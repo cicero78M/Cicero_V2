@@ -51,7 +51,7 @@ waClient.on('message', async (msg) => {
   }
 
   // UPDATE CLIENT
-  if (text.toLowerCase().startsWith('updateclient#')) {
+if (text.toLowerCase().startsWith('updateclient#')) {
     const parts = text.split('#');
     if (parts.length < 4) {
       await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateclient#clientid#key#value');
@@ -68,7 +68,7 @@ waClient.on('message', async (msg) => {
       }
       const updated = await clientService.updateClient(client_id, updateObj);
       if (updated) {
-        await waClient.sendMessage(chatId, `✅ Client *${client_id}* updated:\n*${key}* → ${value}`);
+        await waClient.sendMessage(chatId, `✅ Client *${client_id}* updated: *${key}* → ${value}`);
       } else {
         await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
       }
