@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { pool } from '../config/db.js';
-import { decrypt } from '../util/crypt.js'; // Pastikan path ini benar dan menggunakan CryptoJS
+import { decrypt } from '../utils/crypt.js'; // Pastikan path ini benar dan menggunakan CryptoJS
 
 // Mapping dari key JSON ke kolom DB
 const jsonToDbMap = {
