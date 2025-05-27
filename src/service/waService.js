@@ -105,6 +105,41 @@ waClient.on('message', async (msg) => {
     }
     return;
   }
+
+  // === GET CLIENT INFO ===
+if (text.toLowerCase().startsWith('clientinfo#')) {
+  const [, client_id] = text.split('#');
+  if (!client_id) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: clientinfo#clientid');
+    return;
+  }
+  try {
+    const client = await clientService.findClientById(client_id);
+    if (client) {
+      let dataText = `ℹ️ Info Data Client *${client_id}*:\n`;
+      for (const k in client) {
+        let v = client[k];
+        if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+        dataText += `*${k}*: ${v}\n`;
+      }
+      await waClient.sendMessage(chatId, dataText);
+
+      // Kirim juga ke client_operator jika diinginkan (opsional)
+      if (client.client_operator && client.client_operator.length >= 8) {
+        const operatorId = formatToWhatsAppId(client.client_operator);
+        if (operatorId !== chatId) {
+          await waClient.sendMessage(operatorId, `[Notifikasi Client Info]:\n${dataText}`);
+        }
+      }
+    } else {
+      await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+    }
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal mengambil data client: ${err.message}`);
+  }
+  return;
+}
+
 });
 
 // Helper untuk format nomor ke WhatsApp ID
