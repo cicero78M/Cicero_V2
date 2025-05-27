@@ -307,22 +307,22 @@ if (text.toLowerCase().startsWith('transferuser#')) {
 }
 
   // === LIST CLIENT COMMANDS + UPDATE KEYS ===
-  if (text.toLowerCase() === 'clientrequest') {
-    const updateKeys = [
-      'nama',
-      'client_type',
-      'client_status',
-      'client_insta',
-      'client_insta_status',
-      'client_tiktok',
-      'client_tiktok_status',
-      'client_operator',
-      'client_super',
-      'client_group',
-      'tiktok_secUid'
-    ];
+if (text.toLowerCase() === 'clientrequest') {
+  const updateKeys = [
+    'nama',
+    'client_type',
+    'client_status',
+    'client_insta',
+    'client_insta_status',
+    'client_tiktok',
+    'client_tiktok_status',
+    'client_operator',
+    'client_super',
+    'client_group',
+    'tiktok_secUid'
+  ];
 
-    const menu = `
+  const menu = `
 📝 *Client Request Commands:*
 1. *addnewclient#clientid#clientname*
    - Tambah data client baru.
@@ -334,6 +334,8 @@ if (text.toLowerCase().startsWith('transferuser#')) {
    - Lihat detail data client.
 5. *clientrequest*
    - Tampilkan daftar perintah ini.
+6. *transferuser#clientid*
+   - Migrasi seluruh data user (dari folder user_data/clientid) ke database (khusus admin/akses tertentu).
 
 *Key yang dapat digunakan pada updateclient#:*
 ${updateKeys.map(k => `- *${k}*`).join('\n')}
@@ -347,10 +349,11 @@ updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
 updateclient#BOJONEGORO#tiktok_secUid
 
 _Catatan: Value untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
-    `;
-    await waClient.sendMessage(chatId, menu);
-    return;
-  }
+  `;
+  await waClient.sendMessage(chatId, menu);
+  return;
+}
+
 });
 
 
