@@ -1,4 +1,4 @@
-# CiceroXCubiespot WhatsApp Bot System
+# CICERO_V2 WhatsApp Bot System
 
 Sistem WA bot untuk manajemen data client organisasi,
 sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON ke PostgreSQL),
@@ -23,7 +23,7 @@ Struktur modular, mudah di-maintain dan scalable.
 ## **Struktur Project**
 
 ```
-CiceroXCubiespot/
+CICERO_V2/
 ├── src/
 │   ├── config/
 │   │   └── db.js                  # Koneksi PostgreSQL
