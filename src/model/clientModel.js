@@ -26,9 +26,9 @@ export const create = async (client) => {
     client.nama,
     client.client_type || '',
     client.client_status ?? true,
-    client.client_insta ? JSON.stringify(client.client_insta) : '{}',
+    client.client_insta || '',      // TANPA JSON.stringify!
     client.client_insta_status ?? true,
-    client.client_tiktok ? JSON.stringify(client.client_tiktok) : '{}',
+    client.client_tiktok || '',     // TANPA JSON.stringify!
     client.client_tiktok_status ?? true,
     client.client_operator || '',
     client.client_group || '',
@@ -37,6 +37,7 @@ export const create = async (client) => {
   const res = await pool.query(q, values);
   return res.rows[0];
 };
+
 
 
 // Update client, bisa update 1 key saja!
@@ -65,9 +66,9 @@ export const update = async (client_id, clientData) => {
     merged.nama,
     merged.client_type,
     merged.client_status,
-    typeof merged.client_insta === 'object' ? JSON.stringify(merged.client_insta) : merged.client_insta,
+    merged.client_insta || '',      // PASTIKAN STRING
     merged.client_insta_status,
-    typeof merged.client_tiktok === 'object' ? JSON.stringify(merged.client_tiktok) : merged.client_tiktok,
+    merged.client_tiktok || '',     // PASTIKAN STRING
     merged.client_tiktok_status,
     merged.client_operator,
     merged.client_group,
@@ -76,6 +77,7 @@ export const update = async (client_id, clientData) => {
   const res = await pool.query(q, values);
   return res.rows[0];
 };
+
 
 
 // Hapus client
