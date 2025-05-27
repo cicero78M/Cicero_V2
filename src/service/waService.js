@@ -1,7 +1,8 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
-import * as clientService from './clientService.js'; // Ubah path jika diperlukan
+import * as clientService from './clientService.js'; // Ubah path jika perlu
+import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 
 const waClient = new Client({
   authStrategy: new LocalAuth(),
@@ -29,18 +30,18 @@ waClient.on('message', async (msg) => {
       return;
     }
     try {
-      // Silakan tambahkan field lain jika ingin input via WA
       const newClient = await clientService.createClient({
         client_id,
         nama,
         client_type: '',
         client_status: true,
-        client_insta: {},
+        client_insta: '',      // string kosong
         client_insta_status: false,
-        client_tiktok: {},
+        client_tiktok: '',     // string kosong
         client_tiktok_status: false,
         client_operator: '',
-        client_group: ''
+        client_group: '',
+        tiktok_secUid: ''
       });
 
       let dataText = `✅ Data Client *${newClient.client_id}* berhasil ditambah:\n`;
@@ -51,7 +52,6 @@ waClient.on('message', async (msg) => {
       }
       await waClient.sendMessage(chatId, dataText);
 
-      // Kirim juga ke client_operator jika diisi dan bukan nomor yang sama
       if (newClient.client_operator && newClient.client_operator.length >= 8) {
         const operatorId = formatToWhatsAppId(newClient.client_operator);
         if (operatorId !== chatId) {
@@ -64,11 +64,11 @@ waClient.on('message', async (msg) => {
     return;
   }
 
-  // === UPDATE CLIENT ===
-if (text.toLowerCase().startsWith('updateclient#')) {
+  // === UPDATE CLIENT (BISA JUGA OTOMATIS UPDATE tiktok_secUid) ===
+  if (text.toLowerCase().startsWith('updateclient#')) {
     const parts = text.split('#');
 
-    // ==== KHUSUS updateclient#clientid#tiktok_secUid ====
+    // === OTOMATIS UPDATE tiktok_secUid ===
     if (parts.length === 3 && parts[2] === 'tiktok_secUid') {
       const [, client_id, key] = parts;
       try {
@@ -77,71 +77,46 @@ if (text.toLowerCase().startsWith('updateclient#')) {
           await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
           return;
         }
-        // Cek username tiktok
-        let username = '';
-        if (client.client_tiktok && typeof client.client_tiktok === 'object' && client.client_tiktok.username) {
-          username = client.client_tiktok.username;
-        } else if (typeof client.client_tiktok === 'string') {
-          try {
-            const tiktokObj = JSON.parse(client.client_tiktok);
-            username = tiktokObj.username || '';
-          } catch {}
-        }
+        let username = client.client_tiktok || '';
         if (!username) {
-          await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} belum punya username TikTok!`);
+          await waClient.sendMessage(chatId, `❌ Username TikTok belum diisi pada client dengan ID ${client_id}.`);
           return;
         }
-        // Ambil secUid dan update
         const secUid = await getTiktokSecUid(username);
         const updated = await clientService.updateClient(client_id, { tiktok_secUid: secUid });
         if (updated) {
           let dataText = `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*\n`;
           for (const k in updated) {
             let v = updated[k];
-   
-    // Khusus update secUid otomatis
-  if (parts.length === 3 && parts[2] === 'tiktok_secUid') {
-    const [, client_id, key] = parts;
-    try {
-      // 1. Ambil data client dari DB
-      const client = await clientService.findClientById(client_id);
-      if (!client) {
-        await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
-        return;
+            if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+            dataText += `*${k}*: ${v}\n`;
+          }
+          await waClient.sendMessage(chatId, dataText);
+          if (updated.client_operator && updated.client_operator.length >= 8) {
+            const operatorId = formatToWhatsAppId(updated.client_operator);
+            if (operatorId !== chatId) {
+              await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
+            }
+          }
+        } else {
+          await waClient.sendMessage(chatId, `❌ Gagal update secUid ke client.`);
+        }
+      } catch (err) {
+        await waClient.sendMessage(chatId, `❌ Gagal proses: ${err.message}`);
       }
-      // 2. Ambil username TikTok dari field client_tiktok
-      let username = client.client_tiktok || '';
-      if (!username) {
-        await waClient.sendMessage(chatId, `❌ Username TikTok belum diisi pada client dengan ID ${client_id}.`);
-        return;
-      }
-      // 3. Ambil secUid dari API
-      const secUid = await getTiktokSecUid(username); // fungsi ini dari jawaban sebelumnya
-      // 4. Update tiktok_secUid di database
-      const updated = await clientService.updateClient(client_id, { tiktok_secUid: secUid });
-      if (updated) {
-        await waClient.sendMessage(chatId, `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}`);
-      } else {
-        await waClient.sendMessage(chatId, `❌ Gagal update secUid ke client.`);
-      }
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal proses: ${err.message}`);
+      return;
     }
-    return;
-  }
 
-    // ==== updateclient#clientid#key#value (update field biasa) ====
+    // === UPDATE FIELD BIASA ===
     if (parts.length >= 4) {
-
       const [, client_id, key, ...valueParts] = parts;
       const value = valueParts.join('#');
       try {
         const updateObj = {};
-        
         if (['client_status', 'client_insta_status', 'client_tiktok_status'].includes(key)) {
           updateObj[key] = value === 'true';
         } else if (key === 'client_tiktok' || key === 'client_insta') {
-          updateObj[key] = value; // SIMPAN LANGSUNG username sebagai string
+          updateObj[key] = value; // Simpan username string
         } else {
           updateObj[key] = value;
         }
@@ -171,14 +146,12 @@ if (text.toLowerCase().startsWith('updateclient#')) {
       return;
     }
 
-    // ==== Format salah ====
-    await waClient.sendMessage(chatId, 'Format salah!\n\n' +
-      'Update secUid: updateclient#clientid#tiktok_secUid\n' +
-      'Update field biasa: updateclient#clientid#key#value\n' +
-      'Contoh: updateclient#BOJONEGORO#client_status#true');
+    // FORMAT SALAH
+    await waClient.sendMessage(chatId, 'Format salah!\n' +
+      'updateclient#clientid#key#value\n' +
+      'atau updateclient#clientid#tiktok_secUid (untuk update secUid otomatis dari username TikTok)');
     return;
   }
-
 
   // === GET CLIENT INFO ===
   if (text.toLowerCase().startsWith('clientinfo#')) {
@@ -198,7 +171,6 @@ if (text.toLowerCase().startsWith('updateclient#')) {
         }
         await waClient.sendMessage(chatId, dataText);
 
-        // Kirim juga ke client_operator jika diinginkan (opsional)
         if (client.client_operator && client.client_operator.length >= 8) {
           const operatorId = formatToWhatsAppId(client.client_operator);
           if (operatorId !== chatId) {
@@ -232,7 +204,6 @@ if (text.toLowerCase().startsWith('updateclient#')) {
         }
         await waClient.sendMessage(chatId, dataText);
 
-        // (Opsional) Kirim juga ke operator
         if (removed.client_operator && removed.client_operator.length >= 8) {
           const operatorId = formatToWhatsAppId(removed.client_operator);
           if (operatorId !== chatId) {
@@ -249,21 +220,21 @@ if (text.toLowerCase().startsWith('updateclient#')) {
   }
 
   // === LIST CLIENT COMMANDS + UPDATE KEYS ===
-if (text.toLowerCase() === 'clientrequest') {
-  const updateKeys = [
-    'nama',
-    'client_type',
-    'client_status',
-    'client_insta',
-    'client_insta_status',
-    'client_tiktok',
-    'client_tiktok_status',
-    'client_operator',
-    'client_group',
-    'tiktok_secUid'
-  ];
+  if (text.toLowerCase() === 'clientrequest') {
+    const updateKeys = [
+      'nama',
+      'client_type',
+      'client_status',
+      'client_insta',
+      'client_insta_status',
+      'client_tiktok',
+      'client_tiktok_status',
+      'client_operator',
+      'client_group',
+      'tiktok_secUid'
+    ];
 
-  const menu = `
+    const menu = `
 📝 *Client Request Commands:*
 1. *addnewclient#clientid#clientname*
    - Tambah data client baru.
@@ -283,14 +254,14 @@ Contoh update:
 updateclient#BOJONEGORO#client_status#true
 updateclient#BOJONEGORO#client_insta_status#false
 updateclient#BOJONEGORO#client_operator#+628123456789
+updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
+updateclient#BOJONEGORO#tiktok_secUid
 
-_Catatan: Value untuk key boolean gunakan true/false, untuk data JSON (misal client_insta) gunakan format JSON._
-  `;
-  await waClient.sendMessage(chatId, menu);
-  return;
-}
-
-
+_Catatan: Value untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
+    `;
+    await waClient.sendMessage(chatId, menu);
+    return;
+  }
 });
 
 // Helper untuk format nomor ke WhatsApp ID
