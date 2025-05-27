@@ -4,6 +4,10 @@ import qrcode from 'qrcode-terminal';
 import * as clientService from './clientService.js'; // Ubah path jika perlu
 import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 
+import { migrateUsersFromFolder } from './service/userMigrationService.js';
+
+
+
 const waClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: { headless: true }
@@ -315,6 +319,39 @@ _Catatan: Value untuk key boolean gunakan true/false, untuk username TikTok dan 
     return;
   }
 });
+
+// ...kode lain handler message WhatsApp
+
+if (text.toLowerCase().startsWith('transferuser#')) {
+  const [, client_id] = text.split('#');
+  if (!client_id) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: transferuser#clientid');
+    return;
+  }
+  await waClient.sendMessage(chatId, `⏳ Migrasi user dari user_data/${client_id}/ ...`);
+  try {
+    // Panggil migrasi, tunggu SEMUA file selesai diproses (success/gagal)
+    const result = await migrateUsersFromFolder(client_id);
+    let report = `*Hasil transfer user dari client ${client_id}:*\n`;
+    result.forEach(r => {
+      report += `- ${r.file}: ${r.status}${r.error ? ' (' + r.error + ')' : ''}\n`;
+    });
+
+    // Optional: Notifikasi jika semua sukses
+    if (result.length > 0 && result.every(r => r.status === '✅ Sukses')) {
+      report += '\n🎉 Semua user berhasil ditransfer!';
+    }
+    if (result.length === 0) {
+      report += '\n(Tidak ada file user yang ditemukan atau diproses)';
+    }
+
+    await waClient.sendMessage(chatId, report);
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal proses transfer: ${err.message}`);
+  }
+  return;
+}
+
 
 // Helper untuk format nomor ke WhatsApp ID
 function formatToWhatsAppId(nohp) {
