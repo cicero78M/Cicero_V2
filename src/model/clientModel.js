@@ -16,9 +16,9 @@ export const findById = async (client_id) => {
 export const create = async (client) => {
   const q = `
     INSERT INTO clients 
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secUid)
+      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secUid, client_super)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `;
   const values = [
@@ -26,11 +26,12 @@ export const create = async (client) => {
     client.nama,
     client.client_type || '',
     client.client_status ?? true,
-    client.client_insta || '',      // TANPA JSON.stringify!
+    client.client_insta || '',
     client.client_insta_status ?? true,
-    client.client_tiktok || '',     // TANPA JSON.stringify!
+    client.client_tiktok || '',
     client.client_tiktok_status ?? true,
     client.client_operator || '',
+    client.client_super || '',
     client.client_group || '',
     client.tiktok_secUid || ''
   ];
@@ -56,8 +57,9 @@ export const update = async (client_id, clientData) => {
       client_tiktok = $7,
       client_tiktok_status = $8,
       client_operator = $9,
+      client_super = $12,
       client_group = $10,
-      tiktok_secUid = $11
+      tiktok_secUid = $11,
     WHERE client_id = $1
     RETURNING *
   `;
@@ -66,17 +68,19 @@ export const update = async (client_id, clientData) => {
     merged.nama,
     merged.client_type,
     merged.client_status,
-    merged.client_insta || '',      // PASTIKAN STRING
+    merged.client_insta || '',
     merged.client_insta_status,
-    merged.client_tiktok || '',     // PASTIKAN STRING
+    merged.client_tiktok || '',
     merged.client_tiktok_status,
     merged.client_operator,
+    merged.client_super || '',
     merged.client_group,
-    merged.tiktok_secUid || ''
+    merged.tiktok_secUid || '',
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
 };
+
 
 
 
