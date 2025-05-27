@@ -21,6 +21,7 @@ export const create = async (client) => {
       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `;
+  
   const values = [
     client.client_id,
     client.nama,
