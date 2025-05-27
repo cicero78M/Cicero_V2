@@ -1,4 +1,4 @@
-2025/05/27-08:00:16.148 11524 Reusing MANIFEST D:\Cicero_V2\Cicero_V2\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/05/27-08:00:16.148 11524 Recovering log #231
-2025/05/27-08:00:16.162 11524 Reusing old log D:\Cicero_V2\Cicero_V2\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000231.log 
-2025/05/27-08:00:16.162 11524 Delete type=2 #230
+2025/05/27-08:04:46.590 78a4 Reusing MANIFEST D:\Cicero_V2\Cicero_V2\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/05/27-08:04:46.590 78a4 Recovering log #277
+2025/05/27-08:04:46.605 78a4 Reusing old log D:\Cicero_V2\Cicero_V2\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000277.log 
+2025/05/27-08:04:46.606 78a4 Delete type=2 #276
