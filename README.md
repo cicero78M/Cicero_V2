@@ -58,7 +58,7 @@ PGUSER=your_db_user
 PGPASSWORD=your_db_password
 PGDATABASE=your_db_name
 PGHOST=localhost
-PGPORT=5432
+PGPORT=XXXX
 
 SECRET_KEY=passphrase_rahasia_anda
 RAPIDAPI_KEY=isi_key_rapidapi
