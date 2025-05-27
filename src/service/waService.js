@@ -4,7 +4,7 @@ import qrcode from 'qrcode-terminal';
 import * as clientService from './clientService.js'; // Ubah path jika perlu
 import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 
-import { migrateUsersFromFolder } from './service/userMigrationService.js';
+import { migrateUsersFromFolder } from './userMigrationService.js';
 
 
 
