@@ -61,7 +61,7 @@ export const update = async (client_id, clientData) => {
       client_operator = $9,
       client_group = $10,
       tiktok_secUid = $11,
-      client_super = $12,
+      client_super = $12
 
     WHERE client_id = $1
     RETURNING *
