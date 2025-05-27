@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { pool } from '../config/db.js';
-import { decrypt } from '../utils/crypt.js'; // Pastikan path ini benar dan menggunakan CryptoJS
+import { decrypt } from '../util/crypt.js'; // Pastikan ini adalah versi CryptoJS+passphrase
 
 // Mapping dari key JSON ke kolom DB
 const jsonToDbMap = {
@@ -19,7 +19,8 @@ const jsonToDbMap = {
 
 /**
  * Migrasi semua file JSON di user_data/{clientId} ke table user PostgreSQL.
- * Akan mendekripsi setiap field, dan menambah client_id secara otomatis.
+ * Akan mendekripsi setiap field, menambah client_id otomatis,
+ * dan memastikan user_id selalu 8 karakter (padding nol di depan jika perlu).
  * @param {string} clientId - Misal: 'BOJONEGORO'
  * @returns {Array} List hasil per file
  */
@@ -36,10 +37,19 @@ export async function migrateUsersFromFolder(clientId) {
       try {
         data = JSON.parse(rawContent);
 
-        // Dekripsi & mapping ke user
+        // Dekripsi & mapping ke user, padding ID jika perlu
         const user = {};
         for (const key in jsonToDbMap) {
-          if (data[key]) user[jsonToDbMap[key]] = decrypt(data[key]);
+          if (data[key]) {
+            let val = decrypt(data[key]);
+            if (jsonToDbMap[key] === 'user_id') {
+              // Pad nol di depan jika kurang dari 8 karakter
+              if (val && val.length < 8) {
+                val = val.padStart(8, '0');
+              }
+            }
+            user[jsonToDbMap[key]] = val;
+          }
         }
         user.client_id = clientId; // Tambahkan client_id (bukan dari JSON, dari argumen)
 
