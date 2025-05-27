@@ -4,7 +4,7 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY; // Simpan di .env
 const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 
 export async function getTiktokSecUid(username) {
-  const url = `https://tiktok-api23.p.rapidapi.com/user_info_v2?username=${username}`;
+  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${username}`;
   const options = {
     method: 'GET',
     headers: {
