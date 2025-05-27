@@ -174,6 +174,49 @@ waClient.on('message', async (msg) => {
     return;
   }
 
+  // === LIST CLIENT COMMANDS + UPDATE KEYS ===
+if (text.toLowerCase() === 'clientrequest') {
+  const updateKeys = [
+    'nama',
+    'client_type',
+    'client_status',
+    'client_insta',
+    'client_insta_status',
+    'client_tiktok',
+    'client_tiktok_status',
+    'client_operator',
+    'client_group',
+    'tiktok_secUid'
+  ];
+
+  const menu = `
+📝 *Client Request Commands:*
+1. *addnewclient#clientid#clientname*
+   - Tambah data client baru.
+2. *updateclient#clientid#key#value*
+   - Update data client berdasarkan key.
+3. *removeclient#clientid*
+   - Hapus data client.
+4. *clientinfo#clientid*
+   - Lihat detail data client.
+5. *clientrequest*
+   - Tampilkan daftar perintah ini.
+
+*Key yang dapat digunakan pada updateclient#:*
+${updateKeys.map(k => `- *${k}*`).join('\n')}
+
+Contoh update:
+updateclient#BOJONEGORO#client_status#true
+updateclient#BOJONEGORO#client_insta_status#false
+updateclient#BOJONEGORO#client_operator#+628123456789
+
+_Catatan: Value untuk key boolean gunakan true/false, untuk data JSON (misal client_insta) gunakan format JSON._
+  `;
+  await waClient.sendMessage(chatId, menu);
+  return;
+}
+
+
 });
 
 // Helper untuk format nomor ke WhatsApp ID
