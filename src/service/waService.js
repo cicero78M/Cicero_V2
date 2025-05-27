@@ -65,46 +65,104 @@ waClient.on('message', async (msg) => {
   }
 
   // === UPDATE CLIENT ===
-  if (text.toLowerCase().startsWith('updateclient#')) {
+if (text.toLowerCase().startsWith('updateclient#')) {
     const parts = text.split('#');
-    if (parts.length < 4) {
-      await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateclient#clientid#key#value');
+
+    // ==== KHUSUS updateclient#clientid#tiktok_secUid ====
+    if (parts.length === 3 && parts[2] === 'tiktok_secUid') {
+      const [, client_id, key] = parts;
+      try {
+        const client = await clientService.findClientById(client_id);
+        if (!client) {
+          await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+          return;
+        }
+        // Cek username tiktok
+        let username = '';
+        if (client.client_tiktok && typeof client.client_tiktok === 'object' && client.client_tiktok.username) {
+          username = client.client_tiktok.username;
+        } else if (typeof client.client_tiktok === 'string') {
+          try {
+            const tiktokObj = JSON.parse(client.client_tiktok);
+            username = tiktokObj.username || '';
+          } catch {}
+        }
+        if (!username) {
+          await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} belum punya username TikTok!`);
+          return;
+        }
+        // Ambil secUid dan update
+        const secUid = await getTiktokSecUid(username);
+        const updated = await clientService.updateClient(client_id, { tiktok_secUid: secUid });
+        if (updated) {
+          let dataText = `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*\n`;
+          for (const k in updated) {
+            let v = updated[k];
+            if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+            dataText += `*${k}*: ${v}\n`;
+          }
+          await waClient.sendMessage(chatId, dataText);
+          // (Opsional) Kirim ke operator
+          if (updated.client_operator && updated.client_operator.length >= 8) {
+            const operatorId = formatToWhatsAppId(updated.client_operator);
+            if (operatorId !== chatId) {
+              await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
+            }
+          }
+        } else {
+          await waClient.sendMessage(chatId, `❌ Gagal update secUid ke client.`);
+        }
+      } catch (err) {
+        await waClient.sendMessage(chatId, `❌ Gagal proses: ${err.message}`);
+      }
       return;
     }
-    const [, client_id, key, ...valueParts] = parts;
-    const value = valueParts.join('#');
-    try {
-      const updateObj = {};
-      if (['client_status', 'client_insta_status', 'client_tiktok_status'].includes(key)) {
-        updateObj[key] = value === 'true';
-      } else {
-        updateObj[key] = value;
-      }
-      const updated = await clientService.updateClient(client_id, updateObj);
 
-      if (updated) {
-        let dataText = `✅ Data Client *${client_id}* berhasil diupdate:\n`;
-        for (const k in updated) {
-          let v = updated[k];
-          if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-          dataText += `*${k}*: ${v}\n`;
+    // ==== updateclient#clientid#key#value (update field biasa) ====
+    if (parts.length >= 4) {
+      const [, client_id, key, ...valueParts] = parts;
+      const value = valueParts.join('#');
+      try {
+        const updateObj = {};
+        if (['client_status', 'client_insta_status', 'client_tiktok_status'].includes(key)) {
+          updateObj[key] = value === 'true';
+        } else {
+          updateObj[key] = value;
         }
-        await waClient.sendMessage(chatId, dataText);
+        const updated = await clientService.updateClient(client_id, updateObj);
 
-        if (updated.client_operator && updated.client_operator.length >= 8) {
-          const operatorId = formatToWhatsAppId(updated.client_operator);
-          if (operatorId !== chatId) {
-            await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
+        if (updated) {
+          let dataText = `✅ Data Client *${client_id}* berhasil diupdate:\n`;
+          for (const k in updated) {
+            let v = updated[k];
+            if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+            dataText += `*${k}*: ${v}\n`;
           }
+          await waClient.sendMessage(chatId, dataText);
+
+          if (updated.client_operator && updated.client_operator.length >= 8) {
+            const operatorId = formatToWhatsAppId(updated.client_operator);
+            if (operatorId !== chatId) {
+              await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
+            }
+          }
+        } else {
+          await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
         }
-      } else {
-        await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+      } catch (err) {
+        await waClient.sendMessage(chatId, `❌ Gagal update client: ${err.message}`);
       }
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal update client: ${err.message}`);
+      return;
     }
+
+    // ==== Format salah ====
+    await waClient.sendMessage(chatId, 'Format salah!\n\n' +
+      'Update secUid: updateclient#clientid#tiktok_secUid\n' +
+      'Update field biasa: updateclient#clientid#key#value\n' +
+      'Contoh: updateclient#BOJONEGORO#client_status#true');
     return;
   }
+
 
   // === GET CLIENT INFO ===
   if (text.toLowerCase().startsWith('clientinfo#')) {
