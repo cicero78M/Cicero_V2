@@ -128,11 +128,13 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
         const updated = await clientService.updateClient(client_id, { tiktok_secUid: secUid });
         if (updated) {
           let dataText = `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*\n`;
+                    
           for (const k in updated) {
             let v = updated[k];
             if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
             dataText += `*${k}*: ${v}\n`;
           }
+          
           await waClient.sendMessage(chatId, dataText);
           if (updated.client_operator && updated.client_operator.length >= 8) {
             const operatorId = formatToWhatsAppId(updated.client_operator);
