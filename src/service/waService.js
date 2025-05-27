@@ -18,51 +18,83 @@ waClient.on('ready', () => {
   console.log('[WA] WhatsApp client is ready!');
 });
 
+// === Helper untuk urutan field ===
+function formatClientData(obj, title = '') {
+  let keysOrder = [
+    'client_id',
+    'nama',
+    'client_type',
+    'client_status',
+    'client_insta',
+    'client_insta_status',
+    'client_tiktok',
+    'client_tiktok_status',
+    'client_operator',
+    'client_super',      // <= client_super di bawah client_operator!
+    'client_group',
+    'tiktok_secUid'
+  ];
+  let dataText = title ? `${title}\n` : '';
+  for (const key of keysOrder) {
+    if (key in obj) {
+      let v = obj[key];
+      if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+      dataText += `*${key}*: ${v}\n`;
+    }
+  }
+  Object.keys(obj).forEach(key => {
+    if (!keysOrder.includes(key)) {
+      let v = obj[key];
+      if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+      dataText += `*${key}*: ${v}\n`;
+    }
+  });
+  return dataText;
+}
+
 waClient.on('message', async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
 
   // === UPDATE client_group DARI GROUP ===
-if (text.toLowerCase().startsWith('thisgroup#')) {
-  // Hanya bisa digunakan dalam grup WhatsApp
-  if (!msg.from.endsWith('@g.us')) {
-    await waClient.sendMessage(chatId, '❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!');
-    return;
-  }
-  const [, client_id] = text.split('#');
-  if (!client_id) {
-    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: thisgroup#ClientID');
-    return;
-  }
-  // Ambil WhatsApp Group ID dari msg.from
-  const groupId = msg.from;
-  try {
-    // Update client_group di database
-    const updated = await clientService.updateClient(client_id, { client_group: groupId });
-    if (updated) {
-      // (Opsional: Tampilkan nama group juga, jika ingin)
-      let groupName = '';
-      try {
-        const groupData = await waClient.getChatById(groupId);
-        groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : '';
-      } catch (e) {}
-      await waClient.sendMessage(chatId, `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`);
-      // (Opsional) Kirim notifikasi ke client_operator juga
-      if (updated.client_operator && updated.client_operator.length >= 8) {
-        const operatorId = formatToWhatsAppId(updated.client_operator);
-        if (operatorId !== chatId) {
-          await waClient.sendMessage(operatorId, `[Notifikasi]: Client group *${client_id}* diupdate ke group ID: ${groupId}`);
-        }
-      }
-    } else {
-      await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+  if (text.toLowerCase().startsWith('thisgroup#')) {
+    // Hanya bisa digunakan dalam grup WhatsApp
+    if (!msg.from.endsWith('@g.us')) {
+      await waClient.sendMessage(chatId, '❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!');
+      return;
     }
-  } catch (err) {
-    await waClient.sendMessage(chatId, `❌ Gagal update client_group: ${err.message}`);
+    const [, client_id] = text.split('#');
+    if (!client_id) {
+      await waClient.sendMessage(chatId, 'Format salah!\nGunakan: thisgroup#ClientID');
+      return;
+    }
+    // Ambil WhatsApp Group ID dari msg.from
+    const groupId = msg.from;
+    try {
+      // Update client_group di database
+      const updated = await clientService.updateClient(client_id, { client_group: groupId });
+      if (updated) {
+        let groupName = '';
+        try {
+          const groupData = await waClient.getChatById(groupId);
+          groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : '';
+        } catch (e) {}
+        let dataText = `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`;
+        await waClient.sendMessage(chatId, dataText);
+        if (updated.client_operator && updated.client_operator.length >= 8) {
+          const operatorId = formatToWhatsAppId(updated.client_operator);
+          if (operatorId !== chatId) {
+            await waClient.sendMessage(operatorId, `[Notifikasi]: Client group *${client_id}* diupdate ke group ID: ${groupId}`);
+          }
+        }
+      } else {
+        await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+      }
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal update client_group: ${err.message}`);
+    }
+    return;
   }
-  return;
-}
-
 
   // === ADD NEW CLIENT ===
   if (text.toLowerCase().startsWith('addnewclient#')) {
@@ -77,21 +109,17 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
         nama,
         client_type: '',
         client_status: true,
-        client_insta: '',      // string kosong
+        client_insta: '',
         client_insta_status: false,
-        client_tiktok: '',     // string kosong
+        client_tiktok: '',
         client_tiktok_status: false,
         client_operator: '',
+        client_super: '',      // <== pastikan support field ini!
         client_group: '',
         tiktok_secUid: ''
       });
 
-      let dataText = `✅ Data Client *${newClient.client_id}* berhasil ditambah:\n`;
-      for (const k in newClient) {
-        let v = newClient[k];
-        if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-        dataText += `*${k}*: ${v}\n`;
-      }
+      let dataText = formatClientData(newClient, `✅ Data Client *${newClient.client_id}* berhasil ditambah:`);
       await waClient.sendMessage(chatId, dataText);
 
       if (newClient.client_operator && newClient.client_operator.length >= 8) {
@@ -127,14 +155,7 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
         const secUid = await getTiktokSecUid(username);
         const updated = await clientService.updateClient(client_id, { tiktok_secUid: secUid });
         if (updated) {
-          let dataText = `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*\n`;
-                    
-          for (const k in updated) {
-            let v = updated[k];
-            if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-            dataText += `*${k}*: ${v}\n`;
-          }
-          
+          let dataText = formatClientData(updated, `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*`);
           await waClient.sendMessage(chatId, dataText);
           if (updated.client_operator && updated.client_operator.length >= 8) {
             const operatorId = formatToWhatsAppId(updated.client_operator);
@@ -167,12 +188,7 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
         const updated = await clientService.updateClient(client_id, updateObj);
 
         if (updated) {
-          let dataText = `✅ Data Client *${client_id}* berhasil diupdate:\n`;
-          for (const k in updated) {
-            let v = updated[k];
-            if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-            dataText += `*${k}*: ${v}\n`;
-          }
+          let dataText = formatClientData(updated, `✅ Data Client *${client_id}* berhasil diupdate:`);
           await waClient.sendMessage(chatId, dataText);
 
           if (updated.client_operator && updated.client_operator.length >= 8) {
@@ -207,12 +223,7 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
     try {
       const client = await clientService.findClientById(client_id);
       if (client) {
-        let dataText = `ℹ️ Info Data Client *${client_id}*:\n`;
-        for (const k in client) {
-          let v = client[k];
-          if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-          dataText += `*${k}*: ${v}\n`;
-        }
+        let dataText = formatClientData(client, `ℹ️ Info Data Client *${client_id}*:\n`);
         await waClient.sendMessage(chatId, dataText);
 
         if (client.client_operator && client.client_operator.length >= 8) {
@@ -240,12 +251,7 @@ if (text.toLowerCase().startsWith('thisgroup#')) {
     try {
       const removed = await clientService.deleteClient(client_id);
       if (removed) {
-        let dataText = `🗑️ Client *${client_id}* berhasil dihapus!\nData sebelumnya:\n`;
-        for (const k in removed) {
-          let v = removed[k];
-          if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-          dataText += `*${k}*: ${v}\n`;
-        }
+        let dataText = formatClientData(removed, `🗑️ Client *${client_id}* berhasil dihapus!\nData sebelumnya:\n`);
         await waClient.sendMessage(chatId, dataText);
 
         if (removed.client_operator && removed.client_operator.length >= 8) {
