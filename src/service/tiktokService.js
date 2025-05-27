@@ -12,17 +12,25 @@ export async function getTiktokSecUid(username) {
       'X-RapidAPI-Host': RAPIDAPI_HOST
     }
   };
+ 
   try {
     const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    const data = await response.json();
 
+    if (!response.ok) {
+      // Baca body error biar tahu kenapa error
+      const errText = await response.text();
+      throw new Error(`API Error: ${response.status}.\nDetail: ${errText}`);
+    }
+
+    const data = await response.json();
     // Cek struktur JSON response dari API
     // Path: response.data.userInfo.user.secUid
     const secUid = data?.data?.userInfo?.user?.secUid;
     if (!secUid) throw new Error("secUid tidak ditemukan di response API.");
     return secUid;
+
   } catch (err) {
     throw new Error("Gagal ambil secUid TikTok: " + err.message);
   }
+
 }
