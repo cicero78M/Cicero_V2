@@ -22,6 +22,48 @@ waClient.on('message', async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
 
+  // === UPDATE client_group DARI GROUP ===
+if (text.toLowerCase().startsWith('thisgroup#')) {
+  // Hanya bisa digunakan dalam grup WhatsApp
+  if (!msg.from.endsWith('@g.us')) {
+    await waClient.sendMessage(chatId, '❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!');
+    return;
+  }
+  const [, client_id] = text.split('#');
+  if (!client_id) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: thisgroup#ClientID');
+    return;
+  }
+  // Ambil WhatsApp Group ID dari msg.from
+  const groupId = msg.from;
+  try {
+    // Update client_group di database
+    const updated = await clientService.updateClient(client_id, { client_group: groupId });
+    if (updated) {
+      // (Opsional: Tampilkan nama group juga, jika ingin)
+      let groupName = '';
+      try {
+        const groupData = await waClient.getChatById(groupId);
+        groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : '';
+      } catch (e) {}
+      await waClient.sendMessage(chatId, `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`);
+      // (Opsional) Kirim notifikasi ke client_operator juga
+      if (updated.client_operator && updated.client_operator.length >= 8) {
+        const operatorId = formatToWhatsAppId(updated.client_operator);
+        if (operatorId !== chatId) {
+          await waClient.sendMessage(operatorId, `[Notifikasi]: Client group *${client_id}* diupdate ke group ID: ${groupId}`);
+        }
+      }
+    } else {
+      await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+    }
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal update client_group: ${err.message}`);
+  }
+  return;
+}
+
+
   // === ADD NEW CLIENT ===
   if (text.toLowerCase().startsWith('addnewclient#')) {
     const [cmd, client_id, nama] = text.split('#');
