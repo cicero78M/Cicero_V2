@@ -107,38 +107,72 @@ waClient.on('message', async (msg) => {
   }
 
   // === GET CLIENT INFO ===
-if (text.toLowerCase().startsWith('clientinfo#')) {
-  const [, client_id] = text.split('#');
-  if (!client_id) {
-    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: clientinfo#clientid');
+  if (text.toLowerCase().startsWith('clientinfo#')) {
+    const [, client_id] = text.split('#');
+    if (!client_id) {
+      await waClient.sendMessage(chatId, 'Format salah!\nGunakan: clientinfo#clientid');
+      return;
+    }
+    try {
+      const client = await clientService.findClientById(client_id);
+      if (client) {
+        let dataText = `ℹ️ Info Data Client *${client_id}*:\n`;
+        for (const k in client) {
+          let v = client[k];
+          if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+          dataText += `*${k}*: ${v}\n`;
+        }
+        await waClient.sendMessage(chatId, dataText);
+
+        // Kirim juga ke client_operator jika diinginkan (opsional)
+        if (client.client_operator && client.client_operator.length >= 8) {
+          const operatorId = formatToWhatsAppId(client.client_operator);
+          if (operatorId !== chatId) {
+            await waClient.sendMessage(operatorId, `[Notifikasi Client Info]:\n${dataText}`);
+          }
+        }
+      } else {
+        await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+      }
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal mengambil data client: ${err.message}`);
+    }
     return;
   }
-  try {
-    const client = await clientService.findClientById(client_id);
-    if (client) {
-      let dataText = `ℹ️ Info Data Client *${client_id}*:\n`;
-      for (const k in client) {
-        let v = client[k];
-        if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
-        dataText += `*${k}*: ${v}\n`;
-      }
-      await waClient.sendMessage(chatId, dataText);
 
-      // Kirim juga ke client_operator jika diinginkan (opsional)
-      if (client.client_operator && client.client_operator.length >= 8) {
-        const operatorId = formatToWhatsAppId(client.client_operator);
-        if (operatorId !== chatId) {
-          await waClient.sendMessage(operatorId, `[Notifikasi Client Info]:\n${dataText}`);
-        }
-      }
-    } else {
-      await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+  // === REMOVE CLIENT ===
+  if (text.toLowerCase().startsWith('removeclient#')) {
+    const [, client_id] = text.split('#');
+    if (!client_id) {
+      await waClient.sendMessage(chatId, 'Format salah!\nGunakan: removeclient#clientid');
+      return;
     }
-  } catch (err) {
-    await waClient.sendMessage(chatId, `❌ Gagal mengambil data client: ${err.message}`);
+    try {
+      const removed = await clientService.deleteClient(client_id);
+      if (removed) {
+        let dataText = `🗑️ Client *${client_id}* berhasil dihapus!\nData sebelumnya:\n`;
+        for (const k in removed) {
+          let v = removed[k];
+          if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+          dataText += `*${k}*: ${v}\n`;
+        }
+        await waClient.sendMessage(chatId, dataText);
+
+        // (Opsional) Kirim juga ke operator
+        if (removed.client_operator && removed.client_operator.length >= 8) {
+          const operatorId = formatToWhatsAppId(removed.client_operator);
+          if (operatorId !== chatId) {
+            await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
+          }
+        }
+      } else {
+        await waClient.sendMessage(chatId, `❌ Client dengan ID ${client_id} tidak ditemukan!`);
+      }
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal hapus client: ${err.message}`);
+    }
+    return;
   }
-  return;
-}
 
 });
 

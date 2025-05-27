@@ -16,33 +16,33 @@ export const findById = async (client_id) => {
 export const create = async (client) => {
   const q = `
     INSERT INTO clients 
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group)
+      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secUid)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
   `;
   const values = [
     client.client_id,
     client.nama,
-    client.client_type || '', // default '' jika kosong
+    client.client_type || '',
     client.client_status ?? true,
     client.client_insta ? JSON.stringify(client.client_insta) : '{}',
     client.client_insta_status ?? true,
     client.client_tiktok ? JSON.stringify(client.client_tiktok) : '{}',
     client.client_tiktok_status ?? true,
     client.client_operator || '',
-    client.client_group || ''
+    client.client_group || '',
+    client.tiktok_secUid || ''
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
 };
 
+
 // Update client, bisa update 1 key saja!
 export const update = async (client_id, clientData) => {
-  // Ambil data lama
   const old = await findById(client_id);
   if (!old) return null;
-  // Merge data lama & baru
   const merged = { ...old, ...clientData };
 
   const q = `
@@ -55,7 +55,8 @@ export const update = async (client_id, clientData) => {
       client_tiktok = $7,
       client_tiktok_status = $8,
       client_operator = $9,
-      client_group = $10
+      client_group = $10,
+      tiktok_secUid = $11
     WHERE client_id = $1
     RETURNING *
   `;
@@ -69,11 +70,13 @@ export const update = async (client_id, clientData) => {
     typeof merged.client_tiktok === 'object' ? JSON.stringify(merged.client_tiktok) : merged.client_tiktok,
     merged.client_tiktok_status,
     merged.client_operator,
-    merged.client_group
+    merged.client_group,
+    merged.tiktok_secUid || ''
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
 };
+
 
 // Hapus client
 export const remove = async (client_id) => {
