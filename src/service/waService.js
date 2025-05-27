@@ -296,8 +296,8 @@ ${updateKeys.map(k => `- *${k}*`).join('\n')}
 Contoh update:
 updateclient#BOJONEGORO#client_status#true
 updateclient#BOJONEGORO#client_insta_status#false
-updateclient#BOJONEGORO#client_operator#+628123456789
-updateclient#BOJONEGORO#client_super#+6281234567890
+updateclient#BOJONEGORO#client_operator#628123456789
+updateclient#BOJONEGORO#client_super#6281234567890
 updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
 updateclient#BOJONEGORO#tiktok_secUid
 

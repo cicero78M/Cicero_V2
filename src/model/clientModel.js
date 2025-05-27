@@ -21,7 +21,7 @@ export const create = async (client) => {
       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `;
-  
+
   const values = [
     client.client_id,
     client.nama,
@@ -32,9 +32,10 @@ export const create = async (client) => {
     client.client_tiktok || '',
     client.client_tiktok_status ?? true,
     client.client_operator || '',
-    client.client_super || '',
     client.client_group || '',
-    client.tiktok_secUid || ''
+    client.tiktok_secUid || '',
+    client.client_super || ''
+
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
@@ -58,9 +59,10 @@ export const update = async (client_id, clientData) => {
       client_tiktok = $7,
       client_tiktok_status = $8,
       client_operator = $9,
-      client_super = $12,
       client_group = $10,
       tiktok_secUid = $11,
+      client_super = $12,
+
     WHERE client_id = $1
     RETURNING *
   `;
@@ -74,9 +76,10 @@ export const update = async (client_id, clientData) => {
     merged.client_tiktok || '',
     merged.client_tiktok_status,
     merged.client_operator,
-    merged.client_super || '',
     merged.client_group,
     merged.tiktok_secUid || '',
+    merged.client_super || ''
+
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
