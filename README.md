@@ -1,8 +1,6 @@
 # Cicero\_V2 WhatsApp Bot System
 
-Sistem WA bot untuk manajemen data client organisasi,
-sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON ke PostgreSQL),
-serta integrasi data TikTok secUid berbasis API.
+Sistem WA bot untuk manajemen data client organisasi, sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON/Spreadsheet ke PostgreSQL), serta integrasi data TikTok secUid berbasis API.
 Struktur modular, mudah di-maintain dan scalable.
 
 ---
@@ -18,7 +16,9 @@ Struktur modular, mudah di-maintain dan scalable.
 * Semua fitur via WhatsApp Web Bot (wweb.js)
 * Database PostgreSQL dengan struktur table modular
 * Error handling & padding data otomatis
-* **Seluruh request WhatsApp hanya dapat diakses nomor yang terdaftar di variabel `ADMIN_WHATSAPP` pada file `.env`**
+* **Seluruh request WhatsApp hanya dapat diakses nomor yang terdaftar di variabel `ADMIN_WHATSAPP` (.env) untuk clientrequest/admin, serta proteksi nomor unik pada data user untuk userrequest**
+* **Nomor WhatsApp hanya bisa bind ke satu user**
+* **Username IG & TikTok wajib unik**
 
 ---
 
@@ -43,7 +43,7 @@ Cicero_V2/
 │   │   └── crypt.js               # Encrypt/decrypt data (CryptoJS, passphrase)
 │   └── ...
 ├── user_data/
-│   └── [CLIENT_ID]/*.json         # File user per client terenkripsi
+│   └── [POLRES]/*.json            # File user per client terenkripsi
 ├── .env                           # Env vars (DB, SECRET_KEY, ADMIN_WHATSAPP, dll)
 ├── app.js                         # Entry point (jika ada)
 ├── package.json
@@ -117,110 +117,87 @@ CREATE TABLE "user" (
 
 ### **A. WA Bot (waService.js)**
 
-* **Menerima pesan WA** (wweb.js)
-* Parsing perintah (`addnewclient#`, `updateclient#`, `removeclient#`, dll)
-* Validasi, update/insert ke DB, balas info ke pengirim & operator
-* Handler `clientrequest` untuk bantuan command
-* Handler `transferuser#clientid` untuk migrasi user (otomatis dari file JSON ke DB)
-* Handler `sheettransfer#clientid#link_google_sheet` untuk migrasi user dari Google Sheet
-* Handler absensi user per client (requestinsta#/requesttiktok#)
-* Handler update user (updateuser#user\_id#insta/tiktok/whatsapp#link\_profile)
-* **Semua request WA hanya bisa diakses nomor admin sesuai variabel .env**
+* Handler terpusat untuk semua pesan WA.
+* Parsing perintah, validasi akses nomor WhatsApp (ADMIN\_WHATSAPP atau nomor user sesuai DB).
+* Otomatis binding WhatsApp ke user jika masih null, **proteksi tidak ada duplikasi nomor**.
+* Proteksi username IG/TikTok unik.
+* Balasan otomatis untuk seluruh error/validasi.
+* Mapping istilah POLRI:
 
-### **B. Migrasi User (userMigrationService.js & importUsersFromGoogleSheet.js)**
-
-* Baca semua file `.json` di folder `user_data/[CLIENT_ID]/` atau download dari Google Sheet
-* Dekripsi semua field dengan `decrypt()` (CryptoJS, passphrase `.env`)
-* Field boolean (`status`, `exception`) otomatis false jika kosong/null, true/false case-insensitive
-* Field user\_id dipad ke 8 digit dengan nol di depan
-* Insert/update ke table user
-* Parsing Google Sheet: auto mapping berdasarkan header, header sheet tidak di-import
-
-### **C. TikTok Service (tiktokService.js)**
-
-* Ambil `secUid` TikTok dari username via RapidAPI
-* Update DB via command `updateclient#CLIENT_ID#tiktok_secUid`
-
-### **D. Crypt.js (util/crypt.js)**
-
-* Fungsi encrypt/decrypt AES berbasis passphrase (.env)
-* Kompatibel antar seluruh modul sistem
+  * user\_id → NRP/NIP
+  * divisi  → Satfung
+  * title   → Pangkat
+  * client\_id → POLRES
+  * status: true → AKTIF, false → AKUN DIHAPUS
 
 ---
 
-## **Contoh Command WhatsApp**
+## **Command WhatsApp**
 
-| Fungsi               | Format Pesan WhatsApp                                                                                          |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Add client           | `addnewclient#clientid#clientname`                                                                             |
-| Update data          | `updateclient#clientid#key#value`                                                                              |
-| Update TikTok secUid | `updateclient#clientid#tiktok_secUid` (otomatis dari DB)                                                       |
-| Get client info      | `clientinfo#clientid`                                                                                          |
-| Remove client        | `removeclient#clientid`                                                                                        |
-| List request & key   | `clientrequest`                                                                                                |
-| Migrasi user JSON    | `transferuser#clientid`                                                                                        |
-| Migrasi user Sheet   | `sheettransfer#clientid#link_google_sheet`                                                                     |
-| Set group client     | `thisgroup#clientid` (hanya dari group WA yang sama)                                                           |
-| Absensi IG           | `requestinsta#clientid#sudah` / `requestinsta#clientid#belum`                                                  |
-| Absensi TikTok       | `requesttiktok#clientid#sudah` / `requesttiktok#clientid#belum`                                                |
-| Update data user     | `updateuser#user_id#insta#link_ig` / `updateuser#user_id#tiktok#link_tt` / `updateuser#user_id#whatsapp#nomor` |
+### **A. clientrequest (Hanya untuk ADMIN)**
 
-#### **Penjelasan value boolean:**
+| Fungsi               | Format WhatsApp                                             |
+| -------------------- | ----------------------------------------------------------- |
+| Add client           | `addnewclient#POLRES#Nama Polres`                           |
+| Update data          | `updateclient#POLRES#key#value`                             |
+| Update TikTok secUid | `updateclient#POLRES#tiktok_secUid`                         |
+| Get client info      | `clientinfo#POLRES`                                         |
+| Remove client        | `removeclient#POLRES`                                       |
+| Daftar command admin | `clientrequest`                                             |
+| Migrasi user JSON    | `transferuser#POLRES`                                       |
+| Migrasi user Sheet   | `sheettransfer#POLRES#link_google_sheet`                    |
+| Set group client     | `thisgroup#POLRES` (harus dikirim dari grup WA)             |
+| Absensi IG           | `requestinsta#POLRES#sudah` / `requestinsta#POLRES#belum`   |
+| Absensi TikTok       | `requesttiktok#POLRES#sudah` / `requesttiktok#POLRES#belum` |
 
-* `client_status`, `client_insta_status`, `client_tiktok_status` pakai `true` atau `false`
-* TikTok dan Instagram cukup isikan username string
+### **B. userrequest (Bisa diakses user, proteksi nomor & validasi data)**
 
----
+| Fungsi              | Format WhatsApp                                           |
+| ------------------- | --------------------------------------------------------- |
+| Lihat data user     | `mydata#NRP/NIP`                                          |
+| Update nama         | `updateuser#NRP/NIP#nama#Nama Lengkap`                    |
+| Update pangkat      | `updateuser#NRP/NIP#pangkat#NAMA_PANGKAT`                 |
+| Update satfung      | `updateuser#NRP/NIP#satfung#NAMA_SATFUNG`                 |
+| Update jabatan      | `updateuser#NRP/NIP#jabatan#NAMA_JABATAN`                 |
+| Update Instagram    | `updateuser#NRP/NIP#insta#https://instagram.com/username` |
+| Update TikTok       | `updateuser#NRP/NIP#tiktok#https://tiktok.com/@username`  |
+| Bind WhatsApp       | `updateuser#NRP/NIP#whatsapp#62812xxxxxx`                 |
+| Daftar command user | `userrequest`                                             |
 
-## **Contoh Data User (JSON terenkripsi)**
+**Catatan & Validasi User:**
 
-```json
-{
-  "ID_KEY": "U2FsdGVkX19Ru/fVRpXoWtqxbLtvKlXA1t9th1PKYYE=",
-  "NAMA": "...",
-  "STATUS": "U2FsdGVkX1+PCaPuiKXxG/t+4VrTmuZAP53nqW9LM9I=",
-  ...
-}
-```
-
-* **Semua field di-decrypt otomatis, dan data boolean di-handle aman!**
-
----
-
-## **Penamaan & Hierarki Function**
-
-* Semua function/method menggunakan prefix sesuai modul (ex: `migrateUsersFromFolder`, `getTiktokSecUid`, dsb)
-* Service modular: `clientService`, `tiktokService`, `userMigrationService`
-* Konstanta field, mapping dan urutan output jelas dan konsisten
+* **Nomor WhatsApp hanya bisa bind ke satu user (NRP/NIP)**
+* **Username IG & TikTok wajib unik seluruh sistem**
+* **Validasi otomatis link Instagram/TikTok: hanya boleh link profil**
+* **Update field pangkat/satfung/jabatan hanya bisa value sesuai referensi DB, jika salah bot membalas dengan list data yang valid (berdasarkan POLRES/client yang sama)**
+* **Perubahan hanya bisa dilakukan oleh nomor WhatsApp terdaftar, atau akan di-bind otomatis jika field whatsapp masih kosong**
 
 ---
 
-## **Maintain & Extensi**
+## **Format Response POLRI**
 
-* Tambahkan field baru? Cukup extend mapping & table, serta update logic handler
-* Ingin tambah endpoint HTTP? Modularisasi di controller/service sudah siap
-* Semua error/exception di-handle dengan balasan WA
+* NRP/NIP → user\_id
+* Satfung → divisi
+* Pangkat → title
+* POLRES → client\_id
+* status:
+
+  * true → AKTIF
+  * false → AKUN DIHAPUS
+* **Field exception tidak pernah ditampilkan ke user!**
 
 ---
 
 ## **Absensi User per Client (Instagram & TikTok)**
 
-### **Absensi Instagram**
+* `requestinsta#POLRES#sudah` — daftar user AKTIF (status=AKTIF) sudah IG, per Satfung:
+  `- [Pangkat] [Nama] : [insta]`
+* `requestinsta#POLRES#belum` — daftar user AKTIF belum IG, per Satfung:
+  `- [Pangkat] [Nama]`
+* TikTok sama:
 
-* `requestinsta#clientid#sudah` — menampilkan daftar user yang sudah mengisi data IG (status=true), per divisi.
-  Format: `- [title] [nama] : [insta]`
-* `requestinsta#clientid#belum` — menampilkan daftar user yang BELUM mengisi IG (status=true), per divisi.
-  Format: `- [title] [nama]`
-
-### **Absensi TikTok**
-
-* `requesttiktok#clientid#sudah` — menampilkan daftar user yang sudah mengisi data TikTok (status=true), per divisi.
-  Format: `- [title] [nama] : [tiktok]`
-
-* `requesttiktok#clientid#belum` — menampilkan daftar user yang BELUM mengisi TikTok (status=true), per divisi.
-  Format: `- [title] [nama]`
-
-* Semua data otomatis mengelompokkan per divisi & menampilkan total user per grup dan per client.
+  * `requesttiktok#POLRES#sudah`
+  * `requesttiktok#POLRES#belum`
 
 ---
 
@@ -252,4 +229,4 @@ Open Source - feel free to fork and contribute!
 
 *Silakan modifikasi sesuai kebutuhan, atau kontak developer utama untuk integrasi/feature request!*
 
-*CICERO : Solus Sed Invictus*
+**CICERO : Solus Sed Invictus**
