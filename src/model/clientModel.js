@@ -6,6 +6,7 @@ export const findAll = async () => {
   return res.rows;
 };
 
+
 // Dapatkan satu client by client_id
 export const findById = async (client_id) => {
   const res = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
@@ -40,8 +41,6 @@ export const create = async (client) => {
   const res = await pool.query(q, values);
   return res.rows[0];
 };
-
-
 
 // Update client, bisa update 1 key saja!
 export const update = async (client_id, clientData) => {
@@ -85,11 +84,15 @@ export const update = async (client_id, clientData) => {
   return res.rows[0];
 };
 
-
-
-
 // Hapus client
 export const remove = async (client_id) => {
   const res = await pool.query('DELETE FROM clients WHERE client_id = $1 RETURNING *', [client_id]);
   return res.rows[0] || null;
 };
+
+export async function findAllActiveWithInstagram() {
+  const res = await pool.query(
+    `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true`
+  );
+  return res.rows;
+}

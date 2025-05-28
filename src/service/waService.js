@@ -787,3 +787,11 @@ function formatToWhatsAppId(nohp) {
 waClient.initialize();
 
 export default waClient;
+
+export async function sendWa(to, message) {
+  try {
+    await waClient.sendMessage(to, message);
+  } catch (e) {
+    console.error('WA send error:', e);
+  }
+}
