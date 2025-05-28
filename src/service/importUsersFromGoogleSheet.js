@@ -1,17 +1,17 @@
 import fs from 'fs/promises';
-import fetch from 'node-fetch'; // npm install node-fetch
+import fetch from 'node-fetch';
 import path from 'path';
 import { importUsersFromSpreadsheet } from './importSpreadsheetService.js';
 
 export async function importUsersFromGoogleSheet(sheetUrl, clientId) {
-  // Ekstrak sheetId dan gid dari url
-  const match = sheetUrl.match(/spreadsheets\\/d\\/([\\w-]+)/);
+  // Perbaikan regex di sini:
+  const match = sheetUrl.match(/spreadsheets\/d\/([\w-]+)/);
   if (!match) throw new Error('Link Google Sheet tidak valid!');
   const sheetId = match[1];
 
   // Cek gid (default 0)
   let gid = '0';
-  const gidMatch = sheetUrl.match(/[?&]gid=(\\d+)/);
+  const gidMatch = sheetUrl.match(/[?&]gid=(\d+)/);
   if (gidMatch) gid = gidMatch[1];
 
   // Buat link download CSV
@@ -19,7 +19,7 @@ export async function importUsersFromGoogleSheet(sheetUrl, clientId) {
 
   // Download ke file sementara
   const tempDir = path.resolve('import_data');
-  await fs.mkdir(tempDir, { recursive: true }); // Pastikan folder ada
+  await fs.mkdir(tempDir, { recursive: true });
   const tempFile = path.join(tempDir, `temp_import_${clientId}_${Date.now()}.csv`);
   const res = await fetch(csvUrl);
   if (!res.ok) throw new Error(`Gagal download sheet: ${res.statusText}`);
