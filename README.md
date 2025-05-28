@@ -1,4 +1,4 @@
-# CiceroXCubiespot WhatsApp Bot System
+# Cicero\_V2 WhatsApp Bot System
 
 Sistem WA bot untuk manajemen data client organisasi,
 sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON ke PostgreSQL),
@@ -18,13 +18,14 @@ Struktur modular, mudah di-maintain dan scalable.
 * Semua fitur via WhatsApp Web Bot (wweb.js)
 * Database PostgreSQL dengan struktur table modular
 * Error handling & padding data otomatis
+* **Seluruh request WhatsApp hanya dapat diakses nomor yang terdaftar di variabel `ADMIN_WHATSAPP` pada file `.env`**
 
 ---
 
 ## **Struktur Project**
 
 ```
-CiceroXCubiespot/
+Cicero_V2/
 ├── src/
 │   ├── config/
 │   │   └── db.js                  # Koneksi PostgreSQL
@@ -43,7 +44,7 @@ CiceroXCubiespot/
 │   └── ...
 ├── user_data/
 │   └── [CLIENT_ID]/*.json         # File user per client terenkripsi
-├── .env                           # Env vars (DB, SECRET_KEY, dll)
+├── .env                           # Env vars (DB, SECRET_KEY, ADMIN_WHATSAPP, dll)
 ├── app.js                         # Entry point (jika ada)
 ├── package.json
 └── README.md                      # (file ini)
@@ -64,6 +65,9 @@ PGPORT=5432
 
 SECRET_KEY=passphrase_rahasia_anda
 RAPIDAPI_KEY=isi_key_rapidapi
+
+# Daftar nomor admin (format WhatsApp, tanpa tanda plus, bisa koma)
+ADMIN_WHATSAPP=6281234567890,6285678901234
 ```
 
 ---
@@ -120,6 +124,7 @@ CREATE TABLE "user" (
 * Handler `transferuser#clientid` untuk migrasi user (otomatis dari file JSON ke DB)
 * Handler `sheettransfer#clientid#link_google_sheet` untuk migrasi user dari Google Sheet
 * Handler absensi user per client (requestinsta#/requesttiktok#)
+* **Semua request WA hanya bisa diakses nomor admin sesuai variabel .env**
 
 ### **B. Migrasi User (userMigrationService.js & importUsersFromGoogleSheet.js)**
 
@@ -219,8 +224,8 @@ CREATE TABLE "user" (
 
 ## **Meta Data Pengembang**
 
-* **Author:** \[Your Name/Org]
-* **Repo:** \[github.com/yourorg/CiceroXCubiespot]
+* **Author:** Rizqo Febryan Prastyo
+* **Repo:** [github.com/cicero78M/Cicero\_V2](https://github.com/cicero78M/Cicero_V2)
 * **WA Bot Lib:** [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
 * **Crypto:** [crypto-js](https://github.com/brix/crypto-js)
 * **Database:** PostgreSQL (rekomendasi latest)
