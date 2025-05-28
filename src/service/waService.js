@@ -6,8 +6,8 @@ import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 import { migrateUsersFromFolder } from './userMigrationService.js';
 import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
-
 import { getInstaFilledUsersByClient } from './userService.js'; // Pastikan path sudah benar
+import { getInstaEmptyUsersByClient } from './service/userService.js'; // Pastikan path benar
 
 
 const waClient = new Client({
@@ -61,6 +61,51 @@ function formatClientData(obj, title = '') {
 waClient.on('message', async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
+
+// === REQUEST ABSENSI USER YANG BELUM ISI INSTA ===
+if (text.toLowerCase().startsWith('requestinsta#')) {
+  const [, client_id, status] = text.split('#');
+  if (!client_id || (status !== 'sudah' && status !== 'belum')) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: requestinsta#clientid#sudah atau requestinsta#clientid#belum');
+    return;
+  }
+
+  if (status === 'belum') {
+    try {
+      const users = await getInstaEmptyUsersByClient(client_id);
+
+      if (!users || users.length === 0) {
+        await waClient.sendMessage(chatId, `Semua user dari client *${client_id}* sudah mengisi data Instagram!`);
+        return;
+      }
+
+      // Kelompokkan per divisi
+      const perDivisi = {};
+      users.forEach(u => {
+        if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+        perDivisi[u.divisi].push(u);
+      });
+
+      // Compose pesan
+      let reply = `📋 *Rekap User yang BELUM mengisi Instagram*\n*Client*: ${client_id}\n`;
+      Object.entries(perDivisi).forEach(([divisi, list]) => {
+        reply += `\n*${divisi}* (${list.length} user):\n`;
+        list.forEach(u => {
+          reply += `- ${u.title ? u.title + ' ' : ''}${u.nama}\n`;
+        });
+      });
+      reply += `\nTotal user: *${users.length}*`;
+
+      await waClient.sendMessage(chatId, reply);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
+    }
+    return;
+  }
+
+  // Handler "sudah" tetap gunakan kode sebelumnya (yang sudah Anda miliki!)
+}
+
 
 // === requestinsta#clientid#sudah ===
   if (text.toLowerCase().startsWith('requestinsta#')) {
