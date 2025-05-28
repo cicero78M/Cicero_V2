@@ -46,3 +46,19 @@ export async function getTiktokEmptyUsersByClient(clientId) {
   );
   return result.rows;
 }
+
+
+export async function findUserById(user_id) {
+  const { rows } = await pool.query('SELECT * FROM "user" WHERE user_id=$1', [user_id]);
+  return rows[0];
+}
+
+export async function updateUserField(user_id, field, value) {
+  const allowed = ['insta', 'tiktok', 'whatsapp'];
+  if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok/whatsapp yang bisa diupdate');
+  const { rows } = await pool.query(
+    `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
+    [value, user_id]
+  );
+  return rows[0];
+}
