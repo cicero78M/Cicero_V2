@@ -22,3 +22,27 @@ export async function getInstaEmptyUsersByClient(clientId) {
   );
   return result.rows;
 }
+
+// Ambil user yang SUDAH mengisi tiktok (status true)
+export async function getTiktokFilledUsersByClient(clientId) {
+  const result = await pool.query(
+    `SELECT divisi, nama, user_id, title, tiktok
+     FROM "user"
+     WHERE client_id = $1 AND tiktok IS NOT NULL AND tiktok <> '' AND status = true
+     ORDER BY divisi, nama`,
+    [clientId]
+  );
+  return result.rows;
+}
+
+// Ambil user yang BELUM mengisi tiktok (status true)
+export async function getTiktokEmptyUsersByClient(clientId) {
+  const result = await pool.query(
+    `SELECT divisi, nama, user_id, title
+     FROM "user"
+     WHERE client_id = $1 AND (tiktok IS NULL OR tiktok = '') AND status = true
+     ORDER BY divisi, nama`,
+    [clientId]
+  );
+  return result.rows;
+}

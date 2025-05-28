@@ -8,6 +8,12 @@ import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import { getInstaFilledUsersByClient } from './userService.js'; // Pastikan path sudah benar
 import { getInstaEmptyUsersByClient } from './userService.js'; // Pastikan path benar
+import {
+  getTiktokFilledUsersByClient,
+  getTiktokEmptyUsersByClient
+} from './userService.js';
+
+
 
 
 const waClient = new Client({
@@ -61,6 +67,74 @@ function formatClientData(obj, title = '') {
 waClient.on('message', async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
+
+  // === REQUEST ABSENSI TIKTOK ===
+if (text.toLowerCase().startsWith('requesttiktok#')) {
+  const [, client_id, status] = text.split('#');
+  if (!client_id || (status !== 'sudah' && status !== 'belum')) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: requesttiktok#clientid#sudah atau requesttiktok#clientid#belum');
+    return;
+  }
+
+  // SUDAH MENGISI TIKTOK
+  if (status === 'sudah') {
+    try {
+      const users = await getTiktokFilledUsersByClient(client_id);
+      if (!users || users.length === 0) {
+        await waClient.sendMessage(chatId, `Tidak ada user dari client *${client_id}* yang sudah mengisi data TikTok.`);
+        return;
+      }
+      // Kelompokkan per divisi
+      const perDivisi = {};
+      users.forEach(u => {
+        if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+        perDivisi[u.divisi].push(u);
+      });
+
+      let reply = `📋 *Rekap User yang sudah mengisi TikTok*\n*Client*: ${client_id}\n`;
+      Object.entries(perDivisi).forEach(([divisi, list]) => {
+        reply += `\n*${divisi}* (${list.length} user):\n`;
+        list.forEach(u => {
+          reply += `- ${u.title ? u.title + ' ' : ''}${u.nama} : ${u.tiktok}\n`;
+        });
+      });
+      reply += `\nTotal user: *${users.length}*`;
+      await waClient.sendMessage(chatId, reply);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
+    }
+    return;
+  }
+
+  // BELUM MENGISI TIKTOK
+  if (status === 'belum') {
+    try {
+      const users = await getTiktokEmptyUsersByClient(client_id);
+      if (!users || users.length === 0) {
+        await waClient.sendMessage(chatId, `Semua user dari client *${client_id}* sudah mengisi data TikTok!`);
+        return;
+      }
+      const perDivisi = {};
+      users.forEach(u => {
+        if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+        perDivisi[u.divisi].push(u);
+      });
+
+      let reply = `📋 *Rekap User yang BELUM mengisi TikTok*\n*Client*: ${client_id}\n`;
+      Object.entries(perDivisi).forEach(([divisi, list]) => {
+        reply += `\n*${divisi}* (${list.length} user):\n`;
+        list.forEach(u => {
+          reply += `- ${u.title ? u.title + ' ' : ''}${u.nama}\n`;
+        });
+      });
+      reply += `\nTotal user: *${users.length}*`;
+      await waClient.sendMessage(chatId, reply);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
+    }
+    return;
+  }
+}
 
 // === REQUEST ABSENSI USER YANG BELUM ISI INSTA ===
 if (text.toLowerCase().startsWith('requestinsta#')) {
