@@ -638,9 +638,10 @@ if (text.toLowerCase().startsWith('mydata#')) {
   try {
     const user = await userService.findUserById(user_id);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`);
       return;
     }
+    // Nomor pengirim WA (hanya angka)
     let pengirim = chatId.replace(/[^0-9]/g, '');
 
     // Jika whatsapp masih null/kosong, binding ke nomor ini
@@ -649,25 +650,43 @@ if (text.toLowerCase().startsWith('mydata#')) {
       user.whatsapp = pengirim;
     }
 
-    // Jika whatsapp sudah ada, hanya yang cocok yang bisa akses
+    // Jika whatsapp sudah ada, hanya nomor ini yang bisa akses
     if (user.whatsapp !== pengirim) {
       await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data.');
       return;
     }
 
-    // Compose data (tanpa field exception)
-    let msgText = `📋 *Data Anda (${user_id}):*\n`;
+    // Mapping nama tampilan
+    const fieldMap = {
+      user_id: 'NRP/NIP',
+      nama: 'Nama',
+      title: 'Pangkat',
+      divisi: 'Satfung',
+      jabatan: 'Jabatan',
+      status: 'Status',
+      whatsapp: 'WhatsApp',
+      insta: 'Instagram',
+      tiktok: 'TikTok',
+      client_id: 'POLRES'
+    };
+
+    // Urutan output
     const order = [
       'user_id', 'nama', 'title', 'divisi', 'jabatan', 'status', 'whatsapp', 'insta', 'tiktok', 'client_id'
     ];
+
+    // Compose pesan (tanpa field exception)
+    let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
     order.forEach(k => {
       if (k === 'exception') return;
       if (user[k] !== undefined && user[k] !== null) {
         let val = user[k];
+        // Label mapping
+        let label = fieldMap[k] || k;
         if (k === 'status') {
           val = (val === true || val === 'true') ? 'AKTIF' : 'AKUN DIHAPUS';
         }
-        msgText += `*${k}*: ${val}\n`;
+        msgText += `*${label}*: ${val}\n`;
       }
     });
     await waClient.sendMessage(chatId, msgText);
@@ -676,6 +695,7 @@ if (text.toLowerCase().startsWith('mydata#')) {
   }
   return;
 }
+
 
 
 });
