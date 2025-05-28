@@ -4,8 +4,8 @@ import qrcode from 'qrcode-terminal';
 import * as clientService from './clientService.js'; // Ubah path jika perlu
 import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 import { migrateUsersFromFolder } from './userMigrationService.js';
-import { checkGoogleSheetCsvStatus } from './service/checkGoogleSheetAccess.js';
-import { importUsersFromGoogleSheet } from './service/importUsersFromGoogleSheet.js';
+import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
+import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 
 const waClient = new Client({
   authStrategy: new LocalAuth(),
