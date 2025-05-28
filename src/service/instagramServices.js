@@ -1,5 +1,3 @@
-// src/service/instagramService.js
-
 import pool from '../config/db.js';
 import https from 'https';
 

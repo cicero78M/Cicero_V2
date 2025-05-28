@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import clientModel from '../model/clientModel.js';
-import { savePosts, fetchInstagramPosts } from '../service/instagramService.js';
+import { savePosts, fetchInstagramPosts } from '../service/instagramServices.js';
 import { sendWa } from '../service/waService.js';
 import dotenv from 'dotenv';
 dotenv.config();
