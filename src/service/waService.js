@@ -4,7 +4,8 @@ import qrcode from 'qrcode-terminal';
 import * as clientService from './clientService.js'; // Ubah path jika perlu
 import { getTiktokSecUid } from './tiktokService.js'; // Pastikan ada fungsi ini
 import { migrateUsersFromFolder } from './userMigrationService.js';
-import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
+import { checkGoogleSheetCsvStatus } from './service/checkGoogleSheetAccess.js';
+import { importUsersFromGoogleSheet } from './service/importUsersFromGoogleSheet.js';
 
 const waClient = new Client({
   authStrategy: new LocalAuth(),
@@ -59,27 +60,33 @@ waClient.on('message', async (msg) => {
   const text = msg.body.trim();
 
   // ===MIGRASI USER DARI GOOGLE SHEET===
-  if (text.toLowerCase().startsWith('sheettransfer#')) {
-    const [, client_id, ...linkParts] = text.split('#');
-    const sheetUrl = linkParts.join('#').trim();
-    if (!client_id || !sheetUrl) {
-      await waClient.sendMessage(chatId, 'Format: sheettransfer#clientid#link_google_sheet');
-      return;
-    }
-    await waClient.sendMessage(chatId, `⏳ Mengambil & migrasi data dari Google Sheet...`);
-    try {
-      const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
-      let report = `*Hasil import user ke client ${client_id}:*\n`;
-      result.forEach(r => {
-        report += `- ${r.user_id}: ${r.status}${r.error ? ' (' + r.error + ')' : ''}\n`;
-      });
-      await waClient.sendMessage(chatId, report);
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
-    }
+if (text.toLowerCase().startsWith('sheettransfer#')) {
+  const [, client_id, ...linkParts] = text.split('#');
+  const sheetUrl = linkParts.join('#').trim();
+  if (!client_id || !sheetUrl) {
+    await waClient.sendMessage(chatId, 'Format: sheettransfer#clientid#link_google_sheet');
+    return;
+  }
+  // === CEK SHEET CSV DULU ===
+  const check = await checkGoogleSheetCsvStatus(sheetUrl);
+  if (!check.ok) {
+    await waClient.sendMessage(chatId, `❌ Sheet tidak bisa diakses:\n${check.reason}`);
     return;
   }
 
+  await waClient.sendMessage(chatId, `⏳ Mengambil & migrasi data dari Google Sheet...`);
+  try {
+    const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
+    let report = `*Hasil import user ke client ${client_id}:*\n`;
+    result.forEach(r => {
+      report += `- ${r.user_id}: ${r.status}${r.error ? ' (' + r.error + ')' : ''}\n`;
+    });
+    await waClient.sendMessage(chatId, report);
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
+  }
+  return;
+}
 
   // === UPDATE client_group DARI GROUP ===
   if (text.toLowerCase().startsWith('thisgroup#')) {
