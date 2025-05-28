@@ -629,6 +629,55 @@ if (text.toLowerCase().startsWith('updateuser#')) {
   return;
 }
 
+if (text.toLowerCase().startsWith('mydata#')) {
+  const [, user_id] = text.split('#');
+  if (!user_id) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: mydata#user_id');
+    return;
+  }
+  try {
+    const user = await userService.findUserById(user_id);
+    if (!user) {
+      await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan.`);
+      return;
+    }
+    let pengirim = chatId.replace(/[^0-9]/g, '');
+
+    // Jika whatsapp masih null/kosong, binding ke nomor ini
+    if (!user.whatsapp || user.whatsapp === '') {
+      await userService.updateUserField(user_id, 'whatsapp', pengirim);
+      user.whatsapp = pengirim;
+    }
+
+    // Jika whatsapp sudah ada, hanya yang cocok yang bisa akses
+    if (user.whatsapp !== pengirim) {
+      await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data.');
+      return;
+    }
+
+    // Compose data (tanpa field exception)
+    let msgText = `📋 *Data Anda (${user_id}):*\n`;
+    const order = [
+      'user_id', 'nama', 'title', 'divisi', 'jabatan', 'status', 'whatsapp', 'insta', 'tiktok', 'client_id'
+    ];
+    order.forEach(k => {
+      if (k === 'exception') return;
+      if (user[k] !== undefined && user[k] !== null) {
+        let val = user[k];
+        if (k === 'status') {
+          val = (val === true || val === 'true') ? 'AKTIF' : 'AKUN DIHAPUS';
+        }
+        msgText += `*${k}*: ${val}\n`;
+      }
+    });
+    await waClient.sendMessage(chatId, msgText);
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
+  }
+  return;
+}
+
+
 });
 
 // Helper untuk format nomor ke WhatsApp ID
