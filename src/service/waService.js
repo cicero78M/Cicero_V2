@@ -518,6 +518,45 @@ waClient.on('message', async (msg) => {
     return;
   }
 
+  if (text.toLowerCase() === 'userrequest') {
+  const menu = `
+📝 *User Request Commands:*
+
+1. *mydata#NRP/NIP*
+   - Melihat data user Anda sendiri (dengan penamaan sesuai POLRI: NRP/NIP, pangkat, satfung, jabatan, status).
+   - Hanya dapat diakses oleh nomor WhatsApp yang terdaftar (otomatis bind jika masih kosong).
+
+2. *updateuser#NRP/NIP#field#value*
+   - Mengubah data user.
+   - Field yang bisa diubah (hanya untuk user sendiri):
+     - *nama*           : update nama user.
+     - *pangkat*        : update pangkat (hanya bisa pilih dari list yang valid di database).
+     - *satfung*        : update satfung (hanya bisa pilih dari list yang valid di database & POLRES yang sama).
+     - *jabatan*        : update jabatan.
+     - *insta*          : update/isi profil Instagram, format: https://www.instagram.com/username
+     - *tiktok*         : update/isi profil TikTok, format: https://www.tiktok.com/@username
+     - *whatsapp*       : binding atau update nomor WhatsApp user (hanya satu user per nomor WA, otomatis bind jika null).
+   - Contoh:
+     - updateuser#75070206#pangkat#AKP
+     - updateuser#75070206#satfung#BAGOPS
+     - updateuser#75070206#jabatan#KABAGOPS
+     - updateuser#75070206#insta#https://www.instagram.com/edi.suyono
+     - updateuser#75070206#tiktok#https://www.tiktok.com/@edisuyono
+     - updateuser#75070206#whatsapp#6281234567890
+
+*Catatan:*
+- Untuk update pangkat atau satfung hanya bisa memilih dari list yang valid. Jika salah akan dikirimkan daftar yang bisa digunakan.
+- Nomor WhatsApp hanya boleh digunakan pada satu user (tidak bisa dipakai di dua user berbeda).
+- Untuk update profil Instagram/TikTok, masukkan *link profil* (sistem otomatis mengambil username dari link).
+- Semua perubahan hanya bisa dilakukan oleh user dengan nomor WhatsApp yang sudah terdaftar pada user tersebut. Jika nomor WA masih kosong, akan otomatis bind ke nomor pengirim pertama.
+
+3. *userrequest*
+   - Menampilkan menu bantuan user ini.
+
+`;
+  await waClient.sendMessage(chatId, menu);
+  return;
+}
 
 // === UPDATE USER: NAMA, PANGKAT, SATFUNG, JABATAN ===
 if (text.toLowerCase().startsWith('updateuser#')) {
