@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { pool } from '../config/db.js';
 import csv from 'csv-parser'; // npm install csv-parser
 
