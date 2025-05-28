@@ -519,115 +519,109 @@ waClient.on('message', async (msg) => {
   }
 
 
-  // === UPDATEUSER: Field IG, TIKTOK, WA (open untuk user, sesuai logika validasi) ===
+// === UPDATE USER: NAMA, PANGKAT, SATFUNG, JABATAN ===
 if (text.toLowerCase().startsWith('updateuser#')) {
   const parts = text.split('#');
   if (parts.length !== 4) {
-    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateuser#user_id#field#link_profile');
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateuser#user_id#field#value');
     return;
   }
-  const [, user_id, field, rawValue] = parts;
-  const allowed = ['insta', 'tiktok', 'whatsapp'];
-  if (!allowed.includes(field)) {
-    await waClient.sendMessage(chatId, '❌ Field hanya bisa: insta, tiktok, whatsapp');
-    return;
-  }
+  const [, user_id, field, valueRaw] = parts;
+  const allowedFields = ['nama', 'title', 'pangkat', 'divisi', 'satfung', 'jabatan', 'insta', 'tiktok', 'whatsapp'];
+  let fieldNorm = field.toLowerCase();
+  // Normalisasi: 'pangkat' -> 'title', 'satfung' -> 'divisi'
+  if (fieldNorm === 'pangkat') fieldNorm = 'title';
+  if (fieldNorm === 'satfung') fieldNorm = 'divisi';
 
-  try {
-    // Cari data user utama
-    const user = await userService.findUserById(user_id);
-    if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan`);
+  if (!allowedFields.includes(fieldNorm)) {
+    await waClient.sendMessage(chatId, '❌ Field hanya bisa: nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp');
+    return;
+  }
+  // Cek user
+  const user = await userService.findUserById(user_id);
+  if (!user) {
+    await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan`);
+    return;
+  }
+  // Cek nomor WA: binding jika masih null, kalau sudah harus sama dengan pengirim
+  const pengirim = chatId.replace(/[^0-9]/g, '');
+  if (!user.whatsapp || user.whatsapp === '') {
+    await userService.updateUserField(user_id, 'whatsapp', pengirim);
+    user.whatsapp = pengirim;
+  }
+  if (user.whatsapp !== pengirim) {
+    await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengubah data.');
+    return;
+  }
+  let value = valueRaw.trim();
+
+  // 1. Pangkat/title: harus cocok salah satu di DB (distinct, case-insensitive)
+  if (fieldNorm === 'title') {
+    const allTitles = await userService.getDistinctUserTitles();
+    const valid = allTitles.map(t => t && t.trim().toLowerCase()).filter(Boolean);
+    if (!valid.includes(value.toLowerCase())) {
+      let msg = '❌ Pangkat tidak valid. List pangkat yang bisa digunakan:\n';
+      msg += allTitles.map(t => '- ' + t).join('\n');
+      await waClient.sendMessage(chatId, msg);
       return;
     }
-
-    // Nomor pengirim WA
-    let pengirim = chatId.replace(/[^0-9]/g, '');
-
-    // === ANTI DUPLIKASI WA
-    if (field === 'whatsapp') {
-      const waInUse = await userService.findUserByWhatsApp(pengirim);
-      if (waInUse && waInUse.user_id !== user_id) {
-        await waClient.sendMessage(chatId, '❌ Nomor WhatsApp ini sudah terdaftar pada user lain dan tidak bisa digunakan lagi.');
-        return;
-      }
-      // Hanya pemilik lama/belum terisi yang boleh update
-      if (user.whatsapp && user.whatsapp !== pengirim) {
-        await waClient.sendMessage(chatId, `❌ WhatsApp hanya bisa diubah oleh nomor ${user.whatsapp}`);
-        return;
-      }
+  }
+  // 2. Satfung/divisi: harus ada pada client_id ini
+  if (fieldNorm === 'divisi') {
+    const allDiv = await userService.getDistinctUserDivisions(user.client_id);
+    const valid = allDiv.map(d => d && d.trim().toLowerCase()).filter(Boolean);
+    if (!valid.includes(value.toLowerCase())) {
+      let msg = `❌ Satfung tidak valid untuk POLRES ${user.client_id}. List satfung yang bisa digunakan:\n`;
+      msg += allDiv.map(d => '- ' + d).join('\n');
+      await waClient.sendMessage(chatId, msg);
+      return;
     }
+  }
 
-    // === ANTI DUPLIKASI INSTA
-    let value = rawValue.trim();
-    if (field === 'insta') {
+  // 3. Cek duplikasi username insta/tiktok (jika update field insta/tiktok)
+  if (fieldNorm === 'insta' || fieldNorm === 'tiktok') {
+    // Bisa gunakan validasi dan parsing seperti sebelumnya (cek duplikat)
+    const exists = await userService.findUserByField(fieldNorm, value);
+    if (exists && exists.user_id !== user_id) {
+      await waClient.sendMessage(chatId, `❌ Username ${fieldNorm === 'insta' ? 'Instagram' : 'TikTok'} ini sudah digunakan user lain.`);
+      return;
+    }
+    // Validasi format jika ingin ketat (contoh, pakai regex profile IG/tiktok)
+    if (fieldNorm === 'insta') {
       const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(\/)?(\?|$)/i);
       if (!igMatch) {
         await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil Instagram*, contoh: https://www.instagram.com/username');
         return;
       }
-      value = igMatch[2];
-      const instaDupe = await userService.findUserByInsta(value);
-      if (instaDupe && instaDupe.user_id !== user_id) {
-        await waClient.sendMessage(chatId, `❌ Username Instagram *${value}* sudah terdaftar pada user lain.`);
-        return;
-      }
-      // Hanya pemilik WA atau yang belum ada WA yang boleh update
-      if (user.whatsapp && user.whatsapp !== pengirim) {
-        await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar di user ini yang boleh mengubah data.');
-        return;
-      }
+      value = igMatch[2]; // hanya username
     }
-
-    // === ANTI DUPLIKASI TIKTOK
-    if (field === 'tiktok') {
+    if (fieldNorm === 'tiktok') {
       const ttMatch = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)(\/)?(\?|$)/i);
       if (!ttMatch) {
         await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil TikTok*, contoh: https://www.tiktok.com/@username');
         return;
       }
-      value = '@' + ttMatch[2];
-      const tiktokDupe = await userService.findUserByTiktok(value);
-      if (tiktokDupe && tiktokDupe.user_id !== user_id) {
-        await waClient.sendMessage(chatId, `❌ Username TikTok *${value}* sudah terdaftar pada user lain.`);
-        return;
-      }
-      // Hanya pemilik WA atau yang belum ada WA yang boleh update
-      if (user.whatsapp && user.whatsapp !== pengirim) {
-        await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar di user ini yang boleh mengubah data.');
-        return;
-      }
+      value = '@' + ttMatch[2]; // hanya username (dengan @)
     }
-
-    // === AUTO UPDATE WA saat update insta/tiktok dan belum ada WA
-    let updateObj = {};
-    updateObj[field] = value;
-    if ((field === 'insta' || field === 'tiktok') && (!user.whatsapp || user.whatsapp === '')) {
-      // Cek duplikasi WA (lagi) sebelum auto assign!
-      const waInUse = await userService.findUserByWhatsApp(pengirim);
-      if (waInUse && waInUse.user_id !== user_id) {
-        await waClient.sendMessage(chatId, '❌ Nomor WhatsApp ini sudah terdaftar pada user lain dan tidak bisa digunakan untuk user ini.');
-        return;
-      }
-      updateObj['whatsapp'] = pengirim;
-    }
-
-    // Update database
-    for (const k in updateObj) {
-      await userService.updateUserField(user_id, k, updateObj[k]);
-    }
-
-    let successText = `✅ Data user ${user_id} berhasil diupdate!\n*${field}*: ${value}`;
-    if (updateObj['whatsapp'] && field !== 'whatsapp') {
-      successText += `\n*whatsapp*: ${pengirim}`;
-    }
-    await waClient.sendMessage(chatId, successText);
-
-  } catch (err) {
-    await waClient.sendMessage(chatId, `❌ Gagal update: ${err.message}`);
   }
+
+  // 4. Cek WhatsApp unik (hanya boleh satu user)
+  if (fieldNorm === 'whatsapp') {
+    const waInUse = await userService.findUserByWhatsApp(value);
+    if (waInUse && waInUse.user_id !== user_id) {
+      await waClient.sendMessage(chatId, '❌ Nomor WhatsApp ini sudah terdaftar pada user lain.');
+      return;
+    }
+    value = value.replace(/[^0-9]/g, '');
+  }
+
+  // 5. Update field
+  await userService.updateUserField(user_id, fieldNorm, value);
+
+  await waClient.sendMessage(chatId, `✅ Data ${fieldNorm === 'title' ? 'pangkat' : fieldNorm === 'divisi' ? 'satfung' : fieldNorm} untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`);
   return;
 }
+
 
 if (text.toLowerCase().startsWith('mydata#')) {
   const [, user_id] = text.split('#');

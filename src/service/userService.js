@@ -80,3 +80,21 @@ export async function findUserByTiktok(username) {
   const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [username]);
   return result.rows[0];
 }
+
+// Ambil semua pangkat/title unik (distinct)
+export async function getDistinctUserTitles() {
+  const { rows } = await pool.query('SELECT DISTINCT title FROM "user" WHERE title IS NOT NULL AND title <> \'\' ORDER BY title');
+  return rows.map(r => r.title);
+}
+
+// Ambil semua divisi unik untuk client_id tertentu
+export async function getDistinctUserDivisions(client_id) {
+  const { rows } = await pool.query('SELECT DISTINCT divisi FROM "user" WHERE client_id = $1 AND divisi IS NOT NULL AND divisi <> \'\' ORDER BY divisi', [client_id]);
+  return rows.map(r => r.divisi);
+}
+
+// Cek duplikat insta/tiktok
+export async function findUserByField(field, value) {
+  const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [value]);
+  return rows[0];
+}
