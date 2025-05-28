@@ -520,84 +520,115 @@ waClient.on('message', async (msg) => {
 
 
   // === UPDATEUSER: Field IG, TIKTOK, WA (open untuk user, sesuai logika validasi) ===
-  if (text.toLowerCase().startsWith('updateuser#')) {
-    const parts = text.split('#');
-    if (parts.length !== 4) {
-      await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateuser#user_id#field#link_profile');
-      return;
-    }
-    const [, user_id, field, rawValue] = parts;
-    const allowed = ['insta', 'tiktok', 'whatsapp'];
-    if (!allowed.includes(field)) {
-      await waClient.sendMessage(chatId, '❌ Field hanya bisa: insta, tiktok, whatsapp');
-      return;
-    }
-
-    try {
-      const user = await userService.findUserById(user_id);
-      if (!user) {
-        await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan`);
-        return;
-      }
-      let pengirim = chatId.replace(/[^0-9]/g, '');
-
-      if (field === 'whatsapp') {
-        if (user.whatsapp && user.whatsapp !== pengirim) {
-          await waClient.sendMessage(chatId, `❌ WhatsApp hanya bisa diubah oleh nomor ${user.whatsapp}`);
-          return;
-        }
-        if (!user.whatsapp && pengirim !== rawValue.replace(/[^0-9]/g, '')) {
-          await waClient.sendMessage(chatId, '❌ Data WhatsApp hanya bisa diisi oleh nomor yang sama dengan pengirim.');
-          return;
-        }
-      } else {
-        if (user.whatsapp && user.whatsapp !== pengirim) {
-          await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar di user ini yang boleh mengubah data.');
-          return;
-        }
-      }
-
-      let value = rawValue.trim();
-      if (field === 'insta') {
-        const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(\/)?(\?|$)/i);
-        if (!igMatch) {
-          await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil Instagram*, contoh: https://www.instagram.com/username');
-          return;
-        }
-        value = igMatch[2];
-      }
-      if (field === 'tiktok') {
-        const ttMatch = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)(\/)?(\?|$)/i);
-        if (!ttMatch) {
-          await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil TikTok*, contoh: https://www.tiktok.com/@username');
-          return;
-        }
-        value = '@' + ttMatch[2];
-      }
-      if (field === 'whatsapp') {
-        value = value.replace(/[^0-9]/g, '');
-      }
-
-      let updateObj = {};
-      updateObj[field] = value;
-      if ((field === 'insta' || field === 'tiktok') && (!user.whatsapp || user.whatsapp === '')) {
-        updateObj['whatsapp'] = pengirim;
-      }
-
-      await userService.updateUserField(user_id, field, value);
-      if (updateObj['whatsapp'] && field !== 'whatsapp') {
-        await userService.updateUserField(user_id, 'whatsapp', pengirim);
-      }
-
-      await waClient.sendMessage(
-        chatId,
-        `✅ Data user ${user_id} berhasil diupdate!\n*${field}*: ${value}${updateObj['whatsapp'] ? `\n*whatsapp*: ${pengirim}` : ''}`
-      );
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal update: ${err.message}`);
-    }
+if (text.toLowerCase().startsWith('updateuser#')) {
+  const parts = text.split('#');
+  if (parts.length !== 4) {
+    await waClient.sendMessage(chatId, 'Format salah!\nGunakan: updateuser#user_id#field#link_profile');
     return;
   }
+  const [, user_id, field, rawValue] = parts;
+  const allowed = ['insta', 'tiktok', 'whatsapp'];
+  if (!allowed.includes(field)) {
+    await waClient.sendMessage(chatId, '❌ Field hanya bisa: insta, tiktok, whatsapp');
+    return;
+  }
+
+  try {
+    // Cari data user utama
+    const user = await userService.findUserById(user_id);
+    if (!user) {
+      await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan`);
+      return;
+    }
+
+    // Nomor pengirim WA
+    let pengirim = chatId.replace(/[^0-9]/g, '');
+
+    // === ANTI DUPLIKASI WA
+    if (field === 'whatsapp') {
+      const waInUse = await userService.findUserByWhatsApp(pengirim);
+      if (waInUse && waInUse.user_id !== user_id) {
+        await waClient.sendMessage(chatId, '❌ Nomor WhatsApp ini sudah terdaftar pada user lain dan tidak bisa digunakan lagi.');
+        return;
+      }
+      // Hanya pemilik lama/belum terisi yang boleh update
+      if (user.whatsapp && user.whatsapp !== pengirim) {
+        await waClient.sendMessage(chatId, `❌ WhatsApp hanya bisa diubah oleh nomor ${user.whatsapp}`);
+        return;
+      }
+    }
+
+    // === ANTI DUPLIKASI INSTA
+    let value = rawValue.trim();
+    if (field === 'insta') {
+      const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(\/)?(\?|$)/i);
+      if (!igMatch) {
+        await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil Instagram*, contoh: https://www.instagram.com/username');
+        return;
+      }
+      value = igMatch[2];
+      const instaDupe = await userService.findUserByInsta(value);
+      if (instaDupe && instaDupe.user_id !== user_id) {
+        await waClient.sendMessage(chatId, `❌ Username Instagram *${value}* sudah terdaftar pada user lain.`);
+        return;
+      }
+      // Hanya pemilik WA atau yang belum ada WA yang boleh update
+      if (user.whatsapp && user.whatsapp !== pengirim) {
+        await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar di user ini yang boleh mengubah data.');
+        return;
+      }
+    }
+
+    // === ANTI DUPLIKASI TIKTOK
+    if (field === 'tiktok') {
+      const ttMatch = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)(\/)?(\?|$)/i);
+      if (!ttMatch) {
+        await waClient.sendMessage(chatId, '❌ Format salah! Masukkan *link profil TikTok*, contoh: https://www.tiktok.com/@username');
+        return;
+      }
+      value = '@' + ttMatch[2];
+      const tiktokDupe = await userService.findUserByTiktok(value);
+      if (tiktokDupe && tiktokDupe.user_id !== user_id) {
+        await waClient.sendMessage(chatId, `❌ Username TikTok *${value}* sudah terdaftar pada user lain.`);
+        return;
+      }
+      // Hanya pemilik WA atau yang belum ada WA yang boleh update
+      if (user.whatsapp && user.whatsapp !== pengirim) {
+        await waClient.sendMessage(chatId, '❌ Hanya WhatsApp yang terdaftar di user ini yang boleh mengubah data.');
+        return;
+      }
+    }
+
+    // === AUTO UPDATE WA saat update insta/tiktok dan belum ada WA
+    let updateObj = {};
+    updateObj[field] = value;
+    if ((field === 'insta' || field === 'tiktok') && (!user.whatsapp || user.whatsapp === '')) {
+      // Cek duplikasi WA (lagi) sebelum auto assign!
+      const waInUse = await userService.findUserByWhatsApp(pengirim);
+      if (waInUse && waInUse.user_id !== user_id) {
+        await waClient.sendMessage(chatId, '❌ Nomor WhatsApp ini sudah terdaftar pada user lain dan tidak bisa digunakan untuk user ini.');
+        return;
+      }
+      updateObj['whatsapp'] = pengirim;
+    }
+
+    // Update database
+    for (const k in updateObj) {
+      await userService.updateUserField(user_id, k, updateObj[k]);
+    }
+
+    let successText = `✅ Data user ${user_id} berhasil diupdate!\n*${field}*: ${value}`;
+    if (updateObj['whatsapp'] && field !== 'whatsapp') {
+      successText += `\n*whatsapp*: ${pengirim}`;
+    }
+    await waClient.sendMessage(chatId, successText);
+
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal update: ${err.message}`);
+  }
+  return;
+}
+
 });
 
 // Helper untuk format nomor ke WhatsApp ID

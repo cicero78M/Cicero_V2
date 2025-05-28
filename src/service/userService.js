@@ -62,3 +62,21 @@ export async function updateUserField(user_id, field, value) {
   );
   return rows[0];
 }
+
+export async function findUserByWhatsApp(wa) {
+  if (!wa) return null;
+  const result = await pool.query('SELECT * FROM "user" WHERE whatsapp = $1', [wa]);
+  return result.rows[0];
+}
+
+export async function findUserByInsta(username) {
+  if (!username) return null;
+  const result = await pool.query('SELECT * FROM "user" WHERE insta = $1', [username]);
+  return result.rows[0];
+}
+
+export async function findUserByTiktok(username) {
+  if (!username) return null;
+  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [username]);
+  return result.rows[0];
+}
