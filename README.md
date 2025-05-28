@@ -251,3 +251,5 @@ Open Source - feel free to fork and contribute!
 ---
 
 *Silakan modifikasi sesuai kebutuhan, atau kontak developer utama untuk integrasi/feature request!*
+
+*CICERO : Solus Sed Invictus*
