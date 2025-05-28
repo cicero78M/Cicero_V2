@@ -1,4 +1,4 @@
-# CICERO_V2 WhatsApp Bot System
+# CiceroXCubiespot WhatsApp Bot System
 
 Sistem WA bot untuk manajemen data client organisasi,
 sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON ke PostgreSQL),
@@ -10,10 +10,11 @@ Struktur modular, mudah di-maintain dan scalable.
 ## **Fitur Utama**
 
 * CRUD data client (via WhatsApp command)
-* CRUD dan migrasi user per client (file JSON ke database)
+* CRUD dan migrasi user per client (file JSON ke database, Google Spreadsheet ke database)
 * Semua data terenkripsi (AES), dekripsi otomatis
 * Integrasi TikTok secUid via RapidAPI
 * Notifikasi otomatis ke nomor operator/client\_super
+* Absensi user per client (INSTAGRAM & TIKTOK, sudah/belum) langsung via WhatsApp
 * Semua fitur via WhatsApp Web Bot (wweb.js)
 * Database PostgreSQL dengan struktur table modular
 * Error handling & padding data otomatis
@@ -23,7 +24,7 @@ Struktur modular, mudah di-maintain dan scalable.
 ## **Struktur Project**
 
 ```
-CICERO_V2/
+CiceroXCubiespot/
 ├── src/
 │   ├── config/
 │   │   └── db.js                  # Koneksi PostgreSQL
@@ -35,6 +36,7 @@ CICERO_V2/
 │   │   ├── waService.js           # Handler utama WA Bot & logic command
 │   │   ├── clientService.js       # Logic data client (CRUD)
 │   │   ├── userMigrationService.js# Migrasi user JSON terenkripsi ke DB
+│   │   ├── importUsersFromGoogleSheet.js # Migrasi user dari Google Sheet
 │   │   └── tiktokService.js       # Ambil secUid TikTok via API
 │   ├── util/
 │   │   └── crypt.js               # Encrypt/decrypt data (CryptoJS, passphrase)
@@ -58,7 +60,7 @@ PGUSER=your_db_user
 PGPASSWORD=your_db_password
 PGDATABASE=your_db_name
 PGHOST=localhost
-PGPORT=XXXX
+PGPORT=5432
 
 SECRET_KEY=passphrase_rahasia_anda
 RAPIDAPI_KEY=isi_key_rapidapi
@@ -116,14 +118,17 @@ CREATE TABLE "user" (
 * Validasi, update/insert ke DB, balas info ke pengirim & operator
 * Handler `clientrequest` untuk bantuan command
 * Handler `transferuser#clientid` untuk migrasi user (otomatis dari file JSON ke DB)
+* Handler `sheettransfer#clientid#link_google_sheet` untuk migrasi user dari Google Sheet
+* Handler absensi user per client (requestinsta#/requesttiktok#)
 
-### **B. Migrasi User (userMigrationService.js)**
+### **B. Migrasi User (userMigrationService.js & importUsersFromGoogleSheet.js)**
 
-* Baca semua file `.json` di folder `user_data/[CLIENT_ID]/`
+* Baca semua file `.json` di folder `user_data/[CLIENT_ID]/` atau download dari Google Sheet
 * Dekripsi semua field dengan `decrypt()` (CryptoJS, passphrase `.env`)
 * Field boolean (`status`, `exception`) otomatis false jika kosong/null, true/false case-insensitive
 * Field user\_id dipad ke 8 digit dengan nol di depan
 * Insert/update ke table user
+* Parsing Google Sheet: auto mapping berdasarkan header, header sheet tidak di-import
 
 ### **C. TikTok Service (tiktokService.js)**
 
@@ -139,16 +144,19 @@ CREATE TABLE "user" (
 
 ## **Contoh Command WhatsApp**
 
-| Fungsi               | Format Pesan WhatsApp                                    |
-| -------------------- | -------------------------------------------------------- |
-| Add client           | `addnewclient#clientid#clientname`                       |
-| Update data          | `updateclient#clientid#key#value`                        |
-| Update TikTok secUid | `updateclient#clientid#tiktok_secUid` (otomatis dari DB) |
-| Get client info      | `clientinfo#clientid`                                    |
-| Remove client        | `removeclient#clientid`                                  |
-| List request & key   | `clientrequest`                                          |
-| Migrasi user JSON    | `transferuser#clientid`                                  |
-| Set group client     | `thisgroup#clientid` (hanya dari group WA yang sama)     |
+| Fungsi               | Format Pesan WhatsApp                                           |
+| -------------------- | --------------------------------------------------------------- |
+| Add client           | `addnewclient#clientid#clientname`                              |
+| Update data          | `updateclient#clientid#key#value`                               |
+| Update TikTok secUid | `updateclient#clientid#tiktok_secUid` (otomatis dari DB)        |
+| Get client info      | `clientinfo#clientid`                                           |
+| Remove client        | `removeclient#clientid`                                         |
+| List request & key   | `clientrequest`                                                 |
+| Migrasi user JSON    | `transferuser#clientid`                                         |
+| Migrasi user Sheet   | `sheettransfer#clientid#link_google_sheet`                      |
+| Set group client     | `thisgroup#clientid` (hanya dari group WA yang sama)            |
+| Absensi IG           | `requestinsta#clientid#sudah` / `requestinsta#clientid#belum`   |
+| Absensi TikTok       | `requesttiktok#clientid#sudah` / `requesttiktok#clientid#belum` |
 
 #### **Penjelasan value boolean:**
 
@@ -188,10 +196,31 @@ CREATE TABLE "user" (
 
 ---
 
+## **Absensi User per Client (Instagram & TikTok)**
+
+### **Absensi Instagram**
+
+* `requestinsta#clientid#sudah` — menampilkan daftar user yang sudah mengisi data IG (status=true), per divisi.
+  Format: `- [title] [nama] : [insta]`
+* `requestinsta#clientid#belum` — menampilkan daftar user yang BELUM mengisi IG (status=true), per divisi.
+  Format: `- [title] [nama]`
+
+### **Absensi TikTok**
+
+* `requesttiktok#clientid#sudah` — menampilkan daftar user yang sudah mengisi data TikTok (status=true), per divisi.
+  Format: `- [title] [nama] : [tiktok]`
+
+* `requesttiktok#clientid#belum` — menampilkan daftar user yang BELUM mengisi TikTok (status=true), per divisi.
+  Format: `- [title] [nama]`
+
+* Semua data otomatis mengelompokkan per divisi & menampilkan total user per grup dan per client.
+
+---
+
 ## **Meta Data Pengembang**
 
-* **Author:** \[RIEZQO FEBRYAN / CICERO\]
-* **Repo:** \[github.com/cicero78M/Cicero_V2\]
+* **Author:** \[Your Name/Org]
+* **Repo:** \[github.com/yourorg/CiceroXCubiespot]
 * **WA Bot Lib:** [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
 * **Crypto:** [crypto-js](https://github.com/brix/crypto-js)
 * **Database:** PostgreSQL (rekomendasi latest)
@@ -213,3 +242,5 @@ CREATE TABLE "user" (
 Open Source - feel free to fork and contribute!
 
 ---
+
+*Silakan modifikasi sesuai kebutuhan, atau kontak developer utama untuk integrasi/feature request!*
