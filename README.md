@@ -124,6 +124,7 @@ CREATE TABLE "user" (
 * Handler `transferuser#clientid` untuk migrasi user (otomatis dari file JSON ke DB)
 * Handler `sheettransfer#clientid#link_google_sheet` untuk migrasi user dari Google Sheet
 * Handler absensi user per client (requestinsta#/requesttiktok#)
+* Handler update user (updateuser#user\_id#insta/tiktok/whatsapp#link\_profile)
 * **Semua request WA hanya bisa diakses nomor admin sesuai variabel .env**
 
 ### **B. Migrasi User (userMigrationService.js & importUsersFromGoogleSheet.js)**
@@ -149,19 +150,20 @@ CREATE TABLE "user" (
 
 ## **Contoh Command WhatsApp**
 
-| Fungsi               | Format Pesan WhatsApp                                           |
-| -------------------- | --------------------------------------------------------------- |
-| Add client           | `addnewclient#clientid#clientname`                              |
-| Update data          | `updateclient#clientid#key#value`                               |
-| Update TikTok secUid | `updateclient#clientid#tiktok_secUid` (otomatis dari DB)        |
-| Get client info      | `clientinfo#clientid`                                           |
-| Remove client        | `removeclient#clientid`                                         |
-| List request & key   | `clientrequest`                                                 |
-| Migrasi user JSON    | `transferuser#clientid`                                         |
-| Migrasi user Sheet   | `sheettransfer#clientid#link_google_sheet`                      |
-| Set group client     | `thisgroup#clientid` (hanya dari group WA yang sama)            |
-| Absensi IG           | `requestinsta#clientid#sudah` / `requestinsta#clientid#belum`   |
-| Absensi TikTok       | `requesttiktok#clientid#sudah` / `requesttiktok#clientid#belum` |
+| Fungsi               | Format Pesan WhatsApp                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Add client           | `addnewclient#clientid#clientname`                                                                             |
+| Update data          | `updateclient#clientid#key#value`                                                                              |
+| Update TikTok secUid | `updateclient#clientid#tiktok_secUid` (otomatis dari DB)                                                       |
+| Get client info      | `clientinfo#clientid`                                                                                          |
+| Remove client        | `removeclient#clientid`                                                                                        |
+| List request & key   | `clientrequest`                                                                                                |
+| Migrasi user JSON    | `transferuser#clientid`                                                                                        |
+| Migrasi user Sheet   | `sheettransfer#clientid#link_google_sheet`                                                                     |
+| Set group client     | `thisgroup#clientid` (hanya dari group WA yang sama)                                                           |
+| Absensi IG           | `requestinsta#clientid#sudah` / `requestinsta#clientid#belum`                                                  |
+| Absensi TikTok       | `requesttiktok#clientid#sudah` / `requesttiktok#clientid#belum`                                                |
+| Update data user     | `updateuser#user_id#insta#link_ig` / `updateuser#user_id#tiktok#link_tt` / `updateuser#user_id#whatsapp#nomor` |
 
 #### **Penjelasan value boolean:**
 
@@ -249,5 +251,3 @@ Open Source - feel free to fork and contribute!
 ---
 
 *Silakan modifikasi sesuai kebutuhan, atau kontak developer utama untuk integrasi/feature request!*
-
-*Cicero : Solus Sed Invictus*
