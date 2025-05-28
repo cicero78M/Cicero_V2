@@ -7,7 +7,7 @@ import { migrateUsersFromFolder } from './userMigrationService.js';
 import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import { getInstaFilledUsersByClient } from './userService.js'; // Pastikan path sudah benar
-import { getInstaEmptyUsersByClient } from './service/userService.js'; // Pastikan path benar
+import { getInstaEmptyUsersByClient } from './userService.js'; // Pastikan path benar
 
 
 const waClient = new Client({
