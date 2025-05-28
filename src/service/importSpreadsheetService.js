@@ -3,13 +3,18 @@ import path from 'path';
 import { pool } from '../config/db.js';
 import csv from 'csv-parser'; // npm install csv-parser
 
+/**
+ * Import user dari file CSV ke table user.
+ * Nama kolom harus: user_id, nama, title, divisi, jabatan (urutan BEBAS)
+ * status = true, exception = false, whatsapp/insta/tiktok = NULL, client_id = argumen
+ */
 export async function importUsersFromSpreadsheet(filePath, clientId) {
   return new Promise((resolve, reject) => {
     const results = [];
     const users = [];
 
     fs.createReadStream(filePath)
-      .pipe(csv(['user_id', 'nama', 'title', 'divisi', 'jabatan']))
+      .pipe(csv()) // <-- auto pakai header di file!
       .on('data', (row) => {
         let id = row.user_id ? row.user_id.toString().padStart(8, '0') : null;
         users.push({
