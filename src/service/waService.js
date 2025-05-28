@@ -729,6 +729,50 @@ if (text.toLowerCase().startsWith('mydata#')) {
   return;
 }
 
+// === UPDATE EXCEPTION DAN STATUS USER (ADMIN ONLY) ===
+if (
+  (text.toLowerCase().startsWith('exception#') ||
+    text.toLowerCase().startsWith('status#'))
+) {
+  // Hanya admin dari .env
+  if (!isAdminWhatsApp(chatId)) {
+    await waClient.sendMessage(chatId, '❌ Hanya admin yang dapat mengubah data status/exception.');
+    return;
+  }
+  // Format: exception#user_id#true/false  atau status#user_id#true/false
+  const [command, user_id, valueRaw] = text.split('#');
+  if (
+    !user_id ||
+    (valueRaw !== 'true' && valueRaw !== 'false')
+  ) {
+    await waClient.sendMessage(
+      chatId,
+      `Format salah!\nGunakan: ${command}#user_id#true/false`
+    );
+    return;
+  }
+  const field = command.toLowerCase();
+  try {
+    // Cek user ada?
+    const user = await userService.findUserById(user_id);
+    if (!user) {
+      await waClient.sendMessage(chatId, `❌ User dengan ID ${user_id} tidak ditemukan.`);
+      return;
+    }
+    // Update
+    await userService.updateUserField(user_id, field, valueRaw === 'true');
+    await waClient.sendMessage(
+      chatId,
+      `✅ Data *${field}* untuk user ${user_id} berhasil diupdate ke: *${valueRaw === 'true' ? 'true' : 'false'}*`
+    );
+  } catch (err) {
+    await waClient.sendMessage(
+      chatId,
+      `❌ Gagal update ${field}: ${err.message}`
+    );
+  }
+  return;
+}
 
 
 });
