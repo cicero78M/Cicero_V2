@@ -11,6 +11,9 @@ import { fetchAndStoreInstaContent } from './instaFetchService.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getUsersByClient } from '../model/userModel.js';
+import * as tiktokPostModel from '../model/tiktokPostModel.js';
+import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
+import * as userModel from '../model/userModel.js'; // pastikan path sudah sesuai
 
 
 
@@ -25,6 +28,7 @@ function isAdminWhatsApp(number) {
     .map(n => (n.endsWith('@c.us') ? n : n.replace(/\D/g, '') + '@c.us'));
   return adminNumbers.includes(number);
 }
+
 
 
 // Helper format field
@@ -51,6 +55,20 @@ function formatClientData(obj, title = '') {
   });
   return dataText;
 }
+
+function groupByDivision(users) {
+  const divGroups = {};
+  users.forEach(u => {
+    const div = u.divisi || 'LAINNYA';
+    if (!divGroups[div]) divGroups[div] = [];
+    divGroups[div].push(u);
+  });
+  return divGroups;
+}
+function formatName(u) {
+  return `${u.title ? u.title + ' ' : ''}${u.nama}${u.tiktok ? ` : ${u.tiktok}` : ''}`;
+}
+
 
 const waClient = new Client({
   authStrategy: new LocalAuth(),
@@ -85,186 +103,336 @@ waClient.on('message', async (msg) => {
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
 
-// Helper hari Indonesia
-const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  // Helper hari Indonesia
+  const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 
-if (text.toLowerCase().startsWith('absensilikes#')) {
-  const parts = text.split('#');
-  if (parts.length < 2) {
-    await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid#[sudah|belum|akumulasi#sudah|akumulasi#belum]');
-    return;
-  }
-  const client_id = parts[1];
-  const filter1 = (parts[2] || '').toLowerCase();
-  const filter2 = (parts[3] || '').toLowerCase();
+  if (text.toLowerCase().startsWith('absensilikes#')) {
+    const parts = text.split('#');
+    if (parts.length < 2) {
+      await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid#[sudah|belum|akumulasi#sudah|akumulasi#belum]');
+      return;
+    }
+    const client_id = parts[1];
+    const filter1 = (parts[2] || '').toLowerCase();
+    const filter2 = (parts[3] || '').toLowerCase();
 
-  const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n`;
+    const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n`;
 
-  const now = new Date();
-  const hari = hariIndo[now.getDay()];
-  const tanggal = now.toLocaleDateString('id-ID');
-  const jam = now.toLocaleTimeString('id-ID', { hour12: false });
+    const now = new Date();
+    const hari = hariIndo[now.getDay()];
+    const tanggal = now.toLocaleDateString('id-ID');
+    const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
-  const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+    const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
+    const shortcodes = await getShortcodesTodayByClient(client_id);
 
-  if (!shortcodes.length) {
-    await waClient.sendMessage(chatId, headerLaporan +
-      `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`);
-    return;
-  }
+    if (!shortcodes.length) {
+      await waClient.sendMessage(chatId, headerLaporan +
+        `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`);
+      return;
+    }
 
-  // === AKUMULASI ===
-  if (filter1 === 'akumulasi') {
-    const userStats = {};
-    users.forEach(u => {
-      userStats[u.user_id] = { ...u, count: 0 };
-    });
+    // === AKUMULASI ===
+    if (filter1 === 'akumulasi') {
+      const userStats = {};
+      users.forEach(u => {
+        userStats[u.user_id] = { ...u, count: 0 };
+      });
 
+      for (const shortcode of shortcodes) {
+        const likes = await getLikesByShortcode(shortcode);
+        const likesSet = new Set(likes.map(x => (x || '').toLowerCase()));
+        users.forEach(u => {
+          if (u.insta && likesSet.has(u.insta.toLowerCase())) {
+            userStats[u.user_id].count += 1;
+          }
+        });
+      }
+
+      const totalKonten = shortcodes.length;
+      const sudahPerSatfung = {};
+      const belumPerSatfung = {};
+      let totalUser = Object.values(userStats).length;
+      let totalSudah = 0;
+      let totalBelum = 0;
+
+      Object.values(userStats).forEach(u => {
+        const satfung = u.divisi || '-';
+        const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
+        const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta} (${u.count} konten)` : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
+        if (u.insta && u.insta.trim() !== '' && u.count >= Math.ceil(totalKonten / 2)) {
+          if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+          sudahPerSatfung[satfung].push(label);
+          totalSudah++;
+        } else {
+          if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+          belumPerSatfung[satfung].push(label);
+          totalBelum++;
+        }
+      });
+
+      const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
+      let msg = headerLaporan +
+        `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n`;
+
+      const kontenLinks = shortcodes.map(sc => `https://www.instagram.com/p/${sc}`);
+      msg += `Daftar link konten hari ini:\n${kontenLinks.join('\n')}\n\n`;
+
+      msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+
+      if (tipe === 'sudah') {
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+      } else {
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+      }
+
+      await waClient.sendMessage(chatId, msg.trim());
+      return;
+    }
+
+    // === PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) ===
     for (const shortcode of shortcodes) {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map(x => (x || '').toLowerCase()));
+
+      const sudahPerSatfung = {};
+      const belumPerSatfung = {};
+      let totalUser = 0;
+      let totalSudah = 0;
+      let totalBelum = 0;
+
       users.forEach(u => {
-        if (u.insta && likesSet.has(u.insta.toLowerCase())) {
-          userStats[u.user_id].count += 1;
+        totalUser++;
+        const satfung = u.divisi || '-';
+        const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
+        if (u.insta && u.insta.trim() !== '' && likesSet.has(u.insta.toLowerCase())) {
+          if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
+          totalSudah++;
+        } else {
+          if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+          const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta}` : `${titleNama} : belum mengisi data insta`;
+          belumPerSatfung[satfung].push(label);
+          totalBelum++;
         }
       });
-    }
 
-    const totalKonten = shortcodes.length;
-    const sudahPerSatfung = {};
-    const belumPerSatfung = {};
-    let totalUser = Object.values(userStats).length;
-    let totalSudah = 0;
-    let totalBelum = 0;
+      const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
-    Object.values(userStats).forEach(u => {
-      const satfung = u.divisi || '-';
-      const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-      const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta} (${u.count} konten)` : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
-      if (u.insta && u.insta.trim() !== '' && u.count >= Math.ceil(totalKonten / 2)) {
-        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-        sudahPerSatfung[satfung].push(label);
-        totalSudah++;
-      } else {
-        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-        belumPerSatfung[satfung].push(label);
-        totalBelum++;
+      if (!filter1) {
+        let msg = headerLaporan +
+          `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+          `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+
+        msg += `✅ SUDAH Like:\n`;
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+
+        msg += `\n❌ BELUM Like:\n`;
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+
+        await waClient.sendMessage(chatId, msg.trim());
       }
-    });
 
-    const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
-    let msg = headerLaporan +
-      `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n`;
+      if (filter1 === 'sudah') {
+        let msg = headerLaporan +
+          `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+          `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-    const kontenLinks = shortcodes.map(sc => `https://www.instagram.com/p/${sc}`);
-    msg += `Daftar link konten hari ini:\n${kontenLinks.join('\n')}\n\n`;
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      }
 
-    msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      if (filter1 === 'belum') {
+        let msg = headerLaporan +
+          `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+          `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-    if (tipe === 'sudah') {
-      Object.keys(sudahPerSatfung).forEach(satfung => {
-        const arr = sudahPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
-      });
-    } else {
-      Object.keys(belumPerSatfung).forEach(satfung => {
-        const arr = belumPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
-      });
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach(line => { msg += `- ${line}\n`; });
+          msg += '\n';
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      }
     }
-
-    await waClient.sendMessage(chatId, msg.trim());
     return;
   }
 
-  // === PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) ===
-  for (const shortcode of shortcodes) {
-    const likes = await getLikesByShortcode(shortcode);
-    const likesSet = new Set(likes.map(x => (x || '').toLowerCase()));
+  // ...pada waService.js, setelah handler absensi likes
+  if (text.toLowerCase().startsWith('absensikomentar#')) {
+    const parts = text.toLowerCase().split('#');
+    const client_id = parts[1];
+    const type = parts[2] || '';
+    const subtype = parts[3] || '';
 
-    const sudahPerSatfung = {};
-    const belumPerSatfung = {};
-    let totalUser = 0;
-    let totalSudah = 0;
-    let totalBelum = 0;
+    if (!client_id) {
+      await waClient.sendMessage(chatId, 'Format: absensikomentar#clientid');
+      return;
+    }
 
-    users.forEach(u => {
-      totalUser++;
-      const satfung = u.divisi || '-';
-      const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-      if (u.insta && u.insta.trim() !== '' && likesSet.has(u.insta.toLowerCase())) {
-        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-        sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
-        totalSudah++;
-      } else {
-        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-        const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta}` : `${titleNama} : belum mengisi data insta`;
-        belumPerSatfung[satfung].push(label);
-        totalBelum++;
+    // Ambil semua konten hari ini TikTok (video_id)
+    const videoIds = await tiktokPostModel.getShortcodesTodayByClient(client_id);
+    if (!videoIds.length) {
+      await waClient.sendMessage(chatId, 'Tidak ada konten TikTok hari ini.');
+      return;
+    }
+    // Ambil semua user dengan status TRUE (tiktok username boleh null)
+    const users = await userModel.getUsersByClient(client_id);
+
+    // Helper: ambil username dari user (tanpa @, lower)
+    const normalize = v => (v || '').replace(/^@/, '').toLowerCase();
+
+    // Akumulasi data per user (untuk mode akumulasi)
+    let absensiPerUser = {};
+    users.forEach(u => absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 });
+
+    // Loop setiap video hari ini
+    for (const video_id of videoIds) {
+      const comments = await tiktokCommentModel.getCommentsByVideoId(video_id);
+      const usernameSet = new Set(comments.map(c => normalize(c)));
+
+      let sudah = [], belum = [];
+      users.forEach(u => {
+        const uname = normalize(u.tiktok);
+        if (!u.tiktok) {
+          belum.push({ ...u, note: 'belum mengisi data tiktok' });
+        } else if (usernameSet.has(uname)) {
+          sudah.push(u);
+        } else {
+          belum.push(u);
+        }
+        // Akumulasi statistik per user (untuk mode akumulasi)
+        absensiPerUser[u.user_id].total += 1;
+        if (uname && usernameSet.has(uname)) absensiPerUser[u.user_id].count += 1;
+      });
+
+      // Response sesuai tipe
+      // --- MODE AKUMULASI skip, nanti
+      if (type === 'akumulasi') continue;
+
+      // Filter sudah/belum jika ada tipe
+      if (type === 'sudah') {
+        sudah = sudah.filter(u => u.tiktok);
+        belum = [];
+      } else if (type === 'belum') {
+        belum = belum; // tampilkan semua yg belum (termasuk yg belum isi tiktok)
+        sudah = [];
       }
-    });
+      // Group per divisi
+      const divSudah = groupByDivision(sudah);
+      const divBelum = groupByDivision(belum);
 
-    const linkIG = `https://www.instagram.com/p/${shortcode}`;
+      // Format response
+      let now = new Date();
+      let jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      let hari = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    if (!filter1) {
-      let msg = headerLaporan +
-        `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      const link = `https://www.tiktok.com/video/${video_id}`;
+      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
+      resp += `📋 *Rekap User yang sudah komentar TikTok*\n`;
+      resp += `*Client*: *${client_id}*\n*Link*: ${link}\n*Hari*: ${hari}\n*Jam*: ${jam}\n\n`;
 
-      msg += `✅ SUDAH Like:\n`;
-      Object.keys(sudahPerSatfung).forEach(satfung => {
-        const arr = sudahPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
-      });
+      if (sudah.length) {
+        resp += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
+        Object.entries(divSudah).forEach(([div, list]) => {
+          resp += `*${div}* (${list.length} user):\n`;
+          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
+        });
+      } else {
+        resp += `✅ *Sudah melaksanakan*: -\n`;
+      }
 
-      msg += `\n❌ BELUM Like:\n`;
-      Object.keys(belumPerSatfung).forEach(satfung => {
-        const arr = belumPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
-      });
-
-      await waClient.sendMessage(chatId, msg.trim());
+      if (belum.length) {
+        resp += `\n❌ *Belum melaksanakan* (${belum.length} user):\n`;
+        Object.entries(divBelum).forEach(([div, list]) => {
+          resp += `*${div}* (${list.length} user):\n`;
+          resp += list.map(u => `- ${formatName(u)}${u.note ? ` (${u.note})` : ''}`).join('\n') + '\n';
+        });
+      } else {
+        resp += `\n❌ *Belum melaksanakan*: -\n`;
+      }
+      resp += `\nTotal user: *${users.length}*`;
+      await waClient.sendMessage(chatId, resp);
     }
 
-    if (filter1 === 'sudah') {
-      let msg = headerLaporan +
-        `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
-
-      Object.keys(sudahPerSatfung).forEach(satfung => {
-        const arr = sudahPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
+    // === MODE AKUMULASI (Gabungan semua video hari ini) ===
+    if (type === 'akumulasi') {
+      // Sudah = user dengan count >= 50% dari total konten hari ini
+      const minDone = Math.ceil(videoIds.length * 0.5);
+      let sudah = [], belum = [];
+      Object.values(absensiPerUser).forEach(u => {
+        if (u.count >= minDone) sudah.push(u);
+        else belum.push(u);
       });
-      await waClient.sendMessage(chatId, msg.trim());
-    }
+      // Filter jika subtype
+      if (subtype === 'sudah') belum = [];
+      if (subtype === 'belum') sudah = [];
 
-    if (filter1 === 'belum') {
-      let msg = headerLaporan +
-        `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      const divSudah = groupByDivision(sudah);
+      const divBelum = groupByDivision(belum);
 
-      Object.keys(belumPerSatfung).forEach(satfung => {
-        const arr = belumPerSatfung[satfung];
-        msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach(line => { msg += `- ${line}\n`; });
-        msg += '\n';
-      });
-      await waClient.sendMessage(chatId, msg.trim());
+      let now = new Date();
+      let jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      let hari = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      // List semua link hari ini
+      const links = videoIds.map(id => `https://www.tiktok.com/video/${id}`).join('\n');
+
+      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
+      resp += `📋 *Rekap Akumulasi Pelaksanaan Komentar TikTok*\n`;
+      resp += `*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n\n`;
+      resp += `*Total konten hari ini*: ${videoIds.length}\n\n`;
+      resp += `*Link konten hari ini:*\n${links}\n\n`;
+
+      if (sudah.length) {
+        resp += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
+        Object.entries(divSudah).forEach(([div, list]) => {
+          resp += `*${div}* (${list.length} user):\n`;
+          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
+        });
+      } else {
+        resp += `✅ *Sudah melaksanakan*: -\n`;
+      }
+
+      if (belum.length) {
+        resp += `\n❌ *Belum melaksanakan* (${belum.length} user):\n`;
+        Object.entries(divBelum).forEach(([div, list]) => {
+          resp += `*${div}* (${list.length} user):\n`;
+          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
+        });
+      } else {
+        resp += `\n❌ *Belum melaksanakan*: -\n`;
+      }
+      resp += `\nTotal user: *${users.length}*`;
+      await waClient.sendMessage(chatId, resp);
     }
   }
-  return;
-}
 
 
 
