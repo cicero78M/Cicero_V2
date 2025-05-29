@@ -7,6 +7,7 @@ import { migrateUsersFromFolder } from './userMigrationService.js';
 import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import * as userService from './userService.js';
+import * as userModel from '../model/userModel.js';
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
 
 
@@ -89,7 +90,7 @@ waClient.on('message', async (msg) => {
   }
 
   // Ambil user IG
-  const users = await userService.getUsersByClient(client_id);
+  const users = await userModel.getUsersByClient(client_id);
   // Ambil semua shortcode konten IG hari ini untuk client
   const shortcodes = await instaPostModel.getShortcodesTodayByClient(client_id);
 
