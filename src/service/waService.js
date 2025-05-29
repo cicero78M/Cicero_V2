@@ -81,7 +81,7 @@ waClient.on('message', async (msg) => {
 
     // Tambahkan patch ini di bawah baris adminCommands:
 if (text.startsWith('fetchinsta#')) {
-  if (!isAdminWhatsApp(chatId)) {
+  if (!adminNumbers(chatId)) {
     await waClient.sendMessage(chatId, 'Akses ditolak.');
     return;
   }
@@ -103,6 +103,7 @@ if (text.startsWith('fetchinsta#')) {
   }
   return;
 }
+
 
 
 
