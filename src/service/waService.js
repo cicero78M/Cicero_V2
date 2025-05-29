@@ -8,6 +8,9 @@ import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import * as userService from './userService.js';
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
+import { getUsersByClient } from '../model/userModel.js';
+import { getLikesByShortcode } from '../model/instaLikeModel.js';
+import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 
 
 
