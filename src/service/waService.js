@@ -7,7 +7,7 @@ import { migrateUsersFromFolder } from './userMigrationService.js';
 import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import * as userService from './userService.js';
-import { fetchAndStoreInstaContent } from './service/instaFetchService.js';
+import { fetchAndStoreInstaContent } from './instaFetchService.js';
 
 
 import dotenv from 'dotenv';
