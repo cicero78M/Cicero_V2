@@ -80,18 +80,27 @@ waClient.on('message', async (msg) => {
 
 
     // Tambahkan patch ini di bawah baris adminCommands:
-  if (text.startsWith('fetchinsta#')) {
-    // Akses admin only!
-    if (!adminNumbers.includes(chatId)) {
-      return msg.reply('Akses ditolak.');
-    }
-    // Extract keys
-    const keysString = text.replace('fetchinsta#', '').trim();
-    if (!keysString) return msg.reply('Format: fetchinsta#[key1,key2,...]');
-    const keys = keysString.split(',').map(k => k.trim());
-    const res = await fetchAndStoreInstaContent(keys);
-    return msg.reply(res.message);
+if (text.startsWith('fetchinsta#')) {
+  // Akses admin only!
+  if (!adminNumbers.includes(chatId)) {
+    return msg.reply('Akses ditolak.');
   }
+  // Cek apakah ada key yang dimasukkan
+  const keysString = text.replace('fetchinsta#', '').trim();
+  // Jika kosong, ambil semua key default
+  let keys;
+  if (!keysString) {
+    // List semua key yang ingin Anda ambil (default)
+    keys = [
+      "shortcode", "caption", "like_count", "timestamp",      // tambah sesuai kebutuhan field dari API
+    ];
+  } else {
+    keys = keysString.split(',').map(k => k.trim());
+  }
+  const res = await fetchAndStoreInstaContent(keys);
+  return msg.reply(res.message);
+}
+
 
 
   // === REQUEST ABSENSI TIKTOK/INSTA (admin only) ===
