@@ -83,48 +83,57 @@ waClient.on('message', async (msg) => {
   }
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
-
 if (text.toLowerCase().startsWith('absensilikes#')) {
-  // Format: absensilikes#<client_id>
   const [, client_id] = text.split('#');
   if (!client_id) {
     await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid');
     return;
   }
 
-  
   const users = await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) {
-    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk client ${client_id} hari ini.`);
+    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk Polres ${client_id} hari ini.`);
     return;
   }
 
   for (const shortcode of shortcodes) {
     const likes = await getLikesByShortcode(shortcode);
-    // likes: array username (string) pada key likes
     const likesSet = new Set(likes.map(x => x.toLowerCase()));
 
-    const sudah = [];
-    const belum = [];
+    // Kelompokkan user by satfung (divisi)
+    const sudahPerSatfung = {};
+    const belumPerSatfung = {};
+
     users.forEach(u => {
       if (!u.insta) return;
+      const satfung = u.divisi || '-';
       if (likesSet.has(u.insta.toLowerCase())) {
-        sudah.push(u.nama + ' (@' + u.insta + ')');
+        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+        sudahPerSatfung[satfung].push(`${u.nama} (@${u.insta})`);
       } else {
-        belum.push(u.nama + ' (@' + u.insta + ')');
+        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+        belumPerSatfung[satfung].push(`${u.nama} (@${u.insta})`);
       }
     });
 
+    // Build pesan
     const linkIG = `https://www.instagram.com/p/${shortcode}`;
-    let msg = `📋 *Absensi Likes IG*\nClient: ${client_id}\nLink: ${linkIG}\n\n`;
 
-    msg += `✅ *SUDAH Like* [${sudah.length} user]:\n`;
-    msg += sudah.length ? sudah.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'Tidak ada user yang like.\n';
+    let msg = `📋 *Absensi Likes IG*\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
 
-    msg += `\n❌ *BELUM Like* [${belum.length} user]:\n`;
-    msg += belum.length ? belum.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'Semua user sudah like.\n';
+    msg += `✅ *SUDAH Like:*\n`;
+    Object.keys(sudahPerSatfung).forEach(satfung => {
+      msg += `*${satfung}*\n`;
+      msg += sudahPerSatfung[satfung].length ? sudahPerSatfung[satfung].join('\n') + '\n' : '-\n';
+    });
+
+    msg += `\n❌ *BELUM Like:*\n`;
+    Object.keys(belumPerSatfung).forEach(satfung => {
+      msg += `*${satfung}*\n`;
+      msg += belumPerSatfung[satfung].length ? belumPerSatfung[satfung].join('\n') + '\n' : '-\n';
+    });
 
     await waClient.sendMessage(chatId, msg);
   }
