@@ -8,18 +8,42 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 const limit = pLimit(4);
 
+// Filter hanya data hari ini berdasarkan taken_at (UNIX seconds)
+function isToday(unixTimestamp) {
+  if (!unixTimestamp) return false;
+  const d = new Date(unixTimestamp * 1000); // from seconds to ms
+  const today = new Date();
+  return d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
+}
+
+// Ambil semua shortcode pada database yang taken_at hari ini
 async function getShortcodesToday() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  // Filter created_at berdasarkan tanggal hari ini
   const res = await pool.query(
-    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
+    `SELECT shortcode FROM insta_post 
+     WHERE DATE(created_at) = $1`,
+    [`${yyyy}-${mm}-${dd}`]
   );
   return res.rows.map(r => r.shortcode);
 }
 
+// Hapus data insta_post yang created_at hari ini dan tidak ada di hasil fetch
 async function deleteShortcodes(shortcodesToDelete) {
   if (!shortcodesToDelete.length) return;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
   await pool.query(
-    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = CURRENT_DATE`,
-    [shortcodesToDelete]
+    `DELETE FROM insta_post 
+     WHERE shortcode = ANY($1) AND DATE(created_at) = $2`,
+    [shortcodesToDelete, `${yyyy}-${mm}-${dd}`]
   );
 }
 
@@ -34,7 +58,7 @@ async function getEligibleClients() {
 export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   let processing = true;
 
-  // Tampilkan info waktu server (timezone, jam sekarang)
+  // INFO DEBUG
   console.log("==========[DEBUG: Server Info]==========");
   console.log("Server timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
   console.log("Server now:", new Date());
@@ -44,7 +68,6 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
     if (processing) waClient.sendMessage(chatId, '⏳ Processing fetch data...');
   }, 4000);
 
-  // Dapatkan daftar shortcode yang sudah ada di database hari ini
   const dbShortcodesToday = await getShortcodesToday();
   let fetchedShortcodesToday = [];
 
@@ -67,18 +90,22 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       );
     } catch (err) {
       console.error("ERROR FETCHING POST:", err.response?.data || err.message);
-      continue; // next client
+      continue;
     }
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
 
     for (const post of items) {
-      // Debug date
+      // Filter hanya post yang taken_at == hari ini
+      if (!isToday(post.taken_at)) continue;
+
+      // INFO DEBUG: Komparasi date
       const takenAtDate = post.taken_at ? new Date(post.taken_at * 1000) : null;
       console.log(
         `[DEBUG] Shortcode: ${post.code}, taken_at: ${post.taken_at}, takenAtDate: ${takenAtDate}, serverNow: ${new Date()}`
       );
 
+      // Siapkan data yang akan di-insert/update
       const toSave = { client_id: client.id };
       keys.forEach(k => {
         if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
@@ -93,7 +120,16 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       }
       fetchedShortcodesToday.push(toSave.shortcode);
 
-      await instaPostModel.upsertInstaPost(toSave);
+      // Insert/update dengan created_at = taken_at (dalam detik, diubah jadi timestamp PostgreSQL)
+      await pool.query(
+        `INSERT INTO insta_post (client_id, shortcode, caption, created_at)
+         VALUES ($1, $2, $3, to_timestamp($4))
+         ON CONFLICT (shortcode) DO UPDATE
+         SET client_id = EXCLUDED.client_id,
+             caption = EXCLUDED.caption,
+             created_at = to_timestamp($4)`,
+        [toSave.client_id, toSave.shortcode, toSave.caption || null, post.taken_at]
+      );
 
       // Likes merge
       if (post.code) {
@@ -128,9 +164,14 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   processing = false;
   clearInterval(intervalId);
 
-  // Hanya kirim list konten yang created_at hari ini
+  // Ambil dan kirim hanya yang created_at hari ini
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
   const kontenHariIniRes = await pool.query(
-    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
+    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
+    [`${yyyy}-${mm}-${dd}`]
   );
   kontenHariIniRes.rows.forEach(row => {
     console.log(`[DB] Shortcode: ${row.shortcode}, created_at: ${row.created_at}`);
