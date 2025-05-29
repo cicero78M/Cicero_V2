@@ -83,6 +83,7 @@ waClient.on('message', async (msg) => {
   }
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
+
 if (text.toLowerCase().startsWith('absensilikes#')) {
   const [, client_id] = text.split('#');
   if (!client_id) {
@@ -94,7 +95,7 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) {
-    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk Polres ${client_id} hari ini.`);
+    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk client ${client_id} hari ini.`);
     return;
   }
 
@@ -102,37 +103,37 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     const likes = await getLikesByShortcode(shortcode);
     const likesSet = new Set(likes.map(x => x.toLowerCase()));
 
-    // Kelompokkan user by satfung (divisi)
-    const sudahPerSatfung = {};
-    const belumPerSatfung = {};
+    // Kelompokkan user by divisi
+    const sudahPerDiv = {};
+    const belumPerDiv = {};
 
     users.forEach(u => {
       if (!u.insta) return;
-      const satfung = u.divisi || '-';
+      const div = u.divisi || '-';
       if (likesSet.has(u.insta.toLowerCase())) {
-        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-        sudahPerSatfung[satfung].push(`${u.nama} (@${u.insta})`);
+        if (!sudahPerDiv[div]) sudahPerDiv[div] = [];
+        sudahPerDiv[div].push(`${u.nama} (@${u.insta})`);
       } else {
-        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-        belumPerSatfung[satfung].push(`${u.nama} (@${u.insta})`);
+        if (!belumPerDiv[div]) belumPerDiv[div] = [];
+        belumPerDiv[div].push(`${u.nama} (@${u.insta})`);
       }
     });
 
     // Build pesan
     const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
-    let msg = `📋 *Absensi Likes IG*\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+    let msg = `📋 *Absensi Likes IG*\nClient: ${client_id}\nLink: ${linkIG}\n\n`;
 
     msg += `✅ *SUDAH Like:*\n`;
-    Object.keys(sudahPerSatfung).forEach(satfung => {
-      msg += `*${satfung}*\n`;
-      msg += sudahPerSatfung[satfung].length ? sudahPerSatfung[satfung].join('\n') + '\n' : '-\n';
+    Object.keys(sudahPerDiv).forEach(div => {
+      msg += `*${div}*\n`;
+      msg += sudahPerDiv[div].length ? sudahPerDiv[div].join('\n') + '\n' : '-\n';
     });
 
     msg += `\n❌ *BELUM Like:*\n`;
-    Object.keys(belumPerSatfung).forEach(satfung => {
-      msg += `*${satfung}*\n`;
-      msg += belumPerSatfung[satfung].length ? belumPerSatfung[satfung].join('\n') + '\n' : '-\n';
+    Object.keys(belumPerDiv).forEach(div => {
+      msg += `*${div}*\n`;
+      msg += belumPerDiv[div].length ? belumPerDiv[div].join('\n') + '\n' : '-\n';
     });
 
     await waClient.sendMessage(chatId, msg);
