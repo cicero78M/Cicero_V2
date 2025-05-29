@@ -98,3 +98,11 @@ export async function findUserByField(field, value) {
   const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [value]);
   return rows[0];
 }
+
+export async function getUsersByClient(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, insta FROM users WHERE client_id = $1 AND insta IS NOT NULL AND insta != ''`,
+    [client_id]
+  );
+  return res.rows;
+}
