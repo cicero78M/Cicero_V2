@@ -51,10 +51,17 @@ export const remove = async (id) => {
 };
 
 
+// src/model/userModel.js
+import { pool } from '../config/db.js';
+
+// Hanya ambil user dengan status true
 export async function getUsersByClient(client_id) {
   const res = await pool.query(
-    `SELECT user_id, nama, insta, divisi, title FROM "user" WHERE client_id = $1 AND insta IS NOT NULL AND insta != ''`,
+    `SELECT user_id, nama, insta, divisi, title
+     FROM "user"
+     WHERE client_id = $1 AND insta IS NOT NULL AND insta != '' AND status = true`,
     [client_id]
   );
   return res.rows;
 }
+
