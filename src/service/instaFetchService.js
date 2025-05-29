@@ -10,15 +10,6 @@ const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 // Rate limit: 4 request per detik
 const limit = pLimit(4);
 
-function isToday(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const today = new Date();
-  return d.getFullYear() === today.getFullYear()
-    && d.getMonth() === today.getMonth()
-    && d.getDate() === today.getDate();
-}
-
 async function getEligibleClients() {
   const res = await pool.query(
     `SELECT client_ID as id, client_insta FROM clients
@@ -92,11 +83,15 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       console.log(`Tidak ada items dari API untuk user: ${username}`);
     }
 
+    // === PATCH: DEBUG STRUKTUR POST ===
+    if (items.length > 0) {
+      console.log("Contoh struktur post:", JSON.stringify(items[0], null, 2));
+    }
+
     for (const post of items) {
-      // Filter hanya yang tanggalnya hari ini (field timestamp)
-      const isHariIni = isToday(post.timestamp);
-      console.log('post.timestamp:', post.timestamp, '| isToday:', isHariIni);
-      if (!isHariIni) continue;
+      // PATCH: SEMUA post diproses (filter tanggal DINONAKTIFKAN)
+      // Nanti setelah tau field tanggalnya, filter bisa diaktifkan lagi
+      // if (!isToday(post.timestamp)) continue;
 
       const toSave = { client_id: client.id };
       keys.forEach(k => {
@@ -173,7 +168,7 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   // Kirim hasil akhir ke WhatsApp
   let maxPerMsg = 30; // max link per message
   const totalMsg = Math.ceil(kontenLinks.length / maxPerMsg);
-  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinks.length}*`);
+  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten (tanpa filter tanggal): *${kontenLinks.length}*`);
 
   for (let i = 0; i < totalMsg; i++) {
     const linksMsg = kontenLinks.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
