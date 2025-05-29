@@ -70,7 +70,7 @@ async function fetchTiktokSecUid(username) {
 async function updateClientSecUid(client_id, secUid) {
   if (!client_id || !secUid) return false;
   const res = await pool.query(
-    `UPDATE client SET tiktok_secuid = $1 WHERE client_id = $2`,
+    `UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2`,
     [secUid, client_id]
   );
   return res.rowCount > 0;
@@ -81,7 +81,7 @@ async function getEligibleTiktokClients() {
   // Perhatikan field: client_tiktok = username TikTok, tiktok_secuid = secUid TikTok
   const res = await pool.query(
     `SELECT client_id, tiktok_secuid, client_tiktok
-     FROM client
+     FROM clients
      WHERE client_status = true AND client_tiktok_status = true
        AND client_tiktok IS NOT NULL AND client_tiktok != ''`
   );
