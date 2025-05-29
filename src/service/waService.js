@@ -92,6 +92,7 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     return;
   }
 
+  
   const users = await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
