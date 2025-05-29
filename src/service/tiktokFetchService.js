@@ -6,22 +6,19 @@ import * as tiktokPostModel from '../model/tiktokPostModel.js';
 import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 import { pool } from '../config/db.js';
 
-// Konfigurasi API Key dan Host
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 const limit = pLimit(4);
 
-// Fungsi untuk cek apakah tanggal UNIX adalah hari ini (local server time)
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
-  const d = new Date(unixTimestamp * 1000); // dari detik ke ms
+  const d = new Date(unixTimestamp * 1000); // detik ke ms
   const today = new Date();
   return d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate();
 }
 
-// Ambil semua client dengan TikTok aktif (status true dan username terisi)
 async function getEligibleTiktokClients() {
   const res = await pool.query(
     `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
@@ -30,18 +27,21 @@ async function getEligibleTiktokClients() {
   return res.rows;
 }
 
-// PATCH utama: fetch, simpan, WA notify
 export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
   const clients = await getEligibleTiktokClients();
   let totalKontenHariIni = 0;
   let allDebugLogs = [];
 
+  console.log(`\n===== [TIKTOK FETCH START] =====`);
+  console.log(`Total clients eligible: ${clients.length}`);
+
   for (const client of clients) {
+    console.log(`\n[CLIENT] ID: ${client.client_id}, TikTok: ${client.client_tiktok}`);
     // Pastikan secUid ada, jika belum ambil via API
     let secUid = client.tiktok_secuid;
     if (!secUid || secUid.length < 10) {
-      // Fetch secUid dari username TikTok
       try {
+        console.log(`  [INFO] Mencari secUid untuk username: ${client.client_tiktok}`);
         const secUidRes = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
           params: { unique_id: client.client_tiktok },
           headers: {
@@ -50,17 +50,18 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         });
         secUid = secUidRes.data?.data?.user?.secUid;
+        console.log(`  [RESULT] secUid: ${secUid}`);
         if (secUid) {
           await pool.query(
             `UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2`,
             [secUid, client.client_id]
           );
         } else {
-          console.warn(`[SKIP] Tidak bisa ambil secUid untuk client_id=${client.client_id}`);
+          console.warn(`  [SKIP] Tidak bisa ambil secUid untuk client_id=${client.client_id}`);
           continue;
         }
       } catch (e) {
-        console.warn(`[SKIP] Gagal ambil secUid untuk client_id=${client.client_id}: ${e.message}`);
+        console.warn(`  [SKIP] Gagal ambil secUid untuk client_id=${client.client_id}: ${e.message}`);
         continue;
       }
     }
@@ -68,6 +69,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Fetch post TikTok (API /api/user/posts)
     let posts = [];
     try {
+      console.log(`  [FETCH] Posts TikTok secUid: ${secUid}`);
       const res = await limit(() =>
         axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
           params: { secUid: secUid, count: 35, cursor: 0 },
@@ -77,8 +79,10 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         })
       );
-      // Pastikan path data sesuai dengan response real (cek file sample!)
+      // Log full path, bisa disesuaikan jika format beda
+      console.log("  [API RAW]", JSON.stringify(res.data).substring(0, 500) + '...');
       posts = res.data?.data?.posts || [];
+      console.log(`  [RESULT] Jumlah posts: ${posts.length}`);
     } catch (err) {
       console.error(`[ERROR] Gagal fetch TikTok untuk client_id=${client.client_id}: ${err.message}`);
       if (waClient && typeof waClient.sendMessage === 'function' && chatId)
@@ -92,15 +96,13 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
       const isHariIni = isToday(post.createTime);
 
-      // Debug log
       allDebugLogs.push(
         `[DEBUG] Client: ${client.client_tiktok} | Post ID: ${post.id} | createTime: ${post.createTime} | Date: ${postDate} | Hari Ini: ${isHariIni}`
       );
-
       if (!isHariIni) continue;
       kontenHariIni.push(post);
 
-      // Upsert ke tiktok_post (pastikan model ada)
+      // Insert/update post
       await tiktokPostModel.upsertTiktokPost({
         id: post.id,
         client_id: client.client_id,
@@ -110,7 +112,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
         url: `https://www.tiktok.com/@${post.author?.uniqueId || ''}/video/${post.id}`
       });
 
-      // Fetch komentar untuk post ini (API endpoint: /api/post/comments)
+      // Fetch komentar (API /api/post/comments)
       let comments = [];
       try {
         const res = await limit(() =>
@@ -123,11 +125,11 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           })
         );
         comments = res.data?.data?.comments || [];
+        console.log(`    [KOMEN] Post ${post.id}, Jumlah komentar: ${comments.length}`);
       } catch (e) {
         comments = [];
+        console.log(`    [KOMEN] Gagal fetch comment post: ${post.id}`);
       }
-
-      // Upsert komentar TikTok
       await tiktokCommentModel.upsertTiktokComments(post.id, comments);
     }
 
@@ -142,6 +144,11 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
         allDebugLogs.slice(-kontenHariIni.length || -5).join('\n')
       );
     }
+    // Debug ringkas
+    console.log(`  [SUMMARY] Konten hari ini (client_id: ${client.client_id}): ${kontenHariIni.length}`);
+    kontenHariIni.forEach((p, i) => {
+      console.log(`    - PostID: ${p.id}, Date: ${new Date(p.createTime * 1000)}`);
+    });
   }
 
   // Summary global
@@ -157,4 +164,5 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       console.log("[DEBUG TikTok]\n" + allDebugLogs.slice(-15).join('\n'));
     }
   }
+  console.log(`===== [TIKTOK FETCH END] =====\n`);
 }
