@@ -19,7 +19,7 @@ function isToday(unixSeconds) {
 export async function getEligibleTiktokClients() {
   const res = await pool.query(
     `SELECT client_id, client_tiktok
-     FROM client
+     FROM clients
      WHERE client_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
   );
   return res.rows;
