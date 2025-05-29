@@ -81,24 +81,27 @@ waClient.on('message', async (msg) => {
 
     // Tambahkan patch ini di bawah baris adminCommands:
 if (text.startsWith('fetchinsta#')) {
-  // Akses admin only!
-  if (!adminNumbers.includes(chatId)) {
-    return msg.reply('Akses ditolak.');
+  if (!isAdminWhatsApp(chatId)) {
+    await waClient.sendMessage(chatId, 'Akses ditolak.');
+    return;
   }
-  // Cek apakah ada key yang dimasukkan
   const keysString = text.replace('fetchinsta#', '').trim();
-  // Jika kosong, ambil semua key default
   let keys;
   if (!keysString) {
-    // List semua key yang ingin Anda ambil (default)
     keys = [
-      "shortcode", "caption", "like_count", "timestamp",      // tambah sesuai kebutuhan field dari API
+      "shortcode", "caption", "like_count", "timestamp"
+      // dst
     ];
   } else {
     keys = keysString.split(',').map(k => k.trim());
   }
-  const res = await fetchAndStoreInstaContent(keys);
-  return msg.reply(res.message);
+  try {
+    const res = await fetchAndStoreInstaContent(keys);
+    await waClient.sendMessage(chatId, res.message || '✅ Berhasil mengambil dan menyimpan data Instagram.');
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ Gagal fetch/simpan: ${err.message}`);
+  }
+  return;
 }
 
 
