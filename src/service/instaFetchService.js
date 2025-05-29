@@ -29,7 +29,6 @@ async function getEligibleClients() {
 
 // Ambil semua shortcode pada database hari ini
 async function getShortcodesToday() {
-  // Pastikan field tanggal pada DB anda, misal timestamp
   const res = await pool.query(
     `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
   );
@@ -63,82 +62,105 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   const clients = await getEligibleClients();
   for (const client of clients) {
     const username = client.client_insta;
-    const postsRes = await limit(() =>
-      axios.get(
-        `https://${RAPIDAPI_HOST}/v1/posts`,
-        {
-          params: { username_or_id_or_url: username },
-          headers: {
-            'X-RapidAPI-Key': RAPIDAPI_KEY,
-            'X-RapidAPI-Host': RAPIDAPI_HOST,
-          },
-        }
-      )
-    );
+    console.log("Mengambil data untuk username:", username);
+
+    let postsRes;
+    try {
+      postsRes = await limit(() =>
+        axios.get(
+          `https://${RAPIDAPI_HOST}/v1/posts`,
+          {
+            params: { username_or_id_or_url: username },
+            headers: {
+              'X-RapidAPI-Key': RAPIDAPI_KEY,
+              'X-RapidAPI-Host': RAPIDAPI_HOST,
+            },
+          }
+        )
+      );
+      console.log("API RESPONSE:", JSON.stringify(postsRes.data, null, 2));
+    } catch (err) {
+      console.error("ERROR FETCHING POST:", err.response?.data || err.message);
+      continue; // next client
+    }
+
+    // Array items dari response API
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
 
-    for (const post of items) {
-    // Filter hanya yang tanggalnya hari ini (field timestamp)
-    if (!isToday(post.timestamp)) continue;
+    if (!items.length) {
+      console.log(`Tidak ada items dari API untuk user: ${username}`);
+    }
 
-    const toSave = { client_id: client.id };
-    keys.forEach(k => {
+    for (const post of items) {
+      // Filter hanya yang tanggalnya hari ini (field timestamp)
+      const isHariIni = isToday(post.timestamp);
+      console.log('post.timestamp:', post.timestamp, '| isToday:', isHariIni);
+      if (!isHariIni) continue;
+
+      const toSave = { client_id: client.id };
+      keys.forEach(k => {
         if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
-        toSave.caption = post.caption.text;
+          toSave.caption = post.caption.text;
         } else {
-        toSave[k] = post[k];
+          toSave[k] = post[k];
         }
-    });
-    toSave.shortcode = post.code;
-    if (!toSave.shortcode) {
+      });
+      toSave.shortcode = post.code;
+      if (!toSave.shortcode) {
         console.warn('SKIP: post tanpa code/shortcode', post);
         continue;
-    }
-    fetchedShortcodesToday.push(toSave.shortcode);
+      }
+      fetchedShortcodesToday.push(toSave.shortcode);
 
-    await instaPostModel.upsertInstaPost(toSave);
+      await instaPostModel.upsertInstaPost(toSave);
 
-    // List link
-    kontenCount++;
-    kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
+      // List link
+      kontenCount++;
+      kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
-    // Fetch likes - PATCHED
-    if (post.code) {
+      // Fetch likes - gabungkan likes baru + likes lama
+      if (post.code) {
         await limit(async () => {
-        const likesRes = await axios.get(
-            `https://${RAPIDAPI_HOST}/v1/likes`,
-            {
-            params: { code_or_id_or_url: post.code },
-            headers: {
-                'X-RapidAPI-Key': RAPIDAPI_KEY,
-                'X-RapidAPI-Host': RAPIDAPI_HOST,
-            },
-            }
-        );
-        // Likes baru dari API
-        const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
+          let likesRes;
+          try {
+            likesRes = await axios.get(
+              `https://${RAPIDAPI_HOST}/v1/likes`,
+              {
+                params: { code_or_id_or_url: post.code },
+                headers: {
+                  'X-RapidAPI-Key': RAPIDAPI_KEY,
+                  'X-RapidAPI-Host': RAPIDAPI_HOST,
+                },
+              }
+            );
+          } catch (err) {
+            console.error("ERROR FETCHING LIKES:", err.response?.data || err.message);
+            return;
+          }
+
+          // Likes baru dari API
+          const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
             ? likesRes.data.data.items : [];
-        const newUsernames = likeItems.map(like => like.username ? like.username : like);
+          const newUsernames = likeItems.map(like => like.username ? like.username : like);
 
-        // Likes lama dari database
-        let oldUsernames = [];
-        try {
+          // Likes lama dari database
+          let oldUsernames = [];
+          try {
             oldUsernames = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
-        } catch (e) {
+          } catch (e) {
             oldUsernames = [];
-        }
+          }
 
-        // Gabungkan tanpa duplikat
-        const allUsernamesSet = new Set([...oldUsernames, ...newUsernames]);
-        const allUsernames = Array.from(allUsernamesSet);
+          // Gabungkan tanpa duplikat
+          const allUsernamesSet = new Set([...oldUsernames, ...newUsernames]);
+          const allUsernames = Array.from(allUsernamesSet);
 
-        // Simpan likes gabungan ke database
-        await instaLikeModel.upsertInstaLike(post.code, allUsernames);
+          // Simpan likes gabungan ke database
+          await instaLikeModel.upsertInstaLike(post.code, allUsernames);
         });
+      }
     }
-    }
-
   }
 
   // Setelah fetch selesai, hapus shortcode database hari ini yang tidak ada di hasil fetch
