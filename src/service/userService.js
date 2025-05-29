@@ -102,7 +102,7 @@ export async function findUserByField(field, value) {
 export async function getUsersByClient(client_id) {
   // Pastikan nama tabel dan field sesuai di database!
   const res = await pool.query(
-    `SELECT user_id, nama, insta FROM users WHERE client_id = $1 AND insta IS NOT NULL AND insta != ''`,
+    `SELECT user_id, nama, insta FROM user WHERE client_id = $1 AND insta IS NOT NULL AND insta != ''`,
     [client_id]
   );
   return res.rows;
