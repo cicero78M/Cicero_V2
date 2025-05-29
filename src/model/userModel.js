@@ -50,10 +50,6 @@ export const remove = async (id) => {
   return deleted;
 };
 
-
-// src/model/userModel.js
-import { pool } from '../config/db.js';
-
 // Hanya ambil user dengan status true
 export async function getUsersByClient(client_id) {
   const res = await pool.query(
