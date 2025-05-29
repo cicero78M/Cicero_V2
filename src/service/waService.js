@@ -79,31 +79,31 @@ waClient.on('message', async (msg) => {
   }
 
 
-    // Tambahkan patch ini di bawah baris adminCommands:
-if (text.startsWith('fetchinsta#')) {
-  if (!isAdminWhatsApp(chatId)) {
-    await waClient.sendMessage(chatId, 'Akses ditolak.');
+  // Tambahkan patch ini di bawah baris adminCommands:
+
+  if (text.startsWith('fetchinsta#')) {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(chatId, 'Akses ditolak.');
+      return;
+    }
+    const keysString = text.replace('fetchinsta#', '').trim();
+    let keys;
+    if (!keysString) {
+      keys = [
+        "shortcode", "caption", "like_count", "timestamp"
+        // dst
+      ];
+    } else {
+      keys = keysString.split(',').map(k => k.trim());
+    }
+    // Panggil fungsi dan lempar waClient + chatId
+    try {
+      await fetchAndStoreInstaContent(keys, waClient, chatId);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal fetch/simpan: ${err.message}`);
+    }
     return;
   }
-  const keysString = text.replace('fetchinsta#', '').trim();
-  let keys;
-  if (!keysString) {
-    keys = [
-      "shortcode", "caption", "like_count", "timestamp"
-      // dst
-    ];
-  } else {
-    keys = keysString.split(',').map(k => k.trim());
-  }
-  try {
-    const res = await fetchAndStoreInstaContent(keys);
-    await waClient.sendMessage(chatId, res.message || '✅ Berhasil mengambil dan menyimpan data Instagram.');
-  } catch (err) {
-    await waClient.sendMessage(chatId, `❌ Gagal fetch/simpan: ${err.message}`);
-  }
-  return;
-}
-
 
 
 

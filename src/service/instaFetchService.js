@@ -18,12 +18,20 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-export async function fetchAndStoreInstaContent(keys) {
+// Fungsi utama, sekarang menerima waClient & chatId untuk progress update
+export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
+  let processing = true;
+  let kontenCount = 0;
+  let kontenLinks = [];
+
+  // Progress message: setiap 4 detik
+  const intervalId = setInterval(() => {
+    if (processing) waClient.sendMessage(chatId, '⏳ Processing fetch data...');
+  }, 4000);
+
   const clients = await getEligibleClients();
   for (const client of clients) {
     const username = client.client_insta;
-
-    // Request ke API: endpoint /v1/posts
     const postsRes = await limit(() =>
       axios.get(
         `https://${RAPIDAPI_HOST}/v1/posts`,
@@ -36,23 +44,29 @@ export async function fetchAndStoreInstaContent(keys) {
         }
       )
     );
-
-    // Array post ada di data.data.items
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
 
     for (const post of items) {
-      // Patch: selalu isi 'shortcode' dengan value 'code'
       const toSave = { client_id: client.id };
-      keys.forEach(k => toSave[k] = post[k]);
-      // Wajib field 'shortcode' diisi dari post.code
+      keys.forEach(k => {
+        // Hanya ambil text dari caption
+        if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
+          toSave.caption = post.caption.text;
+        } else {
+          toSave[k] = post[k];
+        }
+      });
       toSave.shortcode = post.code;
       if (!toSave.shortcode) {
-        // Jika tetap tidak ada, skip
         console.warn('SKIP: post tanpa code/shortcode', post);
         continue;
       }
       await instaPostModel.upsertInstaPost(toSave);
+
+      // Push link ke list
+      kontenCount++;
+      kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
       // Fetch likes
       if (post.code) {
@@ -67,15 +81,25 @@ export async function fetchAndStoreInstaContent(keys) {
               },
             }
           );
-          // Array username like ada di data.data.items
           const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
             ? likesRes.data.data.items : [];
-          // Kalau likes berupa array objek { username: ... }
           const likesUsernames = likeItems.map(like => like.username ? like.username : like);
           await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
         });
       }
     }
   }
-  return { message: `Sukses ambil & simpan konten ${clients.length} client` };
+
+  processing = false;
+  clearInterval(intervalId);
+
+  // Kirim hasil akhir ke WhatsApp
+  let maxPerMsg = 30; // max link per message biar tidak terlalu panjang
+  const totalMsg = Math.ceil(kontenLinks.length / maxPerMsg);
+  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten berhasil diambil: *${kontenLinks.length}*`);
+
+  for (let i = 0; i < totalMsg; i++) {
+    const linksMsg = kontenLinks.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
+    await waClient.sendMessage(chatId, `Link konten Instagram:\n${linksMsg}`);
+  }
 }
