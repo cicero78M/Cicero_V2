@@ -91,8 +91,8 @@ waClient.on('message', async (msg) => {
       return;
     }
 
-    // Query WAJIB mengambil field title & divisi!
-    const users = await getUsersByClient(client_id); // user: {user_id, nama, insta, divisi, title}
+    // Pastikan ambil title & divisi!
+    const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
     if (!shortcodes.length) {
@@ -104,47 +104,39 @@ waClient.on('message', async (msg) => {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map(x => x.toLowerCase()));
 
-      // Grouping user per Satfung (divisi)
+      // Satfung => Array user yg sudah like
       const sudahPerSatfung = {};
-      const belumPerSatfung = {};
 
       users.forEach(u => {
         if (!u.insta) return;
         const satfung = u.divisi || '-';
-        // Format: TITLE NAMA (@username)
-        const titleNama = [u.title, u.nama].filter(Boolean).join(' ') + ` (@${u.insta})`;
-
-        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-
+        // Format: TITLE NAMA : username (tanpa @)
+        const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
         if (likesSet.has(u.insta.toLowerCase())) {
-          sudahPerSatfung[satfung].push(titleNama);
-        } else {
-          belumPerSatfung[satfung].push(titleNama);
+          if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
         }
       });
 
-      // Build pesan per satfung
+      // Compose message sesuai contoh
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
-      let msg = `📋 *Absensi Likes IG*\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+      let msg = `📋 Rekap User yang sudah melakukan Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
 
-      msg += `✅ *SUDAH Like:*\n`;
       Object.keys(sudahPerSatfung).forEach(satfung => {
-        msg += `*${satfung}*\n`;
-        msg += sudahPerSatfung[satfung].length ? sudahPerSatfung[satfung].join('\n') + '\n' : '-\n';
+        const arr = sudahPerSatfung[satfung];
+        msg += `${satfung} (${arr.length} user):\n`;
+        arr.forEach(line => {
+          msg += `- ${line}\n`;
+        });
+        msg += '\n';
       });
 
-      msg += `\n❌ *BELUM Like:*\n`;
-      Object.keys(belumPerSatfung).forEach(satfung => {
-        msg += `*${satfung}*\n`;
-        msg += belumPerSatfung[satfung].length ? belumPerSatfung[satfung].join('\n') + '\n' : '-\n';
-      });
+      // Jika ingin tambahkan user yang **belum** like, bisa tambah block seperti di atas untuk perSatfung belum
 
-      await waClient.sendMessage(chatId, msg);
+      await waClient.sendMessage(chatId, msg.trim());
     }
     return;
   }
-
   
   
   // Tambahkan patch ini di bawah baris adminCommands:
