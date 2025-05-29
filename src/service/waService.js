@@ -10,6 +10,7 @@ import * as userService from './userService.js';
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
+import { getUsersByClient } from '../model/userModel.js';
 
 
 
@@ -91,7 +92,7 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     return;
   }
 
-  const users = await userService.getUsersByClient(client_id);
+  const users = await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) {

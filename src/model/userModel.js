@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import { USER_DATA_PATH } from '../utils/constants.js';
+import { pool } from '../config/db.js';
 
 const dataPath = USER_DATA_PATH || './src/data/users.json';
 
@@ -49,3 +50,11 @@ export const remove = async (id) => {
   return deleted;
 };
 
+
+export async function getUsersByClient(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, insta FROM users WHERE client_id = $1 AND insta IS NOT NULL AND insta != ''`,
+    [client_id]
+  );
+  return res.rows;
+}
