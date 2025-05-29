@@ -54,7 +54,6 @@ async function getEligibleClients() {
 export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   let processing = true;
 
-  // INFO DEBUG
   console.log("==========[DEBUG: Server Info]==========");
   console.log("Server timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
   console.log("Server now:", new Date());
@@ -92,42 +91,44 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       ? postsRes.data.data.items : [];
 
     for (const post of items) {
-      // Filter hanya post yang taken_at == hari ini
       if (!isToday(post.taken_at)) continue;
 
-      // INFO DEBUG: Komparasi date
       const takenAtDate = post.taken_at ? new Date(post.taken_at * 1000) : null;
       console.log(
         `[DEBUG] Shortcode: ${post.code}, taken_at: ${post.taken_at}, takenAtDate: ${takenAtDate}, serverNow: ${new Date()}`
       );
 
-      // Siapkan data yang akan di-insert/update
-      const toSave = { client_id: client.id };
-      keys.forEach(k => {
-        if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
-          toSave.caption = post.caption.text;
-        } else {
-          toSave[k] = post[k];
-        }
-      });
-      toSave.shortcode = post.code;
-      toSave.comment_count = post.comment_count ?? 0; // PATCH BARU
+      // === SIAPKAN DATA UNTUK INSERT/UPDATE ===
+      const toSave = {
+        client_id: client.id,
+        shortcode: post.code,
+        comment_count: typeof post.comment_count === "number" ? post.comment_count : 0,
+        like_count: typeof post.like_count === "number" ? post.like_count : 0,
+        caption: (post.caption && typeof post.caption === 'object' && post.caption.text)
+          ? post.caption.text
+          : (typeof post.caption === 'string' ? post.caption : null)
+      };
 
-      if (!toSave.shortcode) {
-        continue;
-      }
       fetchedShortcodesToday.push(toSave.shortcode);
 
-      // PATCH: insert/update dengan comment_count dan created_at = taken_at
+      // INSERT/UPDATE dengan kolom baru
       await pool.query(
-        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, created_at)
-         VALUES ($1, $2, $3, $4, to_timestamp($5))
+        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
+         VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
          ON CONFLICT (shortcode) DO UPDATE
          SET client_id = EXCLUDED.client_id,
              caption = EXCLUDED.caption,
              comment_count = EXCLUDED.comment_count,
-             created_at = to_timestamp($5)`,
-        [toSave.client_id, toSave.shortcode, toSave.caption || null, toSave.comment_count, post.taken_at]
+             like_count = EXCLUDED.like_count,
+             created_at = to_timestamp($6)`,
+        [
+          toSave.client_id,
+          toSave.shortcode,
+          toSave.caption || null,
+          toSave.comment_count,
+          toSave.like_count,
+          post.taken_at
+        ]
       );
 
       // Likes merge
@@ -156,14 +157,12 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
     }
   }
 
-  // Sinkronisasi: hapus yang tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
   clearInterval(intervalId);
 
-  // Ambil dan kirim hanya yang created_at hari ini
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
