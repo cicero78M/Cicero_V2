@@ -84,66 +84,69 @@ waClient.on('message', async (msg) => {
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
-if (text.toLowerCase().startsWith('absensilikes#')) {
-  const [, client_id] = text.split('#');
-  if (!client_id) {
-    await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid');
+  if (text.toLowerCase().startsWith('absensilikes#')) {
+    const [, client_id] = text.split('#');
+    if (!client_id) {
+      await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid');
+      return;
+    }
+
+    // Query WAJIB mengambil field title & divisi!
+    const users = await getUsersByClient(client_id); // user: {user_id, nama, insta, divisi, title}
+    const shortcodes = await getShortcodesTodayByClient(client_id);
+
+    if (!shortcodes.length) {
+      await waClient.sendMessage(chatId, `Tidak ada konten IG untuk Polres ${client_id} hari ini.`);
+      return;
+    }
+
+    for (const shortcode of shortcodes) {
+      const likes = await getLikesByShortcode(shortcode);
+      const likesSet = new Set(likes.map(x => x.toLowerCase()));
+
+      // Grouping user per Satfung (divisi)
+      const sudahPerSatfung = {};
+      const belumPerSatfung = {};
+
+      users.forEach(u => {
+        if (!u.insta) return;
+        const satfung = u.divisi || '-';
+        // Format: TITLE NAMA (@username)
+        const titleNama = [u.title, u.nama].filter(Boolean).join(' ') + ` (@${u.insta})`;
+
+        if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+        if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+
+        if (likesSet.has(u.insta.toLowerCase())) {
+          sudahPerSatfung[satfung].push(titleNama);
+        } else {
+          belumPerSatfung[satfung].push(titleNama);
+        }
+      });
+
+      // Build pesan per satfung
+      const linkIG = `https://www.instagram.com/p/${shortcode}`;
+      let msg = `📋 *Absensi Likes IG*\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+
+      msg += `✅ *SUDAH Like:*\n`;
+      Object.keys(sudahPerSatfung).forEach(satfung => {
+        msg += `*${satfung}*\n`;
+        msg += sudahPerSatfung[satfung].length ? sudahPerSatfung[satfung].join('\n') + '\n' : '-\n';
+      });
+
+      msg += `\n❌ *BELUM Like:*\n`;
+      Object.keys(belumPerSatfung).forEach(satfung => {
+        msg += `*${satfung}*\n`;
+        msg += belumPerSatfung[satfung].length ? belumPerSatfung[satfung].join('\n') + '\n' : '-\n';
+      });
+
+      await waClient.sendMessage(chatId, msg);
+    }
     return;
   }
 
-  const users = await getUsersByClient(client_id);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
-
-  if (!shortcodes.length) {
-    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk client ${client_id} hari ini.`);
-    return;
-  }
-
-  for (const shortcode of shortcodes) {
-    const likes = await getLikesByShortcode(shortcode);
-    const likesSet = new Set(likes.map(x => x.toLowerCase()));
-
-    // Kelompokkan user by divisi
-    const sudahPerDiv = {};
-    const belumPerDiv = {};
-
-    users.forEach(u => {
-      if (!u.insta) return;
-      const div = u.divisi || '-';
-      if (likesSet.has(u.insta.toLowerCase())) {
-        if (!sudahPerDiv[div]) sudahPerDiv[div] = [];
-        sudahPerDiv[div].push(`${u.nama} (@${u.insta})`);
-      } else {
-        if (!belumPerDiv[div]) belumPerDiv[div] = [];
-        belumPerDiv[div].push(`${u.nama} (@${u.insta})`);
-      }
-    });
-
-    // Build pesan
-    const linkIG = `https://www.instagram.com/p/${shortcode}`;
-
-    let msg = `📋 *Absensi Likes IG*\nClient: ${client_id}\nLink: ${linkIG}\n\n`;
-
-    msg += `✅ *SUDAH Like:*\n`;
-    Object.keys(sudahPerDiv).forEach(div => {
-      msg += `*${div}*\n`;
-      msg += sudahPerDiv[div].length ? sudahPerDiv[div].join('\n') + '\n' : '-\n';
-    });
-
-    msg += `\n❌ *BELUM Like:*\n`;
-    Object.keys(belumPerDiv).forEach(div => {
-      msg += `*${div}*\n`;
-      msg += belumPerDiv[div].length ? belumPerDiv[div].join('\n') + '\n' : '-\n';
-    });
-
-    await waClient.sendMessage(chatId, msg);
-  }
-  return;
-}
-
-
-
-
+  
+  
   // Tambahkan patch ini di bawah baris adminCommands:
 
   if (text.startsWith('fetchinsta#')) {
