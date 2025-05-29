@@ -84,7 +84,6 @@ waClient.on('message', async (msg) => {
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
-
   if (text.toLowerCase().startsWith('absensilikes#')) {
     const parts = text.split('#');
     if (parts.length < 2) {
@@ -95,25 +94,27 @@ waClient.on('message', async (msg) => {
     const filter1 = (parts[2] || '').toLowerCase();
     const filter2 = (parts[3] || '').toLowerCase();
 
-    // Ambil data user dengan title & divisi!
+    // Ambil waktu pengambilan
+    const now = new Date();
+    const waktu = now.toLocaleTimeString('id-ID', { hour12: false });
+    const tanggal = now.toLocaleDateString('id-ID');
+
     const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
     if (!shortcodes.length) {
-      await waClient.sendMessage(chatId, `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.`);
+      await waClient.sendMessage(chatId, `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.\nWaktu pengambilan: ${waktu}`);
       return;
     }
 
     // ===== AKUMULASI =====
     if (filter1 === 'akumulasi') {
-      // Hitung absensi akumulasi likes per user
-      const userStats = {}; // user_id => {nama, title, divisi, insta, count}
+      const userStats = {};
       users.forEach(u => {
         if (!u.insta) return;
         userStats[u.user_id] = { ...u, count: 0 };
       });
 
-      // Untuk setiap konten, hitung siapa yang sudah like
       for (const shortcode of shortcodes) {
         const likes = await getLikesByShortcode(shortcode);
         const likesSet = new Set(likes.map(x => x.toLowerCase()));
@@ -132,7 +133,6 @@ waClient.on('message', async (msg) => {
       Object.values(userStats).forEach(u => {
         const satfung = u.divisi || '-';
         const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-        // >=50% dari total konten
         if (u.count >= Math.ceil(totalKonten / 2)) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
           sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta} (${u.count} konten)`);
@@ -143,7 +143,11 @@ waClient.on('message', async (msg) => {
       });
 
       const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
-      let msg = `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\nTanggal: ${(new Date()).toLocaleDateString()}\nKonten hari ini: ${totalKonten}\n\n`;
+      let msg = `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\nTanggal: ${tanggal}\nWaktu pengambilan: ${waktu}\nKonten hari ini: ${totalKonten}\n`;
+
+      // Tambahkan daftar link konten IG
+      const kontenLinks = shortcodes.map(sc => `https://www.instagram.com/p/${sc}`);
+      msg += `Daftar link konten hari ini:\n${kontenLinks.join('\n')}\n\n`;
 
       if (tipe === 'sudah') {
         Object.keys(sudahPerSatfung).forEach(satfung => {
@@ -194,7 +198,7 @@ waClient.on('message', async (msg) => {
 
       // ======= jika filter kosong, tampilkan dua-duanya =======
       if (!filter1) {
-        let msg = `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\nTanggal: ${tanggal}\nWaktu pengambilan: ${waktu}\n\n`;
 
         msg += `✅ SUDAH Like:\n`;
         Object.keys(sudahPerSatfung).forEach(satfung => {
@@ -221,7 +225,7 @@ waClient.on('message', async (msg) => {
 
       // ====== hanya sudah ======
       if (filter1 === 'sudah') {
-        let msg = `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\nTanggal: ${tanggal}\nWaktu pengambilan: ${waktu}\n\n`;
         Object.keys(sudahPerSatfung).forEach(satfung => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -235,7 +239,7 @@ waClient.on('message', async (msg) => {
 
       // ====== hanya belum ======
       if (filter1 === 'belum') {
-        let msg = `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\nTanggal: ${tanggal}\nWaktu pengambilan: ${waktu}\n\n`;
         Object.keys(belumPerSatfung).forEach(satfung => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -250,7 +254,6 @@ waClient.on('message', async (msg) => {
     return;
   }
     
-  
   // Tambahkan patch ini di bawah baris adminCommands:
 
   if (text.startsWith('fetchinsta#')) {
