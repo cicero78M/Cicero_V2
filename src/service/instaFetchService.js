@@ -6,9 +6,22 @@ import { pool } from '../config/db.js';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
-
-// Rate limit: 4 request per detik
 const limit = pLimit(4);
+
+async function getShortcodesToday() {
+  const res = await pool.query(
+    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
+  );
+  return res.rows.map(r => r.shortcode);
+}
+
+async function deleteShortcodes(shortcodesToDelete) {
+  if (!shortcodesToDelete.length) return;
+  await pool.query(
+    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = CURRENT_DATE`,
+    [shortcodesToDelete]
+  );
+}
 
 async function getEligibleClients() {
   const res = await pool.query(
@@ -18,43 +31,20 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-// Ambil semua shortcode pada database hari ini
-async function getShortcodesToday() {
-  const res = await pool.query(
-    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
-  );
-  return res.rows.map(r => r.shortcode);
-}
-
-// Hapus semua shortcode pada database hari ini yang tidak ada di list
-async function deleteShortcodes(shortcodesToDelete) {
-  if (!shortcodesToDelete.length) return;
-  await pool.query(
-    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = CURRENT_DATE`,
-    [shortcodesToDelete]
-  );
-}
-
 export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   let processing = true;
-  let kontenCount = 0;
-  let kontenLinks = [];
 
-  // Progress message: setiap 4 detik
   const intervalId = setInterval(() => {
     if (processing) waClient.sendMessage(chatId, '⏳ Processing fetch data...');
   }, 4000);
 
-  // Ambil semua shortcode database hari ini (sebelum fetch)
+  // Dapatkan daftar shortcode yang sudah ada di database hari ini
   const dbShortcodesToday = await getShortcodesToday();
-  // Untuk tracking hasil fetch hari ini
   let fetchedShortcodesToday = [];
 
   const clients = await getEligibleClients();
   for (const client of clients) {
     const username = client.client_insta;
-    console.log("Mengambil data untuk username:", username);
-
     let postsRes;
     try {
       postsRes = await limit(() =>
@@ -69,30 +59,14 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
           }
         )
       );
-      console.log("API RESPONSE:", JSON.stringify(postsRes.data, null, 2));
     } catch (err) {
       console.error("ERROR FETCHING POST:", err.response?.data || err.message);
       continue; // next client
     }
-
-    // Array items dari response API
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
 
-    if (!items.length) {
-      console.log(`Tidak ada items dari API untuk user: ${username}`);
-    }
-
-    // === PATCH: DEBUG STRUKTUR POST ===
-    if (items.length > 0) {
-      console.log("Contoh struktur post:", JSON.stringify(items[0], null, 2));
-    }
-
     for (const post of items) {
-      // PATCH: SEMUA post diproses (filter tanggal DINONAKTIFKAN)
-      // Nanti setelah tau field tanggalnya, filter bisa diaktifkan lagi
-      // if (!isToday(post.timestamp)) continue;
-
       const toSave = { client_id: client.id };
       keys.forEach(k => {
         if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
@@ -103,72 +77,54 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       });
       toSave.shortcode = post.code;
       if (!toSave.shortcode) {
-        console.warn('SKIP: post tanpa code/shortcode', post);
         continue;
       }
       fetchedShortcodesToday.push(toSave.shortcode);
 
       await instaPostModel.upsertInstaPost(toSave);
 
-      // List link
-      kontenCount++;
-      kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
-
-      // Fetch likes - gabungkan likes baru + likes lama
+      // Likes merge
       if (post.code) {
         await limit(async () => {
-          let likesRes;
-          try {
-            likesRes = await axios.get(
-              `https://${RAPIDAPI_HOST}/v1/likes`,
-              {
-                params: { code_or_id_or_url: post.code },
-                headers: {
-                  'X-RapidAPI-Key': RAPIDAPI_KEY,
-                  'X-RapidAPI-Host': RAPIDAPI_HOST,
-                },
-              }
-            );
-          } catch (err) {
-            console.error("ERROR FETCHING LIKES:", err.response?.data || err.message);
-            return;
-          }
-
-          // Likes baru dari API
+          const likesRes = await axios.get(
+            `https://${RAPIDAPI_HOST}/v1/likes`,
+            {
+              params: { code_or_id_or_url: post.code },
+              headers: {
+                'X-RapidAPI-Key': RAPIDAPI_KEY,
+                'X-RapidAPI-Host': RAPIDAPI_HOST,
+              },
+            }
+          );
           const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
             ? likesRes.data.data.items : [];
-          const newUsernames = likeItems.map(like => like.username ? like.username : like);
-
-          // Likes lama dari database
-          let oldUsernames = [];
-          try {
-            oldUsernames = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
-          } catch (e) {
-            oldUsernames = [];
+          let likesUsernames = likeItems.map(like => like.username ? like.username : like);
+          const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
+          if (dbLike) {
+            likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
           }
-
-          // Gabungkan tanpa duplikat
-          const allUsernamesSet = new Set([...oldUsernames, ...newUsernames]);
-          const allUsernames = Array.from(allUsernamesSet);
-
-          // Simpan likes gabungan ke database
-          await instaLikeModel.upsertInstaLike(post.code, allUsernames);
+          await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
         });
       }
     }
   }
 
-  // Setelah fetch selesai, hapus shortcode database hari ini yang tidak ada di hasil fetch
+  // Sinkronisasi: hapus yang tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
   clearInterval(intervalId);
 
-  // Kirim hasil akhir ke WhatsApp
-  let maxPerMsg = 30; // max link per message
+  // Hanya kirim list konten yang created_at hari ini
+  const kontenHariIniRes = await pool.query(
+    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
+  );
+  const kontenLinks = kontenHariIniRes.rows.map(r => `https://www.instagram.com/p/${r.shortcode}`);
+
+  let maxPerMsg = 30;
   const totalMsg = Math.ceil(kontenLinks.length / maxPerMsg);
-  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten (tanpa filter tanggal): *${kontenLinks.length}*`);
+  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinks.length}*`);
 
   for (let i = 0; i < totalMsg; i++) {
     const linksMsg = kontenLinks.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
