@@ -1,91 +1,82 @@
 import axios from 'axios';
-import pLimit from 'p-limit';
 import * as tiktokPostModel from '../model/tiktokPostModel.js';
 import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 import { pool } from '../config/db.js';
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY_TIKTOK;
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
-const limit = pLimit(4);
 
-// Ambil client yang punya TikTok aktif
-async function getEligibleClients() {
-  const res = await pool.query(
-    `SELECT client_ID as id, client_tiktok FROM clients
-      WHERE client_status=true AND client_tiktok_status=true AND client_tiktok IS NOT NULL`
-  );
-  return res.rows;
-}
-
-// Only post hari ini (asumsi field timestamp: created_at dari Tiktok UNIX time)
-function isToday(unixTimestamp) {
-  if (!unixTimestamp) return false;
-  const d = new Date(unixTimestamp * 1000);
+// Helper: filter hanya hari ini (UNIX seconds)
+function isToday(unix) {
+  if (!unix) return false;
+  const d = new Date(unix * 1000);
   const today = new Date();
   return d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate();
 }
 
+// Ambil semua client yang TikTok aktif
+async function getEligibleClients() {
+  const res = await pool.query(
+    `SELECT client_id, tiktok_secUid FROM client WHERE client_status = true AND client_tiktok_status = true AND tiktok_secUid IS NOT NULL`
+  );
+  return res.rows;
+}
+
 export async function fetchAndStoreTiktokContent() {
   const clients = await getEligibleClients();
   for (const client of clients) {
-    const username = client.client_tiktok;
-    // 1. FETCH video/posts Tiktok via API
+    const secUid = client.tiktok_secuid;
     let postsRes;
     try {
-      postsRes = await limit(() =>
-        axios.get(
-          `https://${RAPIDAPI_HOST}/user/posts/`,
-          {
-            params: { unique_id: username, count: 30 },
-            headers: {
-              'X-RapidAPI-Key': RAPIDAPI_KEY,
-              'X-RapidAPI-Host': RAPIDAPI_HOST,
-            },
+      postsRes = await axios.get(
+        `https://${RAPIDAPI_HOST}/api/user/posts`,
+        {
+          params: { secUid, count: 35, cursor: 0 },
+          headers: {
+            'x-rapidapi-key': RAPIDAPI_KEY,
+            'x-rapidapi-host': RAPIDAPI_HOST
           }
-        )
+        }
       );
     } catch (err) {
-      console.error("ERROR FETCHING TIKTOK POST:", err.response?.data || err.message);
+      console.error('[TikTok Fetch ERROR]', err.response?.data || err.message);
       continue;
     }
-    const items = postsRes.data && Array.isArray(postsRes.data.data) ? postsRes.data.data : [];
+    const items = postsRes.data?.data?.items ?? [];
     for (const post of items) {
-      if (!isToday(post.create_time)) continue;
-      const video_id = post.aweme_id || post.id;
-      await tiktokPostModel.upsertTiktokPost({
-        client_id: client.id,
-        video_id,
-        caption: post.desc,
-        created_at: post.create_time,
-        comment_count: post.statistics?.comment_count || 0,
-        like_count: post.statistics?.digg_count || 0
-      });
-      // 2. FETCH comments per video
-      await limit(async () => {
-        let commentRes;
-        try {
-          commentRes = await axios.get(
-            `https://${RAPIDAPI_HOST}/video/comments/`,
-            {
-              params: { video_id, count: 100 },
-              headers: {
-                'X-RapidAPI-Key': RAPIDAPI_KEY,
-                'X-RapidAPI-Host': RAPIDAPI_HOST,
-              },
+      if (!isToday(post.createTime)) continue;
+      const toSave = {
+        video_id: post.id,
+        client_id: client.client_id,
+        desc: post.desc,
+        created_at: post.createTime,
+        comment_count: post.commentCount,
+        like_count: post.diggCount,
+        share_count: post.shareCount
+      };
+      await tiktokPostModel.upsertTiktokPost(toSave);
+
+      // Fetch comments
+      let commRes;
+      try {
+        commRes = await axios.get(
+          `https://${RAPIDAPI_HOST}/api/post/comments`,
+          {
+            params: { awemeId: post.id },
+            headers: {
+              'x-rapidapi-key': RAPIDAPI_KEY,
+              'x-rapidapi-host': RAPIDAPI_HOST
             }
-          );
-        } catch (e) {
-          console.error('ERROR FETCH COMMENTS:', e.response?.data || e.message);
-          return;
-        }
-        const comments = (commentRes.data?.data || [])
-          .map(c => c.user?.unique_id || c.user?.nickname || c.username)
-          .filter(Boolean);
-        await tiktokCommentModel.upsertTiktokComment(video_id, comments);
-      });
+          }
+        );
+      } catch (err) {
+        console.error('[TikTok Comments ERROR]', err.response?.data || err.message);
+        continue;
+      }
+      const usernames = commRes.data?.data?.comments?.map(c => c.user?.unique_id) ?? [];
+      await tiktokCommentModel.upsertTiktokComment(post.id, usernames);
     }
   }
-  return { message: 'Sukses fetch & simpan data Tiktok hari ini.' };
 }
