@@ -84,7 +84,8 @@ waClient.on('message', async (msg) => {
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
-// Helper untuk hari Indo
+
+// Helper hari Indonesia
 const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 
 if (text.toLowerCase().startsWith('absensilikes#')) {
@@ -97,7 +98,8 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
   const filter1 = (parts[2] || '').toLowerCase();
   const filter2 = (parts[3] || '').toLowerCase();
 
-  // Tanggal dan jam lokal
+  const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n`;
+
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString('id-ID');
@@ -107,24 +109,23 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) {
-    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`);
+    await waClient.sendMessage(chatId, headerLaporan +
+      `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`);
     return;
   }
 
-  // ========== AKUMULASI ==========
+  // === AKUMULASI ===
   if (filter1 === 'akumulasi') {
     const userStats = {};
     users.forEach(u => {
-      if (!u.insta) return;
       userStats[u.user_id] = { ...u, count: 0 };
     });
 
     for (const shortcode of shortcodes) {
       const likes = await getLikesByShortcode(shortcode);
-      const likesSet = new Set(likes.map(x => x.toLowerCase()));
+      const likesSet = new Set(likes.map(x => (x || '').toLowerCase()));
       users.forEach(u => {
-        if (!u.insta) return;
-        if (likesSet.has(u.insta.toLowerCase())) {
+        if (u.insta && likesSet.has(u.insta.toLowerCase())) {
           userStats[u.user_id].count += 1;
         }
       });
@@ -140,25 +141,25 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     Object.values(userStats).forEach(u => {
       const satfung = u.divisi || '-';
       const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-      if (u.count >= Math.ceil(totalKonten / 2)) {
+      const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta} (${u.count} konten)` : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
+      if (u.insta && u.insta.trim() !== '' && u.count >= Math.ceil(totalKonten / 2)) {
         if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-        sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta} (${u.count} konten)`);
+        sudahPerSatfung[satfung].push(label);
         totalSudah++;
       } else {
         if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-        belumPerSatfung[satfung].push(`${titleNama} : ${u.insta} (${u.count} konten)`);
+        belumPerSatfung[satfung].push(label);
         totalBelum++;
       }
     });
 
     const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
-    let msg = `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n`;
+    let msg = headerLaporan +
+      `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n`;
 
-    // Daftar link IG
     const kontenLinks = shortcodes.map(sc => `https://www.instagram.com/p/${sc}`);
     msg += `Daftar link konten hari ini:\n${kontenLinks.join('\n')}\n\n`;
 
-    // Rekap jumlah user
     msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
     if (tipe === 'sudah') {
@@ -181,10 +182,10 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     return;
   }
 
-  // ========== PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) ==========
+  // === PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) ===
   for (const shortcode of shortcodes) {
     const likes = await getLikesByShortcode(shortcode);
-    const likesSet = new Set(likes.map(x => x.toLowerCase()));
+    const likesSet = new Set(likes.map(x => (x || '').toLowerCase()));
 
     const sudahPerSatfung = {};
     const belumPerSatfung = {};
@@ -193,17 +194,17 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     let totalBelum = 0;
 
     users.forEach(u => {
-      if (!u.insta) return;
       totalUser++;
       const satfung = u.divisi || '-';
       const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-      if (likesSet.has(u.insta.toLowerCase())) {
+      if (u.insta && u.insta.trim() !== '' && likesSet.has(u.insta.toLowerCase())) {
         if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
         sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
         totalSudah++;
       } else {
         if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-        belumPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
+        const label = u.insta && u.insta.trim() !== '' ? `${titleNama} : ${u.insta}` : `${titleNama} : belum mengisi data insta`;
+        belumPerSatfung[satfung].push(label);
         totalBelum++;
       }
     });
@@ -211,8 +212,9 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
     if (!filter1) {
-      let msg = `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n`;
-      msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      let msg = headerLaporan +
+        `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
       msg += `✅ SUDAH Like:\n`;
       Object.keys(sudahPerSatfung).forEach(satfung => {
@@ -234,8 +236,9 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     }
 
     if (filter1 === 'sudah') {
-      let msg = `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n`;
-      msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      let msg = headerLaporan +
+        `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
       Object.keys(sudahPerSatfung).forEach(satfung => {
         const arr = sudahPerSatfung[satfung];
@@ -247,8 +250,9 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
     }
 
     if (filter1 === 'belum') {
-      let msg = `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n`;
-      msg += `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+      let msg = headerLaporan +
+        `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+        `👤 Jumlah user: *${totalUser}*\n✅ Sudah melaksanakan: *${totalSudah}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
       Object.keys(belumPerSatfung).forEach(satfung => {
         const arr = belumPerSatfung[satfung];
@@ -261,6 +265,8 @@ if (text.toLowerCase().startsWith('absensilikes#')) {
   }
   return;
 }
+
+
 
     
   // Tambahkan patch ini di bawah baris adminCommands:
