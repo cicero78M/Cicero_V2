@@ -84,6 +84,7 @@ waClient.on('message', async (msg) => {
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
+
   if (text.toLowerCase().startsWith('absensilikes#')) {
     const parts = text.split('#');
     if (parts.length < 2) {
@@ -99,7 +100,7 @@ waClient.on('message', async (msg) => {
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
     if (!shortcodes.length) {
-      await waClient.sendMessage(chatId, `Tidak ada konten IG untuk Polres ${client_id} hari ini.`);
+      await waClient.sendMessage(chatId, `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.`);
       return;
     }
 
@@ -142,12 +143,12 @@ waClient.on('message', async (msg) => {
       });
 
       const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
-      let msg = `📋 Rekap Akumulasi Likes IG\nPolres: ${client_id}\nTanggal: ${(new Date()).toLocaleDateString()}\nKonten hari ini: ${totalKonten}\n\n`;
+      let msg = `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\nTanggal: ${(new Date()).toLocaleDateString()}\nKonten hari ini: ${totalKonten}\n\n`;
 
       if (tipe === 'sudah') {
         Object.keys(sudahPerSatfung).forEach(satfung => {
           const arr = sudahPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -156,7 +157,7 @@ waClient.on('message', async (msg) => {
       } else {
         Object.keys(belumPerSatfung).forEach(satfung => {
           const arr = belumPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -193,12 +194,12 @@ waClient.on('message', async (msg) => {
 
       // ======= jika filter kosong, tampilkan dua-duanya =======
       if (!filter1) {
-        let msg = `📋 Absensi Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Absensi Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
 
         msg += `✅ SUDAH Like:\n`;
         Object.keys(sudahPerSatfung).forEach(satfung => {
           const arr = sudahPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -208,7 +209,7 @@ waClient.on('message', async (msg) => {
         msg += `\n❌ BELUM Like:\n`;
         Object.keys(belumPerSatfung).forEach(satfung => {
           const arr = belumPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -220,10 +221,10 @@ waClient.on('message', async (msg) => {
 
       // ====== hanya sudah ======
       if (filter1 === 'sudah') {
-        let msg = `📋 Rekap User yang sudah melakukan Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
         Object.keys(sudahPerSatfung).forEach(satfung => {
           const arr = sudahPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -234,10 +235,10 @@ waClient.on('message', async (msg) => {
 
       // ====== hanya belum ======
       if (filter1 === 'belum') {
-        let msg = `📋 Rekap User yang *BELUM* Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+        let msg = `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\nLink: ${linkIG}\n\n`;
         Object.keys(belumPerSatfung).forEach(satfung => {
           const arr = belumPerSatfung[satfung];
-          msg += `${satfung} (${arr.length} user):\n`;
+          msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach(line => {
             msg += `- ${line}\n`;
           });
@@ -248,8 +249,7 @@ waClient.on('message', async (msg) => {
     }
     return;
   }
-
-  
+    
   
   // Tambahkan patch ini di bawah baris adminCommands:
 
