@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import routes from './src/routes/index.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import './src/service/waService.js';
-import './src/jobs/instagramFetchJob.js';
 
 
 dotenv.config();
