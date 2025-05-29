@@ -10,6 +10,7 @@ import * as userService from './userService.js';
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
 
 
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -77,6 +78,59 @@ waClient.on('message', async (msg) => {
     await waClient.sendMessage(chatId, '❌ Anda tidak memiliki akses ke sistem ini.');
     return;
   }
+
+  // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
+  if (text.toLowerCase().startsWith('absensilikes#')) {
+  // Format: absensilikes#<client_id>
+  const [, client_id] = text.split('#');
+  if (!client_id) {
+    await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid');
+    return;
+  }
+
+  // Ambil user IG
+  const users = await userService.getUsersByClient(client_id);
+  // Ambil semua shortcode konten IG hari ini untuk client
+  const shortcodes = await instaPostModel.getShortcodesTodayByClient(client_id);
+
+  if (!shortcodes.length) {
+    await waClient.sendMessage(chatId, `Tidak ada konten IG untuk client ${client_id} hari ini.`);
+    return;
+  }
+
+  for (const shortcode of shortcodes) {
+    // Ambil daftar likes per konten
+    const likes = await instaLikeModel.getLikesByShortcode(shortcode);
+    const likesSet = new Set(
+      likes.map(x => typeof x === 'string' ? x.toLowerCase() : x.username?.toLowerCase())
+    );
+
+    const sudah = [];
+    const belum = [];
+    users.forEach(u => {
+      if (!u.insta) return;
+      if (likesSet.has(u.insta.toLowerCase())) {
+        sudah.push(u.nama + ' (@' + u.insta + ')');
+      } else {
+        belum.push(u.nama + ' (@' + u.insta + ')');
+      }
+    });
+
+    // Compose pesan per konten
+    const linkIG = `https://www.instagram.com/p/${shortcode}`;
+    let msg = `📋 *Absensi Likes IG*\nClient: ${client_id}\nLink: ${linkIG}\n\n`;
+
+    msg += `✅ *SUDAH Like* [${sudah.length} user]:\n`;
+    msg += sudah.length ? sudah.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'Tidak ada user yang like.\n';
+
+    msg += `\n❌ *BELUM Like* [${belum.length} user]:\n`;
+    msg += belum.length ? belum.map((n, i) => `${i + 1}. ${n}`).join('\n') : 'Semua user sudah like.\n';
+
+    await waClient.sendMessage(chatId, msg);
+  }
+  return;
+}
+
 
 
   // Tambahkan patch ini di bawah baris adminCommands:

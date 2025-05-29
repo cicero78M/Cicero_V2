@@ -54,3 +54,20 @@ export async function getAllShortcodesToday() {
   );
   return res.rows.map(r => r.shortcode);
 }
+
+
+
+// Ambil likes dari shortcode
+export async function getLikesByShortcode(shortcode) {
+  const res = await pool.query(
+    `SELECT likes FROM insta_like WHERE shortcode = $1`,
+    [shortcode]
+  );
+  if (res.rows.length === 0) return [];
+  try {
+    return Array.isArray(res.rows[0].likes)
+      ? res.rows[0].likes
+      : JSON.parse(res.rows[0].likes);
+  } catch { return []; }
+}
+

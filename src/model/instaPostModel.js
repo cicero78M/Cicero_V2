@@ -22,3 +22,17 @@ export async function upsertInstaPost(data) {
     [client_id, shortcode, caption, comment_count, data.created_at || null]
   );
 }
+
+// Ambil semua konten hari ini per client
+export async function getShortcodesTodayByClient(client_id) {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const res = await pool.query(
+    `SELECT shortcode FROM insta_post
+     WHERE client_id = $1 AND DATE(created_at) = $2`,
+    [client_id, `${yyyy}-${mm}-${dd}`]
+  );
+  return res.rows.map(r => r.shortcode);
+}
