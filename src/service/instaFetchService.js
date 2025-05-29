@@ -8,23 +8,20 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 const limit = pLimit(4);
 
-// Filter hanya data hari ini berdasarkan taken_at (UNIX seconds)
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
-  const d = new Date(unixTimestamp * 1000); // from seconds to ms
+  const d = new Date(unixTimestamp * 1000);
   const today = new Date();
   return d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate();
 }
 
-// Ambil semua shortcode pada database yang taken_at hari ini
 async function getShortcodesToday() {
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
-  // Filter created_at berdasarkan tanggal hari ini
   const res = await pool.query(
     `SELECT shortcode FROM insta_post 
      WHERE DATE(created_at) = $1`,
@@ -33,7 +30,6 @@ async function getShortcodesToday() {
   return res.rows.map(r => r.shortcode);
 }
 
-// Hapus data insta_post yang created_at hari ini dan tidak ada di hasil fetch
 async function deleteShortcodes(shortcodesToDelete) {
   if (!shortcodesToDelete.length) return;
   const today = new Date();
@@ -115,20 +111,23 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
         }
       });
       toSave.shortcode = post.code;
+      toSave.comment_count = post.comment_count ?? 0; // PATCH BARU
+
       if (!toSave.shortcode) {
         continue;
       }
       fetchedShortcodesToday.push(toSave.shortcode);
 
-      // Insert/update dengan created_at = taken_at (dalam detik, diubah jadi timestamp PostgreSQL)
+      // PATCH: insert/update dengan comment_count dan created_at = taken_at
       await pool.query(
-        `INSERT INTO insta_post (client_id, shortcode, caption, created_at)
-         VALUES ($1, $2, $3, to_timestamp($4))
+        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, created_at)
+         VALUES ($1, $2, $3, $4, to_timestamp($5))
          ON CONFLICT (shortcode) DO UPDATE
          SET client_id = EXCLUDED.client_id,
              caption = EXCLUDED.caption,
-             created_at = to_timestamp($4)`,
-        [toSave.client_id, toSave.shortcode, toSave.caption || null, post.taken_at]
+             comment_count = EXCLUDED.comment_count,
+             created_at = to_timestamp($5)`,
+        [toSave.client_id, toSave.shortcode, toSave.caption || null, toSave.comment_count, post.taken_at]
       );
 
       // Likes merge
