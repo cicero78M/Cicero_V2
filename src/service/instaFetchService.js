@@ -8,7 +8,7 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 
 // Rate limit: 4 request per detik
-const limit = pLimit(15);
+const limit = pLimit(4);
 
 function isToday(dateStr) {
   if (!dateStr) return false;
