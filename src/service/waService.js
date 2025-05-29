@@ -7,6 +7,8 @@ import { migrateUsersFromFolder } from './userMigrationService.js';
 import { checkGoogleSheetCsvStatus } from './checkGoogleSheetAccess.js';
 import { importUsersFromGoogleSheet } from './importUsersFromGoogleSheet.js';
 import * as userService from './userService.js';
+import { fetchAndStoreInstaContent } from './service/instaFetchService.js';
+
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -19,6 +21,7 @@ function isAdminWhatsApp(number) {
     .map(n => (n.endsWith('@c.us') ? n : n.replace(/\D/g, '') + '@c.us'));
   return adminNumbers.includes(number);
 }
+
 
 // Helper format field
 function formatClientData(obj, title = '') {
@@ -69,10 +72,27 @@ waClient.on('message', async (msg) => {
     'transferuser#', 'sheettransfer#', 'thisgroup#', 'requestinsta#', 'requesttiktok#'
   ];
   let isAdminCommand = adminCommands.some(cmd => text.toLowerCase().startsWith(cmd));
+
   if (isAdminCommand && !isAdminWhatsApp(chatId)) {
     await waClient.sendMessage(chatId, '❌ Anda tidak memiliki akses ke sistem ini.');
     return;
   }
+
+
+    // Tambahkan patch ini di bawah baris adminCommands:
+  if (text.startsWith('fetchinsta#')) {
+    // Akses admin only!
+    if (!adminNumbers.includes(chatId)) {
+      return msg.reply('Akses ditolak.');
+    }
+    // Extract keys
+    const keysString = text.replace('fetchinsta#', '').trim();
+    if (!keysString) return msg.reply('Format: fetchinsta#[key1,key2,...]');
+    const keys = keysString.split(',').map(k => k.trim());
+    const res = await fetchAndStoreInstaContent(keys);
+    return msg.reply(res.message);
+  }
+
 
   // === REQUEST ABSENSI TIKTOK/INSTA (admin only) ===
   if (text.toLowerCase().startsWith('requesttiktok#')) {
@@ -784,14 +804,7 @@ function formatToWhatsAppId(nohp) {
   return `${number}@c.us`;
 }
 
+
 waClient.initialize();
 
 export default waClient;
-
-export async function sendWa(to, message) {
-  try {
-    await waClient.sendMessage(to, message);
-  } catch (e) {
-    console.error('WA send error:', e);
-  }
-}
