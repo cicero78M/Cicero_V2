@@ -23,42 +23,50 @@ export async function fetchAndStoreInstaContent(keys) {
   for (const client of clients) {
     const username = client.client_insta;
 
-    // --- REQUEST POST (dengan username_or_id_or_url) ---
+    // Request ke API: HARUS GANTI endpoint jadi /v1/posts (lihat instruksi patch sebelumnya!)
     const postsRes = await limit(() =>
       axios.get(
-        `https://${RAPIDAPI_HOST}/v1/posts`,
+        `https://social-api4.p.rapidapi.com/v1/posts`,
         {
           params: { username_or_id_or_url: username },
           headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST,
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': RAPIDAPI_HOST,
           },
         }
       )
     );
 
-    const posts = postsRes.data.data || [];
-    for (const post of posts) {
+    // PATCH disini: ambil items dari response!
+    const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
+      ? postsRes.data.data.items : [];
+
+    for (const post of items) {
       // Simpan key yang dibutuhkan saja
       const toSave = { client_id: client.id };
       keys.forEach(k => toSave[k] = post[k]);
       await instaPostModel.upsertInstaPost(toSave);
 
-      // --- REQUEST LIKES (dengan code_or_id_or_url = shortcode) ---
-      if (post.shortcode) {
+      // Fetch likes: PATCH juga ke endpoint baru
+      if (post.code) { // field untuk likes pakai code/shortcode
         await limit(async () => {
           const likesRes = await axios.get(
-            `https://${RAPIDAPI_HOST}/v1/likes`,
+            `https://social-api4.p.rapidapi.com/v1/likes`,
             {
-              params: { code_or_id_or_url: post.shortcode },
+              params: { code_or_id_or_url: post.code },
               headers: {
-                'x-rapidapi-key': RAPIDAPI_KEY,
-                'x-rapidapi-host': RAPIDAPI_HOST,
+                'X-RapidAPI-Key': RAPIDAPI_KEY,
+                'X-RapidAPI-Host': RAPIDAPI_HOST,
               },
             }
           );
-          const likesUsernames = (likesRes.data.data || []).map(like => like.username);
-          await instaLikeModel.upsertInstaLike(post.shortcode, likesUsernames);
+          // Data like user ada di: likesRes.data.data.items (array username)
+          const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
+            ? likesRes.data.data.items : [];
+          // likesUsernames misal: likeItems.map(l => l.username)
+          // Jika likes berupa array username langsung:
+          const likesUsernames = likeItems.map(like => like.username ? like.username : like);
+          await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
         });
       }
     }
