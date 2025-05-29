@@ -11,6 +11,8 @@ import { fetchAndStoreInstaContent } from './instaFetchService.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getUsersByClient } from '../model/userModel.js';
+import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
+
 import * as tiktokPostModel from '../model/tiktokPostModel.js';
 import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 import * as userModel from '../model/userModel.js'; // pastikan path sudah sesuai
@@ -284,160 +286,33 @@ waClient.on('message', async (msg) => {
     return;
   }
 
-  // ...pada waService.js, setelah handler absensi likes
-  if (text.toLowerCase().startsWith('absensikomentar#')) {
-    const parts = text.toLowerCase().split('#');
-    const client_id = parts[1];
-    const type = parts[2] || '';
-    const subtype = parts[3] || '';
-
-    if (!client_id) {
-      await waClient.sendMessage(chatId, 'Format: absensikomentar#clientid');
-      return;
-    }
-
-    // Ambil semua konten hari ini TikTok (video_id)
-    const videoIds = await tiktokPostModel.getShortcodesTodayByClient(client_id);
-    if (!videoIds.length) {
-      await waClient.sendMessage(chatId, 'Tidak ada konten TikTok hari ini.');
-      return;
-    }
-    // Ambil semua user dengan status TRUE (tiktok username boleh null)
-    const users = await userModel.getUsersByClient(client_id);
-
-    // Helper: ambil username dari user (tanpa @, lower)
-    const normalize = v => (v || '').replace(/^@/, '').toLowerCase();
-
-    // Akumulasi data per user (untuk mode akumulasi)
-    let absensiPerUser = {};
-    users.forEach(u => absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 });
-
-    // Loop setiap video hari ini
-    for (const video_id of videoIds) {
-      const comments = await tiktokCommentModel.getCommentsByVideoId(video_id);
-      const usernameSet = new Set(comments.map(c => normalize(c)));
-
-      let sudah = [], belum = [];
-      users.forEach(u => {
-        const uname = normalize(u.tiktok);
-        if (!u.tiktok) {
-          belum.push({ ...u, note: 'belum mengisi data tiktok' });
-        } else if (usernameSet.has(uname)) {
-          sudah.push(u);
-        } else {
-          belum.push(u);
-        }
-        // Akumulasi statistik per user (untuk mode akumulasi)
-        absensiPerUser[u.user_id].total += 1;
-        if (uname && usernameSet.has(uname)) absensiPerUser[u.user_id].count += 1;
-      });
-
-      // Response sesuai tipe
-      // --- MODE AKUMULASI skip, nanti
-      if (type === 'akumulasi') continue;
-
-      // Filter sudah/belum jika ada tipe
-      if (type === 'sudah') {
-        sudah = sudah.filter(u => u.tiktok);
-        belum = [];
-      } else if (type === 'belum') {
-        belum = belum; // tampilkan semua yg belum (termasuk yg belum isi tiktok)
-        sudah = [];
-      }
-      // Group per divisi
-      const divSudah = groupByDivision(sudah);
-      const divBelum = groupByDivision(belum);
-
-      // Format response
-      let now = new Date();
-      let jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      let hari = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-
-      const link = `https://www.tiktok.com/video/${video_id}`;
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
-      resp += `📋 *Rekap User yang sudah komentar TikTok*\n`;
-      resp += `*Client*: *${client_id}*\n*Link*: ${link}\n*Hari*: ${hari}\n*Jam*: ${jam}\n\n`;
-
-      if (sudah.length) {
-        resp += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
-        Object.entries(divSudah).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
-        });
-      } else {
-        resp += `✅ *Sudah melaksanakan*: -\n`;
-      }
-
-      if (belum.length) {
-        resp += `\n❌ *Belum melaksanakan* (${belum.length} user):\n`;
-        Object.entries(divBelum).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map(u => `- ${formatName(u)}${u.note ? ` (${u.note})` : ''}`).join('\n') + '\n';
-        });
-      } else {
-        resp += `\n❌ *Belum melaksanakan*: -\n`;
-      }
-      resp += `\nTotal user: *${users.length}*`;
-      await waClient.sendMessage(chatId, resp);
-    }
-
-    // === MODE AKUMULASI (Gabungan semua video hari ini) ===
-    if (type === 'akumulasi') {
-      // Sudah = user dengan count >= 50% dari total konten hari ini
-      const minDone = Math.ceil(videoIds.length * 0.5);
-      let sudah = [], belum = [];
-      Object.values(absensiPerUser).forEach(u => {
-        if (u.count >= minDone) sudah.push(u);
-        else belum.push(u);
-      });
-      // Filter jika subtype
-      if (subtype === 'sudah') belum = [];
-      if (subtype === 'belum') sudah = [];
-
-      const divSudah = groupByDivision(sudah);
-      const divBelum = groupByDivision(belum);
-
-      let now = new Date();
-      let jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      let hari = now.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-
-      // List semua link hari ini
-      const links = videoIds.map(id => `https://www.tiktok.com/video/${id}`).join('\n');
-
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
-      resp += `📋 *Rekap Akumulasi Pelaksanaan Komentar TikTok*\n`;
-      resp += `*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n\n`;
-      resp += `*Total konten hari ini*: ${videoIds.length}\n\n`;
-      resp += `*Link konten hari ini:*\n${links}\n\n`;
-
-      if (sudah.length) {
-        resp += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
-        Object.entries(divSudah).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
-        });
-      } else {
-        resp += `✅ *Sudah melaksanakan*: -\n`;
-      }
-
-      if (belum.length) {
-        resp += `\n❌ *Belum melaksanakan* (${belum.length} user):\n`;
-        Object.entries(divBelum).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map(u => `- ${formatName(u)}`).join('\n') + '\n';
-        });
-      } else {
-        resp += `\n❌ *Belum melaksanakan*: -\n`;
-      }
-      resp += `\nTotal user: *${users.length}*`;
-      await waClient.sendMessage(chatId, resp);
-    }
-  }
 
 
 
     
   // Tambahkan patch ini di bawah baris adminCommands:
+
+
+// ... di dalam waClient.on('message', async (msg) => { ... }
+
+if (text.trim().toLowerCase().startsWith('fetchtiktok#')) {
+  // Hanya boleh diakses oleh ADMIN_WHATSAPP
+  if (!isAdminWhatsApp(chatId)) {
+    await waClient.sendMessage(chatId, 'Akses ditolak.');
+    return;
+  }
+  await waClient.sendMessage(chatId, '⏳ Proses fetch konten TikTok dimulai...');
+
+  try {
+    // Jalankan fetch TikTok & summary hasil
+    const hasil = await fetchAndStoreTiktokContent(true, waClient, chatId); // mode manual
+    await waClient.sendMessage(chatId, hasil?.message || 'Fetch TikTok selesai.');
+  } catch (e) {
+    await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok: ${e.message}`);
+  }
+  return;
+}
+
 
   if (text.startsWith('fetchinsta#')) {
     if (!isAdminWhatsApp(chatId)) {
