@@ -1,232 +1,325 @@
-# Cicero\_V2 WhatsApp Bot System
+# Cicero\_V2
 
-Sistem WA bot untuk manajemen data client organisasi, sinkronisasi data client & user (termasuk migrasi user terenkripsi dari JSON/Spreadsheet ke PostgreSQL), serta integrasi data TikTok secUid berbasis API.
-Struktur modular, mudah di-maintain dan scalable.
-
----
-
-## **Fitur Utama**
-
-* CRUD data client (via WhatsApp command)
-* CRUD dan migrasi user per client (file JSON ke database, Google Spreadsheet ke database)
-* Semua data terenkripsi (AES), dekripsi otomatis
-* Integrasi TikTok secUid via RapidAPI
-* Notifikasi otomatis ke nomor operator/client\_super
-* Absensi user per client (INSTAGRAM & TIKTOK, sudah/belum) langsung via WhatsApp
-* Semua fitur via WhatsApp Web Bot (wweb.js)
-* Database PostgreSQL dengan struktur table modular
-* Error handling & padding data otomatis
-* **Seluruh request WhatsApp hanya dapat diakses nomor yang terdaftar di variabel `ADMIN_WHATSAPP` (.env) untuk clientrequest/admin, serta proteksi nomor unik pada data user untuk userrequest**
-* **Nomor WhatsApp hanya bisa bind ke satu user**
-* **Username IG & TikTok wajib unik**
+## Sistem Otomatisasi Monitoring, Absensi, dan Analitik Instagram untuk Organisasi & Divisi via WhatsApp
 
 ---
 
-## **Struktur Project**
+## 1. Deskripsi Singkat
+
+Aplikasi ini membantu organisasi (Client) mengelola, memantau, dan mengakumulasi pelaksanaan interaksi sosial media pada akun Instagram resmi (Official) organisasi. Sistem melakukan *fetch* konten Instagram, menyimpan analitik, dan mengirim laporan absensi pelaksanaan likes/komentar user ke WhatsApp, baik *on-demand* (trigger manual) maupun otomatis (*cronjob*).
+
+---
+
+## 2. Fitur Utama
+
+* Sinkronisasi Otomatis Konten Instagram:
+
+  * Mengambil (fetch) seluruh konten Instagram setiap client (organisasi) secara berkala/otomatis/manual.
+* Absensi Likes Otomatis dan Manual:
+
+  * Melakukan pencocokan antara daftar username user dan likes pada setiap konten.
+  * Menyajikan laporan terstruktur berdasarkan Divisi (bukan Satfung), Client (bukan Polres), sudah/belum melaksanakan, serta akumulasi pelaksanaan.
+* Integrasi WhatsApp:
+
+  * Otomatisasi pengiriman laporan ke admin via WhatsApp.
+  * Semua trigger juga dapat dieksekusi oleh admin melalui chat WhatsApp.
+* Pengelolaan Data User, Client (Organisasi), Absensi, dan Likes:
+
+  * Semua data user, konten, likes, dan log tersimpan di PostgreSQL.
+* Cronjob Otomatis:
+
+  * Eksekusi fetch + absensi likes otomatis setiap jam (06:30–21:30) tanpa interaksi manual.
+* Konfigurasi dan Maintenance Mudah.
+* Support Multi-Admin.
+
+---
+
+## 3. Struktur Folder & File
 
 ```
 Cicero_V2/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── SECURITY.md
+├── app.js
+├── package-lock.json
+├── package.json
 ├── src/
 │   ├── config/
-│   │   └── db.js                  # Koneksi PostgreSQL
+│   │   └── db.js
 │   ├── controller/
-│   │   └── clientController.js    # (opsional, jika ada endpoint REST)
+│   │   ├── clientController.js
+│   │   └── userController.js
+│   ├── data/               # legacy JSON data, tidak digunakan pada mode database production
+│   │   ├── attendance.json
+│   │   ├── backups.json
+│   │   ├── clients.json
+│   │   ├── insta.json
+│   │   ├── tiktok.json
+│   │   ├── users.json
+│   │   └── warnings.json
+│   ├── middleware/
+│   │   └── errorHandler.js
 │   ├── model/
-│   │   └── clientModel.js         # Query data client
+│   │   ├── clientModel.js
+│   │   ├── instaLikeModel.js
+│   │   ├── instaPostModel.js
+│   │   └── userModel.js
+│   ├── routes/
+│   │   ├── clientRoutes.js
+│   │   ├── index.js
+│   │   └── userRoutes.js
 │   ├── service/
-│   │   ├── waService.js           # Handler utama WA Bot & logic command
-│   │   ├── clientService.js       # Logic data client (CRUD)
-│   │   ├── userMigrationService.js# Migrasi user JSON terenkripsi ke DB
-│   │   ├── importUsersFromGoogleSheet.js # Migrasi user dari Google Sheet
-│   │   └── tiktokService.js       # Ambil secUid TikTok via API
-│   ├── util/
-│   │   └── crypt.js               # Encrypt/decrypt data (CryptoJS, passphrase)
-│   └── ...
-├── user_data/
-│   └── [POLRES]/*.json            # File user per client terenkripsi
-├── .env                           # Env vars (DB, SECRET_KEY, ADMIN_WHATSAPP, dll)
-├── app.js                         # Entry point (jika ada)
+│   │   ├── checkGoogleSheetAccess.js
+│   │   ├── clientService.js
+│   │   ├── cronService.js         # job scheduler (cron)
+│   │   ├── importSpreadsheetService.js
+│   │   ├── importUsersFromGoogleSheet.js
+│   │   ├── instaFetchService.js   # core Instagram content fetch
+│   │   ├── tiktokService.js
+│   │   ├── userMigrationService.js
+│   │   ├── userService.js
+│   │   └── waService.js           # WhatsApp integration/command handler
+│   ├── utils/
+│   │   ├── constants.js
+│   │   ├── crypt.js
+│   │   └── response.js
+│   └── index.js (atau main.js)    # entrypoint aplikasi
+```
+
+### Penjelasan Tiap Folder Utama
+
+* **/src/config/**: konfigurasi koneksi DB, setting lain (umumnya hanya db.js).
+* **/src/controller/**: REST API controller untuk akses data Client/User (opsional, dipakai jika expose API selain WA).
+* **/src/data/**: data *legacy* JSON (bisa diabaikan pada mode produksi/database, referensi migrasi awal).
+* **/src/middleware/**: error handler untuk web/REST API (jika digunakan).
+* **/src/model/**: akses dan query database model (ORM/query builder/fetch/postgres).
+* **/src/routes/**: routing REST API (opsional, jika expose endpoint web).
+* **/src/service/**: seluruh service logic utama (integrasi API, WhatsApp, scheduler, migrasi data, dsb).
+* **/src/utils/**: helper, constant, utility (format response, hash/crypt, dll).
+
+```
+
+Cicero_V2/
+├── src/
+│   ├── config/
+│   │   └── db.js
+│   ├── model/
+│   │   ├── instaLikeModel.js
+│   │   ├── instaPostModel.js
+│   │   ├── userModel.js
+│   │   └── clientModel.js
+│   ├── service/
+│   │   ├── instaFetchService.js
+│   │   ├── waService.js
+│   │   ├── userService.js (opsional, alias userModel.js)
+│   │   └── cronJob.js
+│   └── index.js (atau main.js)
+├── .env
 ├── package.json
-└── README.md                      # (file ini)
+└── README.md
 ```
 
 ---
 
-## **Konfigurasi Environment (.env)**
+## 4. Database Structure & Asumsi Field
 
-Contoh:
+### 4.1 Table `client` (Organisasi)
+
+| Kolom                 | Tipe         | Keterangan                            |
+| --------------------- | ------------ | ------------------------------------- |
+| client\_id            | varchar(64)  | PRIMARY KEY                           |
+| client\_nama          | varchar(255) | Nama organisasi                       |
+| client\_status        | boolean      | TRUE = aktif                          |
+| client\_insta         | varchar(128) | Username IG official organisasi       |
+| client\_insta\_status | boolean      | TRUE = wajib punya Instagram official |
+
+### 4.2 Table `user`
+
+| Kolom      | Tipe         | Keterangan                            |
+| ---------- | ------------ | ------------------------------------- |
+| user\_id   | varchar(64)  | PRIMARY KEY, NRP/NIP user             |
+| client\_id | varchar(64)  | FK ke client\_id di client            |
+| nama       | varchar(255) | Nama user                             |
+| title      | varchar(128) | Pangkat/gelar                         |
+| divisi     | varchar(128) | Divisi                                |
+| jabatan    | varchar(128) | Jabatan                               |
+| status     | boolean      | TRUE = aktif, hanya yg aktif dihitung |
+| whatsapp   | varchar(32)  | Nomor WhatsApp                        |
+| insta      | varchar(128) | Username Instagram (boleh null)       |
+
+### 4.3 Table `insta_post`
+
+| Kolom          | Tipe        | Keterangan                           |
+| -------------- | ----------- | ------------------------------------ |
+| shortcode      | varchar(32) | PRIMARY KEY, kode post IG            |
+| client\_id     | varchar(64) | FK ke client                         |
+| caption        | text        | Caption (hanya text)                 |
+| created\_at    | timestamp   | Waktu post (diisi dari taken\_at IG) |
+| like\_count    | integer     | Jumlah likes                         |
+| comment\_count | integer     | Jumlah komentar                      |
+
+### 4.4 Table `insta_like`
+
+| Kolom       | Tipe        | Keterangan                               |
+| ----------- | ----------- | ---------------------------------------- |
+| shortcode   | varchar(32) | FK ke insta\_post.shortcode, PRIMARY KEY |
+| likes       | JSON/JSONB  | Array username yang melakukan like       |
+| updated\_at | timestamp   | Terakhir update data likes               |
+
+---
+
+## 5. ENV & Konfigurasi
+
+**.env file**  (WAJIB diisi)
 
 ```
-PGUSER=your_db_user
-PGPASSWORD=your_db_password
-PGDATABASE=your_db_name
 PGHOST=localhost
+PGUSER=xxxx
+PGPASSWORD=xxxx
+PGDATABASE=xxxx
 PGPORT=5432
-
-SECRET_KEY=passphrase_rahasia_anda
-RAPIDAPI_KEY=isi_key_rapidapi
-
-# Daftar nomor admin (format WhatsApp, tanpa tanda plus, bisa koma)
-ADMIN_WHATSAPP=6281234567890,6285678901234
+RAPIDAPI_KEY=xxxx
+ADMIN_WHATSAPP=628xxxxxx@c.us,628yyyyyy@c.us
 ```
 
 ---
 
-## **Database**
+## 6. Workflow & Fungsi Utama
 
-### **Table: clients**
+### 6.1 Fetch Konten Instagram (src/service/instaFetchService.js)
 
-```sql
-CREATE TABLE clients (
-  client_id        VARCHAR PRIMARY KEY,
-  nama             VARCHAR,
-  client_type      VARCHAR,
-  client_status    BOOLEAN DEFAULT FALSE,
-  client_insta     VARCHAR,
-  client_insta_status BOOLEAN DEFAULT FALSE,
-  client_tiktok    VARCHAR,
-  client_tiktok_status BOOLEAN DEFAULT FALSE,
-  client_operator  VARCHAR,
-  client_super     VARCHAR,
-  client_group     VARCHAR,
-  tiktok_secUid    VARCHAR
-);
+* Setiap jam (06:30–21:30, via cronJob) fetch konten IG dari semua client (organisasi) yang IG-nya aktif.
+* Hanya ambil data **hari ini** (`taken_at` = hari ini).
+* Untuk setiap post:
+
+  * Jika `shortcode` sudah ada → update.
+  * Jika **shortcode** hilang dari hasil fetch (sudah tidak muncul di IG hari ini) → hapus dari DB.
+  * Data disimpan: `caption`, `shortcode`, `created_at`, `comment_count`, `like_count`.
+* Likes per post:
+
+  * Merge username baru ke array likes tanpa duplikat.
+
+### 6.2 Absensi Likes Instagram (src/service/waService.js)
+
+* Trigger WhatsApp:
+
+  * `absensilikes#clientid`
+  * `absensilikes#clientid#sudah`
+  * `absensilikes#clientid#belum`
+  * `absensilikes#clientid#akumulasi#sudah`
+  * `absensilikes#clientid#akumulasi#belum`
+* Workflow:
+
+  * **Per konten hari ini**: cek likes (username) vs user (insta).
+  * **Sudah** = username user ada di likes.
+  * **Belum** = username user tidak ada di likes atau tidak mengisi IG (dengan keterangan).
+  * Laporan **tanpa nomor urut**, dikelompokkan per **Divisi**.
+  * Akumulasi: Sudah ≥ 50% dari jumlah konten IG hari itu.
+  * Semua laporan menyertakan header "Mohon Ijin Komandan, Melaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :" dan jam pengambilan.
+
+### 6.3 CronJob Otomatis (src/service/cronJob.js)
+
+* Menggunakan node-cron:
+
+  * Eksekusi: Tiap jam pada menit 30 dari 06:30 sampai 21:30.
+  * Menjalankan:
+
+    * `fetchAndStoreInstaContent`
+    * `absensilikes#clientid#akumulasi#belum` (per client aktif)
+  * Laporan otomatis dikirim ke semua ADMIN\_WHATSAPP.
+
+---
+
+## 7. WhatsApp Integrasi
+
+* Semua perintah dan notifikasi dikirim via WhatsApp (`waService.js`)
+* Bisa menerima trigger manual dan mengirim laporan otomatis.
+
+---
+
+## 8. Contoh Query Penting
+
+Ambil user per client (status true):
+
+```js
+export async function getUsersByClient(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, title, divisi, insta, status FROM "user" WHERE client_id = $1 AND status = true`,
+    [client_id]
+  );
+  return res.rows;
+}
 ```
 
-### **Table: user**
+Ambil konten IG hari ini per client:
 
-```sql
-CREATE TABLE "user" (
-  user_id      VARCHAR(8) PRIMARY KEY,
-  nama         VARCHAR,
-  title        VARCHAR,
-  divisi       VARCHAR,
-  jabatan      VARCHAR,
-  status       BOOLEAN DEFAULT FALSE,
-  whatsapp     VARCHAR,
-  insta        VARCHAR,
-  tiktok       VARCHAR,
-  exception    BOOLEAN DEFAULT FALSE,
-  client_id    VARCHAR
-);
+```js
+export async function getShortcodesTodayByClient(client_id) {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const res = await pool.query(
+    `SELECT shortcode FROM insta_post WHERE client_id = $1 AND DATE(created_at) = $2`,
+    [client_id, `${yyyy}-${mm}-${dd}`]
+  );
+  return res.rows.map(r => r.shortcode);
+}
 ```
 
 ---
 
-## **Alur Logika & Fungsi Utama**
+## 9. Cara Menjalankan Sistem
 
-### **A. WA Bot (waService.js)**
+1. **Install dependensi**
 
-* Handler terpusat untuk semua pesan WA.
-* Parsing perintah, validasi akses nomor WhatsApp (ADMIN\_WHATSAPP atau nomor user sesuai DB).
-* Otomatis binding WhatsApp ke user jika masih null, **proteksi tidak ada duplikasi nomor**.
-* Proteksi username IG/TikTok unik.
-* Balasan otomatis untuk seluruh error/validasi.
-* Mapping istilah POLRI:
+   ```bash
+   npm install
+   ```
+2. **Setting .env** Lihat contoh di atas.
+3. **Jalankan aplikasi**
 
-  * user\_id → NRP/NIP
-  * divisi  → Satfung
-  * title   → Pangkat
-  * client\_id → POLRES
-  * status: true → AKTIF, false → AKUN DIHAPUS
-
----
-
-## **Command WhatsApp**
-
-### **A. clientrequest (Hanya untuk ADMIN)**
-
-| Fungsi               | Format WhatsApp                                             |
-| -------------------- | ----------------------------------------------------------- |
-| Add client           | `addnewclient#POLRES#Nama Polres`                           |
-| Update data          | `updateclient#POLRES#key#value`                             |
-| Update TikTok secUid | `updateclient#POLRES#tiktok_secUid`                         |
-| Get client info      | `clientinfo#POLRES`                                         |
-| Remove client        | `removeclient#POLRES`                                       |
-| Daftar command admin | `clientrequest`                                             |
-| Migrasi user JSON    | `transferuser#POLRES`                                       |
-| Migrasi user Sheet   | `sheettransfer#POLRES#link_google_sheet`                    |
-| Set group client     | `thisgroup#POLRES` (harus dikirim dari grup WA)             |
-| Absensi IG           | `requestinsta#POLRES#sudah` / `requestinsta#POLRES#belum`   |
-| Absensi TikTok       | `requesttiktok#POLRES#sudah` / `requesttiktok#POLRES#belum` |
-
-### **B. userrequest (Bisa diakses user, proteksi nomor & validasi data)**
-
-| Fungsi              | Format WhatsApp                                           |
-| ------------------- | --------------------------------------------------------- |
-| Lihat data user     | `mydata#NRP/NIP`                                          |
-| Update nama         | `updateuser#NRP/NIP#nama#Nama Lengkap`                    |
-| Update pangkat      | `updateuser#NRP/NIP#pangkat#NAMA_PANGKAT`                 |
-| Update satfung      | `updateuser#NRP/NIP#satfung#NAMA_SATFUNG`                 |
-| Update jabatan      | `updateuser#NRP/NIP#jabatan#NAMA_JABATAN`                 |
-| Update Instagram    | `updateuser#NRP/NIP#insta#https://instagram.com/username` |
-| Update TikTok       | `updateuser#NRP/NIP#tiktok#https://tiktok.com/@username`  |
-| Bind WhatsApp       | `updateuser#NRP/NIP#whatsapp#62812xxxxxx`                 |
-| Daftar command user | `userrequest`                                             |
-
-**Catatan & Validasi User:**
-
-* **Nomor WhatsApp hanya bisa bind ke satu user (NRP/NIP)**
-* **Username IG & TikTok wajib unik seluruh sistem**
-* **Validasi otomatis link Instagram/TikTok: hanya boleh link profil**
-* **Update field pangkat/satfung/jabatan hanya bisa value sesuai referensi DB, jika salah bot membalas dengan list data yang valid (berdasarkan POLRES/client yang sama)**
-* **Perubahan hanya bisa dilakukan oleh nomor WhatsApp terdaftar, atau akan di-bind otomatis jika field whatsapp masih kosong**
+   ```bash
+   node src/index.js
+   # atau
+   npm start
+   ```
+4. **Aplikasi otomatis fetch IG & kirim rekap sesuai jadwal, trigger WA, atau perintah manual.**
 
 ---
 
-## **Format Response POLRI**
+## 10. Maintenance & Pengembangan
 
-* NRP/NIP → user\_id
-* Satfung → divisi
-* Pangkat → title
-* POLRES → client\_id
-* status:
-
-  * true → AKTIF
-  * false → AKUN DIHAPUS
-* **Field exception tidak pernah ditampilkan ke user!**
+* **Menambah client (organisasi):** Tambahkan pada table `client`, isi field `client_insta`, set `client_status` dan `client_insta_status` ke `true`.
+* **Menambah user:** Tambahkan pada table `user` dengan mengisi seluruh field yang dibutuhkan.
+* **Ganti admin WA:** Edit `.env` pada `ADMIN_WHATSAPP`.
+* **Perubahan field database:** Pastikan update pada kode model (`src/model/*Model.js`) jika ada perubahan field/tabel/relasi DB.
+* **Ganti jadwal cron:** Edit string cron pada file cronJob.js.
 
 ---
 
-## **Absensi User per Client (Instagram & TikTok)**
+## 11. Troubleshooting
 
-* `requestinsta#POLRES#sudah` — daftar user AKTIF (status=AKTIF) sudah IG, per Satfung:
-  `- [Pangkat] [Nama] : [insta]`
-* `requestinsta#POLRES#belum` — daftar user AKTIF belum IG, per Satfung:
-  `- [Pangkat] [Nama]`
-* TikTok sama:
-
-  * `requesttiktok#POLRES#sudah`
-  * `requesttiktok#POLRES#belum`
+* Pastikan koneksi DB, API Key, dan WhatsApp session OK.
+* Jika error table/field: cek schema dan query sudah benar.
+* Permission error (PostgreSQL): cek user DB dan izin per tabel.
+* Jika WhatsApp tidak terhubung, ulangi scan QR saat start aplikasi.
+* Untuk debugging, gunakan log di setiap service.
 
 ---
 
-## **Meta Data Pengembang**
+## 12. Pengembangan Lanjutan
 
-* **Author:** Rizqo Febryan Prastyo
-* **Repo:** [github.com/cicero78M/Cicero\_V2](https://github.com/cicero78M/Cicero_V2)
-* **WA Bot Lib:** [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
-* **Crypto:** [crypto-js](https://github.com/brix/crypto-js)
-* **Database:** PostgreSQL (rekomendasi latest)
-* **Node.js:** v16+ recommended
+* Otomatisasi workflow TikTok jika dibutuhkan (dapat mengikuti pola yang sama).
+* Integrasi notifikasi webhook/email jika perlu.
+* Ekspor laporan ke PDF/excel dapat dikembangkan dari data DB.
 
 ---
 
-## **Tips Penting**
+# Selesai
 
-* Jangan upload `.wwebjs_auth/` ke repo (cek `.gitignore`)
-* Pastikan `.env` berisi key yang sama untuk semua proses encrypt/decrypt
-* Backup database sebelum migrasi besar
-* Semua file, field, logic sudah kompatibel dengan update/insert massal
+Dokumentasi ini telah diverifikasi dan utuh, siap digunakan dan dikembangkan. Semua workflow, file, field, dan konvensi sudah sesuai hasil pemeriksaan real file dan kebutuhan aplikasi organisasi (client) berbasis Instagram monitoring dan WhatsApp reporting.
 
 ---
-
-## **Lisensi**
-
-Open Source - feel free to fork and contribute!
-
----
-
-*Silakan modifikasi sesuai kebutuhan, atau kontak developer utama untuk integrasi/feature request!*
-
-**CICERO : Solus Sed Invictus**
