@@ -80,7 +80,8 @@ waClient.on('message', async (msg) => {
   }
 
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
-  if (text.toLowerCase().startsWith('absensilikes#')) {
+
+if (text.toLowerCase().startsWith('absensilikes#')) {
   // Format: absensilikes#<client_id>
   const [, client_id] = text.split('#');
   if (!client_id) {
@@ -88,10 +89,8 @@ waClient.on('message', async (msg) => {
     return;
   }
 
-  // Ambil user IG
-  const users = await userService.getUsersByClient(client_id);
-  // Ambil semua shortcode konten IG hari ini untuk client
-  const shortcodes = await instaPostModel.getShortcodesTodayByClient(client_id);
+  const users = await getUsersByClient(client_id);
+  const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) {
     await waClient.sendMessage(chatId, `Tidak ada konten IG untuk client ${client_id} hari ini.`);
@@ -99,11 +98,9 @@ waClient.on('message', async (msg) => {
   }
 
   for (const shortcode of shortcodes) {
-    // Ambil daftar likes per konten
-    const likes = await instaLikeModel.getLikesByShortcode(shortcode);
-    const likesSet = new Set(
-      likes.map(x => typeof x === 'string' ? x.toLowerCase() : x.username?.toLowerCase())
-    );
+    const likes = await getLikesByShortcode(shortcode);
+    // likes: array username (string) pada key likes
+    const likesSet = new Set(likes.map(x => x.toLowerCase()));
 
     const sudah = [];
     const belum = [];
@@ -116,7 +113,6 @@ waClient.on('message', async (msg) => {
       }
     });
 
-    // Compose pesan per konten
     const linkIG = `https://www.instagram.com/p/${shortcode}`;
     let msg = `📋 *Absensi Likes IG*\nClient: ${client_id}\nLink: ${linkIG}\n\n`;
 
@@ -130,6 +126,7 @@ waClient.on('message', async (msg) => {
   }
   return;
 }
+
 
 
 
