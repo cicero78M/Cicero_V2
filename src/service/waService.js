@@ -85,13 +85,16 @@ waClient.on('message', async (msg) => {
   // === PATCH: FETCH INSTAGRAM CONTENT (admin only) ===
 
   if (text.toLowerCase().startsWith('absensilikes#')) {
-    const [, client_id] = text.split('#');
-    if (!client_id) {
-      await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid');
+    const parts = text.split('#');
+    if (parts.length < 2) {
+      await waClient.sendMessage(chatId, 'Format salah!\nabsensilikes#clientid#[sudah|belum|akumulasi#sudah|akumulasi#belum]');
       return;
     }
+    const client_id = parts[1];
+    const filter1 = (parts[2] || '').toLowerCase();
+    const filter2 = (parts[3] || '').toLowerCase();
 
-    // Pastikan ambil title & divisi!
+    // Ambil data user dengan title & divisi!
     const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
@@ -100,43 +103,152 @@ waClient.on('message', async (msg) => {
       return;
     }
 
+    // ===== AKUMULASI =====
+    if (filter1 === 'akumulasi') {
+      // Hitung absensi akumulasi likes per user
+      const userStats = {}; // user_id => {nama, title, divisi, insta, count}
+      users.forEach(u => {
+        if (!u.insta) return;
+        userStats[u.user_id] = { ...u, count: 0 };
+      });
+
+      // Untuk setiap konten, hitung siapa yang sudah like
+      for (const shortcode of shortcodes) {
+        const likes = await getLikesByShortcode(shortcode);
+        const likesSet = new Set(likes.map(x => x.toLowerCase()));
+        users.forEach(u => {
+          if (!u.insta) return;
+          if (likesSet.has(u.insta.toLowerCase())) {
+            userStats[u.user_id].count += 1;
+          }
+        });
+      }
+
+      const totalKonten = shortcodes.length;
+      const sudahPerSatfung = {};
+      const belumPerSatfung = {};
+
+      Object.values(userStats).forEach(u => {
+        const satfung = u.divisi || '-';
+        const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
+        // >=50% dari total konten
+        if (u.count >= Math.ceil(totalKonten / 2)) {
+          if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
+          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta} (${u.count} konten)`);
+        } else {
+          if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+          belumPerSatfung[satfung].push(`${titleNama} : ${u.insta} (${u.count} konten)`);
+        }
+      });
+
+      const tipe = filter2 === 'belum' ? 'belum' : 'sudah';
+      let msg = `📋 Rekap Akumulasi Likes IG\nPolres: ${client_id}\nTanggal: ${(new Date()).toLocaleDateString()}\nKonten hari ini: ${totalKonten}\n\n`;
+
+      if (tipe === 'sudah') {
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
+        });
+      } else {
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
+        });
+      }
+
+      await waClient.sendMessage(chatId, msg.trim());
+      return;
+    }
+
+    // ===== PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) =====
     for (const shortcode of shortcodes) {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map(x => x.toLowerCase()));
 
-      // Satfung => Array user yg sudah like
       const sudahPerSatfung = {};
+      const belumPerSatfung = {};
 
       users.forEach(u => {
         if (!u.insta) return;
         const satfung = u.divisi || '-';
-        // Format: TITLE NAMA : username (tanpa @)
         const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
         if (likesSet.has(u.insta.toLowerCase())) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
           sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
+        } else {
+          if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
+          belumPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
         }
       });
 
-      // Compose message sesuai contoh
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
-      let msg = `📋 Rekap User yang sudah melakukan Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
 
-      Object.keys(sudahPerSatfung).forEach(satfung => {
-        const arr = sudahPerSatfung[satfung];
-        msg += `${satfung} (${arr.length} user):\n`;
-        arr.forEach(line => {
-          msg += `- ${line}\n`;
+      // ======= jika filter kosong, tampilkan dua-duanya =======
+      if (!filter1) {
+        let msg = `📋 Absensi Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+
+        msg += `✅ SUDAH Like:\n`;
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
         });
-        msg += '\n';
-      });
 
-      // Jika ingin tambahkan user yang **belum** like, bisa tambah block seperti di atas untuk perSatfung belum
+        msg += `\n❌ BELUM Like:\n`;
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
+        });
 
-      await waClient.sendMessage(chatId, msg.trim());
+        await waClient.sendMessage(chatId, msg.trim());
+      }
+
+      // ====== hanya sudah ======
+      if (filter1 === 'sudah') {
+        let msg = `📋 Rekap User yang sudah melakukan Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+        Object.keys(sudahPerSatfung).forEach(satfung => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      }
+
+      // ====== hanya belum ======
+      if (filter1 === 'belum') {
+        let msg = `📋 Rekap User yang *BELUM* Likes IG\nPolres: ${client_id}\nLink: ${linkIG}\n\n`;
+        Object.keys(belumPerSatfung).forEach(satfung => {
+          const arr = belumPerSatfung[satfung];
+          msg += `${satfung} (${arr.length} user):\n`;
+          arr.forEach(line => {
+            msg += `- ${line}\n`;
+          });
+          msg += '\n';
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      }
     }
     return;
   }
+
   
   
   // Tambahkan patch ini di bawah baris adminCommands:
