@@ -34,6 +34,12 @@ async function getEligibleClients() {
 export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
   let processing = true;
 
+  // Tampilkan info waktu server (timezone, jam sekarang)
+  console.log("==========[DEBUG: Server Info]==========");
+  console.log("Server timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+  console.log("Server now:", new Date());
+  console.log("=========================================");
+
   const intervalId = setInterval(() => {
     if (processing) waClient.sendMessage(chatId, '⏳ Processing fetch data...');
   }, 4000);
@@ -67,6 +73,12 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       ? postsRes.data.data.items : [];
 
     for (const post of items) {
+      // Debug date
+      const takenAtDate = post.taken_at ? new Date(post.taken_at * 1000) : null;
+      console.log(
+        `[DEBUG] Shortcode: ${post.code}, taken_at: ${post.taken_at}, takenAtDate: ${takenAtDate}, serverNow: ${new Date()}`
+      );
+
       const toSave = { client_id: client.id };
       keys.forEach(k => {
         if (k === 'caption' && post.caption && typeof post.caption === 'object' && post.caption.text) {
@@ -118,8 +130,11 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
 
   // Hanya kirim list konten yang created_at hari ini
   const kontenHariIniRes = await pool.query(
-    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
+    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = CURRENT_DATE`
   );
+  kontenHariIniRes.rows.forEach(row => {
+    console.log(`[DB] Shortcode: ${row.shortcode}, created_at: ${row.created_at}`);
+  });
   const kontenLinks = kontenHariIniRes.rows.map(r => `https://www.instagram.com/p/${r.shortcode}`);
 
   let maxPerMsg = 30;
