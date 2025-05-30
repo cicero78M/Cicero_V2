@@ -97,7 +97,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
 }
 
 // Cronjob: tiap jam pada menit ke-30 dari 06:30 s/d 20:30 (inclusive)
-cron.schedule('30 6-20 * * *', async () => {
+cron.schedule('40 6-20 * * *', async () => {
   console.log('[CRON] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     // 1. Ambil seluruh client eligible
