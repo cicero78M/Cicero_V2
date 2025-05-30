@@ -78,7 +78,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         })
       );
-      // PATCH: akses itemList, BUKAN posts!
       posts = res.data?.data?.itemList || [];
       if (!Array.isArray(posts)) {
         console.warn("  [API WARNING] Response data.itemList kosong atau bukan array! Struktur response:", JSON.stringify(res.data).substring(0, 350));
@@ -95,7 +94,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Filter & simpan hanya post hari ini
     let kontenHariIni = [];
     for (const post of posts) {
-      // created_at di db adalah timestamp, TikTok API hasilkan UNIX detik
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
       const isHariIni = isToday(postDate);
 
@@ -119,7 +117,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
         post.id,
         client.client_id,
         post.desc || null,
-        postDate, // simpan dalam tipe timestamp
+        postDate,
         post.stats?.diggCount || 0,
         post.stats?.commentCount || 0
       ]);
@@ -129,18 +127,23 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       try {
         const res = await limit(() =>
           axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-            params: { post_id: post.id, count: 100, cursor: 0 },
+            params: { videoId: post.id, count: 100, cursor: 0 }, // PATCH di sini!
             headers: {
               'x-rapidapi-key': RAPIDAPI_KEY,
               'x-rapidapi-host': RAPIDAPI_HOST
             }
           })
         );
-        comments = res.data?.data?.comments || [];
+        comments = res.data?.comments || [];
         console.log(`    [KOMEN] Video ${post.id}, Jumlah komentar: ${comments.length}`);
       } catch (e) {
         comments = [];
         console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
+        if (e.response) {
+          console.error('      [ERR DETAIL]', JSON.stringify(e.response.data));
+        } else {
+          console.error('      [ERR MSG]', e.message);
+        }
       }
       await tiktokCommentModel.upsertTiktokComments(post.id, comments);
     }
