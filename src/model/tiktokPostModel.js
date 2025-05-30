@@ -1,5 +1,10 @@
 // src/model/tiktokPostModel.js
 import { pool } from '../config/db.js';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // UPSERT satu postingan TikTok
 export async function upsertTiktokPost(postData) {
@@ -22,14 +27,15 @@ export async function upsertTiktokPost(postData) {
   );
 }
 
-// GET semua postingan TikTok hari ini dari client tertentu
+
 export async function getPostsTodayByClient(client_id) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // jam 00:00 hari ini
+  const startOfToday = dayjs().tz('Asia/Jakarta').startOf('day').utc().format();
+  const endOfToday = dayjs().tz('Asia/Jakarta').endOf('day').utc().format();
+
   const res = await pool.query(
     `SELECT video_id FROM tiktok_post
-     WHERE client_id = $1 AND created_at >= $2`,
-    [client_id, today]
+     WHERE client_id = $1 AND created_at >= $2 AND created_at <= $3`,
+    [client_id, startOfToday, endOfToday]
   );
   return res.rows.map(row => row.video_id);
 }
