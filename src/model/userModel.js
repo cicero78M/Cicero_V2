@@ -61,4 +61,21 @@ export async function getUsersByClient(client_id) {
   return res.rows;
 }
 
+// src/model/userModel.js
+
+// ... fungsi lama tetap ada
+
+// Fungsi KHUSUS absensi TikTok (semua user aktif, include field tiktok, dst)
+export async function getUsersByClientFull(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, tiktok, divisi, title
+     FROM "user"
+     WHERE client_id = $1 AND (status IS TRUE OR status IS NULL)`,
+    [client_id]
+  );
+  // DEBUG: log hasilnya
+  console.log('[DEBUG][getUsersByClientFull] TikTok, client_id:', client_id, '| user:', res.rows.length);
+  return res.rows;
+}
+
 

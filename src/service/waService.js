@@ -11,14 +11,11 @@ import { fetchAndStoreInstaContent } from './instaFetchService.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getUsersByClient } from '../model/userModel.js';import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
-
 import * as tiktokPostModel from '../model/tiktokPostModel.js';
 import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
-import * as userModel from '../model/userModel.js'; // pastikan path sudah sesuai
-
-
-
+import * as userModel from '../model/userModel.js'; 
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 function isAdminWhatsApp(number) {
@@ -285,8 +282,8 @@ waClient.on('message', async (msg) => {
   }
 
   if (text.toLowerCase().startsWith('absensikomentar#')) {
-  const parts = text.toLowerCase().split('#');
-  const client_id = parts[1];
+  const parts = text.split('#');
+  const client_id = (parts[1] || '').trim();
   const type = parts[2] || '';
   const subtype = parts[3] || '';
 
@@ -298,7 +295,6 @@ waClient.on('message', async (msg) => {
   console.log('[DEBUG][absensikomentar] videoIds:', videoIds, '| client_id:', client_id);
 
   if (!videoIds.length) {
-    // DEBUG: tampilkan posting TikTok terakhir (untuk investigasi waktu)
     const lastPosts = await tiktokPostModel.getLastPostsByClient?.(client_id) || [];
     let msg = 'Tidak ada konten TikTok hari ini.\n\n[Debug Info]\n';
     msg += lastPosts.length
@@ -308,20 +304,25 @@ waClient.on('message', async (msg) => {
     return;
   }
 
-  const users = await userModel.getUsersByClient(client_id);
+  // PATCH: Ambil users dengan field tiktok untuk absensi TikTok
+  const users = await userModel.getUsersByClientFull(client_id);
+  console.log('[DEBUG][absensikomentar] Jumlah users ditemukan:', users.length, '| users:', users);
+  if (!users.length) {
+    await waClient.sendMessage(chatId, 'Tidak ada user TikTok yang terdaftar pada client ini.\n\n[Debug Info]\n' + JSON.stringify(users));
+    return;
+  }
+
   const normalize = v => (v || '').replace(/^@/, '').toLowerCase();
   let absensiPerUser = {};
   users.forEach(u => absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 });
 
   for (const video_id of videoIds) {
-    // Pastikan comments adalah array username (unique_id)
     let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
-    // Debug, tampilkan isi commenters jika error
     if (!Array.isArray(commenters)) {
       console.log('[DEBUG] commenters bukan array, value:', commenters);
       commenters = [];
     }
-    // Hilangkan falsy/duplikat
+    // Normalisasi username komentator
     const usernameSet = new Set(commenters.map(c => normalize(c)).filter(Boolean));
     let sudah = [], belum = [];
     users.forEach(u => {
@@ -423,7 +424,6 @@ waClient.on('message', async (msg) => {
   }
 }
 
-  // Tambahkan patch ini di bawah baris adminCommands:
 
 
 // ... di dalam waClient.on('message', async (msg) => { ... }
