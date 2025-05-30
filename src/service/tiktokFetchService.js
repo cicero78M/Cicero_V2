@@ -1,195 +1,254 @@
-// src/service/tiktokFetchService.js
-
 import axios from 'axios';
 import pLimit from 'p-limit';
+import * as tiktokPostModel from '../model/tiktokPostModel.js';
+import * as tiktokLikeModel from '../model/tiktokLikeModel.js';
 import { pool } from '../config/db.js';
 
+const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
+const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 const limit = pLimit(4);
 
-function isToday(dateObj) {
-  if (!dateObj) return false;
+function isToday(unixTimestamp) {
+  if (!unixTimestamp) return false;
+  const d = new Date(unixTimestamp * 1000);
   const today = new Date();
-  return dateObj.getFullYear() === today.getFullYear() &&
-    dateObj.getMonth() === today.getMonth() &&
-    dateObj.getDate() === today.getDate();
+  return d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
 }
 
-async function getEligibleTiktokClients() {
+// Model functions mirip insta
+async function getVideoIdsToday() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
   const res = await pool.query(
-    `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
-      WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
+    `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`,
+    [`${yyyy}-${mm}-${dd}`]
+  );
+  return res.rows.map(r => r.video_id);
+}
+
+async function deleteVideoIds(videoIdsToDelete) {
+  if (!videoIdsToDelete.length) return;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  await pool.query(
+    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`,
+    [videoIdsToDelete, `${yyyy}-${mm}-${dd}`]
+  );
+}
+
+async function getEligibleClients() {
+  const res = await pool.query(
+    `SELECT client_ID as id, client_tiktok FROM clients
+      WHERE client_status=true AND client_tiktok_status=true AND client_tiktok IS NOT NULL`
   );
   return res.rows;
 }
 
-// Fungsi untuk upsert array username ke field comments (jsonb)
-async function upsertTiktokCommentUsernames(video_id, usernames) {
-  await pool.query(
-    `INSERT INTO tiktok_comment (video_id, comments, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (video_id) DO UPDATE SET
-       comments = EXCLUDED.comments,
-       updated_at = NOW()`,
-    [video_id, JSON.stringify(usernames)]
-  );
+// PATCH: fetch all likes TikTok via pagination (cursor)
+async function fetchAllTiktokLikes(video_id) {
+  let allLikes = [];
+  let nextCursor = null;
+  let page = 1;
+  const maxTry = 20;
+  do {
+    let params = { video_id_or_url: video_id }; // ganti param sesuai API TikTok likes
+    if (nextCursor) params.cursor = nextCursor;
+
+    let likesRes;
+    try {
+      likesRes = await axios.get(
+        `https://${RAPIDAPI_HOST}/v1/tiktok/likes`, // ganti sesuai endpoint likes TikTok
+        {
+          params,
+          headers: {
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': RAPIDAPI_HOST,
+          },
+        }
+      );
+    } catch (e) {
+      console.error(`[ERROR][FETCH TIKTOK LIKES PAGE][${video_id}]`, e.response?.data || e.message);
+      break;
+    }
+
+    // Debug response page (jumlah likes dalam 1 halaman)
+    const likeItems = likesRes.data?.data?.items || [];
+    console.log(`[DEBUG][LIKES PAGE][${video_id}] Page ${page}: jumlah usernames halaman ini: ${likeItems.length}`);
+    allLikes.push(...likeItems.map(like => like.username ? like.username : like).filter(Boolean));
+
+    nextCursor = likesRes.data?.data?.next_cursor || likesRes.data?.data?.end_cursor || null;
+    const hasMore = likesRes.data?.data?.has_more || (nextCursor && nextCursor !== '');
+
+    console.log(`[DEBUG][LIKES PAGING][${video_id}] Fetched so far: ${allLikes.length} | next_cursor: ${nextCursor}`);
+    if (!hasMore || !nextCursor || page++ >= maxTry) break;
+  } while (true);
+
+  const result = [...new Set(allLikes)];
+  console.log(`[DEBUG][LIKES PAGING][${video_id}] FINAL UNIQUE COUNT: ${result.length}`);
+  return result;
 }
 
-export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
-  const clients = await getEligibleTiktokClients();
-  let totalKontenHariIni = 0;
-  let allDebugLogs = [];
+// === CRON TIKTOK FINAL ===
+export async function fetchAndStoreTiktokContent(keys, waClient = null, chatId = null) {
+  let processing = true;
 
-  console.log(`\n===== [TIKTOK FETCH START] =====`);
-  console.log(`Total clients eligible: ${clients.length}`);
+  if (!waClient) console.log("[DEBUG] fetchAndStoreTiktokContent: mode cronjob/auto");
+  else console.log("[DEBUG] fetchAndStoreTiktokContent: mode WA handler");
+
+  const intervalId = setInterval(() => {
+    if (
+      processing &&
+      waClient &&
+      chatId &&
+      typeof waClient.sendMessage === 'function'
+    ) {
+      waClient.sendMessage(chatId, '⏳ Processing fetch data TikTok...');
+    }
+  }, 4000);
+
+  const dbVideoIdsToday = await getVideoIdsToday();
+  let fetchedVideoIdsToday = [];
+  let kontenLinks = [];
+  let kontenCount = 0;
+
+  const clients = await getEligibleClients();
+  console.log(`[DEBUG] Eligible clients for TikTok fetch:`, clients);
 
   for (const client of clients) {
-    console.log(`\n[CLIENT] ID: ${client.client_id}, TikTok: ${client.client_tiktok}`);
-    // Pastikan secUid ada, jika belum ambil via API
-    let secUid = client.tiktok_secuid;
-    if (!secUid || secUid.length < 10) {
-      try {
-        console.log(`  [INFO] Mencari secUid untuk username: ${client.client_tiktok}`);
-        const secUidRes = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
-          params: { unique_id: client.client_tiktok },
-          headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST
-          }
-        });
-        secUid = secUidRes.data?.data?.user?.secUid;
-        console.log(`  [RESULT] secUid: ${secUid}`);
-        if (secUid) {
-          await pool.query(
-            `UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2`,
-            [secUid, client.client_id]
-          );
-        } else {
-          console.warn(`  [SKIP] Tidak bisa ambil secUid untuk client_id=${client.client_id}`);
-          continue;
-        }
-      } catch (e) {
-        console.warn(`  [SKIP] Gagal ambil secUid untuk client_id=${client.client_id}: ${e.message}`);
-        continue;
-      }
-    }
-
-    // Fetch post TikTok (API /api/user/posts)
-    let posts = [];
+    const username = client.client_tiktok;
+    let postsRes;
     try {
-      console.log(`  [FETCH] Posts TikTok secUid: ${secUid}`);
-      const res = await limit(() =>
-        axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-          params: { secUid: secUid, count: 35, cursor: 0 },
-          headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST
+      console.log(`[DEBUG] Fetch posts for client: ${client.id} / @${username}`);
+      postsRes = await limit(() =>
+        axios.get(
+          `https://${RAPIDAPI_HOST}/v1/tiktok/posts`, // endpoint TikTok posts
+          {
+            params: { username_or_id_or_url: username },
+            headers: {
+              'X-RapidAPI-Key': RAPIDAPI_KEY,
+              'X-RapidAPI-Host': RAPIDAPI_HOST,
+            },
           }
-        })
+        )
       );
-      posts = res.data?.data?.itemList || [];
-      if (!Array.isArray(posts)) {
-        console.warn("  [API WARNING] Response data.itemList kosong atau bukan array! Struktur response:", JSON.stringify(res.data).substring(0, 350));
-        posts = [];
-      }
-      console.log(`  [RESULT] Jumlah posts: ${posts.length}`);
+      console.log(`[DEBUG] TikTok /v1/tiktok/posts response (first 500 chars):`, JSON.stringify(postsRes.data).substring(0, 500));
     } catch (err) {
-      console.error(`[ERROR] Gagal fetch TikTok untuk client_id=${client.client_id}: ${err.message}`);
-      if (waClient && typeof waClient.sendMessage === 'function' && chatId)
-        await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok untuk ${client.client_tiktok}: ${err.message}`);
+      console.error("[ERROR][FETCH TIKTOK POST]", err.response?.data || err.message);
       continue;
     }
+    const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
+      ? postsRes.data.data.items : [];
+    console.log(`[DEBUG] Jumlah post TikTok yang ditemukan hari ini:`, items.length);
 
-    // Filter & simpan hanya post hari ini
-    let kontenHariIni = [];
-    for (const post of posts) {
-      const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
-      const isHariIni = isToday(postDate);
+    for (const post of items) {
+      if (!isToday(post.create_time)) continue; // TikTok field create_time unix seconds
 
-      allDebugLogs.push(
-        `[DEBUG] Client: ${client.client_tiktok} | Video ID: ${post.id} | createTime: ${post.createTime} | Date: ${postDate} | Hari Ini: ${isHariIni}`
+      const toSave = {
+        client_id: client.id,
+        video_id: post.video_id,
+        caption: post.desc || null,
+        comment_count: typeof post.comment_count === "number" ? post.comment_count : 0,
+        like_count: typeof post.digg_count === "number" ? post.digg_count : 0,
+        created_at: post.create_time
+      };
+
+      fetchedVideoIdsToday.push(toSave.video_id);
+      kontenCount++;
+      kontenLinks.push(`https://www.tiktok.com/@${username}/video/${toSave.video_id}`);
+
+      // INSERT/UPDATE ke tiktok_post
+      console.log(`[DEBUG][DB] Upsert TikTok post ke tiktok_post:`, toSave);
+      await pool.query(
+        `INSERT INTO tiktok_post (client_id, video_id, caption, comment_count, like_count, created_at)
+         VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
+         ON CONFLICT (video_id) DO UPDATE
+         SET client_id = EXCLUDED.client_id,
+             caption = EXCLUDED.caption,
+             comment_count = EXCLUDED.comment_count,
+             like_count = EXCLUDED.like_count,
+             created_at = to_timestamp($6)`,
+        [
+          toSave.client_id,
+          toSave.video_id,
+          toSave.caption || null,
+          toSave.comment_count,
+          toSave.like_count,
+          toSave.created_at
+        ]
       );
-      if (!isHariIni) continue;
-      kontenHariIni.push(post);
+      console.log(`[DEBUG][DB] Sukses upsert TikTok post:`, toSave.video_id);
 
-      // Insert/update post ke tiktok_post (kolom: video_id, client_id, caption, created_at, like_count, comment_count)
-      await pool.query(`
-        INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (video_id) DO UPDATE SET
-          client_id = EXCLUDED.client_id,
-          caption = EXCLUDED.caption,
-          created_at = EXCLUDED.created_at,
-          like_count = EXCLUDED.like_count,
-          comment_count = EXCLUDED.comment_count
-      `, [
-        post.id,
-        client.client_id,
-        post.desc || null,
-        postDate,
-        post.stats?.diggCount || 0,
-        post.stats?.commentCount || 0
-      ]);
-
-      // Fetch komentar (API /api/post/comments)
-      let usernames = [];
-      try {
-        const res = await limit(() =>
-          axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-            params: { videoId: post.id, count: 100, cursor: 0 },
-            headers: {
-              'x-rapidapi-key': RAPIDAPI_KEY,
-              'x-rapidapi-host': RAPIDAPI_HOST
-            }
-          })
-        );
-        // Ambil array username TikTok dari unique_id
-        usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
-        console.log(`    [KOMEN] Video ${post.id}, Jumlah user yang komentar: ${usernames.length}`);
-      } catch (e) {
-        usernames = [];
-        console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
-        if (e.response) {
-          console.error('      [ERR DETAIL]', JSON.stringify(e.response.data));
-        } else {
-          console.error('      [ERR MSG]', e.message);
-        }
+      // Likes merge via paginasi
+      if (post.video_id) {
+        await limit(async () => {
+          let likesUsernames = await fetchAllTiktokLikes(post.video_id);
+          const reportedLikeCount = (typeof post.digg_count === 'number') ? post.digg_count : null;
+          console.log(`[DEBUG][LIKES COUNT] Video ${post.video_id}: like_count (API post): ${reportedLikeCount} | likesUsernames.length: ${likesUsernames.length}`);
+          if (reportedLikeCount !== null && Math.abs(likesUsernames.length - reportedLikeCount) > 0) {
+            console.warn(`[WARNING][LIKES MISMATCH] Video ${post.video_id}: Jumlah username likes dari API (${likesUsernames.length}) TIDAK SAMA dengan like_count post (${reportedLikeCount})`);
+          }
+          // DB LIKE: tampilkan hanya jumlah data likes, tidak tampilkan isinya
+          const dbLike = await tiktokLikeModel.getLikeUsernamesByVideoId(post.video_id);
+          if (dbLike) {
+            console.log(`[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.video_id}): jumlah=${dbLike.length}`);
+            likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
+          }
+          console.log(`[DEBUG][DB LIKE] Likes setelah merge untuk ${post.video_id}: jumlah=${likesUsernames.length}`);
+          await tiktokLikeModel.upsertTiktokLike(post.video_id, likesUsernames);
+          console.log(`[DEBUG][DB] Sukses upsert likes TikTok:`, post.video_id, '| Total:', likesUsernames.length);
+        });
       }
-      // Simpan array username ke tiktok_comment.comments (jsonb)
-      await upsertTiktokCommentUsernames(post.id, usernames);
     }
-
-    totalKontenHariIni += kontenHariIni.length;
-
-    // WA: summary per client
-    if (waClient && typeof waClient.sendMessage === 'function' && chatId) {
-      await waClient.sendMessage(
-        chatId,
-        `TikTok Client: ${client.client_tiktok}\nKonten hari ini: ${kontenHariIni.length}\n` +
-        (kontenHariIni.length === 0 ? "Cek waktu post & timezone!\n" : "") +
-        allDebugLogs.slice(-kontenHariIni.length || -5).join('\n')
-      );
-    }
-    // Debug ringkas
-    console.log(`  [SUMMARY] Konten hari ini (client_id: ${client.client_id}): ${kontenHariIni.length}`);
-    kontenHariIni.forEach((p, i) => {
-      console.log(`    - VideoID: ${p.id}, Date: ${new Date(p.createTime * 1000)}`);
-    });
   }
 
-  // Summary global
-  const summaryMsg = `✅ Fetch TikTok selesai!\nJumlah konten hari ini: *${totalKontenHariIni}*`;
-  if (waClient && typeof waClient.sendMessage === 'function' && chatId) {
-    await waClient.sendMessage(chatId, summaryMsg);
-    if (totalKontenHariIni === 0) {
-      await waClient.sendMessage(chatId, "[DEBUG TikTok]\n" + allDebugLogs.slice(-15).join('\n'));
+  // Sinkronisasi
+  const videoIdsToDelete = dbVideoIdsToday.filter(x => !fetchedVideoIdsToday.includes(x));
+  console.log(`[DEBUG][SYNC] Akan menghapus video_ids yang tidak ada hari ini:`, videoIdsToDelete.length);
+  await deleteVideoIds(videoIdsToDelete);
+
+  processing = false;
+  clearInterval(intervalId);
+
+  // Ambil hasil link hari ini
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const kontenHariIniRes = await pool.query(
+    `SELECT video_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
+    [`${yyyy}-${mm}-${dd}`]
+  );
+  const kontenLinksToday = kontenHariIniRes.rows.map(r => `https://www.tiktok.com/video/${r.video_id}`);
+
+  let msg = `✅ Fetch TikTok selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
+  let maxPerMsg = 30;
+  const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
+
+  // Mode WA
+  if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
+    const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
+    for (const target of sendTargets) {
+      await waClient.sendMessage(target, msg);
+      for (let i = 0; i < totalMsg; i++) {
+        const linksMsg = kontenLinksToday.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
+        await waClient.sendMessage(target, `Link konten TikTok:\n${linksMsg}`);
+      }
     }
   } else {
-    console.log(summaryMsg);
-    if (totalKontenHariIni === 0) {
-      console.log("[DEBUG TikTok]\n" + allDebugLogs.slice(-15).join('\n'));
+    console.log(msg);
+    if (kontenLinksToday.length) {
+      console.log(kontenLinksToday.join('\n'));
     }
   }
-  console.log(`===== [TIKTOK FETCH END] =====\n`);
 }
