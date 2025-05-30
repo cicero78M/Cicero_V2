@@ -433,13 +433,21 @@ waClient.on("message", async (msg) => {
       return val.replace(/^@/, "").trim().toLowerCase();
     }
 
-    // Debug: Berapa user yang punya TikTok valid
-    const usersWithTiktok = users.filter((u) =>
-      normalizeTikTokUsername(u.tiktok)
-    );
-    console.log(
-      `[DEBUG][absensikomentar] User total: ${users.length} | with TikTok valid: ${usersWithTiktok.length}`
-    );
+    // Helper: group by division
+    function groupByDivision(users) {
+      const divGroups = {};
+      users.forEach((u) => {
+        const div = u.divisi || "-";
+        if (!divGroups[div]) divGroups[div] = [];
+        divGroups[div].push(u);
+      });
+      return divGroups;
+    }
+    function formatName(u) {
+      return `${u.title ? u.title + " " : ""}${u.nama}${
+        u.tiktok ? ` : ${u.tiktok}` : ""
+      }${u.insta ? ` : ${u.insta}` : ""}`;
+    }
 
     // Map user_id ke object absensi
     let absensiPerUser = {};
@@ -492,11 +500,12 @@ waClient.on("message", async (msg) => {
       let jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
       const link = `https://www.tiktok.com/video/${video_id}`;
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
+      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
       resp += `📋 Rekap Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
       resp += `Jumlah Konten: 1\nDaftar Link Konten:\n${link}\n\n`;
       resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
+      // Sudah
       if (sudah.length) {
         resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         Object.entries(divSudah).forEach(([div, list]) => {
@@ -507,6 +516,7 @@ waClient.on("message", async (msg) => {
         resp += `✅ Sudah melaksanakan: -\n`;
       }
 
+      // Belum
       if (belum.length) {
         resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
         Object.entries(divBelum).forEach(([div, list]) => {
@@ -529,7 +539,8 @@ waClient.on("message", async (msg) => {
       let sudah = [],
         belum = [];
       Object.values(absensiPerUser).forEach((u) => {
-        if (u.count >= minDone) sudah.push(u);
+        const uname = normalizeTikTokUsername(u.tiktok);
+        if (uname && u.count >= minDone) sudah.push(u);
         else belum.push(u);
       });
       if (subtype === "sudah") belum = [];
@@ -549,11 +560,12 @@ waClient.on("message", async (msg) => {
       const links = videoIds
         .map((id) => `https://www.tiktok.com/video/${id}`)
         .join("\n");
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official :\n\n`;
+      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
       resp += `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
       resp += `Jumlah Konten: ${videoIds.length}\nDaftar Link Konten:\n${links}\n\n`;
       resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
+      // Sudah
       if (sudah.length) {
         resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         Object.entries(divSudah).forEach(([div, list]) => {
@@ -563,26 +575,25 @@ waClient.on("message", async (msg) => {
       } else {
         resp += `✅ Sudah melaksanakan: -\n`;
       }
+      // Belum
       if (belum.length) {
         resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
         Object.entries(divBelum).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
           resp +=
             list
-              .map((u) => `- ${formatName(u)}${u.note ? ` (${u.note})` : ""}`)
+              .map(
+                (u) =>
+                  `- ${formatName(u)}${
+                    !normalizeTikTokUsername(u.tiktok)
+                      ? " (belum mengisi data tiktok)"
+                      : ""
+                  }`
+              )
               .join("\n") + "\n";
         });
       } else {
         resp += `\n❌ Belum melaksanakan: -\n`;
-      }
-
-      // Debug tambahan jika semua belum: cek 5 sample user tiktok (untuk diagnosis)
-      if (!sudah.length && belum.length > 0) {
-        resp += `\n\n[Debug] Sampel TikTok user: \n`;
-        resp += users
-          .slice(0, 5)
-          .map((u) => `- ${u.nama}: ${u.tiktok}`)
-          .join("\n");
       }
 
       await waClient.sendMessage(chatId, resp.trim());
