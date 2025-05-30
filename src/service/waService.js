@@ -284,8 +284,7 @@ waClient.on('message', async (msg) => {
     return;
   }
 
-
-if (text.toLowerCase().startsWith('absensikomentar#')) {
+  if (text.toLowerCase().startsWith('absensikomentar#')) {
   const parts = text.toLowerCase().split('#');
   const client_id = parts[1];
   const type = parts[2] || '';
@@ -296,18 +295,34 @@ if (text.toLowerCase().startsWith('absensikomentar#')) {
     return;
   }
   const videoIds = await tiktokPostModel.getPostsTodayByClient(client_id);
+  console.log('[DEBUG][absensikomentar] videoIds:', videoIds, '| client_id:', client_id);
+
   if (!videoIds.length) {
-    await waClient.sendMessage(chatId, 'Tidak ada konten TikTok hari ini.');
+    // DEBUG: tampilkan posting TikTok terakhir (untuk investigasi waktu)
+    const lastPosts = await tiktokPostModel.getLastPostsByClient?.(client_id) || [];
+    let msg = 'Tidak ada konten TikTok hari ini.\n\n[Debug Info]\n';
+    msg += lastPosts.length
+      ? lastPosts.map(r => `- ${r.video_id} | ${r.created_at}`).join('\n')
+      : 'Tidak ada posting TikTok sama sekali.';
+    await waClient.sendMessage(chatId, msg);
     return;
   }
+
   const users = await userModel.getUsersByClient(client_id);
   const normalize = v => (v || '').replace(/^@/, '').toLowerCase();
   let absensiPerUser = {};
   users.forEach(u => absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 });
 
   for (const video_id of videoIds) {
-    const commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
-    const usernameSet = new Set(commenters.map(c => normalize(c)));
+    // Pastikan comments adalah array username (unique_id)
+    let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
+    // Debug, tampilkan isi commenters jika error
+    if (!Array.isArray(commenters)) {
+      console.log('[DEBUG] commenters bukan array, value:', commenters);
+      commenters = [];
+    }
+    // Hilangkan falsy/duplikat
+    const usernameSet = new Set(commenters.map(c => normalize(c)).filter(Boolean));
     let sudah = [], belum = [];
     users.forEach(u => {
       const uname = normalize(u.tiktok);
@@ -327,8 +342,8 @@ if (text.toLowerCase().startsWith('absensikomentar#')) {
       sudah = sudah.filter(u => u.tiktok);
       belum = [];
     } else if (type === 'belum') {
-      belum = belum;
       sudah = [];
+      // belum = belum;
     }
     const divSudah = groupByDivision(sudah);
     const divBelum = groupByDivision(belum);
@@ -408,7 +423,6 @@ if (text.toLowerCase().startsWith('absensikomentar#')) {
   }
 }
 
-    
   // Tambahkan patch ini di bawah baris adminCommands:
 
 
