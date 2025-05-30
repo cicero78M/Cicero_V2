@@ -11,7 +11,7 @@ const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
-const limit = pLimit(8);
+const limit = pLimit(4);
 
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
@@ -81,18 +81,17 @@ async function fetchAllLikes(shortcode) {
       break;
     }
 
-    // Debug response page
-    console.log(`[DEBUG][LIKES PAGE][${shortcode}] Page ${page}:`, JSON.stringify(likesRes.data).substring(0, 500));
-
-    // Ambil data likes
+    // Debug response page (jumlah likes dalam 1 halaman)
     const likeItems = likesRes.data?.data?.items || [];
+    console.log(`[DEBUG][LIKES PAGE][${shortcode}] Page ${page}: jumlah usernames halaman ini: ${likeItems.length}`);
+
     allLikes.push(...likeItems.map(like => like.username ? like.username : like).filter(Boolean));
 
     // Cek apakah ada next cursor
     nextCursor = likesRes.data?.data?.next_cursor || likesRes.data?.data?.end_cursor || null;
     const hasMore = likesRes.data?.data?.has_more || (nextCursor && nextCursor !== '');
 
-    // Debug info
+    // Debug info total likes so far
     console.log(`[DEBUG][LIKES PAGING][${shortcode}] Fetched so far: ${allLikes.length} | next_cursor: ${nextCursor}`);
 
     if (!hasMore || !nextCursor || page++ >= maxTry) break;
@@ -100,11 +99,11 @@ async function fetchAllLikes(shortcode) {
 
   // Hilangkan duplikat username
   const result = [...new Set(allLikes)];
-  console.log(`[DEBUG][LIKES PAGING][${shortcode}] FINAL UNIQUE: ${result.length}`);
+  console.log(`[DEBUG][LIKES PAGING][${shortcode}] FINAL UNIQUE COUNT: ${result.length}`);
   return result;
 }
 
-// === PATCH KOMPLIT DENGAN DEBUG DAN PAGING LIKES ===
+// === PATCH FINAL DENGAN LOG JUMLAH DATA SAJA ===
 export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
@@ -203,21 +202,20 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
 
           // Debug jumlah likes & perbandingan
           const reportedLikeCount = (typeof post.like_count === 'number') ? post.like_count : null;
-          console.log(`[DEBUG][LIKES COUNT] Post ${post.code}: like_count (API post):`, reportedLikeCount, '| likesUsernames.length:', likesUsernames.length);
+          console.log(`[DEBUG][LIKES COUNT] Post ${post.code}: like_count (API post): ${reportedLikeCount} | likesUsernames.length: ${likesUsernames.length}`);
 
           if (reportedLikeCount !== null && Math.abs(likesUsernames.length - reportedLikeCount) > 0) {
             console.warn(`[WARNING][LIKES MISMATCH] Post ${post.code}: Jumlah username likes dari API (${likesUsernames.length}) TIDAK SAMA dengan like_count post (${reportedLikeCount})`);
           }
 
-          console.log(`[DEBUG][PARSE IG LIKES] Usernames hasil parsing untuk ${post.code}:`, likesUsernames);
-
+          // DB LIKE: tampilkan hanya jumlah data likes, tidak tampilkan isinya
           const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
           if (dbLike) {
-            console.log(`[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.code}):`, dbLike);
+            console.log(`[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.code}): jumlah=${dbLike.length}`);
             likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
           }
-          // Debug sesudah merge
-          console.log(`[DEBUG][DB LIKE] Likes setelah merge untuk ${post.code}:`, likesUsernames);
+          // Debug sesudah merge (jumlah saja)
+          console.log(`[DEBUG][DB LIKE] Likes setelah merge untuk ${post.code}: jumlah=${likesUsernames.length}`);
 
           await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
           console.log(`[DEBUG][DB] Sukses upsert likes IG:`, post.code, '| Total:', likesUsernames.length);
@@ -228,7 +226,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
 
   // Sinkronisasi: hapus yg tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
-  console.log(`[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini:`, shortcodesToDelete);
+  console.log(`[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini:`, shortcodesToDelete.length);
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
