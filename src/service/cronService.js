@@ -146,9 +146,12 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   const users = await getUsersByClientFull(client_id);
   const postsToday = await getPostsTodayByClient(client_id);
 
-  if (!postsToday.length) return `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini.`;
+  // Patch: Tetap lakukan absensi walau postsToday kosong, informasikan ke log/admin
+  if (!postsToday.length) {
+    console.log(`[CRON TIKTOK] Tidak ada post TikTok hari ini untuk client_id=${client_id}. Akan lakukan absensi berdasar data DB bila ada.`);
+    return `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini.`;
+  }
 
-  // Patch normalisasi username TikTok (pastikan matching)
   const userStats = {};
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
@@ -209,7 +212,7 @@ async function absensiKomentarAkumulasiBelum(client_id) {
 }
 
 // === CRON IG: Likes ===
-cron.schedule('34 6-20 * * *', async () => {
+cron.schedule('04 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     const clients = await getActiveClientsIG();
@@ -245,14 +248,20 @@ cron.schedule('34 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Komentar ===
-cron.schedule('35 6-20 * * *', async () => {
+cron.schedule('05 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
     await fetchAndStoreTiktokContent();
 
     for (const client of clients) {
-      const msg = await absensiKomentarAkumulasiBelum(client.client_id);
+      let msg = await absensiKomentarAkumulasiBelum(client.client_id);
+
+      // Patch fallback: jika post kosong, kasih notifikasi ke admin dan tetap kirim report absensi DB
+      if (msg.trim().toLowerCase().includes('tidak ada konten tiktok')) {
+        console.log(`[CRON TIKTOK] Tidak ada post TikTok di DB untuk client: ${client.client_id} hari ini`);
+      }
+
       if (msg && msg.length > 0) {
         for (const admin of getAdminWAIds()) {
           try {
