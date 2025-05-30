@@ -1,14 +1,13 @@
 import axios from 'axios';
 import pLimit from 'p-limit';
 import { pool } from '../config/db.js';
-import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
-const limit = pLimit(6);
+const RAPIDAPI_HOST = 'instagram-scraper-2023.p.rapidapi.com';
+const limit = pLimit(4);
 
-// Patch: isToday sudah WIB
-function isToday(dateObj) {
+// Patch: isTodayWIB untuk cek post hari ini di WIB
+function isTodayWIB(dateObj) {
   if (!dateObj) return false;
   // UTC+7
   const dateWIB = new Date(dateObj.getTime() + 7 * 60 * 60 * 1000);
@@ -19,143 +18,94 @@ function isToday(dateObj) {
     dateWIB.getDate() === todayWIB.getDate();
 }
 
-async function getEligibleTiktokClients() {
+async function getEligibleInstaClients() {
   const res = await pool.query(
-    `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
-      WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
+    `SELECT client_id, client_insta FROM clients
+      WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL AND client_insta <> ''`
   );
   return res.rows;
 }
 
-export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
-  const clients = await getEligibleTiktokClients();
+export async function fetchAndStoreInstaContent(keys = null, waClient = null, chatId = null) {
+  const clients = await getEligibleInstaClients();
   let totalKontenHariIni = 0;
   let debugGlobal = [];
 
-  console.log(`\n===== [TIKTOK FETCH START] =====`);
-  console.log(`[DEBUG] Total clients eligible: ${clients.length}`);
+  console.log('\n===== [INSTA FETCH START] =====');
+  console.log('[DEBUG] Total clients eligible:', clients.length);
 
   for (const client of clients) {
-    console.log(`\n[CLIENT] ID: ${client.client_id}, TikTok: ${client.client_tiktok}`);
-    // Pastikan secUid ada, jika belum ambil via API
-    let secUid = client.tiktok_secuid;
-    if (!secUid || secUid.length < 10) {
-      try {
-        console.log(`  [INFO] Mencari secUid untuk username: ${client.client_tiktok}`);
-        const secUidRes = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
-          params: { unique_id: client.client_tiktok },
-          headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST
-          }
-        });
-        secUid = secUidRes.data?.data?.user?.secUid;
-        console.log(`  [RESULT] secUid ditemukan? ${!!secUid}`);
-        if (secUid) {
-          await pool.query(
-            `UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2`,
-            [secUid, client.client_id]
-          );
-        } else {
-          console.warn(`  [SKIP] Tidak bisa ambil secUid untuk client_id=${client.client_id}`);
-          continue;
-        }
-      } catch (e) {
-        console.warn(`  [SKIP] Gagal ambil secUid untuk client_id=${client.client_id}: ${e.message}`);
-        continue;
-      }
-    }
+    console.log(`\n[CLIENT] ID: ${client.client_id}, Instagram: ${client.client_insta}`);
 
-    // Fetch post TikTok (API /api/user/posts)
     let posts = [];
     try {
-      console.log(`  [FETCH] Posts TikTok secUid: ${secUid}`);
+      // Fetch posts by username
+      console.log(`  [FETCH] Posts Instagram: ${client.client_insta}`);
       const res = await limit(() =>
-        axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-          params: { secUid: secUid, count: 35, cursor: 0 },
+        axios.get(`https://${RAPIDAPI_HOST}/posts`, {
+          params: { username: client.client_insta },
           headers: {
             'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST
-          }
+            'x-rapidapi-host': RAPIDAPI_HOST,
+          },
         })
       );
-      posts = res.data?.data?.itemList || [];
+      // Struktur response Instagram API bisa berubah, biasanya data.data
+      posts = res.data?.data?.edges || [];
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       console.log(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
 
-      // PATCH DEBUG Tanggal post TikTok
+      // PATCH DEBUG Tanggal post Instagram
       if (jumlahPosts > 0) {
         const tanggalPostWIB = posts.map(p => {
-          const d = new Date(p.createTime * 1000);
+          const d = new Date((p.node?.taken_at_timestamp || p.node?.taken_at || 0) * 1000);
           return new Date(d.getTime() + 7 * 60 * 60 * 1000);
         });
         const earliest = new Date(Math.min(...tanggalPostWIB));
         const latest = new Date(Math.max(...tanggalPostWIB));
-        console.log(`[DEBUG][${client.client_id}] Tanggal post TikTok terawal (WIB): ${earliest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
-        console.log(`[DEBUG][${client.client_id}] Tanggal post TikTok terakhir (WIB): ${latest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
+        console.log(`[DEBUG][${client.client_id}] Tanggal post Instagram terawal (WIB): ${earliest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
+        console.log(`[DEBUG][${client.client_id}] Tanggal post Instagram terakhir (WIB): ${latest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
       } else {
-        console.log(`[DEBUG][${client.client_id}] Tidak ada post TikTok ditemukan dari API.`);
+        console.log(`[DEBUG][${client.client_id}] Tidak ada post Instagram ditemukan dari API.`);
       }
     } catch (err) {
-      console.error(`[ERROR] Gagal fetch TikTok untuk client_id=${client.client_id}: ${err.message}`);
+      console.error(`[ERROR] Gagal fetch Instagram untuk client_id=${client.client_id}: ${err.message}`);
       if (waClient && typeof waClient.sendMessage === 'function' && chatId)
-        await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok untuk ${client.client_tiktok}: ${err.message}`);
+        await waClient.sendMessage(chatId, `❌ Gagal fetch Instagram untuk ${client.client_insta}: ${err.message}`);
       continue;
     }
 
     // Filter & simpan hanya post hari ini (berdasarkan WIB)
     let kontenHariIni = [];
     for (const post of posts) {
-      const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
-      const isHariIni = isToday(postDate);
-      if (!isHariIni) continue;
+      const ts = post.node?.taken_at_timestamp || post.node?.taken_at || 0;
+      const postDate = ts ? new Date(ts * 1000) : null;
+      if (!isTodayWIB(postDate)) continue;
       kontenHariIni.push(post);
 
-      // Insert/update post ke tiktok_post (kolom: video_id, client_id, caption, created_at, like_count, comment_count)
-      await pool.query(`
-        INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (video_id) DO UPDATE SET
-          client_id = EXCLUDED.client_id,
-          caption = EXCLUDED.caption,
-          created_at = EXCLUDED.created_at,
-          like_count = EXCLUDED.like_count,
-          comment_count = EXCLUDED.comment_count
-      `, [
-        post.id,
-        client.client_id,
-        post.desc || null,
-        postDate,
-        post.stats?.diggCount || 0,
-        post.stats?.commentCount || 0
-      ]);
+      // Patch: ambil field penting dan masukkan ke DB
+      const code = post.node?.shortcode;
+      const caption = post.node?.edge_media_to_caption?.edges?.[0]?.node?.text || '';
+      const like_count = post.node?.edge_liked_by?.count || post.node?.like_count || 0;
+      const comment_count = post.node?.edge_media_to_comment?.count || post.node?.comment_count || 0;
 
-      // Fetch komentar (API /api/post/comments)
-      let usernames = [];
-      try {
-        const res = await limit(() =>
-          axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-            params: { videoId: post.id, count: 100, cursor: 0 },
-            headers: {
-              'x-rapidapi-key': RAPIDAPI_KEY,
-              'x-rapidapi-host': RAPIDAPI_HOST
-            }
-          })
-        );
-        usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
-        // Debug jumlah komentar
-        console.log(`    [KOMEN] Video ${post.id}, jumlah komentar user: ${usernames.length}`);
-      } catch (e) {
-        usernames = [];
-        console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
-        if (e.response) {
-          console.error('      [ERR DETAIL]', e.response?.data?.message || JSON.stringify(e.response.data).substring(0, 120));
-        } else {
-          console.error('      [ERR MSG]', e.message);
-        }
-      }
-      // Simpan array username ke tiktok_comment.comments (jsonb)
-      await tiktokCommentModel.upsertTiktokComments(post.id, usernames);
+      await pool.query(
+        `INSERT INTO insta_post (shortcode, client_id, caption, taken_at, like_count, comment_count)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (shortcode) DO UPDATE SET
+            caption = EXCLUDED.caption,
+            like_count = EXCLUDED.like_count,
+            comment_count = EXCLUDED.comment_count,
+            taken_at = EXCLUDED.taken_at`,
+        [
+          code,
+          client.client_id,
+          caption,
+          postDate,
+          like_count,
+          comment_count,
+        ]
+      );
     }
 
     // Debug PATCH: Berapa post yang lolos filter hari ini (WIB)
@@ -167,24 +117,28 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     totalKontenHariIni += kontenHariIni.length;
 
     // Debug ringkas per client
-    console.log(`  [SUMMARY] Konten hari ini TikTok (client_id: ${client.client_id}): ${kontenHariIni.length}`);
+    console.log(`  [SUMMARY] Konten hari ini Instagram (client_id: ${client.client_id}): ${kontenHariIni.length}`);
     if (kontenHariIni.length) {
-      const minDate = Math.min(...kontenHariIni.map(p => p.createTime));
-      const maxDate = Math.max(...kontenHariIni.map(p => p.createTime));
+      const minDate = Math.min(...kontenHariIni.map(p =>
+        (p.node?.taken_at_timestamp || p.node?.taken_at || 0)
+      ));
+      const maxDate = Math.max(...kontenHariIni.map(p =>
+        (p.node?.taken_at_timestamp || p.node?.taken_at || 0)
+      ));
       console.log(`    [SUMMARY] Tanggal konten hari ini: ${new Date(minDate * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} - ${new Date(maxDate * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
     }
 
-    debugGlobal.push(`Client ${client.client_tiktok}: ${kontenHariIni.length} konten hari ini`);
+    debugGlobal.push(`Client ${client.client_insta}: ${kontenHariIni.length} konten hari ini`);
   }
 
   // Summary global
-  const summaryMsg = `✅ Fetch TikTok selesai!\nJumlah konten hari ini: *${totalKontenHariIni}*`;
+  const summaryMsg = `✅ Fetch Instagram selesai!\nJumlah konten hari ini: *${totalKontenHariIni}*`;
   if (waClient && typeof waClient.sendMessage === 'function' && chatId) {
     await waClient.sendMessage(chatId, summaryMsg);
   } else {
     console.log(summaryMsg);
   }
   // Akhir ringkas
-  console.log(`[DEBUG][TIKTOK] Ringkasan fetch:`, debugGlobal.join(' | '));
-  console.log(`===== [TIKTOK FETCH END] =====\n`);
+  console.log(`[DEBUG][INSTA] Ringkasan fetch:`, debugGlobal.join(' | '));
+  console.log(`===== [INSTA FETCH END] =====\n`);
 }

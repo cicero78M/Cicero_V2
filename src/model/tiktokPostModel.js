@@ -8,18 +8,16 @@ dayjs.extend(timezone);
 
 // UPSERT satu postingan TikTok
 export async function upsertTiktokPost(postData) {
-  // Patch: konversi postData.created_at ke Date ISO jika masih UNIX detik (number)
+  // Konversi postData.created_at ke ISO UTC string
   let createdAtVal = postData.created_at;
   if (typeof createdAtVal === 'number') {
     createdAtVal = new Date(createdAtVal * 1000); // UNIX detik -> ms
   }
-  if (createdAtVal instanceof Date) {
-    createdAtVal = createdAtVal.toISOString();
+  if (!(createdAtVal instanceof Date)) {
+    createdAtVal = new Date(createdAtVal);
   }
-  if (typeof createdAtVal === 'string' && !createdAtVal.endsWith('Z')) {
-    // Jika string tapi belum UTC, paksa jadi UTC (edge case)
-    createdAtVal = new Date(createdAtVal).toISOString();
-  }
+  createdAtVal = createdAtVal.toISOString();
+
   await pool.query(
     `INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -52,18 +50,25 @@ export async function getPostsTodayByClient(client_id) {
     `SELECT video_id, created_at FROM tiktok_post WHERE LOWER(client_id) = LOWER($1) ORDER BY created_at DESC LIMIT 20`,
     [client_id]
   );
-  console.log('[DEBUG] Semua post TikTok client ini:');
-  allPosts.rows.forEach(row => {
-    console.log(`  - video_id: ${row.video_id} | created_at: ${row.created_at}`);
-  });
+  if (!allPosts.rows.length) {
+    console.log('[DEBUG] Tidak ada posting TikTok apapun pada client ini.');
+  } else {
+    console.log('[DEBUG] Semua post TikTok client ini:');
+    allPosts.rows.forEach(row => {
+      console.log(`  - video_id: ${row.video_id} | created_at: ${row.created_at}`);
+    });
+  }
 
   const res = await pool.query(
     `SELECT video_id, created_at FROM tiktok_post
      WHERE LOWER(client_id) = LOWER($1) AND created_at >= $2 AND created_at <= $3`,
     [client_id, startOfToday, endOfToday]
   );
-  console.log('[DEBUG] Post yang lolos filter hari ini:', res.rows);
+  if (!res.rows.length) {
+    console.log('[DEBUG] Tidak ada post TikTok yang lolos filter hari ini.');
+  } else {
+    console.log('[DEBUG] Post yang lolos filter hari ini:', res.rows.map(x => x.video_id).join(', '));
+  }
 
   return res.rows.map(row => row.video_id);
 }
-
