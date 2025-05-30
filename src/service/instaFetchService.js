@@ -53,15 +53,15 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-// PATCH: fetch all likes via pagination (cursor)
+// PATCH: fetch all likes via pagination (cursor), debug hanya jumlah
 async function fetchAllLikes(shortcode) {
   let allLikes = [];
   let nextCursor = null;
   let page = 1;
-  const maxTry = 20; // Batasi agar tidak infinite loop jika error
+  const maxTry = 20;
   do {
     let params = { code_or_id_or_url: shortcode };
-    if (nextCursor) params.cursor = nextCursor; // Ganti "cursor" sesuai parameter API jika berbeda
+    if (nextCursor) params.cursor = nextCursor;
 
     let likesRes;
     try {
@@ -80,29 +80,27 @@ async function fetchAllLikes(shortcode) {
       break;
     }
 
-    // Debug response page (jumlah likes dalam 1 halaman)
+    // Debug jumlah likes di page ini
     const likeItems = likesRes.data?.data?.items || [];
-    console.log(`[DEBUG][LIKES PAGE][${shortcode}] Page ${page}: jumlah usernames halaman ini: ${likeItems.length}`);
+    console.log(`[DEBUG][LIKES PAGE][${shortcode}] Page ${page}: ${likeItems.length} username dihalaman ini`);
 
     allLikes.push(...likeItems.map(like => like.username ? like.username : like).filter(Boolean));
 
-    // Cek apakah ada next cursor
     nextCursor = likesRes.data?.data?.next_cursor || likesRes.data?.data?.end_cursor || null;
     const hasMore = likesRes.data?.data?.has_more || (nextCursor && nextCursor !== '');
 
-    // Debug info total likes so far
-    console.log(`[DEBUG][LIKES PAGING][${shortcode}] Fetched so far: ${allLikes.length} | next_cursor: ${nextCursor}`);
+    // Debug progress jumlah total so far
+    console.log(`[DEBUG][LIKES PAGING][${shortcode}] Total fetched sementara: ${allLikes.length} | next_cursor: ${!!nextCursor}`);
 
     if (!hasMore || !nextCursor || page++ >= maxTry) break;
   } while (true);
 
-  // Hilangkan duplikat username
   const result = [...new Set(allLikes)];
-  console.log(`[DEBUG][LIKES PAGING][${shortcode}] FINAL UNIQUE COUNT: ${result.length}`);
+  console.log(`[DEBUG][LIKES PAGING][${shortcode}] FINAL jumlah unique: ${result.length}`);
   return result;
 }
 
-// === PATCH FINAL DENGAN LOG JUMLAH DATA SAJA ===
+// PATCH FINAL: semua debug hanya jumlah data (angka)
 export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
@@ -126,7 +124,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
   let kontenCount = 0;
 
   const clients = await getEligibleClients();
-  console.log(`[DEBUG] Eligible clients for Instagram fetch:`, clients);
+  console.log(`[DEBUG] Eligible clients for Instagram fetch: jumlah client: ${clients.length}`);
 
   for (const client of clients) {
     const username = client.client_insta;
@@ -145,14 +143,14 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           }
         )
       );
-      console.log(`[DEBUG] API /v1/posts response (first 500 chars):`, JSON.stringify(postsRes.data).substring(0, 500));
+      console.log(`[DEBUG] API /v1/posts response: jumlah konten ditemukan: ${postsRes.data?.data?.items?.length || 0}`);
     } catch (err) {
       console.error("[ERROR][FETCH IG POST]", err.response?.data || err.message);
       continue;
     }
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
-    console.log(`[DEBUG] Jumlah post IG yang ditemukan hari ini:`, items.length);
+    console.log(`[DEBUG] Jumlah post IG hari ini:`, items.length);
 
     for (const post of items) {
       if (!isToday(post.taken_at)) continue;
@@ -171,8 +169,8 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
       kontenCount++;
       kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
-      // INSERT/UPDATE dengan kolom baru
-      console.log(`[DEBUG][DB] Upsert IG post ke insta_post:`, toSave);
+      // INSERT/UPDATE
+      console.log(`[DEBUG][DB] Upsert IG post: ${toSave.shortcode}`);
       await pool.query(
         `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
          VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
@@ -191,33 +189,30 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           post.taken_at
         ]
       );
-      console.log(`[DEBUG][DB] Sukses upsert IG post:`, toSave.shortcode);
+      console.log(`[DEBUG][DB] Sukses upsert IG post: ${toSave.shortcode}`);
 
-      // Likes merge dengan DEBUG, PAGING, dan verifikasi jumlah like
+      // Likes merge
       if (post.code) {
         await limit(async () => {
-          // Ganti: ambil semua likes dengan paginasi
           let likesUsernames = await fetchAllLikes(post.code);
 
-          // Debug jumlah likes & perbandingan
+          // Jumlah likes: API vs username hasil fetch
           const reportedLikeCount = (typeof post.like_count === 'number') ? post.like_count : null;
           console.log(`[DEBUG][LIKES COUNT] Post ${post.code}: like_count (API post): ${reportedLikeCount} | likesUsernames.length: ${likesUsernames.length}`);
-
           if (reportedLikeCount !== null && Math.abs(likesUsernames.length - reportedLikeCount) > 0) {
-            console.warn(`[WARNING][LIKES MISMATCH] Post ${post.code}: Jumlah username likes dari API (${likesUsernames.length}) TIDAK SAMA dengan like_count post (${reportedLikeCount})`);
+            console.warn(`[WARNING][LIKES MISMATCH] Post ${post.code}: Jumlah likes API: ${reportedLikeCount}, username hasil fetch: ${likesUsernames.length}`);
           }
 
-          // DB LIKE: tampilkan hanya jumlah data likes, tidak tampilkan isinya
+          // DB LIKE: hanya jumlah
           const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
           if (dbLike) {
             console.log(`[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.code}): jumlah=${dbLike.length}`);
             likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
           }
-          // Debug sesudah merge (jumlah saja)
           console.log(`[DEBUG][DB LIKE] Likes setelah merge untuk ${post.code}: jumlah=${likesUsernames.length}`);
 
           await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
-          console.log(`[DEBUG][DB] Sukses upsert likes IG:`, post.code, '| Total:', likesUsernames.length);
+          console.log(`[DEBUG][DB] Sukses upsert likes IG: ${post.code} | Total likes disimpan: ${likesUsernames.length}`);
         });
       }
     }
@@ -225,13 +220,13 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
 
   // Sinkronisasi: hapus yg tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
-  console.log(`[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini:`, shortcodesToDelete.length);
+  console.log(`[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`);
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
   clearInterval(intervalId);
 
-  // Ambil hasil link hari ini
+  // Ringkasan fetch
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
