@@ -6,14 +6,14 @@ dotenv.config();
 
 // === CRON IG ===
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
-import { getUsersByClient } from '../model/userModel.js'; // Untuk IG
+import { getUsersByClient } from '../model/userModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 
 // === CRON TIKTOK ===
 import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
-import { getUsersByClientFull } from '../model/userModel.js'; // Untuk TikTok
+import { getUsersByClientFull } from '../model/userModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 
 import { pool } from '../config/db.js';
@@ -31,7 +31,20 @@ function getAdminWAIds() {
   );
 }
 
-// === IG CRON: Absensi Likes ===
+function groupByDivision(users) {
+  const divGroups = {};
+  users.forEach(u => {
+    const div = u.divisi || '-';
+    if (!divGroups[div]) divGroups[div] = [];
+    divGroups[div].push(u);
+  });
+  return divGroups;
+}
+function formatName(u) {
+  return `${u.title ? u.title + " " : ""}${u.nama}${u.tiktok ? ` : ${u.tiktok}` : ""}${u.insta ? ` : ${u.insta}` : ""}`;
+}
+
+// === IG CRON: Absensi Likes Akumulasi Belum ===
 async function getActiveClientsIG() {
   const res = await pool.query(
     `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
@@ -64,20 +77,12 @@ async function absensiLikesAkumulasiBelum(client_id) {
   }
 
   const totalKonten = shortcodes.length;
-  const belumPerDivisi = {};
-  let totalUser = Object.values(userStats).length;
-  let totalBelum = 0;
-
+  let sudah = [], belum = [];
   Object.values(userStats).forEach(u => {
-    const divisi = u.divisi || '-';
-    const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-    const label = u.insta && u.insta.trim() !== ''
-      ? `${titleNama} : ${u.insta} (${u.count} konten)`
-      : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
-    if (!u.insta || u.insta.trim() === '' || u.count < Math.ceil(totalKonten / 2)) {
-      if (!belumPerDivisi[divisi]) belumPerDivisi[divisi] = [];
-      belumPerDivisi[divisi].push(label);
-      totalBelum++;
+    if (u.insta && u.insta.trim() !== '' && u.count >= Math.ceil(totalKonten/2)) {
+      sudah.push(u);
+    } else {
+      belum.push(u);
     }
   });
 
@@ -85,26 +90,51 @@ async function absensiLikesAkumulasiBelum(client_id) {
 
   let msg =
     `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n` +
-    `📋 Rekap Akumulasi Likes IG\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n` +
-    `Daftar link konten hari ini:\n${kontenLinks.join('\n')}\n\n` +
-    `👤 Jumlah user: *${totalUser}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+    `📋 Rekap Akumulasi Likes IG\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join('\n')}\n\n` +
+    `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-  Object.keys(belumPerDivisi).forEach(divisi => {
-    const arr = belumPerDivisi[divisi];
-    msg += `*${divisi}* (${arr.length} user):\n`;
-    arr.forEach(line => { msg += `- ${line}\n`; });
-    msg += '\n';
-  });
+  // Sudah
+  if (sudah.length) {
+    const sudahDiv = groupByDivision(sudah);
+    msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+    Object.entries(sudahDiv).forEach(([div, list]) => {
+      msg += `*${div}* (${list.length} user):\n`;
+      msg += list.map(u => `- ${formatName(u)}`).join('\n') + "\n";
+    });
+  } else {
+    msg += `✅ Sudah melaksanakan: -\n`;
+  }
+  // Belum
+  if (belum.length) {
+    const belumDiv = groupByDivision(belum);
+    msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+    Object.entries(belumDiv).forEach(([div, list]) => {
+      msg += `*${div}* (${list.length} user):\n`;
+      msg += list.map(u => `- ${formatName(u)}${!u.insta ? " (belum mengisi data insta)" : ""}`).join('\n') + "\n";
+    });
+  } else {
+    msg += `\n❌ Belum melaksanakan: -\n`;
+  }
 
   return msg.trim();
 }
 
-// === TIKTOK CRON: Absensi Komentar ===
+// === TIKTOK CRON: Absensi Komentar Akumulasi Belum ===
 async function getActiveClientsTiktok() {
   const res = await pool.query(
     `SELECT client_id, client_tiktok FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL`
   );
   return res.rows;
+}
+function normalizeTikTokUsername(val) {
+  if (!val) return "";
+  if (val.startsWith("http")) {
+    // Ambil dari url: https://www.tiktok.com/@username
+    const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
+    return match ? match[1].toLowerCase() : "";
+  }
+  return val.replace(/^@/, "").trim().toLowerCase();
 }
 
 async function absensiKomentarAkumulasiBelum(client_id) {
@@ -114,62 +144,72 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
   const users = await getUsersByClientFull(client_id);
-
-  console.log('[DEBUG][absensiKomentarAkumulasiBelum] Jumlah user TikTok:', users.length, '| client:', client_id);
-
   const postsToday = await getPostsTodayByClient(client_id);
 
   if (!postsToday.length) return `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini.`;
 
+  // Patch normalisasi username TikTok (pastikan matching)
   const userStats = {};
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
   for (const postId of postsToday) {
     const comments = await getCommentsByVideoId(postId);
-    const commentsSet = new Set((comments || []).map(x => (x || '').replace(/^@/, '').toLowerCase()));
+    const commentsSet = new Set((comments || []).map(x => normalizeTikTokUsername(x)));
     users.forEach(u => {
-      const uname = (u.tiktok || '').replace(/^@/, '').toLowerCase();
-      if (u.tiktok && u.tiktok.trim() !== '' && commentsSet.has(uname)) {
+      const uname = normalizeTikTokUsername(u.tiktok);
+      if (uname && commentsSet.has(uname)) {
         userStats[u.user_id].count += 1;
       }
     });
   }
 
   const totalKonten = postsToday.length;
-  const belumPerDivisi = {};
-  let totalUser = Object.values(userStats).length;
-  let totalBelum = 0;
-
+  let sudah = [], belum = [];
   Object.values(userStats).forEach(u => {
-    const divisi = u.divisi || '-';
-    const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
-    const label = u.tiktok && u.tiktok.trim() !== ''
-      ? `${titleNama} : ${u.tiktok} (${u.count} konten)`
-      : `${titleNama} : belum mengisi data tiktok (${u.count} konten)`;
-    if (!u.tiktok || u.tiktok.trim() === '' || u.count < Math.ceil(totalKonten / 2)) {
-      if (!belumPerDivisi[divisi]) belumPerDivisi[divisi] = [];
-      belumPerDivisi[divisi].push(label);
-      totalBelum++;
+    const uname = normalizeTikTokUsername(u.tiktok);
+    if (uname && u.count >= Math.ceil(totalKonten/2)) {
+      sudah.push(u);
+    } else {
+      belum.push(u);
     }
   });
 
+  const kontenLinks = postsToday.map(id => `https://www.tiktok.com/video/${id}`);
+
   let msg =
     `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n` +
-    `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\nKonten hari ini: ${totalKonten}\n\n` +
-    `👤 Jumlah user: *${totalUser}*\n❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+    `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join('\n')}\n\n` +
+    `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-  Object.keys(belumPerDivisi).forEach(divisi => {
-    const arr = belumPerDivisi[divisi];
-    msg += `*${divisi}* (${arr.length} user):\n`;
-    arr.forEach(line => { msg += `- ${line}\n`; });
-    msg += '\n';
-  });
+  // Sudah
+  if (sudah.length) {
+    const sudahDiv = groupByDivision(sudah);
+    msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+    Object.entries(sudahDiv).forEach(([div, list]) => {
+      msg += `*${div}* (${list.length} user):\n`;
+      msg += list.map(u => `- ${formatName(u)}`).join('\n') + "\n";
+    });
+  } else {
+    msg += `✅ Sudah melaksanakan: -\n`;
+  }
+  // Belum
+  if (belum.length) {
+    const belumDiv = groupByDivision(belum);
+    msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+    Object.entries(belumDiv).forEach(([div, list]) => {
+      msg += `*${div}* (${list.length} user):\n`;
+      msg += list.map(u => `- ${formatName(u)}${!normalizeTikTokUsername(u.tiktok) ? " (belum mengisi data tiktok)" : ""}`).join('\n') + "\n";
+    });
+  } else {
+    msg += `\n❌ Belum melaksanakan: -\n`;
+  }
 
   return msg.trim();
 }
 
 // === CRON IG: Likes ===
-cron.schedule('31 6-20 * * *', async () => {
+cron.schedule('46 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     const clients = await getActiveClientsIG();
@@ -205,7 +245,7 @@ cron.schedule('31 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Komentar ===
-cron.schedule('35 6-20 * * *', async () => {
+cron.schedule('47 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
