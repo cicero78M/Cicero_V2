@@ -13,7 +13,7 @@ import { getLikesByShortcode } from '../model/instaLikeModel.js';
 // === CRON TIKTOK ===
 import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
-import { getCommentUsernamesByVideoId } from '../model/tiktokCommentModel.js';
+import { getCommentsByVideoId } from '../model/tiktokCommentModel.js'; // <--- ini sudah benar
 
 import { pool } from '../config/db.js';
 import waClient from './waService.js'; // Pastikan waClient terexport default
@@ -123,7 +123,8 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
   for (const postId of postsToday) {
-    const comments = await getCommentUsernamesByVideoId(postId);
+    // INI UBAH SESUAI EXPORT YANG ADA DI MODEL
+    const comments = await getCommentsByVideoId(postId);
     const commentsSet = new Set((comments || []).map(x => (x || '').toLowerCase()));
     users.forEach(u => {
       if (u.tiktok && u.tiktok.trim() !== '' && commentsSet.has(u.tiktok.toLowerCase())) {
@@ -166,7 +167,6 @@ async function absensiKomentarAkumulasiBelum(client_id) {
 }
 
 // === CRON IG: Rekap Likes ===
-// Tiap jam pada menit ke-40 dari 06:40 s/d 20:40
 cron.schedule('40 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
@@ -203,7 +203,6 @@ cron.schedule('40 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Rekap Komentar ===
-// Tiap jam pada menit ke-45 dari 06:45 s/d 20:45
 cron.schedule('45 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
@@ -237,4 +236,3 @@ cron.schedule('45 6-20 * * *', async () => {
 }, {
   timezone: 'Asia/Jakarta'
 });
-
