@@ -16,6 +16,10 @@ export async function upsertTiktokPost(postData) {
   if (createdAtVal instanceof Date) {
     createdAtVal = createdAtVal.toISOString();
   }
+  if (typeof createdAtVal === 'string' && !createdAtVal.endsWith('Z')) {
+    // Jika string tapi belum UTC, paksa jadi UTC (edge case)
+    createdAtVal = new Date(createdAtVal).toISOString();
+  }
   await pool.query(
     `INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -28,7 +32,7 @@ export async function upsertTiktokPost(postData) {
       postData.video_id,
       postData.client_id,
       postData.caption,
-      createdAtVal,    // sudah ISO string
+      createdAtVal,    // sudah ISO string UTC
       postData.like_count,
       postData.comment_count
     ]
@@ -55,6 +59,7 @@ export async function getPostsTodayByClient(client_id) {
     console.log(`  - video_id: ${row.video_id} | created_at: ${row.created_at}`);
   });
 
+  // Query postingan hari ini (created_at dalam UTC)
   const res = await pool.query(
     `SELECT video_id, created_at FROM tiktok_post
      WHERE client_id = $1 AND created_at >= $2 AND created_at <= $3`,
