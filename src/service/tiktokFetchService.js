@@ -7,12 +7,16 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 const limit = pLimit(6);
 
+// Patch: isToday sudah WIB
 function isToday(dateObj) {
   if (!dateObj) return false;
-  const today = new Date();
-  return dateObj.getFullYear() === today.getFullYear() &&
-    dateObj.getMonth() === today.getMonth() &&
-    dateObj.getDate() === today.getDate();
+  // UTC+7
+  const dateWIB = new Date(dateObj.getTime() + 7 * 60 * 60 * 1000);
+  const now = new Date();
+  const todayWIB = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  return dateWIB.getFullYear() === todayWIB.getFullYear() &&
+    dateWIB.getMonth() === todayWIB.getMonth() &&
+    dateWIB.getDate() === todayWIB.getDate();
 }
 
 async function getEligibleTiktokClients() {
@@ -78,6 +82,20 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       posts = res.data?.data?.itemList || [];
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       console.log(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
+
+      // PATCH DEBUG Tanggal post TikTok
+      if (jumlahPosts > 0) {
+        const tanggalPostWIB = posts.map(p => {
+          const d = new Date(p.createTime * 1000);
+          return new Date(d.getTime() + 7 * 60 * 60 * 1000);
+        });
+        const earliest = new Date(Math.min(...tanggalPostWIB));
+        const latest = new Date(Math.max(...tanggalPostWIB));
+        console.log(`[DEBUG][${client.client_id}] Tanggal post TikTok terawal (WIB): ${earliest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
+        console.log(`[DEBUG][${client.client_id}] Tanggal post TikTok terakhir (WIB): ${latest.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
+      } else {
+        console.log(`[DEBUG][${client.client_id}] Tidak ada post TikTok ditemukan dari API.`);
+      }
     } catch (err) {
       console.error(`[ERROR] Gagal fetch TikTok untuk client_id=${client.client_id}: ${err.message}`);
       if (waClient && typeof waClient.sendMessage === 'function' && chatId)
@@ -85,12 +103,11 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       continue;
     }
 
-    // Filter & simpan hanya post hari ini
+    // Filter & simpan hanya post hari ini (berdasarkan WIB)
     let kontenHariIni = [];
     for (const post of posts) {
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
       const isHariIni = isToday(postDate);
-
       if (!isHariIni) continue;
       kontenHariIni.push(post);
 
@@ -141,6 +158,12 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       await tiktokCommentModel.upsertTiktokComments(post.id, usernames);
     }
 
+    // Debug PATCH: Berapa post yang lolos filter hari ini (WIB)
+    console.log(`[DEBUG][${client.client_id}] Post yang terdeteksi hari ini (WIB): ${kontenHariIni.length}`);
+    if (kontenHariIni.length === 0) {
+      console.log(`[DEBUG][${client.client_id}] Tidak ada post yang lolos filter hari ini. Kemungkinan besar masalah timezone atau memang tidak ada postingan hari ini.`);
+    }
+
     totalKontenHariIni += kontenHariIni.length;
 
     // Debug ringkas per client
@@ -148,7 +171,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     if (kontenHariIni.length) {
       const minDate = Math.min(...kontenHariIni.map(p => p.createTime));
       const maxDate = Math.max(...kontenHariIni.map(p => p.createTime));
-      console.log(`    [SUMMARY] Tanggal konten hari ini: ${new Date(minDate * 1000).toLocaleString()} - ${new Date(maxDate * 1000).toLocaleString()}`);
+      console.log(`    [SUMMARY] Tanggal konten hari ini: ${new Date(minDate * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} - ${new Date(maxDate * 1000).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
     }
 
     debugGlobal.push(`Client ${client.client_tiktok}: ${kontenHariIni.length} konten hari ini`);
