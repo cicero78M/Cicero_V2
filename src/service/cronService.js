@@ -9,13 +9,22 @@ import { getUsersByClient } from '../model/userModel.js';
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 import { pool } from '../config/db.js';
-import waClient from './waService.js'; // Pastikan waClient terexport sebagai default dari waService.js
+import waClient from './waService.js'; // Pastikan waClient terexport default
 
 const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+// Ambil dari .env, support hanya nomor (tanpa @c.us)
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
   .split(',')
   .map(n => n.trim())
-  .filter(n => n.endsWith('@c.us') && n.length > 8);
+  .filter(Boolean);
+
+// Helper agar admin WA id pasti dengan @c.us walau di .env hanya nomor telepon
+function getAdminWAIds() {
+  return ADMIN_WHATSAPP.map(n =>
+    n.endsWith('@c.us') ? n : n.replace(/[^0-9]/g, '') + '@c.us'
+  );
+}
 
 // Helper: ambil seluruh client eligible
 async function getActiveClients() {
@@ -87,8 +96,8 @@ async function absensiLikesAkumulasiBelum(client_id) {
   return msg.trim();
 }
 
-// Cronjob: tiap jam pada menit ke-30 dari 06:30 s/d 20:30 (inclusive, sesuai requirement)
-cron.schedule('15 6-20 * * *', async () => {
+// Cronjob: tiap jam pada menit ke-30 dari 06:30 s/d 20:30 (inclusive)
+cron.schedule('30 6-20 * * *', async () => {
   console.log('[CRON] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     // 1. Ambil seluruh client eligible
@@ -102,7 +111,7 @@ cron.schedule('15 6-20 * * *', async () => {
     for (const client of clients) {
       const msg = await absensiLikesAkumulasiBelum(client.client_id);
       if (msg && msg.length > 0) {
-        for (const admin of ADMIN_WHATSAPP) {
+        for (const admin of getAdminWAIds()) {
           try {
             await waClient.sendMessage(admin, msg);
             console.log(`[CRON] Sent absensi IG client=${client.client_id} to ${admin}`);
@@ -115,7 +124,7 @@ cron.schedule('15 6-20 * * *', async () => {
     console.log('[CRON] Laporan absensi likes berhasil dikirim ke admin.');
   } catch (err) {
     console.error('[CRON ERROR]', err);
-    for (const admin of ADMIN_WHATSAPP) {
+    for (const admin of getAdminWAIds()) {
       try {
         await waClient.sendMessage(admin, `[CRON ERROR] ${err.message || err}`);
       } catch (waErr) {
@@ -126,4 +135,3 @@ cron.schedule('15 6-20 * * *', async () => {
 }, {
   timezone: 'Asia/Jakarta'
 });
-
