@@ -10,13 +10,12 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 const limit = pLimit(4);
 
-function isToday(unixTimestamp) {
-  if (!unixTimestamp) return false;
-  const d = new Date(unixTimestamp * 1000); // detik ke ms
+function isToday(dateObj) {
+  if (!dateObj) return false;
   const today = new Date();
-  return d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate();
+  return dateObj.getFullYear() === today.getFullYear() &&
+    dateObj.getMonth() === today.getMonth() &&
+    dateObj.getDate() === today.getDate();
 }
 
 async function getEligibleTiktokClients() {
@@ -79,8 +78,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         })
       );
-      // Log full path, bisa disesuaikan jika format beda
-      console.log("  [API RAW]", JSON.stringify(res.data).substring(0, 500) + '...');
       // PATCH: akses itemList, BUKAN posts!
       posts = res.data?.data?.itemList || [];
       if (!Array.isArray(posts)) {
@@ -98,24 +95,34 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Filter & simpan hanya post hari ini
     let kontenHariIni = [];
     for (const post of posts) {
+      // created_at di db adalah timestamp, TikTok API hasilkan UNIX detik
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
-      const isHariIni = isToday(post.createTime);
+      const isHariIni = isToday(postDate);
 
       allDebugLogs.push(
-        `[DEBUG] Client: ${client.client_tiktok} | Post ID: ${post.id} | createTime: ${post.createTime} | Date: ${postDate} | Hari Ini: ${isHariIni}`
+        `[DEBUG] Client: ${client.client_tiktok} | Video ID: ${post.id} | createTime: ${post.createTime} | Date: ${postDate} | Hari Ini: ${isHariIni}`
       );
       if (!isHariIni) continue;
       kontenHariIni.push(post);
 
-      // Insert/update post
-      await tiktokPostModel.upsertTiktokPost({
-        id: post.id,
-        client_id: client.client_id,
-        caption: post.desc || null,
-        created_at: post.createTime, // UNIX detik
-        comment_count: post.stats?.commentCount || 0,
-        url: `https://www.tiktok.com/@${post.author?.uniqueId || ''}/video/${post.id}`
-      });
+      // Insert/update post ke tiktok_post (kolom: video_id, client_id, caption, created_at, like_count, comment_count)
+      await pool.query(`
+        INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (video_id) DO UPDATE SET
+          client_id = EXCLUDED.client_id,
+          caption = EXCLUDED.caption,
+          created_at = EXCLUDED.created_at,
+          like_count = EXCLUDED.like_count,
+          comment_count = EXCLUDED.comment_count
+      `, [
+        post.id,
+        client.client_id,
+        post.desc || null,
+        postDate, // simpan dalam tipe timestamp
+        post.stats?.diggCount || 0,
+        post.stats?.commentCount || 0
+      ]);
 
       // Fetch komentar (API /api/post/comments)
       let comments = [];
@@ -130,10 +137,10 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           })
         );
         comments = res.data?.data?.comments || [];
-        console.log(`    [KOMEN] Post ${post.id}, Jumlah komentar: ${comments.length}`);
+        console.log(`    [KOMEN] Video ${post.id}, Jumlah komentar: ${comments.length}`);
       } catch (e) {
         comments = [];
-        console.log(`    [KOMEN] Gagal fetch comment post: ${post.id}`);
+        console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
       }
       await tiktokCommentModel.upsertTiktokComments(post.id, comments);
     }
@@ -152,7 +159,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Debug ringkas
     console.log(`  [SUMMARY] Konten hari ini (client_id: ${client.client_id}): ${kontenHariIni.length}`);
     kontenHariIni.forEach((p, i) => {
-      console.log(`    - PostID: ${p.id}, Date: ${new Date(p.createTime * 1000)}`);
+      console.log(`    - VideoID: ${p.id}, Date: ${new Date(p.createTime * 1000)}`);
     });
   }
 
