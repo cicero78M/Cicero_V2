@@ -44,14 +44,12 @@ export async function getPostsTodayByClient(client_id) {
   const startOfToday = dayjs().tz('Asia/Jakarta').startOf('day').utc().format();
   const endOfToday = dayjs().tz('Asia/Jakarta').endOf('day').utc().format();
 
-  // DEBUG: log batas waktu hari ini
   console.log('[DEBUG][getPostsTodayByClient] client_id:', client_id);
   console.log('[DEBUG] startOfToday (WIB->UTC):', startOfToday);
   console.log('[DEBUG] endOfToday (WIB->UTC):', endOfToday);
 
-  // DEBUG: tampilkan seluruh posting TikTok client_id tersebut
   const allPosts = await pool.query(
-    `SELECT video_id, created_at FROM tiktok_post WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20`,
+    `SELECT video_id, created_at FROM tiktok_post WHERE LOWER(client_id) = LOWER($1) ORDER BY created_at DESC LIMIT 20`,
     [client_id]
   );
   console.log('[DEBUG] Semua post TikTok client ini:');
@@ -59,13 +57,13 @@ export async function getPostsTodayByClient(client_id) {
     console.log(`  - video_id: ${row.video_id} | created_at: ${row.created_at}`);
   });
 
-  // Query postingan hari ini (created_at dalam UTC)
   const res = await pool.query(
     `SELECT video_id, created_at FROM tiktok_post
-     WHERE client_id = $1 AND created_at >= $2 AND created_at <= $3`,
+     WHERE LOWER(client_id) = LOWER($1) AND created_at >= $2 AND created_at <= $3`,
     [client_id, startOfToday, endOfToday]
   );
   console.log('[DEBUG] Post yang lolos filter hari ini:', res.rows);
 
   return res.rows.map(row => row.video_id);
 }
+
