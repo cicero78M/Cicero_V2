@@ -83,7 +83,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       console.log(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
 
-      // PATCH DEBUG Tanggal post TikTok
+      // PATCH DEBUG Daftar tanggal post TikTok (WIB)
       if (jumlahPosts > 0) {
         const tanggalPostWIB = posts.map(p => {
           const d = new Date(p.createTime * 1000);
