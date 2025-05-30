@@ -79,6 +79,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         })
       );
+      // PATCH: Extrak itemList dari struktur hasil file .txt
       posts = res.data?.data?.itemList || [];
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       console.log(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
@@ -109,7 +110,13 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Filter & simpan hanya post hari ini (berdasarkan WIB)
     let kontenHariIni = [];
     for (const post of posts) {
+      // PATCH: Ambil sesuai struktur API TikTok
+      const videoId = post.id;
+      const caption = post.desc || '';
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
+      const likeCount = post.stats?.diggCount || 0;
+      const commentCount = post.stats?.commentCount || 0;
+
       const isHariIni = isToday(postDate);
       if (!isHariIni) continue;
       kontenHariIni.push(post);
@@ -125,12 +132,12 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           like_count = EXCLUDED.like_count,
           comment_count = EXCLUDED.comment_count
       `, [
-        post.id,
+        videoId,
         client.client_id,
-        post.desc || null,
+        caption,
         postDate,
-        post.stats?.diggCount || 0,
-        post.stats?.commentCount || 0
+        likeCount,
+        commentCount
       ]);
 
       // Fetch komentar (API /api/post/comments)
@@ -138,7 +145,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       try {
         const res = await limit(() =>
           axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-            params: { videoId: post.id, count: 100, cursor: 0 },
+            params: { videoId: videoId, count: 100, cursor: 0 },
             headers: {
               'x-rapidapi-key': RAPIDAPI_KEY,
               'x-rapidapi-host': RAPIDAPI_HOST
@@ -147,10 +154,10 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
         );
         usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
         // Debug jumlah komentar
-        console.log(`    [KOMEN] Video ${post.id}, jumlah komentar user: ${usernames.length}`);
+        console.log(`    [KOMEN] Video ${videoId}, jumlah komentar user: ${usernames.length}`);
       } catch (e) {
         usernames = [];
-        console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
+        console.log(`    [KOMEN] Gagal fetch comment video: ${videoId}`);
         if (e.response) {
           console.error('      [ERR DETAIL]', e.response?.data?.message || JSON.stringify(e.response.data).substring(0, 120));
         } else {
@@ -158,7 +165,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
         }
       }
       // Simpan array username ke tiktok_comment.comments (jsonb)
-      await tiktokCommentModel.upsertTiktokComments(post.id, usernames);
+      await tiktokCommentModel.upsertTiktokComments(videoId, usernames);
     }
 
     // Debug PATCH: Berapa post yang lolos filter hari ini (WIB)
