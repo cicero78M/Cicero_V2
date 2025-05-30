@@ -2,6 +2,7 @@ import axios from 'axios';
 import pLimit from 'p-limit';
 import { pool } from '../config/db.js';
 import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
+import { getPostsTodayByClient } from '../model/tiktokPostModel.js'; // <-- Pastikan sudah ada
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
@@ -25,6 +26,33 @@ async function getEligibleTiktokClients() {
       WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
   );
   return res.rows;
+}
+
+// FUNGSI TAMBAHAN: Fetch komentar dari semua video TikTok hari ini pada client ini (langsung update DB)
+export async function fetchCommentsTodayByClient(client_id) {
+  const postsToday = await getPostsTodayByClient(client_id);
+  let totalFetched = 0, failed = 0;
+  for (const video_id of postsToday) {
+    try {
+      const res = await limit(() =>
+        axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
+          params: { videoId: video_id, count: 100, cursor: 0 },
+          headers: {
+            'x-rapidapi-key': RAPIDAPI_KEY,
+            'x-rapidapi-host': RAPIDAPI_HOST
+          }
+        })
+      );
+      const usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
+      await tiktokCommentModel.upsertTiktokComments(video_id, usernames);
+      totalFetched++;
+      console.log(`[FETCH COMMENT] Success video_id: ${video_id} | komentar: ${usernames.length}`);
+    } catch (e) {
+      failed++;
+      console.log(`[FETCH COMMENT] Failed video_id: ${video_id} | ${e.message}`);
+    }
+  }
+  return { total: postsToday.length, totalFetched, failed };
 }
 
 export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
@@ -79,7 +107,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           }
         })
       );
-      // PATCH: Extrak itemList dari struktur hasil file .txt
       posts = res.data?.data?.itemList || [];
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       console.log(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
@@ -90,7 +117,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           const d = new Date(p.createTime * 1000);
           return new Date(d.getTime() + 7 * 60 * 60 * 1000);
         });
-        // List tanggal post secara string (untuk troubleshooting range)
         const tanggalStrs = tanggalPostWIB.map(dt => dt.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }));
         console.log(`[DEBUG][${client.client_id}] Daftar tanggal post TikTok (WIB):\n  ` + tanggalStrs.join('\n  '));
         const earliest = new Date(Math.min(...tanggalPostWIB));
@@ -110,7 +136,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     // Filter & simpan hanya post hari ini (berdasarkan WIB)
     let kontenHariIni = [];
     for (const post of posts) {
-      // PATCH: Ambil sesuai struktur API TikTok
       const videoId = post.id;
       const caption = post.desc || '';
       const postDate = post.createTime ? new Date(post.createTime * 1000) : null;
@@ -121,7 +146,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       if (!isHariIni) continue;
       kontenHariIni.push(post);
 
-      // Insert/update post ke tiktok_post (kolom: video_id, client_id, caption, created_at, like_count, comment_count)
+      // Insert/update post ke tiktok_post
       await pool.query(`
         INSERT INTO tiktok_post (video_id, client_id, caption, created_at, like_count, comment_count)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -153,7 +178,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           })
         );
         usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
-        // Debug jumlah komentar
         console.log(`    [KOMEN] Video ${videoId}, jumlah komentar user: ${usernames.length}`);
       } catch (e) {
         usernames = [];
@@ -164,7 +188,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           console.error('      [ERR MSG]', e.message);
         }
       }
-      // Simpan array username ke tiktok_comment.comments (jsonb)
       await tiktokCommentModel.upsertTiktokComments(videoId, usernames);
     }
 
@@ -175,8 +198,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     }
 
     totalKontenHariIni += kontenHariIni.length;
-
-    // Debug ringkas per client
     console.log(`  [SUMMARY] Konten hari ini TikTok (client_id: ${client.client_id}): ${kontenHariIni.length}`);
     if (kontenHariIni.length) {
       const minDate = Math.min(...kontenHariIni.map(p => p.createTime));
@@ -194,7 +215,6 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
   } else {
     console.log(summaryMsg);
   }
-  // Akhir ringkas
   console.log(`[DEBUG][TIKTOK] Ringkasan fetch:`, debugGlobal.join(' | '));
   console.log(`===== [TIKTOK FETCH END] =====\n`);
 }
