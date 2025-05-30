@@ -205,7 +205,7 @@ cron.schedule('28 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Komentar ===
-cron.schedule('30 6-20 * * *', async () => {
+cron.schedule('35 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
