@@ -212,7 +212,7 @@ async function absensiKomentarAkumulasiBelum(client_id) {
 }
 
 // === CRON IG: Likes ===
-cron.schedule('04 6-20 * * *', async () => {
+cron.schedule('10 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     const clients = await getActiveClientsIG();
@@ -248,7 +248,7 @@ cron.schedule('04 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Komentar ===
-cron.schedule('05 6-20 * * *', async () => {
+cron.schedule('11 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
