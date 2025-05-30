@@ -45,7 +45,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
   const tanggal = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
-  const users = await getUsersByClient(client_id); // IG likes: getUsersByClient
+  const users = await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) return `Tidak ada konten IG untuk *Client*: *${client_id}* hari ini.`;
@@ -113,10 +113,8 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   const tanggal = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
-  // PENTING: Pakai getUsersByClientFull!
   const users = await getUsersByClientFull(client_id);
 
-  // Debug: tampilkan jumlah user hasil query
   console.log('[DEBUG][absensiKomentarAkumulasiBelum] Jumlah user TikTok:', users.length, '| client:', client_id);
 
   const postsToday = await getPostsTodayByClient(client_id);
@@ -127,7 +125,6 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
   for (const postId of postsToday) {
-    // Pakai getCommentsByVideoId untuk fetch komentar (array username)
     const comments = await getCommentsByVideoId(postId);
     const commentsSet = new Set((comments || []).map(x => (x || '').replace(/^@/, '').toLowerCase()));
     users.forEach(u => {
@@ -172,7 +169,7 @@ async function absensiKomentarAkumulasiBelum(client_id) {
 }
 
 // === CRON IG: Likes ===
-cron.schedule('40 6-20 * * *', async () => {
+cron.schedule('25 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
     const clients = await getActiveClientsIG();
@@ -180,7 +177,7 @@ cron.schedule('40 6-20 * * *', async () => {
     await fetchAndStoreInstaContent(keys);
 
     for (const client of clients) {
-      const msg = await absensiLikesAkumulasiBelum(client.client_id); // <--- PASTIKAN INI REKAP LIKES
+      const msg = await absensiLikesAkumulasiBelum(client.client_id);
       if (msg && msg.length > 0) {
         for (const admin of getAdminWAIds()) {
           try {
@@ -208,14 +205,14 @@ cron.schedule('40 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Komentar ===
-cron.schedule('15 6-20 * * *', async () => {
+cron.schedule('25 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
     await fetchAndStoreTiktokContent();
 
     for (const client of clients) {
-      const msg = await absensiKomentarAkumulasiBelum(client.client_id); // <--- PASTIKAN INI REKAP KOMENTAR
+      const msg = await absensiKomentarAkumulasiBelum(client.client_id);
       if (msg && msg.length > 0) {
         for (const admin of getAdminWAIds()) {
           try {
