@@ -81,7 +81,12 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       );
       // Log full path, bisa disesuaikan jika format beda
       console.log("  [API RAW]", JSON.stringify(res.data).substring(0, 500) + '...');
-      posts = res.data?.data?.posts || [];
+      // PATCH: akses itemList, BUKAN posts!
+      posts = res.data?.data?.itemList || [];
+      if (!Array.isArray(posts)) {
+        console.warn("  [API WARNING] Response data.itemList kosong atau bukan array! Struktur response:", JSON.stringify(res.data).substring(0, 350));
+        posts = [];
+      }
       console.log(`  [RESULT] Jumlah posts: ${posts.length}`);
     } catch (err) {
       console.error(`[ERROR] Gagal fetch TikTok untuk client_id=${client.client_id}: ${err.message}`);
