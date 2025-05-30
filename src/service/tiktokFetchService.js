@@ -2,8 +2,6 @@
 
 import axios from 'axios';
 import pLimit from 'p-limit';
-import * as tiktokPostModel from '../model/tiktokPostModel.js';
-import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 import { pool } from '../config/db.js';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
@@ -24,6 +22,18 @@ async function getEligibleTiktokClients() {
       WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
   );
   return res.rows;
+}
+
+// Fungsi untuk upsert array username ke field comments (jsonb)
+async function upsertTiktokCommentUsernames(video_id, usernames) {
+  await pool.query(
+    `INSERT INTO tiktok_comment (video_id, comments, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (video_id) DO UPDATE SET
+       comments = EXCLUDED.comments,
+       updated_at = NOW()`,
+    [video_id, JSON.stringify(usernames)]
+  );
 }
 
 export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
@@ -123,21 +133,22 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
       ]);
 
       // Fetch komentar (API /api/post/comments)
-      let comments = [];
+      let usernames = [];
       try {
         const res = await limit(() =>
           axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-            params: { videoId: post.id, count: 100, cursor: 0 }, // PATCH di sini!
+            params: { videoId: post.id, count: 100, cursor: 0 },
             headers: {
               'x-rapidapi-key': RAPIDAPI_KEY,
               'x-rapidapi-host': RAPIDAPI_HOST
             }
           })
         );
-        comments = res.data?.comments || [];
-        console.log(`    [KOMEN] Video ${post.id}, Jumlah komentar: ${comments.length}`);
+        // Ambil array username TikTok dari unique_id
+        usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
+        console.log(`    [KOMEN] Video ${post.id}, Jumlah user yang komentar: ${usernames.length}`);
       } catch (e) {
-        comments = [];
+        usernames = [];
         console.log(`    [KOMEN] Gagal fetch comment video: ${post.id}`);
         if (e.response) {
           console.error('      [ERR DETAIL]', JSON.stringify(e.response.data));
@@ -145,7 +156,8 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
           console.error('      [ERR MSG]', e.message);
         }
       }
-      await tiktokCommentModel.upsertTiktokComments(post.id, comments);
+      // Simpan array username ke tiktok_comment.comments (jsonb)
+      await upsertTiktokCommentUsernames(post.id, usernames);
     }
 
     totalKontenHariIni += kontenHariIni.length;
