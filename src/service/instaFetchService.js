@@ -58,11 +58,9 @@ async function getEligibleClients() {
 export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
-  // DEBUG info
   if (!waClient) console.log("[DEBUG] fetchAndStoreInstaContent: mode cronjob/auto");
   else console.log("[DEBUG] fetchAndStoreInstaContent: mode WA handler");
 
-  // Progress WA (hanya jika waClient & chatId valid)
   const intervalId = setInterval(() => {
     if (
       processing &&
@@ -80,10 +78,13 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
   let kontenCount = 0;
 
   const clients = await getEligibleClients();
+  console.log(`[DEBUG] Eligible clients for Instagram fetch:`, clients);
+
   for (const client of clients) {
     const username = client.client_insta;
     let postsRes;
     try {
+      console.log(`[DEBUG] Fetch posts for client: ${client.id} / @${username}`);
       postsRes = await limit(() =>
         axios.get(
           `https://${RAPIDAPI_HOST}/v1/posts`,
@@ -96,12 +97,14 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           }
         )
       );
+      console.log(`[DEBUG] API /v1/posts response (first 500 chars):`, JSON.stringify(postsRes.data).substring(0, 500));
     } catch (err) {
-      console.error("ERROR FETCHING POST:", err.response?.data || err.message);
+      console.error("[ERROR][FETCH IG POST]", err.response?.data || err.message);
       continue;
     }
     const items = postsRes.data && postsRes.data.data && Array.isArray(postsRes.data.data.items)
       ? postsRes.data.data.items : [];
+    console.log(`[DEBUG] Jumlah post IG yang ditemukan hari ini:`, items.length);
 
     for (const post of items) {
       if (!isToday(post.taken_at)) continue;
@@ -121,6 +124,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
       kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
       // INSERT/UPDATE dengan kolom baru
+      console.log(`[DEBUG][DB] Upsert IG post ke insta_post:`, toSave);
       await pool.query(
         `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
          VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
@@ -139,28 +143,43 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           post.taken_at
         ]
       );
+      console.log(`[DEBUG][DB] Sukses upsert IG post:`, toSave.shortcode);
 
       // Likes merge
       if (post.code) {
         await limit(async () => {
-          const likesRes = await axios.get(
-            `https://${RAPIDAPI_HOST}/v1/likes`,
-            {
-              params: { code_or_id_or_url: post.code },
-              headers: {
-                'X-RapidAPI-Key': RAPIDAPI_KEY,
-                'X-RapidAPI-Host': RAPIDAPI_HOST,
-              },
-            }
-          );
+          let likesRes;
+          try {
+            likesRes = await axios.get(
+              `https://${RAPIDAPI_HOST}/v1/likes`,
+              {
+                params: { code_or_id_or_url: post.code },
+                headers: {
+                  'X-RapidAPI-Key': RAPIDAPI_KEY,
+                  'X-RapidAPI-Host': RAPIDAPI_HOST,
+                },
+              }
+            );
+            console.log(`[DEBUG] API /v1/likes IG response for ${post.code}:`, JSON.stringify(likesRes.data).substring(0, 500));
+          } catch (e) {
+            console.error(`[ERROR][FETCH IG LIKES][${post.code}]`, e.response?.data || e.message);
+            return;
+          }
           const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
             ? likesRes.data.data.items : [];
           let likesUsernames = likeItems.map(like => like.username ? like.username : like);
+          console.log(`[DEBUG][PARSE IG LIKES] Usernames hasil parsing untuk ${post.code}:`, likesUsernames);
+
           const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
           if (dbLike) {
+            console.log(`[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.code}):`, dbLike);
             likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
           }
+          // Debug sesudah merge
+          console.log(`[DEBUG][DB LIKE] Likes setelah merge untuk ${post.code}:`, likesUsernames);
+
           await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
+          console.log(`[DEBUG][DB] Sukses upsert likes IG:`, post.code, '| Total:', likesUsernames.length);
         });
       }
     }
@@ -168,6 +187,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
 
   // Sinkronisasi: hapus yg tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
+  console.log(`[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini:`, shortcodesToDelete);
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
@@ -190,7 +210,6 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
 
   // Mode WA
   if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
-    // Manual: kirim ke chatId jika ada, jika tidak ke semua admin
     const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
     for (const target of sendTargets) {
       await waClient.sendMessage(target, msg);
@@ -200,7 +219,6 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
       }
     }
   } else {
-    // Mode non-WA
     console.log(msg);
     if (kontenLinksToday.length) {
       console.log(kontenLinksToday.join('\n'));
