@@ -4,7 +4,6 @@ import * as instaPostModel from '../model/instaPostModel.js';
 import * as instaLikeModel from '../model/instaLikeModel.js';
 import { pool } from '../config/db.js';
 
-// Ambil ADMIN_WHATSAPP dari .env (bisa berupa string koma, array, dsb)
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
   .split(',')
   .map(s => s.trim())
@@ -12,7 +11,7 @@ const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
-const limit = pLimit(4);
+const limit = pLimit(8);
 
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
@@ -55,7 +54,57 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-// === PATCH KOMPLIT DENGAN DEBUG ===
+// PATCH: fetch all likes via pagination (cursor)
+async function fetchAllLikes(shortcode) {
+  let allLikes = [];
+  let nextCursor = null;
+  let page = 1;
+  const maxTry = 20; // Batasi agar tidak infinite loop jika error
+  do {
+    let params = { code_or_id_or_url: shortcode };
+    if (nextCursor) params.cursor = nextCursor; // Ganti "cursor" sesuai parameter API jika berbeda
+
+    let likesRes;
+    try {
+      likesRes = await axios.get(
+        `https://${RAPIDAPI_HOST}/v1/likes`,
+        {
+          params,
+          headers: {
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': RAPIDAPI_HOST,
+          },
+        }
+      );
+    } catch (e) {
+      console.error(`[ERROR][FETCH IG LIKES PAGE][${shortcode}]`, e.response?.data || e.message);
+      break;
+    }
+
+    // Debug response page
+    console.log(`[DEBUG][LIKES PAGE][${shortcode}] Page ${page}:`, JSON.stringify(likesRes.data).substring(0, 500));
+
+    // Ambil data likes
+    const likeItems = likesRes.data?.data?.items || [];
+    allLikes.push(...likeItems.map(like => like.username ? like.username : like).filter(Boolean));
+
+    // Cek apakah ada next cursor
+    nextCursor = likesRes.data?.data?.next_cursor || likesRes.data?.data?.end_cursor || null;
+    const hasMore = likesRes.data?.data?.has_more || (nextCursor && nextCursor !== '');
+
+    // Debug info
+    console.log(`[DEBUG][LIKES PAGING][${shortcode}] Fetched so far: ${allLikes.length} | next_cursor: ${nextCursor}`);
+
+    if (!hasMore || !nextCursor || page++ >= maxTry) break;
+  } while (true);
+
+  // Hilangkan duplikat username
+  const result = [...new Set(allLikes)];
+  console.log(`[DEBUG][LIKES PAGING][${shortcode}] FINAL UNIQUE: ${result.length}`);
+  return result;
+}
+
+// === PATCH KOMPLIT DENGAN DEBUG DAN PAGING LIKES ===
 export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
@@ -146,29 +195,11 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
       );
       console.log(`[DEBUG][DB] Sukses upsert IG post:`, toSave.shortcode);
 
-      // Likes merge dengan DEBUG dan verifikasi jumlah like
+      // Likes merge dengan DEBUG, PAGING, dan verifikasi jumlah like
       if (post.code) {
         await limit(async () => {
-          let likesRes;
-          try {
-            likesRes = await axios.get(
-              `https://${RAPIDAPI_HOST}/v1/likes`,
-              {
-                params: { code_or_id_or_url: post.code },
-                headers: {
-                  'X-RapidAPI-Key': RAPIDAPI_KEY,
-                  'X-RapidAPI-Host': RAPIDAPI_HOST,
-                },
-              }
-            );
-            console.log(`[DEBUG] API /v1/likes IG response for ${post.code}:`, JSON.stringify(likesRes.data).substring(0, 500));
-          } catch (e) {
-            console.error(`[ERROR][FETCH IG LIKES][${post.code}]`, e.response?.data || e.message);
-            return;
-          }
-          const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
-            ? likesRes.data.data.items : [];
-          let likesUsernames = likeItems.map(like => like.username ? like.username : like);
+          // Ganti: ambil semua likes dengan paginasi
+          let likesUsernames = await fetchAllLikes(post.code);
 
           // Debug jumlah likes & perbandingan
           const reportedLikeCount = (typeof post.like_count === 'number') ? post.like_count : null;
