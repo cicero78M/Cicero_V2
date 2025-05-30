@@ -13,7 +13,9 @@ import { getLikesByShortcode } from '../model/instaLikeModel.js';
 // === CRON TIKTOK ===
 import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
-import { getCommentsByVideoId } from '../model/tiktokCommentModel.js'; // <--- ini sudah benar
+// Perbaikan: gunakan getUsersByClientFull untuk TikTok
+import { getUsersByClientFull } from '../model/userModel.js';
+import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 
 import { pool } from '../config/db.js';
 import waClient from './waService.js'; // Pastikan waClient terexport default
@@ -114,7 +116,12 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   const tanggal = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
-  const users = await getUsersByClient(client_id);
+  // PENTING: Pakai getUsersByClientFull!
+  const users = await getUsersByClientFull(client_id);
+
+  // Debug: tampilkan jumlah user hasil query
+  console.log('[DEBUG][absensiKomentarAkumulasiBelum] Jumlah user TikTok:', users.length, '| client:', client_id);
+
   const postsToday = await getPostsTodayByClient(client_id);
 
   if (!postsToday.length) return `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini.`;
@@ -123,11 +130,12 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
   for (const postId of postsToday) {
-    // INI UBAH SESUAI EXPORT YANG ADA DI MODEL
+    // Pakai getCommentsByVideoId untuk fetch komentar (array username)
     const comments = await getCommentsByVideoId(postId);
-    const commentsSet = new Set((comments || []).map(x => (x || '').toLowerCase()));
+    const commentsSet = new Set((comments || []).map(x => (x || '').replace(/^@/, '').toLowerCase()));
     users.forEach(u => {
-      if (u.tiktok && u.tiktok.trim() !== '' && commentsSet.has(u.tiktok.toLowerCase())) {
+      const uname = (u.tiktok || '').replace(/^@/, '').toLowerCase();
+      if (u.tiktok && u.tiktok.trim() !== '' && commentsSet.has(uname)) {
         userStats[u.user_id].count += 1;
       }
     });
@@ -167,6 +175,7 @@ async function absensiKomentarAkumulasiBelum(client_id) {
 }
 
 // === CRON IG: Rekap Likes ===
+// Tiap jam pada menit ke-40 dari 06:40 s/d 20:40
 cron.schedule('40 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
@@ -203,7 +212,8 @@ cron.schedule('40 6-20 * * *', async () => {
 });
 
 // === CRON TikTok: Rekap Komentar ===
-cron.schedule('45 6-20 * * *', async () => {
+// Tiap jam pada menit ke-45 dari 06:45 s/d 20:45
+cron.schedule('05 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
