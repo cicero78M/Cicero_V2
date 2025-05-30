@@ -1,6 +1,19 @@
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 import { getUsersByClientFull } from '../model/userModel.js';
+import waClient from '../service/waService.js'; // <--- PATCH: import waClient
+
+// PATCH: Ambil ADMIN_WHATSAPP dari env
+const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
+  .split(',')
+  .map(n => n.trim())
+  .filter(Boolean);
+
+function getAdminWAIds() {
+  return ADMIN_WHATSAPP.map(n =>
+    n.endsWith('@c.us') ? n : n.replace(/[^0-9]/g, '') + '@c.us'
+  );
+}
 
 // Helper format nama user
 function formatName(u) {
@@ -19,26 +32,45 @@ function groupByDivision(users) {
   }, {});
 }
 
-export async function fallbackAbsensiKomentarTiktokHariIni(client_id, waClient = null, chatId = null) {
+export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaClient = null, chatId = null) {
+  // Pakai waClient default jika tidak diinject
+  const clientWA = customWaClient || waClient;
+
   // 1. Ambil user & post hari ini dari DB
   const users = await getUsersByClientFull(client_id);
   const postsToday = await getPostsTodayByClient(client_id);
 
   // === DEBUG INFO (tanpa array) ===
-  console.log(`[DEBUG][FallbackAbsensi] Client: ${client_id}`);
-  console.log(`[DEBUG][FallbackAbsensi] Jumlah user TikTok: ${users.length}`);
-  console.log(`[DEBUG][FallbackAbsensi] Jumlah post TikTok hari ini: ${postsToday.length}`);
-  if (!users.length) console.log(`[DEBUG][FallbackAbsensi] Tidak ada user TikTok untuk client ini.`);
-  if (!postsToday.length) console.log(`[DEBUG][FallbackAbsensi] Tidak ada post TikTok hari ini di DB untuk client ini.`);
+  let initialDebugMsg = `[DEBUG][FallbackAbsensi] Client: ${client_id}\n` +
+    `- Jumlah user TikTok: ${users.length}\n` +
+    `- Jumlah post TikTok hari ini: ${postsToday.length}\n`;
+  if (!users.length) initialDebugMsg += '- Tidak ada user TikTok untuk client ini.\n';
+  if (!postsToday.length) initialDebugMsg += '- Tidak ada post TikTok hari ini di DB untuk client ini.\n';
+
+  // Kirim debug ke console dan seluruh ADMIN_WHATSAPP
+  console.log(initialDebugMsg);
+  for (const admin of getAdminWAIds()) {
+    try { await clientWA.sendMessage(admin, initialDebugMsg); } catch {}
+  }
+  // Juga ke chatId jika diberikan
+  if (clientWA && chatId) {
+    try { await clientWA.sendMessage(chatId, initialDebugMsg); } catch {}
+  }
 
   if (!users.length) {
     const msg = "Tidak ada user TikTok yang terdaftar pada client ini.";
-    if (waClient && chatId) await waClient.sendMessage(chatId, msg);
+    for (const admin of getAdminWAIds()) {
+      try { await clientWA.sendMessage(admin, msg); } catch {}
+    }
+    if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
   }
   if (!postsToday.length) {
     const msg = `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini (DB).`;
-    if (waClient && chatId) await waClient.sendMessage(chatId, msg);
+    for (const admin of getAdminWAIds()) {
+      try { await clientWA.sendMessage(admin, msg); } catch {}
+    }
+    if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
   }
 
@@ -86,21 +118,24 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, waClient =
   // Format link konten
   const kontenLinks = postsToday.map(id => `https://www.tiktok.com/video/${id}`).join('\n');
 
-  // Debug ringkasan
-  const debugInfo = [
-    `[DEBUG][ABSENSI] SUMMARY`,
-    `- Client: ${client_id}`,
-    `- Jumlah user TikTok: ${users.length}`,
-    `- Jumlah konten hari ini: ${totalKonten}`,
-    `- Total komentar dicek: ${totalKomentarChecked}`,
-    `- User dengan komentar terdeteksi: ${userDenganKomentar}`,
-    `- Sudah melaksanakan: ${sudah.length} user`,
-    `- Belum melaksanakan: ${belum.length} user`
-  ].join('\n');
+  // Debug ringkasan summary
+  const debugInfo =
+    `[DEBUG][ABSENSI TIKTOK] SUMMARY\n` +
+    `- Client: ${client_id}\n` +
+    `- Jumlah user TikTok: ${users.length}\n` +
+    `- Jumlah konten hari ini: ${totalKonten}\n` +
+    `- Total komentar dicek: ${totalKomentarChecked}\n` +
+    `- User dengan komentar terdeteksi: ${userDenganKomentar}\n` +
+    `- Sudah melaksanakan: ${sudah.length} user\n` +
+    `- Belum melaksanakan: ${belum.length} user\n` +
+    `- Waktu: ${now.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`;
+  // Kirim summary debug ke console dan seluruh ADMIN_WHATSAPP
   console.log(debugInfo);
-  if (waClient && chatId) {
-    // Debug WA bisa diaktifkan jika ingin (opsional)
-    // await waClient.sendMessage(chatId, debugInfo);
+  for (const admin of getAdminWAIds()) {
+    try { await clientWA.sendMessage(admin, debugInfo); } catch {}
+  }
+  if (clientWA && chatId) {
+    try { await clientWA.sendMessage(chatId, debugInfo); } catch {}
   }
 
   // Build pesan laporan absensi
@@ -129,6 +164,9 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, waClient =
     msg += '-\n';
   }
 
-  if (waClient && chatId) await waClient.sendMessage(chatId, msg.trim());
+  for (const admin of getAdminWAIds()) {
+    try { await clientWA.sendMessage(admin, msg.trim()); } catch {}
+  }
+  if (clientWA && chatId) await clientWA.sendMessage(chatId, msg.trim());
   return msg.trim();
 }
