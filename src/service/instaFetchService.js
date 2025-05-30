@@ -55,6 +55,7 @@ async function getEligibleClients() {
   return res.rows;
 }
 
+// === PATCH KOMPLIT DENGAN DEBUG ===
 export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
@@ -145,7 +146,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
       );
       console.log(`[DEBUG][DB] Sukses upsert IG post:`, toSave.shortcode);
 
-      // Likes merge
+      // Likes merge dengan DEBUG dan verifikasi jumlah like
       if (post.code) {
         await limit(async () => {
           let likesRes;
@@ -168,6 +169,15 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           const likeItems = likesRes.data && likesRes.data.data && Array.isArray(likesRes.data.data.items)
             ? likesRes.data.data.items : [];
           let likesUsernames = likeItems.map(like => like.username ? like.username : like);
+
+          // Debug jumlah likes & perbandingan
+          const reportedLikeCount = (typeof post.like_count === 'number') ? post.like_count : null;
+          console.log(`[DEBUG][LIKES COUNT] Post ${post.code}: like_count (API post):`, reportedLikeCount, '| likesUsernames.length:', likesUsernames.length);
+
+          if (reportedLikeCount !== null && Math.abs(likesUsernames.length - reportedLikeCount) > 0) {
+            console.warn(`[WARNING][LIKES MISMATCH] Post ${post.code}: Jumlah username likes dari API (${likesUsernames.length}) TIDAK SAMA dengan like_count post (${reportedLikeCount})`);
+          }
+
           console.log(`[DEBUG][PARSE IG LIKES] Usernames hasil parsing untuk ${post.code}:`, likesUsernames);
 
           const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(post.code);
