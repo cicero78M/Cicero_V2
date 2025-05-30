@@ -6,19 +6,18 @@ dotenv.config();
 
 // === CRON IG ===
 import { fetchAndStoreInstaContent } from './instaFetchService.js';
-import { getUsersByClient } from '../model/userModel.js';
+import { getUsersByClient } from '../model/userModel.js'; // Untuk IG
 import { getShortcodesTodayByClient } from '../model/instaPostModel.js';
 import { getLikesByShortcode } from '../model/instaLikeModel.js';
 
 // === CRON TIKTOK ===
 import { fetchAndStoreTiktokContent } from './tiktokFetchService.js';
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
-// Perbaikan: gunakan getUsersByClientFull untuk TikTok
-import { getUsersByClientFull } from '../model/userModel.js';
+import { getUsersByClientFull } from '../model/userModel.js'; // Untuk TikTok
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 
 import { pool } from '../config/db.js';
-import waClient from './waService.js'; // Pastikan waClient terexport default
+import waClient from './waService.js';
 
 const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
@@ -32,8 +31,7 @@ function getAdminWAIds() {
   );
 }
 
-// === IG CRON ===
-
+// === IG CRON: Absensi Likes ===
 async function getActiveClientsIG() {
   const res = await pool.query(
     `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
@@ -47,7 +45,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
   const tanggal = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
 
-  const users = await getUsersByClient(client_id);
+  const users = await getUsersByClient(client_id); // IG likes: getUsersByClient
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length) return `Tidak ada konten IG untuk *Client*: *${client_id}* hari ini.`;
@@ -101,8 +99,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
   return msg.trim();
 }
 
-// === TIKTOK CRON ===
-
+// === TIKTOK CRON: Absensi Komentar ===
 async function getActiveClientsTiktok() {
   const res = await pool.query(
     `SELECT client_id, client_tiktok FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL`
@@ -174,8 +171,7 @@ async function absensiKomentarAkumulasiBelum(client_id) {
   return msg.trim();
 }
 
-// === CRON IG: Rekap Likes ===
-// Tiap jam pada menit ke-40 dari 06:40 s/d 20:40
+// === CRON IG: Likes ===
 cron.schedule('40 6-20 * * *', async () => {
   console.log('[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum...');
   try {
@@ -184,7 +180,7 @@ cron.schedule('40 6-20 * * *', async () => {
     await fetchAndStoreInstaContent(keys);
 
     for (const client of clients) {
-      const msg = await absensiLikesAkumulasiBelum(client.client_id);
+      const msg = await absensiLikesAkumulasiBelum(client.client_id); // <--- PASTIKAN INI REKAP LIKES
       if (msg && msg.length > 0) {
         for (const admin of getAdminWAIds()) {
           try {
@@ -211,16 +207,15 @@ cron.schedule('40 6-20 * * *', async () => {
   timezone: 'Asia/Jakarta'
 });
 
-// === CRON TikTok: Rekap Komentar ===
-// Tiap jam pada menit ke-45 dari 06:45 s/d 20:45
-cron.schedule('05 6-20 * * *', async () => {
+// === CRON TikTok: Komentar ===
+cron.schedule('45 6-20 * * *', async () => {
   console.log('[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum...');
   try {
     const clients = await getActiveClientsTiktok();
     await fetchAndStoreTiktokContent();
 
     for (const client of clients) {
-      const msg = await absensiKomentarAkumulasiBelum(client.client_id);
+      const msg = await absensiKomentarAkumulasiBelum(client.client_id); // <--- PASTIKAN INI REKAP KOMENTAR
       if (msg && msg.length > 0) {
         for (const admin of getAdminWAIds()) {
           try {
