@@ -4,6 +4,12 @@ import * as instaPostModel from '../model/instaPostModel.js';
 import * as instaLikeModel from '../model/instaLikeModel.js';
 import { pool } from '../config/db.js';
 
+// Ambil ADMIN_WHATSAPP dari .env (bisa berupa string koma, array, dsb)
+const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 const limit = pLimit(4);
@@ -23,8 +29,7 @@ async function getShortcodesToday() {
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   const res = await pool.query(
-    `SELECT shortcode FROM insta_post 
-     WHERE DATE(created_at) = $1`,
+    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
   return res.rows.map(r => r.shortcode);
@@ -37,8 +42,7 @@ async function deleteShortcodes(shortcodesToDelete) {
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   await pool.query(
-    `DELETE FROM insta_post 
-     WHERE shortcode = ANY($1) AND DATE(created_at) = $2`,
+    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = $2`,
     [shortcodesToDelete, `${yyyy}-${mm}-${dd}`]
   );
 }
@@ -51,20 +55,29 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
+export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = null) {
   let processing = true;
 
-  console.log("==========[DEBUG: Server Info]==========");
-  console.log("Server timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
-  console.log("Server now:", new Date());
-  console.log("=========================================");
+  // DEBUG info
+  if (!waClient) console.log("[DEBUG] fetchAndStoreInstaContent: mode cronjob/auto");
+  else console.log("[DEBUG] fetchAndStoreInstaContent: mode WA handler");
 
+  // Progress WA (hanya jika waClient & chatId valid)
   const intervalId = setInterval(() => {
-    if (processing) waClient.sendMessage(chatId, '⏳ Processing fetch data...');
+    if (
+      processing &&
+      waClient &&
+      chatId &&
+      typeof waClient.sendMessage === 'function'
+    ) {
+      waClient.sendMessage(chatId, '⏳ Processing fetch data...');
+    }
   }, 4000);
 
   const dbShortcodesToday = await getShortcodesToday();
   let fetchedShortcodesToday = [];
+  let kontenLinks = [];
+  let kontenCount = 0;
 
   const clients = await getEligibleClients();
   for (const client of clients) {
@@ -93,12 +106,6 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
     for (const post of items) {
       if (!isToday(post.taken_at)) continue;
 
-      const takenAtDate = post.taken_at ? new Date(post.taken_at * 1000) : null;
-      console.log(
-        `[DEBUG] Shortcode: ${post.code}, taken_at: ${post.taken_at}, takenAtDate: ${takenAtDate}, serverNow: ${new Date()}`
-      );
-
-      // === SIAPKAN DATA UNTUK INSERT/UPDATE ===
       const toSave = {
         client_id: client.id,
         shortcode: post.code,
@@ -110,6 +117,8 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
       };
 
       fetchedShortcodesToday.push(toSave.shortcode);
+      kontenCount++;
+      kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
       // INSERT/UPDATE dengan kolom baru
       await pool.query(
@@ -157,12 +166,14 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
     }
   }
 
+  // Sinkronisasi: hapus yg tidak ada di fetch baru
   const shortcodesToDelete = dbShortcodesToday.filter(x => !fetchedShortcodesToday.includes(x));
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
   clearInterval(intervalId);
 
+  // Ambil hasil link hari ini
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -171,17 +182,28 @@ export async function fetchAndStoreInstaContent(keys, waClient, chatId) {
     `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
-  kontenHariIniRes.rows.forEach(row => {
-    console.log(`[DB] Shortcode: ${row.shortcode}, created_at: ${row.created_at}`);
-  });
-  const kontenLinks = kontenHariIniRes.rows.map(r => `https://www.instagram.com/p/${r.shortcode}`);
+  const kontenLinksToday = kontenHariIniRes.rows.map(r => `https://www.instagram.com/p/${r.shortcode}`);
 
+  let msg = `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
   let maxPerMsg = 30;
-  const totalMsg = Math.ceil(kontenLinks.length / maxPerMsg);
-  await waClient.sendMessage(chatId, `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinks.length}*`);
+  const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
 
-  for (let i = 0; i < totalMsg; i++) {
-    const linksMsg = kontenLinks.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
-    await waClient.sendMessage(chatId, `Link konten Instagram:\n${linksMsg}`);
+  // Mode WA
+  if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
+    // Manual: kirim ke chatId jika ada, jika tidak ke semua admin
+    const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
+    for (const target of sendTargets) {
+      await waClient.sendMessage(target, msg);
+      for (let i = 0; i < totalMsg; i++) {
+        const linksMsg = kontenLinksToday.slice(i * maxPerMsg, (i + 1) * maxPerMsg).join('\n');
+        await waClient.sendMessage(target, `Link konten Instagram:\n${linksMsg}`);
+      }
+    }
+  } else {
+    // Mode non-WA
+    console.log(msg);
+    if (kontenLinksToday.length) {
+      console.log(kontenLinksToday.join('\n'));
+    }
   }
 }
