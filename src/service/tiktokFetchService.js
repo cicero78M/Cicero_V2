@@ -7,7 +7,7 @@ import * as tiktokCommentModel from '../model/tiktokCommentModel.js'; // <-- PAS
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
-const limit = pLimit(4);
+const limit = pLimit(6);
 
 function isToday(dateObj) {
   if (!dateObj) return false;

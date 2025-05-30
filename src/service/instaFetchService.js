@@ -1,6 +1,5 @@
 import axios from 'axios';
 import pLimit from 'p-limit';
-import * as instaPostModel from '../model/instaPostModel.js';
 import * as instaLikeModel from '../model/instaLikeModel.js';
 import { pool } from '../config/db.js';
 
@@ -11,7 +10,7 @@ const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
-const limit = pLimit(4);
+const limit = pLimit(6);
 
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
