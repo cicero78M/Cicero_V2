@@ -147,7 +147,6 @@ waClient.on("message", async (msg) => {
   // =======================
   // === IG: ABSENSI LIKES
   // =======================
-
   if (text.toLowerCase().startsWith("absensilikes#")) {
     const parts = text.split("#");
     if (parts.length < 2) {
@@ -160,6 +159,20 @@ waClient.on("message", async (msg) => {
     const client_id = parts[1];
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
+
+    // === PATCH: Fetch konten & likes terbaru sebelum absensi ===
+    await waClient.sendMessage(
+      chatId,
+      "⏳ Memperbarui konten & likes Instagram..."
+    );
+    try {
+      await fetchAndStoreInstaContent(null); // null = pakai default keys
+    } catch (e) {
+      await waClient.sendMessage(
+        chatId,
+        `⚠️ Gagal update konten IG: ${e.message}\nAbsensi tetap dilanjutkan dengan data terakhir di database.`
+      );
+    }
 
     const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n`;
 
@@ -230,6 +243,7 @@ waClient.on("message", async (msg) => {
         }
       });
 
+      const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
         headerLaporan +
         `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -239,53 +253,26 @@ waClient.on("message", async (msg) => {
         `✅ Sudah melaksanakan: *${totalSudah}*\n` +
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-      const tipe =
-        filter2 === "belum"
-          ? "belum"
-          : filter2 === "sudah"
-          ? "sudah"
-          : "keduanya";
-
-      // Jika tanpa filter kedua, tampilkan dua list: sudah & belum
-      if (tipe === "keduanya") {
-        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
+      // Output sesuai request
+      if (tipe === "sudah") {
+        msg += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n";
-        });
-
-        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
-        Object.keys(belumPerSatfung).forEach((satfung) => {
-          const arr = belumPerSatfung[satfung];
-          msg += `*${satfung}* (${arr.length} user):\n`;
-          arr.forEach((line) => {
-            msg += `- ${line}\n`;
-          });
-          msg += "\n\n";
-        });
-      } else if (tipe === "sudah") {
-        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
-        Object.keys(sudahPerSatfung).forEach((satfung) => {
-          const arr = sudahPerSatfung[satfung];
-          msg += `*${satfung}* (${arr.length} user):\n`;
-          arr.forEach((line) => {
-            msg += `- ${line}\n`;
-          });
-          msg += "\n\n";
+          msg += "\n";
         });
       } else {
-        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
+        msg += `❌ Belum melaksanakan (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n";
+          msg += "\n";
         });
       }
 
@@ -329,6 +316,7 @@ waClient.on("message", async (msg) => {
 
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
+      // Header tetap sama, list user sesuai filter1
       let msg =
         headerLaporan +
         `📋 Absensi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -339,24 +327,24 @@ waClient.on("message", async (msg) => {
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
       if (!filter1) {
-        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
+        msg += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n";
+          msg += "\n";
         });
 
-        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
+        msg += `\n❌ Belum melaksanakan (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n";
+          msg += "\n";
         });
 
         await waClient.sendMessage(chatId, msg.trim());
@@ -370,16 +358,15 @@ waClient.on("message", async (msg) => {
           `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
           `*Jumlah user:* ${totalUser}\n` +
           `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n` +
-          `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
-
+          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+        msgSudah += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msgSudah += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msgSudah += `- ${line}\n`;
           });
-          msgSudah += "\n\n";
+          msgSudah += "\n";
         });
         await waClient.sendMessage(chatId, msgSudah.trim());
       }
@@ -392,16 +379,15 @@ waClient.on("message", async (msg) => {
           `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
           `*Jumlah user:* ${totalUser}\n` +
           `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n` +
-          `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
-
+          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+        msgBelum += `❌ Belum melaksanakan (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msgBelum += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msgBelum += `- ${line}\n`;
           });
-          msgBelum += "\n\n";
+          msgBelum += "\n";
         });
         await waClient.sendMessage(chatId, msgBelum.trim());
       }
