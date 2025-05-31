@@ -19,7 +19,7 @@ import {
 } from "./tiktokFetchService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
 import { fetchTiktokCommentsByVideoId } from './tiktokCommentFetchService.js';
-import { fallbackAbsensiKomentarTiktokHariIni } from './fallbackAbsensiTiktok.js';
+import { fallbackAbsensiKomentarTiktokHariIni } from './tiktokAbsensiFallbackService.js';
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
