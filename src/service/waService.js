@@ -168,7 +168,7 @@ waClient.on("message", async (msg) => {
     const tanggal = now.toLocaleDateString("id-ID");
     const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-    const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
+    const users = await getUsersByClient(client_id);
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
     if (!shortcodes.length) {
@@ -247,7 +247,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n";
+          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
       } else {
         Object.keys(belumPerSatfung).forEach((satfung) => {
@@ -256,7 +256,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n";
+          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
       }
 
@@ -300,7 +300,6 @@ waClient.on("message", async (msg) => {
 
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
-      // Selalu tampilkan format rekap yang lengkap
       let msg =
         headerLaporan +
         `📋 Absensi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -318,7 +317,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n";
+          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
 
         msg += `\n❌ BELUM Like:\n`;
@@ -328,7 +327,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n";
+          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
 
         await waClient.sendMessage(chatId, msg.trim());
@@ -349,7 +348,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msgSudah += `- ${line}\n`;
           });
-          msgSudah += "\n";
+          msgSudah += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
         await waClient.sendMessage(chatId, msgSudah.trim());
       }
@@ -369,7 +368,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msgBelum += `- ${line}\n`;
           });
-          msgBelum += "\n";
+          msgBelum += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
         });
         await waClient.sendMessage(chatId, msgBelum.trim());
       }
@@ -587,7 +586,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === FETCH TIKTOK MANUAL (ADMIN)
   // =========================
-  
+
   if (text.trim().toLowerCase().startsWith("fetchtiktok#")) {
     if (!isAdminWhatsApp(chatId)) {
       await waClient.sendMessage(chatId, "Akses ditolak.");
