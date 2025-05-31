@@ -27,7 +27,6 @@ import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import * as tiktokCommentModel from "../model/tiktokCommentModel.js";
 import { getUsersByClientFull } from '../model/userModel.js';
-import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 
 dotenv.config();
 
