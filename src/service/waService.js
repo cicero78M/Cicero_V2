@@ -17,6 +17,8 @@ import {
   fetchAndStoreTiktokContent,
   fetchCommentsTodayByClient,
 } from "./tiktokFetchService.js";
+import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
