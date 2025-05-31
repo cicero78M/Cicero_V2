@@ -423,21 +423,17 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Ambil users yang ada field tiktok (boleh kosong)
     const users = await userModel.getUsersByClientFull(client_id);
 
-    // Normalisasi username TikTok (harus lowercase, tanpa @, tanpa spasi, tanpa url)
     function normalizeTikTokUsername(val) {
       if (!val) return "";
       if (val.startsWith("http")) {
-        // Ambil dari url: https://www.tiktok.com/@username
         const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
         return match ? match[1].toLowerCase() : "";
       }
       return val.replace(/^@/, "").trim().toLowerCase();
     }
 
-    // Helper: group by division
     function groupByDivision(users) {
       const divGroups = {};
       users.forEach((u) => {
@@ -453,17 +449,14 @@ waClient.on("message", async (msg) => {
       }${u.insta ? ` : ${u.insta}` : ""}`;
     }
 
-    // Map user_id ke object absensi
     let absensiPerUser = {};
     users.forEach(
       (u) => (absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 })
     );
 
-    // Per video: absensi
     for (const video_id of videoIds) {
       let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
       if (!Array.isArray(commenters)) commenters = [];
-      // Set komentator: lowercase, tanpa @
       const usernameSet = new Set(
         commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
       );
@@ -483,17 +476,15 @@ waClient.on("message", async (msg) => {
           absensiPerUser[u.user_id].count += 1;
       });
 
-      if (type === "akumulasi") continue;
-      if (type === "sudah") {
-        belum = [];
-      } else if (type === "belum") {
-        sudah = [];
-      }
+      // --- PERBAIKAN FILTER
+      let tampilSudah = sudah,
+        tampilBelum = belum;
+      if (type === "sudah") tampilBelum = [];
+      if (type === "belum") tampilSudah = [];
 
-      const divSudah = groupByDivision(sudah);
-      const divBelum = groupByDivision(belum);
+      const divSudah = groupByDivision(tampilSudah);
+      const divBelum = groupByDivision(tampilBelum);
 
-      // === HEADER & FORMAT MIRIP IG
       let now = new Date();
       let hariIndo = [
         "Minggu",
@@ -518,8 +509,8 @@ waClient.on("message", async (msg) => {
       resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
       // === Sudah
-      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      if (sudah.length) {
+      resp += `✅ Sudah melaksanakan (${tampilSudah.length} user):\n`;
+      if (tampilSudah.length) {
         Object.entries(divSudah).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
           resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
@@ -529,8 +520,8 @@ waClient.on("message", async (msg) => {
       }
 
       // === Belum
-      resp += `❌ Belum melaksanakan (${belum.length} user):\n`;
-      if (belum.length) {
+      resp += `❌ Belum melaksanakan (${tampilBelum.length} user):\n`;
+      if (tampilBelum.length) {
         Object.entries(divBelum).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
           resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
@@ -542,7 +533,7 @@ waClient.on("message", async (msg) => {
       await waClient.sendMessage(chatId, resp.trim());
     }
 
-    // Akumulasi semua video hari ini
+    // === AKUMULASI
     if (type === "akumulasi") {
       const minDone = Math.ceil(videoIds.length * 0.5);
       let sudah = [],
@@ -552,10 +543,15 @@ waClient.on("message", async (msg) => {
         if (uname && u.count >= minDone) sudah.push(u);
         else belum.push(u);
       });
-      if (subtype === "sudah") belum = [];
-      if (subtype === "belum") sudah = [];
-      const divSudah = groupByDivision(sudah);
-      const divBelum = groupByDivision(belum);
+
+      // --- FILTER sesuai subtype
+      let tampilSudah = sudah,
+        tampilBelum = belum;
+      if (subtype === "sudah") tampilBelum = [];
+      if (subtype === "belum") tampilSudah = [];
+
+      const divSudah = groupByDivision(tampilSudah);
+      const divBelum = groupByDivision(tampilBelum);
 
       let now = new Date();
       let hariIndo = [
@@ -583,8 +579,8 @@ waClient.on("message", async (msg) => {
       resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
       // === Sudah
-      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      if (sudah.length) {
+      resp += `✅ Sudah melaksanakan (${tampilSudah.length} user):\n`;
+      if (tampilSudah.length) {
         Object.entries(divSudah).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
           resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
@@ -594,8 +590,8 @@ waClient.on("message", async (msg) => {
       }
 
       // === Belum
-      resp += `❌ Belum melaksanakan (${belum.length} user):\n`;
-      if (belum.length) {
+      resp += `❌ Belum melaksanakan (${tampilBelum.length} user):\n`;
+      if (tampilBelum.length) {
         Object.entries(divBelum).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
           resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
