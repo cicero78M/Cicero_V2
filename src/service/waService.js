@@ -19,7 +19,6 @@ import {
 } from "./tiktokFetchService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
 
-
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
@@ -400,6 +399,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
+
   if (text.toLowerCase().startsWith("absensikomentar#")) {
     const parts = text.split("#");
     const client_id = (parts[1] || "").trim();
@@ -493,45 +493,50 @@ waClient.on("message", async (msg) => {
       const divSudah = groupByDivision(sudah);
       const divBelum = groupByDivision(belum);
 
-      // Laporan format baru
+      // === HEADER & FORMAT MIRIP IG
       let now = new Date();
-      let hari = now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      let hariIndo = [
+        "Minggu",
+        "Senin",
+        "Selasa",
+        "Rabu",
+        "Kamis",
+        "Jumat",
+        "Sabtu",
+      ];
+      let hari = hariIndo[now.getDay()];
+      let tanggal = now.toLocaleDateString("id-ID");
       let jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
       const link = `https://www.tiktok.com/video/${video_id}`;
       let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
-      resp += `📋 Rekap Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
-      resp += `Jumlah Konten: 1\nDaftar Link Konten:\n${link}\n\n`;
-      resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
+      resp += `📋 Rekap Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n`;
+      resp += `*Jumlah Konten:* 1\n`;
+      resp += `*Daftar link konten hari ini:*\n${link}\n\n`;
+      resp += `*Jumlah user:* ${users.length}\n`;
+      resp += `✅ Sudah melaksanakan: *${sudah.length}*\n`;
+      resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      // Sudah
+      // === Sudah
+      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
       if (sudah.length) {
-        resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         Object.entries(divSudah).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n";
+          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
         });
       } else {
-        resp += `✅ Sudah melaksanakan: -\n`;
+        resp += `-\n\n`;
       }
 
-      // Belum
+      // === Belum
+      resp += `❌ Belum melaksanakan (${belum.length} user):\n`;
       if (belum.length) {
-        resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
         Object.entries(divBelum).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
-          resp +=
-            list
-              .map((u) => `- ${formatName(u)}${u.note ? ` (${u.note})` : ""}`)
-              .join("\n") + "\n";
+          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
         });
       } else {
-        resp += `\n❌ Belum melaksanakan: -\n`;
+        resp += `-\n\n`;
       }
 
       await waClient.sendMessage(chatId, resp.trim());
@@ -553,51 +558,50 @@ waClient.on("message", async (msg) => {
       const divBelum = groupByDivision(belum);
 
       let now = new Date();
-      let hari = now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      let hariIndo = [
+        "Minggu",
+        "Senin",
+        "Selasa",
+        "Rabu",
+        "Kamis",
+        "Jumat",
+        "Sabtu",
+      ];
+      let hari = hariIndo[now.getDay()];
+      let tanggal = now.toLocaleDateString("id-ID");
       let jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
       const links = videoIds
         .map((id) => `https://www.tiktok.com/video/${id}`)
         .join("\n");
       let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
-      resp += `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
-      resp += `Jumlah Konten: ${videoIds.length}\nDaftar Link Konten:\n${links}\n\n`;
-      resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
+      resp += `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n`;
+      resp += `*Jumlah Konten:* ${videoIds.length}\n`;
+      resp += `*Daftar link konten hari ini:*\n${links}\n\n`;
+      resp += `*Jumlah user:* ${users.length}\n`;
+      resp += `✅ Sudah melaksanakan: *${sudah.length}*\n`;
+      resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      // Sudah
+      // === Sudah
+      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
       if (sudah.length) {
-        resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         Object.entries(divSudah).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n";
+          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
         });
       } else {
-        resp += `✅ Sudah melaksanakan: -\n`;
+        resp += `-\n\n`;
       }
-      // Belum
+
+      // === Belum
+      resp += `❌ Belum melaksanakan (${belum.length} user):\n`;
       if (belum.length) {
-        resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
         Object.entries(divBelum).forEach(([div, list]) => {
           resp += `*${div}* (${list.length} user):\n`;
-          resp +=
-            list
-              .map(
-                (u) =>
-                  `- ${formatName(u)}${
-                    !normalizeTikTokUsername(u.tiktok)
-                      ? " (belum mengisi data tiktok)"
-                      : ""
-                  }`
-              )
-              .join("\n") + "\n";
+          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
         });
       } else {
-        resp += `\n❌ Belum melaksanakan: -\n`;
+        resp += `-\n\n`;
       }
 
       await waClient.sendMessage(chatId, resp.trim());
