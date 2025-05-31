@@ -311,7 +311,7 @@ async function rekapLikesIG(client_id) {
 
 // === CRON IG: Likes ===
 cron.schedule(
-  "45 6-22 * * *",
+  "51 6-22 * * *",
   async () => {
     console.log(
       "[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum..."
@@ -479,7 +479,7 @@ async function rekapPostTiktok(client_id, postsToday) {
 
 // === CRON TikTok: Komentar ===
 cron.schedule(
-  "46 6-22 * * *",
+  "50 6-22 * * *",
   async () => {
     console.log(
       "[CRON TIKTOK] Mulai tugas fetchTiktok & absensiKomentar akumulasi belum..."
@@ -488,10 +488,30 @@ cron.schedule(
       const clients = await getActiveClientsTiktok();
       // Step 1: Fetch konten TikTok terbaru (API)
       const fetchResult = await fetchAndStoreTiktokContent();
+      let fetchMsg =
+        `[CRON TIKTOK] Hasil fetch TikTok:\n` +
+        `Tanggal: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}\n`;
+
+      if (fetchResult && typeof fetchResult === "object") {
+        Object.entries(fetchResult).forEach(([clientId, stat]) => {
+          fetchMsg += `Client: ${clientId}\n  - Jumlah post hari ini: ${stat.count || 0}\n`;
+          if (stat.error) fetchMsg += `  - Error: ${stat.error}\n`;
+        });
+      } else {
+        fetchMsg += 'Fetch selesai (tidak ada summary detail).';
+      }
+      // Send summary to admin
+      for (const admin of getAdminWAIds()) {
+        try {
+          await waClient.sendMessage(admin, fetchMsg);
+        } catch (e) {}
+      }
+      console.log(fetchMsg);
 
       for (const client of clients) {
         let postsToday = null;
-        // Step 2: Ambil post dari API result (jika API mengembalikan object array post)
+
+        // Step 2: Ambil post dari API result
         if (
           fetchResult &&
           typeof fetchResult === "object" &&
@@ -500,121 +520,72 @@ cron.schedule(
           fetchResult[client.client_id].postsToday.length > 0
         ) {
           postsToday = fetchResult[client.client_id].postsToday;
+
+          // Info posts yang ditemukan
+          let foundMsg =
+            `[CRON TIKTOK][${client.client_id}] Ditemukan ${postsToday.length} post hasil fetch API TikTok hari ini.`;
+          console.log(foundMsg);
+          for (const admin of getAdminWAIds()) {
+            try { await waClient.sendMessage(admin, foundMsg); } catch (e) {}
+          }
+
           // === Rekap POST TikTok ===
-          const rekapPostMsg = await rekapPostTiktok(
-            client.client_id,
-            postsToday
-          );
+          const rekapPostMsg = await rekapPostTiktok(client.client_id, postsToday);
           if (rekapPostMsg) {
             for (const admin of getAdminWAIds()) {
-              try {
-                await waClient.sendMessage(admin, rekapPostMsg);
-                console.log(
-                  `[CRON TIKTOK] Sent rekap post TikTok client=${client.client_id} to ${admin}`
-                );
-              } catch (waErr) {
-                console.error(
-                  `[CRON TIKTOK ERROR] send rekap post to ${admin}:`,
-                  waErr.message
-                );
-              }
+              try { await waClient.sendMessage(admin, rekapPostMsg); } catch (waErr) {}
             }
           }
           // === Rekap Komentar TikTok ===
-          const rekapMsg = await rekapKomentarTiktok(
-            client.client_id,
-            postsToday
-          );
+          const rekapMsg = await rekapKomentarTiktok(client.client_id, postsToday);
           if (rekapMsg) {
             for (const admin of getAdminWAIds()) {
-              try {
-                await waClient.sendMessage(admin, rekapMsg);
-                console.log(
-                  `[CRON TIKTOK] Sent rekap komentar TikTok client=${client.client_id} to ${admin}`
-                );
-              } catch (waErr) {
-                console.error(
-                  `[CRON TIKTOK ERROR] send rekap komentar to ${admin}:`,
-                  waErr.message
-                );
-              }
+              try { await waClient.sendMessage(admin, rekapMsg); } catch (waErr) {}
             }
           }
           // === Absensi Komentar TikTok ===
           let msg = await absensiKomentarAkumulasiBelum(client.client_id);
           if (msg && msg.length > 0) {
             for (const admin of getAdminWAIds()) {
-              try {
-                await waClient.sendMessage(admin, msg);
-                console.log(
-                  `[CRON TIKTOK] Sent absensi TikTok client=${client.client_id} to ${admin}`
-                );
-              } catch (waErr) {
-                console.error(
-                  `[CRON TIKTOK ERROR] send WA to ${admin}:`,
-                  waErr.message
-                );
-              }
+              try { await waClient.sendMessage(admin, msg); } catch (waErr) {}
             }
           }
         } else {
-          // Step 3: Jika API tidak ada post (benar-benar kosong), fallback ke DB
+          // Step 3: Fallback ke DB jika API tidak ada post
           postsToday = await getPostsTodayByClient(client.client_id);
           if (Array.isArray(postsToday) && postsToday.length > 0) {
+            let fallbackMsg =
+              `[CRON TIKTOK][${client.client_id}] API kosong, fallback ke DB: ditemukan ${postsToday.length} post TikTok hari ini (DB).`;
+            console.log(fallbackMsg);
+            for (const admin of getAdminWAIds()) {
+              try { await waClient.sendMessage(admin, fallbackMsg); } catch (e) {}
+            }
+
             // === Rekap Komentar TikTok (fallback DB) ===
-            const rekapMsg = await rekapKomentarTiktok(
-              client.client_id,
-              postsToday
-            );
+            const rekapMsg = await rekapKomentarTiktok(client.client_id, postsToday);
             if (rekapMsg) {
               for (const admin of getAdminWAIds()) {
-                try {
-                  await waClient.sendMessage(admin, rekapMsg);
-                  console.log(
-                    `[CRON TIKTOK][Fallback DB] Sent rekap komentar TikTok client=${client.client_id} to ${admin}`
-                  );
-                } catch (waErr) {
-                  console.error(
-                    `[CRON TIKTOK ERROR][Fallback DB] send rekap komentar to ${admin}:`,
-                    waErr.message
-                  );
-                }
+                try { await waClient.sendMessage(admin, rekapMsg); } catch (waErr) {}
               }
             }
             // === Absensi Komentar TikTok ===
             let msg = await absensiKomentarAkumulasiBelum(client.client_id);
             if (msg && msg.length > 0) {
               for (const admin of getAdminWAIds()) {
-                try {
-                  await waClient.sendMessage(admin, msg);
-                  console.log(
-                    `[CRON TIKTOK][Fallback DB] Sent absensi TikTok client=${client.client_id} to ${admin}`
-                  );
-                } catch (waErr) {
-                  console.error(
-                    `[CRON TIKTOK ERROR][Fallback DB] send WA to ${admin}:`,
-                    waErr.message
-                  );
-                }
+                try { await waClient.sendMessage(admin, msg); } catch (waErr) {}
               }
             }
           } else {
             // Benar-benar tidak ada post TikTok
-            const notif = `[CRON TIKTOK] Tidak ada post TikTok sama sekali untuk client: ${client.client_id} hari ini`;
+            const notif = `[CRON TIKTOK][${client.client_id}] Tidak ada post TikTok sama sekali untuk client ini hari ini (baik API/DB).`;
+            console.log(notif);
             for (const admin of getAdminWAIds()) {
-              try {
-                await waClient.sendMessage(admin, notif);
-              } catch (waErr) {
-                console.error(
-                  `[DEBUG WA ERROR][${client.client_id}] ke ${admin}:`,
-                  waErr.message
-                );
-              }
+              try { await waClient.sendMessage(admin, notif); } catch (waErr) {}
             }
           }
         }
 
-        // === (Opsional) Update komentar ke DB & log summary (tidak mengganggu rekap/absensi utama) ===
+        // === (Opsional) Update komentar ke DB & log summary ===
         try {
           const commentRes = await fetchCommentsTodayByClient(client.client_id);
           const debugMsg =
@@ -622,36 +593,20 @@ cron.schedule(
             `- Jumlah post hari ini: ${commentRes.total}\n` +
             `- Komentar berhasil diambil: ${commentRes.totalFetched}\n` +
             `- Komentar gagal diambil: ${commentRes.failed}\n` +
-            `Waktu: ${new Date().toLocaleString("id-ID", {
-              timeZone: "Asia/Jakarta",
-            })}`;
+            `Waktu: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`;
+          console.log(debugMsg);
           for (const admin of getAdminWAIds()) {
-            try {
-              await waClient.sendMessage(admin, debugMsg);
-            } catch (waErr) {
-              console.error(
-                `[DEBUG WA ERROR][${client.client_id}] ke ${admin}:`,
-                waErr.message
-              );
-            }
+            try { await waClient.sendMessage(admin, debugMsg); } catch (waErr) {}
           }
         } catch (e) {
           const errorMsg = `[CRON TIKTOK][${client.client_id}] Gagal fetch komentar hari ini: ${e.message}`;
+          console.warn(errorMsg);
           for (const admin of getAdminWAIds()) {
-            try {
-              await waClient.sendMessage(admin, errorMsg);
-            } catch (waErr) {
-              console.error(
-                `[DEBUG WA ERROR][${client.client_id}] ke ${admin}:`,
-                waErr.message
-              );
-            }
+            try { await waClient.sendMessage(admin, errorMsg); } catch (waErr) {}
           }
         }
       }
-      console.log(
-        "[CRON TIKTOK] Laporan absensi & rekap TikTok berhasil dikirim ke admin."
-      );
+      console.log("[CRON TIKTOK] Laporan absensi & rekap TikTok berhasil dikirim ke admin.");
     } catch (err) {
       console.error("[CRON TIKTOK ERROR]", err);
       for (const admin of getAdminWAIds()) {
@@ -673,5 +628,6 @@ cron.schedule(
     timezone: "Asia/Jakarta",
   }
 );
+
 
 // ====== END ======
