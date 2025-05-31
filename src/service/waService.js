@@ -18,17 +18,16 @@ import {
   fetchCommentsTodayByClient,
 } from "./tiktokFetchService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
-import { fetchAndStoreTiktokContent } from '../service/tiktokFetchService.js';
-import { fetchTiktokCommentsByVideoId } from '../service/tiktokCommentFetchService.js';
-import { getUsersByClientFull } from '../model/userModel.js';
-import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
-import { fallbackAbsensiKomentarTiktokHariIni } from '../service/fallbackAbsensiTiktok.js';
+import { fetchTiktokCommentsByVideoId } from './tiktokCommentFetchService.js';
+import { fallbackAbsensiKomentarTiktokHariIni } from './fallbackAbsensiTiktok.js';
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import * as tiktokCommentModel from "../model/tiktokCommentModel.js";
+import { getUsersByClientFull } from '../model/userModel.js';
+import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 
 dotenv.config();
 
