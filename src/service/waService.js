@@ -76,24 +76,6 @@ function formatClientData(obj, title = "") {
   return dataText;
 }
 
-// Mengelompokkan user berdasarkan divisi
-function groupByDivision(users) {
-  const divGroups = {};
-  users.forEach((u) => {
-    const div = u.divisi || "LAINNYA";
-    if (!divGroups[div]) divGroups[div] = [];
-    divGroups[div].push(u);
-  });
-  return divGroups;
-}
-
-// Format nama untuk laporan Tiktok
-function formatName(u) {
-  return `${u.title ? u.title + " " : ""}${u.nama}${
-    u.tiktok ? ` : ${u.tiktok}` : ""
-  }`;
-}
-
 // Konversi nomor ke WhatsAppID (xxxx@c.us)
 function formatToWhatsAppId(nohp) {
   let number = nohp.replace(/\D/g, "");
