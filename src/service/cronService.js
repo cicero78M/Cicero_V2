@@ -17,7 +17,7 @@ import { getUsersByClientFull } from '../model/userModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 
 import { pool } from '../config/db.js';
-import waClient from './waService.js';
+import waClient from './waService-old.js';
 
 const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')

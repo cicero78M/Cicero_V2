@@ -1,6 +1,6 @@
-// =======================
-// IMPORTS & KONFIGURASI
-// =======================
+// ==========================================================
+// 1. IMPORTS & KONFIGURASI
+// ==========================================================
 import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
@@ -27,11 +27,9 @@ import * as tiktokCommentModel from "../model/tiktokCommentModel.js";
 import * as userModel from "../model/userModel.js";
 
 dotenv.config();
-
-// =======================
-// HELPER FUNCTIONS
-// =======================
-
+// ==========================================================
+// 2. HELPER FUNCTIONS (Utility & Format Data)
+// ==========================================================
 // Mengecek apakah nomor WhatsApp adalah admin (dari ENV)
 function isAdminWhatsApp(number) {
   const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
@@ -76,34 +74,9 @@ function formatClientData(obj, title = "") {
   return dataText;
 }
 
-// Mengelompokkan user berdasarkan divisi
-function groupByDivision(users) {
-  const divGroups = {};
-  users.forEach((u) => {
-    const div = u.divisi || "LAINNYA";
-    if (!divGroups[div]) divGroups[div] = [];
-    divGroups[div].push(u);
-  });
-  return divGroups;
-}
-
-// Format nama untuk laporan Tiktok
-function formatName(u) {
-  return `${u.title ? u.title + " " : ""}${u.nama}${
-    u.tiktok ? ` : ${u.tiktok}` : ""
-  }`;
-}
-
-// Konversi nomor ke WhatsAppID (xxxx@c.us)
-function formatToWhatsAppId(nohp) {
-  let number = nohp.replace(/\D/g, "");
-  if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
-  return `${number}@c.us`;
-}
-
-// =======================
-// INISIALISASI CLIENT WA
-// =======================
+// ==========================================================
+// 3. INISIALISASI CLIENT WA & QR CODE
+// ==========================================================
 const waClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: { headless: true },
@@ -120,14 +93,16 @@ waClient.on("ready", () => {
   console.log("[WA] WhatsApp client is ready!");
 });
 
-// =======================
-// MESSAGE HANDLER UTAMA
-// =======================
+// ==========================================================
+// 4. MESSAGE HANDLER UTAMA
+// ==========================================================
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
 
-  // === Proteksi untuk command admin only ===
+  // -----------------------------------------
+  // 4.1 Proteksi Command ADMIN (Global)
+  // -----------------------------------------
   const adminCommands = [
     "addnewclient#",
     "updateclient#",
@@ -139,6 +114,8 @@ waClient.on("message", async (msg) => {
     "thisgroup#",
     "requestinsta#",
     "requesttiktok#",
+    "fetchinsta#",
+    "fetchtiktok#",
   ];
   const isAdminCommand = adminCommands.some((cmd) =>
     text.toLowerCase().startsWith(cmd)
@@ -151,22 +128,1363 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  // Array hari dalam Bahasa Indonesia
-  const hariIndo = [
-    "Minggu",
-    "Senin",
-    "Selasa",
-    "Rabu",
-    "Kamis",
-    "Jumat",
-    "Sabtu",
-  ];
+  // -----------------------------------------
+  // 4.2 HANDLER UMUM (Semua Nomor Bisa Akses)
+  // -----------------------------------------
+  if (text.toLowerCase() === "clientrequest") {
+    // ... tampilkan menu command client
+    return;
+  }
+  if (text.toLowerCase() === "userrequest") {
+    // ... tampilkan menu command user
+    return;
+  }
 
-  // =======================
-  // === IG: ABSENSI LIKES
-  // =======================
+  // -----------------------------------------
+  // 4.3 HANDLER KHUSUS ADMIN
+  // (Untuk pengelolaan data client, migrasi, fetch, dsb)
+  // -----------------------------------------
+  if (text.toLowerCase().startsWith("addnewclient#")) {
+    const [cmd, client_id, nama] = text.split("#");
+    if (!client_id || !nama) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: addnewclient#clientid#clientname"
+      );
+      return;
+    }
+    try {
+      // Tambah client baru
+      const newClient = await clientService.createClient({
+        client_id,
+        nama,
+        client_type: "",
+        client_status: true,
+        client_insta: "",
+        client_insta_status: false,
+        client_tiktok: "",
+        client_tiktok_status: false,
+        client_operator: "",
+        client_super: "",
+        client_group: "",
+        tiktok_secUid: "",
+      });
 
+      // Format pesan readable
+      let dataText = formatClientData(
+        newClient,
+        `✅ Data Client *${newClient.client_id}* berhasil ditambah:`
+      );
+
+      // Kirim ke pengirim
+      await waClient.sendMessage(chatId, dataText);
+
+      // Debug ke console
+      console.log(`[DEBUG][addnewclient] Client baru ditambah:\n${dataText}`);
+
+      // Kirim notifikasi ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[DEBUG][addnewclient]\n${dataText}`
+          );
+        }
+      }
+    } catch (err) {
+      // Error handling
+      const errMsg = `❌ Gagal tambah client: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][addnewclient] ${errMsg}`);
+
+      // Kirim error ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[ERROR][addnewclient]\n${errMsg}`
+          );
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("updateclient#")) {
+    const parts = text.split("#");
+
+    // === OTOMATIS UPDATE tiktok_secUid ===
+    if (parts.length === 3 && parts[2] === "tiktok_secUid") {
+      const [, client_id, key] = parts;
+      try {
+        const client = await clientService.findClientById(client_id);
+        if (!client) {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Client dengan ID ${client_id} tidak ditemukan!`
+          );
+          return;
+        }
+        let username = client.client_tiktok || "";
+        if (!username) {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Username TikTok belum diisi pada client dengan ID ${client_id}.`
+          );
+          return;
+        }
+        const secUid = await getTiktokSecUid(username);
+        const updated = await clientService.updateClient(client_id, {
+          tiktok_secUid: secUid,
+        });
+        if (updated) {
+          let dataText = formatClientData(
+            updated,
+            `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*`
+          );
+          await waClient.sendMessage(chatId, dataText);
+
+          // Debug ke console
+          console.log(`[DEBUG][updateclient][tiktok_secUid] ${dataText}`);
+
+          // Kirim ke semua admin (kecuali pengirim)
+          const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+            .split(",")
+            .map((n) => n.trim())
+            .filter((n) => n.endsWith("@c.us") && n.length > 8);
+          for (const adminId of adminNumbers) {
+            if (adminId !== chatId) {
+              await waClient.sendMessage(
+                adminId,
+                `[DEBUG][updateclient][tiktok_secUid]\n${dataText}`
+              );
+            }
+          }
+        } else {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Gagal update secUid ke client.`
+          );
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal proses: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][updateclient][tiktok_secUid] ${errMsg}`);
+        // Kirim error ke admin
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][updateclient][tiktok_secUid]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    // === UPDATE FIELD BIASA ===
+    if (parts.length >= 4) {
+      const [, client_id, key, ...valueParts] = parts;
+      const value = valueParts.join("#");
+      try {
+        const updateObj = {};
+        if (
+          [
+            "client_status",
+            "client_insta_status",
+            "client_tiktok_status",
+          ].includes(key)
+        ) {
+          updateObj[key] = value === "true";
+        } else if (key === "client_tiktok" || key === "client_insta") {
+          updateObj[key] = value; // Simpan username string
+        } else {
+          updateObj[key] = value;
+        }
+        const updated = await clientService.updateClient(client_id, updateObj);
+
+        if (updated) {
+          let dataText = formatClientData(
+            updated,
+            `✅ Data Client *${client_id}* berhasil diupdate:`
+          );
+          await waClient.sendMessage(chatId, dataText);
+
+          // Debug ke console
+          console.log(`[DEBUG][updateclient] ${dataText}`);
+
+          // Kirim ke semua admin (kecuali pengirim)
+          const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+            .split(",")
+            .map((n) => n.trim())
+            .filter((n) => n.endsWith("@c.us") && n.length > 8);
+          for (const adminId of adminNumbers) {
+            if (adminId !== chatId) {
+              await waClient.sendMessage(
+                adminId,
+                `[DEBUG][updateclient]\n${dataText}`
+              );
+            }
+          }
+        } else {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Client dengan ID ${client_id} tidak ditemukan!`
+          );
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal update client: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][updateclient] ${errMsg}`);
+        // Kirim error ke admin
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][updateclient]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    // FORMAT SALAH
+    await waClient.sendMessage(
+      chatId,
+      "Format salah!\n" +
+        "updateclient#clientid#key#value\n" +
+        "atau updateclient#clientid#tiktok_secUid (untuk update secUid otomatis dari username TikTok)"
+    );
+    return;
+  }
+  if (text.toLowerCase().startsWith("clientinfo#")) {
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: clientinfo#clientid"
+      );
+      return;
+    }
+    try {
+      const client = await clientService.findClientById(client_id);
+      if (client) {
+        let dataText = formatClientData(
+          client,
+          `ℹ️ Info Data Client *${client_id}*:\n`
+        );
+        await waClient.sendMessage(chatId, dataText);
+
+        // Debug ke console
+        console.log(`[DEBUG][clientinfo] ${dataText}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][clientinfo]\n${dataText}`
+            );
+          }
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Client dengan ID ${client_id} tidak ditemukan!`
+        );
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal mengambil data client: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][clientinfo] ${errMsg}`);
+      // Broadcast error ke admin
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[ERROR][clientinfo]\n${errMsg}`);
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("removeclient#")) {
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: removeclient#clientid"
+      );
+      return;
+    }
+    try {
+      const removed = await clientService.deleteClient(client_id);
+      if (removed) {
+        let dataText = formatClientData(
+          removed,
+          `🗑️ Client *${client_id}* berhasil dihapus!\nData sebelumnya:\n`
+        );
+        await waClient.sendMessage(chatId, dataText);
+
+        // Debug ke console
+        console.log(`[DEBUG][removeclient] ${dataText}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][removeclient]\n${dataText}`
+            );
+          }
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Client dengan ID ${client_id} tidak ditemukan!`
+        );
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal hapus client: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][removeclient] ${errMsg}`);
+      // Broadcast error ke admin
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[ERROR][removeclient]\n${errMsg}`
+          );
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("transferuser#")) {
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: transferuser#clientid"
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Migrasi user dari user_data/${client_id}/ ...`
+    );
+    try {
+      // Proses migrasi
+      const result = await migrateUsersFromFolder(client_id);
+      let report = `*Hasil transfer user dari client ${client_id}:*\n`;
+      result.forEach((r) => {
+        report += `- ${r.file}: ${r.status}${
+          r.error ? " (" + r.error + ")" : ""
+        }\n`;
+      });
+
+      if (result.length > 0 && result.every((r) => r.status === "✅ Sukses")) {
+        report += "\n🎉 Semua user berhasil ditransfer!";
+      }
+      if (result.length === 0) {
+        report += "\n(Tidak ada file user yang ditemukan atau diproses)";
+      }
+
+      // Kirim ke pengirim
+      await waClient.sendMessage(chatId, report);
+
+      // Debug ke console
+      console.log(`[DEBUG][transferuser] ${report}`);
+
+      // Broadcast ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[DEBUG][transferuser]\n${report}`
+          );
+        }
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal proses transfer: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][transferuser] ${errMsg}`);
+
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[ERROR][transferuser]\n${errMsg}`
+          );
+        }
+      }
+    }
+    return;
+  }
+  if (text.startsWith("fetchinsta#")) {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(chatId, "Akses ditolak.");
+      return;
+    }
+    const keysString = text.replace("fetchinsta#", "").trim();
+    let keys = keysString
+      ? keysString.split(",").map((k) => k.trim())
+      : ["shortcode", "caption", "like_count", "timestamp"];
+    try {
+      const resultMsg = await fetchAndStoreInstaContent(keys, waClient, chatId);
+
+      // Debug ke console
+      console.log(
+        `[DEBUG][fetchinsta] ${
+          typeof resultMsg === "string"
+            ? resultMsg
+            : "Fetch & Store Instagram selesai."
+        }`
+      );
+
+      // Broadcast ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[DEBUG][fetchinsta]\n${
+              typeof resultMsg === "string"
+                ? resultMsg
+                : "Fetch & Store Instagram selesai."
+            }`
+          );
+        }
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal fetch/simpan: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][fetchinsta] ${errMsg}`);
+
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[ERROR][fetchinsta]\n${errMsg}`);
+        }
+      }
+    }
+    return;
+  }
+  if (text.trim().toLowerCase().startsWith("fetchtiktok#")) {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(chatId, "Akses ditolak.");
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "⏳ Proses fetch konten TikTok dimulai..."
+    );
+
+    // Ekstrak client_id dari command jika ada, contoh: fetchtiktok#BOJONEGORO
+    const parts = text.trim().split("#");
+    const client_id = parts[1] ? parts[1].trim() : null;
+
+    try {
+      // 1. Fetch & store TikTok content
+      let fetchResult = null;
+      if (client_id) {
+        fetchResult = await fetchAndStoreTiktokContent(null, null, client_id);
+      } else {
+        fetchResult = await fetchAndStoreTiktokContent(null, null);
+      }
+
+      // 2. Fetch ulang komentar hari ini
+      let commentDebug = "";
+      if (client_id) {
+        const { total, totalFetched, failed } =
+          await fetchCommentsTodayByClient(client_id);
+        commentDebug =
+          `[DEBUG] Komentar hari ini (client_id: ${client_id}):\n` +
+          `Total video hari ini: ${total}\n` +
+          `Komentar berhasil diambil ulang: ${totalFetched}\n` +
+          `Gagal fetch komentar: ${failed}`;
+      } else {
+        commentDebug =
+          "[DEBUG] Fitur fetch komentar ulang hanya otomatis untuk 1 client_id.";
+      }
+
+      // 3. Ringkas hasil dan kirim
+      const msg =
+        (fetchResult?.message || "Fetch TikTok selesai.") +
+        "\n\n" +
+        commentDebug;
+      await waClient.sendMessage(chatId, msg);
+
+      // Debug ke console
+      console.log(`[DEBUG][fetchtiktok] ${msg}`);
+
+      // Broadcast ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[DEBUG][fetchtiktok]\n${msg}`);
+        }
+      }
+    } catch (e) {
+      const errMsg = `❌ Gagal fetch TikTok: ${e.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][fetchtiktok] ${errMsg}`);
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[ERROR][fetchtiktok]\n${errMsg}`
+          );
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("sheettransfer#")) {
+    const [, client_id, ...linkParts] = text.split("#");
+    const sheetUrl = linkParts.join("#").trim();
+    if (!client_id || !sheetUrl) {
+      await waClient.sendMessage(
+        chatId,
+        "Format: sheettransfer#clientid#link_google_sheet"
+      );
+      return;
+    }
+    const check = await checkGoogleSheetCsvStatus(sheetUrl);
+    if (!check.ok) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Sheet tidak bisa diakses:\n${check.reason}`
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Mengambil & migrasi data dari Google Sheet...`
+    );
+    try {
+      const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
+      let report = `*Hasil import user ke client ${client_id}:*\n`;
+      result.forEach((r) => {
+        report += `- ${r.user_id}: ${r.status}${
+          r.error ? " (" + r.error + ")" : ""
+        }\n`;
+      });
+      await waClient.sendMessage(chatId, report);
+
+      // Debug ke console
+      console.log(`[DEBUG][sheettransfer] ${report}`);
+
+      // Broadcast ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[DEBUG][sheettransfer]\n${report}`
+          );
+        }
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal import: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][sheettransfer] ${errMsg}`);
+
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[ERROR][sheettransfer]\n${errMsg}`
+          );
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("thisgroup#")) {
+    // Hanya bisa digunakan dalam grup WhatsApp
+    if (!msg.from.endsWith("@g.us")) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!"
+      );
+      return;
+    }
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: thisgroup#ClientID"
+      );
+      return;
+    }
+    // Ambil WhatsApp Group ID dari msg.from
+    const groupId = msg.from;
+    try {
+      // Update client_group di database
+      const updated = await clientService.updateClient(client_id, {
+        client_group: groupId,
+      });
+      if (updated) {
+        let groupName = "";
+        try {
+          const groupData = await waClient.getChatById(groupId);
+          groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : "";
+        } catch (e) {}
+        let dataText = `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`;
+        await waClient.sendMessage(chatId, dataText);
+
+        // Debug ke console
+        console.log(`[DEBUG][thisgroup] ${dataText}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][thisgroup]\n${dataText}`
+            );
+          }
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Client dengan ID ${client_id} tidak ditemukan!`
+        );
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal update client_group: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][thisgroup] ${errMsg}`);
+
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[ERROR][thisgroup]\n${errMsg}`);
+        }
+      }
+    }
+    return;
+  }
+  if (text.toLowerCase().startsWith("requestinsta#")) {
+    const [, client_id, status] = text.split("#");
+    if (!client_id || (status !== "sudah" && status !== "belum")) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: requestinsta#clientid#sudah atau requestinsta#clientid#belum"
+      );
+      return;
+    }
+    if (status === "belum") {
+      try {
+        const users = await userService.getInstaEmptyUsersByClient(client_id);
+        if (!users || users.length === 0) {
+          await waClient.sendMessage(
+            chatId,
+            `Semua user dari client *${client_id}* sudah mengisi data Instagram!`
+          );
+          return;
+        }
+        const perDivisi = {};
+        users.forEach((u) => {
+          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+          perDivisi[u.divisi].push(u);
+        });
+        let reply = `📋 *Rekap User yang BELUM mengisi Instagram*\n*Client*: ${client_id}\n`;
+        Object.entries(perDivisi).forEach(([divisi, list]) => {
+          reply += `\n*${divisi}* (${list.length} user):\n`;
+          list.forEach((u) => {
+            reply += `- ${u.title ? u.title + " " : ""}${u.nama}\n`;
+          });
+        });
+        reply += `\nTotal user: *${users.length}*`;
+        await waClient.sendMessage(chatId, reply);
+
+        // Debug ke console
+        console.log(`[DEBUG][requestinsta][belum] ${reply}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][requestinsta][belum]\n${reply}`
+            );
+          }
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal mengambil data: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][requestinsta][belum] ${errMsg}`);
+
+        // Broadcast error ke admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][requestinsta][belum]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+    if (status === "sudah") {
+      try {
+        const users = await userService.getInstaFilledUsersByClient(client_id);
+        if (!users || users.length === 0) {
+          await waClient.sendMessage(
+            chatId,
+            `Tidak ada user dari client *${client_id}* yang sudah mengisi data Instagram.`
+          );
+          return;
+        }
+        const perDivisi = {};
+        users.forEach((u) => {
+          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+          perDivisi[u.divisi].push(u);
+        });
+        let reply = `📋 *Rekap User yang sudah mengisi Instagram*\n*Client*: ${client_id}\n`;
+        Object.entries(perDivisi).forEach(([divisi, list]) => {
+          reply += `\n*${divisi}* (${list.length} user):\n`;
+          list.forEach((u) => {
+            reply += `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+              u.insta
+            }\n`;
+          });
+        });
+        reply += `\nTotal user: *${users.length}*`;
+        await waClient.sendMessage(chatId, reply);
+
+        // Debug ke console
+        console.log(`[DEBUG][requestinsta][sudah] ${reply}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][requestinsta][sudah]\n${reply}`
+            );
+          }
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal mengambil data: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][requestinsta][sudah] ${errMsg}`);
+
+        // Broadcast error ke admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][requestinsta][sudah]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+  }
+  if (text.toLowerCase().startsWith("requesttiktok#")) {
+    const [, client_id, status] = text.split("#");
+    if (!client_id || (status !== "sudah" && status !== "belum")) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: requesttiktok#clientid#sudah atau requesttiktok#clientid#belum"
+      );
+      return;
+    }
+
+    if (status === "sudah") {
+      try {
+        const users = await userService.getTiktokFilledUsersByClient(client_id);
+        if (!users || users.length === 0) {
+          await waClient.sendMessage(
+            chatId,
+            `Tidak ada user dari client *${client_id}* yang sudah mengisi data TikTok.`
+          );
+          return;
+        }
+        const perDivisi = {};
+        users.forEach((u) => {
+          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+          perDivisi[u.divisi].push(u);
+        });
+        let reply = `📋 *Rekap User yang sudah mengisi TikTok*\n*Client*: ${client_id}\n`;
+        Object.entries(perDivisi).forEach(([divisi, list]) => {
+          reply += `\n*${divisi}* (${list.length} user):\n`;
+          list.forEach((u) => {
+            reply += `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+              u.tiktok
+            }\n`;
+          });
+        });
+        reply += `\nTotal user: *${users.length}*`;
+        await waClient.sendMessage(chatId, reply);
+
+        // Debug ke console
+        console.log(`[DEBUG][requesttiktok][sudah] ${reply}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][requesttiktok][sudah]\n${reply}`
+            );
+          }
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal mengambil data: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][requesttiktok][sudah] ${errMsg}`);
+
+        // Broadcast error ke admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][requesttiktok][sudah]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    if (status === "belum") {
+      try {
+        const users = await userService.getTiktokEmptyUsersByClient(client_id);
+        if (!users || users.length === 0) {
+          await waClient.sendMessage(
+            chatId,
+            `Semua user dari client *${client_id}* sudah mengisi data TikTok!`
+          );
+          return;
+        }
+        const perDivisi = {};
+        users.forEach((u) => {
+          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
+          perDivisi[u.divisi].push(u);
+        });
+        let reply = `📋 *Rekap User yang BELUM mengisi TikTok*\n*Client*: ${client_id}\n`;
+        Object.entries(perDivisi).forEach(([divisi, list]) => {
+          reply += `\n*${divisi}* (${list.length} user):\n`;
+          list.forEach((u) => {
+            reply += `- ${u.title ? u.title + " " : ""}${u.nama}\n`;
+          });
+        });
+        reply += `\nTotal user: *${users.length}*`;
+        await waClient.sendMessage(chatId, reply);
+
+        // Debug ke console
+        console.log(`[DEBUG][requesttiktok][belum] ${reply}`);
+
+        // Broadcast ke semua admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[DEBUG][requesttiktok][belum]\n${reply}`
+            );
+          }
+        }
+      } catch (err) {
+        const errMsg = `❌ Gagal mengambil data: ${err.message}`;
+        await waClient.sendMessage(chatId, errMsg);
+        console.error(`[ERROR][requesttiktok][belum] ${errMsg}`);
+
+        // Broadcast error ke admin (kecuali pengirim)
+        const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n.endsWith("@c.us") && n.length > 8);
+        for (const adminId of adminNumbers) {
+          if (adminId !== chatId) {
+            await waClient.sendMessage(
+              adminId,
+              `[ERROR][requesttiktok][belum]\n${errMsg}`
+            );
+          }
+        }
+      }
+      return;
+    }
+  }
+  if (
+    text.toLowerCase().startsWith("exception#") ||
+    text.toLowerCase().startsWith("status#")
+  ) {
+    // Hanya admin dari .env
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Hanya admin yang dapat mengubah data status/exception."
+      );
+      return;
+    }
+    // Format: exception#user_id#true/false  atau status#user_id#true/false
+    const [command, user_id, valueRaw] = text.split("#");
+    if (!user_id || (valueRaw !== "true" && valueRaw !== "false")) {
+      await waClient.sendMessage(
+        chatId,
+        `Format salah!\nGunakan: ${command}#user_id#true/false`
+      );
+      return;
+    }
+    const field = command.toLowerCase();
+    try {
+      // Cek user ada?
+      const user = await userService.findUserById(user_id);
+      if (!user) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ User dengan ID ${user_id} tidak ditemukan.`
+        );
+        return;
+      }
+      // Update
+      await userService.updateUserField(user_id, field, valueRaw === "true");
+      const successMsg = `✅ Data *${field}* untuk user ${user_id} berhasil diupdate ke: *${
+        valueRaw === "true" ? "true" : "false"
+      }*`;
+      await waClient.sendMessage(chatId, successMsg);
+
+      // Debug ke console
+      console.log(`[DEBUG][${field}] ${successMsg}`);
+
+      // Broadcast ke semua admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(
+            adminId,
+            `[DEBUG][${field}]\n${successMsg}`
+          );
+        }
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal update ${field}: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][${field}] ${errMsg}`);
+
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[ERROR][${field}]\n${errMsg}`);
+        }
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------
+  // 4.4 HANDLER KHUSUS USER (WA terdaftar di user)
+  // (Untuk update/lihat data user sendiri)
+  // -----------------------------------------
+  if (text.toLowerCase().startsWith("updateuser#")) {
+    const parts = text.split("#");
+    if (parts.length !== 4) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: updateuser#user_id#field#value"
+      );
+      return;
+    }
+    const [, user_id, field, valueRaw] = parts;
+    const allowedFields = [
+      "nama",
+      "title",
+      "pangkat",
+      "divisi",
+      "satfung",
+      "jabatan",
+      "insta",
+      "tiktok",
+      "whatsapp",
+    ];
+    let fieldNorm = field.toLowerCase();
+    // Normalisasi: 'pangkat' -> 'title', 'satfung' -> 'divisi'
+    if (fieldNorm === "pangkat") fieldNorm = "title";
+    if (fieldNorm === "satfung") fieldNorm = "divisi";
+
+    if (!allowedFields.includes(fieldNorm)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Field hanya bisa: nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp"
+      );
+      return;
+    }
+    // Cek user
+    const user = await userService.findUserById(user_id);
+    if (!user) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ User dengan NRP/NIP ${user_id} tidak ditemukan`
+      );
+      return;
+    }
+    // Cek nomor WA: binding jika masih null, kalau sudah harus sama dengan pengirim
+    const pengirim = chatId.replace(/[^0-9]/g, "");
+    if (!user.whatsapp || user.whatsapp === "") {
+      await userService.updateUserField(user_id, "whatsapp", pengirim);
+      user.whatsapp = pengirim;
+    }
+    if (user.whatsapp !== pengirim) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengubah data."
+      );
+      return;
+    }
+    let value = valueRaw.trim();
+
+    // 1. Pangkat/title: harus cocok salah satu di DB (distinct, case-insensitive)
+    if (fieldNorm === "title") {
+      const allTitles = await userService.getDistinctUserTitles();
+      const valid = allTitles
+        .map((t) => t && t.trim().toLowerCase())
+        .filter(Boolean);
+      if (!valid.includes(value.toLowerCase())) {
+        let msg = "❌ Pangkat tidak valid. List pangkat yang bisa digunakan:\n";
+        msg += allTitles.map((t) => "- " + t).join("\n");
+        await waClient.sendMessage(chatId, msg);
+        return;
+      }
+    }
+    // 2. Satfung/divisi: harus ada pada client_id ini
+    if (fieldNorm === "divisi") {
+      const allDiv = await userService.getDistinctUserDivisions(user.client_id);
+      const valid = allDiv
+        .map((d) => d && d.trim().toLowerCase())
+        .filter(Boolean);
+      if (!valid.includes(value.toLowerCase())) {
+        let msg = `❌ Satfung tidak valid untuk POLRES ${user.client_id}. List satfung yang bisa digunakan:\n`;
+        msg += allDiv.map((d) => "- " + d).join("\n");
+        await waClient.sendMessage(chatId, msg);
+        return;
+      }
+    }
+
+    // 3. Cek duplikasi username insta/tiktok (jika update field insta/tiktok)
+    if (fieldNorm === "insta" || fieldNorm === "tiktok") {
+      const exists = await userService.findUserByField(fieldNorm, value);
+      if (exists && exists.user_id !== user_id) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Username ${
+            fieldNorm === "insta" ? "Instagram" : "TikTok"
+          } ini sudah digunakan user lain.`
+        );
+        return;
+      }
+      if (fieldNorm === "insta") {
+        const igMatch = value.match(
+          /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(\/)?(\?|$)/i
+        );
+        if (!igMatch) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Format salah! Masukkan *link profil Instagram*, contoh: https://www.instagram.com/username"
+          );
+          return;
+        }
+        value = igMatch[2];
+      }
+      if (fieldNorm === "tiktok") {
+        const ttMatch = value.match(
+          /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)(\/)?(\?|$)/i
+        );
+        if (!ttMatch) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Format salah! Masukkan *link profil TikTok*, contoh: https://www.tiktok.com/@username"
+          );
+          return;
+        }
+        value = "@" + ttMatch[2];
+      }
+    }
+
+    // 4. Cek WhatsApp unik (hanya boleh satu user)
+    if (fieldNorm === "whatsapp") {
+      const waInUse = await userService.findUserByWhatsApp(value);
+      if (waInUse && waInUse.user_id !== user_id) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Nomor WhatsApp ini sudah terdaftar pada user lain."
+        );
+        return;
+      }
+      value = value.replace(/[^0-9]/g, "");
+    }
+
+    // 5. Update field
+    await userService.updateUserField(user_id, fieldNorm, value);
+
+    const okMsg = `✅ Data ${
+      fieldNorm === "title"
+        ? "pangkat"
+        : fieldNorm === "divisi"
+        ? "satfung"
+        : fieldNorm
+    } untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`;
+
+    await waClient.sendMessage(chatId, okMsg);
+
+    // Debug ke admin WhatsApp & console
+    console.log(`[DEBUG][updateuser] ${okMsg}`);
+    const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.endsWith("@c.us") && n.length > 8);
+    for (const adminId of adminNumbers) {
+      if (adminId !== chatId) {
+        await waClient.sendMessage(adminId, `[DEBUG][updateuser]\n${okMsg}`);
+      }
+    }
+    return;
+  }
+
+  if (text.toLowerCase().startsWith("mydata#")) {
+    const [, user_id] = text.split("#");
+    if (!user_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: mydata#user_id"
+      );
+      return;
+    }
+    try {
+      const user = await userService.findUserById(user_id);
+      if (!user) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
+        );
+        return;
+      }
+      // Nomor pengirim WA (hanya angka)
+      let pengirim = chatId.replace(/[^0-9]/g, "");
+
+      // Jika whatsapp masih null/kosong, binding ke nomor ini
+      if (!user.whatsapp || user.whatsapp === "") {
+        await userService.updateUserField(user_id, "whatsapp", pengirim);
+        user.whatsapp = pengirim;
+      }
+
+      // Jika whatsapp sudah ada, hanya nomor ini yang bisa akses
+      if (user.whatsapp !== pengirim) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data."
+        );
+        return;
+      }
+
+      // Mapping nama tampilan
+      const fieldMap = {
+        user_id: "NRP/NIP",
+        nama: "Nama",
+        title: "Pangkat",
+        divisi: "Satfung",
+        jabatan: "Jabatan",
+        status: "Status",
+        whatsapp: "WhatsApp",
+        insta: "Instagram",
+        tiktok: "TikTok",
+        client_id: "POLRES",
+      };
+
+      // Urutan output
+      const order = [
+        "user_id",
+        "nama",
+        "title",
+        "divisi",
+        "jabatan",
+        "status",
+        "whatsapp",
+        "insta",
+        "tiktok",
+        "client_id",
+      ];
+
+      // Compose pesan (tanpa field exception)
+      let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
+      order.forEach((k) => {
+        if (k === "exception") return;
+        if (user[k] !== undefined && user[k] !== null) {
+          let val = user[k];
+          let label = fieldMap[k] || k;
+          if (k === "status") {
+            val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
+          }
+          msgText += `*${label}*: ${val}\n`;
+        }
+      });
+      await waClient.sendMessage(chatId, msgText);
+
+      // Debug ke admin WhatsApp & console
+      console.log(`[DEBUG][mydata] ${msgText}`);
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[DEBUG][mydata]\n${msgText}`);
+        }
+      }
+    } catch (err) {
+      const errMsg = `❌ Gagal mengambil data: ${err.message}`;
+      await waClient.sendMessage(chatId, errMsg);
+      console.error(`[ERROR][mydata] ${errMsg}`);
+      // Broadcast error ke admin (kecuali pengirim)
+      const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.endsWith("@c.us") && n.length > 8);
+      for (const adminId of adminNumbers) {
+        if (adminId !== chatId) {
+          await waClient.sendMessage(adminId, `[ERROR][mydata]\n${errMsg}`);
+        }
+      }
+    }
+    return;
+  }
+
+  // -----------------------------------------
+  // 4.5 HANDLER LAPORAN/ABSENSI (IG/Tiktok, Semua)
+  // (Handler yang terkait absensi likes IG, komentar Tiktok)
+  // -----------------------------------------
+  // =======================
+  // === IG: ABSENSI LIKES (ADMIN ONLY)
+  // =======================
   if (text.toLowerCase().startsWith("absensilikes#")) {
+    // Proteksi hanya admin WhatsApp
+    const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.endsWith("@c.us") && n.length > 8);
+
+    if (!adminNumbers.includes(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Hanya admin yang dapat melakukan rekap absensi likes Instagram."
+      );
+      return;
+    }
+
     const parts = text.split("#");
     if (parts.length < 2) {
       await waClient.sendMessage(
@@ -186,7 +1504,7 @@ waClient.on("message", async (msg) => {
     const tanggal = now.toLocaleDateString("id-ID");
     const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-    const users = await getUsersByClient(client_id); // {user_id, nama, insta, divisi, title}
+    const users = await getUsersByClient(client_id);
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
     if (!shortcodes.length) {
@@ -395,10 +1713,20 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  // =========================
-  // === TIKTOK: ABSENSI KOMENTAR
-  // =========================
   if (text.toLowerCase().startsWith("absensikomentar#")) {
+    // Hanya boleh admin WhatsApp yang bisa eksekusi perintah
+    const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.endsWith("@c.us") && n.length > 8);
+    if (!ADMIN_WHATSAPP.includes(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Hanya admin yang dapat melakukan rekap absensi komentar TikTok."
+      );
+      return;
+    }
+
     const parts = text.split("#");
     const client_id = (parts[1] || "").trim();
     const type = (parts[2] || "").toLowerCase();
@@ -408,34 +1736,51 @@ waClient.on("message", async (msg) => {
       await waClient.sendMessage(chatId, "Format: absensikomentar#clientid");
       return;
     }
-    const videoIds = await tiktokPostModel.getPostsTodayByClient(client_id);
 
-    if (!videoIds.length) {
-      const lastPosts =
-        (await tiktokPostModel.getLastPostsByClient?.(client_id)) || [];
+    let videoIds = [];
+    try {
+      videoIds = await tiktokPostModel.getPostsTodayByClient(client_id);
+    } catch (e) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Error load posting TikTok: ${e.message}`
+      );
+      return;
+    }
+
+    if (!Array.isArray(videoIds) || !videoIds.length) {
       let msg = "Tidak ada konten TikTok hari ini.\n\n[Debug Info]\n";
-      msg += lastPosts.length
-        ? lastPosts.map((r) => `- ${r.video_id} | ${r.created_at}`).join("\n")
-        : "Tidak ada posting TikTok sama sekali.";
+      try {
+        const lastPosts =
+          (await tiktokPostModel.getLastPostsByClient?.(client_id)) || [];
+        msg += lastPosts.length
+          ? lastPosts.map((r) => `- ${r.video_id} | ${r.created_at}`).join("\n")
+          : "Tidak ada posting TikTok sama sekali.";
+      } catch (err) {
+        msg += "Error ambil data terakhir.";
+      }
       await waClient.sendMessage(chatId, msg);
       return;
     }
 
-    // Ambil users yang ada field tiktok (boleh kosong)
-    const users = await userModel.getUsersByClientFull(client_id);
+    let users = [];
+    try {
+      users = await userModel.getUsersByClientFull(client_id);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Error get users: ${err.message}`);
+      return;
+    }
 
-    // Normalisasi username TikTok (harus lowercase, tanpa @, tanpa spasi, tanpa url)
+    // Normalisasi username TikTok
     function normalizeTikTokUsername(val) {
       if (!val) return "";
       if (val.startsWith("http")) {
-        // Ambil dari url: https://www.tiktok.com/@username
         const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
         return match ? match[1].toLowerCase() : "";
       }
       return val.replace(/^@/, "").trim().toLowerCase();
     }
 
-    // Helper: group by division
     function groupByDivision(users) {
       const divGroups = {};
       users.forEach((u) => {
@@ -459,8 +1804,14 @@ waClient.on("message", async (msg) => {
 
     // Per video: absensi
     for (const video_id of videoIds) {
-      let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
-      if (!Array.isArray(commenters)) commenters = [];
+      let commenters = [];
+      try {
+        commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
+        if (!Array.isArray(commenters)) commenters = [];
+      } catch (err) {
+        commenters = [];
+      }
+
       // Set komentator: lowercase, tanpa @
       const usernameSet = new Set(
         commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
@@ -491,7 +1842,6 @@ waClient.on("message", async (msg) => {
       const divSudah = groupByDivision(sudah);
       const divBelum = groupByDivision(belum);
 
-      // Laporan format baru
       let now = new Date();
       let hari = now.toLocaleDateString("id-ID", {
         weekday: "long",
@@ -601,1039 +1951,10 @@ waClient.on("message", async (msg) => {
       await waClient.sendMessage(chatId, resp.trim());
     }
   }
+});
 
-  // =========================
-  // === FETCH TIKTOK MANUAL (ADMIN)
-  // =========================
-  
-  if (text.trim().toLowerCase().startsWith("fetchtiktok#")) {
-    if (!isAdminWhatsApp(chatId)) {
-      await waClient.sendMessage(chatId, "Akses ditolak.");
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      "⏳ Proses fetch konten TikTok dimulai..."
-    );
-
-    // Ekstrak client_id dari command jika ada, contoh: fetchtiktok#BOJONEGORO
-    const parts = text.trim().split("#");
-    const client_id = parts[1] ? parts[1].trim() : null;
-
-    try {
-      // 1. Fetch & store TikTok content (jika client_id diberikan, hanya client itu, jika tidak, semua)
-      let fetchResult = null;
-      if (client_id) {
-        fetchResult = await fetchAndStoreTiktokContent(null, null, client_id);
-      } else {
-        fetchResult = await fetchAndStoreTiktokContent(null, null);
-      }
-
-      // 2. Fetch ulang komentar dari semua video hari ini (DB update, tanpa array)
-      let commentDebug = "";
-      if (client_id) {
-        const { total, totalFetched, failed } =
-          await fetchCommentsTodayByClient(client_id);
-        commentDebug =
-          `[DEBUG] Komentar hari ini (client_id: ${client_id}):\n` +
-          `Total video hari ini: ${total}\n` +
-          `Komentar berhasil diambil ulang: ${totalFetched}\n` +
-          `Gagal fetch komentar: ${failed}`;
-      } else {
-        // Jika semua client, bisa lakukan loop ke setiap client aktif (opsional)
-        commentDebug =
-          "[DEBUG] Fitur fetch komentar ulang hanya otomatis untuk 1 client_id.";
-      }
-
-      // 3. Ringkas hasil dan kirim
-      const msg =
-        (fetchResult?.message || "Fetch TikTok selesai.") +
-        "\n\n" +
-        commentDebug;
-      await waClient.sendMessage(chatId, msg);
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok: ${e.message}`);
-    }
-    return;
-  }
-
-  // =========================
-  // === FETCH INSTAGRAM (ADMIN)
-  // =========================
-  if (text.startsWith("fetchinsta#")) {
-    if (!isAdminWhatsApp(chatId)) {
-      await waClient.sendMessage(chatId, "Akses ditolak.");
-      return;
-    }
-    const keysString = text.replace("fetchinsta#", "").trim();
-    let keys = keysString
-      ? keysString.split(",").map((k) => k.trim())
-      : ["shortcode", "caption", "like_count", "timestamp"];
-    try {
-      await fetchAndStoreInstaContent(keys, waClient, chatId);
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal fetch/simpan: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === REQUEST TIKTOK/INSTA STATUS (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("requesttiktok#")) {
-    const [, client_id, status] = text.split("#");
-    if (!client_id || (status !== "sudah" && status !== "belum")) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: requesttiktok#clientid#sudah atau requesttiktok#clientid#belum"
-      );
-      return;
-    }
-
-    if (status === "sudah") {
-      try {
-        const users = await userService.getTiktokFilledUsersByClient(client_id);
-        if (!users || users.length === 0) {
-          await waClient.sendMessage(
-            chatId,
-            `Tidak ada user dari client *${client_id}* yang sudah mengisi data TikTok.`
-          );
-          return;
-        }
-        const perDivisi = {};
-        users.forEach((u) => {
-          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
-          perDivisi[u.divisi].push(u);
-        });
-        let reply = `📋 *Rekap User yang sudah mengisi TikTok*\n*Client*: ${client_id}\n`;
-        Object.entries(perDivisi).forEach(([divisi, list]) => {
-          reply += `\n*${divisi}* (${list.length} user):\n`;
-          list.forEach((u) => {
-            reply += `- ${u.title ? u.title + " " : ""}${u.nama} : ${
-              u.tiktok
-            }\n`;
-          });
-        });
-        reply += `\nTotal user: *${users.length}*`;
-        await waClient.sendMessage(chatId, reply);
-      } catch (err) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal mengambil data: ${err.message}`
-        );
-      }
-      return;
-    }
-
-    if (status === "belum") {
-      try {
-        const users = await userService.getTiktokEmptyUsersByClient(client_id);
-        if (!users || users.length === 0) {
-          await waClient.sendMessage(
-            chatId,
-            `Semua user dari client *${client_id}* sudah mengisi data TikTok!`
-          );
-          return;
-        }
-        const perDivisi = {};
-        users.forEach((u) => {
-          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
-          perDivisi[u.divisi].push(u);
-        });
-        let reply = `📋 *Rekap User yang BELUM mengisi TikTok*\n*Client*: ${client_id}\n`;
-        Object.entries(perDivisi).forEach(([divisi, list]) => {
-          reply += `\n*${divisi}* (${list.length} user):\n`;
-          list.forEach((u) => {
-            reply += `- ${u.title ? u.title + " " : ""}${u.nama}\n`;
-          });
-        });
-        reply += `\nTotal user: *${users.length}*`;
-        await waClient.sendMessage(chatId, reply);
-      } catch (err) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal mengambil data: ${err.message}`
-        );
-      }
-      return;
-    }
-  }
-
-  if (text.toLowerCase().startsWith("requestinsta#")) {
-    const [, client_id, status] = text.split("#");
-    if (!client_id || (status !== "sudah" && status !== "belum")) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: requestinsta#clientid#sudah atau requestinsta#clientid#belum"
-      );
-      return;
-    }
-    if (status === "belum") {
-      try {
-        const users = await userService.getInstaEmptyUsersByClient(client_id);
-        if (!users || users.length === 0) {
-          await waClient.sendMessage(
-            chatId,
-            `Semua user dari client *${client_id}* sudah mengisi data Instagram!`
-          );
-          return;
-        }
-        const perDivisi = {};
-        users.forEach((u) => {
-          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
-          perDivisi[u.divisi].push(u);
-        });
-        let reply = `📋 *Rekap User yang BELUM mengisi Instagram*\n*Client*: ${client_id}\n`;
-        Object.entries(perDivisi).forEach(([divisi, list]) => {
-          reply += `\n*${divisi}* (${list.length} user):\n`;
-          list.forEach((u) => {
-            reply += `- ${u.title ? u.title + " " : ""}${u.nama}\n`;
-          });
-        });
-        reply += `\nTotal user: *${users.length}*`;
-        await waClient.sendMessage(chatId, reply);
-      } catch (err) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal mengambil data: ${err.message}`
-        );
-      }
-      return;
-    }
-    if (status === "sudah") {
-      try {
-        const users = await userService.getInstaFilledUsersByClient(client_id);
-        if (!users || users.length === 0) {
-          await waClient.sendMessage(
-            chatId,
-            `Tidak ada user dari client *${client_id}* yang sudah mengisi data Instagram.`
-          );
-          return;
-        }
-        const perDivisi = {};
-        users.forEach((u) => {
-          if (!perDivisi[u.divisi]) perDivisi[u.divisi] = [];
-          perDivisi[u.divisi].push(u);
-        });
-        let reply = `📋 *Rekap User yang sudah mengisi Instagram*\n*Client*: ${client_id}\n`;
-        Object.entries(perDivisi).forEach(([divisi, list]) => {
-          reply += `\n*${divisi}* (${list.length} user):\n`;
-          list.forEach((u) => {
-            reply += `- ${u.title ? u.title + " " : ""}${u.nama} : ${
-              u.insta
-            }\n`;
-          });
-        });
-        reply += `\nTotal user: *${users.length}*`;
-        await waClient.sendMessage(chatId, reply);
-      } catch (err) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal mengambil data: ${err.message}`
-        );
-      }
-      return;
-    }
-  }
-
-  // =========================
-  // === MIGRASI DARI GOOGLE SHEET (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("sheettransfer#")) {
-    const [, client_id, ...linkParts] = text.split("#");
-    const sheetUrl = linkParts.join("#").trim();
-    if (!client_id || !sheetUrl) {
-      await waClient.sendMessage(
-        chatId,
-        "Format: sheettransfer#clientid#link_google_sheet"
-      );
-      return;
-    }
-    const check = await checkGoogleSheetCsvStatus(sheetUrl);
-    if (!check.ok) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Sheet tidak bisa diakses:\n${check.reason}`
-      );
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Mengambil & migrasi data dari Google Sheet...`
-    );
-    try {
-      const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
-      let report = `*Hasil import user ke client ${client_id}:*\n`;
-      result.forEach((r) => {
-        report += `- ${r.user_id}: ${r.status}${
-          r.error ? " (" + r.error + ")" : ""
-        }\n`;
-      });
-      await waClient.sendMessage(chatId, report);
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
-    }
-    return;
-  }
-
-  // =========================
-  // === UPDATE client_group dari WhatsApp GROUP (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("thisgroup#")) {
-    // Hanya bisa digunakan dalam grup WhatsApp
-    if (!msg.from.endsWith("@g.us")) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!"
-      );
-      return;
-    }
-    const [, client_id] = text.split("#");
-    if (!client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: thisgroup#ClientID"
-      );
-      return;
-    }
-    // Ambil WhatsApp Group ID dari msg.from
-    const groupId = msg.from;
-    try {
-      // Update client_group di database
-      const updated = await clientService.updateClient(client_id, {
-        client_group: groupId,
-      });
-      if (updated) {
-        let groupName = "";
-        try {
-          const groupData = await waClient.getChatById(groupId);
-          groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : "";
-        } catch (e) {}
-        let dataText = `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`;
-        await waClient.sendMessage(chatId, dataText);
-        if (updated.client_operator && updated.client_operator.length >= 8) {
-          const operatorId = formatToWhatsAppId(updated.client_operator);
-          if (operatorId !== chatId) {
-            await waClient.sendMessage(
-              operatorId,
-              `[Notifikasi]: Client group *${client_id}* diupdate ke group ID: ${groupId}`
-            );
-          }
-        }
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Client dengan ID ${client_id} tidak ditemukan!`
-        );
-      }
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal update client_group: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === ADD NEW CLIENT (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("addnewclient#")) {
-    const [cmd, client_id, nama] = text.split("#");
-    if (!client_id || !nama) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: addnewclient#clientid#clientname"
-      );
-      return;
-    }
-    try {
-      const newClient = await clientService.createClient({
-        client_id,
-        nama,
-        client_type: "",
-        client_status: true,
-        client_insta: "",
-        client_insta_status: false,
-        client_tiktok: "",
-        client_tiktok_status: false,
-        client_operator: "",
-        client_super: "", // <== pastikan support field ini!
-        client_group: "",
-        tiktok_secUid: "",
-      });
-
-      let dataText = formatClientData(
-        newClient,
-        `✅ Data Client *${newClient.client_id}* berhasil ditambah:`
-      );
-      await waClient.sendMessage(chatId, dataText);
-
-      if (newClient.client_operator && newClient.client_operator.length >= 8) {
-        const operatorId = formatToWhatsAppId(newClient.client_operator);
-        if (operatorId !== chatId) {
-          await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
-        }
-      }
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal tambah client: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === UPDATE CLIENT (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("updateclient#")) {
-    const parts = text.split("#");
-
-    // === OTOMATIS UPDATE tiktok_secUid ===
-    if (parts.length === 3 && parts[2] === "tiktok_secUid") {
-      const [, client_id, key] = parts;
-      try {
-        const client = await clientService.findClientById(client_id);
-        if (!client) {
-          await waClient.sendMessage(
-            chatId,
-            `❌ Client dengan ID ${client_id} tidak ditemukan!`
-          );
-          return;
-        }
-        let username = client.client_tiktok || "";
-        if (!username) {
-          await waClient.sendMessage(
-            chatId,
-            `❌ Username TikTok belum diisi pada client dengan ID ${client_id}.`
-          );
-          return;
-        }
-        const secUid = await getTiktokSecUid(username);
-        const updated = await clientService.updateClient(client_id, {
-          tiktok_secUid: secUid,
-        });
-        if (updated) {
-          let dataText = formatClientData(
-            updated,
-            `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*`
-          );
-          await waClient.sendMessage(chatId, dataText);
-          if (updated.client_operator && updated.client_operator.length >= 8) {
-            const operatorId = formatToWhatsAppId(updated.client_operator);
-            if (operatorId !== chatId) {
-              await waClient.sendMessage(
-                operatorId,
-                `[Notifikasi]:\n${dataText}`
-              );
-            }
-          }
-        } else {
-          await waClient.sendMessage(
-            chatId,
-            `❌ Gagal update secUid ke client.`
-          );
-        }
-      } catch (err) {
-        await waClient.sendMessage(chatId, `❌ Gagal proses: ${err.message}`);
-      }
-      return;
-    }
-
-    // === UPDATE FIELD BIASA ===
-    if (parts.length >= 4) {
-      const [, client_id, key, ...valueParts] = parts;
-      const value = valueParts.join("#");
-      try {
-        const updateObj = {};
-        if (
-          [
-            "client_status",
-            "client_insta_status",
-            "client_tiktok_status",
-          ].includes(key)
-        ) {
-          updateObj[key] = value === "true";
-        } else if (key === "client_tiktok" || key === "client_insta") {
-          updateObj[key] = value; // Simpan username string
-        } else {
-          updateObj[key] = value;
-        }
-        const updated = await clientService.updateClient(client_id, updateObj);
-
-        if (updated) {
-          let dataText = formatClientData(
-            updated,
-            `✅ Data Client *${client_id}* berhasil diupdate:`
-          );
-          await waClient.sendMessage(chatId, dataText);
-
-          if (updated.client_operator && updated.client_operator.length >= 8) {
-            const operatorId = formatToWhatsAppId(updated.client_operator);
-            if (operatorId !== chatId) {
-              await waClient.sendMessage(
-                operatorId,
-                `[Notifikasi]:\n${dataText}`
-              );
-            }
-          }
-        } else {
-          await waClient.sendMessage(
-            chatId,
-            `❌ Client dengan ID ${client_id} tidak ditemukan!`
-          );
-        }
-      } catch (err) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal update client: ${err.message}`
-        );
-      }
-      return;
-    }
-
-    // FORMAT SALAH
-    await waClient.sendMessage(
-      chatId,
-      "Format salah!\n" +
-        "updateclient#clientid#key#value\n" +
-        "atau updateclient#clientid#tiktok_secUid (untuk update secUid otomatis dari username TikTok)"
-    );
-    return;
-  }
-
-  // =========================
-  // === GET CLIENT INFO (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("clientinfo#")) {
-    const [, client_id] = text.split("#");
-    if (!client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: clientinfo#clientid"
-      );
-      return;
-    }
-    try {
-      const client = await clientService.findClientById(client_id);
-      if (client) {
-        let dataText = formatClientData(
-          client,
-          `ℹ️ Info Data Client *${client_id}*:\n`
-        );
-        await waClient.sendMessage(chatId, dataText);
-
-        if (client.client_operator && client.client_operator.length >= 8) {
-          const operatorId = formatToWhatsAppId(client.client_operator);
-          if (operatorId !== chatId) {
-            await waClient.sendMessage(
-              operatorId,
-              `[Notifikasi Client Info]:\n${dataText}`
-            );
-          }
-        }
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Client dengan ID ${client_id} tidak ditemukan!`
-        );
-      }
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal mengambil data client: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === REMOVE CLIENT (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("removeclient#")) {
-    const [, client_id] = text.split("#");
-    if (!client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: removeclient#clientid"
-      );
-      return;
-    }
-    try {
-      const removed = await clientService.deleteClient(client_id);
-      if (removed) {
-        let dataText = formatClientData(
-          removed,
-          `🗑️ Client *${client_id}* berhasil dihapus!\nData sebelumnya:\n`
-        );
-        await waClient.sendMessage(chatId, dataText);
-
-        if (removed.client_operator && removed.client_operator.length >= 8) {
-          const operatorId = formatToWhatsAppId(removed.client_operator);
-          if (operatorId !== chatId) {
-            await waClient.sendMessage(
-              operatorId,
-              `[Notifikasi]:\n${dataText}`
-            );
-          }
-        }
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Client dengan ID ${client_id} tidak ditemukan!`
-        );
-      }
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal hapus client: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === MIGRASI USER DARI FOLDER (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("transferuser#")) {
-    const [, client_id] = text.split("#");
-    if (!client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: transferuser#clientid"
-      );
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Migrasi user dari user_data/${client_id}/ ...`
-    );
-    try {
-      // Panggil migrasi, tunggu SEMUA file selesai diproses (success/gagal)
-      const result = await migrateUsersFromFolder(client_id);
-      let report = `*Hasil transfer user dari client ${client_id}:*\n`;
-      result.forEach((r) => {
-        report += `- ${r.file}: ${r.status}${
-          r.error ? " (" + r.error + ")" : ""
-        }\n`;
-      });
-
-      // Optional: Notifikasi jika semua sukses
-      if (result.length > 0 && result.every((r) => r.status === "✅ Sukses")) {
-        report += "\n🎉 Semua user berhasil ditransfer!";
-      }
-      if (result.length === 0) {
-        report += "\n(Tidak ada file user yang ditemukan atau diproses)";
-      }
-
-      await waClient.sendMessage(chatId, report);
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal proses transfer: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === MENU COMMANDS (CLIENT/USER)
-  // =========================
-  if (text.toLowerCase() === "clientrequest") {
-    const updateKeys = [
-      "nama",
-      "client_type",
-      "client_status",
-      "client_insta",
-      "client_insta_status",
-      "client_tiktok",
-      "client_tiktok_status",
-      "client_operator",
-      "client_super",
-      "client_group",
-      "tiktok_secUid",
-    ];
-
-    const menu = `
-    📝 *Client Request Commands:*
-    1. *addnewclient#clientid#clientname*
-        - Tambah data client baru.
-    2. *updateclient#clientid#key#value*
-        - Update data client berdasarkan key.
-    3. *removeclient#clientid*
-        - Hapus data client.
-    4. *clientinfo#clientid*
-        - Lihat detail data client.
-    5. *clientrequest*
-        - Tampilkan daftar perintah ini.
-    6. *transferuser#clientid*
-        - Migrasi seluruh data user (dari folder user_data/clientid) ke database (khusus admin/akses tertentu).
-
-    *Key yang dapat digunakan pada updateclient#:*
-    ${updateKeys.map((k) => `- *${k}*`).join("\n")}
-
-    Contoh update:
-    updateclient#BOJONEGORO#client_status#true
-    updateclient#BOJONEGORO#client_insta_status#false
-    updateclient#BOJONEGORO#client_operator#628123456789
-    updateclient#BOJONEGORO#client_super#6281234567890
-    updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
-    updateclient#BOJONEGORO#tiktok_secUid
-
-    _Catatan: Value untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
-        `;
-    await waClient.sendMessage(chatId, menu);
-    return;
-  }
-
-  if (text.toLowerCase() === "userrequest") {
-    const menu = `
-    📝 *User Request Commands:*
-
-    1. *mydata#NRP/NIP*
-    - Melihat data user Anda sendiri (dengan penamaan sesuai POLRI: NRP/NIP, pangkat, satfung, jabatan, status).
-    - Hanya dapat diakses oleh nomor WhatsApp yang terdaftar (otomatis bind jika masih kosong).
-
-    2. *updateuser#NRP/NIP#field#value*
-    - Mengubah data user.
-    - Field yang bisa diubah (hanya untuk user sendiri):
-        - *nama*           : update nama user.
-        - *pangkat*        : update pangkat (hanya bisa pilih dari list yang valid di database).
-        - *satfung*        : update satfung (hanya bisa pilih dari list yang valid di database & POLRES yang sama).
-        - *jabatan*        : update jabatan.
-        - *insta*          : update/isi profil Instagram, format: https://www.instagram.com/username
-        - *tiktok*         : update/isi profil TikTok, format: https://www.tiktok.com/@username
-        - *whatsapp*       : binding atau update nomor WhatsApp user (hanya satu user per nomor WA, otomatis bind jika null).
-    - Contoh:
-        - updateuser#75070206#pangkat#AKP
-        - updateuser#75070206#satfung#BAGOPS
-        - updateuser#75070206#jabatan#KABAGOPS
-        - updateuser#75070206#insta#https://www.instagram.com/edi.suyono
-        - updateuser#75070206#tiktok#https://www.tiktok.com/@edisuyono
-        - updateuser#75070206#whatsapp#6281234567890
-
-    *Catatan:*
-    - Untuk update pangkat atau satfung hanya bisa memilih dari list yang valid. Jika salah akan dikirimkan daftar yang bisa digunakan.
-    - Nomor WhatsApp hanya boleh digunakan pada satu user (tidak bisa dipakai di dua user berbeda).
-    - Untuk update profil Instagram/TikTok, masukkan *link profil* (sistem otomatis mengambil username dari link).
-    - Semua perubahan hanya bisa dilakukan oleh user dengan nomor WhatsApp yang sudah terdaftar pada user tersebut. Jika nomor WA masih kosong, akan otomatis bind ke nomor pengirim pertama.
-
-    3. *userrequest*
-    - Menampilkan menu bantuan user ini.
-
-    `;
-    await waClient.sendMessage(chatId, menu);
-    return;
-  }
-
-  // =========================
-  // === UPDATE DATA USER (USER)
-  // =========================
-  if (text.toLowerCase().startsWith("updateuser#")) {
-    const parts = text.split("#");
-    if (parts.length !== 4) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: updateuser#user_id#field#value"
-      );
-      return;
-    }
-    const [, user_id, field, valueRaw] = parts;
-    const allowedFields = [
-      "nama",
-      "title",
-      "pangkat",
-      "divisi",
-      "satfung",
-      "jabatan",
-      "insta",
-      "tiktok",
-      "whatsapp",
-    ];
-    let fieldNorm = field.toLowerCase();
-    // Normalisasi: 'pangkat' -> 'title', 'satfung' -> 'divisi'
-    if (fieldNorm === "pangkat") fieldNorm = "title";
-    if (fieldNorm === "satfung") fieldNorm = "divisi";
-
-    if (!allowedFields.includes(fieldNorm)) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Field hanya bisa: nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp"
-      );
-      return;
-    }
-    // Cek user
-    const user = await userService.findUserById(user_id);
-    if (!user) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ User dengan NRP/NIP ${user_id} tidak ditemukan`
-      );
-      return;
-    }
-    // Cek nomor WA: binding jika masih null, kalau sudah harus sama dengan pengirim
-    const pengirim = chatId.replace(/[^0-9]/g, "");
-    if (!user.whatsapp || user.whatsapp === "") {
-      await userService.updateUserField(user_id, "whatsapp", pengirim);
-      user.whatsapp = pengirim;
-    }
-    if (user.whatsapp !== pengirim) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengubah data."
-      );
-      return;
-    }
-    let value = valueRaw.trim();
-
-    // 1. Pangkat/title: harus cocok salah satu di DB (distinct, case-insensitive)
-    if (fieldNorm === "title") {
-      const allTitles = await userService.getDistinctUserTitles();
-      const valid = allTitles
-        .map((t) => t && t.trim().toLowerCase())
-        .filter(Boolean);
-      if (!valid.includes(value.toLowerCase())) {
-        let msg = "❌ Pangkat tidak valid. List pangkat yang bisa digunakan:\n";
-        msg += allTitles.map((t) => "- " + t).join("\n");
-        await waClient.sendMessage(chatId, msg);
-        return;
-      }
-    }
-    // 2. Satfung/divisi: harus ada pada client_id ini
-    if (fieldNorm === "divisi") {
-      const allDiv = await userService.getDistinctUserDivisions(user.client_id);
-      const valid = allDiv
-        .map((d) => d && d.trim().toLowerCase())
-        .filter(Boolean);
-      if (!valid.includes(value.toLowerCase())) {
-        let msg = `❌ Satfung tidak valid untuk POLRES ${user.client_id}. List satfung yang bisa digunakan:\n`;
-        msg += allDiv.map((d) => "- " + d).join("\n");
-        await waClient.sendMessage(chatId, msg);
-        return;
-      }
-    }
-
-    // 3. Cek duplikasi username insta/tiktok (jika update field insta/tiktok)
-    if (fieldNorm === "insta" || fieldNorm === "tiktok") {
-      // Bisa gunakan validasi dan parsing seperti sebelumnya (cek duplikat)
-      const exists = await userService.findUserByField(fieldNorm, value);
-      if (exists && exists.user_id !== user_id) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Username ${
-            fieldNorm === "insta" ? "Instagram" : "TikTok"
-          } ini sudah digunakan user lain.`
-        );
-        return;
-      }
-      // Validasi format jika ingin ketat (contoh, pakai regex profile IG/tiktok)
-      if (fieldNorm === "insta") {
-        const igMatch = value.match(
-          /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(\/)?(\?|$)/i
-        );
-        if (!igMatch) {
-          await waClient.sendMessage(
-            chatId,
-            "❌ Format salah! Masukkan *link profil Instagram*, contoh: https://www.instagram.com/username"
-          );
-          return;
-        }
-        value = igMatch[2]; // hanya username
-      }
-      if (fieldNorm === "tiktok") {
-        const ttMatch = value.match(
-          /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)(\/)?(\?|$)/i
-        );
-        if (!ttMatch) {
-          await waClient.sendMessage(
-            chatId,
-            "❌ Format salah! Masukkan *link profil TikTok*, contoh: https://www.tiktok.com/@username"
-          );
-          return;
-        }
-        value = "@" + ttMatch[2]; // hanya username (dengan @)
-      }
-    }
-
-    // 4. Cek WhatsApp unik (hanya boleh satu user)
-    if (fieldNorm === "whatsapp") {
-      const waInUse = await userService.findUserByWhatsApp(value);
-      if (waInUse && waInUse.user_id !== user_id) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Nomor WhatsApp ini sudah terdaftar pada user lain."
-        );
-        return;
-      }
-      value = value.replace(/[^0-9]/g, "");
-    }
-
-    // 5. Update field
-    await userService.updateUserField(user_id, fieldNorm, value);
-
-    await waClient.sendMessage(
-      chatId,
-      `✅ Data ${
-        fieldNorm === "title"
-          ? "pangkat"
-          : fieldNorm === "divisi"
-          ? "satfung"
-          : fieldNorm
-      } untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
-    );
-    return;
-  }
-  // =========================
-  // === TAMPILKAN DATA USER (USER)
-  // =========================
-  if (text.toLowerCase().startsWith("mydata#")) {
-    const [, user_id] = text.split("#");
-    if (!user_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: mydata#user_id"
-      );
-      return;
-    }
-    try {
-      const user = await userService.findUserById(user_id);
-      if (!user) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
-        );
-        return;
-      }
-      // Nomor pengirim WA (hanya angka)
-      let pengirim = chatId.replace(/[^0-9]/g, "");
-
-      // Jika whatsapp masih null/kosong, binding ke nomor ini
-      if (!user.whatsapp || user.whatsapp === "") {
-        await userService.updateUserField(user_id, "whatsapp", pengirim);
-        user.whatsapp = pengirim;
-      }
-
-      // Jika whatsapp sudah ada, hanya nomor ini yang bisa akses
-      if (user.whatsapp !== pengirim) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data."
-        );
-        return;
-      }
-
-      // Mapping nama tampilan
-      const fieldMap = {
-        user_id: "NRP/NIP",
-        nama: "Nama",
-        title: "Pangkat",
-        divisi: "Satfung",
-        jabatan: "Jabatan",
-        status: "Status",
-        whatsapp: "WhatsApp",
-        insta: "Instagram",
-        tiktok: "TikTok",
-        client_id: "POLRES",
-      };
-
-      // Urutan output
-      const order = [
-        "user_id",
-        "nama",
-        "title",
-        "divisi",
-        "jabatan",
-        "status",
-        "whatsapp",
-        "insta",
-        "tiktok",
-        "client_id",
-      ];
-
-      // Compose pesan (tanpa field exception)
-      let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
-      order.forEach((k) => {
-        if (k === "exception") return;
-        if (user[k] !== undefined && user[k] !== null) {
-          let val = user[k];
-          // Label mapping
-          let label = fieldMap[k] || k;
-          if (k === "status") {
-            val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
-          }
-          msgText += `*${label}*: ${val}\n`;
-        }
-      });
-      await waClient.sendMessage(chatId, msgText);
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal mengambil data: ${err.message}`
-      );
-    }
-    return;
-  }
-
-  // =========================
-  // === UPDATE STATUS/EXCEPTION (ADMIN)
-  // =========================
-  if (
-    text.toLowerCase().startsWith("exception#") ||
-    text.toLowerCase().startsWith("status#")
-  ) {
-    // Hanya admin dari .env
-    if (!isAdminWhatsApp(chatId)) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Hanya admin yang dapat mengubah data status/exception."
-      );
-      return;
-    }
-    // Format: exception#user_id#true/false  atau status#user_id#true/false
-    const [command, user_id, valueRaw] = text.split("#");
-    if (!user_id || (valueRaw !== "true" && valueRaw !== "false")) {
-      await waClient.sendMessage(
-        chatId,
-        `Format salah!\nGunakan: ${command}#user_id#true/false`
-      );
-      return;
-    }
-    const field = command.toLowerCase();
-    try {
-      // Cek user ada?
-      const user = await userService.findUserById(user_id);
-      if (!user) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ User dengan ID ${user_id} tidak ditemukan.`
-        );
-        return;
-      }
-      // Update
-      await userService.updateUserField(user_id, field, valueRaw === "true");
-      await waClient.sendMessage(
-        chatId,
-        `✅ Data *${field}* untuk user ${user_id} berhasil diupdate ke: *${
-          valueRaw === "true" ? "true" : "false"
-        }*`
-      );
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal update ${field}: ${err.message}`
-      );
-    }
-    return;
-  }
-}); // END waClient.on('message', ...)
-
-// =======================
-// INISIALISASI WA CLIENT
-// =======================
+// ==========================================================
+// 5. INISIALISASI WA CLIENT
+// ==========================================================
 waClient.initialize();
-
 export default waClient;
