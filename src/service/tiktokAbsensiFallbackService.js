@@ -1,6 +1,7 @@
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 import { getUsersByClientFull } from '../model/userModel.js';
+import { fetchAndStoreTiktokContent } from '../service/tiktokFetchService.js'; // Pastikan import benar
 import waClient from '../service/waService.js';
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
@@ -30,56 +31,78 @@ function groupByDivision(users) {
   }, {});
 }
 
+// PATCH: fallbackAbsensiKomentarTiktokHariIni — rekap komentar by API, fallback DB jika kosong
 export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaClient = null, chatId = null) {
-  // Pakai waClient default jika tidak diinject
   const clientWA = customWaClient || waClient;
   const adminList = getAdminWAIds();
 
-  // 1. Ambil user & post hari ini dari DB
+  // 1. Ambil user TikTok dari DB
   const users = await getUsersByClientFull(client_id);
-  const postsToday = await getPostsTodayByClient(client_id);
 
-  // === DEBUG INFO (tanpa array) ===
+  // 2. Coba fetch post terbaru (API), rekap komentar by API
+  let postsToday = [];
+  let fetchApiResult = null;
+  try {
+    fetchApiResult = await fetchAndStoreTiktokContent(null, null, client_id);
+    if (
+      fetchApiResult &&
+      typeof fetchApiResult === "object" &&
+      fetchApiResult[client_id] &&
+      Array.isArray(fetchApiResult[client_id].postsToday)
+    ) {
+      postsToday = fetchApiResult[client_id].postsToday.map((post) =>
+        typeof post === "object"
+          ? post.id || post.video_id || post.aweme_id || post.post_id
+          : post
+      );
+    }
+  } catch (e) {
+    // Gagal API, fallback ke DB langsung
+    postsToday = [];
+  }
+
+  // Jika API gagal/kosong, fallback ambil dari DB
+  if (!Array.isArray(postsToday) || postsToday.length === 0) {
+    postsToday = await getPostsTodayByClient(client_id);
+  }
+
+  // === DEBUG INFO
   let initialDebugMsg = `[DEBUG][FallbackAbsensi] Client: ${client_id}\n` +
     `- Jumlah user TikTok: ${users.length}\n` +
     `- Jumlah post TikTok hari ini: ${postsToday.length}\n`;
   if (!users.length) initialDebugMsg += '- Tidak ada user TikTok untuk client ini.\n';
-  if (!postsToday.length) initialDebugMsg += '- Tidak ada post TikTok hari ini di DB untuk client ini.\n';
+  if (!postsToday.length) initialDebugMsg += '- Tidak ada post TikTok hari ini di API/DB untuk client ini.\n';
 
-  // Kirim debug ke console dan seluruh ADMIN_WHATSAPP
   console.log(initialDebugMsg);
   for (const admin of adminList) {
-    try { await clientWA.sendMessage(admin, initialDebugMsg); } catch (e) { }
+    try { await clientWA.sendMessage(admin, initialDebugMsg); } catch (e) {}
   }
-  // Juga ke chatId jika diberikan
   if (clientWA && chatId) {
-    try { await clientWA.sendMessage(chatId, initialDebugMsg); } catch (e) { }
+    try { await clientWA.sendMessage(chatId, initialDebugMsg); } catch (e) {}
   }
 
+  // Edge case: user atau post kosong
   if (!users.length) {
     const msg = "Tidak ada user TikTok yang terdaftar pada client ini.";
-    for (const admin of adminList) {
-      try { await clientWA.sendMessage(admin, msg); } catch (e) { }
-    }
+    for (const admin of adminList) { try { await clientWA.sendMessage(admin, msg); } catch (e) {} }
     if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
   }
   if (!postsToday.length) {
-    const msg = `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini (DB).`;
-    for (const admin of adminList) {
-      try { await clientWA.sendMessage(admin, msg); } catch (e) { }
-    }
+    const msg = `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini (API/DB).`;
+    for (const admin of adminList) { try { await clientWA.sendMessage(admin, msg); } catch (e) {} }
     if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
   }
 
-  // 2. Proses absensi akumulasi: hitung komentar untuk tiap user
+  // 3. Proses absensi akumulasi: hitung komentar untuk tiap user
   const userStats = {};
   users.forEach(u => { userStats[u.user_id] = { ...u, count: 0 }; });
 
   let totalKomentarChecked = 0;
   let userDenganKomentar = 0;
   let komentarDebugMsg = '[DEBUG][KOMENTAR]\n';
+
   for (const postId of postsToday) {
     const comments = await getCommentsByVideoId(postId);
     komentarDebugMsg += `- Post ${postId}: Jumlah komentar = ${comments ? comments.length : 0}\n`;
@@ -102,7 +125,7 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
     try { await clientWA.sendMessage(chatId, komentarDebugMsg); } catch (e) { }
   }
 
-  // 3. Laporan
+  // 4. Laporan
   const totalKonten = postsToday.length;
   const sudah = [];
   const belum = [];
