@@ -211,26 +211,21 @@ waClient.on("message", async (msg) => {
       Object.values(userStats).forEach((u) => {
         const satfung = u.divisi || "-";
         const titleNama = [u.title, u.nama].filter(Boolean).join(" ");
-        const labelSudah =
+        const label =
           u.insta && u.insta.trim() !== ""
-            ? `${titleNama} : ${u.insta} (${u.count} konten) (Sudah)`
-            : `${titleNama} : belum mengisi data insta (${u.count} konten) (Belum)`;
-        const labelBelum =
-          u.insta && u.insta.trim() !== ""
-            ? `${titleNama} : ${u.insta} (${u.count} konten) (Belum)`
-            : `${titleNama} : belum mengisi data insta (${u.count} konten) (Belum)`;
-
+            ? `${titleNama} : ${u.insta} (${u.count} konten)`
+            : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
         if (
           u.insta &&
           u.insta.trim() !== "" &&
           u.count >= Math.ceil(totalKonten / 2)
         ) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-          sudahPerSatfung[satfung].push(labelSudah);
+          sudahPerSatfung[satfung].push(label);
           totalSudah++;
         } else {
           if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-          belumPerSatfung[satfung].push(labelBelum);
+          belumPerSatfung[satfung].push(label);
           totalBelum++;
         }
       });
@@ -253,7 +248,7 @@ waClient.on("message", async (msg) => {
 
       // Jika tanpa filter kedua, tampilkan dua list: sudah & belum
       if (tipe === "keduanya") {
-        msg += `✅ *List User Sudah Likes (min. 50% konten):*\n`;
+        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -263,7 +258,7 @@ waClient.on("message", async (msg) => {
           msg += "\n\n";
         });
 
-        msg += `❌ *List User Belum Likes (kurang dari 50% konten):*\n`;
+        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -273,6 +268,7 @@ waClient.on("message", async (msg) => {
           msg += "\n\n";
         });
       } else if (tipe === "sudah") {
+        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -282,6 +278,7 @@ waClient.on("message", async (msg) => {
           msg += "\n\n";
         });
       } else {
+        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -317,14 +314,14 @@ waClient.on("message", async (msg) => {
           likesSet.has(u.insta.toLowerCase())
         ) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta} (Sudah)`);
+          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
           totalSudah++;
         } else {
           if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
           const label =
             u.insta && u.insta.trim() !== ""
-              ? `${titleNama} : ${u.insta} (Belum)`
-              : `${titleNama} : belum mengisi data insta (Belum)`;
+              ? `${titleNama} : ${u.insta}`
+              : `${titleNama} : belum mengisi data insta`;
           belumPerSatfung[satfung].push(label);
           totalBelum++;
         }
@@ -342,7 +339,7 @@ waClient.on("message", async (msg) => {
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
       if (!filter1) {
-        msg += `✅ SUDAH Like:\n`;
+        msg += `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -352,7 +349,7 @@ waClient.on("message", async (msg) => {
           msg += "\n\n";
         });
 
-        msg += `\n❌ BELUM Like:\n`;
+        msg += `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
@@ -373,7 +370,9 @@ waClient.on("message", async (msg) => {
           `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
           `*Jumlah user:* ${totalUser}\n` +
           `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+          `❌ Belum melaksanakan: *${totalBelum}*\n\n` +
+          `✅ *Sudah Melaksanakan* (${totalSudah} user):\n`;
+
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msgSudah += `*${satfung}* (${arr.length} user):\n`;
@@ -393,7 +392,9 @@ waClient.on("message", async (msg) => {
           `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
           `*Jumlah user:* ${totalUser}\n` +
           `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
+          `❌ Belum melaksanakan: *${totalBelum}*\n\n` +
+          `❌ *Belum Melaksanakan* (${totalBelum} user):\n`;
+
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msgBelum += `*${satfung}* (${arr.length} user):\n`;
