@@ -20,18 +20,11 @@ function isToday(dateObj) {
     dateWIB.getDate() === todayWIB.getDate();
 }
 
-async function getEligibleTiktokClients() {
-  const res = await pool.query(
-    `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
-      WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
-  );
-  return res.rows;
-}
-
 // FUNGSI TAMBAHAN: Fetch komentar dari semua video TikTok hari ini pada client ini (langsung update DB)
-export async function fetchCommentsTodayByClient(client_id) {
+export async function fetchCommentsTodayByClient(client_id, debugCallback = null) {
   const postsToday = await getPostsTodayByClient(client_id);
   let totalFetched = 0, failed = 0;
+  let debugArr = [];
   for (const video_id of postsToday) {
     try {
       const res = await limit(() =>
@@ -46,19 +39,36 @@ export async function fetchCommentsTodayByClient(client_id) {
       const usernames = res.data?.comments?.map(c => c.user?.unique_id).filter(Boolean) || [];
       await tiktokCommentModel.upsertTiktokComments(video_id, usernames);
       totalFetched++;
-      console.log(`[FETCH COMMENT] Success video_id: ${video_id} | komentar: ${usernames.length}`);
+      const debugLine = `[FETCH COMMENT] Success video_id: ${video_id} | komentar: ${usernames.length}`;
+      debugArr.push(debugLine);
+      if (debugCallback) await debugCallback(debugLine);
+      else console.log(debugLine);
     } catch (e) {
       failed++;
-      console.log(`[FETCH COMMENT] Failed video_id: ${video_id} | ${e.message}`);
+      const errLine = `[FETCH COMMENT] Failed video_id: ${video_id} | ${e.message}`;
+      debugArr.push(errLine);
+      if (debugCallback) await debugCallback(errLine);
+      else console.log(errLine);
     }
   }
-  return { total: postsToday.length, totalFetched, failed };
+  return { total: postsToday.length, totalFetched, failed, debug: debugArr };
 }
 
-export async function fetchAndStoreTiktokContent(waClient = null, chatId = null) {
-  const clients = await getEligibleTiktokClients();
+export async function fetchAndStoreTiktokContent(waClient = null, chatId = null, onlyClientId = null) {
+  const clients = onlyClientId
+    ? (await pool.query(
+        `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
+         WHERE client_id = $1 AND client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`, 
+        [onlyClientId]
+      )).rows
+    : await (await pool.query(
+        `SELECT client_id, client_tiktok, tiktok_secuid FROM clients
+         WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
+      )).rows;
+
   let totalKontenHariIni = 0;
   let debugGlobal = [];
+  let responseObj = {};
 
   console.log(`\n===== [TIKTOK FETCH START] =====`);
   console.log(`[DEBUG] Total clients eligible: ${clients.length}`);
@@ -206,6 +216,12 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
     }
 
     debugGlobal.push(`Client ${client.client_tiktok}: ${kontenHariIni.length} konten hari ini`);
+    // Return info per client
+    responseObj[client.client_id] = {
+      postsToday: kontenHariIni,
+      totalHariIni: kontenHariIni.length,
+      debug: debugGlobal[debugGlobal.length - 1]
+    };
   }
 
   // Summary global
@@ -217,4 +233,7 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null)
   }
   console.log(`[DEBUG][TIKTOK] Ringkasan fetch:`, debugGlobal.join(' | '));
   console.log(`===== [TIKTOK FETCH END] =====\n`);
+
+  // PATCH: return detail per client agar bisa dipakai handler WA atau absensi
+  return responseObj;
 }

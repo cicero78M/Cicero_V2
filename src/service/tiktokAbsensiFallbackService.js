@@ -1,9 +1,8 @@
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 import { getUsersByClientFull } from '../model/userModel.js';
-import waClient from '../service/waService.js'; // <--- PATCH: import waClient
+import waClient from '../service/waService.js';
 
-// PATCH: Ambil ADMIN_WHATSAPP dari env
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
   .split(',')
   .map(n => n.trim())
@@ -15,7 +14,6 @@ function getAdminWAIds() {
   );
 }
 
-// Helper format nama user
 function formatName(u) {
   const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
   return u.tiktok
@@ -35,6 +33,7 @@ function groupByDivision(users) {
 export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaClient = null, chatId = null) {
   // Pakai waClient default jika tidak diinject
   const clientWA = customWaClient || waClient;
+  const adminList = getAdminWAIds();
 
   // 1. Ambil user & post hari ini dari DB
   const users = await getUsersByClientFull(client_id);
@@ -49,26 +48,26 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
 
   // Kirim debug ke console dan seluruh ADMIN_WHATSAPP
   console.log(initialDebugMsg);
-  for (const admin of getAdminWAIds()) {
-    try { await clientWA.sendMessage(admin, initialDebugMsg); } catch {}
+  for (const admin of adminList) {
+    try { await clientWA.sendMessage(admin, initialDebugMsg); } catch (e) { }
   }
   // Juga ke chatId jika diberikan
   if (clientWA && chatId) {
-    try { await clientWA.sendMessage(chatId, initialDebugMsg); } catch {}
+    try { await clientWA.sendMessage(chatId, initialDebugMsg); } catch (e) { }
   }
 
   if (!users.length) {
     const msg = "Tidak ada user TikTok yang terdaftar pada client ini.";
-    for (const admin of getAdminWAIds()) {
-      try { await clientWA.sendMessage(admin, msg); } catch {}
+    for (const admin of adminList) {
+      try { await clientWA.sendMessage(admin, msg); } catch (e) { }
     }
     if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
   }
   if (!postsToday.length) {
     const msg = `Tidak ada konten TikTok untuk *Client*: *${client_id}* hari ini (DB).`;
-    for (const admin of getAdminWAIds()) {
-      try { await clientWA.sendMessage(admin, msg); } catch {}
+    for (const admin of adminList) {
+      try { await clientWA.sendMessage(admin, msg); } catch (e) { }
     }
     if (clientWA && chatId) await clientWA.sendMessage(chatId, msg);
     return msg;
@@ -80,8 +79,10 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
 
   let totalKomentarChecked = 0;
   let userDenganKomentar = 0;
+  let komentarDebugMsg = '[DEBUG][KOMENTAR]\n';
   for (const postId of postsToday) {
     const comments = await getCommentsByVideoId(postId);
+    komentarDebugMsg += `- Post ${postId}: Jumlah komentar = ${comments ? comments.length : 0}\n`;
     const commentsSet = new Set((comments || []).map(x => (x || '').replace(/^@/, '').toLowerCase()));
     users.forEach(u => {
       const uname = (u.tiktok || '').replace(/^@/, '').toLowerCase();
@@ -91,6 +92,14 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
       }
     });
     totalKomentarChecked += (comments ? comments.length : 0);
+  }
+
+  // Kirim debug komentar ke admin
+  for (const admin of adminList) {
+    try { await clientWA.sendMessage(admin, komentarDebugMsg); } catch (e) { }
+  }
+  if (clientWA && chatId) {
+    try { await clientWA.sendMessage(chatId, komentarDebugMsg); } catch (e) { }
   }
 
   // 3. Laporan
@@ -131,11 +140,11 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
     `- Waktu: ${now.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`;
   // Kirim summary debug ke console dan seluruh ADMIN_WHATSAPP
   console.log(debugInfo);
-  for (const admin of getAdminWAIds()) {
-    try { await clientWA.sendMessage(admin, debugInfo); } catch {}
+  for (const admin of adminList) {
+    try { await clientWA.sendMessage(admin, debugInfo); } catch (e) { }
   }
   if (clientWA && chatId) {
-    try { await clientWA.sendMessage(chatId, debugInfo); } catch {}
+    try { await clientWA.sendMessage(chatId, debugInfo); } catch (e) { }
   }
 
   // Build pesan laporan absensi
@@ -164,8 +173,9 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
     msg += '-\n';
   }
 
-  for (const admin of getAdminWAIds()) {
-    try { await clientWA.sendMessage(admin, msg.trim()); } catch {}
+  // Kirim pesan laporan
+  for (const admin of adminList) {
+    try { await clientWA.sendMessage(admin, msg.trim()); } catch (e) { }
   }
   if (clientWA && chatId) await clientWA.sendMessage(chatId, msg.trim());
   return msg.trim();
