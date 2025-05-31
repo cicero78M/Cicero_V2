@@ -211,26 +211,30 @@ waClient.on("message", async (msg) => {
       Object.values(userStats).forEach((u) => {
         const satfung = u.divisi || "-";
         const titleNama = [u.title, u.nama].filter(Boolean).join(" ");
-        const label =
+        const labelSudah =
           u.insta && u.insta.trim() !== ""
-            ? `${titleNama} : ${u.insta} (${u.count} konten)`
-            : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
+            ? `${titleNama} : ${u.insta} (${u.count} konten) (Sudah)`
+            : `${titleNama} : belum mengisi data insta (${u.count} konten) (Belum)`;
+        const labelBelum =
+          u.insta && u.insta.trim() !== ""
+            ? `${titleNama} : ${u.insta} (${u.count} konten) (Belum)`
+            : `${titleNama} : belum mengisi data insta (${u.count} konten) (Belum)`;
+
         if (
           u.insta &&
           u.insta.trim() !== "" &&
           u.count >= Math.ceil(totalKonten / 2)
         ) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-          sudahPerSatfung[satfung].push(label);
+          sudahPerSatfung[satfung].push(labelSudah);
           totalSudah++;
         } else {
           if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
-          belumPerSatfung[satfung].push(label);
+          belumPerSatfung[satfung].push(labelBelum);
           totalBelum++;
         }
       });
 
-      const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
         headerLaporan +
         `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -240,14 +244,42 @@ waClient.on("message", async (msg) => {
         `✅ Sudah melaksanakan: *${totalSudah}*\n` +
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-      if (tipe === "sudah") {
+      const tipe =
+        filter2 === "belum"
+          ? "belum"
+          : filter2 === "sudah"
+          ? "sudah"
+          : "keduanya";
+
+      // Jika tanpa filter kedua, tampilkan dua list: sudah & belum
+      if (tipe === "keduanya") {
+        msg += `✅ *List User Sudah Likes (min. 50% konten):*\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msg += `*${satfung}* (${arr.length} user):\n`;
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msg += "\n\n";
+        });
+
+        msg += `❌ *List User Belum Likes (kurang dari 50% konten):*\n`;
+        Object.keys(belumPerSatfung).forEach((satfung) => {
+          const arr = belumPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach((line) => {
+            msg += `- ${line}\n`;
+          });
+          msg += "\n\n";
+        });
+      } else if (tipe === "sudah") {
+        Object.keys(sudahPerSatfung).forEach((satfung) => {
+          const arr = sudahPerSatfung[satfung];
+          msg += `*${satfung}* (${arr.length} user):\n`;
+          arr.forEach((line) => {
+            msg += `- ${line}\n`;
+          });
+          msg += "\n\n";
         });
       } else {
         Object.keys(belumPerSatfung).forEach((satfung) => {
@@ -256,7 +288,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msg += "\n\n";
         });
       }
 
@@ -285,14 +317,14 @@ waClient.on("message", async (msg) => {
           likesSet.has(u.insta.toLowerCase())
         ) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
+          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta} (Sudah)`);
           totalSudah++;
         } else {
           if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
           const label =
             u.insta && u.insta.trim() !== ""
-              ? `${titleNama} : ${u.insta}`
-              : `${titleNama} : belum mengisi data insta`;
+              ? `${titleNama} : ${u.insta} (Belum)`
+              : `${titleNama} : belum mengisi data insta (Belum)`;
           belumPerSatfung[satfung].push(label);
           totalBelum++;
         }
@@ -317,7 +349,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msg += "\n\n";
         });
 
         msg += `\n❌ BELUM Like:\n`;
@@ -327,7 +359,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msg += `- ${line}\n`;
           });
-          msg += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msg += "\n\n";
         });
 
         await waClient.sendMessage(chatId, msg.trim());
@@ -348,7 +380,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msgSudah += `- ${line}\n`;
           });
-          msgSudah += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msgSudah += "\n\n";
         });
         await waClient.sendMessage(chatId, msgSudah.trim());
       }
@@ -368,7 +400,7 @@ waClient.on("message", async (msg) => {
           arr.forEach((line) => {
             msgBelum += `- ${line}\n`;
           });
-          msgBelum += "\n\n"; // <-- Dua baris kosong antar divisi/satfung
+          msgBelum += "\n\n";
         });
         await waClient.sendMessage(chatId, msgBelum.trim());
       }
