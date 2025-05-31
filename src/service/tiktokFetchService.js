@@ -8,10 +8,9 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 const limit = pLimit(6);
 
-// Patch: isToday sudah WIB dan menerima UNIX EPOCH (detik)
+// Patch: isTodayEpoch, menerima UNIX epoch detik, bandingkan dengan hari WIB
 function isTodayEpoch(epoch) {
   if (!epoch) return false;
-  // Ubah ke WIB
   const d = new Date(epoch * 1000 + 7 * 60 * 60 * 1000);
   const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
   return (
@@ -21,7 +20,7 @@ function isTodayEpoch(epoch) {
   );
 }
 
-// FUNGSI TAMBAHAN: Fetch komentar dari semua video TikTok hari ini pada client ini (langsung update DB)
+// Fetch komentar dari semua video TikTok hari ini pada client ini (langsung update DB)
 export async function fetchCommentsTodayByClient(client_id, debugCallback = null) {
   const postsToday = await getPostsTodayByClient(client_id);
   let totalFetched = 0, failed = 0;
@@ -126,7 +125,15 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null,
       const jumlahPosts = Array.isArray(posts) ? posts.length : 0;
       debugLines.push(`  [RESULT] Jumlah posts ditemukan: ${jumlahPosts}`);
 
-      // PATCH DEBUG Daftar tanggal post TikTok (WIB)
+      // PATCH DEBUG: Daftar tanggal post TikTok (WIB)
+      posts.forEach(p => {
+        const rawEpoch = p.createTime || 0;
+        const wibDate = new Date(rawEpoch * 1000 + 7 * 60 * 60 * 1000);
+        debugLines.push(
+          `[DEBUG][${client.client_id}] POST ID ${p.id} | createTime: ${rawEpoch} | WIB: ${wibDate.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`
+        );
+      });
+
       if (jumlahPosts > 0) {
         const tanggalPostWIB = posts.map(p => {
           const d = new Date((p.createTime || 0) * 1000 + 7 * 60 * 60 * 1000);
@@ -156,6 +163,10 @@ export async function fetchAndStoreTiktokContent(waClient = null, chatId = null,
       const postDateEpoch = post.createTime;
       const likeCount = post.stats?.diggCount || 0;
       const commentCount = post.stats?.commentCount || 0;
+
+      // PATCH DEBUG: cek tanggal epoch & hasil filter
+      const d = new Date((postDateEpoch || 0) * 1000 + 7 * 60 * 60 * 1000);
+      debugLines.push(`[DEBUG][${client.client_id}] [FILTER] VideoId: ${videoId} | Epoch: ${postDateEpoch} | WIB: ${d.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} | isTodayEpoch: ${isTodayEpoch(postDateEpoch)}`);
 
       if (!isTodayEpoch(postDateEpoch)) continue;
       kontenHariIni.push(post);
