@@ -403,7 +403,6 @@ waClient.on("message", async (msg) => {
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
 
-  // PATCH: Workflow absensikomentar#
   if (text.toLowerCase().startsWith("absensikomentar#")) {
     const parts = text.split("#");
     const client_id = (parts[1] || "").trim();
@@ -417,50 +416,101 @@ waClient.on("message", async (msg) => {
 
     // === 1. Fetch post TikTok via API ===
     let postsToday = [];
+    let debugFetchResult = null;
     try {
-      const fetchResult = await fetchAndStoreTiktokContent(
+      debugFetchResult = await fetchAndStoreTiktokContent(
         null,
         null,
         client_id
       );
+      console.log(
+        `[DEBUG][absensikomentar#] fetchAndStoreTiktokContent result:`,
+        debugFetchResult
+      );
+
       if (
-        fetchResult &&
-        typeof fetchResult === "object" &&
-        fetchResult[client_id] &&
-        Array.isArray(fetchResult[client_id].postsToday) &&
-        fetchResult[client_id].postsToday.length > 0
+        debugFetchResult &&
+        typeof debugFetchResult === "object" &&
+        debugFetchResult[client_id] &&
+        Array.isArray(debugFetchResult[client_id].postsToday) &&
+        debugFetchResult[client_id].postsToday.length > 0
       ) {
-        postsToday = fetchResult[client_id].postsToday.map((post) =>
+        postsToday = debugFetchResult[client_id].postsToday.map((post) =>
           typeof post === "object"
             ? post.id || post.video_id || post.aweme_id || post.post_id
             : post
         );
       }
+      console.log(
+        `[DEBUG][absensikomentar#] postsToday (after fetch):`,
+        postsToday
+      );
     } catch (e) {
       console.warn(
         "[DEBUG][absensikomentar#] Gagal fetch TikTok API:",
         e.message
       );
+      await waClient.sendMessage(
+        chatId,
+        `[DEBUG] Fetch post TikTok GAGAL: ${e.message}`
+      );
     }
 
     // === 2. Fallback jika API kosong ===
     if (!Array.isArray(postsToday) || postsToday.length === 0) {
+      await waClient.sendMessage(
+        chatId,
+        `[DEBUG] Fallback ke DB karena fetch post TikTok kosong.`
+      );
       await fallbackAbsensiKomentarTiktokHariIni(client_id, waClient, chatId);
       return;
     }
 
-    // === 3. Fetch komentar semua video hari ini (PAKAI p-limit) ===
-    const limit = pLimit(6); // Sesuaikan paralel request
-    await Promise.all(
-      postsToday.map((videoId) =>
-        limit(() => fetchTiktokCommentsByVideoId(videoId))
-      )
+    // === 3. Fetch komentar semua video hari ini (p-limit, DEBUG!) ===
+    const limit = pLimit(6);
+    const fetchLogs = [];
+
+    for (const videoId of postsToday) {
+      fetchLogs.push(
+        limit(async () => {
+          console.log(`[DEBUG][FETCH KOMEN][START] VideoID: ${videoId}`);
+          try {
+            const result = await fetchTiktokCommentsByVideoId(videoId);
+            console.log(
+              `[DEBUG][FETCH KOMEN][SUCCESS] VideoID: ${videoId}, Jumlah Komentar: ${result.length}`
+            );
+            return { videoId, status: "success", count: result.length };
+          } catch (err) {
+            console.error(
+              `[DEBUG][FETCH KOMEN][FAIL] VideoID: ${videoId}, Error: ${
+                err.message || err
+              }`
+            );
+            return { videoId, status: "fail", error: err.message || err };
+          }
+        })
+      );
+    }
+
+    const results = await Promise.all(fetchLogs);
+    console.log(`[DEBUG][FETCH KOMEN][SUMMARY]:`, results);
+
+    await waClient.sendMessage(
+      chatId,
+      `[DEBUG] Fetch komentar selesai.\n` +
+        results
+          .map((r) =>
+            r.status === "success"
+              ? `✅ ${r.videoId}: ${r.count} user`
+              : `❌ ${r.videoId}: ${r.error}`
+          )
+          .join("\n")
     );
 
     // === 4. Ambil data users terbaru dari DB ===
     const users = await getUsersByClientFull(client_id);
 
-    // === 5. Absensi seperti patch WA-friendly ===
+    // === 5. Absensi (sesuai patch terbaru) ===
     function normalizeTikTokUsername(val) {
       if (!val) return "";
       if (val.startsWith("http")) {
@@ -535,7 +585,6 @@ waClient.on("message", async (msg) => {
         const divSudah = groupByDivision(sudah);
         const divBelum = groupByDivision(belum);
 
-        // Laporan format baru
         let now = new Date();
         let hari = now.toLocaleDateString("id-ID", {
           weekday: "long",
@@ -551,7 +600,6 @@ waClient.on("message", async (msg) => {
         resp += `Jumlah Konten: 1\nDaftar Link Konten:\n${link}\n\n`;
         resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-        // Sudah
         if (sudah.length) {
           resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
           Object.entries(divSudah).forEach(([div, list]) => {
@@ -561,8 +609,6 @@ waClient.on("message", async (msg) => {
         } else {
           resp += `✅ Sudah melaksanakan: -\n`;
         }
-
-        // Belum
         if (belum.length) {
           resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
           Object.entries(divBelum).forEach(([div, list]) => {
@@ -612,7 +658,6 @@ waClient.on("message", async (msg) => {
       resp += `Jumlah Konten: ${postsToday.length}\nDaftar Link Konten:\n${links}\n\n`;
       resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      // Sudah
       if (sudah.length) {
         resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         Object.entries(divSudah).forEach(([div, list]) => {
@@ -622,7 +667,6 @@ waClient.on("message", async (msg) => {
       } else {
         resp += `✅ Sudah melaksanakan: -\n`;
       }
-      // Belum
       if (belum.length) {
         resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
         Object.entries(divBelum).forEach(([div, list]) => {
