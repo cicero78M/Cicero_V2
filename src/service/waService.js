@@ -18,14 +18,17 @@ import {
   fetchCommentsTodayByClient,
 } from "./tiktokFetchService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+import { fetchAndStoreTiktokContent } from '../service/tiktokFetchService.js';
+import { fetchTiktokCommentsByVideoId } from '../service/tiktokCommentFetchService.js';
+import { getUsersByClientFull } from '../model/userModel.js';
+import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
+import { fallbackAbsensiKomentarTiktokHariIni } from '../service/fallbackAbsensiTiktok.js';
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
-import * as tiktokPostModel from "../model/tiktokPostModel.js";
 import * as tiktokCommentModel from "../model/tiktokCommentModel.js";
-import * as userModel from "../model/userModel.js";
 
 dotenv.config();
 
@@ -400,209 +403,227 @@ waClient.on("message", async (msg) => {
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
 
-  if (text.toLowerCase().startsWith("absensikomentar#")) {
-    const parts = text.split("#");
-    const client_id = (parts[1] || "").trim();
-    const type = (parts[2] || "").toLowerCase();
-    const subtype = (parts[3] || "").toLowerCase();
+if (text.toLowerCase().startsWith("absensikomentar#")) {
+  const parts = text.split("#");
+  const client_id = (parts[1] || "").trim();
+  const type = (parts[2] || "").toLowerCase();
+  const subtype = (parts[3] || "").toLowerCase();
 
-    if (!client_id) {
-      await waClient.sendMessage(chatId, "Format: absensikomentar#clientid");
-      return;
-    }
-    const videoIds = await tiktokPostModel.getPostsTodayByClient(client_id);
-
-    if (!videoIds.length) {
-      const lastPosts =
-        (await tiktokPostModel.getLastPostsByClient?.(client_id)) || [];
-      let msg = "Tidak ada konten TikTok hari ini.\n\n[Debug Info]\n";
-      msg += lastPosts.length
-        ? lastPosts.map((r) => `- ${r.video_id} | ${r.created_at}`).join("\n")
-        : "Tidak ada posting TikTok sama sekali.";
-      await waClient.sendMessage(chatId, msg);
-      return;
-    }
-
-    const users = await userModel.getUsersByClientFull(client_id);
-
-    function normalizeTikTokUsername(val) {
-      if (!val) return "";
-      if (val.startsWith("http")) {
-        const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
-        return match ? match[1].toLowerCase() : "";
-      }
-      return val.replace(/^@/, "").trim().toLowerCase();
-    }
-
-    function groupByDivision(users) {
-      const divGroups = {};
-      users.forEach((u) => {
-        const div = u.divisi || "-";
-        if (!divGroups[div]) divGroups[div] = [];
-        divGroups[div].push(u);
-      });
-      return divGroups;
-    }
-    function formatName(u) {
-      return `${u.title ? u.title + " " : ""}${u.nama}${
-        u.tiktok ? ` : ${u.tiktok}` : ""
-      }${u.insta ? ` : ${u.insta}` : ""}`;
-    }
-
-    let absensiPerUser = {};
-    users.forEach(
-      (u) => (absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 })
-    );
-
-    for (const video_id of videoIds) {
-      let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
-      if (!Array.isArray(commenters)) commenters = [];
-      const usernameSet = new Set(
-        commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
-      );
-      let sudah = [],
-        belum = [];
-      users.forEach((u) => {
-        const uname = normalizeTikTokUsername(u.tiktok);
-        if (!uname) {
-          belum.push({ ...u, note: "belum mengisi data tiktok" });
-        } else if (usernameSet.has(uname)) {
-          sudah.push(u);
-        } else {
-          belum.push(u);
-        }
-        absensiPerUser[u.user_id].total += 1;
-        if (uname && usernameSet.has(uname))
-          absensiPerUser[u.user_id].count += 1;
-      });
-
-      // --- PERBAIKAN FILTER
-      let tampilSudah = sudah,
-        tampilBelum = belum;
-      if (type === "sudah") tampilBelum = [];
-      if (type === "belum") tampilSudah = [];
-
-      const divSudah = groupByDivision(tampilSudah);
-      const divBelum = groupByDivision(tampilBelum);
-
-      let now = new Date();
-      let hariIndo = [
-        "Minggu",
-        "Senin",
-        "Selasa",
-        "Rabu",
-        "Kamis",
-        "Jumat",
-        "Sabtu",
-      ];
-      let hari = hariIndo[now.getDay()];
-      let tanggal = now.toLocaleDateString("id-ID");
-      let jam = now.toLocaleTimeString("id-ID", { hour12: false });
-
-      const link = `https://www.tiktok.com/video/${video_id}`;
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
-      resp += `📋 Rekap Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n`;
-      resp += `*Jumlah Konten:* 1\n`;
-      resp += `*Daftar link konten hari ini:*\n${link}\n\n`;
-      resp += `*Jumlah user:* ${users.length}\n`;
-      resp += `✅ Sudah melaksanakan: *${sudah.length}*\n`;
-      resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
-
-      // === Sudah
-      resp += `✅ Sudah melaksanakan (${tampilSudah.length} user):\n`;
-      if (tampilSudah.length) {
-        Object.entries(divSudah).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
-        });
-      } else {
-        resp += `-\n\n`;
-      }
-
-      // === Belum
-      resp += `❌ Belum melaksanakan (${tampilBelum.length} user):\n`;
-      if (tampilBelum.length) {
-        Object.entries(divBelum).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
-        });
-      } else {
-        resp += `-\n\n`;
-      }
-
-      await waClient.sendMessage(chatId, resp.trim());
-    }
-
-    // === AKUMULASI
-    if (type === "akumulasi") {
-      const minDone = Math.ceil(videoIds.length * 0.5);
-      let sudah = [],
-        belum = [];
-      Object.values(absensiPerUser).forEach((u) => {
-        const uname = normalizeTikTokUsername(u.tiktok);
-        if (uname && u.count >= minDone) sudah.push(u);
-        else belum.push(u);
-      });
-
-      // --- FILTER sesuai subtype
-      let tampilSudah = sudah,
-        tampilBelum = belum;
-      if (subtype === "sudah") tampilBelum = [];
-      if (subtype === "belum") tampilSudah = [];
-
-      const divSudah = groupByDivision(tampilSudah);
-      const divBelum = groupByDivision(tampilBelum);
-
-      let now = new Date();
-      let hariIndo = [
-        "Minggu",
-        "Senin",
-        "Selasa",
-        "Rabu",
-        "Kamis",
-        "Jumat",
-        "Sabtu",
-      ];
-      let hari = hariIndo[now.getDay()];
-      let tanggal = now.toLocaleDateString("id-ID");
-      let jam = now.toLocaleTimeString("id-ID", { hour12: false });
-
-      const links = videoIds
-        .map((id) => `https://www.tiktok.com/video/${id}`)
-        .join("\n");
-      let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
-      resp += `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n`;
-      resp += `*Jumlah Konten:* ${videoIds.length}\n`;
-      resp += `*Daftar link konten hari ini:*\n${links}\n\n`;
-      resp += `*Jumlah user:* ${users.length}\n`;
-      resp += `✅ Sudah melaksanakan: *${sudah.length}*\n`;
-      resp += `❌ Belum melaksanakan: *${belum.length}*\n\n`;
-
-      // === Sudah
-      resp += `✅ Sudah melaksanakan (${tampilSudah.length} user):\n`;
-      if (tampilSudah.length) {
-        Object.entries(divSudah).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
-        });
-      } else {
-        resp += `-\n\n`;
-      }
-
-      // === Belum
-      resp += `❌ Belum melaksanakan (${tampilBelum.length} user):\n`;
-      if (tampilBelum.length) {
-        Object.entries(divBelum).forEach(([div, list]) => {
-          resp += `*${div}* (${list.length} user):\n`;
-          resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n\n";
-        });
-      } else {
-        resp += `-\n\n`;
-      }
-
-      await waClient.sendMessage(chatId, resp.trim());
-    }
+  if (!client_id) {
+    await waClient.sendMessage(chatId, "Format: absensikomentar#clientid");
+    return;
   }
+
+  // === 1. Fetch post TikTok via API ===
+  let postsToday = [];
+  try {
+    const fetchResult = await fetchAndStoreTiktokContent(null, null); // WA notifikasi tidak dikirim dari sini
+    if (
+      fetchResult &&
+      typeof fetchResult === "object" &&
+      fetchResult[client_id] &&
+      Array.isArray(fetchResult[client_id].postsToday) &&
+      fetchResult[client_id].postsToday.length > 0
+    ) {
+      postsToday = fetchResult[client_id].postsToday.map(post =>
+        typeof post === 'object' ? (post.id || post.video_id || post.aweme_id || post.post_id) : post
+      );
+    }
+  } catch (e) {
+    // Jika error, biarkan postsToday tetap kosong
+    console.warn("[DEBUG][absensikomentar#] Gagal fetch TikTok API:", e.message);
+  }
+
+  // === Fallback jika API kosong ===
+  if (!Array.isArray(postsToday) || postsToday.length === 0) {
+    // Panggil fallback DB
+    await fallbackAbsensiKomentarTiktokHariIni(client_id, waClient, chatId);
+    return;
+  }
+
+  // === 2. Fetch komentar untuk semua post hari ini (API update) ===
+  for (const videoId of postsToday) {
+    await fetchTiktokCommentsByVideoId(videoId);
+  }
+
+  // === 3. Ambil data users terbaru dari DB ===
+  const users = await getUsersByClientFull(client_id);
+
+  // === 4. Absensi (model sama seperti patch WA-friendly di atas) ===
+  function normalizeTikTokUsername(val) {
+    if (!val) return "";
+    if (val.startsWith("http")) {
+      const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
+      return match ? match[1].toLowerCase() : "";
+    }
+    return val.replace(/^@/, "").trim().toLowerCase();
+  }
+
+  function groupByDivision(users) {
+    return users.reduce((acc, u) => {
+      const div = u.divisi || '-';
+      if (!acc[div]) acc[div] = [];
+      acc[div].push(u);
+      return acc;
+    }, {});
+  }
+  function formatName(u) {
+    const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
+    return u.tiktok
+      ? `${titleNama} : @${u.tiktok.replace(/^@/, '')}`
+      : `${titleNama} : belum mengisi data tiktok`;
+  }
+
+  // Map user_id ke object absensi
+  let absensiPerUser = {};
+  users.forEach(
+    (u) => (absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 })
+  );
+
+  for (const video_id of postsToday) {
+    let commenters = await tiktokCommentModel.getCommentsByVideoId(video_id);
+    if (!Array.isArray(commenters)) commenters = [];
+    // Set komentator: lowercase, tanpa @
+    const usernameSet = new Set(
+      commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
+    );
+    let sudah = [],
+      belum = [];
+    users.forEach((u) => {
+      const uname = normalizeTikTokUsername(u.tiktok);
+      if (!uname) {
+        belum.push({ ...u, note: "belum mengisi data tiktok" });
+      } else if (usernameSet.has(uname)) {
+        sudah.push(u);
+      } else {
+        belum.push(u);
+      }
+      absensiPerUser[u.user_id].total += 1;
+      if (uname && usernameSet.has(uname))
+        absensiPerUser[u.user_id].count += 1;
+    });
+
+    if (type === "akumulasi") continue;
+    if (type === "sudah") {
+      belum = [];
+    } else if (type === "belum") {
+      sudah = [];
+    }
+
+    const divSudah = groupByDivision(sudah);
+    const divBelum = groupByDivision(belum);
+
+    // Laporan format baru
+    let now = new Date();
+    let hari = now.toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    let jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+    const link = `https://www.tiktok.com/video/${video_id}`;
+    let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
+    resp += `📋 Rekap Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
+    resp += `Jumlah Konten: 1\nDaftar Link Konten:\n${link}\n\n`;
+    resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
+
+    // Sudah
+    if (sudah.length) {
+      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+      Object.entries(divSudah).forEach(([div, list]) => {
+        resp += `*${div}* (${list.length} user):\n`;
+        resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n";
+      });
+    } else {
+      resp += `✅ Sudah melaksanakan: -\n`;
+    }
+
+    // Belum
+    if (belum.length) {
+      resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+      Object.entries(divBelum).forEach(([div, list]) => {
+        resp += `*${div}* (${list.length} user):\n`;
+        resp +=
+          list
+            .map((u) => `- ${formatName(u)}${u.note ? ` (${u.note})` : ""}`)
+            .join("\n") + "\n";
+      });
+    } else {
+      resp += `\n❌ Belum melaksanakan: -\n`;
+    }
+
+    await waClient.sendMessage(chatId, resp.trim());
+  }
+
+  // Akumulasi semua video hari ini
+  if (type === "akumulasi") {
+    const minDone = Math.ceil(postsToday.length * 0.5);
+    let sudah = [],
+      belum = [];
+    Object.values(absensiPerUser).forEach((u) => {
+      const uname = normalizeTikTokUsername(u.tiktok);
+      if (uname && u.count >= minDone) sudah.push(u);
+      else belum.push(u);
+    });
+    if (subtype === "sudah") belum = [];
+    if (subtype === "belum") sudah = [];
+    const divSudah = groupByDivision(sudah);
+    const divBelum = groupByDivision(belum);
+
+    let now = new Date();
+    let hari = now.toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    let jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+    const links = postsToday
+      .map((id) => `https://www.tiktok.com/video/${id}`)
+      .join("\n");
+    let resp = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok :\n\n`;
+    resp += `📋 Rekap Akumulasi Komentar TikTok\n*Client*: *${client_id}*\n*Hari*: ${hari}\n*Jam*: ${jam}\n`;
+    resp += `Jumlah Konten: ${postsToday.length}\nDaftar Link Konten:\n${links}\n\n`;
+    resp += `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
+
+    // Sudah
+    if (sudah.length) {
+      resp += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+      Object.entries(divSudah).forEach(([div, list]) => {
+        resp += `*${div}* (${list.length} user):\n`;
+        resp += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n";
+      });
+    } else {
+      resp += `✅ Sudah melaksanakan: -\n`;
+    }
+    // Belum
+    if (belum.length) {
+      resp += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+      Object.entries(divBelum).forEach(([div, list]) => {
+        resp += `*${div}* (${list.length} user):\n`;
+        resp +=
+          list
+            .map(
+              (u) =>
+                `- ${formatName(u)}${
+                  !normalizeTikTokUsername(u.tiktok)
+                    ? " (belum mengisi data tiktok)"
+                    : ""
+                }`
+            )
+            .join("\n") + "\n";
+      });
+    } else {
+      resp += `\n❌ Belum melaksanakan: -\n`;
+    }
+
+    await waClient.sendMessage(chatId, resp.trim());
+  }
+}
+
 
   // =========================
   // === FETCH TIKTOK MANUAL (ADMIN)
