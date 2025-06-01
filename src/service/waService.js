@@ -407,14 +407,12 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
 
-  // --- DEBUG LOG: Jumlah post TikTok di database
-  const { sendAdminDebug } = await import("../service/tiktokFetchService.js");
+  // --- DEBUG LOG: Jumlah post TikTok di database (hanya console, tidak kirim wa)
   let debugMsg = `[DEBUG][absensikomentar] client_id=${client_id}, Hari=${hari}, Tanggal=${tanggal} Jam=${jam}\n`;
   debugMsg += `[DEBUG] Jumlah post TikTok: ${posts.length}\n`;
   posts.forEach((p, i) => {
     debugMsg += `#${i + 1} video_id=${p.video_id || p.id} | created_at=${p.created_at || p.create_time}\n`;
   });
-  sendAdminDebug(debugMsg);
   console.log(debugMsg);
 
   if (!posts || posts.length === 0) {
@@ -618,9 +616,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   return;
 }
 
-
-
-  // =========================
+// =========================
   // === FETCH INSTAGRAM (ADMIN)
   // =========================
   if (text.startsWith("fetchinsta#")) {
