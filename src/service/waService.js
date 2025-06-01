@@ -13,10 +13,6 @@ import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 import * as userService from "./userService.js";
-import {
-  fetchAndStoreTiktokContent,
-  fetchCommentsTodayByClient,
-} from "./tiktokFetchService.js";
 import { fetchAndAbsensiTiktok } from './tiktokFetchService.js';
 import { fallbackAbsensiKomentarTiktokHariIni } from "./tiktokAbsensiFallbackService.js";
 
