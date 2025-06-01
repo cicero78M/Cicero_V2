@@ -53,7 +53,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -80,15 +80,22 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Pilih array mana yang berisi post
+  // Otomatis deteksi array yang berisi post
   let postsArr = [];
   let fieldUsed = '';
+  // Prioritas: itemList, posts, aweme_list, videoList, ... (urutkan sesuai data real API)
   if (Array.isArray(data?.itemList) && data.itemList.length) {
     postsArr = data.itemList;
     fieldUsed = 'itemList';
   } else if (Array.isArray(data?.posts) && data.posts.length) {
     postsArr = data.posts;
     fieldUsed = 'posts';
+  } else if (Array.isArray(data?.aweme_list) && data.aweme_list.length) {
+    postsArr = data.aweme_list;
+    fieldUsed = 'aweme_list';
+  } else if (Array.isArray(data?.videoList) && data.videoList.length) {
+    postsArr = data.videoList;
+    fieldUsed = 'videoList';
   }
   const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
   console.log(msgFieldUsed);
@@ -96,6 +103,11 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   // Tanggal sistem Asia/Jakarta
   const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
+  console.log(msgTgl);
+  sendAdminDebug(msgTgl);
+
+  // Fungsi filter hari ini
   function isTodayJakarta(ts) {
     const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
     return d.getFullYear() === todayJakarta.getFullYear() &&
@@ -105,11 +117,8 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   // Filter post hari ini
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
-  const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
-  console.log(msgTgl);
-  sendAdminDebug(msgTgl);
 
-  // DEBUG: Hanya kirim konten yang hari ini
+  // DEBUG: Hanya kirim konten hari ini
   if (postsToday.length) {
     postsToday.forEach((post, idx) => {
       const tgl = post.createTime ? new Date(post.createTime * 1000).toISOString() : '-';
@@ -124,7 +133,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   if (postsToday.length > 0) {
     await upsertTiktokPosts(client_id, postsToday.map(post => ({
-      video_id: post.id,
+      video_id: post.id || post.video_id,
       caption: post.desc || post.caption || "",
       created_at: new Date(post.createTime * 1000),
       like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
@@ -139,7 +148,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     sendAdminDebug(msg3);
   }
   return postsToday.map(post => ({
-    video_id: post.id,
+    video_id: post.id || post.video_id,
     caption: post.desc || post.caption || "",
     created_at: new Date(post.createTime * 1000),
     like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
