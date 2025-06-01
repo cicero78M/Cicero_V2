@@ -16,7 +16,8 @@ import * as userService from "./userService.js";
 import { fetchAndAbsensiTiktok } from "./tiktokFetchService.js";
 import { fallbackAbsensiKomentarTiktokHariIni } from "./tiktokAbsensiFallbackService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
-
+import { fetchAndStoreTiktokContent, fetchCommentsTodayByClient } from '../service/tiktokFetchService.js'; // atau lokasi sesuai project
+import { findById } from '../model/clientModel.js';
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
@@ -659,56 +660,74 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   // === FETCH TIKTOK MANUAL (ADMIN)
   // =========================
 
-  if (text.trim().toLowerCase().startsWith("fetchtiktok#")) {
-    if (!isAdminWhatsApp(chatId)) {
-      await waClient.sendMessage(chatId, "Akses ditolak.");
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      "⏳ Proses fetch konten TikTok dimulai..."
-    );
+// Handler: WhatsApp command "fetchtiktok#"
+// Lokasi: src/service/waService.js (atau handler utama WA bot kamu)
+// Pastikan import fetchAndStoreTiktokContent & fetchCommentsTodayByClient sudah benar
 
-    // Ekstrak client_id dari command jika ada, contoh: fetchtiktok#BOJONEGORO
-    const parts = text.trim().split("#");
-    const client_id = parts[1] ? parts[1].trim() : null;
-
-    try {
-      // 1. Fetch & store TikTok content (jika client_id diberikan, hanya client itu, jika tidak, semua)
-      let fetchResult = null;
-      if (client_id) {
-        fetchResult = await fetchAndStoreTiktokContent(null, null, client_id);
-      } else {
-        fetchResult = await fetchAndStoreTiktokContent(null, null);
-      }
-
-      // 2. Fetch ulang komentar dari semua video hari ini (DB update, tanpa array)
-      let commentDebug = "";
-      if (client_id) {
-        const { total, totalFetched, failed } =
-          await fetchCommentsTodayByClient(client_id);
-        commentDebug =
-          `[DEBUG] Komentar hari ini (client_id: ${client_id}):\n` +
-          `Total video hari ini: ${total}\n` +
-          `Komentar berhasil diambil ulang: ${totalFetched}\n` +
-          `Gagal fetch komentar: ${failed}`;
-      } else {
-        // Jika semua client, bisa lakukan loop ke setiap client aktif (opsional)
-        commentDebug =
-          "[DEBUG] Fitur fetch komentar ulang hanya otomatis untuk 1 client_id.";
-      }
-
-      // 3. Ringkas hasil dan kirim
-      const msg =
-        (fetchResult?.message || "Fetch TikTok selesai.") +
-        "\n\n" +
-        commentDebug;
-      await waClient.sendMessage(chatId, msg);
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok: ${e.message}`);
-    }
+if (text.trim().toLowerCase().startsWith("fetchtiktok#")) {
+  if (!isAdminWhatsApp(chatId)) {
+    await waClient.sendMessage(chatId, "Akses ditolak.");
     return;
   }
+  await waClient.sendMessage(
+    chatId,
+    "⏳ Proses fetch konten TikTok dimulai..."
+  );
+
+  // Ekstrak client_id dari command, contoh: fetchtiktok#BOJONEGORO
+  const parts = text.trim().split("#");
+  const client_id = parts[1] ? parts[1].trim() : null;
+
+  try {
+    // Jika ada client_id, pastikan client valid dan ada username TikTok-nya
+    if (client_id) {
+      const client = await findById(client_id);
+      if (!client) {
+        await waClient.sendMessage(chatId, `❌ Client ${client_id} tidak ditemukan di database.`);
+        return;
+      }
+      if (!client.client_tiktok) {
+        await waClient.sendMessage(chatId, `❌ Client ${client_id} belum mengisi username TikTok (field client_tiktok).`);
+        return;
+      }
+    }
+
+    // 1. Fetch & store TikTok content (by client_id jika ada, atau semua client)
+    let fetchResult = null;
+    if (client_id) {
+      fetchResult = await fetchAndStoreTiktokContent(null, null, client_id);
+    } else {
+      fetchResult = await fetchAndStoreTiktokContent(null, null);
+    }
+
+    // 2. Fetch ulang komentar dari semua video hari ini (DB update, tanpa array)
+    let commentDebug = "";
+    if (client_id) {
+      const { total, totalFetched, failed } =
+        await fetchCommentsTodayByClient(client_id);
+      commentDebug =
+        `[DEBUG] Komentar hari ini (client_id: ${client_id}):\n` +
+        `Total video hari ini: ${total}\n` +
+        `Komentar berhasil diambil ulang: ${totalFetched}\n` +
+        `Gagal fetch komentar: ${failed}`;
+    } else {
+      // Jika semua client, bisa lakukan loop ke setiap client aktif (opsional)
+      commentDebug =
+        "[DEBUG] Fitur fetch komentar ulang hanya otomatis untuk 1 client_id.";
+    }
+
+    // 3. Ringkas hasil dan kirim
+    const msg =
+      (fetchResult?.message || "Fetch TikTok selesai.") +
+      "\n\n" +
+      commentDebug;
+    await waClient.sendMessage(chatId, msg);
+  } catch (e) {
+    await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok: ${e.message}`);
+  }
+  return;
+}
+
 
   // =========================
   // === FETCH INSTAGRAM (ADMIN)
