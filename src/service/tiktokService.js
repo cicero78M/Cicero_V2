@@ -16,6 +16,7 @@ export async function getTiktokSecUid(client_id, username) {
     const client = await findById(client_id);
     // PATCH: gunakan field tiktok_secuid dari DB (lowercase)
     if (client && client.tiktok_secuid) {
+      console.log(`[INFO] Ambil secUid dari DB: ${client.tiktok_secuid}`);
       return client.tiktok_secuid;
     }
     // Fallback: username dari field client_tiktok jika tidak di-parameter
@@ -38,6 +39,7 @@ export async function getTiktokSecUid(client_id, username) {
     }
   };
   try {
+    console.log(`[INFO] Ambil secUid dari API untuk username: ${username}`);
     const response = await fetch(url, options);
     if (!response.ok) {
       const errText = await response.text();
