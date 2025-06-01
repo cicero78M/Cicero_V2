@@ -1,3 +1,5 @@
+// src/service/tiktokFetchService.js
+
 import axios from "axios";
 import { findById, update } from "../model/clientModel.js";
 import { upsertTiktokPosts } from "../model/tiktokPostModel.js";
@@ -53,7 +55,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -77,18 +79,18 @@ export async function fetchAndStoreTiktokContent(client_id) {
   // DEBUG FULL PAYLOAD
   console.log(`[DEBUG][TikTokAPI][${client_id}] Payload hasil fetch post:\n`, JSON.stringify(data, null, 2));
 
-  // Filter post hari ini (zona waktu Asia/Jakarta)
-  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  const isToday = (ts) => {
-    const d = new Date(ts * 1000);
-    return d.getFullYear() === today.getFullYear() &&
-      d.getMonth() === today.getMonth() &&
-      d.getDate() === today.getDate();
-  };
+  // Filter post hari ini menggunakan Asia/Jakarta
+  const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  function isTodayJakarta(ts) {
+    const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    return d.getFullYear() === todayJakarta.getFullYear() &&
+           d.getMonth() === todayJakarta.getMonth() &&
+           d.getDate() === todayJakarta.getDate();
+  }
 
   // Data array ada di: data.itemList
   const postsArr = Array.isArray(data?.itemList) ? data.itemList : [];
-  const postsToday = postsArr.filter(post => isToday(post.createTime));
+  const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
 
   const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
   console.log(msg1);
