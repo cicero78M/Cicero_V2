@@ -1,5 +1,7 @@
 import { pool } from '../config/db.js';
+import { normalizeTikTokUsername } from '../utils/tiktokHelper.js';
 
+// Ambil user yang SUDAH mengisi Instagram (status true)
 export async function getInstaFilledUsersByClient(clientId) {
   const result = await pool.query(
     `SELECT divisi, nama, user_id, title, insta
@@ -11,7 +13,7 @@ export async function getInstaFilledUsersByClient(clientId) {
   return result.rows;
 }
 
-// Ambil user yang BELUM mengisi insta, status harus true
+// Ambil user yang BELUM mengisi Instagram (status true)
 export async function getInstaEmptyUsersByClient(clientId) {
   const result = await pool.query(
     `SELECT divisi, nama, user_id, title
@@ -23,7 +25,7 @@ export async function getInstaEmptyUsersByClient(clientId) {
   return result.rows;
 }
 
-// Ambil user yang SUDAH mengisi tiktok (status true)
+// Ambil user yang SUDAH mengisi TikTok (status true)
 export async function getTiktokFilledUsersByClient(clientId) {
   const result = await pool.query(
     `SELECT divisi, nama, user_id, title, tiktok
@@ -35,7 +37,7 @@ export async function getTiktokFilledUsersByClient(clientId) {
   return result.rows;
 }
 
-// Ambil user yang BELUM mengisi tiktok (status true)
+// Ambil user yang BELUM mengisi TikTok (status true)
 export async function getTiktokEmptyUsersByClient(clientId) {
   const result = await pool.query(
     `SELECT divisi, nama, user_id, title
@@ -47,18 +49,25 @@ export async function getTiktokEmptyUsersByClient(clientId) {
   return result.rows;
 }
 
-
 export async function findUserById(user_id) {
   const { rows } = await pool.query('SELECT * FROM "user" WHERE user_id=$1', [user_id]);
   return rows[0];
 }
 
+/**
+ * Update field user (insta/tiktok/whatsapp) dengan normalisasi untuk TikTok
+ */
 export async function updateUserField(user_id, field, value) {
   const allowed = ['insta', 'tiktok', 'whatsapp'];
   if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok/whatsapp yang bisa diupdate');
+
+  let newValue = value;
+  if (field === 'tiktok' && value) {
+    newValue = normalizeTikTokUsername(value);
+  }
   const { rows } = await pool.query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
-    [value, user_id]
+    [newValue, user_id]
   );
   return rows[0];
 }
@@ -71,13 +80,16 @@ export async function findUserByWhatsApp(wa) {
 
 export async function findUserByInsta(username) {
   if (!username) return null;
+  // Untuk Instagram, tidak perlu normalisasi "@"
   const result = await pool.query('SELECT * FROM "user" WHERE insta = $1', [username]);
   return result.rows[0];
 }
 
 export async function findUserByTiktok(username) {
   if (!username) return null;
-  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [username]);
+  // Selalu normalize sebelum query
+  const norm = normalizeTikTokUsername(username);
+  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [norm]);
   return result.rows[0];
 }
 
@@ -93,9 +105,12 @@ export async function getDistinctUserDivisions(client_id) {
   return rows.map(r => r.divisi);
 }
 
-// Cek duplikat insta/tiktok
+// Cek duplikat insta/tiktok: normalisasi jika TikTok
 export async function findUserByField(field, value) {
-  const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [value]);
+  let val = value;
+  if (field === 'tiktok' && value) {
+    val = normalizeTikTokUsername(value);
+  }
+  const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [val]);
   return rows[0];
 }
-

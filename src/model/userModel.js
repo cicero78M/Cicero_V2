@@ -53,7 +53,7 @@ export const remove = async (id) => {
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
   const res = await pool.query(
-    `SELECT user_id, nama, insta, divisi, title
+    `SELECT user_id, nama, tiktok, insta, divisi, title
      FROM "user"
      WHERE client_id = $1 AND status = true`,
     [client_id]
