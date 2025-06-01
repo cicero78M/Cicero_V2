@@ -19,13 +19,23 @@ function sendAdminDebug(msg) {
 import { saveTiktokComments } from "../model/tiktokCommentModel.js";
 
 /**
+ * Helper delay (rate limiting)
+ * @param {number} ms
+ * @returns {Promise}
+ */
+function delay(ms) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
+/**
  * Fetch semua komentar TikTok via API dan simpan ke DB
+ * Paginasi otomatis, debug setiap page, rate limiting 650ms/request
  * @param {string} video_id
  * @returns {Array} Array komentar (asli)
  */
 export async function fetchAndStoreTiktokComments(video_id) {
   let allComments = [];
-  let cursor = 0, page = 1;
+  let cursor = 0, page = 1, reqCount = 0;
   while (true) {
     const options = {
       method: 'GET',
@@ -42,12 +52,18 @@ export async function fetchAndStoreTiktokComments(video_id) {
     };
     let response, data;
     try {
+      reqCount++;
+      const msgReq = `[DEBUG][fetchKomentar] video_id=${video_id} | page=${page} | cursor=${cursor} | req#${reqCount}`;
+      console.log(msgReq);
+      sendAdminDebug(msgReq);
+
       response = await axios.request(options);
       data = response.data;
     } catch (err) {
       sendAdminDebug(`[ERROR] Gagal fetch komentar TikTok video_id=${video_id} page=${page}: ${err.message}`);
       throw err;
     }
+
     // Path array komentar: data.comments atau data.data.comments
     let comments = [];
     if (Array.isArray(data?.comments)) {
@@ -62,6 +78,9 @@ export async function fetchAndStoreTiktokComments(video_id) {
     if (!comments.length || !data.has_more || !data.next_cursor) break;
     cursor = data.next_cursor;
     page++;
+
+    // Rate limit: delay 650ms per request
+    await delay(650);
   }
 
   // SIMPAN KE DB
