@@ -17,9 +17,9 @@ import { fetchAndStoreTiktokComments } from "./tiktokCommentService.js";
 import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 
-// IG konstanta, helper, dll
+// === Helper dan konstanta ===
 const hariIndo = [
-  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
+  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
 ];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -41,12 +41,11 @@ function groupByDivision(users) {
   return divGroups;
 }
 function formatName(u) {
-  return `${u.title ? u.title + " " : ""}${u.nama}${
-    u.tiktok ? ` : ${u.tiktok}` : ""
-  }${u.insta ? ` : ${u.insta}` : ""}`;
+  return `${u.title ? u.title + " " : ""}${u.nama}${u.tiktok ? ` : ${u.tiktok}` : ""}${u.insta ? ` : ${u.insta}` : ""}`;
 }
 
-// === IG CRON: Absensi Likes Akumulasi Belum ===
+// ========== IG CRON ==========
+
 async function getActiveClientsIG() {
   const res = await pool.query(
     `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
@@ -106,9 +105,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
   let msg =
     `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n` +
     `📋 Rekap Akumulasi Likes IG\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join(
-      "\n"
-    )}\n\n` +
+    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
     `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
   if (sudah.length) {
@@ -126,15 +123,14 @@ async function absensiLikesAkumulasiBelum(client_id) {
     msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
     Object.entries(belumDiv).forEach(([div, list]) => {
       msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list
-          .map(
-            (u) =>
-              `- ${formatName(u)}${
-                !u.insta ? " (belum mengisi data insta)" : ""
-              }`
-          )
-          .join("\n") + "\n";
+      msg += list
+        .map(
+          (u) =>
+            `- ${formatName(u)}${
+              !u.insta ? " (belum mengisi data insta)" : ""
+            }`
+        )
+        .join("\n") + "\n";
     });
   } else {
     msg += `\n❌ Belum melaksanakan: -\n`;
@@ -143,7 +139,6 @@ async function absensiLikesAkumulasiBelum(client_id) {
   return msg.trim();
 }
 
-// === Rekap Likes IG per Client ===
 async function rekapLikesIG(client_id) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length) return null;
@@ -267,7 +262,7 @@ cron.schedule(
   }
 );
 
-// =================== CRON TIKTOK ======================
+// ========== TIKTOK CRON ==========
 
 async function getActiveClientsTiktok() {
   const res = await pool.query(
@@ -276,9 +271,6 @@ async function getActiveClientsTiktok() {
   return res.rows.map(row => row.client_id);
 }
 
-/**
- * Kirim laporan absensi komentar TikTok per post (mode default) ke seluruh admin.
- */
 async function absensiKomentarTiktok(client_id, posts) {
   const users = await getUsersByClient(client_id);
   if (!posts || posts.length === 0) return;
@@ -350,16 +342,14 @@ async function absensiKomentarTiktok(client_id, posts) {
       msg += "\n";
     });
 
-    // Kirim laporan ke seluruh ADMIN
     for (const wa of getAdminWAIds()) {
       await waClient.sendMessage(wa, msg.trim()).catch(() => {});
     }
   }
 }
 
-// === CRON TIKTOK: fetch & absensi komentar ===
 cron.schedule(
-  "25 6-22 * * *",
+  "38 6-22 * * *",
   async () => {
     console.log("[CRON TIKTOK] Mulai tugas fetch post & absensi komentar...");
     try {
@@ -367,9 +357,20 @@ cron.schedule(
 
       for (const client_id of clients) {
         try {
-          // 1. Fetch TikTok post terbaru
+          // 1. Fetch TikTok post terbaru (API, fallback ke DB)
           const postsToday = await fetchAndStoreTiktokContent(client_id);
-          if (!postsToday || postsToday.length === 0) {
+          let postList = postsToday;
+          if (!postList || postList.length === 0) {
+            // fallback ke DB jika dari API kosong
+            postList = await getPostsTodayByClient(client_id);
+            for (const admin of getAdminWAIds()) {
+              await waClient.sendMessage(
+                admin,
+                `[CRON TIKTOK][${client_id}] ⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
+              ).catch(() => {});
+            }
+          }
+          if (!postList || postList.length === 0) {
             for (const admin of getAdminWAIds()) {
               await waClient.sendMessage(
                 admin,
@@ -379,7 +380,6 @@ cron.schedule(
             continue;
           }
           // 2. Fetch & simpan komentar untuk semua post hari ini
-          const postList = await getPostsTodayByClient(client_id);
           for (const [i, post] of postList.entries()) {
             const video_id = post.video_id || post.id;
             for (const admin of getAdminWAIds()) {
@@ -441,4 +441,4 @@ cron.schedule(
   }
 );
 
-// ====== END ======
+// ===== END =====
