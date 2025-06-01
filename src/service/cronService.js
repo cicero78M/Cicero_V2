@@ -4,14 +4,15 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
+import axios from "axios";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
 import { getUsersByClient, getUsersByClientFull } from "../model/userModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
-
-// TikTok workflow (harus pakai normalisasi username!)
 import { fetchAndAbsensiTiktok } from "./tiktokFetchService.js";
 import { normalizeTikTokUsername } from "../utils/tiktokHelper.js";
+import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
+import * as tiktokCommentModel from '../model/tiktokCommentModel.js';
 import { pool } from "../config/db.js";
 import waClient from "./waService.js";
 
@@ -168,9 +169,66 @@ async function rekapLikesIG(client_id) {
   return msg.trim();
 }
 
+// ===============================
+// === TikTok Multi-page Comment ===
+// ===============================
+
+function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+// Ambil semua komentar satu video (semua halaman)
+async function fetchAllCommentsForVideo(videoId, maxPage = 20) {
+  let allComments = [];
+  let cursor = 0;
+  let hasMore = true;
+  let page = 0;
+  while (hasMore && page < maxPage) {
+    try {
+      const res = await axios.get(`https://${process.env.RAPIDAPI_HOST}/api/post/comments`, {
+        params: { videoId, count: 100, cursor },
+        headers: {
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+          'x-rapidapi-host': process.env.RAPIDAPI_HOST
+        }
+      });
+      const data = res.data;
+      const comments = (data.comments || []).map(c => c.user?.unique_id).filter(Boolean);
+      allComments.push(...comments);
+      hasMore = !!(data.has_more || data.hasMore || data.next_cursor);
+      cursor = data.next_cursor || data.cursor || 0;
+      if (!hasMore || comments.length === 0) break;
+      await sleep(700); // delay antar halaman
+      page++;
+    } catch (e) {
+      console.log(`[ERROR] Fetch komentar video ${videoId}: ${e.message}`);
+      break;
+    }
+  }
+  // Remove duplicates
+  allComments = Array.from(new Set(allComments));
+  return allComments;
+}
+
+async function fetchAllTikTokCommentsToday(clients) {
+  for (const client of clients) {
+    if (!client.client_status || !client.client_tiktok || !client.tiktok_secuid) continue;
+    const posts = await getPostsTodayByClient(client.client_id);
+    for (const post of posts) {
+      const video_id = post.video_id || post.id;
+      if (!video_id) continue;
+      const comments = await fetchAllCommentsForVideo(video_id);
+      await tiktokCommentModel.upsertTiktokComments(video_id, comments);
+      console.log(`[${client.client_id}] ${video_id} - ${comments.length} komentar`);
+      await sleep(1200); // delay antar video
+    }
+    await sleep(2000); // delay antar client
+  }
+  console.log('=== Fetch ALL TikTok Comments Selesai ===');
+  return true;
+}
+
 // === CRON IG: Likes ===
 cron.schedule(
-  "51 6-22 * * *",
+  "3 6-22 * * *",
   async () => {
     console.log(
       "[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum..."
@@ -264,17 +322,17 @@ cron.schedule(
   }
 );
 
-// === CRON TIKTOK: Komentar & Absensi ===
+// === CRON TIKTOK: Komentar & Absensi (Multi-Page) ===
 cron.schedule(
-  "10 6-22 * * *",
+  "2 6-22 * * *",
   async () => {
     console.log(
-      "[CRON TIKTOK] Mulai tugas fetchTiktok, fetch komentar, dan absensi komentar akumulasi belum..."
+      "[CRON TIKTOK] Mulai tugas fetchTiktok, fetch komentar multi-page, dan absensi komentar akumulasi belum..."
     );
     let clients;
     try {
       const res = await pool.query(
-        `SELECT client_id, client_tiktok, tiktok_secuid FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
+        `SELECT client_id, client_tiktok, tiktok_secuid, client_status FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_tiktok IS NOT NULL AND client_tiktok <> ''`
       );
       clients = res.rows;
     } catch (err) {
@@ -282,9 +340,21 @@ cron.schedule(
       return;
     }
 
+    // 1. Fetch semua komentar multi-page seluruh video TikTok hari ini
+    try {
+      await fetchAllTikTokCommentsToday(clients);
+    } catch (err) {
+      console.error("[CRON TIKTOK] ERROR fetchAllTikTokCommentsToday:", err);
+      for (const admin of getAdminWAIds()) {
+        try {
+          await waClient.sendMessage(admin, `[CRON TIKTOK ERROR] Gagal fetch semua komentar TikTok: ${err.message || err}`);
+        } catch {}
+      }
+    }
+
+    // 2. Proses absensi komentar (setelah komentar sudah terupdate)
     for (const client of clients) {
       try {
-        // Pastikan fetchAndAbsensiTiktok konsisten bandingkan dengan @username
         const hasilAbsensi = await fetchAndAbsensiTiktok(client, waClient, null);
         if (!hasilAbsensi) {
           const notif = `[CRON TIKTOK][${client.client_id}] Tidak ada post/komentar TikTok hari ini (API/DB).`;
