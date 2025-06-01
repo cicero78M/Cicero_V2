@@ -72,48 +72,38 @@ export async function fetchAndStoreTiktokContent(client_id) {
   sendAdminDebug(msg0);
 
   const response = await axios.get(url, { headers, params });
-  const topLevel = response.data;
-  // Cek jika ada key "data", maka gunakan data = topLevel.data
-  const data = topLevel?.data ? topLevel.data : topLevel;
 
-  // DEBUG root payload & keys
-  const rootKeys = Object.keys(topLevel);
-  const msgPayloadRoot = `[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`;
-  console.log(msgPayloadRoot);
-  sendAdminDebug(msgPayloadRoot);
+  // Debug tipe dan kunci pada setiap level
+  const t1 = typeof response.data;
+  const t2 = typeof response.data?.data;
+  sendAdminDebug(`[DEBUG] Tipe response.data: ${t1}, response.data.data: ${t2}`);
 
-  // Otomatis deteksi array yang berisi post di level .data maupun root
   let postsArr = [];
   let fieldUsed = '';
-  if (Array.isArray(data?.itemList) && data.itemList.length) {
-    postsArr = data.itemList;
+  if (Array.isArray(response?.data?.data?.itemList) && response.data.data.itemList.length) {
+    postsArr = response.data.data.itemList;
+    fieldUsed = 'data.data.itemList';
+  } else if (Array.isArray(response?.data?.itemList) && response.data.itemList.length) {
+    postsArr = response.data.itemList;
     fieldUsed = 'data.itemList';
-  } else if (Array.isArray(data?.posts) && data.posts.length) {
-    postsArr = data.posts;
+  } else if (Array.isArray(response?.data?.posts) && response.data.posts.length) {
+    postsArr = response.data.posts;
     fieldUsed = 'data.posts';
-  } else if (Array.isArray(data?.aweme_list) && data.aweme_list.length) {
-    postsArr = data.aweme_list;
+  } else if (Array.isArray(response?.data?.aweme_list) && response.data.aweme_list.length) {
+    postsArr = response.data.aweme_list;
     fieldUsed = 'data.aweme_list';
-  } else if (Array.isArray(data?.videoList) && data.videoList.length) {
-    postsArr = data.videoList;
+  } else if (Array.isArray(response?.data?.videoList) && response.data.videoList.length) {
+    postsArr = response.data.videoList;
     fieldUsed = 'data.videoList';
-  } else if (Array.isArray(topLevel?.itemList) && topLevel.itemList.length) {
-    postsArr = topLevel.itemList;
-    fieldUsed = 'itemList';
-  } else if (Array.isArray(topLevel?.posts) && topLevel.posts.length) {
-    postsArr = topLevel.posts;
-    fieldUsed = 'posts';
-  } else if (Array.isArray(topLevel?.aweme_list) && topLevel.aweme_list.length) {
-    postsArr = topLevel.aweme_list;
-    fieldUsed = 'aweme_list';
-  } else if (Array.isArray(topLevel?.videoList) && topLevel.videoList.length) {
-    postsArr = topLevel.videoList;
-    fieldUsed = 'videoList';
+  } else if (Array.isArray(response?.data) && response.data.length) {
+    postsArr = response.data;
+    fieldUsed = 'data(array)';
+  } else if (Array.isArray(response?.data?.data) && response.data.data.length) {
+    postsArr = response.data.data;
+    fieldUsed = 'data.data(array)';
   }
 
-  const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
-  console.log(msgFieldUsed);
-  sendAdminDebug(msgFieldUsed);
+  sendAdminDebug(`[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`);
 
   // Tanggal sistem Asia/Jakarta
   const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
@@ -121,7 +111,6 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msgTgl);
   sendAdminDebug(msgTgl);
 
-  // Fungsi filter hari ini
   function isTodayJakarta(ts) {
     const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
     return d.getFullYear() === todayJakarta.getFullYear() &&
@@ -129,10 +118,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
            d.getDate() === todayJakarta.getDate();
   }
 
-  // Filter post hari ini
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
-
-  // DEBUG: Hanya kirim konten hari ini
   if (postsToday.length) {
     postsToday.forEach((post, idx) => {
       const tgl = post.createTime ? new Date(post.createTime * 1000).toISOString() : '-';
@@ -140,7 +126,6 @@ export async function fetchAndStoreTiktokContent(client_id) {
       sendAdminDebug(`[DEBUG][itemToday ${idx+1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
     });
   }
-
   const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
   console.log(msg1);
   sendAdminDebug(msg1);
