@@ -59,7 +59,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
   const params = {
-    secUid,
+    secUid: secUid,
     count: 35,
     cursor: 0
   };
