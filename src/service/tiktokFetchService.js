@@ -53,7 +53,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// PATCH FINAL: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -71,38 +71,32 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msg0);
   sendAdminDebug(msg0);
 
-  let response;
-  try {
-    response = await axios.get(url, { headers, params });
-  } catch (err) {
-    sendAdminDebug(`[ERROR] Gagal fetch TikTok: ${err.message}`);
-    throw err;
-  }
-
+  const response = await axios.get(url, { headers, params });
   let data = response.data;
-  if (!data || (typeof data === "string" && !data.trim())) {
-    sendAdminDebug(`[DEBUG] TikTok API response kosong/null untuk client_id=${client_id}`);
+
+  // --- Tambahan debug: response.data tipe dan fallback parse ---
+  if (typeof data === "string") {
+    sendAdminDebug(`[DEBUG] Tipe response.data: string, mencoba JSON.parse ...`);
+    try {
+      data = JSON.parse(data);
+      sendAdminDebug(`[DEBUG] JSON.parse response.data sukses.`);
+    } catch {
+      sendAdminDebug(`[DEBUG] Gagal parse string ke JSON.`);
+      data = {};
+    }
+  }
+  if (!data || Object.keys(data).length === 0) {
+    sendAdminDebug(`[DEBUG] response TikTok API kosong untuk client_id=${client_id}`);
     return [];
   }
 
-  // parse jika string
-  if (typeof data === "string") {
-    try {
-      data = JSON.parse(data);
-      sendAdminDebug(`[DEBUG] TikTok API response.data type string, parse manual OK`);
-    } catch (e) {
-      sendAdminDebug(`[ERROR] response TikTok tidak bisa di-parse: ${e.message}`);
-      return [];
-    }
-  }
-
-  // DEBUG root payload & keys
-  const rootKeys = data && typeof data === "object" ? Object.keys(data) : [];
+  // --- DEBUG root payload & keys
+  const rootKeys = Object.keys(data);
   const msgPayloadRoot = `[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`;
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Deteksi array mana yang isi post
+  // Otomatis deteksi array post
   let postsArr = [];
   let fieldUsed = '';
   if (Array.isArray(data?.itemList) && data.itemList.length) {
@@ -111,18 +105,19 @@ export async function fetchAndStoreTiktokContent(client_id) {
   } else if (Array.isArray(data?.posts) && data.posts.length) {
     postsArr = data.posts;
     fieldUsed = 'posts';
+  } else if (Array.isArray(data?.aweme_list) && data.aweme_list.length) {
+    postsArr = data.aweme_list;
+    fieldUsed = 'aweme_list';
+  } else if (Array.isArray(data?.videoList) && data.videoList.length) {
+    postsArr = data.videoList;
+    fieldUsed = 'videoList';
   }
   const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
   console.log(msgFieldUsed);
   sendAdminDebug(msgFieldUsed);
 
-  // Jika benar-benar array konten kosong
-  if (Array.isArray(postsArr) && postsArr.length === 0) {
-    sendAdminDebug(`[DEBUG] TikTok API mengembalikan array post kosong untuk client_id=${client_id}`);
-  }
-
-  // Debug tiap konten, max 10 konten
-  postsArr.slice(0, 10).forEach((post, idx) => {
+  // Debug tiap konten
+  postsArr.forEach((post, idx) => {
     const tgl = post.createTime ? new Date(post.createTime * 1000).toISOString() : '-';
     const id = post.id || post.video_id || '-';
     sendAdminDebug(`[DEBUG][item ${idx+1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
@@ -147,7 +142,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   if (postsToday.length > 0) {
     await upsertTiktokPosts(client_id, postsToday.map(post => ({
-      video_id: post.id,
+      video_id: post.id || post.video_id,
       caption: post.desc || post.caption || "",
       created_at: new Date(post.createTime * 1000),
       like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
@@ -162,7 +157,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     sendAdminDebug(msg3);
   }
   return postsToday.map(post => ({
-    video_id: post.id,
+    video_id: post.id || post.video_id,
     caption: post.desc || post.caption || "",
     created_at: new Date(post.createTime * 1000),
     like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
