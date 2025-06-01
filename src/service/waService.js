@@ -16,7 +16,7 @@ import * as userService from "./userService.js";
 import { fetchAndAbsensiTiktok } from "./tiktokFetchService.js";
 import { fallbackAbsensiKomentarTiktokHariIni } from "./tiktokAbsensiFallbackService.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
-import { fetchAndStoreTiktokContent, fetchCommentsTodayByClient } from '../service/tiktokFetchService.js'; // atau lokasi sesuai project
+import { fetchAndStoreTiktokContent, fetchCommentsTodayByClient } from './tiktokFetchService.js'; // atau lokasi sesuai project
 import { findById } from '../model/clientModel.js';
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
