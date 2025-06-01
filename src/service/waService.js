@@ -20,8 +20,7 @@ import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 
 import {
-  fetchAndStoreTiktokContent,
-  fetchAllTikTokCommentsToday, getTiktokSecUid
+  fetchAndStoreTiktokContent, getTiktokSecUid
 } from "./tiktokFetchService.js";
 
 
@@ -421,19 +420,23 @@ if (text.toLowerCase().startsWith("fetchtiktok#")) {
 
   await waClient.sendMessage(
     chatId,
-    `⏳ Memulai fetch TikTok & komentar untuk *${client_id}* ...`
+    `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
   );
 
   try {
-    // 1. Fetch seluruh post TikTok hari ini dan update secUid jika perlu
+    // 1. Fetch seluruh post TikTok hari ini via API
     let posts = await fetchAndStoreTiktokContent(client_id);
+
     if (!posts || posts.length === 0) {
-      // fallback ke DB jika hasil API kosong
-      posts = await (await import("../model/tiktokPostModel.js")).getPostsTodayByClient(client_id);
-      await waClient.sendMessage(
-        chatId,
-        `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
-      );
+      // Fallback ke DB jika hasil API kosong
+      const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
+      posts = await getPostsTodayByClient(client_id);
+      if (posts && posts.length > 0) {
+        await waClient.sendMessage(
+          chatId,
+          `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
+        );
+      }
     }
 
     if (!posts || posts.length === 0) {
@@ -444,17 +447,23 @@ if (text.toLowerCase().startsWith("fetchtiktok#")) {
       return;
     }
 
-    await waClient.sendMessage(chatId, `✅ Ditemukan ${posts.length} post hari ini. Proses komentar...`);
+    // Format laporan rekap post TikTok hari ini
+    let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
+    msg += `Jumlah post: *${posts.length}*\n\n`;
+    posts.forEach((item, i) => {
+      const desc = item.desc || item.caption || "-";
+      const create_time = item.create_time || item.created_at || item.createTime;
+      const created = create_time
+        ? new Date(create_time).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
+        : "-";
+      msg += `#${i + 1} Video ID: ${item.video_id || item.id}\n`;
+      msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
+      msg += `   Tanggal: ${created}\n`;
+      msg += `   Like: ${item.digg_count ?? item.like_count ?? 0} | Komentar: ${item.comment_count ?? 0}\n`;
+      msg += `   Link: https://www.tiktok.com/@_/${item.video_id || item.id}\n\n`;
+    });
 
-    // 2. Fetch komentar tiap post hari ini
-    let totalComment = 0;
-    for (const post of posts) {
-      const video_id = post.video_id || post.id;
-      const commenters = await fetchAllTikTokCommentsToday(client_id, video_id);
-      totalComment += commenters.length;
-      await waClient.sendMessage(chatId, `• Post ID: ${video_id} | Jumlah komentator: ${commenters.length}`);
-    }
-    await waClient.sendMessage(chatId, `✅ Selesai! Jumlah post: ${posts.length}, total user komentar: ${totalComment}`);
+    await waClient.sendMessage(chatId, msg.trim());
   } catch (err) {
     await waClient.sendMessage(
       chatId,
@@ -463,6 +472,7 @@ if (text.toLowerCase().startsWith("fetchtiktok#")) {
   }
   return;
 }
+
 
   // =========================
   // === REQUEST TIKTOK/INSTA STATUS (ADMIN)
