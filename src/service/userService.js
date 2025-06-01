@@ -1,5 +1,4 @@
 import { pool } from '../config/db.js';
-import { normalizeTikTokUsername } from '../utils/tiktokHelper.js';
 
 // Ambil user yang SUDAH mengisi Instagram (status true)
 export async function getInstaFilledUsersByClient(clientId) {
@@ -55,19 +54,14 @@ export async function findUserById(user_id) {
 }
 
 /**
- * Update field user (insta/tiktok/whatsapp) dengan normalisasi untuk TikTok
+ * Update field user (insta/tiktok/whatsapp) - tanpa normalisasi TikTok
  */
 export async function updateUserField(user_id, field, value) {
   const allowed = ['insta', 'tiktok', 'whatsapp'];
   if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok/whatsapp yang bisa diupdate');
-
-  let newValue = value;
-  if (field === 'tiktok' && value) {
-    newValue = normalizeTikTokUsername(value);
-  }
   const { rows } = await pool.query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
-    [newValue, user_id]
+    [value, user_id]
   );
   return rows[0];
 }
@@ -80,16 +74,14 @@ export async function findUserByWhatsApp(wa) {
 
 export async function findUserByInsta(username) {
   if (!username) return null;
-  // Untuk Instagram, tidak perlu normalisasi "@"
   const result = await pool.query('SELECT * FROM "user" WHERE insta = $1', [username]);
   return result.rows[0];
 }
 
 export async function findUserByTiktok(username) {
   if (!username) return null;
-  // Selalu normalize sebelum query
-  const norm = normalizeTikTokUsername(username);
-  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [norm]);
+  // Query string langsung, tidak ada normalisasi
+  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [username]);
   return result.rows[0];
 }
 
@@ -105,12 +97,10 @@ export async function getDistinctUserDivisions(client_id) {
   return rows.map(r => r.divisi);
 }
 
-// Cek duplikat insta/tiktok: normalisasi jika TikTok
+// Cek duplikat insta/tiktok: query langsung, tidak perlu normalisasi
 export async function findUserByField(field, value) {
-  let val = value;
-  if (field === 'tiktok' && value) {
-    val = normalizeTikTokUsername(value);
-  }
-  const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [val]);
+  const allowed = ['insta', 'tiktok'];
+  if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok yang didukung');
+  const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [value]);
   return rows[0];
 }
