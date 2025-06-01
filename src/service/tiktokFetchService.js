@@ -70,51 +70,47 @@ export async function fetchAndStoreTiktokContent(client_id) {
   };
 
   const msg0 = `[DEBUG] fetchAndStoreTiktokContent: fetch post TikTok secUid=${secUid} client_id=${client_id}`;
-  console.log(msg0);
-  sendAdminDebug(msg0);
+  console.log(msg0); sendAdminDebug(msg0);
 
   const response = await axios.get(url, { headers, params });
   const data = response.data;
 
-  // DEBUG tanggal sistem Asia/Jakarta
-  const now = new Date();
-  const sysDateJakarta = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  const sysDebug = `[DEBUG] Tanggal sistem Asia/Jakarta: ${sysDateJakarta.toISOString().split("T")[0]} (${sysDateJakarta})`;
-  console.log(sysDebug);
-  sendAdminDebug(sysDebug);
+  // Debug all root keys
+  const allKeys = Object.keys(data).join(', ');
+  sendAdminDebug(`[DEBUG] TikTok PAYLOAD KEYS: ${allKeys}`);
 
-  // Data array ada di: data.itemList
+  // Ambil array post dari itemList
   const postsArr = Array.isArray(data?.itemList) ? data.itemList : [];
+  sendAdminDebug(`[DEBUG] TikTok POST FIELD USED: itemList (length=${postsArr.length})`);
 
-  // Debug detail setiap konten
+  // --- DEBUG: Listkan semua konten, tanggal, dan hasil cek isToday ---
+  const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  sendAdminDebug(`[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`);
   for (const post of postsArr) {
-    const kontenDateJakarta = new Date(new Date(post.createTime * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-    // Ambil ringkasan detail post, tanpa array nested
+    const ts = post.createTime || post.create_time;
+    const kontenDate = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const isToday = kontenDate.getFullYear() === todayJakarta.getFullYear()
+      && kontenDate.getMonth() === todayJakarta.getMonth()
+      && kontenDate.getDate() === todayJakarta.getDate();
     const detail = [
       `video_id=${post.id}`,
-      `desc=${(post.desc || '').slice(0, 40).replace(/\n/g,' ')}...`,
-      `diggCount=${post.statistics?.diggCount ?? 0}`,
-      `commentCount=${post.statistics?.commentCount ?? 0}`,
-      `createTime=${post.createTime} (${kontenDateJakarta.toISOString()})`
+      `createTime=${ts} (${kontenDate.toISOString()})`,
+      `isTodayJakarta=${isToday}`
     ].join(" | ");
-    const kontenDebug = `[DEBUG][itemList] ${detail}`;
-    console.log(kontenDebug);
-    sendAdminDebug(kontenDebug);
+    sendAdminDebug(`[DEBUG][itemList] ${detail}`);
   }
 
-  // Filter post hari ini (Asia/Jakarta)
+  // --- Gunakan filter hari ini persis seperti di atas ---
   function isTodayJakarta(ts) {
     const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-    return d.getFullYear() === sysDateJakarta.getFullYear() &&
-           d.getMonth() === sysDateJakarta.getMonth() &&
-           d.getDate() === sysDateJakarta.getDate();
+    return d.getFullYear() === todayJakarta.getFullYear() &&
+           d.getMonth() === todayJakarta.getMonth() &&
+           d.getDate() === todayJakarta.getDate();
   }
-
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
 
   const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
-  console.log(msg1);
-  sendAdminDebug(msg1);
+  console.log(msg1); sendAdminDebug(msg1);
 
   if (postsToday.length > 0) {
     await upsertTiktokPosts(client_id, postsToday.map(post => ({
@@ -125,12 +121,10 @@ export async function fetchAndStoreTiktokContent(client_id) {
       create_time: post.createTime,
     })));
     const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
-    console.log(msg2);
-    sendAdminDebug(msg2);
+    console.log(msg2); sendAdminDebug(msg2);
   } else {
     const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
-    console.log(msg3);
-    sendAdminDebug(msg3);
+    console.log(msg3); sendAdminDebug(msg3);
   }
   return postsToday.map(post => ({
     video_id: post.id,
