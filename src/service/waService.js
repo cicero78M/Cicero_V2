@@ -20,7 +20,7 @@ import {
   fetchAndStoreTiktokContent,
   fetchCommentsTodayByClient,
 } from "./tiktokFetchService.js"; // atau lokasi sesuai project
-import { findById } from "../model/clientModel.js";
+import { findAll } from "../model/clientModel.js";
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
