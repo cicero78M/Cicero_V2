@@ -136,6 +136,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
 }
 
 
+
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
 export async function fetchAllTikTokCommentsToday(client_id, video_id) {
   try {
