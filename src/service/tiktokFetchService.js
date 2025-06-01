@@ -70,18 +70,20 @@ export async function fetchAndStoreTiktokContent(client_id) {
   };
 
   const msg0 = `[DEBUG] fetchAndStoreTiktokContent: fetch post TikTok secUid=${secUid} client_id=${client_id}`;
-  console.log(msg0); sendAdminDebug(msg0);
+  console.log(msg0);
+  sendAdminDebug(msg0);
 
   const response = await axios.get(url, { headers, params });
   const data = response.data;
 
   // Debug all root keys
   const allKeys = Object.keys(data).join(', ');
-  sendAdminDebug(`[DEBUG] TikTok PAYLOAD KEYS: ${allKeys}`);
+  sendAdminDebug(`[DEBUG] TikTok PAYLOAD ROOT KEYS: ${allKeys}`);
+  sendAdminDebug(`[DEBUG] TikTok PAYLOAD data KEYS: ${Object.keys(data.data||{}).join(', ')}`);
 
-  // Ambil array post dari itemList
-  const postsArr = Array.isArray(data?.itemList) ? data.itemList : [];
-  sendAdminDebug(`[DEBUG] TikTok POST FIELD USED: itemList (length=${postsArr.length})`);
+  // Ambil array post dari data.itemList (BUKAN root!)
+  const postsArr = Array.isArray(data?.data?.itemList) ? data.data.itemList : [];
+  sendAdminDebug(`[DEBUG] TikTok POST FIELD USED: data.itemList (length=${postsArr.length})`);
 
   // --- DEBUG: Listkan semua konten, tanggal, dan hasil cek isToday ---
   const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
