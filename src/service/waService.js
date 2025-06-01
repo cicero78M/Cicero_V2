@@ -20,9 +20,10 @@ import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 
-import { fetchAndStoreTiktokContent, fetchAllTikTokCommentsToday } from "./tiktokFetchService.js";
-import { findById } from "../model/clientModel.js";
-
+import {
+  fetchAndStoreTiktokContent,
+  fetchAllTikTokCommentsToday,
+} from "./tiktokFetchService.js";
 
 dotenv.config();
 
@@ -375,8 +376,6 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-
-
   // =========================
   // === FETCH INSTAGRAM (ADMIN)
   // =========================
@@ -401,64 +400,84 @@ waClient.on("message", async (msg) => {
   }
 
   // =========================
-// === FETCH TIKTOK MANUAL (ADMIN)
-// =========================
-if (text.toLowerCase().startsWith("fetchtiktok#")) {
-  if (!isAdminWhatsApp(chatId)) {
-    await waClient.sendMessage(chatId, "❌ Anda tidak memiliki akses ke sistem ini.");
-    return;
-  }
-  const [, client_id] = text.split("#");
-  if (!client_id) {
-    await waClient.sendMessage(chatId, "Format salah!\nGunakan: fetchtiktok#clientid");
-    return;
-  }
-
-  await waClient.sendMessage(chatId, `⏳ Memulai fetch TikTok & komentar untuk *${client_id}* ...`);
-
-  try {
-    // 1. Fetch seluruh post TikTok hari ini dan update secUid jika perlu
-    const posts = await fetchAndStoreTiktokContent(client_id);
-    if (!posts || posts.length === 0) {
-      await waClient.sendMessage(chatId, `Tidak ada post TikTok hari ini untuk client *${client_id}*.`);
+  // === FETCH TIKTOK MANUAL (ADMIN)
+  // =========================
+  if (text.toLowerCase().startsWith("fetchtiktok#")) {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Anda tidak memiliki akses ke sistem ini."
+      );
+      return;
+    }
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: fetchtiktok#clientid"
+      );
       return;
     }
 
-    // 2. Untuk setiap video, fetch & simpan semua komentar (paginasi semua halaman)
-    let totalCommented = 0, totalVideos = 0;
-    let rekap = [];
-    for (const post of posts) {
-      // fetchAllTikTokCommentsToday otomatis handle paginasi untuk 1 video_id
-      const komentarData = await fetchAllTikTokCommentsToday(client_id, post.video_id);
-      const count = Array.isArray(komentarData) ? komentarData.length : 0;
-      totalCommented += count;
-      totalVideos++;
-      rekap.push({
-        video_id: post.video_id,
-        desc: post.desc,
-        digg_count: post.digg_count,
-        comment_count: count,
-        url: `https://www.tiktok.com/@${post.unique_id}/video/${post.video_id}`
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Memulai fetch TikTok & komentar untuk *${client_id}* ...`
+    );
+
+    try {
+      // 1. Fetch seluruh post TikTok hari ini dan update secUid jika perlu
+      const posts = await fetchAndStoreTiktokContent(client_id);
+      if (!posts || posts.length === 0) {
+        await waClient.sendMessage(
+          chatId,
+          `Tidak ada post TikTok hari ini untuk client *${client_id}*.`
+        );
+        return;
+      }
+
+      // 2. Untuk setiap video, fetch & simpan semua komentar (paginasi semua halaman)
+      let totalCommented = 0,
+        totalVideos = 0;
+      let rekap = [];
+      for (const post of posts) {
+        // fetchAllTikTokCommentsToday otomatis handle paginasi untuk 1 video_id
+        const komentarData = await fetchAllTikTokCommentsToday(
+          client_id,
+          post.video_id
+        );
+        const count = Array.isArray(komentarData) ? komentarData.length : 0;
+        totalCommented += count;
+        totalVideos++;
+        rekap.push({
+          video_id: post.video_id,
+          desc: post.desc,
+          digg_count: post.digg_count,
+          comment_count: count,
+          url: `https://www.tiktok.com/@${post.unique_id}/video/${post.video_id}`,
+        });
+      }
+
+      // 3. Format & kirim rekap ke WhatsApp
+      let msg = `*Rekap TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
+      msg += `Jumlah video: *${totalVideos}*\nTotal komentar tersimpan: *${totalCommented}*\n\n`;
+      rekap.forEach((item, i) => {
+        msg += `#${i + 1} Video: ${item.video_id}\n`;
+        msg += `   Deskripsi: ${item.desc?.slice(0, 50) || "-"}\n`;
+        msg += `   Like: ${item.digg_count || 0} | Komentar: ${
+          item.comment_count
+        }\n`;
+        msg += `   Link: ${item.url}\n\n`;
       });
+
+      await waClient.sendMessage(chatId, msg.trim());
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal fetch TikTok: ${err.message}`
+      );
     }
-
-    // 3. Format & kirim rekap ke WhatsApp
-    let msg = `*Rekap TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
-    msg += `Jumlah video: *${totalVideos}*\nTotal komentar tersimpan: *${totalCommented}*\n\n`;
-    rekap.forEach((item, i) => {
-      msg += `#${i + 1} Video: ${item.video_id}\n`;
-      msg += `   Deskripsi: ${item.desc?.slice(0, 50) || "-"}\n`;
-      msg += `   Like: ${item.digg_count || 0} | Komentar: ${item.comment_count}\n`;
-      msg += `   Link: ${item.url}\n\n`;
-    });
-
-    await waClient.sendMessage(chatId, msg.trim());
-  } catch (err) {
-    await waClient.sendMessage(chatId, `❌ Gagal fetch TikTok: ${err.message}`);
+    return;
   }
-  return;
-}
-
 
   // =========================
   // === REQUEST TIKTOK/INSTA STATUS (ADMIN)
