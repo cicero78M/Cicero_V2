@@ -73,43 +73,48 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   const response = await axios.get(url, { headers, params });
 
-  // Debug tipe dan kunci pada setiap level
-  const t1 = typeof response.data;
-  const t2 = typeof response.data?.data;
-  sendAdminDebug(`[DEBUG] Tipe response.data: ${t1}, response.data.data: ${t2}`);
-
-  let postsArr = [];
-  let fieldUsed = '';
-  if (Array.isArray(response?.data?.data?.itemList) && response.data.data.itemList.length) {
-    postsArr = response.data.data.itemList;
-    fieldUsed = 'data.data.itemList';
-  } else if (Array.isArray(response?.data?.itemList) && response.data.itemList.length) {
-    postsArr = response.data.itemList;
-    fieldUsed = 'data.itemList';
-  } else if (Array.isArray(response?.data?.posts) && response.data.posts.length) {
-    postsArr = response.data.posts;
-    fieldUsed = 'data.posts';
-  } else if (Array.isArray(response?.data?.aweme_list) && response.data.aweme_list.length) {
-    postsArr = response.data.aweme_list;
-    fieldUsed = 'data.aweme_list';
-  } else if (Array.isArray(response?.data?.videoList) && response.data.videoList.length) {
-    postsArr = response.data.videoList;
-    fieldUsed = 'data.videoList';
-  } else if (Array.isArray(response?.data) && response.data.length) {
-    postsArr = response.data;
-    fieldUsed = 'data(array)';
-  } else if (Array.isArray(response?.data?.data) && response.data.data.length) {
-    postsArr = response.data.data;
-    fieldUsed = 'data.data(array)';
+  // PATCH: PARSE MANUAL JIKA STRING
+  let rawData = response.data;
+  let tipeData = typeof rawData;
+  if (tipeData === "string") {
+    sendAdminDebug(`[DEBUG] TikTok: response.data type string, parse manual...`);
+    try {
+      rawData = JSON.parse(rawData);
+      tipeData = typeof rawData;
+    } catch (e) {
+      sendAdminDebug(`[ERROR] Gagal parse response.data jadi JSON: ${e.message}`);
+      return [];
+    }
   }
 
+  // Debug root keys (setelah parsing)
+  const rootKeys = rawData ? Object.keys(rawData) : [];
+  sendAdminDebug(`[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`);
+
+  // Otomatis deteksi array yang berisi post
+  let postsArr = [];
+  let fieldUsed = '';
+  if (Array.isArray(rawData?.itemList) && rawData.itemList.length) {
+    postsArr = rawData.itemList;
+    fieldUsed = 'itemList';
+  } else if (Array.isArray(rawData?.posts) && rawData.posts.length) {
+    postsArr = rawData.posts;
+    fieldUsed = 'posts';
+  } else if (Array.isArray(rawData?.aweme_list) && rawData.aweme_list.length) {
+    postsArr = rawData.aweme_list;
+    fieldUsed = 'aweme_list';
+  } else if (Array.isArray(rawData?.videoList) && rawData.videoList.length) {
+    postsArr = rawData.videoList;
+    fieldUsed = 'videoList';
+  } else if (Array.isArray(rawData?.data?.itemList) && rawData.data.itemList.length) {
+    postsArr = rawData.data.itemList;
+    fieldUsed = 'data.itemList';
+  }
   sendAdminDebug(`[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`);
 
   // Tanggal sistem Asia/Jakarta
   const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
-  console.log(msgTgl);
-  sendAdminDebug(msgTgl);
+  sendAdminDebug(`[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`);
 
   function isTodayJakarta(ts) {
     const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
@@ -118,6 +123,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
            d.getDate() === todayJakarta.getDate();
   }
 
+  // Filter post hari ini
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
   if (postsToday.length) {
     postsToday.forEach((post, idx) => {
@@ -126,9 +132,8 @@ export async function fetchAndStoreTiktokContent(client_id) {
       sendAdminDebug(`[DEBUG][itemToday ${idx+1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
     });
   }
-  const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
-  console.log(msg1);
-  sendAdminDebug(msg1);
+
+  sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`);
 
   if (postsToday.length > 0) {
     await upsertTiktokPosts(client_id, postsToday.map(post => ({
@@ -138,13 +143,9 @@ export async function fetchAndStoreTiktokContent(client_id) {
       like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
       comment_count: post.statistics?.commentCount ?? post.comment_count ?? 0,
     })));
-    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
-    console.log(msg2);
-    sendAdminDebug(msg2);
+    sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`);
   } else {
-    const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
-    console.log(msg3);
-    sendAdminDebug(msg3);
+    sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`);
   }
   return postsToday.map(post => ({
     video_id: post.id || post.video_id,
@@ -154,6 +155,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     comment_count: post.statistics?.commentCount ?? post.comment_count ?? 0,
   }));
 }
+
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
 export async function fetchAllTikTokCommentsToday(client_id, video_id) {
