@@ -405,7 +405,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const { getUsersByClient } = await import("../model/userModel.js");
   const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
   const users = await getUsersByClient(client_id);
-  const posts = await getPostsTodayByClient(client_id);
+  let posts = await getPostsTodayByClient(client_id);
 
   // === DEBUG LOG khusus pengambilan data post dari DB ===
   let debugMsg = `[DEBUG] [absensikomentar] Hasil query getPostsTodayByClient untuk client_id=${client_id}:\n`;
@@ -417,8 +417,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     debugMsg += `[DEBUG]   Tidak ada data post TikTok ditemukan di database untuk client_id=${client_id}\n`;
   }
   console.log(debugMsg);
-
-  // === Kirim debug ke ADMIN_WHATSAPP (konvensi .env) ===
+  // Kirim ke admin WA
   const adminWA = (process.env.ADMIN_WHATSAPP || "")
     .split(",")
     .map(n => n.trim())
@@ -435,6 +434,48 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
         `Tidak ada post TikTok untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`
     );
     return;
+  }
+
+  // === STEP: Selalu fetch komentar terbaru via API, simpan ke DB sebelum absensi ===
+  const { upsertTiktokComments } = await import("../model/tiktokCommentModel.js");
+  const axios = (await import("axios")).default;
+  const apiKey = process.env.RAPIDAPI_KEY;
+  const apiHost = "tiktok-api23.p.rapidapi.com";
+  for (const post of posts) {
+    const video_id = post.video_id || post.id;
+    try {
+      let allComments = [];
+      let cursor = 0, page = 1;
+      while (true) {
+        const options = {
+          method: "GET",
+          url: `https://${apiHost}/api/post/comments`,
+          params: {
+            videoId: video_id,
+            count: "50",
+            cursor: String(cursor)
+          },
+          headers: {
+            "x-rapidapi-key": apiKey,
+            "x-rapidapi-host": apiHost
+          }
+        };
+        const res = await axios.request(options);
+        const data = res.data;
+        const comments = Array.isArray(data?.comments) ? data.comments : [];
+        allComments.push(...comments);
+        if (!data.has_more || !data.next_cursor || comments.length === 0) break;
+        cursor = data.next_cursor;
+        page++;
+      }
+      // Simpan semua komentar ke DB
+      await upsertTiktokComments(video_id, allComments);
+    } catch (err) {
+      // Debug error ke admin
+      const errMsg = `[DEBUG] Gagal fetch komentar API video_id=${video_id}: ${err.message}`;
+      console.log(errMsg);
+      for (const wa of adminWA) waClient.sendMessage(wa, errMsg).catch(() => {});
+    }
   }
 
   // 2. Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum)

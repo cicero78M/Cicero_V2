@@ -1,7 +1,11 @@
 import { pool } from "../config/db.js";
 
+/**
+ * Simpan/Update komentar TikTok untuk video tertentu.
+ * @param {string} video_id - ID video TikTok
+ * @param {Array} commentsArr - Array of comment objects
+ */
 export async function upsertTiktokComments(video_id, commentsArr) {
-  // Kolom: video_id (PK), comments (jsonb), updated_at (timestamp)
   const q = `
     INSERT INTO tiktok_comment (video_id, comments, updated_at)
     VALUES ($1, $2, NOW())
@@ -11,6 +15,11 @@ export async function upsertTiktokComments(video_id, commentsArr) {
   await pool.query(q, [video_id, JSON.stringify(commentsArr)]);
 }
 
+/**
+ * Ambil array komentar TikTok untuk video tertentu.
+ * @param {string} video_id - ID video TikTok
+ * @returns {Object} { comments: [...] }
+ */
 export async function getCommentsByVideoId(video_id) {
   const q = `SELECT comments FROM tiktok_comment WHERE video_id = $1`;
   const res = await pool.query(q, [video_id]);
