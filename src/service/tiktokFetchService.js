@@ -53,7 +53,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -72,31 +72,45 @@ export async function fetchAndStoreTiktokContent(client_id) {
   sendAdminDebug(msg0);
 
   const response = await axios.get(url, { headers, params });
-  const data = response.data;
+  const topLevel = response.data;
+  // Cek jika ada key "data", maka gunakan data = topLevel.data
+  const data = topLevel?.data ? topLevel.data : topLevel;
 
   // DEBUG root payload & keys
-  const rootKeys = Object.keys(data);
+  const rootKeys = Object.keys(topLevel);
   const msgPayloadRoot = `[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`;
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Otomatis deteksi array yang berisi post
+  // Otomatis deteksi array yang berisi post di level .data maupun root
   let postsArr = [];
   let fieldUsed = '';
-  // Prioritas: itemList, posts, aweme_list, videoList, ... (urutkan sesuai data real API)
   if (Array.isArray(data?.itemList) && data.itemList.length) {
     postsArr = data.itemList;
-    fieldUsed = 'itemList';
+    fieldUsed = 'data.itemList';
   } else if (Array.isArray(data?.posts) && data.posts.length) {
     postsArr = data.posts;
-    fieldUsed = 'posts';
+    fieldUsed = 'data.posts';
   } else if (Array.isArray(data?.aweme_list) && data.aweme_list.length) {
     postsArr = data.aweme_list;
-    fieldUsed = 'aweme_list';
+    fieldUsed = 'data.aweme_list';
   } else if (Array.isArray(data?.videoList) && data.videoList.length) {
     postsArr = data.videoList;
+    fieldUsed = 'data.videoList';
+  } else if (Array.isArray(topLevel?.itemList) && topLevel.itemList.length) {
+    postsArr = topLevel.itemList;
+    fieldUsed = 'itemList';
+  } else if (Array.isArray(topLevel?.posts) && topLevel.posts.length) {
+    postsArr = topLevel.posts;
+    fieldUsed = 'posts';
+  } else if (Array.isArray(topLevel?.aweme_list) && topLevel.aweme_list.length) {
+    postsArr = topLevel.aweme_list;
+    fieldUsed = 'aweme_list';
+  } else if (Array.isArray(topLevel?.videoList) && topLevel.videoList.length) {
+    postsArr = topLevel.videoList;
     fieldUsed = 'videoList';
   }
+
   const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
   console.log(msgFieldUsed);
   sendAdminDebug(msgFieldUsed);
