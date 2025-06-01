@@ -71,16 +71,38 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msg0);
   sendAdminDebug(msg0);
 
-  const response = await axios.get(url, { headers, params });
-  const data = response.data;
+  let response;
+  try {
+    response = await axios.get(url, { headers, params });
+  } catch (err) {
+    sendAdminDebug(`[ERROR] Gagal fetch TikTok: ${err.message}`);
+    throw err;
+  }
+
+  let data = response.data;
+  if (!data || (typeof data === "string" && !data.trim())) {
+    sendAdminDebug(`[DEBUG] TikTok API response kosong/null untuk client_id=${client_id}`);
+    return [];
+  }
+
+  // parse jika string
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+      sendAdminDebug(`[DEBUG] TikTok API response.data type string, parse manual OK`);
+    } catch (e) {
+      sendAdminDebug(`[ERROR] response TikTok tidak bisa di-parse: ${e.message}`);
+      return [];
+    }
+  }
 
   // DEBUG root payload & keys
-  const rootKeys = Object.keys(data);
+  const rootKeys = data && typeof data === "object" ? Object.keys(data) : [];
   const msgPayloadRoot = `[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`;
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Cek field mana yang array post
+  // Deteksi array mana yang isi post
   let postsArr = [];
   let fieldUsed = '';
   if (Array.isArray(data?.itemList) && data.itemList.length) {
@@ -94,14 +116,19 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msgFieldUsed);
   sendAdminDebug(msgFieldUsed);
 
-  // Debug tiap konten
-  postsArr.forEach((post, idx) => {
+  // Jika benar-benar array konten kosong
+  if (Array.isArray(postsArr) && postsArr.length === 0) {
+    sendAdminDebug(`[DEBUG] TikTok API mengembalikan array post kosong untuk client_id=${client_id}`);
+  }
+
+  // Debug tiap konten, max 10 konten
+  postsArr.slice(0, 10).forEach((post, idx) => {
     const tgl = post.createTime ? new Date(post.createTime * 1000).toISOString() : '-';
     const id = post.id || post.video_id || '-';
     sendAdminDebug(`[DEBUG][item ${idx+1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
   });
 
-  // Filter post hari ini (zona waktu Asia/Jakarta)
+  // Filter post hari ini (Asia/Jakarta)
   const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
   function isTodayJakarta(ts) {
     const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
@@ -109,7 +136,6 @@ export async function fetchAndStoreTiktokContent(client_id) {
            d.getMonth() === todayJakarta.getMonth() &&
            d.getDate() === todayJakarta.getDate();
   }
-
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
   const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
   console.log(msgTgl);
@@ -171,9 +197,6 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
 
       const response = await axios.request(options);
       const data = response.data;
-
-      // DEBUG full payload (1x per page)
-      // console.log(`[DEBUG][TikTok API /api/post/comments] client_id=${client_id} page=${page} payload:\n${JSON.stringify(data, null, 2)}`);
 
       if (!data.comments || !Array.isArray(data.comments)) {
         const msgNoData = `[DEBUG] fetchAllTikTokCommentsToday: tidak ada data.comments page=${page}`;
