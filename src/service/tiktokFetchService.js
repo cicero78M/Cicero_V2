@@ -1,8 +1,8 @@
-import fetch from "node-fetch";
+import axios from "axios";
 import { findById, update } from "../model/clientModel.js";
 import { upsertTiktokPosts } from "../model/tiktokPostModel.js";
 import { saveTiktokComments } from "../model/tiktokCommentModel.js";
-import waClient from "./waService.js"; // pastikan waClient sudah diekspor default
+import waClient from "./waService.js"; // default export WA Client
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -38,8 +38,8 @@ export async function getTiktokSecUid(client_id) {
   console.log(msg1);
   sendAdminDebug(msg1);
 
-  const res = await fetch(url, { headers });
-  const data = await res.json();
+  const response = await axios.get(url, { headers });
+  const data = response.data;
   const secUid = data?.userInfo?.user?.secUid;
   if (!secUid) {
     const msgErr = `[ERROR] Gagal fetch secUid dari API untuk ${client_id} / username=${username} -- PAYLOAD: ${JSON.stringify(data)}`;
@@ -57,23 +57,65 @@ export async function getTiktokSecUid(client_id) {
 // Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
-  const url = `https://tiktok-api23.p.rapidapi.com/api/post/user/aweme?secUid=${encodeURIComponent(secUid)}&count=30`;
+  const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
+  const params = {
+    secUid,
+    count: 35,
+    cursor: 0
+  };
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
     "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
   };
-  const res = await fetch(url, { headers });
-  const data = await res.json();
 
-  // === DEBUG PAYLOAD FULL ke console ===
-  console.log(`[DEBUG][TikTokAPI][${client_id}] Payload hasil fetch:\n`, JSON.stringify(data, null, 2));
+  const msg0 = `[DEBUG] fetchAndStoreTiktokContent: fetch post TikTok secUid=${secUid} client_id=${client_id}`;
+  console.log(msg0);
+  sendAdminDebug(msg0);
 
-  // Filter post hari ini (rekomendasi: gunakan patch zona waktu Asia/Jakarta!)
-  // ...lanjutkan sesuai patch yang sudah disarankan sebelumnya...
+  const response = await axios.get(url, { headers, params });
+  const data = response.data;
 
-  // ... lanjutkan dengan proses filter, simpan ke DB, dsb ...
+  // DEBUG FULL PAYLOAD
+  console.log(`[DEBUG][TikTokAPI][${client_id}] Payload hasil fetch post:\n`, JSON.stringify(data, null, 2));
+
+  // Filter post hari ini (zona waktu Asia/Jakarta)
+  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const isToday = (ts) => {
+    const d = new Date(ts * 1000);
+    return d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate();
+  };
+
+  const postsToday = (data?.aweme_list || data?.posts || []).filter(post => isToday(post.create_time));
+  const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
+  console.log(msg1);
+  sendAdminDebug(msg1);
+
+  if (postsToday.length > 0) {
+    await upsertTiktokPosts(client_id, postsToday.map(post => ({
+      video_id: post.aweme_id || post.video_id,
+      desc: post.desc,
+      digg_count: post.statistics?.digg_count ?? post.digg_count ?? 0,
+      comment_count: post.statistics?.comment_count ?? post.comment_count ?? 0,
+      create_time: post.create_time,
+    })));
+    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
+    console.log(msg2);
+    sendAdminDebug(msg2);
+  } else {
+    const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
+    console.log(msg3);
+    sendAdminDebug(msg3);
+  }
+  return postsToday.map(post => ({
+    video_id: post.aweme_id || post.video_id,
+    desc: post.desc,
+    digg_count: post.statistics?.digg_count ?? post.digg_count ?? 0,
+    comment_count: post.statistics?.comment_count ?? post.comment_count ?? 0,
+    create_time: post.create_time,
+  }));
 }
-
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
 export async function fetchAllTikTokCommentsToday(client_id, video_id) {
@@ -81,17 +123,31 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
     let cursor = 0, allComments = [];
     let page = 1;
     while (true) {
-      const url = `https://tiktok-api23.p.rapidapi.com/api/comment/list?aweme_id=${video_id}&cursor=${cursor}&count=50`;
-      const headers = {
-        "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-        "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+      const options = {
+        method: 'GET',
+        url: 'https://tiktok-api23.p.rapidapi.com/api/post/comments',
+        params: {
+          videoId: video_id,
+          count: '50',
+          cursor: String(cursor)
+        },
+        headers: {
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+          'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com',
+          'Content-Type': 'application/json'
+        }
       };
+
       const msg1 = `[DEBUG] fetchAllTikTokCommentsToday: fetch komentar page=${page} video_id=${video_id} cursor=${cursor}`;
       console.log(msg1);
       sendAdminDebug(msg1);
 
-      const res = await fetch(url, { headers });
-      const data = await res.json();
+      const response = await axios.request(options);
+      const data = response.data;
+
+      // DEBUG full payload (1x per page)
+      console.log(`[DEBUG][TikTok API /api/post/comments] client_id=${client_id} page=${page} payload:\n${JSON.stringify(data, null, 2)}`);
+
       if (!data.comments || !Array.isArray(data.comments)) {
         const msgNoData = `[DEBUG] fetchAllTikTokCommentsToday: tidak ada data.comments page=${page}`;
         console.log(msgNoData);
@@ -99,13 +155,14 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
         break;
       }
       allComments.push(...data.comments);
-      if (!data.has_more || !data.cursor || data.comments.length === 0) {
+
+      if (!data.has_more || !data.next_cursor || data.comments.length === 0) {
         const msgFinish = `[DEBUG] fetchAllTikTokCommentsToday: selesai (no more/empty) page=${page}, total komentar=${allComments.length}`;
         console.log(msgFinish);
         sendAdminDebug(msgFinish);
         break;
       }
-      cursor = data.cursor;
+      cursor = data.next_cursor;
       page++;
     }
     // Simpan ke DB (array of username, handle map jika objek)
