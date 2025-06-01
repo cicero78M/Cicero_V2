@@ -6,7 +6,6 @@ import waClient from "./waService.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Helper: Kirim log/debug ke ADMIN WhatsApp
 function sendAdminDebug(msg) {
   const adminWA = (process.env.ADMIN_WHATSAPP || "")
     .split(",")
@@ -18,7 +17,6 @@ function sendAdminDebug(msg) {
   }
 }
 
-// Dapatkan secUid TikTok dari DB atau fetch API
 export async function getTiktokSecUid(client_id) {
   const client = await findById(client_id);
   if (client && client.tiktok_secuid) {
@@ -54,9 +52,29 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// Fungsi normalisasi post TikTok (pastikan field DB konsisten)
+// Recursive scan: temukan field array of TikTok post di object apapun
+function findArrayField(obj, debugPath = '') {
+  if (Array.isArray(obj) && obj.length > 0 && typeof obj[0] === "object") {
+    // Cek minimal ada field id/video_id/createTime
+    const sample = obj[0];
+    if (
+      ("id" in sample || "video_id" in sample) &&
+      ("desc" in sample || "caption" in sample) &&
+      ("createTime" in sample || "create_time" in sample)
+    ) {
+      return { arr: obj, field: debugPath };
+    }
+  }
+  if (typeof obj === "object" && obj !== null) {
+    for (const key of Object.keys(obj)) {
+      const found = findArrayField(obj[key], debugPath ? `${debugPath}.${key}` : key);
+      if (found && found.arr) return found;
+    }
+  }
+  return { arr: [], field: '' };
+}
+
 function normalizeTiktokPost(post) {
-  // TikTok sering ganti2 field, pastikan mapping DB tetap aman
   return {
     video_id: post.id || post.video_id || "",
     desc: post.desc || post.caption || "",
@@ -66,83 +84,41 @@ function normalizeTiktokPost(post) {
   };
 }
 
-// FINAL: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
-  const params = {
-    secUid: secUid,
-    count: 35,
-    cursor: 0
-  };
+  const params = { secUid, count: 35, cursor: 0 };
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
     "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
   };
 
   const msg0 = `[DEBUG] fetchAndStoreTiktokContent: fetch post TikTok secUid=${secUid} client_id=${client_id}`;
-  console.log(msg0);
-  sendAdminDebug(msg0);
+  console.log(msg0); sendAdminDebug(msg0);
 
   const response = await axios.get(url, { headers, params });
   let data = response.data;
 
-  // --- Tambahan debug: response.data tipe dan fallback parse ---
   if (typeof data === "string") {
     sendAdminDebug(`[DEBUG] Tipe response.data: string, mencoba JSON.parse ...`);
-    try {
-      data = JSON.parse(data);
-      sendAdminDebug(`[DEBUG] JSON.parse response.data sukses.`);
-    } catch {
-      sendAdminDebug(`[DEBUG] Gagal parse string ke JSON.`);
-      data = {};
-    }
+    try { data = JSON.parse(data); sendAdminDebug(`[DEBUG] JSON.parse response.data sukses.`);}
+    catch { sendAdminDebug(`[DEBUG] Gagal parse string ke JSON.`); data = {}; }
   }
   if (!data || Object.keys(data).length === 0) {
     sendAdminDebug(`[DEBUG] response TikTok API kosong untuk client_id=${client_id}`);
     return [];
   }
 
-  // --- DEBUG root payload & keys
   const rootKeys = Object.keys(data);
   const msgPayloadRoot = `[DEBUG] TikTok PAYLOAD ROOT KEYS: ${rootKeys.join(", ")}`;
-  console.log(msgPayloadRoot);
-  sendAdminDebug(msgPayloadRoot);
+  console.log(msgPayloadRoot); sendAdminDebug(msgPayloadRoot);
 
-  // PATCH: Otomatis cari array post TikTok (pembuktian real payload!)
-  let postsArr = [];
-  let fieldUsed = '';
+  // Auto-detect array post
+  const { arr: postsArr, field: fieldUsed } = findArrayField(data);
 
-  // Paling sering: TikTok sekarang letakkan array di data.data
-  if (Array.isArray(data?.data) && data.data.length) {
-    postsArr = data.data;
-    fieldUsed = 'data.data';
-  }
-  // Cek fallback key lain
-  else if (Array.isArray(data?.itemList) && data.itemList.length) {
-    postsArr = data.itemList;
-    fieldUsed = 'itemList';
-  } else if (Array.isArray(data?.posts) && data.posts.length) {
-    postsArr = data.posts;
-    fieldUsed = 'posts';
-  } else if (Array.isArray(data?.aweme_list) && data.aweme_list.length) {
-    postsArr = data.aweme_list;
-    fieldUsed = 'aweme_list';
-  } else if (Array.isArray(data?.videoList) && data.videoList.length) {
-    postsArr = data.videoList;
-    fieldUsed = 'videoList';
-  }
-  // Fallback: array langsung di root
-  else if (Array.isArray(data) && data.length) {
-    postsArr = data;
-    fieldUsed = 'root';
-  }
+  const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed || '-'} (length=${postsArr.length})`;
+  console.log(msgFieldUsed); sendAdminDebug(msgFieldUsed);
 
-  const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
-  console.log(msgFieldUsed);
-  sendAdminDebug(msgFieldUsed);
-
-  // Debug tiap konten
   postsArr.forEach((post, idx) => {
     const tgl = post.createTime
       ? new Date(post.createTime * 1000).toISOString()
@@ -166,24 +142,19 @@ export async function fetchAndStoreTiktokContent(client_id) {
     .filter(post => isTodayJakarta(post.create_time));
 
   const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
-  console.log(msgTgl);
-  sendAdminDebug(msgTgl);
+  console.log(msgTgl); sendAdminDebug(msgTgl);
 
   const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
-  console.log(msg1);
-  sendAdminDebug(msg1);
+  console.log(msg1); sendAdminDebug(msg1);
 
   if (postsToday.length > 0) {
     await upsertTiktokPosts(client_id, postsToday);
     const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
-    console.log(msg2);
-    sendAdminDebug(msg2);
+    console.log(msg2); sendAdminDebug(msg2);
   } else {
     const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
-    console.log(msg3);
-    sendAdminDebug(msg3);
+    console.log(msg3); sendAdminDebug(msg3);
   }
-  // Return format standar
   return postsToday;
 }
 
@@ -209,24 +180,21 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
       };
 
       const msg1 = `[DEBUG] fetchAllTikTokCommentsToday: fetch komentar page=${page} video_id=${video_id} cursor=${cursor}`;
-      console.log(msg1);
-      sendAdminDebug(msg1);
+      console.log(msg1); sendAdminDebug(msg1);
 
       const response = await axios.request(options);
       const data = response.data;
 
       if (!data.comments || !Array.isArray(data.comments)) {
         const msgNoData = `[DEBUG] fetchAllTikTokCommentsToday: tidak ada data.comments page=${page}`;
-        console.log(msgNoData);
-        sendAdminDebug(msgNoData);
+        console.log(msgNoData); sendAdminDebug(msgNoData);
         break;
       }
       allComments.push(...data.comments);
 
       if (!data.has_more || !data.next_cursor || data.comments.length === 0) {
         const msgFinish = `[DEBUG] fetchAllTikTokCommentsToday: selesai (no more/empty) page=${page}, total komentar=${allComments.length}`;
-        console.log(msgFinish);
-        sendAdminDebug(msgFinish);
+        console.log(msgFinish); sendAdminDebug(msgFinish);
         break;
       }
       cursor = data.next_cursor;
@@ -237,14 +205,12 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
       .map(c => c.user?.unique_id)
       .filter(Boolean);
     const msg2 = `[DEBUG] fetchAllTikTokCommentsToday: saveTiktokComments untuk video_id=${video_id}, total commenters=${commentUsernames.length}`;
-    console.log(msg2);
-    sendAdminDebug(msg2);
+    console.log(msg2); sendAdminDebug(msg2);
     await saveTiktokComments(video_id, commentUsernames);
     return commentUsernames;
   } catch (err) {
     const msgErr = `[ERROR] fetchAllTikTokCommentsToday error: ${err.message}`;
-    console.error(msgErr);
-    sendAdminDebug(msgErr);
+    console.error(msgErr); sendAdminDebug(msgErr);
     throw err;
   }
 }
