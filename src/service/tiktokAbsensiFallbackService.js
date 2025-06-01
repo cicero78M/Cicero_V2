@@ -1,8 +1,8 @@
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 import { getUsersByClientFull } from '../model/userModel.js';
-import { fetchAndStoreTiktokContent } from '../service/tiktokFetchService.js'; // Pastikan import benar
-import waClient from '../service/waService.js';
+import { fetchAndStoreTiktokContent } from './tiktokFetchService.js'; // Pastikan import benar
+import waClient from './waService.js';
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
   .split(',')
