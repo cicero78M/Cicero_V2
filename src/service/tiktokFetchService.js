@@ -56,50 +56,24 @@ export async function getTiktokSecUid(client_id) {
 
 // Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
-  try {
-    const secUid = await getTiktokSecUid(client_id);
-    const url = `https://tiktok-api23.p.rapidapi.com/api/post/user/aweme?secUid=${encodeURIComponent(secUid)}&count=30`;
-    const headers = {
-      "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-      "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
-    };
-    const msg1 = `[DEBUG] fetchAndStoreTiktokContent: fetch post TikTok secUid=${secUid} client_id=${client_id}`;
-    console.log(msg1);
-    sendAdminDebug(msg1);
+  const secUid = await getTiktokSecUid(client_id);
+  const url = `https://tiktok-api23.p.rapidapi.com/api/post/user/aweme?secUid=${encodeURIComponent(secUid)}&count=30`;
+  const headers = {
+    "x-rapidapi-key": process.env.RAPIDAPI_KEY,
+    "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+  };
+  const res = await fetch(url, { headers });
+  const data = await res.json();
 
-    const res = await fetch(url, { headers });
-    const data = await res.json();
-    // Filter post hari ini
-    const today = new Date();
-    const isToday = (ts) => {
-      const d = new Date(ts * 1000);
-      return d.toDateString() === today.toDateString();
-    };
-    const postsToday = (data?.aweme_list || []).filter(post => isToday(post.create_time));
-    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
-    console.log(msg2);
-    sendAdminDebug(msg2);
+  // === DEBUG PAYLOAD FULL ke console ===
+  console.log(`[DEBUG][TikTokAPI][${client_id}] Payload hasil fetch:\n`, JSON.stringify(data, null, 2));
 
-    // Simpan ke DB
-    await upsertTiktokPosts(client_id, postsToday);
-    const msg3 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
-    console.log(msg3);
-    sendAdminDebug(msg3);
+  // Filter post hari ini (rekomendasi: gunakan patch zona waktu Asia/Jakarta!)
+  // ...lanjutkan sesuai patch yang sudah disarankan sebelumnya...
 
-    return postsToday.map(post => ({
-      video_id: post.aweme_id,
-      desc: post.desc,
-      digg_count: post.statistics.digg_count,
-      unique_id: post.author?.unique_id || "",
-      create_time: post.create_time
-    }));
-  } catch (err) {
-    const msgErr = `[ERROR] fetchAndStoreTiktokContent error: ${err.message}`;
-    console.error(msgErr);
-    sendAdminDebug(msgErr);
-    throw err;
-  }
+  // ... lanjutkan dengan proses filter, simpan ke DB, dsb ...
 }
+
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
 export async function fetchAllTikTokCommentsToday(client_id, video_id) {
