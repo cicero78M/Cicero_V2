@@ -30,14 +30,14 @@ function delay(ms) {
 
 /**
  * Fetch semua komentar TikTok via API dan simpan ke DB (append, tidak replace)
- * Paginasi otomatis, berhenti jika comments kosong, selalu lanjut next_cursor jika ada.
- * Debug setiap langkah, rate limit 1200ms/request, plimit bisa diterapkan di level pemanggil
+ * Paginasi berdasarkan cursor & total. Debug setiap langkah, rate limit 1200ms/request.
  * @param {string} video_id
  * @returns {Array} Array komentar (semua)
  */
 export async function fetchAndStoreTiktokComments(video_id) {
   let allComments = [];
   let cursor = 0, page = 1, reqCount = 0;
+  let total = null;
 
   while (true) {
     const options = {
@@ -63,7 +63,7 @@ export async function fetchAndStoreTiktokComments(video_id) {
       response = await axios.request(options);
       data = response.data;
 
-      // Debug response path (lihat isi aslinya)
+      // Debug response structure
       const keys = Object.keys(data);
       const dataKeys = data?.data ? Object.keys(data.data) : [];
       sendAdminDebug(`[DEBUG][API_RESPONSE] page=${page} keys=${JSON.stringify(keys)} dataKeys=${JSON.stringify(dataKeys)}`);
@@ -73,28 +73,31 @@ export async function fetchAndStoreTiktokComments(video_id) {
       throw err;
     }
 
-    // Path array komentar: data.data.comments (berdasarkan file bukti/upload)
+    // Path array komentar dan total: data.data.comments & data.data.total
     let comments = [];
-    let nextCursor = null;
     if (Array.isArray(data?.data?.comments)) {
       comments = data.data.comments;
-      nextCursor = data.data.next_cursor;
+      if (typeof data.data.total === "number") {
+        total = data.data.total;
+      }
     } else if (Array.isArray(data?.comments)) {
       comments = data.comments;
-      nextCursor = data.next_cursor;
+      if (typeof data.total === "number") {
+        total = data.total;
+      }
     }
 
-    sendAdminDebug(`[DEBUG] TikTok Komentar page=${page}, video_id=${video_id}, jml=${comments.length}, next_cursor=${nextCursor}`);
+    sendAdminDebug(`[DEBUG] TikTok Komentar page=${page}, video_id=${video_id}, jml=${comments.length}, cursor=${cursor}, total=${total}`);
 
     if (!comments.length) break; // STOP paginasi jika data kosong!
     allComments.push(...comments);
 
-    // Siapkan next_cursor jika ada, lanjut loop, jika tidak, break
-    if (!nextCursor) break;
-    cursor = nextCursor;
+    // Cek paginasi: lanjut jika cursor+50 < total, else break
+    if (total === null || cursor + 50 >= total) break;
+    cursor += 50;
     page++;
 
-    // Rate limit: delay 1200ms per request (patch, aman dari rate limit API)
+    // Rate limit: delay 1200ms per request
     await delay(1200);
   }
 
@@ -105,7 +108,7 @@ export async function fetchAndStoreTiktokComments(video_id) {
     if (Array.isArray(existing.comments)) oldComments = existing.comments;
   } catch {/* ignore */}
 
-  // Gabungkan, unik berdasarkan cid/comment_id/id/JSON
+  // Gabungkan unik berdasarkan cid/comment_id/id/JSON
   const uniqMap = {};
   [...oldComments, ...allComments].forEach((c) => {
     const key = c?.cid || c?.comment_id || c?.id || JSON.stringify(c);
