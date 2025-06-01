@@ -1,29 +1,18 @@
-import { pool } from '../config/db.js';
+import { pool } from "../config/db.js";
 
-// Upsert komentar (jsonb) TikTok berdasarkan video_id
-export async function saveTiktokComments(video_id, commentsArr) {
-  // commentsArr: array of objek comment dari API, simpan langsung dalam 1 array JSON
-  if (!video_id || !Array.isArray(commentsArr)) return false;
-  await pool.query(
-    `INSERT INTO tiktok_comment (video_id, comments, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (video_id)
-     DO UPDATE SET
-        comments = EXCLUDED.comments,
-        updated_at = NOW()`,
-    [
-      video_id,
-      JSON.stringify(commentsArr)
-    ]
-  );
-  return true;
+export async function upsertTiktokComments(video_id, commentsArr) {
+  // Kolom: video_id (PK), comments (jsonb), updated_at (timestamp)
+  const q = `
+    INSERT INTO tiktok_comment (video_id, comments, updated_at)
+    VALUES ($1, $2, NOW())
+    ON CONFLICT (video_id)
+    DO UPDATE SET comments = $2, updated_at = NOW()
+  `;
+  await pool.query(q, [video_id, JSON.stringify(commentsArr)]);
 }
 
-// Ambil komentar untuk video_id tertentu
 export async function getCommentsByVideoId(video_id) {
-  const res = await pool.query(
-    `SELECT comments FROM tiktok_comment WHERE video_id = $1`,
-    [video_id]
-  );
-  return res.rows[0]?.comments || [];
+  const q = `SELECT comments FROM tiktok_comment WHERE video_id = $1`;
+  const res = await pool.query(q, [video_id]);
+  return res.rows[0] ? { comments: res.rows[0].comments } : { comments: [] };
 }

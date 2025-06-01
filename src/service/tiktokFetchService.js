@@ -70,6 +70,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
   );
   function isTodayJakarta(ts) {
+    if (!ts) return false;
     const d = new Date(
       new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
     );
@@ -92,7 +93,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
       postsToday.map((post) => ({
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
-        created_at: post.createTime, // <== mapping ke kolom created_at di DB (epoch detik)
+        created_at: new Date(post.createTime * 1000), // simpan sebagai timestamp JS (Pastikan model konversi ke timestamp DB!)
         like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
         comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
       }))
@@ -110,7 +111,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
   return postsToday.map((post) => ({
     video_id: post.id || post.video_id,
     caption: post.desc || post.caption || "",
-    created_at: post.createTime,
+    created_at: new Date(post.createTime * 1000),
     like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
     comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
   }));
