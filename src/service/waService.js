@@ -391,7 +391,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const filter1 = (parts[2] || "").toLowerCase();
   const filter2 = (parts[3] || "").toLowerCase();
 
-  // 1. Siapkan header laporan
+  // Header laporan
   const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n`;
   const now = new Date();
   const hariIndo = [
@@ -401,11 +401,21 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  // 2. Ambil user & post TikTok hari ini dari database
+  // 1. Ambil user & post TikTok hari ini dari database
   const { getUsersByClient } = await import("../model/userModel.js");
   const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
+
+  // --- DEBUG LOG: Jumlah post TikTok di database
+  const { sendAdminDebug } = await import("../service/tiktokFetchService.js");
+  let debugMsg = `[DEBUG][absensikomentar] client_id=${client_id}, Hari=${hari}, Tanggal=${tanggal} Jam=${jam}\n`;
+  debugMsg += `[DEBUG] Jumlah post TikTok: ${posts.length}\n`;
+  posts.forEach((p, i) => {
+    debugMsg += `#${i + 1} video_id=${p.video_id || p.id} | created_at=${p.created_at || p.create_time}\n`;
+  });
+  sendAdminDebug(debugMsg);
+  console.log(debugMsg);
 
   if (!posts || posts.length === 0) {
     await waClient.sendMessage(
@@ -416,7 +426,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     return;
   }
 
-  // 3. Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum)
+  // 2. Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum)
   if (filter1 === "akumulasi") {
     // Map user: {user_id: {..., count:0}}
     const userStats = {};
@@ -505,7 +515,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     return;
   }
 
-  // 4. Mode per Post TikTok (default/sudah/belum)
+  // 3. Mode per Post TikTok (default/sudah/belum)
   const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
   for (const post of posts) {
     const video_id = post.video_id || post.id;
