@@ -11,20 +11,24 @@ const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
  * @returns {string|null} secUid TikTok
  */
 export async function getTiktokSecUid(client_id, username) {
-  // 1. Cek DB
+  // 1. Cek DB lebih dulu (by client_id)
   if (client_id) {
     const client = await findById(client_id);
-    // PATCH: pakai field tiktok_secuid (bukan camelCase)
+    // PATCH: gunakan field tiktok_secuid dari DB (lowercase)
     if (client && client.tiktok_secuid) {
       return client.tiktok_secuid;
     }
-    // Fallback: username dari client jika kosong di parameter
+    // Fallback: username dari field client_tiktok jika tidak di-parameter
     if (!username && client && client.client_tiktok) {
-      username = client.client_tiktok.replace(/^@/, '');
+      username = String(client.client_tiktok).replace(/^@/, '').trim();
     }
   }
-  if (!username) throw new Error("Username TikTok kosong.");
-  // 2. Fetch via API
+  // PATCH: Error handling jika username kosong
+  if (!username) {
+    throw new Error("Username TikTok kosong. Harap lengkapi data client_tiktok pada client.");
+  }
+
+  // 2. Fetch via API jika secUid belum ada di DB
   const url = `https://${RAPIDAPI_HOST}/api/user/info?uniqueId=${encodeURIComponent(username)}`;
   const options = {
     method: 'GET',
@@ -43,9 +47,9 @@ export async function getTiktokSecUid(client_id, username) {
     const secUid = data?.userInfo?.user?.secUid;
     if (!secUid) throw new Error("secUid tidak ditemukan di response API.");
 
-    // PATCH: update DB ke field tiktok_secuid (LOWERCASE)
+    // 3. Update ke DB jika client_id tersedia
     if (client_id && secUid) {
-      await update(client_id, { tiktok_secuid: secUid });
+      await update(client_id, { tiktok_secuid: secUid }); // field harus tiktok_secuid (LOWERCASE)
     }
     return secUid;
   } catch (err) {
