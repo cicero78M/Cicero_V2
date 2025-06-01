@@ -30,7 +30,7 @@ function delay(ms) {
 
 /**
  * Fetch semua komentar TikTok via API dan simpan ke DB (append, tidak replace)
- * Paginasi berdasarkan cursor & total. Debug setiap langkah, rate limit 1200ms/request.
+ * Paginasi berdasarkan cursor & total. Debug setiap langkah, rate limit 2000ms/request.
  * @param {string} video_id
  * @returns {Array} Array komentar (semua)
  */
@@ -92,12 +92,13 @@ export async function fetchAndStoreTiktokComments(video_id) {
     if (!comments.length) break; // STOP paginasi jika data kosong!
     allComments.push(...comments);
 
-    // Cek paginasi: lanjut jika cursor+50 < total, else break
-    if (total === null || cursor + 50 >= total) break;
+    // --- LOGIKA PAGINASI FINAL SESUAI REQUEST ---
+    // Hanya berhenti jika cursor > total+50
+    if (total !== null && cursor > (total + 50)) break;
     cursor += 50;
     page++;
 
-    // Rate limit: delay 1200ms per request
+    // Rate limit: delay 2000ms per request
     await delay(2000);
   }
 
