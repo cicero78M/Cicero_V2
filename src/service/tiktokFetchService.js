@@ -17,15 +17,17 @@ function sendAdminDebug(msg) {
   }
 }
 
+// Ambil secUid dari DB atau API TikTok
 export async function getTiktokSecUid(client_id) {
   const client = await findById(client_id);
   if (client && client.tiktok_secuid) return client.tiktok_secuid;
-  if (!client || !client.client_tiktok) throw new Error("Username TikTok kosong di database.");
+  if (!client || !client.client_tiktok)
+    throw new Error("Username TikTok kosong di database.");
   const username = client.client_tiktok.replace(/^@/, "");
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`;
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-    "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+    "x-rapidapi-host": "tiktok-api23.p.rapidapi.com",
   };
   const response = await axios.get(url, { headers });
   const data = response.data;
@@ -35,59 +37,81 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// PATCH FINAL
+// PATCH FINAL: Fetch semua post TikTok hari ini, mapping waktu ke created_at (DB)
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
   const params = {
     secUid: secUid,
     count: 35,
-    cursor: 0
+    cursor: 0,
   };
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-    "x-rapidapi-host": "tiktok-api23.p.rapidapi.com"
+    "x-rapidapi-host": "tiktok-api23.p.rapidapi.com",
   };
 
   const response = await axios.get(url, { headers, params });
   let data = response.data;
   if (typeof data === "string") {
-    try { data = JSON.parse(data); } catch { data = {}; }
+    try {
+      data = JSON.parse(data);
+    } catch {
+      data = {};
+    }
   }
-  // --- PATCH: Periksa path data.itemList sesuai file asli
+
+  // PATCH: Pastikan path data.itemList sesuai hasil fetch API asli
   const postsArr = Array.isArray(data?.data?.itemList) ? data.data.itemList : [];
   sendAdminDebug(`[DEBUG] TikTok POST COUNT (data.itemList): ${postsArr.length}`);
 
-  // Filter post hari ini (Asia/Jakarta)
-  const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  // Filter hanya post hari ini (Asia/Jakarta)
+  const todayJakarta = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
   function isTodayJakarta(ts) {
-    const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-    return d.getFullYear() === todayJakarta.getFullYear() &&
-           d.getMonth() === todayJakarta.getMonth() &&
-           d.getDate() === todayJakarta.getDate();
+    const d = new Date(
+      new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+    );
+    return (
+      d.getFullYear() === todayJakarta.getFullYear() &&
+      d.getMonth() === todayJakarta.getMonth() &&
+      d.getDate() === todayJakarta.getDate()
+    );
   }
-  const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
+  const postsToday = postsArr.filter((post) => isTodayJakarta(post.createTime));
 
-  sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`);
+  sendAdminDebug(
+    `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`
+  );
 
-  // --- Simpan ke DB jika ada
+  // Simpan ke DB
   if (postsToday.length > 0) {
-    await upsertTiktokPosts(client_id, postsToday.map(post => ({
-      video_id: post.id || post.video_id,
-      desc: post.desc || "",
-      create_time: post.createTime, // unix detik
-      digg_count: post.stats?.diggCount ?? 0,
-      comment_count: post.stats?.commentCount ?? 0,
-    })));
-    sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`);
+    await upsertTiktokPosts(
+      client_id,
+      postsToday.map((post) => ({
+        video_id: post.id || post.video_id,
+        caption: post.desc || post.caption || "",
+        created_at: post.createTime, // <== mapping ke kolom created_at di DB (epoch detik)
+        like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+        comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
+      }))
+    );
+    sendAdminDebug(
+      `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`
+    );
   } else {
-    sendAdminDebug(`[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`);
+    sendAdminDebug(
+      `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`
+    );
   }
-  return postsToday.map(post => ({
+
+  // Return array posts
+  return postsToday.map((post) => ({
     video_id: post.id || post.video_id,
-    desc: post.desc || "",
-    create_time: post.createTime,
-    digg_count: post.stats?.diggCount ?? 0,
-    comment_count: post.stats?.commentCount ?? 0,
+    caption: post.desc || post.caption || "",
+    created_at: post.createTime,
+    like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+    comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
   }));
 }
