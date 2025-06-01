@@ -1,8 +1,7 @@
 import fetch from "node-fetch";
 import { findById, update } from "../model/clientModel.js";
-import { saveTiktokPosts } from "../model/tiktokPostModel.js";
+import { upsertTiktokPosts } from "../model/tiktokPostModel.js";
 import { saveTiktokComments } from "../model/tiktokCommentModel.js";
-
 
 // Mendapatkan secUid dari DB, jika tidak ada ambil dari API, lalu update DB
 export async function getTiktokSecUid(client_id) {
@@ -27,7 +26,6 @@ export async function getTiktokSecUid(client_id) {
 // Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
-  // panggil API post TikTok (ganti sesuai endpoint rapidapi-mu)
   const url = `https://tiktok-api23.p.rapidapi.com/api/post/user/aweme?secUid=${encodeURIComponent(secUid)}&count=30`;
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
@@ -42,8 +40,8 @@ export async function fetchAndStoreTiktokContent(client_id) {
     return d.toDateString() === today.toDateString();
   };
   const postsToday = (data?.aweme_list || []).filter(post => isToday(post.create_time));
-  // Simpan ke DB (pastikan fungsi saveTiktokPosts tersedia)
-  await saveTiktokPosts(client_id, postsToday);
+  // Simpan ke DB (pakai upsertTiktokPosts)
+  await upsertTiktokPosts(client_id, postsToday);
   return postsToday.map(post => ({
     video_id: post.aweme_id,
     desc: post.desc,
@@ -69,7 +67,7 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
     if (!data.has_more || !data.cursor || data.comments.length === 0) break;
     cursor = data.cursor;
   }
-  // Simpan ke DB (pastikan fungsi saveTiktokComments tersedia)
-  await saveTiktokComments(client_id, video_id, allComments);
+  // Simpan ke DB (param sesuai model!)
+  await saveTiktokComments(video_id, allComments);
   return allComments;
 }
