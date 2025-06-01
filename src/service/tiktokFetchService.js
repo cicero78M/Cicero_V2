@@ -1,7 +1,8 @@
-import { pool } from "../config/db.js";
 import fetch from "node-fetch";
 import { findById, update } from "../model/clientModel.js";
-import { saveTiktokPosts, saveTiktokComments } from "../model/tiktokPostModel.js"; // pastikan sesuai
+import { saveTiktokPosts } from "../model/tiktokPostModel.js";
+import { saveTiktokComments } from "../model/tiktokCommentModel.js";
+
 
 // Mendapatkan secUid dari DB, jika tidak ada ambil dari API, lalu update DB
 export async function getTiktokSecUid(client_id) {
