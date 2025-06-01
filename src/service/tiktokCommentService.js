@@ -113,7 +113,7 @@ export async function fetchAndStoreTiktokComments(video_id) {
  * @returns {Promise<Array>} - Array hasil per video (array komentar per video)
  */
 export async function fetchCommentsBatch(videoIds) {
-  const limit = pLimit(8); // Max 8 video berjalan bersamaan
+  const limit = pLimit(1); // Max 8 video berjalan bersamaan
   const tasks = videoIds.map(video_id =>
     limit(() => fetchAndStoreTiktokComments(video_id))
   );
