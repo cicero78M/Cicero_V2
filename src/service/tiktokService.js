@@ -14,8 +14,9 @@ export async function getTiktokSecUid(client_id, username) {
   // 1. Cek DB
   if (client_id) {
     const client = await findById(client_id);
-    if (client && client.tiktok_secUid) {
-      return client.tiktok_secUid;
+    // PATCH: pakai field tiktok_secuid (bukan camelCase)
+    if (client && client.tiktok_secuid) {
+      return client.tiktok_secuid;
     }
     // Fallback: username dari client jika kosong di parameter
     if (!username && client && client.client_tiktok) {
@@ -42,9 +43,9 @@ export async function getTiktokSecUid(client_id, username) {
     const secUid = data?.userInfo?.user?.secUid;
     if (!secUid) throw new Error("secUid tidak ditemukan di response API.");
 
-    // 3. Update ke DB jika client_id tersedia
+    // PATCH: update DB ke field tiktok_secuid (LOWERCASE)
     if (client_id && secUid) {
-      await update(client_id, { tiktok_secUid: secUid });
+      await update(client_id, { tiktok_secuid: secUid });
     }
     return secUid;
   } catch (err) {

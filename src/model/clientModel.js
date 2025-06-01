@@ -6,7 +6,6 @@ export const findAll = async () => {
   return res.rows;
 };
 
-
 // Dapatkan satu client by client_id
 export const findById = async (client_id) => {
   const res = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
@@ -17,7 +16,7 @@ export const findById = async (client_id) => {
 export const create = async (client) => {
   const q = `
     INSERT INTO clients 
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secUid, client_super)
+      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secuid, client_super)
     VALUES
       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
@@ -34,9 +33,8 @@ export const create = async (client) => {
     client.client_tiktok_status ?? true,
     client.client_operator || '',
     client.client_group || '',
-    client.tiktok_secUid || '',
+    client.tiktok_secuid || '',       // PATCH: field lowercase, match DB!
     client.client_super || ''
-
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
@@ -59,9 +57,8 @@ export const update = async (client_id, clientData) => {
       client_tiktok_status = $8,
       client_operator = $9,
       client_group = $10,
-      tiktok_secUid = $11,
+      tiktok_secuid = $11,            // PATCH: field lowercase, match DB!
       client_super = $12
-
     WHERE client_id = $1
     RETURNING *
   `;
@@ -76,9 +73,8 @@ export const update = async (client_id, clientData) => {
     merged.client_tiktok_status,
     merged.client_operator,
     merged.client_group,
-    merged.tiktok_secUid || '',
+    merged.tiktok_secuid || '',      // PATCH: field lowercase, match DB!
     merged.client_super || ''
-
   ];
   const res = await pool.query(q, values);
   return res.rows[0];
