@@ -81,7 +81,7 @@ export async function fetchAndStoreTiktokComments(video_id) {
     page++;
 
     // Rate limit: delay 650ms per request
-    await delay(650);
+    await delay(2000);
   }
 
   // Gabungkan komentar baru dan lama, hindari duplikat
