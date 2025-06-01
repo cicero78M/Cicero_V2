@@ -460,13 +460,31 @@ waClient.on("message", async (msg) => {
       msg += `Jumlah post: *${posts.length}*\n\n`;
       posts.forEach((item, i) => {
         const desc = item.desc || item.caption || "-";
-        const create_time =
+        let create_time =
           item.create_time || item.created_at || item.createTime;
-        const created = create_time
-          ? new Date(create_time).toLocaleString("id-ID", {
+        let created = "-";
+        // Robust: deteksi tipe waktu (epoch detik, string ISO, Date)
+        if (typeof create_time === "number") {
+          // Jika > tahun 2050 berarti ms, bukan detik
+          if (create_time > 2000000000) {
+            // year > 2033 in detik, berarti ms
+            created = new Date(create_time).toLocaleString("id-ID", {
               timeZone: "Asia/Jakarta",
-            })
-          : "-";
+            });
+          } else {
+            created = new Date(create_time * 1000).toLocaleString("id-ID", {
+              timeZone: "Asia/Jakarta",
+            });
+          }
+        } else if (typeof create_time === "string") {
+          created = new Date(create_time).toLocaleString("id-ID", {
+            timeZone: "Asia/Jakarta",
+          });
+        } else if (create_time instanceof Date) {
+          created = create_time.toLocaleString("id-ID", {
+            timeZone: "Asia/Jakarta",
+          });
+        }
         const video_id = item.video_id || item.id;
         msg += `#${i + 1} Video ID: ${video_id}\n`;
         msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
