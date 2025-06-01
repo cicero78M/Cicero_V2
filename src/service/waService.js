@@ -8,7 +8,6 @@ import dotenv from "dotenv";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
-import { getTiktokSecUid } from "./tiktokService.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
@@ -22,8 +21,9 @@ import { getUsersByClient } from "../model/userModel.js";
 
 import {
   fetchAndStoreTiktokContent,
-  fetchAllTikTokCommentsToday,
+  fetchAllTikTokCommentsToday, getTiktokSecUid
 } from "./tiktokFetchService.js";
+
 
 dotenv.config();
 
