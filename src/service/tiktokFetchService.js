@@ -18,6 +18,7 @@ function sendAdminDebug(msg) {
   }
 }
 
+// Dapatkan secUid TikTok dari DB atau fetch API
 export async function getTiktokSecUid(client_id) {
   const client = await findById(client_id);
   if (client && client.tiktok_secuid) {
@@ -53,19 +54,19 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// Normalisasi TikTok post agar insert ke DB konsisten
+// Fungsi normalisasi post TikTok (pastikan field DB konsisten)
 function normalizeTiktokPost(post) {
-  // Handle beberapa struktur: TikTok API kadang mengirim field tidak konsisten
+  // TikTok sering ganti2 field, pastikan mapping DB tetap aman
   return {
-    video_id: post.id || post.video_id,
+    video_id: post.id || post.video_id || "",
     desc: post.desc || post.caption || "",
-    create_time: post.createTime || post.create_time, // UNIX seconds
-    digg_count: (post.stats?.diggCount ?? post.digg_count ?? post.statistics?.diggCount ?? post.statistics?.likeCount ?? 0),
-    comment_count: (post.stats?.commentCount ?? post.comment_count ?? post.statistics?.commentCount ?? 0),
+    create_time: post.createTime || post.create_time || 0,
+    digg_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.digg_count ?? post.like_count ?? 0,
+    comment_count: post.statistics?.commentCount ?? post.comment_count ?? 0,
   };
 }
 
-// PATCH FINAL: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// FINAL: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -108,10 +109,17 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Otomatis deteksi array post (support field: itemList, posts, aweme_list, videoList, data)
+  // PATCH: Otomatis cari array post TikTok (pembuktian real payload!)
   let postsArr = [];
   let fieldUsed = '';
-  if (Array.isArray(data?.itemList) && data.itemList.length) {
+
+  // Paling sering: TikTok sekarang letakkan array di data.data
+  if (Array.isArray(data?.data) && data.data.length) {
+    postsArr = data.data;
+    fieldUsed = 'data.data';
+  }
+  // Cek fallback key lain
+  else if (Array.isArray(data?.itemList) && data.itemList.length) {
     postsArr = data.itemList;
     fieldUsed = 'itemList';
   } else if (Array.isArray(data?.posts) && data.posts.length) {
@@ -123,19 +131,26 @@ export async function fetchAndStoreTiktokContent(client_id) {
   } else if (Array.isArray(data?.videoList) && data.videoList.length) {
     postsArr = data.videoList;
     fieldUsed = 'videoList';
-  } else if (Array.isArray(data?.data) && data.data.length) {
-    postsArr = data.data; // PATCH: TikTok response kadang rootnya 'data'
-    fieldUsed = 'data';
   }
+  // Fallback: array langsung di root
+  else if (Array.isArray(data) && data.length) {
+    postsArr = data;
+    fieldUsed = 'root';
+  }
+
   const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
   console.log(msgFieldUsed);
   sendAdminDebug(msgFieldUsed);
 
   // Debug tiap konten
   postsArr.forEach((post, idx) => {
-    const tgl = post.createTime ? new Date(post.createTime * 1000).toISOString() : '-';
+    const tgl = post.createTime
+      ? new Date(post.createTime * 1000).toISOString()
+      : post.create_time
+      ? new Date(post.create_time * 1000).toISOString()
+      : '-';
     const id = post.id || post.video_id || '-';
-    sendAdminDebug(`[DEBUG][item ${idx+1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
+    sendAdminDebug(`[DEBUG][item ${idx + 1}] id=${id} caption=${post.desc || post.caption || ''} createTime=${tgl}`);
   });
 
   // Filter post hari ini (Asia/Jakarta)
@@ -146,7 +161,10 @@ export async function fetchAndStoreTiktokContent(client_id) {
            d.getMonth() === todayJakarta.getMonth() &&
            d.getDate() === todayJakarta.getDate();
   }
-  const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime || post.create_time));
+  const postsToday = postsArr
+    .map(normalizeTiktokPost)
+    .filter(post => isTodayJakarta(post.create_time));
+
   const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
   console.log(msgTgl);
   sendAdminDebug(msgTgl);
@@ -156,19 +174,17 @@ export async function fetchAndStoreTiktokContent(client_id) {
   sendAdminDebug(msg1);
 
   if (postsToday.length > 0) {
-    // PATCH: mapping normalization sebelum simpan DB
-    const normalizedPosts = postsToday.map(normalizeTiktokPost);
-    await upsertTiktokPosts(client_id, normalizedPosts);
-    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${normalizedPosts.length} post ke DB`;
+    await upsertTiktokPosts(client_id, postsToday);
+    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
     console.log(msg2);
     sendAdminDebug(msg2);
-    return normalizedPosts;
   } else {
     const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
     console.log(msg3);
     sendAdminDebug(msg3);
-    return [];
   }
+  // Return format standar
+  return postsToday;
 }
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
