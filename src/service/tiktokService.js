@@ -1,22 +1,19 @@
 import fetch from 'node-fetch'; // npm install node-fetch
-import { findClientById, updateClient } from '../model/clientModel.js';
-// Jika secUid juga disimpan di tabel user, import model user dan update logika sesuai kebutuhan
+import { findById, update } from '../model/clientModel.js';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 
 /**
- * Ambil secUid TikTok:
- * 1. Cek di database (client.tiktok_secUid)
- * 2. Jika kosong/null, fetch via API, lalu simpan ke DB
+ * Ambil secUid TikTok (DB-first, fallback ke API jika kosong).
  * @param {string} client_id 
- * @param {string} username (username TikTok tanpa '@')
+ * @param {string} username (tanpa '@', optional)
  * @returns {string|null} secUid TikTok
  */
 export async function getTiktokSecUid(client_id, username) {
   // 1. Cek DB
   if (client_id) {
-    const client = await findClientById(client_id);
+    const client = await findById(client_id);
     if (client && client.tiktok_secUid) {
       return client.tiktok_secUid;
     }
@@ -25,9 +22,8 @@ export async function getTiktokSecUid(client_id, username) {
       username = client.client_tiktok.replace(/^@/, '');
     }
   }
-  // 2. Pastikan username tersedia
   if (!username) throw new Error("Username TikTok kosong.");
-  // 3. Fetch via API
+  // 2. Fetch via API
   const url = `https://${RAPIDAPI_HOST}/api/user/info?uniqueId=${encodeURIComponent(username)}`;
   const options = {
     method: 'GET',
@@ -46,9 +42,9 @@ export async function getTiktokSecUid(client_id, username) {
     const secUid = data?.userInfo?.user?.secUid;
     if (!secUid) throw new Error("secUid tidak ditemukan di response API.");
 
-    // 4. Update ke DB jika client_id tersedia
+    // 3. Update ke DB jika client_id tersedia
     if (client_id && secUid) {
-      await updateClient(client_id, { tiktok_secUid: secUid });
+      await update(client_id, { tiktok_secUid: secUid });
     }
     return secUid;
   } catch (err) {
