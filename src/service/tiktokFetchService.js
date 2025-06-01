@@ -208,3 +208,32 @@ export async function fetchCommentsTodayByClient(client_id, debugCallback = null
 
 // Fungsi fetchAndStoreTiktokContent bisa dibuat redirect ke fetchAndAbsensiTiktok jika ingin backward compatible, atau silakan hapus jika sudah tidak dipakai.
 
+// Patch: Alias agar handler lama tetap kompatibel
+export async function fetchAndStoreTiktokContent(arg1 = null, arg2 = null, client_id = null) {
+  // arg1, arg2 abaikan saja (biar signature tetap)
+  // handler lama biasa memanggil: fetchAndStoreTiktokContent(null, null, client_id)
+  // Kita ambil 1 client jika ada, atau semua client aktif jika null
+  if (client_id) {
+    // Ambil info client dari DB (pastikan ada findById/import sesuai project)
+    const { findById } = await import('../model/clientModel.js');
+    const client = await findById(client_id);
+    if (!client) throw new Error(`Client ${client_id} tidak ditemukan di database.`);
+    return await fetchAndAbsensiTiktok(client);
+  } else {
+    // Fetch semua client aktif
+    const { findAll } = await import('../model/clientModel.js');
+    const allClients = await findAll();
+    let allResults = [];
+    for (const client of allClients) {
+      if (client.client_tiktok_status && client.client_tiktok) {
+        try {
+          const result = await fetchAndAbsensiTiktok(client);
+          allResults.push(result);
+        } catch (err) {
+          allResults.push({ error: err.message, client_id: client.client_id });
+        }
+      }
+    }
+    return allResults;
+  }
+}
