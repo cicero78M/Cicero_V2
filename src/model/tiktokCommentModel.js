@@ -1,41 +1,29 @@
-// src/model/tiktokCommentModel.js
-
 import { pool } from '../config/db.js';
 
-/**
- * Simpan (replace) komentar TikTok ke DB untuk 1 video.
- * @param {string} video_id
- * @param {string[]} comments - array username yang berkomentar
- */
-export async function saveTiktokComments(video_id, comments) {
-  await pool.query(`DELETE FROM tiktok_comment WHERE video_id = $1`, [video_id]);
-  if (!comments || comments.length === 0) return;
-  // Insert bulk
-  const values = comments.map((c, i) => `($1, $${i+2})`).join(',');
+// Upsert komentar (jsonb) TikTok berdasarkan video_id
+export async function saveTiktokComments(video_id, commentsArr) {
+  // commentsArr: array of objek comment dari API, simpan langsung dalam 1 array JSON
+  if (!video_id || !Array.isArray(commentsArr)) return false;
   await pool.query(
-    `INSERT INTO tiktok_comment (video_id, username) VALUES ${values}`,
-    [video_id, ...comments]
+    `INSERT INTO tiktok_comment (video_id, comments, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (video_id)
+     DO UPDATE SET
+        comments = EXCLUDED.comments,
+        updated_at = NOW()`,
+    [
+      video_id,
+      JSON.stringify(commentsArr)
+    ]
   );
+  return true;
 }
 
-/**
- * Upsert komentar TikTok (replace semua) untuk 1 video (alias dari saveTiktokComments)
- * @param {string} video_id
- * @param {string[]} commenters
- */
-export async function upsertTiktokComments(video_id, commenters) {
-  return saveTiktokComments(video_id, commenters);
-}
-
-/**
- * Ambil seluruh username yang berkomentar di video TikTok (by video_id)
- * @param {string} video_id
- * @returns {Promise<string[]>}
- */
+// Ambil komentar untuk video_id tertentu
 export async function getCommentsByVideoId(video_id) {
   const res = await pool.query(
-    `SELECT username FROM tiktok_comment WHERE video_id = $1`,
+    `SELECT comments FROM tiktok_comment WHERE video_id = $1`,
     [video_id]
   );
-  return res.rows.map(r => r.username);
+  return res.rows[0]?.comments || [];
 }

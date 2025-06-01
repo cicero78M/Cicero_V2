@@ -375,6 +375,76 @@ waClient.on("message", async (msg) => {
     return;
   }
 
+  // =======================
+  // === TIKTOK: ABSENSI KOMENTAR
+  // =======================
+if (text.toLowerCase().startsWith("absensikomentar#")) {
+  if (!isAdminWhatsApp(chatId)) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Anda tidak memiliki akses ke sistem ini."
+    );
+    return;
+  }
+
+  const [, client_id] = text.split("#");
+  if (!client_id) {
+    await waClient.sendMessage(
+      chatId,
+      "Format salah!\nGunakan: absensikomentar#clientid"
+    );
+    return;
+  }
+
+  await waClient.sendMessage(
+    chatId,
+    `⏳ Memulai absensi komentar TikTok untuk *${client_id}* ...`
+  );
+
+  try {
+    // 1. Ambil seluruh post TikTok hari ini dari database
+    const { getPostsTodayByClient } = await import(
+      "../model/tiktokPostModel.js"
+    );
+    const posts = await getPostsTodayByClient(client_id);
+
+    if (!posts || posts.length === 0) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Tidak ada post TikTok hari ini di database untuk client *${client_id}*`
+      );
+      return;
+    }
+
+    let totalComment = 0;
+    const { fetchAllTikTokCommentsToday } = await import(
+      "../service/tiktokFetchService.js"
+    );
+    for (const [idx, post] of posts.entries()) {
+      const video_id = post.video_id || post.id;
+      // Fetch komentar dari API dan simpan ke DB
+      const commenters = await fetchAllTikTokCommentsToday(
+        client_id,
+        video_id
+      );
+      totalComment += Array.isArray(commenters) ? commenters.length : 0;
+      await waClient.sendMessage(
+        chatId,
+        `• [${idx + 1}/${posts.length}] Video ID: ${video_id} | Jumlah komentator: ${commenters.length || 0}`
+      );
+    }
+
+    await waClient.sendMessage(
+      chatId,
+      `✅ Selesai absensi komentar!\nJumlah post: ${posts.length}, total user komentar: ${totalComment}`
+    );
+  } catch (err) {
+    await waClient.sendMessage(chatId, `❌ ERROR: ${err.message}`);
+  }
+  return;
+}
+
+
   // =========================
   // === FETCH INSTAGRAM (ADMIN)
   // =========================
