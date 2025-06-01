@@ -20,9 +20,9 @@ import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 
 import {
-  fetchAndStoreTiktokContent, getTiktokSecUid
+  fetchAndStoreTiktokContent,
+  getTiktokSecUid,
 } from "./tiktokFetchService.js";
-
 
 dotenv.config();
 
@@ -401,78 +401,88 @@ waClient.on("message", async (msg) => {
   // =========================
   // === FETCH TIKTOK MANUAL (ADMIN)
   // =========================
-if (text.toLowerCase().startsWith("fetchtiktok#")) {
-  if (!isAdminWhatsApp(chatId)) {
-    await waClient.sendMessage(
-      chatId,
-      "❌ Anda tidak memiliki akses ke sistem ini."
-    );
-    return;
-  }
-  const [, client_id] = text.split("#");
-  if (!client_id) {
-    await waClient.sendMessage(
-      chatId,
-      "Format salah!\nGunakan: fetchtiktok#clientid"
-    );
-    return;
-  }
-
-  await waClient.sendMessage(
-    chatId,
-    `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
-  );
-
-  try {
-    // 1. Fetch seluruh post TikTok hari ini via API
-    let posts = await fetchAndStoreTiktokContent(client_id);
-
-    if (!posts || posts.length === 0) {
-      // Fallback ke DB jika hasil API kosong
-      const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
-      posts = await getPostsTodayByClient(client_id);
-      if (posts && posts.length > 0) {
-        await waClient.sendMessage(
-          chatId,
-          `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
-        );
-      }
-    }
-
-    if (!posts || posts.length === 0) {
+  if (text.toLowerCase().startsWith("fetchtiktok#")) {
+    if (!isAdminWhatsApp(chatId)) {
       await waClient.sendMessage(
         chatId,
-        `❌ Tidak ada post TikTok hari ini untuk client *${client_id}*`
+        "❌ Anda tidak memiliki akses ke sistem ini."
+      );
+      return;
+    }
+    const [, client_id] = text.split("#");
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: fetchtiktok#clientid"
       );
       return;
     }
 
-    // Format laporan rekap post TikTok hari ini
-    let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
-    msg += `Jumlah post: *${posts.length}*\n\n`;
-    posts.forEach((item, i) => {
-      const desc = item.desc || item.caption || "-";
-      const create_time = item.create_time || item.created_at || item.createTime;
-      const created = create_time
-        ? new Date(create_time).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
-        : "-";
-      msg += `#${i + 1} Video ID: ${item.video_id || item.id}\n`;
-      msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
-      msg += `   Tanggal: ${created}\n`;
-      msg += `   Like: ${item.digg_count ?? item.like_count ?? 0} | Komentar: ${item.comment_count ?? 0}\n`;
-      msg += `   Link: https://www.tiktok.com/@_/${item.video_id || item.id}\n\n`;
-    });
-
-    await waClient.sendMessage(chatId, msg.trim());
-  } catch (err) {
     await waClient.sendMessage(
       chatId,
-      `❌ ERROR: ${err.message}`
+      `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
     );
-  }
-  return;
-}
 
+    try {
+      // Fetch seluruh post TikTok hari ini via API
+      let posts = await fetchAndStoreTiktokContent(client_id);
+
+      if (!posts || posts.length === 0) {
+        // Fallback ke DB jika hasil API kosong
+        const { getPostsTodayByClient } = await import(
+          "../model/tiktokPostModel.js"
+        );
+        posts = await getPostsTodayByClient(client_id);
+        if (posts && posts.length > 0) {
+          await waClient.sendMessage(
+            chatId,
+            `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
+          );
+        }
+      }
+
+      if (!posts || posts.length === 0) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Tidak ada post TikTok hari ini untuk client *${client_id}*`
+        );
+        return;
+      }
+
+      // Ambil username tiktok dari database client
+      const { findById } = await import("../model/clientModel.js");
+      const client = await findById(client_id);
+      let username = client?.client_tiktok || "";
+      if (username.startsWith("@")) username = username.slice(1);
+
+      // Format laporan rekap post TikTok hari ini
+      let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
+      msg += `Jumlah post: *${posts.length}*\n\n`;
+      posts.forEach((item, i) => {
+        const desc = item.desc || item.caption || "-";
+        const create_time =
+          item.create_time || item.created_at || item.createTime;
+        const created = create_time
+          ? new Date(create_time).toLocaleString("id-ID", {
+              timeZone: "Asia/Jakarta",
+            })
+          : "-";
+        const video_id = item.video_id || item.id;
+        msg += `#${i + 1} Video ID: ${video_id}\n`;
+        msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
+        msg += `   Tanggal: ${created}\n`;
+        msg += `   Like: ${
+          item.digg_count ?? item.like_count ?? 0
+        } | Komentar: ${item.comment_count ?? 0}\n`;
+        msg += `   Link: https://www.tiktok.com/@${username}/video/${video_id}\n\n`;
+      });
+
+      await waClient.sendMessage(chatId, msg.trim());
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ ERROR: ${err.message}`);
+    }
+    return;
+  }
 
   // =========================
   // === REQUEST TIKTOK/INSTA STATUS (ADMIN)
