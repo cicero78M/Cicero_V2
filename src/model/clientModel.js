@@ -1,12 +1,12 @@
 import { pool } from '../config/db.js';
 
-// Dapatkan semua client
+// Ambil semua client
 export const findAll = async () => {
   const res = await pool.query('SELECT * FROM clients');
   return res.rows;
 };
 
-// Dapatkan satu client by client_id
+// Ambil client by client_id
 export const findById = async (client_id) => {
   const res = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
   return res.rows[0] || null;
@@ -21,7 +21,6 @@ export const create = async (client) => {
       ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `;
-
   const values = [
     client.client_id,
     client.nama,
@@ -33,7 +32,7 @@ export const create = async (client) => {
     client.client_tiktok_status ?? true,
     client.client_operator || '',
     client.client_group || '',
-    client.tiktok_secuid || '',       // PATCH: field lowercase, match DB!
+    client.tiktok_secuid || '',       // PATCH: lowercase, match DB!
     client.client_super || ''
   ];
   const res = await pool.query(q, values);
@@ -57,7 +56,7 @@ export const update = async (client_id, clientData) => {
       client_tiktok_status = $8,
       client_operator = $9,
       client_group = $10,
-      tiktok_secuid = $11,            // PATCH: field lowercase, match DB!
+      tiktok_secuid = $11,           -- PATCH: lowercase, match DB!
       client_super = $12
     WHERE client_id = $1
     RETURNING *
@@ -73,7 +72,7 @@ export const update = async (client_id, clientData) => {
     merged.client_tiktok_status,
     merged.client_operator,
     merged.client_group,
-    merged.tiktok_secuid || '',      // PATCH: field lowercase, match DB!
+    merged.tiktok_secuid || '',     // PATCH: lowercase, match DB!
     merged.client_super || ''
   ];
   const res = await pool.query(q, values);
@@ -86,6 +85,7 @@ export const remove = async (client_id) => {
   return res.rows[0] || null;
 };
 
+// Ambil semua client aktif IG
 export async function findAllActiveWithInstagram() {
   const res = await pool.query(
     `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true`
