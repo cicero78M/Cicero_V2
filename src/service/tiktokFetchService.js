@@ -53,6 +53,18 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
+// Normalisasi TikTok post agar insert ke DB konsisten
+function normalizeTiktokPost(post) {
+  // Handle beberapa struktur: TikTok API kadang mengirim field tidak konsisten
+  return {
+    video_id: post.id || post.video_id,
+    desc: post.desc || post.caption || "",
+    create_time: post.createTime || post.create_time, // UNIX seconds
+    digg_count: (post.stats?.diggCount ?? post.digg_count ?? post.statistics?.diggCount ?? post.statistics?.likeCount ?? 0),
+    comment_count: (post.stats?.commentCount ?? post.comment_count ?? post.statistics?.commentCount ?? 0),
+  };
+}
+
 // PATCH FINAL: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
@@ -96,7 +108,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
   console.log(msgPayloadRoot);
   sendAdminDebug(msgPayloadRoot);
 
-  // Otomatis deteksi array post
+  // Otomatis deteksi array post (support field: itemList, posts, aweme_list, videoList, data)
   let postsArr = [];
   let fieldUsed = '';
   if (Array.isArray(data?.itemList) && data.itemList.length) {
@@ -111,6 +123,9 @@ export async function fetchAndStoreTiktokContent(client_id) {
   } else if (Array.isArray(data?.videoList) && data.videoList.length) {
     postsArr = data.videoList;
     fieldUsed = 'videoList';
+  } else if (Array.isArray(data?.data) && data.data.length) {
+    postsArr = data.data; // PATCH: TikTok response kadang rootnya 'data'
+    fieldUsed = 'data';
   }
   const msgFieldUsed = `[DEBUG] TikTok POST FIELD USED: ${fieldUsed} (length=${postsArr.length})`;
   console.log(msgFieldUsed);
@@ -131,7 +146,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
            d.getMonth() === todayJakarta.getMonth() &&
            d.getDate() === todayJakarta.getDate();
   }
-  const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
+  const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime || post.create_time));
   const msgTgl = `[DEBUG] Tanggal sistem Asia/Jakarta: ${todayJakarta.toISOString()}`;
   console.log(msgTgl);
   sendAdminDebug(msgTgl);
@@ -141,28 +156,19 @@ export async function fetchAndStoreTiktokContent(client_id) {
   sendAdminDebug(msg1);
 
   if (postsToday.length > 0) {
-    await upsertTiktokPosts(client_id, postsToday.map(post => ({
-      video_id: post.id || post.video_id,
-      caption: post.desc || post.caption || "",
-      created_at: new Date(post.createTime * 1000),
-      like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
-      comment_count: post.statistics?.commentCount ?? post.comment_count ?? 0,
-    })));
-    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`;
+    // PATCH: mapping normalization sebelum simpan DB
+    const normalizedPosts = postsToday.map(normalizeTiktokPost);
+    await upsertTiktokPosts(client_id, normalizedPosts);
+    const msg2 = `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${normalizedPosts.length} post ke DB`;
     console.log(msg2);
     sendAdminDebug(msg2);
+    return normalizedPosts;
   } else {
     const msg3 = `[DEBUG] fetchAndStoreTiktokContent: tidak ada post hari ini untuk ${client_id}`;
     console.log(msg3);
     sendAdminDebug(msg3);
+    return [];
   }
-  return postsToday.map(post => ({
-    video_id: post.id || post.video_id,
-    caption: post.desc || post.caption || "",
-    created_at: new Date(post.createTime * 1000),
-    like_count: post.statistics?.diggCount ?? post.statistics?.likeCount ?? post.like_count ?? 0,
-    comment_count: post.statistics?.commentCount ?? post.comment_count ?? 0,
-  }));
 }
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
