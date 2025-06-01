@@ -3,6 +3,8 @@ import waClient from "./waService.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+import { upsertTiktokComments, getCommentsByVideoId } from "../model/tiktokCommentModel.js";
+
 // Helper: Kirim debug ke ADMIN WhatsApp
 function sendAdminDebug(msg) {
   const adminWA = (process.env.ADMIN_WHATSAPP || "")
@@ -15,9 +17,6 @@ function sendAdminDebug(msg) {
   }
 }
 
-// SIMPAN KOMENTAR TIKTOK KE DATABASE
-import { saveTiktokComments } from "../model/tiktokCommentModel.js";
-
 /**
  * Helper delay (rate limiting)
  * @param {number} ms
@@ -28,7 +27,7 @@ function delay(ms) {
 }
 
 /**
- * Fetch semua komentar TikTok via API dan simpan ke DB
+ * Fetch semua komentar TikTok via API dan simpan ke DB (append, no replace)
  * Paginasi otomatis, debug setiap page, rate limiting 650ms/request
  * @param {string} video_id
  * @returns {Array} Array komentar (asli)
@@ -83,8 +82,24 @@ export async function fetchAndStoreTiktokComments(video_id) {
     await delay(650);
   }
 
+  // --- Gabungkan komentar baru dan lama, hindari duplikat ---
+  let oldComments = [];
+  try {
+    const existing = await getCommentsByVideoId(video_id);
+    if (Array.isArray(existing.comments)) {
+      oldComments = existing.comments;
+    }
+  } catch { /* ignore, kosongkan saja jika error */ }
+  // Gabungkan, unique by comment_id/userid (atau full JSON)
+  const uniqMap = {};
+  [...oldComments, ...allComments].forEach((c) => {
+    const key = c?.cid || c?.comment_id || c?.id || JSON.stringify(c);
+    uniqMap[key] = c;
+  });
+  const finalComments = Object.values(uniqMap);
+
   // SIMPAN KE DB
-  await saveTiktokComments(video_id, allComments);
-  sendAdminDebug(`[DEBUG] Sudah simpan ${allComments.length} komentar ke DB untuk video_id=${video_id}`);
-  return allComments;
+  await upsertTiktokComments(video_id, finalComments);
+  sendAdminDebug(`[DEBUG] Sudah simpan ${finalComments.length} komentar ke DB untuk video_id=${video_id}`);
+  return finalComments;
 }
