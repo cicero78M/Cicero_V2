@@ -55,7 +55,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB
+// PATCHED: Fetch semua post hari ini berdasarkan secUid dan simpan ke DB, debug tanggal konten
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -76,20 +76,32 @@ export async function fetchAndStoreTiktokContent(client_id) {
   const response = await axios.get(url, { headers, params });
   const data = response.data;
 
-  // DEBUG FULL PAYLOAD
-  console.log(`[DEBUG][TikTokAPI][${client_id}] Payload hasil fetch post:\n`, JSON.stringify(data, null, 2));
-
-  // Filter post hari ini menggunakan Asia/Jakarta
-  const todayJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  function isTodayJakarta(ts) {
-    const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-    return d.getFullYear() === todayJakarta.getFullYear() &&
-           d.getMonth() === todayJakarta.getMonth() &&
-           d.getDate() === todayJakarta.getDate();
-  }
+  // DEBUG tanggal sistem Asia/Jakarta
+  const now = new Date();
+  const sysDateJakarta = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const sysDebug = `[DEBUG] Tanggal sistem Asia/Jakarta: ${sysDateJakarta.toISOString().split("T")[0]} (${sysDateJakarta})`;
+  console.log(sysDebug);
+  sendAdminDebug(sysDebug);
 
   // Data array ada di: data.itemList
   const postsArr = Array.isArray(data?.itemList) ? data.itemList : [];
+
+  // Debug tanggal konten per post
+  for (const post of postsArr) {
+    const kontenDateJakarta = new Date(new Date(post.createTime * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const kontenDebug = `[DEBUG] Konten video_id=${post.id}, createTime=${post.createTime}, tanggal Asia/Jakarta=${kontenDateJakarta.toISOString()}`;
+    console.log(kontenDebug);
+    sendAdminDebug(kontenDebug);
+  }
+
+  // Filter post hari ini (Asia/Jakarta)
+  function isTodayJakarta(ts) {
+    const d = new Date(new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    return d.getFullYear() === sysDateJakarta.getFullYear() &&
+           d.getMonth() === sysDateJakarta.getMonth() &&
+           d.getDate() === sysDateJakarta.getDate();
+  }
+
   const postsToday = postsArr.filter(post => isTodayJakarta(post.createTime));
 
   const msg1 = `[DEBUG] fetchAndStoreTiktokContent: jumlah post hari ini=${postsToday.length}`;
@@ -148,9 +160,6 @@ export async function fetchAllTikTokCommentsToday(client_id, video_id) {
 
       const response = await axios.request(options);
       const data = response.data;
-
-      // DEBUG full payload (1x per page)
-      console.log(`[DEBUG][TikTok API /api/post/comments] client_id=${client_id} page=${page} payload:\n${JSON.stringify(data, null, 2)}`);
 
       if (!data.comments || !Array.isArray(data.comments)) {
         const msgNoData = `[DEBUG] fetchAllTikTokCommentsToday: tidak ada data.comments page=${page}`;
