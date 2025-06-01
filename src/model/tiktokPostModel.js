@@ -14,11 +14,11 @@ export async function upsertTiktokPosts(client_id, posts) {
         comment_count = EXCLUDED.comment_count`,
       [
         client_id,
-        post.video_id,
+        post.video_id || post.id,
         post.desc || "",
-        post.create_time,
-        post.digg_count || 0,
-        post.comment_count || 0,
+        post.create_time || post.createTime,
+        post.digg_count || post.statistics?.diggCount || 0,
+        post.comment_count || post.statistics?.commentCount || 0,
       ]
     );
   }
