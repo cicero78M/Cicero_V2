@@ -13,8 +13,9 @@ import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 import * as userService from "./userService.js";
-import { fetchAndAbsensiTiktok } from './tiktokFetchService.js';
+import { fetchAndAbsensiTiktok } from "./tiktokFetchService.js";
 import { fallbackAbsensiKomentarTiktokHariIni } from "./tiktokAbsensiFallbackService.js";
+import { fetchAndStoreInstaContent } from "./instaFetchService.js";
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
@@ -156,11 +157,11 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
-    const client_id = parts[1];
+    const client_id = (parts[1] || "").trim();
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
 
-    // === PATCH: Fetch konten & likes terbaru sebelum absensi ===
+    // 1. Fetch konten & likes IG terbaru (always update before check)
     await waClient.sendMessage(
       chatId,
       "⏳ Memperbarui konten & likes Instagram..."
@@ -174,17 +175,27 @@ waClient.on("message", async (msg) => {
       );
     }
 
+    // 2. Siapkan data dasar rekap
     const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n`;
-
     const now = new Date();
+    const hariIndo = [
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
+    ];
     const hari = hariIndo[now.getDay()];
     const tanggal = now.toLocaleDateString("id-ID");
     const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
+    // 3. Ambil user dan list konten IG hari ini
     const users = await getUsersByClient(client_id);
     const shortcodes = await getShortcodesTodayByClient(client_id);
 
-    if (!shortcodes.length) {
+    if (!shortcodes || shortcodes.length === 0) {
       await waClient.sendMessage(
         chatId,
         headerLaporan +
@@ -198,8 +209,9 @@ waClient.on("message", async (msg) => {
     );
     const totalKonten = shortcodes.length;
 
-    // === AKUMULASI ===
+    // 4. === Mode Akumulasi ===
     if (filter1 === "akumulasi") {
+      // Hitung akumulasi likes untuk seluruh user
       const userStats = {};
       users.forEach((u) => {
         userStats[u.user_id] = { ...u, count: 0 };
@@ -207,7 +219,7 @@ waClient.on("message", async (msg) => {
 
       for (const shortcode of shortcodes) {
         const likes = await getLikesByShortcode(shortcode);
-        const likesSet = new Set(likes.map((x) => (x || "").toLowerCase()));
+        const likesSet = new Set(likes.map((l) => (l || "").toLowerCase()));
         users.forEach((u) => {
           if (u.insta && likesSet.has(u.insta.toLowerCase())) {
             userStats[u.user_id].count += 1;
@@ -215,19 +227,19 @@ waClient.on("message", async (msg) => {
         });
       }
 
+      // Rekap sudah/belum per divisi (satfung)
       const sudahPerSatfung = {};
       const belumPerSatfung = {};
-      let totalUser = Object.values(userStats).length;
-      let totalSudah = 0;
-      let totalBelum = 0;
+      let totalSudah = 0,
+        totalBelum = 0;
 
       Object.values(userStats).forEach((u) => {
         const satfung = u.divisi || "-";
-        const titleNama = [u.title, u.nama].filter(Boolean).join(" ");
+        const nama = [u.title, u.nama].filter(Boolean).join(" ");
         const label =
           u.insta && u.insta.trim() !== ""
-            ? `${titleNama} : ${u.insta} (${u.count} konten)`
-            : `${titleNama} : belum mengisi data insta (${u.count} konten)`;
+            ? `${nama} : ${u.insta} (${u.count} konten)`
+            : `${nama} : belum mengisi data insta (${u.count} konten)`;
         if (
           u.insta &&
           u.insta.trim() !== "" &&
@@ -249,11 +261,11 @@ waClient.on("message", async (msg) => {
         `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
         `*Jumlah Konten:* ${totalKonten}\n` +
         `*Daftar link konten hari ini:*\n${kontenLinks.join("\n")}\n\n` +
-        `*Jumlah user:* ${totalUser}\n` +
+        `*Jumlah user:* ${users.length}\n` +
         `✅ Sudah melaksanakan: *${totalSudah}*\n` +
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-      // Output sesuai request
+      // Filter output sudah/belum sesuai tipe request
       if (tipe === "sudah") {
         msg += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
@@ -280,35 +292,32 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // === PER KONTEN IG: SUDAH/BELUM/DUA-DUA (DEFAULT) ===
+    // 5. === Mode per Konten (default/sudah/belum) ===
     for (const shortcode of shortcodes) {
       const likes = await getLikesByShortcode(shortcode);
-      const likesSet = new Set(likes.map((x) => (x || "").toLowerCase()));
-
+      const likesSet = new Set(likes.map((l) => (l || "").toLowerCase()));
       const sudahPerSatfung = {};
       const belumPerSatfung = {};
-      let totalUser = 0;
-      let totalSudah = 0;
-      let totalBelum = 0;
+      let totalSudah = 0,
+        totalBelum = 0;
 
       users.forEach((u) => {
-        totalUser++;
         const satfung = u.divisi || "-";
-        const titleNama = [u.title, u.nama].filter(Boolean).join(" ");
+        const nama = [u.title, u.nama].filter(Boolean).join(" ");
         if (
           u.insta &&
           u.insta.trim() !== "" &&
           likesSet.has(u.insta.toLowerCase())
         ) {
           if (!sudahPerSatfung[satfung]) sudahPerSatfung[satfung] = [];
-          sudahPerSatfung[satfung].push(`${titleNama} : ${u.insta}`);
+          sudahPerSatfung[satfung].push(`${nama} : ${u.insta}`);
           totalSudah++;
         } else {
           if (!belumPerSatfung[satfung]) belumPerSatfung[satfung] = [];
           const label =
             u.insta && u.insta.trim() !== ""
-              ? `${titleNama} : ${u.insta}`
-              : `${titleNama} : belum mengisi data insta`;
+              ? `${nama} : ${u.insta}`
+              : `${nama} : belum mengisi data insta`;
           belumPerSatfung[satfung].push(label);
           totalBelum++;
         }
@@ -316,13 +325,13 @@ waClient.on("message", async (msg) => {
 
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
 
-      // Header tetap sama, list user sesuai filter1
+      // Template pesan
       let msg =
         headerLaporan +
         `📋 Absensi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
         `*Jumlah Konten:* 1\n` +
         `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
-        `*Jumlah user:* ${totalUser}\n` +
+        `*Jumlah user:* ${users.length}\n` +
         `✅ Sudah melaksanakan: *${totalSudah}*\n` +
         `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
@@ -336,7 +345,6 @@ waClient.on("message", async (msg) => {
           });
           msg += "\n";
         });
-
         msg += `\n❌ Belum melaksanakan (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
@@ -346,20 +354,12 @@ waClient.on("message", async (msg) => {
           });
           msg += "\n";
         });
-
         await waClient.sendMessage(chatId, msg.trim());
+        continue; // proses ke konten berikutnya
       }
 
       if (filter1 === "sudah") {
-        let msgSudah =
-          headerLaporan +
-          `📋 Rekap User yang sudah melakukan Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-          `*Jumlah Konten:* 1\n` +
-          `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
-          `*Jumlah user:* ${totalUser}\n` +
-          `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
-        msgSudah += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
+        let msgSudah = msg + `✅ Sudah melaksanakan (${totalSudah} user):\n`;
         Object.keys(sudahPerSatfung).forEach((satfung) => {
           const arr = sudahPerSatfung[satfung];
           msgSudah += `*${satfung}* (${arr.length} user):\n`;
@@ -369,18 +369,11 @@ waClient.on("message", async (msg) => {
           msgSudah += "\n";
         });
         await waClient.sendMessage(chatId, msgSudah.trim());
+        continue;
       }
 
       if (filter1 === "belum") {
-        let msgBelum =
-          headerLaporan +
-          `📋 Rekap User yang *BELUM* Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-          `*Jumlah Konten:* 1\n` +
-          `*Daftar link konten hari ini:*\n${linkIG}\n\n` +
-          `*Jumlah user:* ${totalUser}\n` +
-          `✅ Sudah melaksanakan: *${totalSudah}*\n` +
-          `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
-        msgBelum += `❌ Belum melaksanakan (${totalBelum} user):\n`;
+        let msgBelum = msg + `❌ Belum melaksanakan (${totalBelum} user):\n`;
         Object.keys(belumPerSatfung).forEach((satfung) => {
           const arr = belumPerSatfung[satfung];
           msgBelum += `*${satfung}* (${arr.length} user):\n`;
@@ -390,6 +383,7 @@ waClient.on("message", async (msg) => {
           msgBelum += "\n";
         });
         await waClient.sendMessage(chatId, msgBelum.trim());
+        continue;
       }
     }
     return;
@@ -398,7 +392,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
-if (text.toLowerCase().startsWith("absensikomentar#")) {
+  if (text.toLowerCase().startsWith("absensikomentar#")) {
     const parts = text.split("#");
     const client_id = (parts[1] || "").trim();
     const type = (parts[2] || "").toLowerCase();
@@ -413,18 +407,27 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     let postsToday = [];
     let debugFetchResult = null;
     try {
-      debugFetchResult = await fetchAndAbsensiTiktok({ client_id }, waClient, chatId);
+      debugFetchResult = await fetchAndAbsensiTiktok(
+        { client_id },
+        waClient,
+        chatId
+      );
       if (Array.isArray(debugFetchResult) && debugFetchResult.length > 0) {
-        postsToday = debugFetchResult.map(res => res.videoId).filter(Boolean);
+        postsToday = debugFetchResult.map((res) => res.videoId).filter(Boolean);
       }
-      const msgDebug = "[DEBUG] fetchAndAbsensiTiktok selesai\n" +
+      const msgDebug =
+        "[DEBUG] fetchAndAbsensiTiktok selesai\n" +
         (Array.isArray(debugFetchResult) && debugFetchResult.length > 0
-          ? debugFetchResult.map(
-              res => `- Video: ${res.videoId}, Komentar: ${res.komentar}`
-            ).join("\n")
+          ? debugFetchResult
+              .map(
+                (res) => `- Video: ${res.videoId}, Komentar: ${res.komentar}`
+              )
+              .join("\n")
           : "Tidak ada hasil post TikTok hari ini.");
       for (const admin of getAdminWAIds()) {
-        try { await waClient.sendMessage(admin, msgDebug); } catch {}
+        try {
+          await waClient.sendMessage(admin, msgDebug);
+        } catch {}
       }
     } catch (e) {
       await waClient.sendMessage(
@@ -451,7 +454,9 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       fetchLogs.push(
         limit(async () => {
           try {
-            const result = await tiktokCommentModel.getCommentsByVideoId(videoId);
+            const result = await tiktokCommentModel.getCommentsByVideoId(
+              videoId
+            );
             return { videoId, status: "success", count: result.length };
           } catch (err) {
             return { videoId, status: "fail", error: err.message || err };
@@ -475,7 +480,9 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     await waClient.sendMessage(chatId, fetchResultMsg);
 
     for (const admin of getAdminWAIds()) {
-      try { await waClient.sendMessage(admin, fetchResultMsg); } catch {}
+      try {
+        await waClient.sendMessage(admin, fetchResultMsg);
+      } catch {}
     }
 
     // === 4. Ambil data users terbaru dari DB ===
@@ -527,7 +534,8 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
         const usernameSet = new Set(
           commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
         );
-        let sudah = [], belum = [];
+        let sudah = [],
+          belum = [];
         users.forEach((u) => {
           const uname = normalizeTikTokUsername(u.tiktok);
           if (!uname) {
@@ -589,7 +597,8 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     // === Akumulasi semua video hari ini ===
     if (type === "akumulasi") {
       const minDone = Math.ceil(postsToday.length * 0.5);
-      let sudah = [], belum = [];
+      let sudah = [],
+        belum = [];
       Object.values(absensiPerUser).forEach((u) => {
         const uname = normalizeTikTokUsername(u.tiktok);
         if (uname && u.count >= minDone) sudah.push(u);
