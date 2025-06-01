@@ -407,15 +407,16 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
 
-  // --- DEBUG LOG: Jumlah post TikTok di database (hanya console, tidak kirim wa)
+  // --- DEBUG LOG: Jumlah post TikTok di database (hanya console)
   let debugMsg = `[DEBUG][absensikomentar] client_id=${client_id}, Hari=${hari}, Tanggal=${tanggal} Jam=${jam}\n`;
   debugMsg += `[DEBUG] Jumlah post TikTok: ${posts.length}\n`;
   posts.forEach((p, i) => {
-    debugMsg += `#${i + 1} video_id=${p.video_id || p.id} | created_at=${p.created_at || p.create_time}\n`;
+    debugMsg += `  [DEBUG] #${i + 1} video_id=${p.video_id || p.id} | created_at=${p.created_at || p.create_time}\n`;
   });
   console.log(debugMsg);
 
   if (!posts || posts.length === 0) {
+    console.log(`[DEBUG] Tidak ada post TikTok ditemukan di database untuk client_id=${client_id}`);
     await waClient.sendMessage(
       chatId,
       headerLaporan +
@@ -426,7 +427,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
 
   // 2. Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum)
   if (filter1 === "akumulasi") {
-    // Map user: {user_id: {..., count:0}}
+    console.log(`[DEBUG] Masuk mode akumulasi komentar`);
     const userStats = {};
     users.forEach((u) => {
       userStats[u.user_id] = { ...u, count: 0 };
@@ -435,6 +436,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
     for (const post of posts) {
       const video_id = post.video_id || post.id;
+      console.log(`[DEBUG] Ambil komentar video_id=${video_id}`);
       const komentar = await getCommentsByVideoId(video_id);
       const commentsArr = Array.isArray(komentar?.comments)
         ? komentar.comments
@@ -452,8 +454,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     // Rekap sudah/belum per satfung/divisi
     const sudahPerSatfung = {};
     const belumPerSatfung = {};
-    let totalSudah = 0,
-      totalBelum = 0;
+    let totalSudah = 0, totalBelum = 0;
     const totalKonten = posts.length;
 
     Object.values(userStats).forEach((u) => {
@@ -478,6 +479,8 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       }
     });
 
+    console.log(`[DEBUG] Akumulasi selesai. Total sudah: ${totalSudah}, total belum: ${totalBelum}`);
+
     const tipe = filter2 === "belum" ? "belum" : "sudah";
     let msg =
       headerLaporan +
@@ -487,15 +490,12 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       `✅ Sudah melaksanakan: *${totalSudah}*\n` +
       `❌ Belum melaksanakan: *${totalBelum}*\n\n`;
 
-    // Filter output sudah/belum sesuai tipe request
     if (tipe === "sudah") {
       msg += `✅ Sudah melaksanakan (${totalSudah} user):\n`;
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
     } else {
@@ -503,9 +503,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
     }
@@ -517,6 +515,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
   for (const post of posts) {
     const video_id = post.video_id || post.id;
+    console.log(`[DEBUG] Proses video_id=${video_id}`);
     const komentar = await getCommentsByVideoId(video_id);
     const commentsArr = Array.isArray(komentar?.comments)
       ? komentar.comments
@@ -527,8 +526,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
 
     const sudahPerSatfung = {};
     const belumPerSatfung = {};
-    let totalSudah = 0,
-      totalBelum = 0;
+    let totalSudah = 0, totalBelum = 0;
 
     users.forEach((u) => {
       const satfung = u.divisi || "-";
@@ -553,6 +551,8 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       }
     });
 
+    console.log(`[DEBUG] Post video_id=${video_id}: sudah=${totalSudah}, belum=${totalBelum}`);
+
     // Template pesan
     let msg =
       headerLaporan +
@@ -567,22 +567,18 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
       msg += `\n❌ Belum melaksanakan (${totalBelum} user):\n`;
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
       await waClient.sendMessage(chatId, msg.trim());
-      continue; // proses ke video berikutnya
+      continue;
     }
 
     if (filter1 === "sudah") {
@@ -590,9 +586,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msgSudah += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msgSudah += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msgSudah += `- ${line}\n`; });
         msgSudah += "\n";
       });
       await waClient.sendMessage(chatId, msgSudah.trim());
@@ -604,9 +598,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msgBelum += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msgBelum += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msgBelum += `- ${line}\n`; });
         msgBelum += "\n";
       });
       await waClient.sendMessage(chatId, msgBelum.trim());
@@ -615,6 +607,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   }
   return;
 }
+
 
 // =========================
   // === FETCH INSTAGRAM (ADMIN)
