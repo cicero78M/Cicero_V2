@@ -17,8 +17,7 @@ import {
   fetchAndStoreTiktokContent,
   fetchCommentsTodayByClient,
 } from "./tiktokFetchService.js";
-import { fetchAndStoreInstaContent } from "./instaFetchService.js";
-import { fetchTiktokCommentsByVideoId } from "./tiktokCommentFetchService.js";
+import { fetchAndAbsensiTiktok } from './tiktokFetchService.js';
 import { fallbackAbsensiKomentarTiktokHariIni } from "./tiktokAbsensiFallbackService.js";
 
 // Model Imports
@@ -403,7 +402,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
-  if (text.toLowerCase().startsWith("absensikomentar#")) {
+if (text.toLowerCase().startsWith("absensikomentar#")) {
     const parts = text.split("#");
     const client_id = (parts[1] || "").trim();
     const type = (parts[2] || "").toLowerCase();
@@ -418,35 +417,18 @@ waClient.on("message", async (msg) => {
     let postsToday = [];
     let debugFetchResult = null;
     try {
-      debugFetchResult = await fetchAndStoreTiktokContent(
-        null,
-        null,
-        client_id
-      );
-      if (
-        debugFetchResult &&
-        typeof debugFetchResult === "object" &&
-        debugFetchResult[client_id] &&
-        Array.isArray(debugFetchResult[client_id].postsToday) &&
-        debugFetchResult[client_id].postsToday.length > 0
-      ) {
-        postsToday = debugFetchResult[client_id].postsToday
-          .filter((post) => post && typeof post === "object" && post.id)
-          .map((post) => post.id);
+      debugFetchResult = await fetchAndAbsensiTiktok({ client_id }, waClient, chatId);
+      if (Array.isArray(debugFetchResult) && debugFetchResult.length > 0) {
+        postsToday = debugFetchResult.map(res => res.videoId).filter(Boolean);
       }
-      // Kirim debug lengkap juga ke ADMIN_WHATSAPP jika ada
-      if (
-        waClient.ADMIN_WHATSAPP?.length &&
-        debugFetchResult[client_id]?.debug
-      ) {
-        for (const admin of waClient.ADMIN_WHATSAPP) {
-          try {
-            await waClient.sendMessage(
-              admin,
-              debugFetchResult[client_id].debug
-            );
-          } catch {}
-        }
+      const msgDebug = "[DEBUG] fetchAndAbsensiTiktok selesai\n" +
+        (Array.isArray(debugFetchResult) && debugFetchResult.length > 0
+          ? debugFetchResult.map(
+              res => `- Video: ${res.videoId}, Komentar: ${res.komentar}`
+            ).join("\n")
+          : "Tidak ada hasil post TikTok hari ini.");
+      for (const admin of getAdminWAIds()) {
+        try { await waClient.sendMessage(admin, msgDebug); } catch {}
       }
     } catch (e) {
       await waClient.sendMessage(
@@ -473,7 +455,7 @@ waClient.on("message", async (msg) => {
       fetchLogs.push(
         limit(async () => {
           try {
-            const result = await fetchTiktokCommentsByVideoId(videoId);
+            const result = await tiktokCommentModel.getCommentsByVideoId(videoId);
             return { videoId, status: "success", count: result.length };
           } catch (err) {
             return { videoId, status: "fail", error: err.message || err };
@@ -496,19 +478,13 @@ waClient.on("message", async (msg) => {
         .join("\n");
     await waClient.sendMessage(chatId, fetchResultMsg);
 
-    // Kirim juga ke ADMIN_WHATSAPP (jika ada)
-    if (waClient.ADMIN_WHATSAPP?.length) {
-      for (const admin of waClient.ADMIN_WHATSAPP) {
-        try {
-          await waClient.sendMessage(admin, fetchResultMsg);
-        } catch {}
-      }
+    for (const admin of getAdminWAIds()) {
+      try { await waClient.sendMessage(admin, fetchResultMsg); } catch {}
     }
 
     // === 4. Ambil data users terbaru dari DB ===
     const users = await getUsersByClientFull(client_id);
 
-    // === 5. Helper untuk formatName dan groupByDivision ===
     function groupByDivision(users) {
       return users.reduce((acc, u) => {
         const div = u.divisi || "-";
@@ -524,7 +500,6 @@ waClient.on("message", async (msg) => {
         : `${titleNama} : belum mengisi data tiktok`;
     }
 
-    // Map user_id ke object absensi
     let absensiPerUser = {};
     users.forEach(
       (u) => (absensiPerUser[u.user_id] = { ...u, count: 0, total: 0 })
@@ -556,8 +531,7 @@ waClient.on("message", async (msg) => {
         const usernameSet = new Set(
           commenters.map((c) => normalizeTikTokUsername(c)).filter(Boolean)
         );
-        let sudah = [],
-          belum = [];
+        let sudah = [], belum = [];
         users.forEach((u) => {
           const uname = normalizeTikTokUsername(u.tiktok);
           if (!uname) {
@@ -619,8 +593,7 @@ waClient.on("message", async (msg) => {
     // === Akumulasi semua video hari ini ===
     if (type === "akumulasi") {
       const minDone = Math.ceil(postsToday.length * 0.5);
-      let sudah = [],
-        belum = [];
+      let sudah = [], belum = [];
       Object.values(absensiPerUser).forEach((u) => {
         const uname = normalizeTikTokUsername(u.tiktok);
         if (uname && u.count >= minDone) sudah.push(u);
