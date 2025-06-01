@@ -86,10 +86,18 @@ export async function fetchAndStoreTiktokContent(client_id) {
   // Data array ada di: data.itemList
   const postsArr = Array.isArray(data?.itemList) ? data.itemList : [];
 
-  // Debug tanggal konten per post
+  // Debug detail setiap konten
   for (const post of postsArr) {
     const kontenDateJakarta = new Date(new Date(post.createTime * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-    const kontenDebug = `[DEBUG] Konten video_id=${post.id}, createTime=${post.createTime}, tanggal Asia/Jakarta=${kontenDateJakarta.toISOString()}`;
+    // Ambil ringkasan detail post, tanpa array nested
+    const detail = [
+      `video_id=${post.id}`,
+      `desc=${(post.desc || '').slice(0, 40).replace(/\n/g,' ')}...`,
+      `diggCount=${post.statistics?.diggCount ?? 0}`,
+      `commentCount=${post.statistics?.commentCount ?? 0}`,
+      `createTime=${post.createTime} (${kontenDateJakarta.toISOString()})`
+    ].join(" | ");
+    const kontenDebug = `[DEBUG][itemList] ${detail}`;
     console.log(kontenDebug);
     sendAdminDebug(kontenDebug);
   }
@@ -132,6 +140,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     create_time: post.createTime,
   }));
 }
+
 
 // Fetch semua komentar untuk satu video_id (paginasi otomatis, simpan ke DB)
 export async function fetchAllTikTokCommentsToday(client_id, video_id) {
