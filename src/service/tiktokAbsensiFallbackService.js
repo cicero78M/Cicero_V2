@@ -1,7 +1,7 @@
 import { getPostsTodayByClient } from '../model/tiktokPostModel.js';
 import { getCommentsByVideoId } from '../model/tiktokCommentModel.js';
 import { getUsersByClientFull } from '../model/userModel.js';
-import { fetchAndStoreTiktokContent } from './tiktokFetchService.js'; // Pastikan import benar
+import { fetchAndAbsensiTiktok } from './tiktokFetchService.js';
 import waClient from './waService.js';
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || '')
@@ -15,10 +15,21 @@ function getAdminWAIds() {
   );
 }
 
+function normalizeTikTokUsername(val) {
+  if (!val) return '';
+  if (val.startsWith('http')) {
+    const match = val.match(/tiktok\.com\/@([a-zA-Z0-9._]+)/i);
+    return match ? '@' + match[1].toLowerCase() : '';
+  }
+  // Pastikan tetap awali @ (tidak dobel @)
+  if (!val.startsWith('@')) val = '@' + val;
+  return val.trim().toLowerCase();
+}
+
 function formatName(u) {
   const titleNama = [u.title, u.nama].filter(Boolean).join(' ');
   return u.tiktok
-    ? `${titleNama} : @${u.tiktok.replace(/^@/, '')}`
+    ? `${titleNama} : ${u.tiktok}`
     : `${titleNama} : belum mengisi data tiktok`;
 }
 
@@ -43,18 +54,21 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
   let postsToday = [];
   let fetchApiResult = null;
   try {
-    fetchApiResult = await fetchAndStoreTiktokContent(null, null, client_id);
+    // Ganti ke fetchAndAbsensiTiktok agar compatible
+    fetchApiResult = await fetchAndAbsensiTiktok(
+      { client_id }, // patch: parameter hanya butuh client_id
+      null,
+      null
+    );
     if (
       fetchApiResult &&
-      typeof fetchApiResult === "object" &&
-      fetchApiResult[client_id] &&
-      Array.isArray(fetchApiResult[client_id].postsToday)
+      Array.isArray(fetchApiResult)
     ) {
-      postsToday = fetchApiResult[client_id].postsToday.map((post) =>
-        typeof post === "object"
-          ? post.id || post.video_id || post.aweme_id || post.post_id
-          : post
-      );
+      postsToday = fetchApiResult.map(p =>
+        typeof p === 'object'
+          ? p.videoId || p.id || p.video_id || p.aweme_id || p.post_id
+          : p
+      ).filter(Boolean);
     }
   } catch (e) {
     // Gagal API, fallback ke DB langsung
@@ -106,10 +120,10 @@ export async function fallbackAbsensiKomentarTiktokHariIni(client_id, customWaCl
   for (const postId of postsToday) {
     const comments = await getCommentsByVideoId(postId);
     komentarDebugMsg += `- Post ${postId}: Jumlah komentar = ${comments ? comments.length : 0}\n`;
-    const commentsSet = new Set((comments || []).map(x => (x || '').replace(/^@/, '').toLowerCase()));
+    const commentsSet = new Set((comments || []).map(x => normalizeTikTokUsername(x)));
     users.forEach(u => {
-      const uname = (u.tiktok || '').replace(/^@/, '').toLowerCase();
-      if (u.tiktok && u.tiktok.trim() !== '' && commentsSet.has(uname)) {
+      const uname = normalizeTikTokUsername(u.tiktok);
+      if (uname && commentsSet.has(uname)) {
         userStats[u.user_id].count += 1;
         userDenganKomentar += 1;
       }
