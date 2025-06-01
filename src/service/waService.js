@@ -401,11 +401,11 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  // 1. Ambil user & post TikTok hari ini dari database
+  // Ambil user & post TikTok hari ini dari database
   const { getUsersByClient } = await import("../model/userModel.js");
   const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
   const users = await getUsersByClient(client_id);
-  let posts = await getPostsTodayByClient(client_id);
+  const posts = await getPostsTodayByClient(client_id);
 
   // === DEBUG LOG khusus pengambilan data post dari DB ===
   let debugMsg = `[DEBUG] [absensikomentar] Hasil query getPostsTodayByClient untuk client_id=${client_id}:\n`;
@@ -417,7 +417,8 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     debugMsg += `[DEBUG]   Tidak ada data post TikTok ditemukan di database untuk client_id=${client_id}\n`;
   }
   console.log(debugMsg);
-  // Kirim ke admin WA
+
+  // === Kirim debug ke ADMIN_WHATSAPP
   const adminWA = (process.env.ADMIN_WHATSAPP || "")
     .split(",")
     .map(n => n.trim())
@@ -436,49 +437,29 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     return;
   }
 
-  // === STEP: Selalu fetch komentar terbaru via API, simpan ke DB sebelum absensi ===
-  const { upsertTiktokComments } = await import("../model/tiktokCommentModel.js");
-  const axios = (await import("axios")).default;
-  const apiKey = process.env.RAPIDAPI_KEY;
-  const apiHost = "tiktok-api23.p.rapidapi.com";
-  for (const post of posts) {
+  // === FETCH & STORE KOMENTAR SETIAP POST (PASTI FRESH DARI API, dengan debug setiap step) ===
+  const { fetchAndStoreTiktokComments } = await import("../service/tiktokCommentService.js");
+  for (const [i, post] of posts.entries()) {
     const video_id = post.video_id || post.id;
+    let msgStart = `[DEBUG][absensikomentar] Mulai fetch komentar video_id=${video_id} (${i+1}/${posts.length})`;
+    console.log(msgStart);
+    for (const wa of adminWA) waClient.sendMessage(wa, msgStart).catch(() => {});
     try {
-      let allComments = [];
-      let cursor = 0, page = 1;
-      while (true) {
-        const options = {
-          method: "GET",
-          url: `https://${apiHost}/api/post/comments`,
-          params: {
-            videoId: video_id,
-            count: "50",
-            cursor: String(cursor)
-          },
-          headers: {
-            "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": apiHost
-          }
-        };
-        const res = await axios.request(options);
-        const data = res.data;
-        const comments = Array.isArray(data?.comments) ? data.comments : [];
-        allComments.push(...comments);
-        if (!data.has_more || !data.next_cursor || comments.length === 0) break;
-        cursor = data.next_cursor;
-        page++;
-      }
-      // Simpan semua komentar ke DB
-      await upsertTiktokComments(video_id, allComments);
+      const allComments = await fetchAndStoreTiktokComments(video_id);
+      let msgOk = `[DEBUG][absensikomentar] Sukses fetch & simpan ${allComments.length} komentar video_id=${video_id}`;
+      console.log(msgOk);
+      for (const wa of adminWA) waClient.sendMessage(wa, msgOk).catch(() => {});
     } catch (err) {
-      // Debug error ke admin
-      const errMsg = `[DEBUG] Gagal fetch komentar API video_id=${video_id}: ${err.message}`;
-      console.log(errMsg);
-      for (const wa of adminWA) waClient.sendMessage(wa, errMsg).catch(() => {});
+      let msgErr = `[ERROR][absensikomentar] Gagal fetch komentar video_id=${video_id}: ${err.message}`;
+      console.log(msgErr);
+      for (const wa of adminWA) waClient.sendMessage(wa, msgErr).catch(() => {});
     }
   }
 
-  // 2. Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum)
+  // === Lanjutkan proses absensi komentar (DARI DB, hasil update tadi) ===
+  const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
+
+  // === Mode Akumulasi Komentar (akumulasi#sudah|akumulasi#belum) ===
   if (filter1 === "akumulasi") {
     // Map user: {user_id: {..., count:0}}
     const userStats = {};
@@ -486,13 +467,10 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       userStats[u.user_id] = { ...u, count: 0 };
     });
 
-    const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
     for (const post of posts) {
       const video_id = post.video_id || post.id;
       const komentar = await getCommentsByVideoId(video_id);
-      const commentsArr = Array.isArray(komentar?.comments)
-        ? komentar.comments
-        : [];
+      const commentsArr = Array.isArray(komentar?.comments) ? komentar.comments : [];
       const usernameSet = new Set(
         commentsArr.map((k) => (k.user?.unique_id || k.username || "").toLowerCase())
       );
@@ -506,8 +484,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     // Rekap sudah/belum per satfung/divisi
     const sudahPerSatfung = {};
     const belumPerSatfung = {};
-    let totalSudah = 0,
-      totalBelum = 0;
+    let totalSudah = 0, totalBelum = 0;
     const totalKonten = posts.length;
 
     Object.values(userStats).forEach((u) => {
@@ -547,9 +524,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
     } else {
@@ -557,9 +532,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
     }
@@ -567,8 +540,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     return;
   }
 
-  // 3. Mode per Post TikTok (default/sudah/belum)
-  const { getCommentsByVideoId } = await import("../model/tiktokCommentModel.js");
+  // === Mode per Post TikTok (default/sudah/belum) ===
   for (const post of posts) {
     const video_id = post.video_id || post.id;
     const komentar = await getCommentsByVideoId(video_id);
@@ -621,18 +593,14 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
       msg += `\n❌ Belum melaksanakan (${totalBelum} user):\n`;
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msg += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msg += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msg += `- ${line}\n`; });
         msg += "\n";
       });
       await waClient.sendMessage(chatId, msg.trim());
@@ -644,9 +612,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(sudahPerSatfung).forEach((satfung) => {
         const arr = sudahPerSatfung[satfung];
         msgSudah += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msgSudah += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msgSudah += `- ${line}\n`; });
         msgSudah += "\n";
       });
       await waClient.sendMessage(chatId, msgSudah.trim());
@@ -658,9 +624,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       Object.keys(belumPerSatfung).forEach((satfung) => {
         const arr = belumPerSatfung[satfung];
         msgBelum += `*${satfung}* (${arr.length} user):\n`;
-        arr.forEach((line) => {
-          msgBelum += `- ${line}\n`;
-        });
+        arr.forEach((line) => { msgBelum += `- ${line}\n`; });
         msgBelum += "\n";
       });
       await waClient.sendMessage(chatId, msgBelum.trim());
@@ -669,6 +633,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   }
   return;
 }
+
 
 
 // =========================
