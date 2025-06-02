@@ -1814,30 +1814,25 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
   // =========================
   // === UPDATE STATUS/EXCEPTION (ADMIN)
   // =========================
-  if (
-    text.toLowerCase().startsWith("exception#") ||
-    text.toLowerCase().startsWith("status#")
-  ) {
-    // Hanya admin dari .env
+  if (text.toLowerCase().startsWith("exception#")) {
+    // Hanya admin dari .env yang boleh pakai command ini!
     if (!isAdminWhatsApp(chatId)) {
       await waClient.sendMessage(
         chatId,
-        "❌ Hanya admin yang dapat mengubah data status/exception."
+        "❌ Hanya admin yang dapat mengubah data *exception* user."
       );
       return;
     }
-    // Format: exception#user_id#true/false  atau status#user_id#true/false
-    const [command, user_id, valueRaw] = text.split("#");
+    // Format: exception#user_id#true/false
+    const [, user_id, valueRaw] = text.split("#");
     if (!user_id || (valueRaw !== "true" && valueRaw !== "false")) {
       await waClient.sendMessage(
         chatId,
-        `Format salah!\nGunakan: ${command}#user_id#true/false`
+        "Format salah!\nGunakan: exception#user_id#true/false"
       );
       return;
     }
-    const field = command.toLowerCase();
     try {
-      // Cek user ada?
       const user = await userService.findUserById(user_id);
       if (!user) {
         await waClient.sendMessage(
@@ -1846,22 +1841,69 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
         );
         return;
       }
-      // Update
-      await userService.updateUserField(user_id, field, valueRaw === "true");
+      // Update field exception
+      await userService.updateUserField(
+        user_id,
+        "exception",
+        valueRaw === "true"
+      );
       await waClient.sendMessage(
         chatId,
-        `✅ Data *${field}* untuk user ${user_id} berhasil diupdate ke: *${
-          valueRaw === "true" ? "true" : "false"
-        }*`
+        `✅ Data *exception* untuk user ${user_id} berhasil diupdate ke: *${valueRaw}*`
       );
     } catch (err) {
       await waClient.sendMessage(
         chatId,
-        `❌ Gagal update ${field}: ${err.message}`
+        `❌ Gagal update exception: ${err.message}`
       );
     }
     return;
   }
+
+  // Handler status# tetap bisa digunakan jika memang perlu
+
+  if (text.toLowerCase().startsWith("status#")) {
+    // Hanya admin dari .env yang boleh pakai command ini!
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Hanya admin yang dapat mengubah data *status* user."
+      );
+      return;
+    }
+    // Format: status#user_id#true/false
+    const [, user_id, valueRaw] = text.split("#");
+    if (!user_id || (valueRaw !== "true" && valueRaw !== "false")) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: status#user_id#true/false"
+      );
+      return;
+    }
+    try {
+      const user = await userService.findUserById(user_id);
+      if (!user) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ User dengan ID ${user_id} tidak ditemukan.`
+        );
+        return;
+      }
+      // Update field status (boolean)
+      await userService.updateUserField(user_id, "status", valueRaw === "true");
+      await waClient.sendMessage(
+        chatId,
+        `✅ Data *status* untuk user ${user_id} berhasil diupdate ke: *${valueRaw}*`
+      );
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal update status: ${err.message}`
+      );
+    }
+    return;
+  }
+
   // ...semua handler di atas...
 
   // =========================
