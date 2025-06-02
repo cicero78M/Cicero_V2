@@ -107,9 +107,13 @@ async function absensiLikesAkumulasiBelum(client_id) {
 
   const totalKonten = shortcodes.length;
   let sudah = [],
-    belum = [];
+    belum = [],
+    exceptionUsers = [];
+
   Object.values(userStats).forEach((u) => {
-    if (
+    if (u.exception) {
+      exceptionUsers.push(u);
+    } else if (
       u.insta &&
       u.insta.trim() !== "" &&
       u.count >= Math.ceil(totalKonten / 2)
@@ -119,6 +123,14 @@ async function absensiLikesAkumulasiBelum(client_id) {
       belum.push(u);
     }
   });
+
+  // Hanya masukkan user exception ke sudah jika sudah > 50
+  if (sudah.length > 50) {
+    sudah = [...sudah, ...exceptionUsers];
+  } else {
+    // Kalau sudah <= 50, user exception tetap di list belum
+    belum = [...belum, ...exceptionUsers];
+  }
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -428,9 +440,12 @@ cron.schedule(
 
           const totalKonten = posts.length;
           let sudah = [],
-            belum = [];
+            belum = [],
+            exceptionUsers = [];
           Object.values(userStats).forEach((u) => {
-            if (
+            if (u.exception) {
+              exceptionUsers.push(u);
+            } else if (
               u.tiktok &&
               u.tiktok.trim() !== "" &&
               u.count >= Math.ceil(totalKonten / 2)
@@ -440,6 +455,13 @@ cron.schedule(
               belum.push(u);
             }
           });
+
+          // User exception ke sudah jika sudah > 50, jika tidak, exception tetap ke belum
+          if (sudah.length > 50) {
+            sudah = [...sudah, ...exceptionUsers];
+          } else {
+            belum = [...belum, ...exceptionUsers];
+          }
 
           const now = new Date();
           const hari = hariIndo[now.getDay()];

@@ -251,9 +251,12 @@ waClient.on("message", async (msg) => {
       }
 
       let sudah = [],
-        belum = [];
+        belum = [],
+        exceptionUsers = [];
       Object.values(userStats).forEach((u) => {
-        if (
+        if (u.exception) {
+          exceptionUsers.push(u);
+        } else if (
           u.insta &&
           u.insta.trim() !== "" &&
           u.count >= Math.ceil(totalKonten / 2)
@@ -263,6 +266,13 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
+
+      // User exception ke sudah jika sudah > 50, jika tidak, exception tetap ke belum
+      if (sudah.length > 50) {
+        sudah = [...sudah, ...exceptionUsers];
+      } else {
+        belum = [...belum, ...exceptionUsers];
+      }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
@@ -320,9 +330,12 @@ waClient.on("message", async (msg) => {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map((l) => (l || "").toLowerCase()));
       let sudah = [],
-        belum = [];
+        belum = [],
+        exceptionUsers = [];
       users.forEach((u) => {
-        if (
+        if (u.exception) {
+          exceptionUsers.push(u);
+        } else if (
           u.insta &&
           u.insta.trim() !== "" &&
           likesSet.has(u.insta.toLowerCase())
@@ -332,6 +345,13 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
+
+      // Logic exception juga: ke sudah kalau sudah > 50, kalau tidak ke belum
+      if (sudah.length > 50) {
+        sudah = [...sudah, ...exceptionUsers];
+      } else {
+        belum = [...belum, ...exceptionUsers];
+      }
 
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
       let msg =
@@ -441,7 +461,6 @@ waClient.on("message", async (msg) => {
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
 
-    // Helper: urut divisi custom (BAG, SAT, POLSEK, lalu abjad)
     function sortDivisionKeys(keys) {
       const order = ["BAG", "SAT", "POLSEK"];
       return keys.sort((a, b) => {
@@ -506,67 +525,21 @@ waClient.on("message", async (msg) => {
       // fallback tetap -
     }
 
-    // Link video
     const kontenLinks = posts.map(
       (p) =>
         `https://www.tiktok.com/@${client_tiktok}/video/${p.video_id || p.id}`
     );
 
-    // DEBUG LOG pengambilan data post dari DB
-    let debugMsg = `[DEBUG] [absensikomentar] Hasil query getPostsTodayByClient untuk client_id=${client_id}:\n`;
-    if (posts && posts.length > 0) {
-      posts.forEach((p, i) => {
-        debugMsg += `[DEBUG]   #${i + 1} video_id=${
-          p.video_id || p.id
-        } | created_at=${p.created_at || p.create_time}\n`;
-      });
-    } else {
-      debugMsg += `[DEBUG]   Tidak ada data post TikTok ditemukan di database untuk client_id=${client_id}\n`;
-    }
-    console.log(debugMsg);
-
-    // Kirim debug ke ADMIN_WHATSAPP
-    const adminWA = (process.env.ADMIN_WHATSAPP || "")
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean)
-      .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
-    for (const wa of adminWA) {
-      waClient.sendMessage(wa, debugMsg).catch(() => {});
-    }
-
-    if (!posts || posts.length === 0) {
-      await waClient.sendMessage(
-        chatId,
-        headerLaporan +
-          `Tidak ada post TikTok untuk *Polres*: *${client_id}* hari ini.\n${hari}, ${tanggal}\nJam: ${jam}`
-      );
-      return;
-    }
-
-    // FETCH & STORE KOMENTAR SETIAP POST (PASTI FRESH DARI API)
+    // === FETCH & STORE KOMENTAR SETIAP POST (PASTI FRESH DARI API) ===
     const { fetchAndStoreTiktokComments } = await import(
       "../service/tiktokCommentService.js"
     );
     for (const [i, post] of posts.entries()) {
       const video_id = post.video_id || post.id;
-      let msgStart = `[DEBUG][absensikomentar] Mulai fetch komentar video_id=${video_id} (${
-        i + 1
-      }/${posts.length})`;
-      console.log(msgStart);
-      for (const wa of adminWA)
-        waClient.sendMessage(wa, msgStart).catch(() => {});
       try {
-        const allComments = await fetchAndStoreTiktokComments(video_id);
-        let msgOk = `[DEBUG][absensikomentar] Sukses fetch & simpan ${allComments.length} komentar video_id=${video_id}`;
-        console.log(msgOk);
-        for (const wa of adminWA)
-          waClient.sendMessage(wa, msgOk).catch(() => {});
+        await fetchAndStoreTiktokComments(video_id);
       } catch (err) {
-        let msgErr = `[ERROR][absensikomentar] Gagal fetch komentar video_id=${video_id}: ${err.message}`;
-        console.log(msgErr);
-        for (const wa of adminWA)
-          waClient.sendMessage(wa, msgErr).catch(() => {});
+        // Skip error
       }
     }
 
@@ -575,7 +548,6 @@ waClient.on("message", async (msg) => {
       "../model/tiktokCommentModel.js"
     );
 
-    // Helper normalisasi array komentar (string/object/campur)
     function normalizeKomentarArr(arr) {
       return arr
         .map((c) => {
@@ -617,11 +589,14 @@ waClient.on("message", async (msg) => {
       }
 
       let sudah = [],
-        belum = [];
+        belum = [],
+        exceptionUsers = [];
       const totalKonten = posts.length;
 
       Object.values(userStats).forEach((u) => {
-        if (
+        if (u.exception) {
+          exceptionUsers.push(u);
+        } else if (
           u.tiktok &&
           u.tiktok.trim() !== "" &&
           u.count >= Math.ceil(totalKonten / 2)
@@ -631,6 +606,13 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
+
+      // User exception ke sudah jika sudah > 50, kalau tidak ke belum
+      if (sudah.length > 50) {
+        sudah = [...sudah, ...exceptionUsers];
+      } else {
+        belum = [...belum, ...exceptionUsers];
+      }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
@@ -693,10 +675,13 @@ waClient.on("message", async (msg) => {
       const usernameSet = new Set(commentsArr);
 
       let sudah = [],
-        belum = [];
+        belum = [],
+        exceptionUsers = [];
       users.forEach((u) => {
         const tiktokUsername = (u.tiktok || "").replace(/^@/, "").toLowerCase();
-        if (
+        if (u.exception) {
+          exceptionUsers.push(u);
+        } else if (
           u.tiktok &&
           u.tiktok.trim() !== "" &&
           usernameSet.has(tiktokUsername)
@@ -706,6 +691,13 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
+
+      // Exception ke sudah jika sudah > 50
+      if (sudah.length > 50) {
+        sudah = [...sudah, ...exceptionUsers];
+      } else {
+        belum = [...belum, ...exceptionUsers];
+      }
 
       let msg =
         headerLaporan +
@@ -1875,6 +1867,7 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
   // =========================
   // === DEFAULT HANDLER UNTUK PESAN TIDAK DIKENALI
   // =========================
+
   let userWaNum = chatId.replace(/[^0-9]/g, "");
   const isFirstTime = !knownUserSet.has(userWaNum);
   knownUserSet.add(userWaNum);
