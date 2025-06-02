@@ -368,11 +368,10 @@ cron.schedule(
               // === PATCH: jika komentar hasil API berupa array objek, mapping ke array username lowercase
               if (commentsArr.length && typeof commentsArr[0] === "object") {
                 commentsArr = commentsArr
-                  .map(
-                    (c) =>
-                      (c.user?.unique_id || c.username || "")
-                        .replace(/^@/, "")
-                        .toLowerCase()
+                  .map((c) =>
+                    (c.user?.unique_id || c.username || "")
+                      .replace(/^@/, "")
+                      .toLowerCase()
                   )
                   .filter(Boolean);
               }
@@ -388,7 +387,9 @@ cron.schedule(
               commentsArr.map((x) => x.toLowerCase())
             );
             users.forEach((u) => {
-              const tiktokUsername = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+              const tiktokUsername = (u.tiktok || "")
+                .replace(/^@/, "")
+                .toLowerCase();
               if (
                 u.tiktok &&
                 u.tiktok.trim() !== "" &&
@@ -420,9 +421,11 @@ cron.schedule(
           const hari = hariIndo[now.getDay()];
           const tanggal = now.toLocaleDateString("id-ID");
           const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+          // Link video
           const kontenLinks = posts.map(
             (p) =>
-              `https://www.tiktok.com/@${p.username || "-"}/video/${
+              `https://www.tiktok.com/@${client_tiktok}/video/${
                 p.video_id || p.id
               }`
           );
