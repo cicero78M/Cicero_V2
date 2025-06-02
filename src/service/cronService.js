@@ -84,7 +84,7 @@ async function absensiLikesAkumulasiBelum(client_id) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length)
-    return `Tidak ada konten IG untuk *Client*: *${client_id}* hari ini.`;
+    return `Tidak ada konten IG untuk *Polres*: *${client_id}* hari ini.`;
 
   const userStats = {};
   users.forEach((u) => {
@@ -126,46 +126,48 @@ async function absensiLikesAkumulasiBelum(client_id) {
 
   let msg =
     `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official:\n\n` +
-    `📋 Rekap Akumulasi Likes IG\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join(
-      "\n"
-    )}\n\n` +
-    `Jumlah user: *${users.length}*\n` +
+    `📋 Rekap Akumulasi Likes IG\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+    `*Jumlah Konten:* ${totalKonten}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
+    `*Jumlah user:* ${users.length}\n` +
     `✅ Sudah melaksanakan: *${sudah.length}*\n` +
     `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-  if (belum.length > 0) {
-    const belumDiv = groupByDivision(belum);
-    sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
-      const list = belumDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list
-          .map(
-            (u) =>
-              `- ${formatName(u)}${
-                !u.insta ? " (belum mengisi data insta)" : ""
-              } (${u.count} konten)`
-          )
-          .join("\n") + "\n\n";
-    });
-  } else {
-    msg += `❌ Belum melaksanakan: -\n`;
-  }
+  // === Belum ===
+  msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
+  const belumDiv = groupByDivision(belum);
+  sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+    const list = belumDiv[div];
+    msg += `*${div}* (${list.length} user):\n`;
+    msg +=
+      list
+        .map(
+          (u) =>
+            `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+              u.insta ? u.insta : "belum mengisi data insta"
+            }`
+        )
+        .join("\n") + "\n\n";
+  });
+  if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
 
-  if (sudah.length > 0) {
-    msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
-    const sudahDiv = groupByDivision(sudah);
-    sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
-      const list = sudahDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list.map((u) => `- ${formatName(u)} (${u.count} konten)`).join("\n") +
-        "\n\n";
-    });
-  } else {
-    msg += `\n✅ Sudah melaksanakan: -\n`;
-  }
+  // === Sudah ===
+  msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+  const sudahDiv = groupByDivision(sudah);
+  sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+    const list = sudahDiv[div];
+    msg += `*${div}* (${list.length} user):\n`;
+    msg +=
+      list
+        .map(
+          (u) =>
+            `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta} (${
+              u.count
+            } konten)`
+        )
+        .join("\n") + "\n\n";
+  });
+  if (Object.keys(sudahDiv).length === 0) msg += "-\n";
 
   msg += `\nTerimakasih.`;
 
@@ -460,39 +462,41 @@ cron.schedule(
             `✅ Sudah melaksanakan: *${sudah.length}*\n` +
             `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-          if (belum.length > 0) {
-            const belumDiv = groupByDivision(belum);
-            sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
-              const list = belumDiv[div];
-              msg += `*${div}* (${list.length} user):\n`;
-              msg +=
-                list
-                  .map(
-                    (u) =>
-                      `- ${formatName(u)}${
-                        !u.tiktok ? " (belum mengisi data tiktok)" : ""
-                      } (${u.count} video)`
-                  )
-                  .join("\n") + "\n\n";
-            });
-          } else {
-            msg += `❌ Belum melaksanakan: -\n`;
-          }
+          // === Belum ===
+          msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
+          const belumDiv = groupByDivision(belum);
+          sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+            const list = belumDiv[div];
+            msg += `*${div}* (${list.length} user):\n`;
+            msg +=
+              list
+                .map(
+                  (u) =>
+                    `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+                      u.tiktok ? u.tiktok : "belum mengisi data tiktok"
+                    }`
+                )
+                .join("\n") + "\n\n";
+          });
+          if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
 
-          if (sudah.length > 0) {
-            msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
-            const sudahDiv = groupByDivision(sudah);
-            sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
-              const list = sudahDiv[div];
-              msg += `*${div}* (${list.length} user):\n`;
-              msg +=
-                list
-                  .map((u) => `- ${formatName(u)} (${u.count} video)`)
-                  .join("\n") + "\n\n";
-            });
-          } else {
-            msg += `\n✅ Sudah melaksanakan: -\n`;
-          }
+          // === Sudah ===
+          msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+          const sudahDiv = groupByDivision(sudah);
+          sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+            const list = sudahDiv[div];
+            msg += `*${div}* (${list.length} user):\n`;
+            msg +=
+              list
+                .map(
+                  (u) =>
+                    `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+                      u.tiktok
+                    } (${u.count} video)`
+                )
+                .join("\n") + "\n\n";
+          });
+          if (Object.keys(sudahDiv).length === 0) msg += "-\n";
 
           msg += `\nTerimakasih.`;
 

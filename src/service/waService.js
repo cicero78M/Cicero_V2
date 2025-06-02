@@ -157,7 +157,6 @@ waClient.on("message", async (msg) => {
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
 
-    // Urutan divisi prioritas (bisa ditambah sesuai kebutuhan)
     function sortDivisionKeys(keys) {
       const order = ["BAG", "SAT", "POLSEK"];
       return keys.sort((a, b) => {
@@ -171,6 +170,18 @@ waClient.on("message", async (msg) => {
           (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
         );
       });
+    }
+    function groupByDivision(arr) {
+      const divGroups = {};
+      arr.forEach((u) => {
+        const div = u.divisi || "-";
+        if (!divGroups[div]) divGroups[div] = [];
+        divGroups[div].push(u);
+      });
+      return divGroups;
+    }
+    function formatNama(u) {
+      return [u.title, u.nama].filter(Boolean).join(" ");
     }
 
     // 1. Fetch konten & likes IG terbaru (always update before check)
@@ -239,7 +250,6 @@ waClient.on("message", async (msg) => {
         });
       }
 
-      // Rekap sudah/belum per divisi (satfung)
       let sudah = [],
         belum = [];
       Object.values(userStats).forEach((u) => {
@@ -264,16 +274,6 @@ waClient.on("message", async (msg) => {
         `✅ Sudah melaksanakan: *${sudah.length}*\n` +
         `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      function groupByDivision(arr) {
-        const divGroups = {};
-        arr.forEach((u) => {
-          const div = u.divisi || "-";
-          if (!divGroups[div]) divGroups[div] = [];
-          divGroups[div].push(u);
-        });
-        return divGroups;
-      }
-
       if (tipe === "sudah") {
         msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         const sudahDiv = groupByDivision(sudah);
@@ -284,7 +284,7 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                  `- ${formatNama(u)} : ${
                     u.insta || "belum mengisi data insta"
                   } (${u.count} konten)${
                     !u.insta ? " (belum mengisi data insta)" : ""
@@ -302,11 +302,9 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
-                    u.insta || "belum mengisi data insta"
-                  } (${u.count} konten)${
-                    !u.insta ? " (belum mengisi data insta)" : ""
-                  }`
+                  `- ${formatNama(u)} : ${
+                    u.insta ? u.insta : "belum mengisi data insta"
+                  } (0 konten)${!u.insta ? " (belum mengisi data insta)" : ""}`
               )
               .join("\n") + "\n\n";
         });
@@ -345,19 +343,8 @@ waClient.on("message", async (msg) => {
         `✅ Sudah melaksanakan: *${sudah.length}*\n` +
         `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      function groupByDivision(arr) {
-        const divGroups = {};
-        arr.forEach((u) => {
-          const div = u.divisi || "-";
-          if (!divGroups[div]) divGroups[div] = [];
-          divGroups[div].push(u);
-        });
-        return divGroups;
-      }
-
       // filter1: kosong (all), sudah, atau belum
       if (!filter1) {
-        // Tampilkan dua-duanya, rapi dan ada jarak antar divisi
         msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         const sudahDiv = groupByDivision(sudah);
         sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
@@ -367,7 +354,7 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                  `- ${formatNama(u)} : ${
                     u.insta || "belum mengisi data insta"
                   }${!u.insta ? " (belum mengisi data insta)" : ""}`
               )
@@ -382,8 +369,8 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
-                    u.insta || "belum mengisi data insta"
+                  `- ${formatNama(u)} : ${
+                    u.insta ? u.insta : "belum mengisi data insta"
                   }${!u.insta ? " (belum mengisi data insta)" : ""}`
               )
               .join("\n") + "\n\n";
@@ -403,7 +390,7 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                  `- ${formatNama(u)} : ${
                     u.insta || "belum mengisi data insta"
                   }${!u.insta ? " (belum mengisi data insta)" : ""}`
               )
@@ -424,8 +411,8 @@ waClient.on("message", async (msg) => {
             list
               .map(
                 (u) =>
-                  `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
-                    u.insta || "belum mengisi data insta"
+                  `- ${formatNama(u)} : ${
+                    u.insta ? u.insta : "belum mengisi data insta"
                   }${!u.insta ? " (belum mengisi data insta)" : ""}`
               )
               .join("\n") + "\n\n";
@@ -667,7 +654,7 @@ waClient.on("message", async (msg) => {
                 (u) =>
                   `- ${formatNama(u)} : ${
                     u.tiktok || "belum mengisi data tiktok"
-                  } (${u.count} konten)${
+                  } (${u.count} video)${
                     !u.tiktok ? " (belum mengisi data tiktok)" : ""
                   }`
               )
@@ -684,10 +671,8 @@ waClient.on("message", async (msg) => {
               .map(
                 (u) =>
                   `- ${formatNama(u)} : ${
-                    u.tiktok || "belum mengisi data tiktok"
-                  } (${u.count} konten)${
-                    !u.tiktok ? " (belum mengisi data tiktok)" : ""
-                  }`
+                    u.tiktok ? u.tiktok : "belum mengisi data tiktok"
+                  } (0 video)${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
               )
               .join("\n") + "\n\n";
         });
@@ -757,7 +742,7 @@ waClient.on("message", async (msg) => {
               .map(
                 (u) =>
                   `- ${formatNama(u)} : ${
-                    u.tiktok || "belum mengisi data tiktok"
+                    u.tiktok ? u.tiktok : "belum mengisi data tiktok"
                   }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
               )
               .join("\n") + "\n\n";
@@ -799,7 +784,7 @@ waClient.on("message", async (msg) => {
               .map(
                 (u) =>
                   `- ${formatNama(u)} : ${
-                    u.tiktok || "belum mengisi data tiktok"
+                    u.tiktok ? u.tiktok : "belum mengisi data tiktok"
                   }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
               )
               .join("\n") + "\n\n";
