@@ -3,6 +3,7 @@ import { pool } from "../config/db.js";
 /**
  * Simpan/Update komentar TikTok untuk video tertentu (merge, bukan replace).
  * Jika sudah ada, gabung komentar lama dengan yang baru (tanpa duplikat user dan id).
+ * PATCH: Normalisasi, tambahkan field `username` pada setiap komentar.
  * @param {string} video_id - ID video TikTok
  * @param {Array} commentsArr - Array of comment objects
  */
@@ -15,13 +16,28 @@ export async function upsertTiktokComments(video_id, commentsArr) {
     existing = res.rows[0].comments;
   }
 
-  // Gabungkan tanpa duplikat (berdasarkan id komentar)
+  // PATCH: Normalisasi username pada setiap komentar
+  function normalizeUsername(comment) {
+    if (!comment) return comment;
+    // Jika sudah ada field username, biarkan
+    if (comment.username && typeof comment.username === "string" && comment.username.length > 0) return comment;
+    // Jika punya user.unique_id, salin ke username
+    if (comment.user && typeof comment.user.unique_id === "string") {
+      return { ...comment, username: comment.user.unique_id };
+    }
+    // fallback, tetap kembalikan objek as is
+    return comment;
+  }
+
+  // Gabungkan tanpa duplikat (berdasarkan id komentar) + normalisasi username
   const byId = {};
   for (const k of existing) {
-    if (k && k.cid) byId[k.cid] = k;
+    const norm = normalizeUsername(k);
+    if (norm && norm.cid) byId[norm.cid] = norm;
   }
   for (const k of commentsArr) {
-    if (k && k.cid) byId[k.cid] = k;
+    const norm = normalizeUsername(k);
+    if (norm && norm.cid) byId[norm.cid] = norm;
   }
   // Array hasil merge
   const merged = Object.values(byId);
