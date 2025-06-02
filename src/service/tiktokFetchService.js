@@ -37,7 +37,7 @@ export async function getTiktokSecUid(client_id) {
   return secUid;
 }
 
-// PATCH FINAL: Fetch semua post TikTok hari ini, mapping waktu ke created_at (DB)
+// PATCH FINAL: Fetch semua post TikTok hari ini, mapping waktu ke created_at (epoch)
 export async function fetchAndStoreTiktokContent(client_id) {
   const secUid = await getTiktokSecUid(client_id);
   const url = `https://tiktok-api23.p.rapidapi.com/api/user/posts`;
@@ -70,7 +70,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
   );
   function isTodayJakarta(ts) {
-    if (!ts) return false;
+    if (!ts || isNaN(ts)) return false;
     const d = new Date(
       new Date(ts * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
     );
@@ -90,13 +90,16 @@ export async function fetchAndStoreTiktokContent(client_id) {
   if (postsToday.length > 0) {
     await upsertTiktokPosts(
       client_id,
-      postsToday.map((post) => ({
-        video_id: post.id || post.video_id,
-        caption: post.desc || post.caption || "",
-        created_at: new Date(post.createTime * 1000), // simpan sebagai timestamp JS (Pastikan model konversi ke timestamp DB!)
-        like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
-        comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
-      }))
+      postsToday.map((post) => {
+        const createdEpoch = typeof post.createTime === "number" ? post.createTime : null;
+        return {
+          video_id: post.id || post.video_id,
+          caption: post.desc || post.caption || "",
+          created_at: createdEpoch, // gunakan format number (epoch detik)
+          like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+          comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
+        };
+      })
     );
     sendAdminDebug(
       `[DEBUG] fetchAndStoreTiktokContent: sudah simpan ${postsToday.length} post ke DB`
@@ -108,11 +111,15 @@ export async function fetchAndStoreTiktokContent(client_id) {
   }
 
   // Return array posts
-  return postsToday.map((post) => ({
-    video_id: post.id || post.video_id,
-    caption: post.desc || post.caption || "",
-    created_at: new Date(post.createTime * 1000),
-    like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
-    comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
-  }));
+  return postsToday.map((post) => {
+    const createdEpoch = typeof post.createTime === "number" ? post.createTime : null;
+    return {
+      video_id: post.id || post.video_id,
+      caption: post.desc || post.caption || "",
+      created_at: createdEpoch,
+      like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+      comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
+    };
+  });
 }
+
