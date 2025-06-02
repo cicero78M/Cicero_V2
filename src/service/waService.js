@@ -251,11 +251,10 @@ waClient.on("message", async (msg) => {
       }
 
       let sudah = [],
-        belum = [],
-        exceptionUsers = [];
+        belum = [];
       Object.values(userStats).forEach((u) => {
         if (u.exception) {
-          exceptionUsers.push(u);
+          sudah.push(u); // Selalu masuk sudah, apapun kondisinya
         } else if (
           u.insta &&
           u.insta.trim() !== "" &&
@@ -266,13 +265,6 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
-
-      // === Perbaikan logic exception (sesuai permintaan)
-      if (sudah.length > 50) {
-        sudah = sudah.concat(exceptionUsers);
-      } else {
-        belum = belum.concat(exceptionUsers);
-      }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
@@ -330,11 +322,10 @@ waClient.on("message", async (msg) => {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map((l) => (l || "").toLowerCase()));
       let sudah = [],
-        belum = [],
-        exceptionUsers = [];
+        belum = [];
       users.forEach((u) => {
         if (u.exception) {
-          exceptionUsers.push(u);
+          sudah.push(u); // Selalu masuk sudah, apapun kondisinya
         } else if (
           u.insta &&
           u.insta.trim() !== "" &&
@@ -346,13 +337,6 @@ waClient.on("message", async (msg) => {
         }
       });
 
-      // === Perbaikan logic exception (sesuai permintaan)
-      if (sudah.length > 50) {
-        sudah = sudah.concat(exceptionUsers);
-      } else {
-        belum = belum.concat(exceptionUsers);
-      }
-
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
       let msg =
         headerLaporan +
@@ -363,7 +347,6 @@ waClient.on("message", async (msg) => {
         `✅ Sudah melaksanakan: *${sudah.length}*\n` +
         `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-      // filter1: kosong (all), sudah, atau belum
       if (!filter1) {
         msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
         const sudahDiv = groupByDivision(sudah);
@@ -397,7 +380,7 @@ waClient.on("message", async (msg) => {
         });
         msg += "\nTerimakasih.";
         await waClient.sendMessage(chatId, msg.trim());
-        continue;
+        continue; // lanjut ke konten berikutnya
       }
 
       if (filter1 === "sudah") {
@@ -505,16 +488,11 @@ waClient.on("message", async (msg) => {
     const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
     // Ambil user, post TikTok, dan client_tiktok dari database
-    const { getUsersByClient } = await import("../model/userModel.js");
-    const { getPostsTodayByClient } = await import(
-      "../model/tiktokPostModel.js"
-    );
     const users = await getUsersByClient(client_id);
     const posts = await getPostsTodayByClient(client_id);
 
     let client_tiktok = "-";
     try {
-      const { pool } = await import("../config/db.js");
       const q =
         "SELECT client_tiktok FROM clients WHERE client_id = $1 LIMIT 1";
       const result = await pool.query(q, [client_id]);
@@ -531,10 +509,7 @@ waClient.on("message", async (msg) => {
     );
 
     // === FETCH & STORE KOMENTAR SETIAP POST (PASTI FRESH DARI API) ===
-    const { fetchAndStoreTiktokComments } = await import(
-      "../service/tiktokCommentService.js"
-    );
-    for (const [i, post] of posts.entries()) {
+    for (const post of posts) {
       const video_id = post.video_id || post.id;
       try {
         await fetchAndStoreTiktokComments(video_id);
@@ -542,11 +517,6 @@ waClient.on("message", async (msg) => {
         // Skip error
       }
     }
-
-    // Lanjutkan proses absensi komentar (dari DB, hasil update tadi)
-    const { getCommentsByVideoId } = await import(
-      "../model/tiktokCommentModel.js"
-    );
 
     function normalizeKomentarArr(arr) {
       return arr
@@ -589,13 +559,12 @@ waClient.on("message", async (msg) => {
       }
 
       let sudah = [],
-        belum = [],
-        exceptionUsers = [];
+        belum = [];
       const totalKonten = posts.length;
 
       Object.values(userStats).forEach((u) => {
         if (u.exception) {
-          exceptionUsers.push(u);
+          sudah.push(u); // Selalu masuk sudah, apapun kondisinya
         } else if (
           u.tiktok &&
           u.tiktok.trim() !== "" &&
@@ -606,13 +575,6 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
-
-      // ==== FIXED LOGIC: exception ke sudah HANYA jika sudah.length > 50
-      if (sudah.length > 50) {
-        sudah = sudah.concat(exceptionUsers);
-      } else {
-        belum = belum.concat(exceptionUsers);
-      }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
       let msg =
@@ -675,12 +637,11 @@ waClient.on("message", async (msg) => {
       const usernameSet = new Set(commentsArr);
 
       let sudah = [],
-        belum = [],
-        exceptionUsers = [];
+        belum = [];
       users.forEach((u) => {
         const tiktokUsername = (u.tiktok || "").replace(/^@/, "").toLowerCase();
         if (u.exception) {
-          exceptionUsers.push(u);
+          sudah.push(u); // Selalu masuk sudah, apapun kondisinya
         } else if (
           u.tiktok &&
           u.tiktok.trim() !== "" &&
@@ -691,13 +652,6 @@ waClient.on("message", async (msg) => {
           belum.push(u);
         }
       });
-
-      // ==== FIXED LOGIC: exception ke sudah HANYA jika sudah.length > 50
-      if (sudah.length > 50) {
-        sudah = sudah.concat(exceptionUsers);
-      } else {
-        belum = belum.concat(exceptionUsers);
-      }
 
       let msg =
         headerLaporan +
