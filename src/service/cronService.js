@@ -19,7 +19,13 @@ import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 
 // === Helper dan konstanta ===
 const hariIndo = [
-  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
 ];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -41,7 +47,9 @@ function groupByDivision(users) {
   return divGroups;
 }
 function formatName(u) {
-  return `${u.title ? u.title + " " : ""}${u.nama}${u.tiktok ? ` : ${u.tiktok}` : ""}${u.insta ? ` : ${u.insta}` : ""}`;
+  return `${u.title ? u.title + " " : ""}${u.nama}${
+    u.tiktok ? ` : ${u.tiktok}` : ""
+  }${u.insta ? ` : ${u.insta}` : ""}`;
 }
 
 // ========== IG CRON ==========
@@ -85,8 +93,10 @@ async function absensiLikesAkumulasiBelum(client_id) {
   }
 
   const totalKonten = shortcodes.length;
-  let sudah = [], belum = [];
+  let sudah = [],
+    belum = [];
   Object.values(userStats).forEach((u) => {
+    // Harus likes di >= setengah jumlah konten untuk "sudah"
     if (
       u.insta &&
       u.insta.trim() !== "" &&
@@ -103,38 +113,50 @@ async function absensiLikesAkumulasiBelum(client_id) {
   );
 
   let msg =
-    `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official :\n\n` +
+    `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official:\n\n` +
     `📋 Rekap Akumulasi Likes IG\n*Client*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
-    `Jumlah user: *${users.length}*\n✅ Sudah melaksanakan: *${sudah.length}*\n❌ Belum melaksanakan: *${belum.length}*\n\n`;
+    `Jumlah Konten: ${totalKonten}\nDaftar Link Konten:\n${kontenLinks.join(
+      "\n"
+    )}\n\n` +
+    `Jumlah user: *${users.length}*\n` +
+    `✅ Sudah melaksanakan: *${sudah.length}*\n` +
+    `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-  if (sudah.length) {
-    const sudahDiv = groupByDivision(sudah);
-    msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-    Object.entries(sudahDiv).forEach(([div, list]) => {
-      msg += `*${div}* (${list.length} user):\n`;
-      msg += list.map((u) => `- ${formatName(u)}`).join("\n") + "\n";
-    });
-  } else {
-    msg += `✅ Sudah melaksanakan: -\n`;
-  }
-  if (belum.length) {
+  if (belum.length > 0) {
     const belumDiv = groupByDivision(belum);
-    msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+    msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
     Object.entries(belumDiv).forEach(([div, list]) => {
       msg += `*${div}* (${list.length} user):\n`;
-      msg += list
-        .map(
-          (u) =>
-            `- ${formatName(u)}${
-              !u.insta ? " (belum mengisi data insta)" : ""
-            }`
-        )
-        .join("\n") + "\n";
+      msg +=
+        list
+          .map(
+            (u) =>
+              `- ${formatName(u)}${!u.insta ? " (belum mengisi data insta)" : ""} (${u.count} konten)`
+          )
+          .join("\n") + "\n\n";
     });
   } else {
-    msg += `\n❌ Belum melaksanakan: -\n`;
+    msg += `❌ Belum melaksanakan: -\n`;
   }
+
+  if (sudah.length > 0) {
+    msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
+    const sudahDiv = groupByDivision(sudah);
+    Object.entries(sudahDiv).forEach(([div, list]) => {
+      msg += `*${div}* (${list.length} user):\n`;
+      msg +=
+        list
+          .map(
+            (u) =>
+              `- ${formatName(u)} (${u.count} konten)`
+          )
+          .join("\n") + "\n\n";
+    });
+  } else {
+    msg += `\n✅ Sudah melaksanakan: -\n`;
+  }
+
+  msg += `\nTerimakasih.`;
 
   return msg.trim();
 }
@@ -176,7 +198,11 @@ cron.schedule(
     try {
       const clients = await getActiveClientsIG();
       const keys = [
-        "code", "caption", "like_count", "taken_at", "comment_count",
+        "code",
+        "caption",
+        "like_count",
+        "taken_at",
+        "comment_count",
       ];
       const fetchSummary = await fetchAndStoreInstaContent(keys);
 
@@ -264,19 +290,19 @@ cron.schedule(
 
 // ========== TIKTOK CRON ==========
 
-// ========== TIKTOK CRON ==========
-
 async function getActiveClientsTiktok() {
   const res = await pool.query(
     `SELECT client_id FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
   );
-  return res.rows.map(row => row.client_id);
+  return res.rows.map((row) => row.client_id);
 }
 
 cron.schedule(
   "50 6-22 * * *",
   async () => {
-    console.log("[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)...");
+    console.log(
+      "[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)..."
+    );
     try {
       const clients = await getActiveClientsTiktok();
 
@@ -290,10 +316,12 @@ cron.schedule(
           } catch (e) {
             // Optional: kirim error ke admin, tapi lanjut fallback
             for (const admin of getAdminWAIds()) {
-              await waClient.sendMessage(
-                admin,
-                `[CRON TIKTOK][${client_id}] ERROR API: ${e.message || e}`
-              ).catch(() => {});
+              await waClient
+                .sendMessage(
+                  admin,
+                  `[CRON TIKTOK][${client_id}] ERROR API: ${e.message || e}`
+                )
+                .catch(() => {});
             }
           }
 
@@ -302,19 +330,23 @@ cron.schedule(
           } else {
             posts = await getPostsTodayByClient(client_id);
             for (const admin of getAdminWAIds()) {
-              await waClient.sendMessage(
-                admin,
-                `[CRON TIKTOK][${client_id}] ⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
-              ).catch(() => {});
+              await waClient
+                .sendMessage(
+                  admin,
+                  `[CRON TIKTOK][${client_id}] ⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
+                )
+                .catch(() => {});
             }
           }
 
           if (!posts || posts.length === 0) {
             for (const admin of getAdminWAIds()) {
-              await waClient.sendMessage(
-                admin,
-                `[CRON TIKTOK][${client_id}] Tidak ada post TikTok hari ini.`
-              ).catch(() => {});
+              await waClient
+                .sendMessage(
+                  admin,
+                  `[CRON TIKTOK][${client_id}] Tidak ada post TikTok hari ini.`
+                )
+                .catch(() => {});
             }
             continue;
           }
@@ -338,10 +370,14 @@ cron.schedule(
             } catch (err) {
               // Gagal fetch, ambil dari DB
               const komentarDb = await getCommentsByVideoId(video_id);
-              commentsArr = Array.isArray(komentarDb?.comments) ? komentarDb.comments : [];
+              commentsArr = Array.isArray(komentarDb?.comments)
+                ? komentarDb.comments
+                : [];
             }
             const usernameSet = new Set(
-              commentsArr.map((k) => (k.user?.unique_id || k.username || "").toLowerCase())
+              commentsArr.map((k) =>
+                (k.user?.unique_id || k.username || "").toLowerCase()
+              )
             );
             users.forEach((u) => {
               const tiktokUsername = (u.tiktok || "").replace(/^@/, "");
@@ -356,7 +392,8 @@ cron.schedule(
           }
 
           const totalKonten = posts.length;
-          let sudah = [], belum = [];
+          let sudah = [],
+            belum = [];
           Object.values(userStats).forEach((u) => {
             // Harus komentar di >= setengah jumlah post untuk dinyatakan "sudah"
             if (
@@ -376,8 +413,13 @@ cron.schedule(
           const tanggal = now.toLocaleDateString("id-ID");
           const jam = now.toLocaleTimeString("id-ID", { hour12: false });
           const kontenLinks = posts.map(
-            (p) => `https://www.tiktok.com/@${(p.username || "-")}/video/${p.video_id || p.id}`
+            (p) =>
+              `https://www.tiktok.com/@${p.username || "-"}/video/${
+                p.video_id || p.id
+              }`
           );
+
+          // ... (bagian awal workflow tetap sama)
 
           let msg =
             `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n` +
@@ -394,14 +436,15 @@ cron.schedule(
             msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
             Object.entries(belumDiv).forEach(([div, list]) => {
               msg += `*${div}* (${list.length} user):\n`;
-              msg += list
-                .map(
-                  (u) =>
-                    `- ${formatName(u)}${
-                      !u.tiktok ? " (belum mengisi data tiktok)" : ""
-                    } (${u.count} video)`
-                )
-                .join("\n") + "\n";
+              msg +=
+                list
+                  .map(
+                    (u) =>
+                      `- ${formatName(u)}${
+                        !u.tiktok ? " (belum mengisi data tiktok)" : ""
+                      } (${u.count} video)`
+                  )
+                  .join("\n") + "\n\n"; // << TAMBAH \n ekstra di sini!
             });
           } else {
             msg += `❌ Belum melaksanakan: -\n`;
@@ -412,31 +455,38 @@ cron.schedule(
             const sudahDiv = groupByDivision(sudah);
             Object.entries(sudahDiv).forEach(([div, list]) => {
               msg += `*${div}* (${list.length} user):\n`;
-              msg += list
-                .map(
-                  (u) =>
-                    `- ${formatName(u)} (${u.count} video)`
-                )
-                .join("\n") + "\n";
+              msg +=
+                list
+                  .map((u) => `- ${formatName(u)} (${u.count} video)`)
+                  .join("\n") + "\n\n"; // << TAMBAH \n ekstra di sini!
             });
           } else {
             msg += `\n✅ Sudah melaksanakan: -\n`;
           }
 
+          // Tambahkan ucapan terimakasih di akhir laporan
+          msg += `\nTerimakasih.`;
+
           for (const admin of getAdminWAIds()) {
             await waClient.sendMessage(admin, msg.trim()).catch(() => {});
           }
-          console.log(`[CRON TIKTOK] Sent absensi komentar TikTok (akumulasi belum) client=${client_id}`);
+          console.log(
+            `[CRON TIKTOK] Sent absensi komentar TikTok (akumulasi belum) client=${client_id}`
+          );
         } catch (err) {
           for (const admin of getAdminWAIds()) {
-            await waClient.sendMessage(
-              admin,
-              `[CRON TIKTOK][${client_id}] ERROR: ${err.message}`
-            ).catch(() => {});
+            await waClient
+              .sendMessage(
+                admin,
+                `[CRON TIKTOK][${client_id}] ERROR: ${err.message}`
+              )
+              .catch(() => {});
           }
         }
       }
-      console.log("[CRON TIKTOK] Laporan absensi komentar (akumulasi belum) berhasil dikirim ke admin.");
+      console.log(
+        "[CRON TIKTOK] Laporan absensi komentar (akumulasi belum) berhasil dikirim ke admin."
+      );
     } catch (err) {
       console.error("[CRON TIKTOK ERROR]", err);
       for (const admin of getAdminWAIds()) {
