@@ -37,6 +37,17 @@ function getAdminWAIds() {
     n.endsWith("@c.us") ? n : n.replace(/[^0-9]/g, "") + "@c.us"
   );
 }
+
+// Urut divisi: BAG, SAT, POLSEK, lalu abjad
+function sortDivisionKeys(keys) {
+  const order = ["BAG", "SAT", "POLSEK"];
+  return keys.sort((a, b) => {
+    const ia = order.findIndex((prefix) => a.toUpperCase().startsWith(prefix));
+    const ib = order.findIndex((prefix) => b.toUpperCase().startsWith(prefix));
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
+  });
+}
+
 function groupByDivision(users) {
   const divGroups = {};
   users.forEach((u) => {
@@ -124,8 +135,8 @@ async function absensiLikesAkumulasiBelum(client_id) {
 
   if (belum.length > 0) {
     const belumDiv = groupByDivision(belum);
-    msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
-    Object.entries(belumDiv).forEach(([div, list]) => {
+    sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+      const list = belumDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
         list
@@ -144,7 +155,8 @@ async function absensiLikesAkumulasiBelum(client_id) {
   if (sudah.length > 0) {
     msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
     const sudahDiv = groupByDivision(sudah);
-    Object.entries(sudahDiv).forEach(([div, list]) => {
+    sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+      const list = sudahDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
         list.map((u) => `- ${formatName(u)} (${u.count} konten)`).join("\n") +
@@ -295,6 +307,16 @@ async function getActiveClientsTiktok() {
   return res.rows.map((row) => row.client_id);
 }
 
+async function getClientTiktokUsername(client_id) {
+  try {
+    const q = `SELECT client_tiktok FROM clients WHERE client_id = $1 LIMIT 1`;
+    const result = await pool.query(q, [client_id]);
+    if (result.rows[0] && result.rows[0].client_tiktok)
+      return result.rows[0].client_tiktok.replace(/^@/, "");
+  } catch (e) {}
+  return "-";
+}
+
 cron.schedule(
   "21 6-22 * * *",
   async () => {
@@ -306,13 +328,14 @@ cron.schedule(
 
       for (const client_id of clients) {
         try {
+          const client_tiktok = await getClientTiktokUsername(client_id);
+
           // === 1. FETCH POST TIKTOK ala fetchtiktok# ===
           let posts = [];
           let postsFromApi = [];
           try {
             postsFromApi = await fetchAndStoreTiktokContent(client_id);
           } catch (e) {
-            // Optional: kirim error ke admin, tapi lanjut fallback
             for (const admin of getAdminWAIds()) {
               await waClient
                 .sendMessage(
@@ -365,7 +388,6 @@ cron.schedule(
             try {
               // Fetch komentar terbaru (force update DB, delay internal sudah di service)
               commentsArr = await fetchAndStoreTiktokComments(video_id);
-              // === PATCH: jika komentar hasil API berupa array objek, mapping ke array username lowercase
               if (commentsArr.length && typeof commentsArr[0] === "object") {
                 commentsArr = commentsArr
                   .map((c) =>
@@ -382,7 +404,6 @@ cron.schedule(
                 ? komentarDb.comments
                 : [];
             }
-            // === PENTING: commentsArr pasti array username (string)
             const usernameSet = new Set(
               commentsArr.map((x) => x.toLowerCase())
             );
@@ -404,7 +425,6 @@ cron.schedule(
           let sudah = [],
             belum = [];
           Object.values(userStats).forEach((u) => {
-            // Harus komentar di >= setengah jumlah post untuk dinyatakan "sudah"
             if (
               u.tiktok &&
               u.tiktok.trim() !== "" &&
@@ -416,13 +436,11 @@ cron.schedule(
             }
           });
 
-          // Format laporan AKUMULASI BELUM (seperti absensikomentar#clientid#akumulasi#belum)
           const now = new Date();
           const hari = hariIndo[now.getDay()];
           const tanggal = now.toLocaleDateString("id-ID");
           const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-          // Link video
           const kontenLinks = posts.map(
             (p) =>
               `https://www.tiktok.com/@${client_tiktok}/video/${
@@ -440,10 +458,10 @@ cron.schedule(
             `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
           if (belum.length > 0) {
-            // Group by division
             const belumDiv = groupByDivision(belum);
             msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
-            Object.entries(belumDiv).forEach(([div, list]) => {
+            sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+              const list = belumDiv[div];
               msg += `*${div}* (${list.length} user):\n`;
               msg +=
                 list
@@ -462,7 +480,8 @@ cron.schedule(
           if (sudah.length > 0) {
             msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
             const sudahDiv = groupByDivision(sudah);
-            Object.entries(sudahDiv).forEach(([div, list]) => {
+            sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+              const list = sudahDiv[div];
               msg += `*${div}* (${list.length} user):\n`;
               msg +=
                 list
@@ -473,7 +492,6 @@ cron.schedule(
             msg += `\n✅ Sudah melaksanakan: -\n`;
           }
 
-          // Tambahkan ucapan terimakasih di akhir laporan
           msg += `\nTerimakasih.`;
 
           for (const admin of getAdminWAIds()) {
