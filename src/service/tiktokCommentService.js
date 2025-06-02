@@ -5,7 +5,10 @@ import waClient from "./waService.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { upsertTiktokComments, getCommentsByVideoId } from "../model/tiktokCommentModel.js";
+import {
+  upsertTiktokComments,
+  getCommentsByVideoId,
+} from "../model/tiktokCommentModel.js";
 
 /**
  * Kirim debug ke ADMIN WhatsApp
@@ -36,23 +39,25 @@ function delay(ms) {
  */
 export async function fetchAndStoreTiktokComments(video_id) {
   let allComments = [];
-  let cursor = 0, page = 1, reqCount = 0;
+  let cursor = 0,
+    page = 1,
+    reqCount = 0;
   let total = null;
 
   while (true) {
     const options = {
-      method: 'GET',
-      url: 'https://tiktok-api23.p.rapidapi.com/api/post/comments',
+      method: "GET",
+      url: "https://tiktok-api23.p.rapidapi.com/api/post/comments",
       params: {
         videoId: video_id,
-        count: '50',
-        cursor: String(cursor)
+        count: "50",
+        cursor: String(cursor),
       },
       headers: {
-        'x-cache-control': 'no-cache',
-        'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-        'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com'
-      }
+        "x-cache-control": "no-cache",
+        "x-rapidapi-key": process.env.RAPIDAPI_KEY,
+        "x-rapidapi-host": "tiktok-api23.p.rapidapi.com",
+      },
     };
     let response, data;
     try {
@@ -67,10 +72,15 @@ export async function fetchAndStoreTiktokComments(video_id) {
       // Debug response structure
       const keys = Object.keys(data);
       const dataKeys = data?.data ? Object.keys(data.data) : [];
-      sendAdminDebug(`[DEBUG][API_RESPONSE] page=${page} keys=${JSON.stringify(keys)} dataKeys=${JSON.stringify(dataKeys)}`);
-
+      sendAdminDebug(
+        `[DEBUG][API_RESPONSE] page=${page} keys=${JSON.stringify(
+          keys
+        )} dataKeys=${JSON.stringify(dataKeys)}`
+      );
     } catch (err) {
-      sendAdminDebug(`[ERROR] Gagal fetch komentar TikTok video_id=${video_id} page=${page}: ${err.message}`);
+      sendAdminDebug(
+        `[ERROR] Gagal fetch komentar TikTok video_id=${video_id} page=${page}: ${err.message}`
+      );
       throw err;
     }
 
@@ -88,14 +98,16 @@ export async function fetchAndStoreTiktokComments(video_id) {
       }
     }
 
-    sendAdminDebug(`[DEBUG] TikTok Komentar page=${page}, video_id=${video_id}, jml=${comments.length}, cursor=${cursor}, total=${total}`);
+    sendAdminDebug(
+      `[DEBUG] TikTok Komentar page=${page}, video_id=${video_id}, jml=${comments.length}, cursor=${cursor}, total=${total}`
+    );
 
     if (!comments.length) break; // STOP paginasi jika data kosong!
     allComments.push(...comments);
 
     // --- LOGIKA PAGINASI FINAL SESUAI REQUEST ---
     // Hanya berhenti jika cursor > total+50
-    if (total !== null && cursor > (total + 50)) break;
+    if (total !== null && cursor > total + 50) break;
     cursor += 50;
     page++;
 
@@ -108,7 +120,9 @@ export async function fetchAndStoreTiktokComments(video_id) {
   try {
     const existing = await getCommentsByVideoId(video_id);
     if (Array.isArray(existing.comments)) oldComments = existing.comments;
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
 
   // Gabungkan unik berdasarkan cid/comment_id/id/JSON
   const uniqMap = {};
@@ -120,7 +134,9 @@ export async function fetchAndStoreTiktokComments(video_id) {
 
   // SIMPAN KE DB
   await upsertTiktokComments(video_id, finalComments);
-  sendAdminDebug(`[DEBUG] Sudah simpan ${finalComments.length} komentar ke DB untuk video_id=${video_id}`);
+  sendAdminDebug(
+    `[DEBUG] Sudah simpan ${finalComments.length} komentar ke DB untuk video_id=${video_id}`
+  );
 
   return finalComments;
 }

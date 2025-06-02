@@ -24,7 +24,9 @@ export async function getTiktokSecUid(client_id) {
   if (!client || !client.client_tiktok)
     throw new Error("Username TikTok kosong di database.");
   const username = client.client_tiktok.replace(/^@/, "");
-  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`;
+  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(
+    username
+  )}`;
   const headers = {
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
     "x-rapidapi-host": "tiktok-api23.p.rapidapi.com",
@@ -63,8 +65,12 @@ export async function fetchAndStoreTiktokContent(client_id) {
   }
 
   // PATCH: Pastikan path data.itemList sesuai hasil fetch API asli
-  const postsArr = Array.isArray(data?.data?.itemList) ? data.data.itemList : [];
-  sendAdminDebug(`[DEBUG] TikTok POST COUNT (data.itemList): ${postsArr.length}`);
+  const postsArr = Array.isArray(data?.data?.itemList)
+    ? data.data.itemList
+    : [];
+  sendAdminDebug(
+    `[DEBUG] TikTok POST COUNT (data.itemList): ${postsArr.length}`
+  );
 
   // Filter hanya post hari ini (Asia/Jakarta)
   const todayJakarta = new Date(
@@ -92,12 +98,14 @@ export async function fetchAndStoreTiktokContent(client_id) {
     await upsertTiktokPosts(
       client_id,
       postsToday.map((post) => {
-        const createdEpoch = typeof post.createTime === "number" ? post.createTime : null;
+        const createdEpoch =
+          typeof post.createTime === "number" ? post.createTime : null;
         return {
           video_id: post.id || post.video_id,
           caption: post.desc || post.caption || "",
           created_at: createdEpoch, // gunakan format number (epoch detik)
-          like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+          like_count:
+            post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
           comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
         };
       })
@@ -113,14 +121,15 @@ export async function fetchAndStoreTiktokContent(client_id) {
 
   // Return array posts
   return postsToday.map((post) => {
-    const createdEpoch = typeof post.createTime === "number" ? post.createTime : null;
+    const createdEpoch =
+      typeof post.createTime === "number" ? post.createTime : null;
     return {
       video_id: post.id || post.video_id,
       caption: post.desc || post.caption || "",
       created_at: createdEpoch,
-      like_count: post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
+      like_count:
+        post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
       comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
     };
   });
 }
-

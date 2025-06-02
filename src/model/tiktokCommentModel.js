@@ -26,7 +26,9 @@ export async function upsertTiktokComments(video_id, commentsArr) {
   const res = await pool.query(qSelect, [video_id]);
   let existing = [];
   if (res.rows[0] && Array.isArray(res.rows[0].comments)) {
-    existing = res.rows[0].comments.map(u => (typeof u === "string" ? u.toLowerCase() : null)).filter(Boolean);
+    existing = res.rows[0].comments
+      .map((u) => (typeof u === "string" ? u.toLowerCase() : null))
+      .filter(Boolean);
   }
   // Merge dan unikkan lagi
   const finalUsernames = [...new Set([...existing, ...uniqUsernames])];

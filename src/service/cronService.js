@@ -19,7 +19,13 @@ import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 
 // === Helper dan konstanta ===
 const hariIndo = [
-  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
 ];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -38,7 +44,9 @@ function sortDivisionKeys(keys) {
   return keys.sort((a, b) => {
     const ia = order.findIndex((prefix) => a.toUpperCase().startsWith(prefix));
     const ib = order.findIndex((prefix) => b.toUpperCase().startsWith(prefix));
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
+    return (
+      (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
+    );
   });
 }
 
@@ -388,15 +396,17 @@ cron.schedule(
             }
             // ALWAYS NORMALIZE array username lowercase (string), baik dari API/object/string/null
             if (commentsArr.length) {
-              commentsArr = commentsArr.map((c) => {
-                if (typeof c === "string") return c.toLowerCase();
-                if (c && typeof c === "object") {
-                  return (c.user?.unique_id || c.username || "")
-                    .replace(/^@/, "")
-                    .toLowerCase();
-                }
-                return "";
-              }).filter(Boolean);
+              commentsArr = commentsArr
+                .map((c) => {
+                  if (typeof c === "string") return c.toLowerCase();
+                  if (c && typeof c === "object") {
+                    return (c.user?.unique_id || c.username || "")
+                      .replace(/^@/, "")
+                      .toLowerCase();
+                  }
+                  return "";
+                })
+                .filter(Boolean);
             }
             const usernameSet = new Set(commentsArr);
 
