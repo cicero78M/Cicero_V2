@@ -131,7 +131,9 @@ async function absensiLikesAkumulasiBelum(client_id) {
         list
           .map(
             (u) =>
-              `- ${formatName(u)}${!u.insta ? " (belum mengisi data insta)" : ""} (${u.count} konten)`
+              `- ${formatName(u)}${
+                !u.insta ? " (belum mengisi data insta)" : ""
+              } (${u.count} konten)`
           )
           .join("\n") + "\n\n";
     });
@@ -145,12 +147,8 @@ async function absensiLikesAkumulasiBelum(client_id) {
     Object.entries(sudahDiv).forEach(([div, list]) => {
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
-        list
-          .map(
-            (u) =>
-              `- ${formatName(u)} (${u.count} konten)`
-          )
-          .join("\n") + "\n\n";
+        list.map((u) => `- ${formatName(u)} (${u.count} konten)`).join("\n") +
+        "\n\n";
     });
   } else {
     msg += `\n✅ Sudah melaksanakan: -\n`;
@@ -190,7 +188,7 @@ async function rekapLikesIG(client_id) {
 
 // === CRON IG: Likes ===
 cron.schedule(
-  "28 6-22 * * *",
+  "20 6-22 * * *",
   async () => {
     console.log(
       "[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum..."
@@ -298,7 +296,7 @@ async function getActiveClientsTiktok() {
 }
 
 cron.schedule(
-  "50 6-22 * * *",
+  "21 6-22 * * *",
   async () => {
     console.log(
       "[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)..."
