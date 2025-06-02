@@ -124,12 +124,11 @@ async function absensiLikesAkumulasiBelum(client_id) {
     }
   });
 
-  // Hanya masukkan user exception ke sudah jika sudah > 50
+  // === Logic exception sesuai permintaan
   if (sudah.length > 50) {
-    sudah = [...sudah, ...exceptionUsers];
+    sudah = sudah.concat(exceptionUsers);
   } else {
-    // Kalau sudah <= 50, user exception tetap di list belum
-    belum = [...belum, ...exceptionUsers];
+    belum = belum.concat(exceptionUsers);
   }
 
   const kontenLinks = shortcodes.map(
@@ -456,11 +455,11 @@ cron.schedule(
             }
           });
 
-          // User exception ke sudah jika sudah > 50, jika tidak, exception tetap ke belum
+          // === Logic exception sesuai permintaan
           if (sudah.length > 50) {
-            sudah = [...sudah, ...exceptionUsers];
+            sudah = sudah.concat(exceptionUsers);
           } else {
-            belum = [...belum, ...exceptionUsers];
+            belum = belum.concat(exceptionUsers);
           }
 
           const now = new Date();

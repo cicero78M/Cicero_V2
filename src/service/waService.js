@@ -267,11 +267,11 @@ waClient.on("message", async (msg) => {
         }
       });
 
-      // User exception ke sudah jika sudah > 50, jika tidak, exception tetap ke belum
+      // === Perbaikan logic exception (sesuai permintaan)
       if (sudah.length > 50) {
-        sudah = [...sudah, ...exceptionUsers];
+        sudah = sudah.concat(exceptionUsers);
       } else {
-        belum = [...belum, ...exceptionUsers];
+        belum = belum.concat(exceptionUsers);
       }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
@@ -346,11 +346,11 @@ waClient.on("message", async (msg) => {
         }
       });
 
-      // Logic exception juga: ke sudah kalau sudah > 50, kalau tidak ke belum
+      // === Perbaikan logic exception (sesuai permintaan)
       if (sudah.length > 50) {
-        sudah = [...sudah, ...exceptionUsers];
+        sudah = sudah.concat(exceptionUsers);
       } else {
-        belum = [...belum, ...exceptionUsers];
+        belum = belum.concat(exceptionUsers);
       }
 
       const linkIG = `https://www.instagram.com/p/${shortcode}`;
@@ -397,7 +397,7 @@ waClient.on("message", async (msg) => {
         });
         msg += "\nTerimakasih.";
         await waClient.sendMessage(chatId, msg.trim());
-        continue; // lanjut ke konten berikutnya
+        continue;
       }
 
       if (filter1 === "sudah") {
@@ -607,11 +607,11 @@ waClient.on("message", async (msg) => {
         }
       });
 
-      // User exception ke sudah jika sudah > 50, kalau tidak ke belum
+      // ==== FIXED LOGIC: exception ke sudah HANYA jika sudah.length > 50
       if (sudah.length > 50) {
-        sudah = [...sudah, ...exceptionUsers];
+        sudah = sudah.concat(exceptionUsers);
       } else {
-        belum = [...belum, ...exceptionUsers];
+        belum = belum.concat(exceptionUsers);
       }
 
       const tipe = filter2 === "belum" ? "belum" : "sudah";
@@ -692,11 +692,11 @@ waClient.on("message", async (msg) => {
         }
       });
 
-      // Exception ke sudah jika sudah > 50
+      // ==== FIXED LOGIC: exception ke sudah HANYA jika sudah.length > 50
       if (sudah.length > 50) {
-        sudah = [...sudah, ...exceptionUsers];
+        sudah = sudah.concat(exceptionUsers);
       } else {
-        belum = [...belum, ...exceptionUsers];
+        belum = belum.concat(exceptionUsers);
       }
 
       let msg =
