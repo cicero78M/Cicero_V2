@@ -1577,16 +1577,22 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
     }
     const [, user_id, field, valueRaw] = parts;
     const allowedFields = [
-      "nama",
-      "title",
-      "pangkat",
-      "divisi",
-      "satfung",
-      "jabatan",
       "insta",
       "tiktok",
       "whatsapp",
+      "exception",
+      "status",
+      "nama",
+      "title",
+      "divisi",
+      "jabatan",
     ];
+    if (!allowedFields.includes(field)) {
+      throw new Error(
+        "Hanya field tertentu yang bisa diupdate: " + allowedFields.join(", ")
+      );
+    }
+
     let fieldNorm = field.toLowerCase();
     // Normalisasi: 'pangkat' -> 'title', 'satfung' -> 'divisi'
     if (fieldNorm === "pangkat") fieldNorm = "title";
