@@ -365,6 +365,17 @@ cron.schedule(
             try {
               // Fetch komentar terbaru (force update DB, delay internal sudah di service)
               commentsArr = await fetchAndStoreTiktokComments(video_id);
+              // === PATCH: jika komentar hasil API berupa array objek, mapping ke array username lowercase
+              if (commentsArr.length && typeof commentsArr[0] === "object") {
+                commentsArr = commentsArr
+                  .map(
+                    (c) =>
+                      (c.user?.unique_id || c.username || "")
+                        .replace(/^@/, "")
+                        .toLowerCase()
+                  )
+                  .filter(Boolean);
+              }
             } catch (err) {
               // Gagal fetch, ambil dari DB
               const komentarDb = await getCommentsByVideoId(video_id);
@@ -372,17 +383,16 @@ cron.schedule(
                 ? komentarDb.comments
                 : [];
             }
+            // === PENTING: commentsArr pasti array username (string)
             const usernameSet = new Set(
-              commentsArr.map((k) =>
-                (k.user?.unique_id || k.username || "").toLowerCase()
-              )
+              commentsArr.map((x) => x.toLowerCase())
             );
             users.forEach((u) => {
-              const tiktokUsername = (u.tiktok || "").replace(/^@/, "");
+              const tiktokUsername = (u.tiktok || "").replace(/^@/, "").toLowerCase();
               if (
                 u.tiktok &&
                 u.tiktok.trim() !== "" &&
-                usernameSet.has(tiktokUsername.toLowerCase())
+                usernameSet.has(tiktokUsername)
               ) {
                 userStats[u.user_id].count += 1;
               }
@@ -417,8 +427,6 @@ cron.schedule(
               }`
           );
 
-          // ... (bagian awal workflow tetap sama)
-
           let msg =
             `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n` +
             `📋 Rekap Akumulasi Komentar TikTok\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -442,7 +450,7 @@ cron.schedule(
                         !u.tiktok ? " (belum mengisi data tiktok)" : ""
                       } (${u.count} video)`
                   )
-                  .join("\n") + "\n\n"; // << TAMBAH \n ekstra di sini!
+                  .join("\n") + "\n\n";
             });
           } else {
             msg += `❌ Belum melaksanakan: -\n`;
@@ -456,7 +464,7 @@ cron.schedule(
               msg +=
                 list
                   .map((u) => `- ${formatName(u)} (${u.count} video)`)
-                  .join("\n") + "\n\n"; // << TAMBAH \n ekstra di sini!
+                  .join("\n") + "\n\n";
             });
           } else {
             msg += `\n✅ Sudah melaksanakan: -\n`;
