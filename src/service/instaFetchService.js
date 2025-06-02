@@ -70,6 +70,7 @@ async function fetchAllLikes(shortcode) {
         {
           params,
           headers: {
+            'x-cache-control': 'no-cache',
             'X-RapidAPI-Key': RAPIDAPI_KEY,
             'X-RapidAPI-Host': RAPIDAPI_HOST,
           },
@@ -137,6 +138,7 @@ export async function fetchAndStoreInstaContent(keys, waClient = null, chatId = 
           {
             params: { username_or_id_or_url: username },
             headers: {
+              'x-cache-control': 'no-cache',            
               'X-RapidAPI-Key': RAPIDAPI_KEY,
               'X-RapidAPI-Host': RAPIDAPI_HOST,
             },

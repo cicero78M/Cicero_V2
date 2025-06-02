@@ -47,6 +47,7 @@ export async function fetchAndStoreTiktokContent(client_id) {
     cursor: 0,
   };
   const headers = {
+    "x-cache-control": "no-cache",
     "x-rapidapi-key": process.env.RAPIDAPI_KEY,
     "x-rapidapi-host": "tiktok-api23.p.rapidapi.com",
   };
