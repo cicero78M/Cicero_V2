@@ -57,7 +57,7 @@ export async function findUserById(user_id) {
  * Update field user (insta/tiktok/whatsapp) - tanpa normalisasi TikTok
  */
 export async function updateUserField(user_id, field, value) {
-  const allowed = ['insta', 'tiktok', 'whatsapp'];
+  const allowed = ['insta', 'tiktok', 'whatsapp', "exception", "status", "nama", "title", "divisi", "jabatan"];
   if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok/whatsapp yang bisa diupdate');
   const { rows } = await pool.query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
