@@ -11,7 +11,7 @@ import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { pool } from "../config/db.js";
 import waClient from "./waService.js";
 
-// Tambahan untuk TikTok
+// TikTok
 import { fetchAndStoreTiktokContent } from "./tiktokFetchService.js";
 import { fetchAndStoreTiktokComments } from "./tiktokCommentService.js";
 import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
@@ -19,13 +19,7 @@ import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 
 // === Helper dan konstanta ===
 const hariIndo = [
-  "Minggu",
-  "Senin",
-  "Selasa",
-  "Rabu",
-  "Kamis",
-  "Jumat",
-  "Sabtu",
+  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
 ];
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -107,7 +101,6 @@ async function absensiLikesAkumulasiBelum(client_id) {
   let sudah = [],
     belum = [];
   Object.values(userStats).forEach((u) => {
-    // Harus likes di >= setengah jumlah konten untuk "sudah"
     if (
       u.insta &&
       u.insta.trim() !== "" &&
@@ -386,27 +379,27 @@ cron.schedule(
             const video_id = post.video_id || post.id;
             let commentsArr = [];
             try {
-              // Fetch komentar terbaru (force update DB, delay internal sudah di service)
               commentsArr = await fetchAndStoreTiktokComments(video_id);
-              if (commentsArr.length && typeof commentsArr[0] === "object") {
-                commentsArr = commentsArr
-                  .map((c) =>
-                    (c.user?.unique_id || c.username || "")
-                      .replace(/^@/, "")
-                      .toLowerCase()
-                  )
-                  .filter(Boolean);
-              }
             } catch (err) {
-              // Gagal fetch, ambil dari DB
               const komentarDb = await getCommentsByVideoId(video_id);
               commentsArr = Array.isArray(komentarDb?.comments)
                 ? komentarDb.comments
                 : [];
             }
-            const usernameSet = new Set(
-              commentsArr.map((x) => x.toLowerCase())
-            );
+            // ALWAYS NORMALIZE array username lowercase (string), baik dari API/object/string/null
+            if (commentsArr.length) {
+              commentsArr = commentsArr.map((c) => {
+                if (typeof c === "string") return c.toLowerCase();
+                if (c && typeof c === "object") {
+                  return (c.user?.unique_id || c.username || "")
+                    .replace(/^@/, "")
+                    .toLowerCase();
+                }
+                return "";
+              }).filter(Boolean);
+            }
+            const usernameSet = new Set(commentsArr);
+
             users.forEach((u) => {
               const tiktokUsername = (u.tiktok || "")
                 .replace(/^@/, "")
@@ -459,7 +452,6 @@ cron.schedule(
 
           if (belum.length > 0) {
             const belumDiv = groupByDivision(belum);
-            msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
             sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
               const list = belumDiv[div];
               msg += `*${div}* (${list.length} user):\n`;

@@ -422,7 +422,6 @@ if (text.toLowerCase().startsWith("absensilikes#")) {
   return;
 }
 
-
   // =======================
   // === TIKTOK: ABSENSI KOMENTAR
   // =======================
@@ -439,7 +438,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   const filter1 = (parts[2] || "").toLowerCase();
   const filter2 = (parts[3] || "").toLowerCase();
 
-  // Divisi order custom
+  // Helper: urut divisi custom (BAG, SAT, POLSEK, lalu abjad)
   function sortDivisionKeys(keys) {
     const order = ["BAG", "SAT", "POLSEK"];
     return keys.sort((a, b) => {
@@ -447,6 +446,18 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       const ib = order.findIndex((prefix) => b.toUpperCase().startsWith(prefix));
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
     });
+  }
+  function groupByDivision(arr) {
+    const divGroups = {};
+    arr.forEach((u) => {
+      const div = u.divisi || "-";
+      if (!divGroups[div]) divGroups[div] = [];
+      divGroups[div].push(u);
+    });
+    return divGroups;
+  }
+  function formatNama(u) {
+    return [u.title, u.nama].filter(Boolean).join(" ");
   }
 
   // Header laporan
@@ -543,9 +554,21 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     "../model/tiktokCommentModel.js"
   );
 
+  // Helper normalisasi array komentar (string/object/campur)
+  function normalizeKomentarArr(arr) {
+    return arr.map((c) => {
+      if (typeof c === "string") return c.replace(/^@/, "").toLowerCase();
+      if (c && typeof c === "object") {
+        return (c.user?.unique_id || c.username || "")
+          .replace(/^@/, "")
+          .toLowerCase();
+      }
+      return "";
+    }).filter(Boolean);
+  }
+
   // === MODE AKUMULASI ===
   if (filter1 === "akumulasi") {
-    // Map user: {user_id: {..., count:0}}
     const userStats = {};
     users.forEach((u) => {
       userStats[u.user_id] = { ...u, count: 0 };
@@ -554,10 +577,12 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
     for (const post of posts) {
       const video_id = post.video_id || post.id;
       const komentar = await getCommentsByVideoId(video_id);
-      const commentsArr = Array.isArray(komentar?.comments)
+      let commentsArr = Array.isArray(komentar?.comments)
         ? komentar.comments
         : [];
-      const usernameSet = new Set(commentsArr.map((x) => x.toLowerCase()));
+      commentsArr = normalizeKomentarArr(commentsArr);
+      const usernameSet = new Set(commentsArr);
+
       users.forEach((u) => {
         const tiktokUsername = (u.tiktok || "")
           .replace(/^@/, "")
@@ -594,16 +619,6 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       `✅ Sudah melaksanakan: *${sudah.length}*\n` +
       `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-    function groupByDivision(arr) {
-      const divGroups = {};
-      arr.forEach((u) => {
-        const div = u.divisi || "-";
-        if (!divGroups[div]) divGroups[div] = [];
-        divGroups[div].push(u);
-      });
-      return divGroups;
-    }
-
     if (tipe === "sudah") {
       msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
       const sudahDiv = groupByDivision(sudah);
@@ -614,7 +629,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 } (${u.count} konten)${
                   !u.tiktok ? " (belum mengisi data tiktok)" : ""
@@ -632,7 +647,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 } (${u.count} konten)${
                   !u.tiktok ? " (belum mengisi data tiktok)" : ""
@@ -650,10 +665,11 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
   for (const post of posts) {
     const video_id = post.video_id || post.id;
     const komentar = await getCommentsByVideoId(video_id);
-    const commentsArr = Array.isArray(komentar?.comments)
+    let commentsArr = Array.isArray(komentar?.comments)
       ? komentar.comments
       : [];
-    const usernameSet = new Set(commentsArr.map((x) => x.toLowerCase()));
+    commentsArr = normalizeKomentarArr(commentsArr);
+    const usernameSet = new Set(commentsArr);
 
     let sudah = [],
       belum = [];
@@ -670,7 +686,6 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       }
     });
 
-    // Template pesan
     let msg =
       headerLaporan +
       `📋 Absensi Komentar TikTok\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
@@ -679,16 +694,6 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
       `*Jumlah user:* ${users.length}\n` +
       `✅ Sudah melaksanakan: *${sudah.length}*\n` +
       `❌ Belum melaksanakan: *${belum.length}*\n\n`;
-
-    function groupByDivision(arr) {
-      const divGroups = {};
-      arr.forEach((u) => {
-        const div = u.divisi || "-";
-        if (!divGroups[div]) divGroups[div] = [];
-        divGroups[div].push(u);
-      });
-      return divGroups;
-    }
 
     if (!filter1) {
       msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
@@ -700,7 +705,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -715,7 +720,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -736,7 +741,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -757,7 +762,7 @@ if (text.toLowerCase().startsWith("absensikomentar#")) {
           list
             .map(
               (u) =>
-                `- ${[u.title, u.nama].filter(Boolean).join(" ")} : ${
+                `- ${formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
