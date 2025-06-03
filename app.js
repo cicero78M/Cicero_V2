@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import routes from './src/routes/index.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import './src/cron/cronInstaService.js';
-import './src/cron/cronTiktokService.js'
+import './src/cron/cronTiktokService.js';
 
 
 
