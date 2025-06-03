@@ -53,7 +53,7 @@ export const remove = async (id) => {
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
   const res = await pool.query(
-    `SELECT user_id, nama, tiktok, insta, divisi, title
+    `SELECT user_id, nama, tiktok, insta, divisi, title, exception
      FROM "user"
      WHERE client_id = $1 AND status = true`,
     [client_id]
@@ -68,7 +68,7 @@ export async function getUsersByClient(client_id) {
 // Fungsi KHUSUS absensi TikTok (semua user aktif, include field tiktok, dst)
 export async function getUsersByClientFull(client_id) {
   const res = await pool.query(
-    `SELECT user_id, nama, tiktok, divisi, title
+    `SELECT user_id, nama, tiktok, divisi, title, exception
      FROM "user"
      WHERE client_id = $1 AND (status IS TRUE OR status IS NULL)`,
     [client_id]
