@@ -28,6 +28,20 @@ dotenv.config();
 // HELPER FUNCTIONS
 // =======================
 
+// Tambah di atas (global scope)
+const userMenuContext = {};
+const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
+
+// --- Utility helper untuk session timeout ---
+function setMenuTimeout(chatId) {
+  if (userMenuContext[chatId]?.timeout) {
+    clearTimeout(userMenuContext[chatId].timeout);
+  }
+  userMenuContext[chatId].timeout = setTimeout(() => {
+    delete userMenuContext[chatId];
+  }, MENU_TIMEOUT);
+}
+
 // Mengecek apakah nomor WhatsApp adalah admin (dari ENV)
 function isAdminWhatsApp(number) {
   const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
@@ -1594,36 +1608,312 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
     return;
   }
 
+  // --- Mulai menu interaktif userrequest ---
   if (text.toLowerCase() === "userrequest") {
-    const menu = `
-📝 *User Request Commands*
+    userMenuContext[chatId] = { step: "main" };
+    setMenuTimeout(chatId);
+    await waClient.sendMessage(
+      chatId,
+      `📝 *Menu User Cicero System*\n` +
+        `Balas dengan angka pilihan:\n` +
+        `1. Lihat data saya\n` +
+        `2. Update data saya\n` +
+        `3. Daftar perintah\n` +
+        `4. Kontak operator\n\n` +
+        `Ketik *batal* untuk keluar dari menu.`
+    );
+    return;
+  }
 
-1. *mydata#NRP/NIP*
-   - Melihat data user Anda sendiri (dengan penamaan sesuai POLRI: NRP/NIP, pangkat, satfung, jabatan, status).
-   - ⚠️ *Hanya dapat diakses oleh nomor WhatsApp yang terdaftar pada user tersebut (otomatis bind jika masih kosong).*
+  // --- Handler keluar/batal session ---
+  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
+    delete userMenuContext[chatId];
+    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
+    return;
+  }
 
-2. *updateuser#NRP/NIP#field#value*
-   - Mengubah data user Anda sendiri.
-   - Field yang bisa diubah (hanya untuk user sendiri):
-     - *nama*           : update nama user.
-     - *pangkat*        : update pangkat (pilih dari list valid database).
-     - *satfung*        : update satfung (pilih dari list valid & POLRES sama).
-     - *jabatan*        : update jabatan.
-     - *insta*          : update/isi profil Instagram (masukkan link, misal https://www.instagram.com/username).
-     - *tiktok*         : update/isi profil TikTok (masukkan link, misal https://www.tiktok.com/@username).
-     - *whatsapp*       : binding/update nomor WhatsApp user (hanya satu user per nomor WA, otomatis bind jika null).
-   - ⚠️ *Hanya dapat diakses oleh nomor WhatsApp yang terdaftar pada user tersebut (otomatis bind jika masih kosong).*
+  // --- Jika sedang ada sesi menu interaktif userrequest ---
+  if (userMenuContext[chatId]) {
+    setMenuTimeout(chatId);
 
-3. *userrequest*
-   - Menampilkan menu bantuan user ini.
+    const session = userMenuContext[chatId];
 
-*Catatan:*
-- Untuk update pangkat atau satfung hanya bisa memilih dari list yang valid. Jika salah akan dikirimkan daftar yang bisa digunakan.
-- Nomor WhatsApp hanya boleh digunakan pada satu user (tidak bisa dipakai di dua user berbeda).
-- Untuk update profil Instagram/TikTok, masukkan *link profil* (sistem otomatis mengambil username dari link).
-- Semua perubahan hanya bisa dilakukan oleh user dengan nomor WhatsApp yang sudah terdaftar pada user tersebut. Jika nomor WA masih kosong, akan otomatis bind ke nomor pengirim pertama.
-`;
-    await waClient.sendMessage(chatId, menu);
+    // --- MAIN MENU ---
+    if (session.step === "main") {
+      if (text === "1") {
+        session.step = "inputUserId";
+        await waClient.sendMessage(
+          chatId,
+          "Ketik NRP/NIP Anda untuk melihat data. (contoh: 75070206)"
+        );
+        return;
+      }
+      if (text === "2") {
+        session.step = "updateAskUserId";
+        await waClient.sendMessage(
+          chatId,
+          "Ketik NRP/NIP Anda yang ingin diupdate:"
+        );
+        return;
+      }
+      if (text === "3") {
+        session.step = "main"; // tetap di menu utama
+        await waClient.sendMessage(
+          chatId,
+          `🛠️ *Daftar Perintah User:*\n\n` +
+            `- mydata#NRP/NIP\n` +
+            `- updateuser#NRP/NIP#field#value\n` +
+            `Contoh: updateuser#75070206#pangkat#AKP\n` +
+            `Ketik *batal* untuk keluar dari menu.`
+        );
+        return;
+      }
+      if (text === "4") {
+        // Cek operator berdasarkan nomor WA user
+        let operatorText = "Operator tidak ditemukan di database.";
+        try {
+          // (Sesuai dengan logic-mu sebelumnya)
+          const userWaNum = chatId.replace(/[^0-9]/g, "");
+          const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
+          const waId = userWaNum.startsWith("62")
+            ? userWaNum
+            : "62" + userWaNum.replace(/^0/, "");
+          const res = await pool.query(q, [waId]);
+          if (res.rows && res.rows[0]) {
+            const op = res.rows[0];
+            operatorText = `Hubungi Operator:\n*${
+              op.nama || op.client_id
+            }* (WA: https://wa.me/${op.client_operator.replace(/\D/g, "")})`;
+          }
+        } catch (e) {}
+        await waClient.sendMessage(chatId, operatorText);
+        return;
+      }
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
+      );
+      return;
+    }
+
+    // --- LIHAT DATA USER ---
+    if (session.step === "inputUserId") {
+      const user_id = text.replace(/[^0-9a-zA-Z]/g, "");
+      if (!user_id) {
+        await waClient.sendMessage(
+          chatId,
+          "NRP/NIP tidak valid. Coba lagi atau ketik *batal*."
+        );
+        return;
+      }
+      // Query userService
+      try {
+        const user = await userService.findUserById(user_id);
+        if (!user) {
+          await waClient.sendMessage(
+            chatId,
+            `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
+          );
+        } else {
+          // Only self/allowed WA (ambil dari logic mydata#...)
+          let pengirim = chatId.replace(/[^0-9]/g, "");
+          if (!user.whatsapp || user.whatsapp === "") {
+            await userService.updateUserField(user_id, "whatsapp", pengirim);
+            user.whatsapp = pengirim;
+          }
+          if (user.whatsapp !== pengirim) {
+            await waClient.sendMessage(
+              chatId,
+              "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data."
+            );
+            return;
+          }
+          // Compose message
+          const fieldMap = {
+            user_id: "NRP/NIP",
+            nama: "Nama",
+            title: "Pangkat",
+            divisi: "Satfung",
+            jabatan: "Jabatan",
+            status: "Status",
+            whatsapp: "WhatsApp",
+            insta: "Instagram",
+            tiktok: "TikTok",
+            client_id: "POLRES",
+          };
+          const order = [
+            "user_id",
+            "nama",
+            "title",
+            "divisi",
+            "jabatan",
+            "status",
+            "whatsapp",
+            "insta",
+            "tiktok",
+            "client_id",
+          ];
+          let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
+          order.forEach((k) => {
+            if (k === "exception") return;
+            if (user[k] !== undefined && user[k] !== null) {
+              let val = user[k];
+              let label = fieldMap[k] || k;
+              if (k === "status")
+                val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
+              msgText += `*${label}*: ${val}\n`;
+            }
+          });
+          await waClient.sendMessage(chatId, msgText);
+        }
+      } catch (err) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Gagal mengambil data: ${err.message}`
+        );
+      }
+      // Kembali ke menu utama
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    }
+
+    // --- UPDATE DATA USER: Langkah 1 (NRP) ---
+    if (session.step === "updateAskUserId") {
+      session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
+      session.step = "updateAskField";
+      await waClient.sendMessage(
+        chatId,
+        "Ketik field yang ingin diupdate (nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp):"
+      );
+      return;
+    }
+
+    // --- UPDATE DATA USER: Langkah 2 (Field) ---
+    if (session.step === "updateAskField") {
+      const field = text.toLowerCase().trim();
+      const allowedFields = [
+        "nama",
+        "pangkat",
+        "satfung",
+        "jabatan",
+        "insta",
+        "tiktok",
+        "whatsapp",
+      ];
+      if (!allowedFields.includes(field)) {
+        await waClient.sendMessage(
+          chatId,
+          `Field tidak valid. Pilih salah satu dari: ${allowedFields.join(
+            ", "
+          )}`
+        );
+        return;
+      }
+      session.updateField = field;
+      session.step = "updateAskValue";
+      await waClient.sendMessage(
+        chatId,
+        `Ketik nilai baru untuk field *${field}* (misal: AKP, https://instagram.com/username, dsb):`
+      );
+      return;
+    }
+
+    // --- UPDATE DATA USER: Langkah 3 (Value & Proses) ---
+    if (session.step === "updateAskValue") {
+      const user_id = session.updateUserId;
+      let field = session.updateField;
+      let value = text.trim();
+
+      // Normalisasi
+      if (field === "pangkat") field = "title";
+      if (field === "satfung") field = "divisi";
+
+      // Cek user
+      const user = await userService.findUserById(user_id);
+      if (!user) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
+        );
+        session.step = "main";
+        await waClient.sendMessage(
+          chatId,
+          "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+        );
+        return;
+      }
+      // Cek WA pengirim sama
+      const pengirim = chatId.replace(/[^0-9]/g, "");
+      if (!user.whatsapp || user.whatsapp === "") {
+        await userService.updateUserField(user_id, "whatsapp", pengirim);
+        user.whatsapp = pengirim;
+      }
+      if (user.whatsapp !== pengirim) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengubah data."
+        );
+        session.step = "main";
+        await waClient.sendMessage(
+          chatId,
+          "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+        );
+        return;
+      }
+
+      // Validasi khusus insta/tiktok (link)
+      if (field === "insta") {
+        const igMatch = value.match(
+          /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i
+        );
+        if (!igMatch) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Format salah! Masukkan *link profil Instagram* (contoh: https://www.instagram.com/username)"
+          );
+          return;
+        }
+        value = igMatch[2];
+      }
+      if (field === "tiktok") {
+        const ttMatch = value.match(
+          /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)/i
+        );
+        if (!ttMatch) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Format salah! Masukkan *link profil TikTok* (contoh: https://www.tiktok.com/@username)"
+          );
+          return;
+        }
+        value = "@" + ttMatch[2];
+      }
+      // Validasi whatsapp hanya angka
+      if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
+
+      // Update ke DB
+      await userService.updateUserField(user_id, field, value);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Data *${field}* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
+      );
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    }
+    // --- Handler default jika step tidak dikenal
+    await waClient.sendMessage(
+      chatId,
+      "⚠️ Sesi menu user tidak dikenal, silakan ketik *userrequest* ulang atau *batal*."
+    );
+    delete userMenuContext[chatId];
     return;
   }
 
