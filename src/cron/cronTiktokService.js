@@ -139,7 +139,7 @@ function formatRekapPostTikTok(client_id, username, posts) {
 }
 
 cron.schedule(
-  "57 6-22 * * *",
+  "45 6-22 * * *",
   async () => {
     console.log("[CRON TIKTOK] Mulai tugas fetch post, rekap post, & absensi komentar ...");
     try {
@@ -257,83 +257,64 @@ cron.schedule(
             });
           }
 
-const totalKonten = posts.length;
-let sudah = [],
-  belum = [];
-Object.values(userStats).forEach((u) => {
-  if (u.exception === true) {
-    sudah.push(u); // SELALU dianggap sudah!
-  } else if (
-    u.tiktok &&
-    u.tiktok.trim() !== "" &&
-    u.count >= Math.ceil(totalKonten / 2)
-  ) {
-    sudah.push(u);
-  } else {
-    belum.push(u);
-  }
-});
-// Penting! Pastikan tidak ada user exception di list belum
-belum = belum.filter(u => !u.exception);
+          const totalKonten = posts.length;
+          let sudah = [],
+            belum = [];
+          Object.values(userStats).forEach((u) => {
+            if (u.exception) {
+              // Selalu dianggap sudah!
+              sudah.push(u);
+            } else if (
+              u.tiktok &&
+              u.tiktok.trim() !== "" &&
+              u.count >= Math.ceil(totalKonten / 2)
+            ) {
+              sudah.push(u);
+            } else if (!u.exception) {
+              // Pastikan exception tidak pernah masuk ke "belum"
+              belum.push(u);
+            }
+          });
 
-const now = new Date();
-const hari = hariIndo[now.getDay()];
-const tanggal = now.toLocaleDateString("id-ID");
-const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+          const now = new Date();
+          const hari = hariIndo[now.getDay()];
+          const tanggal = now.toLocaleDateString("id-ID");
+          const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-const kontenLinks = posts.map(
-  (p) =>
-    `https://www.tiktok.com/@${client_tiktok}/video/${
-      p.video_id || p.id
-    }`
-);
+          const kontenLinks = posts.map(
+            (p) =>
+              `https://www.tiktok.com/@${client_tiktok}/video/${
+                p.video_id || p.id
+              }`
+          );
 
-let msg =
-  `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n` +
-  `📋 Rekap Akumulasi Komentar TikTok\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
-  `*Jumlah Konten:* ${totalKonten}\n` +
-  `*Daftar link video hari ini:*\n${kontenLinks.join("\n")}\n\n` +
-  `*Jumlah user:* ${users.length}\n` +
-  `✅ Sudah melaksanakan: *${sudah.length}*\n` +
-  `❌ Belum melaksanakan: *${belum.length}*\n\n`;
+          let msg =
+            `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n` +
+            `📋 Rekap Akumulasi Komentar TikTok\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+            `*Jumlah Konten:* ${totalKonten}\n` +
+            `*Daftar link video hari ini:*\n${kontenLinks.join("\n")}\n\n` +
+            `*Jumlah user:* ${users.length}\n` +
+            `✅ Sudah melaksanakan: *${sudah.length}*\n` +
+            `❌ Belum melaksanakan: *${belum.length}*\n\n`;
 
-// === Belum ===
-msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
-const belumDiv = groupByDivision(belum);
-sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
-  const list = belumDiv[div];
-  msg += `*${div}* (${list.length} user):\n`;
-  msg +=
-    list
-      .map(
-        (u) =>
-          `- ${u.title ? u.title + " " : ""}${u.nama} : ${
-            u.tiktok ? u.tiktok : "belum mengisi data tiktok"
-          }`
-      )
-      .join("\n") + "\n\n";
-});
-if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
+          msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
+          const belumDiv = groupByDivision(belum);
+          sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+            const list = belumDiv[div];
+            msg += `*${div}* (${list.length} user):\n`;
+            msg +=
+              list
+                .map(
+                  (u) =>
+                    `- ${u.title ? u.title + " " : ""}${u.nama} : ${
+                      u.tiktok ? u.tiktok : "belum mengisi data tiktok"
+                    }`
+                )
+                .join("\n") + "\n\n";
+          });
+          if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
 
-// === Sudah ===
-msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-const sudahDiv = groupByDivision(sudah);
-sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
-  const list = sudahDiv[div];
-  msg += `*${div}* (${list.length} user):\n`;
-  msg +=
-    list
-      .map(
-        (u) =>
-          `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.tiktok} (${
-            u.count
-          } video)${u.exception === true ? " (EXCEPTION)" : ""}`
-      )
-      .join("\n") + "\n\n";
-});
-if (Object.keys(sudahDiv).length === 0) msg += "-\n";
-
-msg += `\nTerimakasih.`;
+          msg += `\nTerimakasih.`;
 
           for (const admin of getAdminWAIds()) {
             await waClient.sendMessage(admin, msg.trim()).catch(() => {});
