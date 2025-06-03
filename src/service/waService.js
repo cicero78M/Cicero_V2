@@ -1749,93 +1749,122 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
   // =========================
   // === TAMPILKAN DATA USER (USER)
   // =========================
-  if (text.toLowerCase().startsWith("mydata#")) {
-    const [, user_id] = text.split("#");
-    if (!user_id) {
+if (text.toLowerCase().startsWith("mydata#")) {
+  const [, user_id] = text.split("#");
+  if (!user_id) {
+    await waClient.sendMessage(
+      chatId,
+      "Format salah!\nGunakan: mydata#user_id"
+    );
+    return;
+  }
+  try {
+    const user = await userService.findUserById(user_id);
+    if (!user) {
       await waClient.sendMessage(
         chatId,
-        "Format salah!\nGunakan: mydata#user_id"
+        `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
       );
       return;
     }
+    // Nomor pengirim WA (hanya angka)
+    let pengirim = chatId.replace(/[^0-9]/g, "");
+
+    // Jika whatsapp masih null/kosong, binding ke nomor ini
+    if (!user.whatsapp || user.whatsapp === "") {
+      await userService.updateUserField(user_id, "whatsapp", pengirim);
+      user.whatsapp = pengirim;
+    }
+
+    // --- MODIFIKASI: Tambahkan akses untuk ADMIN_WHATSAPP dan client_operator ---
+    // Ambil array admin dari ENV
+    const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((n) => (n.endsWith("@c.us") ? n.replace("@c.us", "") : n.replace(/\D/g, "")));
+
+    // Cek jika nomor pengirim adalah client_operator pada tabel client milik user ini
+    let isOperator = false;
     try {
-      const user = await userService.findUserById(user_id);
-      if (!user) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`
-        );
-        return;
-      }
-      // Nomor pengirim WA (hanya angka)
-      let pengirim = chatId.replace(/[^0-9]/g, "");
-
-      // Jika whatsapp masih null/kosong, binding ke nomor ini
-      if (!user.whatsapp || user.whatsapp === "") {
-        await userService.updateUserField(user_id, "whatsapp", pengirim);
-        user.whatsapp = pengirim;
-      }
-
-      // Jika whatsapp sudah ada, hanya nomor ini yang bisa akses
-      if (user.whatsapp !== pengirim) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Hanya WhatsApp yang terdaftar pada user ini yang dapat mengakses data."
-        );
-        return;
-      }
-
-      // Mapping nama tampilan
-      const fieldMap = {
-        user_id: "NRP/NIP",
-        nama: "Nama",
-        title: "Pangkat",
-        divisi: "Satfung",
-        jabatan: "Jabatan",
-        status: "Status",
-        whatsapp: "WhatsApp",
-        insta: "Instagram",
-        tiktok: "TikTok",
-        client_id: "POLRES",
-      };
-
-      // Urutan output
-      const order = [
-        "user_id",
-        "nama",
-        "title",
-        "divisi",
-        "jabatan",
-        "status",
-        "whatsapp",
-        "insta",
-        "tiktok",
-        "client_id",
-      ];
-
-      // Compose pesan (tanpa field exception)
-      let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
-      order.forEach((k) => {
-        if (k === "exception") return;
-        if (user[k] !== undefined && user[k] !== null) {
-          let val = user[k];
-          // Label mapping
-          let label = fieldMap[k] || k;
-          if (k === "status") {
-            val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
-          }
-          msgText += `*${label}*: ${val}\n`;
+      if (user.client_id) {
+        const q = `SELECT client_operator FROM clients WHERE client_id=$1 LIMIT 1`;
+        const res = await pool.query(q, [user.client_id]);
+        if (res.rows[0] && res.rows[0].client_operator) {
+          let op = res.rows[0].client_operator.replace(/\D/g, "");
+          if (op.startsWith("0")) op = "62" + op.slice(1);
+          if (pengirim === op) isOperator = true;
         }
-      });
-      await waClient.sendMessage(chatId, msgText);
-    } catch (err) {
+      }
+    } catch (e) {
+      isOperator = false;
+    }
+
+    // Cek akses (self, admin, atau operator client)
+    const isSelf = (user.whatsapp === pengirim);
+    const isAdmin = adminNumbers.includes(pengirim);
+
+    if (!isSelf && !isAdmin && !isOperator) {
       await waClient.sendMessage(
         chatId,
-        `❌ Gagal mengambil data: ${err.message}`
+        "❌ Hanya WhatsApp yang terdaftar pada user ini, admin, atau operator client yang dapat mengakses data ini."
       );
+      return;
     }
-    return;
+    // --- END MODIFIKASI ---
+
+    // Mapping nama tampilan
+    const fieldMap = {
+      user_id: "NRP/NIP",
+      nama: "Nama",
+      title: "Pangkat",
+      divisi: "Satfung",
+      jabatan: "Jabatan",
+      status: "Status",
+      whatsapp: "WhatsApp",
+      insta: "Instagram",
+      tiktok: "TikTok",
+      client_id: "POLRES",
+    };
+
+    // Urutan output
+    const order = [
+      "user_id",
+      "nama",
+      "title",
+      "divisi",
+      "jabatan",
+      "status",
+      "whatsapp",
+      "insta",
+      "tiktok",
+      "client_id",
+    ];
+
+    // Compose pesan (tanpa field exception)
+    let msgText = `📋 *Data Anda (${user.user_id}):*\n`;
+    order.forEach((k) => {
+      if (k === "exception") return;
+      if (user[k] !== undefined && user[k] !== null) {
+        let val = user[k];
+        // Label mapping
+        let label = fieldMap[k] || k;
+        if (k === "status") {
+          val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
+        }
+        msgText += `*${label}*: ${val}\n`;
+      }
+    });
+    await waClient.sendMessage(chatId, msgText);
+  } catch (err) {
+    await waClient.sendMessage(
+      chatId,
+      `❌ Gagal mengambil data: ${err.message}`
+    );
   }
+  return;
+}
+
 
   // =========================
   // === UPDATE STATUS/EXCEPTION (ADMIN)
