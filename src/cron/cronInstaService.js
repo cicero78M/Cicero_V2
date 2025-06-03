@@ -140,22 +140,22 @@ async function absensiLikesAkumulasiBelum(client_id) {
   if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
 
   // === Sudah ===
-  msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-  const sudahDiv = groupByDivision(sudah);
-  sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
-    const list = sudahDiv[div];
-    msg += `*${div}* (${list.length} user):\n`;
-    msg +=
-      list
-        .map(
-          (u) =>
-            `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta} (${
-              u.count
-            } konten)${u.exception === true ? " (EXCEPTION)" : ""}`
-        )
-        .join("\n") + "\n\n";
-  });
-  if (Object.keys(sudahDiv).length === 0) msg += "-\n";
+//   msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+//   const sudahDiv = groupByDivision(sudah);
+//   sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+//     const list = sudahDiv[div];
+//     msg += `*${div}* (${list.length} user):\n`;
+//     msg +=
+//       list
+//         .map(
+//           (u) =>
+//             `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta} (${
+//               u.count
+//             } konten)${u.exception === true ? "" : ""}`
+//         )
+//         .join("\n") + "\n\n";
+//   });
+//   if (Object.keys(sudahDiv).length === 0) msg += "-\n";
 
   msg += `\nTerimakasih.`;
 
