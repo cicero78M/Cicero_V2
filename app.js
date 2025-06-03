@@ -3,8 +3,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import routes from './src/routes/index.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
-import './src/service/waService.js';
-import './src/service/cronService.js'
+import './src/cron/cronInstaService.js';
+import './src/cron/cronTiktokService.js'
+
 
 
 dotenv.config();
