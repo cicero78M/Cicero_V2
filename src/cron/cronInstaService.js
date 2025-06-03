@@ -88,13 +88,12 @@ async function absensiLikesAkumulasiBelum(client_id) {
   }
 
   const totalKonten = shortcodes.length;
-  let sudah = [],
-    belum = [];
+  let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {
-    if (u.exception) {
-      // Selalu dianggap sudah!
-      sudah.push(u);
+    // === PERUBAHAN PENTING DI SINI! ===
+    if (u.exception === true) {
+      sudah.push(u); // SELALU ke SUDAH!
     } else if (
       u.insta &&
       u.insta.trim() !== "" &&
@@ -105,6 +104,9 @@ async function absensiLikesAkumulasiBelum(client_id) {
       belum.push(u);
     }
   });
+
+  // filter kembali, agar TIDAK ADA user exception di list belum!
+  belum = belum.filter(u => !u.exception);
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -137,10 +139,29 @@ async function absensiLikesAkumulasiBelum(client_id) {
   });
   if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
 
+  // === Sudah ===
+  msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
+  const sudahDiv = groupByDivision(sudah);
+  sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+    const list = sudahDiv[div];
+    msg += `*${div}* (${list.length} user):\n`;
+    msg +=
+      list
+        .map(
+          (u) =>
+            `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta} (${
+              u.count
+            } konten)${u.exception === true ? " (EXCEPTION)" : ""}`
+        )
+        .join("\n") + "\n\n";
+  });
+  if (Object.keys(sudahDiv).length === 0) msg += "-\n";
+
   msg += `\nTerimakasih.`;
 
   return msg.trim();
 }
+
 
 async function rekapLikesIG(client_id) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
@@ -170,7 +191,7 @@ async function rekapLikesIG(client_id) {
 }
 
 cron.schedule(
-  "25 6-22 * * *",
+  "58 6-22 * * *",
   async () => {
     console.log(
       "[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum..."
