@@ -148,8 +148,7 @@ waClient.on("message", async (msg) => {
     "removeclient#",
     "clientinfo#",
     "clientrequest",
-    "addvancedclientrequest",
-
+    "advancedclientrequest",
     "transferuser#",
     "sheettransfer#",
     "thisgroup#",
@@ -1567,7 +1566,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === MENU COMMANDS (CLIENT/USER)
   // =========================
-  if (text.toLowerCase() === "advanceclientrequest") {
+  if (text.toLowerCase() === "advancedclientrequest") {
     if (!isAdminWhatsApp(chatId)) {
       await waClient.sendMessage(
         chatId,
