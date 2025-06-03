@@ -107,7 +107,7 @@ async function rekapKomentarTikTok(client_id, client_tiktok) {
 }
 
 cron.schedule(
-  "21 6-22 * * *",
+  "23 6-22 * * *",
   async () => {
     console.log(
       "[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)..."

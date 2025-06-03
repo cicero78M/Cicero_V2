@@ -170,7 +170,7 @@ async function rekapLikesIG(client_id) {
 }
 
 cron.schedule(
-  "20 6-22 * * *",
+  "25 6-22 * * *",
   async () => {
     console.log(
       "[CRON IG] Mulai tugas fetchInsta & absensiLikes akumulasi belum..."
