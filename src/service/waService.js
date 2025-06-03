@@ -21,7 +21,6 @@ import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 
 import {
-  fetchAndStoreTiktokContent,
   getTiktokSecUid,
 } from "./tiktokFetchService.js";
 

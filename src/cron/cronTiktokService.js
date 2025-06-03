@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { fetchAndStoreTiktokContent } from "../service/tiktokFetchService.js";
-import { fetchAndStoreTiktokComments } from "../service/tiktokCommentFetchService.js";
+import { fetchAndStoreTiktokComments } from "../service/tiktokCommentService.js";
 import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
@@ -107,7 +107,7 @@ async function rekapKomentarTikTok(client_id, client_tiktok) {
 }
 
 cron.schedule(
-  "18 6-22 * * *",
+  "21 6-22 * * *",
   async () => {
     console.log(
       "[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)..."
