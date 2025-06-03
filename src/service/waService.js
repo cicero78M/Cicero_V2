@@ -148,6 +148,8 @@ waClient.on("message", async (msg) => {
     "removeclient#",
     "clientinfo#",
     "clientrequest",
+    "addvancedclientrequest",
+
     "transferuser#",
     "sheettransfer#",
     "thisgroup#",
@@ -1517,6 +1519,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
   // =========================
   // === MIGRASI USER DARI FOLDER (ADMIN)
   // =========================
@@ -1560,6 +1563,72 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
+  // =========================
+  // === MENU COMMANDS (CLIENT/USER)
+  // =========================
+  if (text.toLowerCase() === "advanceclientrequest") {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Anda tidak memiliki akses ke menu ini."
+      );
+      return;
+    }
+
+    const updateKeys = [
+      "nama",
+      "client_type",
+      "client_status",
+      "client_insta",
+      "client_insta_status",
+      "client_tiktok",
+      "client_tiktok_status",
+      "client_operator",
+      "client_super",
+      "client_group",
+      "tiktok_secUid",
+    ];
+
+    const menu = `
+📝 *Client Request Commands (KHUSUS ADMIN)*
+
+1. *addnewclient#clientid#clientname*
+2. *updateclient#clientid#key#value*
+3. *removeclient#clientid*
+4. *clientinfo#clientid*
+5. *clientrequest*
+6. *transferuser#clientid*
+7. *sheettransfer#clientid#link_google_sheet*
+8. *fetchinsta#keys*
+9. *fetchtiktok#clientid*
+10. *requestinsta#clientid#[sudah|belum]*
+11. *requesttiktok#clientid#[sudah|belum]*
+12. *thisgroup#clientid*
+13. *exception#user_id#true/false*
+14. *status#user_id#true/false*
+15. *absensilikes#clientid#[opsi]*
+    - Rekap absensi likes Instagram harian.
+16. *absensikomentar#clientid#[opsi]*
+    - Rekap absensi komentar TikTok harian.
+
+*Key yang dapat digunakan pada updateclient#:*
+${updateKeys.map((k) => `- *${k}*`).join("\n")}
+
+Contoh update:
+updateclient#BOJONEGORO#client_status#true
+updateclient#BOJONEGORO#client_insta_status#false
+updateclient#BOJONEGORO#client_operator#628123456789
+updateclient#BOJONEGORO#client_super#6281234567890
+updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
+updateclient#BOJONEGORO#tiktok_secUid
+
+_Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
+  `;
+    await waClient.sendMessage(chatId, menu);
+    return;
+  }
+
   // --- Mulai menu interaktif userrequest ---
   if (text.toLowerCase() === "userrequest") {
     userMenuContext[chatId] = { step: "main" };
@@ -1576,12 +1645,14 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
+
   // --- Handler keluar/batal session ---
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
     delete userMenuContext[chatId];
     await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
     return;
   }
+
   // --- Jika sedang ada sesi menu interaktif userrequest ---
   if (userMenuContext[chatId]) {
     setMenuTimeout(chatId);
@@ -1866,6 +1937,7 @@ waClient.on("message", async (msg) => {
     delete userMenuContext[chatId];
     return;
   }
+
   // ==== Interaktif Menu Client Request ====
   if (text.toLowerCase() === "clientrequest") {
     if (!isAdminWhatsApp(chatId)) {
@@ -1895,6 +1967,7 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
+
   // ==== Keluar session ====
   if (getSession(chatId) && text.toLowerCase() === "batal") {
     clearSession(chatId);
@@ -2640,6 +2713,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
   // =========================
   // === UPDATE STATUS/EXCEPTION (ADMIN)
   // =========================
@@ -2688,6 +2762,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
   // =========================
   // === LIST ALL EXCEPTION USERS (ADMIN ONLY)
   // =========================
@@ -2748,6 +2823,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
   // Handler status# tetap bisa digunakan jika memang perlu
 
   if (text.toLowerCase().startsWith("status#")) {
@@ -2791,6 +2867,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
   // =========================
   // === DEFAULT HANDLER UNTUK PESAN TIDAK DIKENALI
   // =========================
