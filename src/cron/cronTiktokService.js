@@ -2,13 +2,13 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchAndStoreTiktokContent } from "./tiktokFetchService.js";
-import { fetchAndStoreTiktokComments } from "./tiktokCommentService.js";
+import { fetchAndStoreTiktokContent } from "../service/tiktokFetchService.js";
+import { fetchAndStoreTiktokComments } from "../service/tiktokCommentFetchService.js";
 import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 import { pool } from "../config/db.js";
-import waClient from "./waService.js";
+import waClient from "../service/waService.js";
 
 const hariIndo = [
   "Minggu",
@@ -107,7 +107,7 @@ async function rekapKomentarTikTok(client_id, client_tiktok) {
 }
 
 cron.schedule(
-  "15 6-22 * * *",
+  "18 6-22 * * *",
   async () => {
     console.log(
       "[CRON TIKTOK] Mulai tugas fetch post & absensi komentar AKUMULASI BELUM (ala handler manual)..."

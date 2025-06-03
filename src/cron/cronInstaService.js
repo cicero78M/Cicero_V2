@@ -2,12 +2,12 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+import { fetchAndStoreInstaContent } from "../service/instaFetchService.js";
 import { getUsersByClient } from "../model/userModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { pool } from "../config/db.js";
-import waClient from "./waService.js";
+import waClient from "../service/waService.js";
 
 const hariIndo = [
   "Minggu",
