@@ -47,11 +47,7 @@ function groupByDivision(users) {
   });
   return divGroups;
 }
-function formatName(u) {
-  return `${u.title ? u.title + " " : ""}${u.nama}${
-    u.tiktok ? ` : ${u.tiktok}` : ""
-  }${u.insta ? ` : ${u.insta}` : ""}`;
-}
+
 
 async function getActiveClientsIG() {
   const res = await pool.query(
