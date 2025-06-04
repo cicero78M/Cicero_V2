@@ -246,7 +246,7 @@ waClient.on("message", async (msg) => {
     // Cek user berdasarkan nomor WhatsApp
     let user = (await userService.findUserByWhatsApp)
       ? await userService.findUserByWhatsApp(waNum)
-      : await userService.findUserByWA(waNum);
+      : await userService.findUserByWhatsApp(waNum);
     if (user) {
       // Update username (standar: IG tanpa @, TT selalu pakai @)
       await userService.updateUserField(user.user_id, field, username);
@@ -3820,9 +3820,9 @@ const userMenuHandlers = {
     // === CASE 2: Update Data Saya ===
     if (text === "2") {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userService.findUserByWhatsapp)
-        ? await userService.findUserByWhatsapp(pengirim)
-        : await findUserByWhatsapp(pengirim);
+      const userByWA = (await userService.findUserByWhatsApp)
+        ? await userService.findUserByWhatsApp(pengirim)
+        : await findUserByWhatsApp(pengirim);
 
       if (userByWA) {
         const salam = getGreeting();
