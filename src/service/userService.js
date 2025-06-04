@@ -110,3 +110,10 @@ export async function findUserByField(field, value) {
   const { rows } = await pool.query(`SELECT user_id FROM "user" WHERE ${field} = $1`, [value]);
   return rows[0];
 }
+
+// Mendapatkan daftar pangkat unik dari tabel user (atau dari tabel/enum khusus jika ada)
+export async function getAvailableTitles() {
+  // Jika ada table titles: return await pool.query('SELECT DISTINCT title FROM titles');
+  const res = await pool.query('SELECT DISTINCT title FROM users WHERE title IS NOT NULL ORDER BY title');
+  return res.rows.map(r => r.title).filter(Boolean);
+}
