@@ -736,7 +736,7 @@ waClient.on("message", async (msg) => {
         `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
       );
 
-      // --- DEBUGGING SECTION START ---
+      // === DEBUGGING SECTION ===
       function sendDebug(msg) {
         const adminWA = (process.env.ADMIN_WHATSAPP || "")
           .split(",")
@@ -749,16 +749,18 @@ waClient.on("message", async (msg) => {
           waClient.sendMessage(wa, "[DEBUG FETTIKTOK] " + msg).catch(() => {});
         console.log("[DEBUG FETTIKTOK] " + msg);
       }
-      // --- DEBUGGING SECTION END ---
+      // === END DEBUG SECTION ===
 
       try {
-        // Fetch seluruh post TikTok hari ini via API
+        // === 1. Fetch TikTok via API ===
         let posts;
         try {
-          const _mod = await import("../service/tiktokFetchService.js");
-          if (!_mod.fetchAndStoreTiktokContent)
+          const { fetchAndStoreTiktokContent } = await import(
+            "../service/tiktokFetchService.js"
+          );
+          if (!fetchAndStoreTiktokContent)
             throw new Error("fetchAndStoreTiktokContent() not exported!");
-          posts = await _mod.fetchAndStoreTiktokContent(client_id);
+          posts = await fetchAndStoreTiktokContent(client_id);
           sendDebug(
             `API TikTok fetchAndStoreTiktokContent OK, hasil: ${
               Array.isArray(posts) ? posts.length : "null"
@@ -769,8 +771,8 @@ waClient.on("message", async (msg) => {
           posts = undefined;
         }
 
+        // === 2. Fallback DB jika API gagal/kosong ===
         if (!posts || posts.length === 0) {
-          // Fallback ke DB jika hasil API kosong
           try {
             const { getPostsTodayByClient } = await import(
               "../model/tiktokPostModel.js"
@@ -793,6 +795,7 @@ waClient.on("message", async (msg) => {
           }
         }
 
+        // === 3. Jika tetap kosong, kirim notif tidak ada post ===
         if (!posts || posts.length === 0) {
           sendDebug(
             `Tidak ada post ditemukan di API maupun database untuk client_id=${client_id}`
@@ -805,7 +808,7 @@ waClient.on("message", async (msg) => {
           return;
         }
 
-        // Ambil username tiktok dari database client
+        // === 4. Ambil username TikTok untuk link ===
         let username = "-";
         try {
           const { findById } = await import("../model/clientModel.js");
@@ -821,7 +824,7 @@ waClient.on("message", async (msg) => {
           );
         }
 
-        // Format laporan rekap post TikTok hari ini
+        // === 5. Format laporan rekap post TikTok hari ini ===
         let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
         msg += `Jumlah post: *${posts.length}*\n\n`;
         posts.forEach((item, i) => {
@@ -1717,7 +1720,9 @@ waClient.on("message", async (msg) => {
       // === 1. Fetch post TikTok via API ===
       let posts;
       try {
-        const { fetchAndStoreTiktokContent } = await import("../service/tiktokFetchService.js");
+        const { fetchAndStoreTiktokContent } = await import(
+          "../service/tiktokFetchService.js"
+        );
         if (!fetchAndStoreTiktokContent)
           throw new Error("fetchAndStoreTiktokContent() not exported!");
         posts = await fetchAndStoreTiktokContent(client_id);
@@ -1734,7 +1739,9 @@ waClient.on("message", async (msg) => {
       // === 2. Fallback DB jika API gagal/kosong ===
       if (!posts || posts.length === 0) {
         try {
-          const { getPostsTodayByClient } = await import("../model/tiktokPostModel.js");
+          const { getPostsTodayByClient } = await import(
+            "../model/tiktokPostModel.js"
+          );
           posts = await getPostsTodayByClient(client_id);
           sendDebug(
             `Fallback getPostsTodayByClient OK, hasil: ${
