@@ -1,4 +1,4 @@
-function sortDivisionKeys(keys) {
+export function sortDivisionKeys(keys) {
   const order = ["BAG", "SAT", "SI", "POLSEK"];
   return keys.sort((a, b) => {
     const ia = order.findIndex((prefix) => a.toUpperCase().startsWith(prefix));
@@ -10,7 +10,7 @@ function sortDivisionKeys(keys) {
 }
 
 
-function sortTitleKeys(keys, pangkatOrder) {
+export function sortTitleKeys(keys, pangkatOrder) {
   // pangkatOrder: array urut dari DB
   return keys.slice().sort((a, b) => {
     const ia = pangkatOrder.indexOf(a);
