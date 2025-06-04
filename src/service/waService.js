@@ -3892,8 +3892,6 @@ const userMenuHandlers = {
   },
 
   // Konfirmasi identitas data WA untuk lihat data
-
-  // Konfirmasi identitas data WA untuk lihat data
   confirmUserByWaIdentity: async (
     session,
     chatId,
