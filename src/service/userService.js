@@ -157,3 +157,29 @@ export async function getAvailableSatfung() {
   );
   return res.rows.map((r) => r.divisi).filter(Boolean);
 }
+
+// --- Tambahkan fungsi createUser ---
+export async function createUser(userData) {
+  // Contoh userData: {user_id, nama, title, divisi, jabatan, ...}
+  // Sesuaikan dengan struktur dan database-mu!
+  const q = `
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    RETURNING *;
+  `;
+  const params = [
+    userData.user_id,
+    userData.nama,
+    userData.title,
+    userData.divisi,
+    userData.jabatan,
+    userData.status ?? true, // default true
+    userData.whatsapp || "",
+    userData.insta || "",
+    userData.tiktok || "",
+    userData.client_id || null,
+    userData.exception ?? false
+  ];
+  const res = await pool.query(q, params);
+  return res.rows[0];
+}
