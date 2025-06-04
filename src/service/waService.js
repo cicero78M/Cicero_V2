@@ -208,6 +208,24 @@ waClient.on("message", async (msg) => {
     return;
   }
 
+  // Di handler utama pesan masuk
+  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
+    delete userMenuContext[chatId];
+    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
+    return;
+  }
+
+  // Fallback: Jika step "main" tapi input bukan 1/2/3/4 atau "batal"
+  if (userMenuContext[chatId] && userMenuContext[chatId].step === "main") {
+    if (!["1", "2", "3", "4"].includes(text.trim())) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
+      );
+      return;
+    }
+  }
+
   // === Proteksi untuk command admin only ===
   const adminCommands = [
     "addnewclient#",
@@ -404,12 +422,6 @@ waClient.on("message", async (msg) => {
         `4. Kontak operator\n\n` +
         `Ketik *batal* untuk keluar dari menu.`
     );
-    return;
-  }
-
-  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
-    delete userMenuContext[chatId];
-    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
     return;
   }
 
