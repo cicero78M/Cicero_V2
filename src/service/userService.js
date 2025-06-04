@@ -54,16 +54,22 @@ export async function findUserById(user_id) {
 }
 
 /**
- * Update field user (insta/tiktok/whatsapp) - tanpa normalisasi TikTok
+ * Update field user (termasuk insta/tiktok/whatsapp/exception/status/nama/title/divisi/jabatan)
  */
 export async function updateUserField(user_id, field, value) {
   const allowed = ['insta', 'tiktok', 'whatsapp', "exception", "status", "nama", "title", "divisi", "jabatan"];
-  if (!allowed.includes(field)) throw new Error('Hanya field insta/tiktok/whatsapp yang bisa diupdate');
+  if (!allowed.includes(field)) throw new Error('Field tidak diizinkan!');
   const { rows } = await pool.query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
     [value, user_id]
   );
   return rows[0];
+}
+
+// Ambil semua user yang exception = true
+export async function getAllExceptionUsers() {
+  const { rows } = await pool.query('SELECT * FROM "user" WHERE exception = true');
+  return rows;
 }
 
 export async function findUserByWhatsApp(wa) {

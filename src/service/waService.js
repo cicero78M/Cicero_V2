@@ -9,18 +9,20 @@ import { pool } from "../config/db.js"; // Pastikan path ini sesuai projek Anda
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
+import * as userService from "./userService.js";
+
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
-import * as userService from "./userService.js";
+
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+import { getTiktokSecUid } from "./tiktokFetchService.js";
+
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
-
-import { getTiktokSecUid } from "./tiktokFetchService.js";
 
 dotenv.config();
 
