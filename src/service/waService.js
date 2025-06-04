@@ -3787,9 +3787,9 @@ const userMenuHandlers = {
     // === CASE 1: Lihat Data Saya ===
     if (text === "1") {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userService.findUserByWhatsapp)
-        ? await userService.findUserByWhatsapp(pengirim)
-        : await findUserByWhatsapp(pengirim); // fallback jika import langsung
+      const userByWA = (await userService.findUserByWhatsApp)
+        ? await userService.findUserByWhatsApp(pengirim)
+        : await findUserByWhatsApp(pengirim); // fallback jika import langsung
 
       if (userByWA) {
         const salam = getGreeting();
