@@ -397,7 +397,9 @@ waClient.on("message", async (msg) => {
         `11. Daftar perintah manual (advanced)\n` +
         `12. Update *exception* user\n` +
         `13. Update *status* user\n` +
-        `14. Daftar *allexception* user\n\n` +
+        `14. Daftar *allexception* user\n` +
+        `15. Request data *Instagram* user\n` +
+        `16. Request data *TikTok* user\n\n` +
         `Ketik *batal* untuk keluar dari menu.`
     );
     return;
