@@ -158,7 +158,23 @@ waClient.on("message", async (msg) => {
   const text = msg.body.trim();
 
   const session = getSession(chatId);
+  // Di handler utama pesan masuk
+  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
+    delete userMenuContext[chatId];
+    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
+    return;
+  }
 
+  // Fallback: Jika step "main" tapi input bukan 1/2/3/4 atau "batal"
+  if (userMenuContext[chatId] && userMenuContext[chatId].step === "main") {
+    if (!["1", "2", "3", "4"].includes(text.trim())) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
+      );
+      return;
+    }
+  }
   if (session && session.menu === "oprrequest") {
     await oprRequestHandlers[session.step || "main"](
       session,
@@ -207,25 +223,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
-
-  // Di handler utama pesan masuk
-  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
-    delete userMenuContext[chatId];
-    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
-    return;
-  }
-
-  // Fallback: Jika step "main" tapi input bukan 1/2/3/4 atau "batal"
-  if (userMenuContext[chatId] && userMenuContext[chatId].step === "main") {
-    if (!["1", "2", "3", "4"].includes(text.trim())) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
-      );
-      return;
-    }
-  }
-
+  // =======================
   // === Proteksi untuk command admin only ===
   const adminCommands = [
     "addnewclient#",
