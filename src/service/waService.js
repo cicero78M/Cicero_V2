@@ -158,10 +158,18 @@ waClient.on("message", async (msg) => {
   const text = msg.body.trim();
 
   const session = getSession(chatId);
+
   // Di handler utama pesan masuk
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
     delete userMenuContext[chatId];
     await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
+    return;
+  }
+
+  // ==== Keluar session ====
+  if (getSession(chatId) && text.toLowerCase() === "batal") {
+    clearSession(chatId);
+    await waClient.sendMessage(chatId, "✅ Menu Admin Client ditutup.");
     return;
   }
 
@@ -175,6 +183,7 @@ waClient.on("message", async (msg) => {
       return;
     }
   }
+
   if (session && session.menu === "oprrequest") {
     await oprRequestHandlers[session.step || "main"](
       session,
@@ -461,7 +470,12 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  if (text === "oprrequest") {
+  if (text.toLowerCase() === "oprrequest") {
+    let session = getSession(chatId);
+    if (!session) session = {};
+    session.menu = "oprrequest";
+    session.step = "main"; // atau step lain sesuai kebutuhan
+    setSession(chatId, session);
     // Cek apakah nomor WA user adalah operator pada client manapun
     const pengirim = chatId.replace(/[^0-9]/g, "");
     const q = `SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1`;
@@ -488,14 +502,6 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
-
-  // ==== Keluar session ====
-  if (getSession(chatId) && text.toLowerCase() === "batal") {
-    clearSession(chatId);
-    await waClient.sendMessage(chatId, "✅ Menu Admin Client ditutup.");
-    return;
-  }
-
   // =======================
   // MANUAL COMMANDS HANDLER
   // =======================
