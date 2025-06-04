@@ -3732,128 +3732,166 @@ function sortTitleKeys(keys, pangkatOrder) {
 }
 
 // ===== Handler utama usermenu =====
+// ===== Handler utama usermenu =====
 const userMenuHandlers = {
   main: async (session, chatId, text, waClient, pool, userService) => {
-    switch (text) {
-      case "1": {
-        // Ambil nomor WA user (tanpa karakter non-digit)
-        const pengirim = chatId.replace(/[^0-9]/g, "");
-        const userByWA = await userService.findUserByWhatsapp(pengirim);
+    // Helper salam
+    function getGreeting() {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour >= 4 && hour < 10) return "Selamat pagi";
+      if (hour >= 10 && hour < 15) return "Selamat siang";
+      if (hour >= 15 && hour < 18) return "Selamat sore";
+      return "Selamat malam";
+    }
 
-        function getGreeting() {
-          const now = new Date();
-          const hour = now.getHours();
-          if (hour >= 4 && hour < 10) return "Selamat pagi";
-          if (hour >= 10 && hour < 15) return "Selamat siang";
-          if (hour >= 15 && hour < 18) return "Selamat sore";
-          return "Selamat malam";
+    // Helper untuk tampil data user
+    function formatUserData(user) {
+      const fieldMap = {
+        user_id: "NRP/NIP",
+        nama: "Nama",
+        title: "Pangkat",
+        divisi: "Satfung",
+        jabatan: "Jabatan",
+        status: "Status",
+        whatsapp: "WhatsApp",
+        insta: "Instagram",
+        tiktok: "TikTok",
+        client_id: "POLRES",
+      };
+      const order = [
+        "user_id",
+        "nama",
+        "title",
+        "divisi",
+        "jabatan",
+        "status",
+        "whatsapp",
+        "insta",
+        "tiktok",
+        "client_id",
+      ];
+      let msgText = "";
+      order.forEach((k) => {
+        if (user[k] !== undefined && user[k] !== null) {
+          let val = user[k];
+          let label = fieldMap[k] || k;
+          if (k === "status")
+            val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
+          msgText += `*${label}*: ${val}\n`;
         }
+      });
+      return msgText;
+    }
 
-        if (userByWA) {
-          const pangkat = userByWA.title || "-";
-          const nama = userByWA.nama || "-";
-          const nrp = userByWA.user_id || "-";
+    // === CASE 1: Lihat Data Saya ===
+    if (text === "1") {
+      const pengirim = chatId.replace(/[^0-9]/g, "");
+      const userByWA = (await userService.findUserByWhatsapp)
+        ? await userService.findUserByWhatsapp(pengirim)
+        : await findUserByWhatsapp(pengirim); // fallback jika import langsung
 
-          const fieldMap = {
-            user_id: "NRP/NIP",
-            nama: "Nama",
-            title: "Pangkat",
-            divisi: "Satfung",
-            jabatan: "Jabatan",
-            status: "Status",
-            whatsapp: "WhatsApp",
-            insta: "Instagram",
-            tiktok: "TikTok",
-            client_id: "POLRES",
-          };
-          const order = [
-            "user_id",
-            "nama",
-            "title",
-            "divisi",
-            "jabatan",
-            "status",
-            "whatsapp",
-            "insta",
-            "tiktok",
-            "client_id",
-          ];
+      if (userByWA) {
+        const salam = getGreeting();
+        const pangkat = userByWA.title || "-";
+        const nama = userByWA.nama || "-";
+        const nrp = userByWA.user_id || "-";
+        let msgText =
+          `👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
+          `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n` +
+          formatUserData(userByWA) +
+          `\nApakah data di atas benar milik Anda?\n` +
+          `Balas *ya* jika benar, atau *tidak* jika bukan. Jika data salah, silakan hubungi operator.`;
 
-          let msgText =
-            `👋 ${getGreeting()}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
-            `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n`;
-          order.forEach((k) => {
-            if (userByWA[k] !== undefined && userByWA[k] !== null) {
-              let val = userByWA[k];
-              let label = fieldMap[k] || k;
-              if (k === "status")
-                val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
-              msgText += `*${label}*: ${val}\n`;
-            }
-          });
-
-          msgText +=
-            `\nApakah data di atas benar milik Anda?\n` +
-            `Balas *ya* jika benar, atau *tidak* jika bukan. Jika data salah, silakan hubungi operator untuk perubahan.\n`;
-
-          session.step = "confirmUserByWaIdentity";
-          session.user_id = userByWA.user_id;
-          await waClient.sendMessage(chatId, msgText);
-        } else {
-          session.step = "inputUserId";
-          await waClient.sendMessage(
-            chatId,
-            "Ketik NRP/NIP Anda untuk melihat data. (contoh: 75070206)"
-          );
-        }
-        break;
+        session.step = "confirmUserByWaIdentity";
+        session.user_id = userByWA.user_id;
+        await waClient.sendMessage(chatId, msgText);
+        return;
+      } else {
+        session.step = "inputUserId";
+        await waClient.sendMessage(
+          chatId,
+          "Ketik NRP/NIP Anda untuk melihat data. (contoh: 75070206)"
+        );
+        return;
       }
+    }
 
-      case "2":
+    // === CASE 2: Update Data Saya ===
+    if (text === "2") {
+      const pengirim = chatId.replace(/[^0-9]/g, "");
+      const userByWA = (await userService.findUserByWhatsapp)
+        ? await userService.findUserByWhatsapp(pengirim)
+        : await findUserByWhatsapp(pengirim);
+
+      if (userByWA) {
+        const salam = getGreeting();
+        const pangkat = userByWA.title || "-";
+        const nama = userByWA.nama || "-";
+        const nrp = userByWA.user_id || "-";
+        let msgText =
+          `👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
+          `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n` +
+          formatUserData(userByWA) +
+          `\nApakah data di atas benar milik Anda dan ingin melakukan perubahan?\n` +
+          `Balas *ya* jika benar, atau *tidak* jika bukan. Jika data salah, silakan hubungi operator.`;
+
+        session.step = "confirmUserByWaUpdate";
+        session.user_id = userByWA.user_id;
+        await waClient.sendMessage(chatId, msgText);
+        return;
+      } else {
         session.step = "updateAskUserId";
         await waClient.sendMessage(
           chatId,
           "Ketik NRP/NIP Anda yang ingin diupdate:"
         );
-        break;
-      case "3":
-        await waClient.sendMessage(
-          chatId,
-          `🛠️ *Daftar Perintah User:*\n\n` +
-            `- mydata#NRP/NIP\n` +
-            `- updateuser#NRP/NIP#field#value\n` +
-            `Contoh: updateuser#75070206#pangkat#AKP\n` +
-            `Ketik *batal* untuk keluar dari menu.\n\n` +
-            `ℹ️ Untuk update manual, lihat info lengkap: *userrequest* (menu interaktif jauh lebih mudah).`
-        );
-        break;
-      case "4":
-        // Cek operator berdasarkan nomor WA user
-        let operatorText = "Operator tidak ditemukan di database.";
-        try {
-          const userWaNum = chatId.replace(/[^0-9]/g, "");
-          const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
-          const waId = userWaNum.startsWith("62")
-            ? userWaNum
-            : "62" + userWaNum.replace(/^0/, "");
-          const res = await pool.query(q, [waId]);
-          if (res.rows && res.rows[0]) {
-            const op = res.rows[0];
-            operatorText = `Hubungi Operator:\n*${
-              op.nama || op.client_id
-            }* (WA: https://wa.me/${op.client_operator.replace(/\D/g, "")})`;
-          }
-        } catch (e) {}
-        await waClient.sendMessage(chatId, operatorText);
-        break;
-      default:
-        await waClient.sendMessage(
-          chatId,
-          "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
-        );
+        return;
+      }
     }
+
+    // === CASE 3: Daftar Perintah User ===
+    if (text === "3") {
+      await waClient.sendMessage(
+        chatId,
+        `🛠️ *Daftar Perintah User:*\n\n` +
+          `- mydata#NRP/NIP\n` +
+          `- updateuser#NRP/NIP#field#value\n` +
+          `Contoh: updateuser#75070206#pangkat#AKP\n` +
+          `Ketik *batal* untuk keluar dari menu.\n\n` +
+          `ℹ️ Untuk update manual, lihat info lengkap: *userrequest* (menu interaktif jauh lebih mudah).`
+      );
+      return;
+    }
+
+    // === CASE 4: Hubungi Operator ===
+    if (text === "4") {
+      let operatorText = "Operator tidak ditemukan di database.";
+      try {
+        const userWaNum = chatId.replace(/[^0-9]/g, "");
+        const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
+        const waId = userWaNum.startsWith("62")
+          ? userWaNum
+          : "62" + userWaNum.replace(/^0/, "");
+        const res = await pool.query(q, [waId]);
+        if (res.rows && res.rows[0]) {
+          const op = res.rows[0];
+          operatorText = `Hubungi Operator:\n*${
+            op.nama || op.client_id
+          }* (WA: https://wa.me/${op.client_operator.replace(/\D/g, "")})`;
+        }
+      } catch (e) {}
+      await waClient.sendMessage(chatId, operatorText);
+      return;
+    }
+
+    await waClient.sendMessage(
+      chatId,
+      "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
+    );
   },
 
+  // Konfirmasi identitas data WA untuk lihat data
   confirmUserByWaIdentity: async (
     session,
     chatId,
@@ -3863,7 +3901,35 @@ const userMenuHandlers = {
     userService
   ) => {
     if (text.trim().toLowerCase() === "ya") {
-      // Lanjut ke proses update (atau menu lanjutan sesuai kebutuhan)
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Terima kasih. Data Anda telah ditampilkan di atas."
+      );
+    } else if (text.trim().toLowerCase() === "tidak") {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Silakan hubungi operator untuk perbaikan data. Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
+      );
+    }
+  },
+
+  // Konfirmasi identitas data WA untuk update data
+  confirmUserByWaUpdate: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    if (text.trim().toLowerCase() === "ya") {
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
       await waClient.sendMessage(
