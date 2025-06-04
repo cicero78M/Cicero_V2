@@ -991,64 +991,158 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // === Step Request Data Instagram ===
+    // --- STEP: Menu 15 (Request data Instagram user) ---
     if (session.step === "requestInsta_id") {
-      const client_id = text.trim().toUpperCase();
-      try {
-        // Ambil semua user yang sudah/belum isi insta
-        const filled = await userService.getInstaFilledUsersByClient(client_id);
-        const empty = await userService.getInstaEmptyUsersByClient(client_id);
-
-        let msg = `📋 *Daftar User Instagram*\nClient: *${client_id}*\n\n`;
-        msg += `✅ Sudah mengisi IG: ${filled.length}\n`;
-        filled.forEach((u, i) => {
-          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama} - @${
-            u.insta
-          }\n`;
-        });
-        msg += `\n❌ Belum mengisi IG: ${empty.length}\n`;
-        empty.forEach((u, i) => {
-          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama}\n`;
-        });
-        await waClient.sendMessage(chatId, msg.trim());
-      } catch (e) {
+      const rows = await pool.query(
+        "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+      );
+      const clients = rows.rows;
+      if (!clients.length) {
+        await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+        clearSession(chatId);
+        return;
+      }
+      session.clientList = clients;
+      session.step = "requestInsta_choose";
+      setSession(chatId, session);
+      let msg = `*Daftar Client Aktif*\nPilih client (balas angka):\n`;
+      clients.forEach((c, i) => {
+        msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+      });
+      await waClient.sendMessage(chatId, msg.trim());
+      return;
+    }
+    if (session.step === "requestInsta_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
         await waClient.sendMessage(
           chatId,
-          `Gagal mengambil data: ${e.message}`
+          "Pilihan tidak valid. Balas angka sesuai list."
         );
+        return;
       }
+      session.requestClientId = clients[idx].client_id;
+      session.step = "requestInsta_submenu";
+      setSession(chatId, session);
+      await waClient.sendMessage(
+        chatId,
+        "Pilih data yang ingin ditampilkan:\n1. Semua\n2. Sudah mengisi IG\n3. Belum mengisi IG\nBalas angka 1/2/3:"
+      );
+      return;
+    }
+    if (session.step === "requestInsta_submenu") {
+      const client_id = session.requestClientId;
+      let mode = text.trim();
+      let users = [];
+      if (mode === "1") {
+        const a = await userService.getInstaFilledUsersByClient(client_id);
+        const b = await userService.getInstaEmptyUsersByClient(client_id);
+        users = [...a, ...b];
+      } else if (mode === "2") {
+        users = await userService.getInstaFilledUsersByClient(client_id);
+      } else if (mode === "3") {
+        users = await userService.getInstaEmptyUsersByClient(client_id);
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas 1, 2, atau 3."
+        );
+        return;
+      }
+      const divGroups = groupByDivision(users);
+      let msg = `*Daftar User Instagram*\nClient: *${client_id}*\n\n`;
+      sortDivisionKeys(Object.keys(divGroups)).forEach((div) => {
+        const list = divGroups[div];
+        msg += `*${div}* (${list.length} user):\n`;
+        msg +=
+          list
+            .map((u, i) =>
+              `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
+                u.insta ? `(@${u.insta})` : ""
+              }`.trim()
+            )
+            .join("\n") + "\n\n";
+      });
+      await waClient.sendMessage(chatId, msg.trim());
       clearSession(chatId);
       return;
     }
 
-    // === Step Request Data TikTok ===
+    // --- STEP: Menu 16 (Request data TikTok user) ---
     if (session.step === "requestTiktok_id") {
-      const client_id = text.trim().toUpperCase();
-      try {
-        // Ambil semua user yang sudah/belum isi tiktok
-        const filled = await userService.getTiktokFilledUsersByClient(
-          client_id
-        );
-        const empty = await userService.getTiktokEmptyUsersByClient(client_id);
-
-        let msg = `📋 *Daftar User TikTok*\nClient: *${client_id}*\n\n`;
-        msg += `✅ Sudah mengisi TikTok: ${filled.length}\n`;
-        filled.forEach((u, i) => {
-          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama} - @${
-            u.tiktok
-          }\n`;
-        });
-        msg += `\n❌ Belum mengisi TikTok: ${empty.length}\n`;
-        empty.forEach((u, i) => {
-          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama}\n`;
-        });
-        await waClient.sendMessage(chatId, msg.trim());
-      } catch (e) {
+      const rows = await pool.query(
+        "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+      );
+      const clients = rows.rows;
+      if (!clients.length) {
+        await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+        clearSession(chatId);
+        return;
+      }
+      session.clientList = clients;
+      session.step = "requestTiktok_choose";
+      setSession(chatId, session);
+      let msg = `*Daftar Client Aktif*\nPilih client (balas angka):\n`;
+      clients.forEach((c, i) => {
+        msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+      });
+      await waClient.sendMessage(chatId, msg.trim());
+      return;
+    }
+    if (session.step === "requestTiktok_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
         await waClient.sendMessage(
           chatId,
-          `Gagal mengambil data: ${e.message}`
+          "Pilihan tidak valid. Balas angka sesuai list."
         );
+        return;
       }
+      session.requestClientId = clients[idx].client_id;
+      session.step = "requestTiktok_submenu";
+      setSession(chatId, session);
+      await waClient.sendMessage(
+        chatId,
+        "Pilih data yang ingin ditampilkan:\n1. Semua\n2. Sudah mengisi TikTok\n3. Belum mengisi TikTok\nBalas angka 1/2/3:"
+      );
+      return;
+    }
+    if (session.step === "requestTiktok_submenu") {
+      const client_id = session.requestClientId;
+      let mode = text.trim();
+      let users = [];
+      if (mode === "1") {
+        const a = await userService.getTiktokFilledUsersByClient(client_id);
+        const b = await userService.getTiktokEmptyUsersByClient(client_id);
+        users = [...a, ...b];
+      } else if (mode === "2") {
+        users = await userService.getTiktokFilledUsersByClient(client_id);
+      } else if (mode === "3") {
+        users = await userService.getTiktokEmptyUsersByClient(client_id);
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas 1, 2, atau 3."
+        );
+        return;
+      }
+      const divGroups = groupByDivision(users);
+      let msg = `*Daftar User TikTok*\nClient: *${client_id}*\n\n`;
+      sortDivisionKeys(Object.keys(divGroups)).forEach((div) => {
+        const list = divGroups[div];
+        msg += `*${div}* (${list.length} user):\n`;
+        msg +=
+          list
+            .map((u, i) =>
+              `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
+                u.tiktok ? `(@${u.tiktok})` : ""
+              }`.trim()
+            )
+            .join("\n") + "\n\n";
+      });
+      await waClient.sendMessage(chatId, msg.trim());
       clearSession(chatId);
       return;
     }
@@ -3795,6 +3889,16 @@ function sortDivisionKeys(keys) {
       (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
     );
   });
+}
+
+function groupByDivision(users) {
+  const divGroups = {};
+  users.forEach((u) => {
+    const div = u.divisi || "-";
+    if (!divGroups[div]) divGroups[div] = [];
+    divGroups[div].push(u);
+  });
+  return divGroups;
 }
 
 function sortTitleKeys(keys, pangkatOrder) {
