@@ -173,130 +173,155 @@ waClient.on("message", async (msg) => {
   }
 
   // --- Handler otomatis update username dari link IG/TikTok ---
-// Sesi sementara untuk update username via link (gunakan di konteks handler global)
-const updateUsernameSession = {}; // key: chatId
+  // Sesi sementara untuk update username via link (gunakan di konteks handler global)
+  const updateUsernameSession = {}; // key: chatId
 
-// Tangkap pesan yang hanya berisi link Instagram/TikTok
-if (
-  !text.includes("#") &&
-  (text.match(/^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/?$/i) ||
-    text.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i))
-) {
-  updateUsernameSession[chatId] = {
-    link: text.trim(),
-    step: "confirm",
-  };
-  await waClient.sendMessage(
-    chatId,
-    `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
-  );
-  return;
-}
-
-// Proses konfirmasi (step=confirm)
-if (updateUsernameSession[chatId] && updateUsernameSession[chatId].step === "confirm") {
-  const jawaban = text.trim().toLowerCase();
-  if (jawaban === "tidak" || jawaban === "batal") {
-    delete updateUsernameSession[chatId];
-    await waClient.sendMessage(chatId, "Update username dibatalkan.");
-    return;
-  }
-  if (jawaban !== "ya") {
-    await waClient.sendMessage(
-      chatId,
-      "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
-    );
-    return;
-  }
-
-  // Jawaban "ya", lanjut cek binding WA
-  const pengirim = chatId.replace(/[^0-9]/g, "");
-  let username = null;
-  let field = null;
-  let match = null;
+  // Tangkap pesan yang hanya berisi link Instagram/TikTok
   if (
-    (match = updateUsernameSession[chatId].link.match(
-      /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i
-    ))
+    !text.includes("#") &&
+    (text.match(/^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/?$/i) ||
+      text.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i))
   ) {
-    username = match[2];
-    field = "insta";
-  } else if (
-    (match = updateUsernameSession[chatId].link.match(
-      /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i
-    ))
+    updateUsernameSession[chatId] = {
+      link: text.trim(),
+      step: "confirm",
+    };
+    await waClient.sendMessage(
+      chatId,
+      `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
+    );
+    return;
+  }
+
+  // Proses konfirmasi (step=confirm)
+  if (
+    updateUsernameSession[chatId] &&
+    updateUsernameSession[chatId].step === "confirm"
   ) {
-    username = "@" + match[2];
-    field = "tiktok";
+    const jawaban = text.trim().toLowerCase();
+    if (jawaban === "tidak" || jawaban === "batal") {
+      delete updateUsernameSession[chatId];
+      await waClient.sendMessage(chatId, "Update username dibatalkan.");
+      return;
+    }
+    if (jawaban !== "ya") {
+      await waClient.sendMessage(
+        chatId,
+        "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
+      );
+      return;
+    }
+
+    // Jawaban "ya", lanjut cek binding WA
+    const pengirim = chatId.replace(/[^0-9]/g, "");
+    let username = null;
+    let field = null;
+    let match = null;
+    if (
+      (match = updateUsernameSession[chatId].link.match(
+        /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i
+      ))
+    ) {
+      username = match[2];
+      field = "insta";
+    } else if (
+      (match = updateUsernameSession[chatId].link.match(
+        /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i
+      ))
+    ) {
+      username = "@" + match[2];
+      field = "tiktok";
+    }
+
+    if (!username || !field) {
+      await waClient.sendMessage(
+        chatId,
+        "Link tidak valid atau sistem gagal membaca username."
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    }
+
+    // Cek user berdasarkan nomor WhatsApp
+    const user = await userService.findUserByWA(pengirim);
+    if (user) {
+      // Update username
+      await userService.updateUserField(user.user_id, field, username);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Username *${
+          field === "insta" ? "Instagram" : "TikTok"
+        }* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${
+          user.user_id
+        }*.`
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    } else {
+      // WA belum terdaftar, minta NRP
+      updateUsernameSession[chatId].step = "ask_nrp";
+      updateUsernameSession[chatId].username = username;
+      updateUsernameSession[chatId].field = field;
+      await waClient.sendMessage(
+        chatId,
+        "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
+      );
+      return;
+    }
   }
 
-  if (!username || !field) {
-    await waClient.sendMessage(chatId, "Link tidak valid atau sistem gagal membaca username.");
-    delete updateUsernameSession[chatId];
-    return;
-  }
-
-  // Cek user berdasarkan nomor WhatsApp
-  const user = await userService.findUserByWA(pengirim);
-  if (user) {
-    // Update username
-    await userService.updateUserField(user.user_id, field, username);
+  // Proses binding NRP (step=ask_nrp)
+  if (
+    updateUsernameSession[chatId] &&
+    updateUsernameSession[chatId].step === "ask_nrp"
+  ) {
+    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
+    if (!nrp) {
+      await waClient.sendMessage(
+        chatId,
+        "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
+      );
+      return;
+    }
+    const user = await userService.findUserById(nrp);
+    if (!user) {
+      await waClient.sendMessage(
+        chatId,
+        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
+      );
+      return;
+    }
+    // Cek WA sudah digunakan oleh user lain belum?
+    const pengirim = chatId.replace(/[^0-9]/g, "");
+    const waUsed = await userService.findUserByWA(pengirim);
+    if (waUsed && waUsed.user_id !== user.user_id) {
+      await waClient.sendMessage(
+        chatId,
+        `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    }
+    // Update username dan bind WA
+    await userService.updateUserField(
+      user.user_id,
+      updateUsernameSession[chatId].field,
+      updateUsernameSession[chatId].username
+    );
+    await userService.updateUserField(user.user_id, "whatsapp", pengirim);
     await waClient.sendMessage(
       chatId,
-      `✅ Username *${field === "insta" ? "Instagram" : "TikTok"}* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${user.user_id}*.`
+      `✅ Username *${
+        updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"
+      }* berhasil diupdate menjadi *${
+        updateUsernameSession[chatId].username
+      }* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${
+        user.user_id
+      }*.`
     );
     delete updateUsernameSession[chatId];
     return;
-  } else {
-    // WA belum terdaftar, minta NRP
-    updateUsernameSession[chatId].step = "ask_nrp";
-    updateUsernameSession[chatId].username = username;
-    updateUsernameSession[chatId].field = field;
-    await waClient.sendMessage(
-      chatId,
-      "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
-    );
-    return;
   }
-}
-
-// Proses binding NRP (step=ask_nrp)
-if (updateUsernameSession[chatId] && updateUsernameSession[chatId].step === "ask_nrp") {
-  const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-  if (!nrp) {
-    await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan.");
-    return;
-  }
-  const user = await userService.findUserById(nrp);
-  if (!user) {
-    await waClient.sendMessage(
-      chatId,
-      `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
-    );
-    return;
-  }
-  // Cek WA sudah digunakan oleh user lain belum?
-  const pengirim = chatId.replace(/[^0-9]/g, "");
-  const waUsed = await userService.findUserByWA(pengirim);
-  if (waUsed && waUsed.user_id !== user.user_id) {
-    await waClient.sendMessage(
-      chatId,
-      `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
-    );
-    delete updateUsernameSession[chatId];
-    return;
-  }
-  // Update username dan bind WA
-  await userService.updateUserField(user.user_id, updateUsernameSession[chatId].field, updateUsernameSession[chatId].username);
-  await userService.updateUserField(user.user_id, "whatsapp", pengirim);
-  await waClient.sendMessage(
-    chatId,
-    `✅ Username *${updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"}* berhasil diupdate menjadi *${updateUsernameSession[chatId].username}* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${user.user_id}*.`
-  );
-  delete updateUsernameSession[chatId];
-  return;
-}
-
 
   // =======================
   // HANDLER PERINTAH INTERAKTIF USER REQUEST
@@ -697,22 +722,152 @@ if (updateUsernameSession[chatId] && updateUsernameSession[chatId].step === "ask
     // Fetch TikTok
     if (session.step === "fetchTiktok_id") {
       const client_id = text.trim().toUpperCase();
-      try {
-        const posts = await fetchAndStoreTiktokContent(client_id);
+
+      if (!client_id) {
         await waClient.sendMessage(
           chatId,
-          `✅ Selesai fetch TikTok untuk ${client_id}. Hasil: ${
-            (posts && posts.length) || 0
-          } post`
+          "Format salah!\nSilakan masukkan Client ID TikTok yang benar."
         );
-      } catch (e) {
-        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+        return;
+      }
+
+      await waClient.sendMessage(
+        chatId,
+        `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
+      );
+
+      // --- DEBUGGING SECTION START ---
+      function sendDebug(msg) {
+        const adminWA = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean)
+          .map((n) =>
+            n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"
+          );
+        for (const wa of adminWA)
+          waClient.sendMessage(wa, "[DEBUG FETTIKTOK] " + msg).catch(() => {});
+        console.log("[DEBUG FETTIKTOK] " + msg);
+      }
+      // --- DEBUGGING SECTION END ---
+
+      try {
+        // Fetch seluruh post TikTok hari ini via API
+        let posts;
+        try {
+          const _mod = await import("../service/tiktokFetchService.js");
+          if (!_mod.fetchAndStoreTiktokContent)
+            throw new Error("fetchAndStoreTiktokContent() not exported!");
+          posts = await _mod.fetchAndStoreTiktokContent(client_id);
+          sendDebug(
+            `API TikTok fetchAndStoreTiktokContent OK, hasil: ${
+              Array.isArray(posts) ? posts.length : "null"
+            }`
+          );
+        } catch (apiErr) {
+          sendDebug(`GAGAL API TikTok: ${apiErr.stack || apiErr.message}`);
+          posts = undefined;
+        }
+
+        if (!posts || posts.length === 0) {
+          // Fallback ke DB jika hasil API kosong
+          try {
+            const { getPostsTodayByClient } = await import(
+              "../model/tiktokPostModel.js"
+            );
+            posts = await getPostsTodayByClient(client_id);
+            sendDebug(
+              `Fallback getPostsTodayByClient OK, hasil: ${
+                Array.isArray(posts) ? posts.length : "null"
+              }`
+            );
+            if (posts && posts.length > 0) {
+              await waClient.sendMessage(
+                chatId,
+                `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
+              );
+            }
+          } catch (dbErr) {
+            sendDebug(`GAGAL Query DB TikTok: ${dbErr.stack || dbErr.message}`);
+            posts = undefined;
+          }
+        }
+
+        if (!posts || posts.length === 0) {
+          sendDebug(
+            `Tidak ada post ditemukan di API maupun database untuk client_id=${client_id}`
+          );
+          await waClient.sendMessage(
+            chatId,
+            `❌ Tidak ada post TikTok hari ini untuk client *${client_id}*`
+          );
+          clearSession(chatId);
+          return;
+        }
+
+        // Ambil username tiktok dari database client
+        let username = "-";
+        try {
+          const { findById } = await import("../model/clientModel.js");
+          const client = await findById(client_id);
+          username = client?.client_tiktok || "-";
+          if (username.startsWith("@")) username = username.slice(1);
+          sendDebug(`Client TikTok username: ${username}`);
+        } catch (userErr) {
+          sendDebug(
+            `Gagal ambil username TikTok dari DB: ${
+              userErr.stack || userErr.message
+            }`
+          );
+        }
+
+        // Format laporan rekap post TikTok hari ini
+        let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
+        msg += `Jumlah post: *${posts.length}*\n\n`;
+        posts.forEach((item, i) => {
+          const desc = item.desc || item.caption || "-";
+          let create_time =
+            item.create_time || item.created_at || item.createTime;
+          let created = "-";
+          if (typeof create_time === "number") {
+            if (create_time > 2000000000) {
+              created = new Date(create_time).toLocaleString("id-ID", {
+                timeZone: "Asia/Jakarta",
+              });
+            } else {
+              created = new Date(create_time * 1000).toLocaleString("id-ID", {
+                timeZone: "Asia/Jakarta",
+              });
+            }
+          } else if (typeof create_time === "string") {
+            created = new Date(create_time).toLocaleString("id-ID", {
+              timeZone: "Asia/Jakarta",
+            });
+          } else if (create_time instanceof Date) {
+            created = create_time.toLocaleString("id-ID", {
+              timeZone: "Asia/Jakarta",
+            });
+          }
+          const video_id = item.video_id || item.id;
+          msg += `#${i + 1} Video ID: ${video_id}\n`;
+          msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
+          msg += `   Tanggal: ${created}\n`;
+          msg += `   Like: ${
+            item.digg_count ?? item.like_count ?? 0
+          } | Komentar: ${item.comment_count ?? 0}\n`;
+          msg += `   Link: https://www.tiktok.com/@${username}/video/${video_id}\n\n`;
+        });
+
+        await waClient.sendMessage(chatId, msg.trim());
+        sendDebug("Laporan berhasil dikirim ke user.");
+      } catch (err) {
+        sendDebug("ERROR CATCH FINAL: " + (err.stack || err.message));
+        await waClient.sendMessage(chatId, `❌ ERROR: ${err.message}`);
       }
       clearSession(chatId);
       return;
     }
 
-    // Absensi likes IG
     // Absensi likes IG
     if (session.step === "absensiLikes_id") {
       session.absensiLikes_client_id = text.trim().toUpperCase();
@@ -2459,6 +2614,7 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
     );
     return;
   }
+
   // =========================
   // === TAMPILKAN DATA USER (USER)
   // =========================
@@ -3440,7 +3596,9 @@ function sortDivisionKeys(keys) {
   return keys.sort((a, b) => {
     const ia = order.findIndex((prefix) => a.toUpperCase().startsWith(prefix));
     const ib = order.findIndex((prefix) => b.toUpperCase().startsWith(prefix));
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
+    return (
+      (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
+    );
   });
 }
 
@@ -3449,7 +3607,9 @@ function sortTitleKeys(keys, pangkatOrder) {
   return keys.slice().sort((a, b) => {
     const ia = pangkatOrder.indexOf(a);
     const ib = pangkatOrder.indexOf(b);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
+    return (
+      (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
+    );
   });
 }
 
@@ -3588,7 +3748,14 @@ const userMenuHandlers = {
     );
   },
 
-  updateAskUserId: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskUserId: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
     session.step = "updateAskField";
     await waClient.sendMessage(
@@ -3597,7 +3764,14 @@ const userMenuHandlers = {
     );
   },
 
-  updateAskField: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskField: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     const field = text.toLowerCase().trim();
     const allowedFields = [
       "nama",
@@ -3620,21 +3794,37 @@ const userMenuHandlers = {
     if (field === "pangkat") {
       const titles = await userService.getAvailableTitles(); // e.g. ["AKBP","KOMPOL",...,"PENATA TK I","PENGATUR","PENDA"]
       if (!titles || titles.length === 0) {
-        await waClient.sendMessage(chatId, "Data pangkat tidak ditemukan di database.");
+        await waClient.sendMessage(
+          chatId,
+          "Data pangkat tidak ditemukan di database."
+        );
         return;
       }
       // Urutkan sesuai urutan DB
-      let msgList = sortTitleKeys(titles, titles).map((t, i) => `${i+1}. ${t}`).join("\n");
-      await waClient.sendMessage(chatId, "Daftar pangkat yang dapat dipilih:\n" + msgList);
+      let msgList = sortTitleKeys(titles, titles)
+        .map((t, i) => `${i + 1}. ${t}`)
+        .join("\n");
+      await waClient.sendMessage(
+        chatId,
+        "Daftar pangkat yang dapat dipilih:\n" + msgList
+      );
     }
     if (field === "satfung") {
       const satfung = await userService.getAvailableSatfung();
       if (!satfung || satfung.length === 0) {
-        await waClient.sendMessage(chatId, "Data satfung tidak ditemukan di database.");
+        await waClient.sendMessage(
+          chatId,
+          "Data satfung tidak ditemukan di database."
+        );
         return;
       }
-      let msgList = sortDivisionKeys(satfung).map((s, i) => `${i+1}. ${s}`).join("\n");
-      await waClient.sendMessage(chatId, "Daftar satfung yang dapat dipilih:\n" + msgList);
+      let msgList = sortDivisionKeys(satfung)
+        .map((s, i) => `${i + 1}. ${s}`)
+        .join("\n");
+      await waClient.sendMessage(
+        chatId,
+        "Daftar satfung yang dapat dipilih:\n" + msgList
+      );
     }
     session.step = "updateAskValue";
     await waClient.sendMessage(
@@ -3643,7 +3833,14 @@ const userMenuHandlers = {
     );
   },
 
-  updateAskValue: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskValue: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     const user_id = session.updateUserId;
     let field = session.updateField;
     let value = text.trim();
@@ -3691,7 +3888,12 @@ const userMenuHandlers = {
       if (!titles.map((x) => x.toUpperCase()).includes(value.toUpperCase())) {
         await waClient.sendMessage(
           chatId,
-          `❌ Pangkat tidak valid! Pilih salah satu dari daftar berikut:\n${sortTitleKeys(titles, titles).map((t, i) => `${i+1}. ${t}`).join("\n")}`
+          `❌ Pangkat tidak valid! Pilih salah satu dari daftar berikut:\n${sortTitleKeys(
+            titles,
+            titles
+          )
+            .map((t, i) => `${i + 1}. ${t}`)
+            .join("\n")}`
         );
         return;
       }
@@ -3702,7 +3904,11 @@ const userMenuHandlers = {
       if (!satfung.map((x) => x.toUpperCase()).includes(value.toUpperCase())) {
         await waClient.sendMessage(
           chatId,
-          `❌ Satfung tidak valid! Pilih salah satu dari daftar berikut:\n${sortDivisionKeys(satfung).map((s, i) => `${i+1}. ${s}`).join("\n")}`
+          `❌ Satfung tidak valid! Pilih salah satu dari daftar berikut:\n${sortDivisionKeys(
+            satfung
+          )
+            .map((s, i) => `${i + 1}. ${s}`)
+            .join("\n")}`
         );
         return;
       }
@@ -3742,7 +3948,9 @@ const userMenuHandlers = {
     await userService.updateUserField(user_id, field, value);
     await waClient.sendMessage(
       chatId,
-      `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
+      `✅ Data *${
+        field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field
+      }* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
     );
     session.step = "main";
     await waClient.sendMessage(
@@ -3751,7 +3959,5 @@ const userMenuHandlers = {
     );
   },
 };
-
-
 
 // ======================= end of file ======================
