@@ -1,4 +1,4 @@
-import { sortDivisionKeys, sortTitleKeys } from '../utils/waUtils.js';
+import { sortDivisionKeys, sortTitleKeys } from "../utils/waUtils.js";
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
@@ -159,75 +159,70 @@ export const userMenuHandlers = {
     );
   },
 
-  // Konfirmasi identitas data WA untuk lihat data
-confirmUserByWaIdentity: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService
-) => {
-  if (text.trim().toLowerCase() === "ya") {
-    // Setelah user konfirmasi benar, tanya apakah ingin update data
-    session.step = "confirmUserWantUpdate";
-    await waClient.sendMessage(
-      chatId,
-      "Terima kasih. Data Anda telah ditampilkan di atas.\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk kembali ke menu utama."
-    );
-    return;
-  } else if (text.trim().toLowerCase() === "tidak") {
-    session.step = "main";
-    // Cari client_operator dari client_id milik user
-    let operatorText = "Silakan hubungi operator untuk perbaikan data.";
-    try {
-      const user = await userService.findUserById(session.user_id);
-      if (user && user.client_id) {
-        const q = `SELECT nama, client_operator FROM clients WHERE client_id=$1 LIMIT 1`;
-        const res = await pool.query(q, [user.client_id]);
-        if (res.rows && res.rows[0] && res.rows[0].client_operator) {
-          const namaOp = res.rows[0].nama || "Operator";
-          const opWA = res.rows[0].client_operator.replace(/\D/g, "");
-          operatorText =
-            `Silakan hubungi operator untuk perbaikan data.\n` +
-            `*${namaOp}* (WA: https://wa.me/${opWA})`;
+  confirmUserByWaIdentity: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    if (text.trim().toLowerCase() === "ya") {
+      session.step = "tanyaUpdateMyData";
+      await waClient.sendMessage(
+        chatId,
+        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk kembali ke menu utama."
+      );
+    } else if (text.trim().toLowerCase() === "tidak") {
+      session.step = "main";
+      // Cari client_operator dari client_id milik user
+      let operatorText = "Silakan hubungi operator untuk perbaikan data.";
+      try {
+        const user = await userService.findUserById(session.user_id);
+        if (user && user.client_id) {
+          const q = `SELECT nama, client_operator FROM clients WHERE client_id=$1 LIMIT 1`;
+          const res = await pool.query(q, [user.client_id]);
+          if (res.rows && res.rows[0] && res.rows[0].client_operator) {
+            const namaOp = res.rows[0].nama || "Operator";
+            const opWA = res.rows[0].client_operator.replace(/\D/g, "");
+            operatorText =
+              `Silakan hubungi operator untuk perbaikan data.\n` +
+              `*${namaOp}* (WA: https://wa.me/${opWA})`;
+          }
+        }
+      } catch (e) {
+        // fallback: tetap kirim pesan standar jika gagal query
+        console.error("[USERMENU][QUERY_OPERATOR] ERROR:", e);
+
+        // Kirim notifikasi error ke admin
+        const admins = (process.env.ADMIN_WHATSAPP || "")
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean)
+          .map((n) =>
+            n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"
+          );
+        const debugMsg = `[USERMENU][QUERY_OPERATOR] ERROR:\n${
+          e.stack || e.message
+        }`;
+        for (const admin of admins) {
+          waClient.sendMessage(admin, debugMsg).catch(() => {});
         }
       }
-    } catch (e) {
-      // fallback: tetap kirim pesan standar jika gagal query
-      console.error("[USERMENU][QUERY_OPERATOR] ERROR:", e);
 
-      // Kirim notifikasi error ke admin
-      const admins = (process.env.ADMIN_WHATSAPP || "")
-        .split(",")
-        .map((n) => n.trim())
-        .filter(Boolean)
-        .map((n) =>
-          n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"
-        );
-      const debugMsg = `[USERMENU][QUERY_OPERATOR] ERROR:\n${
-        e.stack || e.message
-      }`;
-      for (const admin of admins) {
-        waClient.sendMessage(admin, debugMsg).catch(() => {});
-      }
+      await waClient.sendMessage(chatId, operatorText);
+      await waClient.sendMessage(
+        chatId,
+        "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
+      );
     }
-
-    await waClient.sendMessage(chatId, operatorText);
-    await waClient.sendMessage(
-      chatId,
-      "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
-    );
-    return;
-  } else {
-    await waClient.sendMessage(
-      chatId,
-      "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
-    );
-    return;
-  }
-},
-
+  },
 
   // Konfirmasi identitas data WA untuk update data
   confirmUserByWaUpdate: async (
@@ -500,7 +495,6 @@ confirmUserByWaIdentity: async (
       `Ketik nilai baru untuk field *${allowedFields[idx].label}* (pilih dari daftar jika pangkat/satfung):`
     );
   },
-  // [END UPDATE: FIELD PILIHAN ANGKA]
 
   // Konfirmasi hapus whatsapp
   konfirmasiHapusWhatsapp: async (
@@ -667,6 +661,41 @@ confirmUserByWaIdentity: async (
     await waClient.sendMessage(
       chatId,
       "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+    );
+  },
+
+  // Handler step: tanyaUpdateMyData
+  tanyaUpdateMyData: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    if (text.trim().toLowerCase() === "ya") {
+      session.step = "confirmUserByWaUpdate";
+      // Call handler langsung (supaya tidak ada lag)
+      await userMenuHandlers.confirmUserByWaUpdate(
+        session,
+        chatId,
+        "ya",
+        waClient,
+        pool,
+        userService
+      );
+      return;
+    } else if (text.trim().toLowerCase() === "tidak") {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Balas *ya* jika ingin update data, atau *tidak* untuk kembali."
     );
   },
 };
