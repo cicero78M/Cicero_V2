@@ -48,7 +48,6 @@ function groupByDivision(users) {
   return divGroups;
 }
 
-
 async function getActiveClientsIG() {
   const res = await pool.query(
     `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
@@ -129,39 +128,27 @@ async function absensiLikesAkumulasiBelum(client_id) {
     msg += `*${div}* (${list.length} user):\n`;
     msg +=
       list
-        .map(
-          (u) =>
-            `- ${u.title ? u.title + " " : ""}${u.nama} : ${
-              u.insta ? u.insta : "belum mengisi data insta"
-            }`
-        )
+        .map((u) => {
+          let ket = "";
+          if (!u.count || u.count === 0) {
+            ket = `sudah melaksanakan 0 dari ${totalKonten} konten`;
+          } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
+            ket = `sudah melaksanakan ${u.count} dari ${totalKonten} konten`;
+          }
+          return (
+            `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
+            `${u.insta ? u.insta : "belum mengisi data insta"}` +
+            (ket ? ` (${ket})` : "")
+          );
+        })
         .join("\n") + "\n\n";
   });
   if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
-
-  // === Sudah ===
-//   msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-//   const sudahDiv = groupByDivision(sudah);
-//   sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
-//     const list = sudahDiv[div];
-//     msg += `*${div}* (${list.length} user):\n`;
-//     msg +=
-//       list
-//         .map(
-//           (u) =>
-//             `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta} (${
-//               u.count
-//             } konten)${u.exception === true ? "" : ""}`
-//         )
-//         .join("\n") + "\n\n";
-//   });
-//   if (Object.keys(sudahDiv).length === 0) msg += "-\n";
 
   msg += `\nTerimakasih.`;
 
   return msg.trim();
 }
-
 
 async function rekapLikesIG(client_id) {
   const shortcodes = await getShortcodesTodayByClient(client_id);

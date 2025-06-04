@@ -178,7 +178,7 @@ cron.schedule(
             }
           }
 
-          // === 1a. Kirim rekap post TikTok (mirip fetchtiktok#) ke admin
+          // === 1a. Kirim rekap post TikTok ke admin
           if (posts && posts.length > 0) {
             const rekapPostMsg = formatRekapPostTikTok(client_id, client_tiktok, posts);
             for (const admin of getAdminWAIds()) {
@@ -258,12 +258,10 @@ cron.schedule(
           }
 
           const totalKonten = posts.length;
-          let sudah = [],
-            belum = [];
+          let sudah = [], belum = [];
           Object.values(userStats).forEach((u) => {
             if (u.exception) {
-              // Selalu dianggap sudah!
-              sudah.push(u);
+              sudah.push(u); // Selalu dianggap sudah!
             } else if (
               u.tiktok &&
               u.tiktok.trim() !== "" &&
@@ -271,8 +269,7 @@ cron.schedule(
             ) {
               sudah.push(u);
             } else if (!u.exception) {
-              // Pastikan exception tidak pernah masuk ke "belum"
-              belum.push(u);
+              belum.push(u); // Pastikan exception tidak pernah masuk ke "belum"
             }
           });
 
@@ -292,10 +289,17 @@ cron.schedule(
             `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n` +
             `📋 Rekap Akumulasi Komentar TikTok\n*Polres*: *${client_id}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
             `*Jumlah Konten:* ${totalKonten}\n` +
-            `*Daftar link video hari ini:*\n${kontenLinks.join("\n")}\n\n` +
-            `*Jumlah user:* ${users.length}\n` +
-            `✅ Sudah melaksanakan: *${sudah.length}*\n` +
-            `❌ Belum melaksanakan: *${belum.length}*\n\n`;
+            `*Daftar link video hari ini:*\n${kontenLinks.join("\n")}\n\n`;
+
+          const totalUser = users.length;
+          const jumlahSudah = sudah.length;
+          const jumlahBelum = belum.length;
+          const persenPelaksanaan = totalUser > 0 ? Math.round((jumlahSudah / totalUser) * 100) : 0;
+
+          msg += `*Jumlah user:* ${totalUser}\n` +
+                 `✅ Sudah melaksanakan: *${jumlahSudah}*\n` +
+                 `❌ Belum melaksanakan: *${jumlahBelum}*\n` +
+                 `\n*Jumlah pelaksanaan: ${jumlahSudah} dari ${totalUser} user (${persenPelaksanaan}%)*\n\n`;
 
           msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
           const belumDiv = groupByDivision(belum);
@@ -304,12 +308,17 @@ cron.schedule(
             msg += `*${div}* (${list.length} user):\n`;
             msg +=
               list
-                .map(
-                  (u) =>
-                    `- ${u.title ? u.title + " " : ""}${u.nama} : ${
-                      u.tiktok ? u.tiktok : "belum mengisi data tiktok"
-                    }`
-                )
+                .map((u) => {
+                  let ket = "";
+                  if (!u.count || u.count === 0) {
+                    ket = "sudah melaksanakan 0";
+                  } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
+                    ket = `sudah melaksanakan ${u.count} dari ${totalKonten} konten`;
+                  }
+                  return `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
+                         `${u.tiktok ? u.tiktok : "belum mengisi data tiktok"}` +
+                         (ket ? ` (${ket})` : "");
+                })
                 .join("\n") + "\n\n";
           });
           if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
