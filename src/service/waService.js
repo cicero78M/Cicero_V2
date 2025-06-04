@@ -245,7 +245,7 @@ waClient.on("message", async (msg) => {
     }
 
     // Cek user berdasarkan nomor WhatsApp
-    const user = await userService.findUserByWA(pengirim);
+    const user = await userService.findUserByWhatsApp(pengirim);
     if (user) {
       // Update username
       await userService.updateUserField(user.user_id, field, username);
@@ -2845,7 +2845,7 @@ waClient.on("message", async (msg) => {
     }
     try {
       // Ambil semua user yang exception === true
-      const exceptionUsers = await userService.getUsersByField(
+      const exceptionUsers = await userService.getAllExceptionUsers(
         "exception",
         true
       );
