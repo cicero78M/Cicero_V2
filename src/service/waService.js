@@ -593,22 +593,55 @@ waClient.on("message", async (msg) => {
       session.targetClient_id = clients[idx].client_id;
       session.step = "updateClient_field";
       setSession(chatId, session);
-      await waClient.sendMessage(
-        chatId,
-        `Masukkan *key/field* yang ingin diupdate (misal: client_insta, client_operator, tiktok_secUid, dll):`
-      );
+      // List field yang bisa diupdate
+      const fields = [
+        { key: "client_insta", label: "Username Instagram" },
+        { key: "client_operator", label: "Operator Client" },
+        { key: "client_super", label: "Super Admin Client" },
+        { key: "client_group", label: "Group Client" },
+        { key: "tiktok_secUid", label: "TikTok SecUID" },
+        { key: "client_tiktok", label: "Username TikTok" },
+        { key: "client_status", label: "Status Aktif (true/false)" },
+        { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
+        {
+          key: "client_tiktok_status",
+          label: "Status TikTok Aktif (true/false)",
+        },
+        { key: "client_type", label: "Tipe Client" },
+      ];
+      session.updateFieldList = fields;
+      setSession(chatId, session);
+
+      let msg = `Pilih field yang ingin diupdate:\n`;
+      fields.forEach((f, i) => {
+        msg += `${i + 1}. ${f.label} [${f.key}]\n`;
+      });
+      msg += `\nBalas dengan angka sesuai daftar di atas.`;
+      await waClient.sendMessage(chatId, msg);
       return;
     }
     if (session.step === "updateClient_field") {
-      session.updateField = text.trim();
+      const idx = parseInt(text.trim()) - 1;
+      const fields = session.updateFieldList || [];
+      if (isNaN(idx) || !fields[idx]) {
+        let msg = `Pilihan tidak valid. Balas angka sesuai daftar di atas.\n`;
+        fields.forEach((f, i) => {
+          msg += `${i + 1}. ${f.label} [${f.key}]\n`;
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+        return;
+      }
+      session.updateField = fields[idx].key;
       session.step = "updateClient_value";
       setSession(chatId, session);
+
       await waClient.sendMessage(
         chatId,
-        `Masukkan value baru untuk *${session.updateField}* (isi dengan true/false untuk boolean):`
+        `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key})\nUntuk boolean, isi dengan true/false:`
       );
       return;
     }
+
     if (session.step === "updateClient_value") {
       try {
         const updated = await clientService.updateClient(
