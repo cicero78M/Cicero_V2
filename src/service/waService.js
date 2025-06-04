@@ -1105,18 +1105,23 @@ waClient.on("message", async (msg) => {
       }
       const divGroups = groupByDivision(users);
       let msg = `*Daftar User TikTok*\nClient: *${client_id}*\n\n`;
-      sortDivisionKeys(Object.keys(divGroups)).forEach((div) => {
-        const list = divGroups[div];
-        msg += `*${div}* (${list.length} user):\n`;
-        msg +=
-          list
-            .map((u, i) =>
-              `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
-                u.tiktok ? `(@${u.tiktok})` : ""
-              }`.trim()
-            )
-            .join("\n") + "\n\n";
-      });
+      const divKeys = sortDivisionKeys(Object.keys(divGroups));
+      if (divKeys.length === 0) {
+        msg += `_Tidak ada data user TikTok pada filter ini._`;
+      } else {
+        divKeys.forEach((div) => {
+          const list = divGroups[div];
+          msg += `*${div}* (${list.length} user):\n`;
+          msg +=
+            list
+              .map((u, i) =>
+                `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
+                  u.tiktok ? `(@${u.tiktok.replace(/^@+/, "")})` : ""
+                }`.trim()
+              )
+              .join("\n") + "\n\n";
+        });
+      }
       await waClient.sendMessage(chatId, msg.trim());
       clearSession(chatId);
       return;
