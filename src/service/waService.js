@@ -444,7 +444,8 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
-    setSession(chatId, { step: "main" });
+    // PERBAIKAN PENTING: Tambahkan menu agar routing session benar
+    setSession(chatId, { menu: "clientrequest", step: "main" });
     await waClient.sendMessage(
       chatId,
       `🛠️ *Menu Admin Client Cicero*\n` +
@@ -469,6 +470,10 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
+
+  // =======================
+  // HANDLER PERINTAH OPERATOR CICERO
+  // =======================
 
   if (text.toLowerCase() === "oprrequest") {
     let session = getSession(chatId);
