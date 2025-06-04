@@ -393,7 +393,10 @@ waClient.on("message", async (msg) => {
         `8. Fetch TikTok\n` +
         `9. Rekap absensi likes IG\n` +
         `10. Rekap absensi komentar TikTok\n` +
-        `11. Daftar perintah manual (advanced)\n\n` +
+        `11. Daftar perintah manual (advanced)\n` +
+        `12. Update *exception* user\n` +
+        `13. Update *status* user\n` +
+        `14. Daftar *allexception* user\n\n` +
         `Ketik *batal* untuk keluar dari menu.`
     );
     return;
@@ -494,7 +497,6 @@ waClient.on("message", async (msg) => {
             "Masukkan *client_id* untuk rekap komentar TikTok:"
           );
           return;
-
         case "11":
           await waClient.sendMessage(
             chatId,
@@ -502,16 +504,58 @@ waClient.on("message", async (msg) => {
           );
           clearSession(chatId);
           return;
+        case "12":
+          session.step = "updateUserException_id";
+          setSession(chatId, session);
+          await waClient.sendMessage(
+            chatId,
+            "Masukkan *user_id* yang akan di-update exception-nya:"
+          );
+          return;
+        case "13":
+          session.step = "updateUserStatus_id";
+          setSession(chatId, session);
+          await waClient.sendMessage(
+            chatId,
+            "Masukkan *user_id* yang akan di-update status-nya:"
+          );
+          return;
+        case "14":
+          // langsung query dan tampilkan daftar user exception (asumsi ada userService.getAllExceptionUsers)
+          try {
+            const exceptionUsers = await userService.getAllExceptionUsers();
+            if (!exceptionUsers.length) {
+              await waClient.sendMessage(
+                chatId,
+                "Tidak ada user dengan exception."
+              );
+            } else {
+              let msg = `*Daftar User Exception:*\n`;
+              exceptionUsers.forEach((u) => {
+                msg += `- ${u.user_id}: ${u.nama || ""} (${
+                  u.insta || u.tiktok || "-"
+                })\n`;
+              });
+              await waClient.sendMessage(chatId, msg);
+            }
+          } catch (e) {
+            await waClient.sendMessage(
+              chatId,
+              "Gagal mengambil data exception: " + e.message
+            );
+          }
+          clearSession(chatId);
+          return;
         default:
           await waClient.sendMessage(
             chatId,
-            "Pilihan tidak valid. Balas angka 1-11, atau *batal* untuk keluar."
+            "Pilihan tidak valid. Balas angka 1-14, atau *batal* untuk keluar."
           );
           return;
       }
     }
 
-    // Tambah client
+    // === Tambah client ===
     if (session.step === "addClient_id") {
       session.newClient_id = text.trim().toUpperCase();
       session.step = "addClient_nama";
@@ -551,7 +595,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Update client
+    // === Update client ===
     if (session.step === "updateClient_id") {
       session.targetClient_id = text.trim().toUpperCase();
       session.step = "updateClient_field";
@@ -596,7 +640,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Hapus client
+    // === Hapus client ===
     if (session.step === "removeClient_id") {
       const client_id = text.trim().toUpperCase();
       try {
@@ -618,7 +662,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Info client
+    // === Info client ===
     if (session.step === "infoClient_id") {
       const client_id = text.trim().toUpperCase();
       try {
@@ -638,7 +682,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Transfer user
+    // === Transfer user ===
     if (session.step === "transferUser_id") {
       const client_id = text.trim().toUpperCase();
       await waClient.sendMessage(
@@ -664,7 +708,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Sheet transfer
+    // === Sheet transfer ===
     if (session.step === "sheetTransfer_id") {
       session.sheetTransfer_client_id = text.trim().toUpperCase();
       session.step = "sheetTransfer_link";
@@ -703,7 +747,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Fetch Instagram
+    // === Fetch Instagram ===
     if (session.step === "fetchInsta_id") {
       const client_id = text.trim().toUpperCase();
       try {
@@ -719,10 +763,9 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Fetch TikTok
+    // === Fetch TikTok ===
     if (session.step === "fetchTiktok_id") {
       const client_id = text.trim().toUpperCase();
-
       if (!client_id) {
         await waClient.sendMessage(
           chatId,
@@ -730,12 +773,10 @@ waClient.on("message", async (msg) => {
         );
         return;
       }
-
       await waClient.sendMessage(
         chatId,
         `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
       );
-
       // === DEBUGGING SECTION ===
       function sendDebug(msg) {
         const adminWA = (process.env.ADMIN_WHATSAPP || "")
@@ -770,7 +811,6 @@ waClient.on("message", async (msg) => {
           sendDebug(`GAGAL API TikTok: ${apiErr.stack || apiErr.message}`);
           posts = undefined;
         }
-
         // === 2. Fallback DB jika API gagal/kosong ===
         if (!posts || posts.length === 0) {
           try {
@@ -794,7 +834,6 @@ waClient.on("message", async (msg) => {
             posts = undefined;
           }
         }
-
         // === 3. Jika tetap kosong, kirim notif tidak ada post ===
         if (!posts || posts.length === 0) {
           sendDebug(
@@ -807,7 +846,6 @@ waClient.on("message", async (msg) => {
           clearSession(chatId);
           return;
         }
-
         // === 4. Ambil username TikTok untuk link ===
         let username = "-";
         try {
@@ -823,7 +861,6 @@ waClient.on("message", async (msg) => {
             }`
           );
         }
-
         // === 5. Format laporan rekap post TikTok hari ini ===
         let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
         msg += `Jumlah post: *${posts.length}*\n\n`;
@@ -860,7 +897,6 @@ waClient.on("message", async (msg) => {
           } | Komentar: ${item.comment_count ?? 0}\n`;
           msg += `   Link: https://www.tiktok.com/@${username}/video/${video_id}\n\n`;
         });
-
         await waClient.sendMessage(chatId, msg.trim());
         sendDebug("Laporan berhasil dikirim ke user.");
       } catch (err) {
@@ -871,7 +907,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Absensi likes IG
+    // === Absensi likes IG ===
     if (session.step === "absensiLikes_id") {
       session.absensiLikes_client_id = text.trim().toUpperCase();
       session.step = "absensiLikes_mode";
@@ -931,7 +967,7 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // Absensi komentar TikTok
+    // === Absensi komentar TikTok ===
     if (session.step === "absensiKomentar_id") {
       session.absensiKomentar_client_id = text.trim().toUpperCase();
       session.step = "absensiKomentar_mode";
@@ -992,6 +1028,71 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
+
+    // === Update User Exception ===
+    if (session.step === "updateUserException_id") {
+      session.target_user_id = text.trim();
+      session.step = "updateUserException_value";
+      setSession(chatId, session);
+      await waClient.sendMessage(
+        chatId,
+        "Ketik *true* untuk exception, *false* untuk batal exception:"
+      );
+      return;
+    }
+    if (session.step === "updateUserException_value") {
+      try {
+        const newException = text.trim().toLowerCase() === "true";
+        await userService.updateUserField(
+          session.target_user_id,
+          "exception",
+          newException
+        );
+        await waClient.sendMessage(
+          chatId,
+          `✅ User ${session.target_user_id} diupdate exception=${newException}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(
+          chatId,
+          `Gagal update exception: ${e.message}`
+        );
+      }
+      clearSession(chatId);
+      return;
+    }
+
+    // === Update User Status ===
+    if (session.step === "updateUserStatus_id") {
+      session.target_user_id = text.trim();
+      session.step = "updateUserStatus_value";
+      setSession(chatId, session);
+      await waClient.sendMessage(
+        chatId,
+        "Ketik *true* untuk aktif, *false* untuk non-aktif:"
+      );
+      return;
+    }
+    if (session.step === "updateUserStatus_value") {
+      try {
+        const newStatus = text.trim().toLowerCase() === "true";
+        await userService.updateUserField(
+          session.target_user_id,
+          "user_status",
+          newStatus
+        );
+        await waClient.sendMessage(
+          chatId,
+          `✅ User ${session.target_user_id} diupdate status=${newStatus}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `Gagal update status: ${e.message}`);
+      }
+      clearSession(chatId);
+      return;
+    }
+
+    // === END OF INTERAKTIF HANDLER ===
   }
 
   // =======================
@@ -2393,72 +2494,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
-
-  // =========================
-  // === MENU COMMANDS (CLIENT/USER)
-  // =========================
-  if (text.toLowerCase() === "advancedlientrequest") {
-    if (!isAdminWhatsApp(chatId)) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Anda tidak memiliki akses ke menu ini."
-      );
-      return;
-    }
-
-    const updateKeys = [
-      "nama",
-      "client_type",
-      "client_status",
-      "client_insta",
-      "client_insta_status",
-      "client_tiktok",
-      "client_tiktok_status",
-      "client_operator",
-      "client_super",
-      "client_group",
-      "tiktok_secUid",
-    ];
-
-    const menu = `
-📝 *Client Request Commands (KHUSUS ADMIN)*
-
-1. *addnewclient#clientid#clientname*
-2. *updateclient#clientid#key#value*
-3. *removeclient#clientid*
-4. *clientinfo#clientid*
-5. *clientrequest*
-6. *transferuser#clientid*
-7. *sheettransfer#clientid#link_google_sheet*
-8. *fetchinsta#keys*
-9. *fetchtiktok#clientid*
-10. *requestinsta#clientid#[sudah|belum]*
-11. *requesttiktok#clientid#[sudah|belum]*
-12. *thisgroup#clientid*
-13. *exception#user_id#true/false*
-14. *status#user_id#true/false*
-15. *absensilikes#clientid#[opsi]*
-    - Rekap absensi likes Instagram harian.
-16. *absensikomentar#clientid#[opsi]*
-    - Rekap absensi komentar TikTok harian.
-
-*Key yang dapat digunakan pada updateclient#:*
-${updateKeys.map((k) => `- *${k}*`).join("\n")}
-
-Contoh update:
-updateclient#BOJONEGORO#client_status#true
-updateclient#BOJONEGORO#client_insta_status#false
-updateclient#BOJONEGORO#client_operator#628123456789
-updateclient#BOJONEGORO#client_super#6281234567890
-updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
-updateclient#BOJONEGORO#tiktok_secUid
-
-_Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
-  `;
-    await waClient.sendMessage(chatId, menu);
-    return;
-  }
-
+  
   // =========================
   // === UPDATE DATA USER (USER)
   // =========================
@@ -2895,6 +2931,71 @@ _Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instag
         `❌ Gagal update status: ${err.message}`
       );
     }
+    return;
+  }
+
+  // =========================
+  // === MENU COMMANDS (CLIENT/USER)
+  // =========================
+  if (text.toLowerCase() === "advancedclientrequest") {
+    if (!isAdminWhatsApp(chatId)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Anda tidak memiliki akses ke menu ini."
+      );
+      return;
+    }
+
+    const updateKeys = [
+      "nama",
+      "client_type",
+      "client_status",
+      "client_insta",
+      "client_insta_status",
+      "client_tiktok",
+      "client_tiktok_status",
+      "client_operator",
+      "client_super",
+      "client_group",
+      "tiktok_secUid",
+    ];
+
+    const menu = `
+📝 *Client Request Commands (KHUSUS ADMIN)*
+
+1. *addnewclient#clientid#clientname*
+2. *updateclient#clientid#key#value*
+3. *removeclient#clientid*
+4. *clientinfo#clientid*
+5. *clientrequest*
+6. *transferuser#clientid*
+7. *sheettransfer#clientid#link_google_sheet*
+8. *fetchinsta#keys*
+9. *fetchtiktok#clientid*
+10. *requestinsta#clientid#[sudah|belum]*
+11. *requesttiktok#clientid#[sudah|belum]*
+12. *thisgroup#clientid*
+13. *exception#user_id#true/false*
+14. *status#user_id#true/false*
+15. *absensilikes#clientid#[opsi]*
+    - Rekap absensi likes Instagram harian.
+16. *absensikomentar#clientid#[opsi]*
+    - Rekap absensi komentar TikTok harian.
+
+*Key yang dapat digunakan pada updateclient#:*
+${updateKeys.map((k) => `- *${k}*`).join("\n")}
+
+Contoh update:
+updateclient#BOJONEGORO#client_status#true
+updateclient#BOJONEGORO#client_insta_status#false
+updateclient#BOJONEGORO#client_operator#628123456789
+updateclient#BOJONEGORO#client_super#6281234567890
+updateclient#BOJONEGORO#client_tiktok#bjn_tiktok
+updateclient#BOJONEGORO#tiktok_secUid
+
+_Catatan: Untuk key boolean gunakan true/false, untuk username TikTok dan Instagram cukup string._
+  `;
+    await waClient.sendMessage(chatId, menu);
     return;
   }
 
