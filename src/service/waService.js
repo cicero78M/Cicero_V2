@@ -18,7 +18,6 @@ import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
 import { getTiktokSecUid } from "./tiktokFetchService.js";
 
-
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
@@ -523,7 +522,7 @@ waClient.on("message", async (msg) => {
           );
           return;
         case "14":
-          // langsung query dan tampilkan daftar user exception (asumsi ada userService.getAllExceptionUsers)
+          // Daftar user exception
           try {
             const exceptionUsers = await userService.getAllExceptionUsers();
             if (!exceptionUsers.length) {
@@ -548,10 +547,31 @@ waClient.on("message", async (msg) => {
           }
           clearSession(chatId);
           return;
+
+        // === Tambahan: Request Data Instagram ===
+        case "15":
+          session.step = "requestInsta_id";
+          setSession(chatId, session);
+          await waClient.sendMessage(
+            chatId,
+            "Masukkan *client_id* untuk request data Instagram:"
+          );
+          return;
+
+        // === Tambahan: Request Data TikTok ===
+        case "16":
+          session.step = "requestTiktok_id";
+          setSession(chatId, session);
+          await waClient.sendMessage(
+            chatId,
+            "Masukkan *client_id* untuk request data TikTok:"
+          );
+          return;
+
         default:
           await waClient.sendMessage(
             chatId,
-            "Pilihan tidak valid. Balas angka 1-14, atau *batal* untuk keluar."
+            "Pilihan tidak valid. Balas angka 1-16, atau *batal* untuk keluar."
           );
           return;
       }
@@ -966,6 +986,68 @@ waClient.on("message", async (msg) => {
       // ... LOGIKA ABSENSILIKES di sini ...
       // Bisa refactor kode absensilikes#... menjadi fungsi terpisah:
       await handleAbsensiLikes(waClient, chatId, client_id, filter1, filter2);
+      return;
+    }
+
+    // === Step Request Data Instagram ===
+    if (session.step === "requestInsta_id") {
+      const client_id = text.trim().toUpperCase();
+      try {
+        // Ambil semua user yang sudah/belum isi insta
+        const filled = await userService.getInstaFilledUsersByClient(client_id);
+        const empty = await userService.getInstaEmptyUsersByClient(client_id);
+
+        let msg = `📋 *Daftar User Instagram*\nClient: *${client_id}*\n\n`;
+        msg += `✅ Sudah mengisi IG: ${filled.length}\n`;
+        filled.forEach((u, i) => {
+          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama} - @${
+            u.insta
+          }\n`;
+        });
+        msg += `\n❌ Belum mengisi IG: ${empty.length}\n`;
+        empty.forEach((u, i) => {
+          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama}\n`;
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      } catch (e) {
+        await waClient.sendMessage(
+          chatId,
+          `Gagal mengambil data: ${e.message}`
+        );
+      }
+      clearSession(chatId);
+      return;
+    }
+
+    // === Step Request Data TikTok ===
+    if (session.step === "requestTiktok_id") {
+      const client_id = text.trim().toUpperCase();
+      try {
+        // Ambil semua user yang sudah/belum isi tiktok
+        const filled = await userService.getTiktokFilledUsersByClient(
+          client_id
+        );
+        const empty = await userService.getTiktokEmptyUsersByClient(client_id);
+
+        let msg = `📋 *Daftar User TikTok*\nClient: *${client_id}*\n\n`;
+        msg += `✅ Sudah mengisi TikTok: ${filled.length}\n`;
+        filled.forEach((u, i) => {
+          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama} - @${
+            u.tiktok
+          }\n`;
+        });
+        msg += `\n❌ Belum mengisi TikTok: ${empty.length}\n`;
+        empty.forEach((u, i) => {
+          msg += `${i + 1}. ${u.title ? u.title + " " : ""}${u.nama}\n`;
+        });
+        await waClient.sendMessage(chatId, msg.trim());
+      } catch (e) {
+        await waClient.sendMessage(
+          chatId,
+          `Gagal mengambil data: ${e.message}`
+        );
+      }
+      clearSession(chatId);
       return;
     }
 
@@ -2496,7 +2578,7 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
-  
+
   // =========================
   // === UPDATE DATA USER (USER)
   // =========================
