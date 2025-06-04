@@ -3752,7 +3752,6 @@ const userMenuHandlers = {
   },
 };
 
-module.exports = { userMenuHandlers, sortDivisionKeys, sortTitleKeys };
 
 
 // ======================= end of file ======================
