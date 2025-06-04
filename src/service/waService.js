@@ -3801,7 +3801,7 @@ const userMenuHandlers = {
           `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n` +
           formatUserData(userByWA) +
           `\nApakah data di atas benar milik Anda?\n` +
-          `Balas *ya* jika benar, atau *tidak* jika bukan. Jika data salah, silakan hubungi operator.`;
+          `Balas *ya* jika benar, atau *tidak* jika bukan.`;
 
         session.step = "confirmUserByWaIdentity";
         session.user_id = userByWA.user_id;
