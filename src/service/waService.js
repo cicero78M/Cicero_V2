@@ -3735,13 +3735,80 @@ function sortTitleKeys(keys, pangkatOrder) {
 const userMenuHandlers = {
   main: async (session, chatId, text, waClient, pool, userService) => {
     switch (text) {
-      case "1":
-        session.step = "inputUserId";
-        await waClient.sendMessage(
-          chatId,
-          "Ketik NRP/NIP Anda untuk melihat data. (contoh: 75070206)"
-        );
+      case "1": {
+        // Ambil nomor WA user (tanpa karakter non-digit)
+        const pengirim = chatId.replace(/[^0-9]/g, "");
+        const userByWA = await userService.findUserByWhatsapp(pengirim);
+
+        function getGreeting() {
+          const now = new Date();
+          const hour = now.getHours();
+          if (hour >= 4 && hour < 10) return "Selamat pagi";
+          if (hour >= 10 && hour < 15) return "Selamat siang";
+          if (hour >= 15 && hour < 18) return "Selamat sore";
+          return "Selamat malam";
+        }
+
+        if (userByWA) {
+          const pangkat = userByWA.title || "-";
+          const nama = userByWA.nama || "-";
+          const nrp = userByWA.user_id || "-";
+
+          const fieldMap = {
+            user_id: "NRP/NIP",
+            nama: "Nama",
+            title: "Pangkat",
+            divisi: "Satfung",
+            jabatan: "Jabatan",
+            status: "Status",
+            whatsapp: "WhatsApp",
+            insta: "Instagram",
+            tiktok: "TikTok",
+            client_id: "POLRES",
+          };
+          const order = [
+            "user_id",
+            "nama",
+            "title",
+            "divisi",
+            "jabatan",
+            "status",
+            "whatsapp",
+            "insta",
+            "tiktok",
+            "client_id",
+          ];
+
+          let msgText =
+            `👋 ${getGreeting()}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
+            `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n`;
+          order.forEach((k) => {
+            if (userByWA[k] !== undefined && userByWA[k] !== null) {
+              let val = userByWA[k];
+              let label = fieldMap[k] || k;
+              if (k === "status")
+                val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
+              msgText += `*${label}*: ${val}\n`;
+            }
+          });
+
+          msgText +=
+            `\nApakah data di atas benar milik Anda?\n` +
+            `Balas *ya* jika benar, atau *tidak* jika bukan. Jika data salah, silakan hubungi operator untuk perubahan.\n`;
+
+          session.step = "confirmUserByWaIdentity";
+          session.user_id = userByWA.user_id;
+          await waClient.sendMessage(chatId, msgText);
+        } else {
+          session.step = "inputUserId";
+          await waClient.sendMessage(
+            chatId,
+            "Ketik NRP/NIP Anda untuk melihat data. (contoh: 75070206)"
+          );
+        }
         break;
+      }
+
       case "2":
         session.step = "updateAskUserId";
         await waClient.sendMessage(
@@ -3784,6 +3851,36 @@ const userMenuHandlers = {
           chatId,
           "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
         );
+    }
+  },
+
+  confirmUserByWaIdentity: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    if (text.trim().toLowerCase() === "ya") {
+      // Lanjut ke proses update (atau menu lanjutan sesuai kebutuhan)
+      session.updateUserId = session.user_id;
+      session.step = "updateAskField";
+      await waClient.sendMessage(
+        chatId,
+        "Silakan ketik field yang ingin diupdate (nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp):"
+      );
+    } else if (text.trim().toLowerCase() === "tidak") {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Silakan hubungi operator untuk perbaikan data. Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
+      );
     }
   },
 
