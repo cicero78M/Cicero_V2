@@ -1009,14 +1009,18 @@ waClient.on("message", async (msg) => {
       const client_id = session.requestClientId;
       let mode = text.trim();
       let users = [];
+      let headerLabel = "";
       if (mode === "1") {
         const a = await userService.getInstaFilledUsersByClient(client_id);
         const b = await userService.getInstaEmptyUsersByClient(client_id);
         users = [...a, ...b];
+        headerLabel = "*Mode: Semua User IG (Sudah & Belum Mengisi)*";
       } else if (mode === "2") {
         users = await userService.getInstaFilledUsersByClient(client_id);
+        headerLabel = "*Mode: User IG Sudah Mengisi*";
       } else if (mode === "3") {
         users = await userService.getInstaEmptyUsersByClient(client_id);
+        headerLabel = "*Mode: User IG Belum Mengisi*";
       } else {
         await waClient.sendMessage(
           chatId,
@@ -1025,19 +1029,24 @@ waClient.on("message", async (msg) => {
         return;
       }
       const divGroups = groupByDivision(users);
-      let msg = `*Daftar User Instagram*\nClient: *${client_id}*\n\n`;
-      sortDivisionKeys(Object.keys(divGroups)).forEach((div) => {
-        const list = divGroups[div];
-        msg += `*${div}* (${list.length} user):\n`;
-        msg +=
-          list
-            .map((u, i) =>
-              `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
-                u.insta ? `(@${u.insta})` : ""
-              }`.trim()
-            )
-            .join("\n") + "\n\n";
-      });
+      let msg = `*Daftar User Instagram*\nClient: *${client_id}*\n${headerLabel}\n\n`;
+      const divKeys = sortDivisionKeys(Object.keys(divGroups));
+      if (divKeys.length === 0) {
+        msg += `_Tidak ada data user Instagram pada filter ini._`;
+      } else {
+        divKeys.forEach((div) => {
+          const list = divGroups[div];
+          msg += `*${div}* (${list.length} user):\n`;
+          msg +=
+            list
+              .map((u, i) =>
+                `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
+                  u.insta ? `(@${u.insta.replace(/^@+/, "")})` : ""
+                }`.trim()
+              )
+              .join("\n") + "\n\n";
+        });
+      }
       await waClient.sendMessage(chatId, msg.trim());
       clearSession(chatId);
       return;
@@ -1088,14 +1097,18 @@ waClient.on("message", async (msg) => {
       const client_id = session.requestClientId;
       let mode = text.trim();
       let users = [];
+      let headerLabel = "";
       if (mode === "1") {
         const a = await userService.getTiktokFilledUsersByClient(client_id);
         const b = await userService.getTiktokEmptyUsersByClient(client_id);
         users = [...a, ...b];
+        headerLabel = "*Mode: Semua User TikTok (Sudah & Belum Mengisi)*";
       } else if (mode === "2") {
         users = await userService.getTiktokFilledUsersByClient(client_id);
+        headerLabel = "*Mode: User TikTok Sudah Mengisi*";
       } else if (mode === "3") {
         users = await userService.getTiktokEmptyUsersByClient(client_id);
+        headerLabel = "*Mode: User TikTok Belum Mengisi*";
       } else {
         await waClient.sendMessage(
           chatId,
@@ -1104,7 +1117,7 @@ waClient.on("message", async (msg) => {
         return;
       }
       const divGroups = groupByDivision(users);
-      let msg = `*Daftar User TikTok*\nClient: *${client_id}*\n\n`;
+      let msg = `*Daftar User TikTok*\nClient: *${client_id}*\n${headerLabel}\n\n`;
       const divKeys = sortDivisionKeys(Object.keys(divGroups));
       if (divKeys.length === 0) {
         msg += `_Tidak ada data user TikTok pada filter ini._`;
