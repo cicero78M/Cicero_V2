@@ -4103,22 +4103,37 @@ const userMenuHandlers = {
     );
   },
 
-  updateAskUserId: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService
-  ) => {
-    session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
-    session.step = "updateAskField";
-    await waClient.sendMessage(
-      chatId,
-      "Ketik field yang ingin diupdate (nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp):"
-    );
-  },
+updateAskUserId: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService
+) => {
+  session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
+  session.step = "updateAskField";
+  // --- Mulai: ubah jadi menu angka field
+  const allowedFields = [
+    { key: "nama", label: "Nama" },
+    { key: "pangkat", label: "Pangkat" },
+    { key: "satfung", label: "Satfung" },
+    { key: "jabatan", label: "Jabatan" },
+    { key: "insta", label: "Instagram" },
+    { key: "tiktok", label: "TikTok" },
+    { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
+  ];
+  let msg = `Pilih field yang ingin diupdate:\n`;
+  allowedFields.forEach((f, i) => {
+    msg += `${i + 1}. ${f.label}\n`;
+  });
+  msg += `\nBalas dengan angka sesuai daftar di atas.`;
+  await waClient.sendMessage(chatId, msg);
+  // --- Selesai ubah jadi menu angka field
+},
 
+
+// [START UPDATE: FIELD PILIHAN ANGKA]
 updateAskField: async (
   session,
   chatId,
@@ -4189,6 +4204,8 @@ updateAskField: async (
     `Ketik nilai baru untuk field *${allowedFields[idx].label}* (pilih dari daftar jika pangkat/satfung):`
   );
 },
+// [END UPDATE: FIELD PILIHAN ANGKA]
+
 
 // Konfirmasi hapus whatsapp
 konfirmasiHapusWhatsapp: async (
