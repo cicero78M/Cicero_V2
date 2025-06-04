@@ -554,20 +554,53 @@ waClient.on("message", async (msg) => {
         case "15":
           session.step = "requestInsta_id";
           setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Menampilkan daftar client aktif, silakan pilih angka client:"
-          );
+          // Langsung jalankan handler step berikutnya!
+          {
+            // Ambil seluruh client aktif (status true)
+            const rows = await pool.query(
+              "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+            );
+            const clients = rows.rows;
+            if (!clients.length) {
+              await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+              clearSession(chatId);
+              return;
+            }
+            session.clientList = clients;
+            session.step = "requestInsta_choose";
+            setSession(chatId, session);
+            let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
+            clients.forEach((c, i) => {
+              msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+            });
+            await waClient.sendMessage(chatId, msg.trim());
+          }
           return;
 
         // === Tambahan: Request Data TikTok ===
         case "16":
           session.step = "requestTiktok_id";
           setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Menampilkan daftar client aktif, silakan pilih angka client:"
-          );
+          // Langsung jalankan handler step berikutnya!
+          {
+            const rows = await pool.query(
+              "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+            );
+            const clients = rows.rows;
+            if (!clients.length) {
+              await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+              clearSession(chatId);
+              return;
+            }
+            session.clientList = clients;
+            session.step = "requestTiktok_choose";
+            setSession(chatId, session);
+            let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
+            clients.forEach((c, i) => {
+              msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+            });
+            await waClient.sendMessage(chatId, msg.trim());
+          }
           return;
 
         default:
