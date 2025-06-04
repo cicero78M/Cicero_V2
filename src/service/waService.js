@@ -556,7 +556,7 @@ waClient.on("message", async (msg) => {
           setSession(chatId, session);
           await waClient.sendMessage(
             chatId,
-            "Masukkan *client_id* untuk request data Instagram:"
+            "Menampilkan daftar client aktif, silakan pilih angka client:"
           );
           return;
 
@@ -566,7 +566,7 @@ waClient.on("message", async (msg) => {
           setSession(chatId, session);
           await waClient.sendMessage(
             chatId,
-            "Masukkan *client_id* untuk request data TikTok:"
+            "Menampilkan daftar client aktif, silakan pilih angka client:"
           );
           return;
 
