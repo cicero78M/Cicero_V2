@@ -389,22 +389,22 @@ waClient.on("message", async (msg) => {
       chatId,
       `🛠️ *Menu Admin Client Cicero*\n` +
         `Balas angka pilihan:\n` +
-        `1. Tambah client baru\n` +
-        `2. Update client\n` +
-        `3. Hapus client\n` +
-        `4. Info client\n` +
-        `5. Transfer user dari folder\n` +
-        `6. Import user dari Google Sheet\n` +
-        `7. Fetch Instagram\n` +
-        `8. Fetch TikTok\n` +
-        `9. Rekap absensi likes IG\n` +
-        `10. Rekap absensi komentar TikTok\n` +
-        `11. Daftar perintah manual (advanced)\n` +
-        `12. Update *exception* user\n` +
-        `13. Update *status* user\n` +
-        `14. Daftar *allexception* user\n` +
-        `15. Request data *Instagram* user\n` +
-        `16. Request data *TikTok* user\n\n` +
+        `1️⃣. Tambah client baru\n` +
+        `2️⃣. Update client\n` +
+        `3️⃣. Hapus client\n` +
+        `4️⃣. Info client\n` +
+        `5️⃣. Transfer user dari folder\n` +
+        `6️⃣. Import user dari Google Sheet\n` +
+        `7️⃣. Fetch Instagram\n` +
+        `8️⃣. Fetch TikTok\n` +
+        `9️⃣. Rekap absensi likes IG\n` +
+        `🔟. Rekap absensi komentar TikTok\n` +
+        `1️⃣1️⃣. Daftar perintah manual (advanced)\n` +
+        `1️⃣2️⃣. Update *exception* user\n` +
+        `1️⃣3️⃣. Update *status* user\n` +
+        `1️⃣4️⃣. Daftar *allexception* user\n` +
+        `1️⃣5️⃣. Request data *Instagram* user\n` +
+        `1️⃣6️⃣. Request data *TikTok* user\n\n` +
         `Ketik *batal* untuk keluar dari menu.`
     );
     return;
