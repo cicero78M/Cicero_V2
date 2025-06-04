@@ -16,6 +16,8 @@ import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+import { fetchAndStoreTiktokContent } from "./tiktokFetchService.js";
+
 import { getTiktokSecUid } from "./tiktokFetchService.js";
 
 // Model Imports
