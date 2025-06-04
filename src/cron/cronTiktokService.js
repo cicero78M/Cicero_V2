@@ -1,3 +1,5 @@
+// src/service/cronService.js
+
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
@@ -19,6 +21,7 @@ const hariIndo = [
   "Jumat",
   "Sabtu",
 ];
+
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
   .map((n) => n.trim())
@@ -65,7 +68,6 @@ async function getClientTiktokUsername(client_id) {
   return "-";
 }
 
-// Format rekap komentar TikTok (mirip laporan IG)
 async function rekapKomentarTikTok(client_id, client_tiktok) {
   const posts = await getPostsTodayByClient(client_id);
   if (!posts.length) return null;
@@ -98,7 +100,6 @@ async function rekapKomentarTikTok(client_id, client_tiktok) {
   return msg.trim();
 }
 
-// Rekap post TikTok mirip fetchtiktok# manual
 function formatRekapPostTikTok(client_id, username, posts) {
   let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
   msg += `Jumlah post: *${posts.length}*\n\n`;
@@ -107,9 +108,7 @@ function formatRekapPostTikTok(client_id, username, posts) {
     let create_time =
       item.create_time || item.created_at || item.createTime;
     let created = "-";
-    // Deteksi tipe waktu (epoch detik/ms, ISO, Date)
     if (typeof create_time === "number") {
-      // year > 2033 in detik, berarti ms
       if (create_time > 2000000000) {
         created = new Date(create_time).toLocaleString("id-ID", {
           timeZone: "Asia/Jakarta",
@@ -139,7 +138,7 @@ function formatRekapPostTikTok(client_id, username, posts) {
 }
 
 cron.schedule(
-  "43 6-22 * * *",
+  "45 6-22 * * *",
   async () => {
     console.log("[CRON TIKTOK] Mulai tugas fetch post, rekap post, & absensi komentar ...");
     try {
@@ -149,11 +148,10 @@ cron.schedule(
         try {
           const client_tiktok = await getClientTiktokUsername(client_id);
 
-          // === 1. FETCH POST TIKTOK ===
-          let posts = [];
-          let postsFromApi = [];
+          // === 1. FETCH POST TIKTOK (robust, fallback ke DB jika kosong/error) ===
+          let posts;
           try {
-            postsFromApi = await fetchAndStoreTiktokContent(client_id);
+            posts = await fetchAndStoreTiktokContent(client_id);
           } catch (e) {
             for (const admin of getAdminWAIds()) {
               await waClient
@@ -163,10 +161,10 @@ cron.schedule(
                 )
                 .catch(() => {});
             }
+            posts = undefined;
           }
-          if (postsFromApi && postsFromApi.length > 0) {
-            posts = postsFromApi;
-          } else {
+          // Fallback ke DB jika kosong/error
+          if (!posts || !Array.isArray(posts) || posts.length === 0) {
             posts = await getPostsTodayByClient(client_id);
             for (const admin of getAdminWAIds()) {
               await waClient
@@ -177,6 +175,18 @@ cron.schedule(
                 .catch(() => {});
             }
           }
+          // Jika tetap kosong, notif admin & lanjut client berikutnya
+          if (!posts || posts.length === 0) {
+            for (const admin of getAdminWAIds()) {
+              await waClient
+                .sendMessage(
+                  admin,
+                  `[CRON TIKTOK][${client_id}] ❌ Tidak ada post TikTok hari ini (API & DB kosong)`
+                )
+                .catch(() => {});
+            }
+            continue;
+          }
 
           // === 1a. Kirim rekap post TikTok ke admin
           if (posts && posts.length > 0) {
@@ -186,16 +196,6 @@ cron.schedule(
                 await waClient.sendMessage(admin, rekapPostMsg);
               } catch (waErr) {}
             }
-          } else {
-            for (const admin of getAdminWAIds()) {
-              await waClient
-                .sendMessage(
-                  admin,
-                  `[CRON TIKTOK][${client_id}] Tidak ada post TikTok hari ini.`
-                )
-                .catch(() => {});
-            }
-            continue;
           }
 
           // === 2. REKAP KOMENTAR TIKTOK ===
