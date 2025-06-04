@@ -3969,14 +3969,27 @@ const userMenuHandlers = {
     if (text.trim().toLowerCase() === "ya") {
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
-      await waClient.sendMessage(
-        chatId,
-        "Silakan ketik field yang ingin diupdate (nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp):"
-      );
+      // === Mulai: tampilkan menu angka pilihan field ===
+      const allowedFields = [
+        { key: "nama", label: "Nama" },
+        { key: "pangkat", label: "Pangkat" },
+        { key: "satfung", label: "Satfung" },
+        { key: "jabatan", label: "Jabatan" },
+        { key: "insta", label: "Instagram" },
+        { key: "tiktok", label: "TikTok" },
+        { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
+      ];
+      let msg = `Pilih field yang ingin diupdate:\n`;
+      allowedFields.forEach((f, i) => {
+        msg += `${i + 1}. ${f.label}\n`;
+      });
+      msg += `\nBalas dengan angka sesuai daftar di atas.`;
+      await waClient.sendMessage(chatId, msg);
+      // === Selesai ===
+      return;
     } else if (text.trim().toLowerCase() === "tidak") {
       session.step = "main";
-
-      // Cari client_operator dari client_id milik user
+      // ... sisanya tetap seperti yang sudah Anda tulis ...
       let operatorText = "Silakan hubungi operator untuk perbaikan data.";
       try {
         const user = await userService.findUserById(session.user_id);
@@ -3992,10 +4005,7 @@ const userMenuHandlers = {
           }
         }
       } catch (e) {
-        // fallback: tetap kirim pesan standar jika gagal query
         console.error("[USERMENU][QUERY_OPERATOR] ERROR:", e);
-
-        // Kirim notifikasi error ke admin
         const admins = (process.env.ADMIN_WHATSAPP || "")
           .split(",")
           .map((n) => n.trim())
@@ -4010,7 +4020,6 @@ const userMenuHandlers = {
           waClient.sendMessage(admin, debugMsg).catch(() => {});
         }
       }
-
       await waClient.sendMessage(chatId, operatorText);
       await waClient.sendMessage(
         chatId,
@@ -4103,152 +4112,165 @@ const userMenuHandlers = {
     );
   },
 
-updateAskUserId: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService
-) => {
-  session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
-  session.step = "updateAskField";
-  // --- Mulai: ubah jadi menu angka field
-  const allowedFields = [
-    { key: "nama", label: "Nama" },
-    { key: "pangkat", label: "Pangkat" },
-    { key: "satfung", label: "Satfung" },
-    { key: "jabatan", label: "Jabatan" },
-    { key: "insta", label: "Instagram" },
-    { key: "tiktok", label: "TikTok" },
-    { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
-  ];
-  let msg = `Pilih field yang ingin diupdate:\n`;
-  allowedFields.forEach((f, i) => {
-    msg += `${i + 1}. ${f.label}\n`;
-  });
-  msg += `\nBalas dengan angka sesuai daftar di atas.`;
-  await waClient.sendMessage(chatId, msg);
-  // --- Selesai ubah jadi menu angka field
-},
-
-
-// [START UPDATE: FIELD PILIHAN ANGKA]
-updateAskField: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService
-) => {
-  // Daftar field
-  const allowedFields = [
-    { key: "nama", label: "Nama" },
-    { key: "pangkat", label: "Pangkat" },
-    { key: "satfung", label: "Satfung" },
-    { key: "jabatan", label: "Jabatan" },
-    { key: "insta", label: "Instagram" },
-    { key: "tiktok", label: "TikTok" },
-    { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
-  ];
-
-  // Jika text belum berupa angka field, tampilkan menu
-  if (!/^[1-7]$/.test(text.trim())) {
+  updateAskUserId: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
+    session.step = "updateAskField";
+    // --- Mulai: ubah jadi menu angka field
+    const allowedFields = [
+      { key: "nama", label: "Nama" },
+      { key: "pangkat", label: "Pangkat" },
+      { key: "satfung", label: "Satfung" },
+      { key: "jabatan", label: "Jabatan" },
+      { key: "insta", label: "Instagram" },
+      { key: "tiktok", label: "TikTok" },
+      { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
+    ];
     let msg = `Pilih field yang ingin diupdate:\n`;
     allowedFields.forEach((f, i) => {
       msg += `${i + 1}. ${f.label}\n`;
     });
     msg += `\nBalas dengan angka sesuai daftar di atas.`;
     await waClient.sendMessage(chatId, msg);
-    return;
-  }
+    // --- Selesai ubah jadi menu angka field
+  },
 
-  // User memilih field by angka
-  const idx = parseInt(text.trim()) - 1;
-  const field = allowedFields[idx].key;
-  session.updateField = field;
+  // [START UPDATE: FIELD PILIHAN ANGKA]
+  updateAskField: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    // Daftar field
+    const allowedFields = [
+      { key: "nama", label: "Nama" },
+      { key: "pangkat", label: "Pangkat" },
+      { key: "satfung", label: "Satfung" },
+      { key: "jabatan", label: "Jabatan" },
+      { key: "insta", label: "Instagram" },
+      { key: "tiktok", label: "TikTok" },
+      { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
+    ];
 
-  // Hapus whatsapp: konfirmasi hapus!
-  if (field === "hapus_whatsapp") {
-    session.step = "konfirmasiHapusWhatsapp";
-    await waClient.sendMessage(
-      chatId,
-      "⚠️ Apakah Anda yakin ingin *menghapus nomor WhatsApp* dari database?\nBalas *ya* untuk menghapus, *tidak* untuk membatalkan."
-    );
-    return;
-  }
-
-  // --- jika pangkat/satfung, tampilkan pilihan dari DB & urutkan ---
-  if (field === "pangkat") {
-    const titles = await userService.getAvailableTitles();
-    if (!titles || titles.length === 0) {
-      await waClient.sendMessage(chatId, "Data pangkat tidak ditemukan di database.");
+    // Jika text belum berupa angka field, tampilkan menu
+    if (!/^[1-7]$/.test(text.trim())) {
+      let msg = `Pilih field yang ingin diupdate:\n`;
+      allowedFields.forEach((f, i) => {
+        msg += `${i + 1}. ${f.label}\n`;
+      });
+      msg += `\nBalas dengan angka sesuai daftar di atas.`;
+      await waClient.sendMessage(chatId, msg);
       return;
     }
-    let msgList = sortTitleKeys(titles, titles).map((t, i) => `${i + 1}. ${t}`).join("\n");
-    await waClient.sendMessage(chatId, "Daftar pangkat yang dapat dipilih:\n" + msgList);
-  }
-  if (field === "satfung") {
-    const satfung = await userService.getAvailableSatfung();
-    if (!satfung || satfung.length === 0) {
-      await waClient.sendMessage(chatId, "Data satfung tidak ditemukan di database.");
+
+    // User memilih field by angka
+    const idx = parseInt(text.trim()) - 1;
+    const field = allowedFields[idx].key;
+    session.updateField = field;
+
+    // Hapus whatsapp: konfirmasi hapus!
+    if (field === "hapus_whatsapp") {
+      session.step = "konfirmasiHapusWhatsapp";
+      await waClient.sendMessage(
+        chatId,
+        "⚠️ Apakah Anda yakin ingin *menghapus nomor WhatsApp* dari database?\nBalas *ya* untuk menghapus, *tidak* untuk membatalkan."
+      );
       return;
     }
-    let msgList = sortDivisionKeys(satfung).map((s, i) => `${i + 1}. ${s}`).join("\n");
-    await waClient.sendMessage(chatId, "Daftar satfung yang dapat dipilih:\n" + msgList);
-  }
-  session.step = "updateAskValue";
-  await waClient.sendMessage(
+
+    // --- jika pangkat/satfung, tampilkan pilihan dari DB & urutkan ---
+    if (field === "pangkat") {
+      const titles = await userService.getAvailableTitles();
+      if (!titles || titles.length === 0) {
+        await waClient.sendMessage(
+          chatId,
+          "Data pangkat tidak ditemukan di database."
+        );
+        return;
+      }
+      let msgList = sortTitleKeys(titles, titles)
+        .map((t, i) => `${i + 1}. ${t}`)
+        .join("\n");
+      await waClient.sendMessage(
+        chatId,
+        "Daftar pangkat yang dapat dipilih:\n" + msgList
+      );
+    }
+    if (field === "satfung") {
+      const satfung = await userService.getAvailableSatfung();
+      if (!satfung || satfung.length === 0) {
+        await waClient.sendMessage(
+          chatId,
+          "Data satfung tidak ditemukan di database."
+        );
+        return;
+      }
+      let msgList = sortDivisionKeys(satfung)
+        .map((s, i) => `${i + 1}. ${s}`)
+        .join("\n");
+      await waClient.sendMessage(
+        chatId,
+        "Daftar satfung yang dapat dipilih:\n" + msgList
+      );
+    }
+    session.step = "updateAskValue";
+    await waClient.sendMessage(
+      chatId,
+      `Ketik nilai baru untuk field *${allowedFields[idx].label}* (pilih dari daftar jika pangkat/satfung):`
+    );
+  },
+  // [END UPDATE: FIELD PILIHAN ANGKA]
+
+  // Konfirmasi hapus whatsapp
+  konfirmasiHapusWhatsapp: async (
+    session,
     chatId,
-    `Ketik nilai baru untuk field *${allowedFields[idx].label}* (pilih dari daftar jika pangkat/satfung):`
-  );
-},
-// [END UPDATE: FIELD PILIHAN ANGKA]
-
-
-// Konfirmasi hapus whatsapp
-konfirmasiHapusWhatsapp: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService
-) => {
-  if (text.trim().toLowerCase() === "ya") {
-    // Lakukan hapus whatsapp
-    const user_id = session.updateUserId;
-    await userService.updateUserField(user_id, "whatsapp", "");
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    if (text.trim().toLowerCase() === "ya") {
+      // Lakukan hapus whatsapp
+      const user_id = session.updateUserId;
+      await userService.updateUserField(user_id, "whatsapp", "");
+      await waClient.sendMessage(
+        chatId,
+        `✅ Nomor WhatsApp untuk NRP/NIP ${user_id} berhasil dihapus dari database.`
+      );
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    }
+    if (text.trim().toLowerCase() === "tidak") {
+      await waClient.sendMessage(
+        chatId,
+        "Dibatalkan. Nomor WhatsApp tidak dihapus."
+      );
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
+      );
+      return;
+    }
     await waClient.sendMessage(
       chatId,
-      `✅ Nomor WhatsApp untuk NRP/NIP ${user_id} berhasil dihapus dari database.`
+      "Balas *ya* untuk menghapus WhatsApp, *tidak* untuk membatalkan."
     );
-    session.step = "main";
-    await waClient.sendMessage(
-      chatId,
-      "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
-    );
-    return;
-  }
-  if (text.trim().toLowerCase() === "tidak") {
-    await waClient.sendMessage(
-      chatId,
-      "Dibatalkan. Nomor WhatsApp tidak dihapus."
-    );
-    session.step = "main";
-    await waClient.sendMessage(
-      chatId,
-      "Anda kembali ke Menu Utama. Pilih menu (1-4) atau *batal*."
-    );
-    return;
-  }
-  await waClient.sendMessage(
-    chatId,
-    "Balas *ya* untuk menghapus WhatsApp, *tidak* untuk membatalkan."
-  );
-},
-
+  },
 
   updateAskValue: async (
     session,
