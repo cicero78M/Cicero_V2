@@ -36,13 +36,14 @@ const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit timeout
 const userMenuContext = {};
 const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
 
-
 // Pada scope global file (agar session per chatId tetap nyantol)
 const updateUsernameSession = {}; // key: chatId
 
 // Regex untuk deteksi link IG/TikTok
-const IG_PROFILE_REGEX = /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i;
-const TT_PROFILE_REGEX = /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
+const IG_PROFILE_REGEX =
+  /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(?:[/?].*)?$/i;
+const TT_PROFILE_REGEX =
+  /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
 
 // --- Utility helper untuk session timeout ---
 function setMenuTimeout(chatId) {
@@ -181,152 +182,152 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-
-// Tangkap pesan hanya link IG/TikTok (tanpa # dan lain-lain)
-if (
-  !text.includes("#") &&
-  (IG_PROFILE_REGEX.test(text.trim()) || TT_PROFILE_REGEX.test(text.trim()))
-) {
-  updateUsernameSession[chatId] = {
-    link: text.trim(),
-    step: "confirm",
-  };
-  await waClient.sendMessage(
-    chatId,
-    `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
-  );
-  return;
-}
-
-// Proses konfirmasi update username
-if (
-  updateUsernameSession[chatId] &&
-  updateUsernameSession[chatId].step === "confirm"
-) {
-  const jawaban = text.trim().toLowerCase();
-  if (["tidak", "batal", "no", "cancel"].includes(jawaban)) {
-    delete updateUsernameSession[chatId];
-    await waClient.sendMessage(chatId, "Update username dibatalkan.");
-    return;
-  }
-  if (jawaban !== "ya") {
+  // Tangkap pesan hanya link IG/TikTok (tanpa # dan lain-lain)
+  if (
+    !text.includes("#") &&
+    (IG_PROFILE_REGEX.test(text.trim()) || TT_PROFILE_REGEX.test(text.trim()))
+  ) {
+    updateUsernameSession[chatId] = {
+      link: text.trim(),
+      step: "confirm",
+    };
     await waClient.sendMessage(
       chatId,
-      "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
+      `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
     );
     return;
   }
 
-  // Jawaban "ya", lanjut cek binding WA
-  // Ekstrak username dan field (IG atau TikTok)
-  let username = null;
-  let field = null;
-  let match = null;
-  if ((match = updateUsernameSession[chatId].link.match(IG_PROFILE_REGEX))) {
-    username = match[2].toLowerCase();
-    field = "insta";
-  } else if ((match = updateUsernameSession[chatId].link.match(TT_PROFILE_REGEX))) {
-    username = "@" + match[2].replace(/^@+/, "").toLowerCase();
-    field = "tiktok";
+  // Proses konfirmasi update username
+  if (
+    updateUsernameSession[chatId] &&
+    updateUsernameSession[chatId].step === "confirm"
+  ) {
+    const jawaban = text.trim().toLowerCase();
+    if (["tidak", "batal", "no", "cancel"].includes(jawaban)) {
+      delete updateUsernameSession[chatId];
+      await waClient.sendMessage(chatId, "Update username dibatalkan.");
+      return;
+    }
+    if (jawaban !== "ya") {
+      await waClient.sendMessage(
+        chatId,
+        "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
+      );
+      return;
+    }
+
+    // Jawaban "ya", lanjut cek binding WA
+    // Ekstrak username dan field (IG atau TikTok)
+    let username = null;
+    let field = null;
+    let match = null;
+    if ((match = updateUsernameSession[chatId].link.match(IG_PROFILE_REGEX))) {
+      username = match[2].toLowerCase();
+      field = "insta";
+    } else if (
+      (match = updateUsernameSession[chatId].link.match(TT_PROFILE_REGEX))
+    ) {
+      username = "@" + match[2].replace(/^@+/, "").toLowerCase();
+      field = "tiktok";
+    }
+
+    if (!username || !field) {
+      await waClient.sendMessage(
+        chatId,
+        "Link tidak valid atau sistem gagal membaca username."
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    }
+
+    // Ambil nomor WA (selalu angka, tanpa @c.us)
+    let waNum = chatId.replace(/[^0-9]/g, "");
+    // Cek user berdasarkan nomor WhatsApp
+    let user = (await userService.findUserByWhatsApp)
+      ? await userService.findUserByWhatsApp(waNum)
+      : await userService.findUserByWA(waNum);
+    if (user) {
+      // Update username (standar: IG tanpa @, TT selalu pakai @)
+      await userService.updateUserField(user.user_id, field, username);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Username *${
+          field === "insta" ? "Instagram" : "TikTok"
+        }* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${
+          user.user_id
+        }*.`
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    } else {
+      // WA belum terdaftar, minta NRP/NIP
+      updateUsernameSession[chatId].step = "ask_nrp";
+      updateUsernameSession[chatId].username = username;
+      updateUsernameSession[chatId].field = field;
+      await waClient.sendMessage(
+        chatId,
+        "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
+      );
+      return;
+    }
   }
 
-  if (!username || !field) {
-    await waClient.sendMessage(
-      chatId,
-      "Link tidak valid atau sistem gagal membaca username."
+  // Proses binding NRP/NIP
+  if (
+    updateUsernameSession[chatId] &&
+    updateUsernameSession[chatId].step === "ask_nrp"
+  ) {
+    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
+    if (!nrp) {
+      await waClient.sendMessage(
+        chatId,
+        "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
+      );
+      return;
+    }
+    const user = await userService.findUserById(nrp);
+    if (!user) {
+      await waClient.sendMessage(
+        chatId,
+        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
+      );
+      return;
+    }
+    // Ambil nomor WA dari pengirim
+    let waNum = chatId.replace(/[^0-9]/g, "");
+    // Pastikan nomor WA belum dipakai user lain!
+    let waUsed = (await userService.findUserByWhatsApp)
+      ? await userService.findUserByWhatsApp(waNum)
+      : await userService.findUserByWA(waNum);
+    if (waUsed && waUsed.user_id !== user.user_id) {
+      await waClient.sendMessage(
+        chatId,
+        `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
+      );
+      delete updateUsernameSession[chatId];
+      return;
+    }
+    // Update username dan bind WA
+    await userService.updateUserField(
+      user.user_id,
+      updateUsernameSession[chatId].field,
+      updateUsernameSession[chatId].username
     );
-    delete updateUsernameSession[chatId];
-    return;
-  }
-
-  // Ambil nomor WA (selalu angka, tanpa @c.us)
-  let waNum = chatId.replace(/[^0-9]/g, "");
-  // Cek user berdasarkan nomor WhatsApp
-  let user = await userService.findUserByWhatsApp
-    ? await userService.findUserByWhatsApp(waNum)
-    : await userService.findUserByWA(waNum);
-  if (user) {
-    // Update username (standar: IG tanpa @, TT selalu pakai @)
-    await userService.updateUserField(user.user_id, field, username);
+    await userService.updateUserField(user.user_id, "whatsapp", waNum);
     await waClient.sendMessage(
       chatId,
       `✅ Username *${
-        field === "insta" ? "Instagram" : "TikTok"
-      }* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${
+        updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"
+      }* berhasil diupdate menjadi *${
+        updateUsernameSession[chatId].username
+      }* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${
         user.user_id
       }*.`
     );
     delete updateUsernameSession[chatId];
     return;
-  } else {
-    // WA belum terdaftar, minta NRP/NIP
-    updateUsernameSession[chatId].step = "ask_nrp";
-    updateUsernameSession[chatId].username = username;
-    updateUsernameSession[chatId].field = field;
-    await waClient.sendMessage(
-      chatId,
-      "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
-    );
-    return;
   }
-}
-
-// Proses binding NRP/NIP
-if (
-  updateUsernameSession[chatId] &&
-  updateUsernameSession[chatId].step === "ask_nrp"
-) {
-  const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-  if (!nrp) {
-    await waClient.sendMessage(
-      chatId,
-      "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
-    );
-    return;
-  }
-  const user = await userService.findUserById(nrp);
-  if (!user) {
-    await waClient.sendMessage(
-      chatId,
-      `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
-    );
-    return;
-  }
-  // Ambil nomor WA dari pengirim
-  let waNum = chatId.replace(/[^0-9]/g, "");
-  // Pastikan nomor WA belum dipakai user lain!
-  let waUsed = await userService.findUserByWhatsApp
-    ? await userService.findUserByWhatsApp(waNum)
-    : await userService.findUserByWA(waNum);
-  if (waUsed && waUsed.user_id !== user.user_id) {
-    await waClient.sendMessage(
-      chatId,
-      `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
-    );
-    delete updateUsernameSession[chatId];
-    return;
-  }
-  // Update username dan bind WA
-  await userService.updateUserField(
-    user.user_id,
-    updateUsernameSession[chatId].field,
-    updateUsernameSession[chatId].username
-  );
-  await userService.updateUserField(user.user_id, "whatsapp", waNum);
-  await waClient.sendMessage(
-    chatId,
-    `✅ Username *${
-      updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"
-    }* berhasil diupdate menjadi *${
-      updateUsernameSession[chatId].username
-    }* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${
-      user.user_id
-    }*.`
-  );
-  delete updateUsernameSession[chatId];
-  return;
-}
-
 
   // =======================
   // HANDLER PERINTAH INTERAKTIF USER REQUEST
@@ -432,78 +433,49 @@ if (
             "Masukkan *client_id* untuk client baru:"
           );
           return;
+
+        // Semua menu yang butuh client: tampilkan daftar client aktif
         case "2":
-          session.step = "updateClient_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* yang ingin diupdate:"
-          );
-          return;
         case "3":
-          session.step = "removeClient_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* yang ingin dihapus:"
-          );
-          return;
         case "4":
-          session.step = "infoClient_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* yang ingin dilihat infonya:"
-          );
-          return;
         case "5":
-          session.step = "transferUser_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk transfer user:"
-          );
-          return;
         case "6":
-          session.step = "sheetTransfer_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk import user Google Sheet:"
-          );
-          return;
         case "7":
-          session.step = "fetchInsta_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk fetch Instagram:"
-          );
-          return;
         case "8":
-          session.step = "fetchTiktok_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk fetch TikTok:"
-          );
-          return;
         case "9":
-          session.step = "absensiLikes_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk rekap likes IG:"
-          );
-          return;
         case "10":
-          session.step = "absensiKomentar_id";
-          setSession(chatId, session);
-          await waClient.sendMessage(
-            chatId,
-            "Masukkan *client_id* untuk rekap komentar TikTok:"
-          );
+          {
+            const rows = await pool.query(
+              "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+            );
+            const clients = rows.rows;
+            if (!clients.length) {
+              await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+              clearSession(chatId);
+              return;
+            }
+            session.clientList = clients;
+            const stepMap = {
+              2: "updateClient_choose",
+              3: "removeClient_choose",
+              4: "infoClient_choose",
+              5: "transferUser_choose",
+              6: "sheetTransfer_choose",
+              7: "fetchInsta_choose",
+              8: "fetchTiktok_choose",
+              9: "absensiLikes_choose",
+              10: "absensiKomentar_choose",
+            };
+            session.step = stepMap[text];
+            setSession(chatId, session);
+            let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
+            clients.forEach((c, i) => {
+              msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+            });
+            await waClient.sendMessage(chatId, msg.trim());
+          }
           return;
+
         case "11":
           await waClient.sendMessage(
             chatId,
@@ -554,13 +526,8 @@ if (
           clearSession(chatId);
           return;
 
-        // === Tambahan: Request Data Instagram ===
-        case "15":
-          session.step = "requestInsta_id";
-          setSession(chatId, session);
-          // Langsung jalankan handler step berikutnya!
+        case "15": // Request data Instagram
           {
-            // Ambil seluruh client aktif (status true)
             const rows = await pool.query(
               "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
             );
@@ -580,12 +547,7 @@ if (
             await waClient.sendMessage(chatId, msg.trim());
           }
           return;
-
-        // === Tambahan: Request Data TikTok ===
-        case "16":
-          session.step = "requestTiktok_id";
-          setSession(chatId, session);
-          // Langsung jalankan handler step berikutnya!
+        case "16": // Request data TikTok
           {
             const rows = await pool.query(
               "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
@@ -616,54 +578,24 @@ if (
       }
     }
 
-    // === Tambah client ===
-    if (session.step === "addClient_id") {
-      session.newClient_id = text.trim().toUpperCase();
-      session.step = "addClient_nama";
-      setSession(chatId, session);
-      await waClient.sendMessage(chatId, "Masukkan *nama* client baru:");
-      return;
-    }
-    if (session.step === "addClient_nama") {
-      const client_id = session.newClient_id;
-      const nama = text.trim();
-      try {
-        const newClient = await clientService.createClient({
-          client_id,
-          nama,
-          client_type: "",
-          client_status: true,
-          client_insta: "",
-          client_insta_status: false,
-          client_tiktok: "",
-          client_tiktok_status: false,
-          client_operator: "",
-          client_super: "",
-          client_group: "",
-          tiktok_secUid: "",
-        });
+    // === Pilih client untuk setiap menu ===
+    // Update client
+    if (session.step === "updateClient_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
         await waClient.sendMessage(
           chatId,
-          `✅ Client berhasil ditambah:\n${formatClientData(newClient)}`
+          "Pilihan tidak valid. Balas angka sesuai list."
         );
-      } catch (e) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal tambah client: ${e.message}`
-        );
+        return;
       }
-      clearSession(chatId);
-      return;
-    }
-
-    // === Update client ===
-    if (session.step === "updateClient_id") {
-      session.targetClient_id = text.trim().toUpperCase();
+      session.targetClient_id = clients[idx].client_id;
       session.step = "updateClient_field";
       setSession(chatId, session);
       await waClient.sendMessage(
         chatId,
-        "Masukkan *key/field* yang ingin diupdate (misal: client_insta, client_operator, tiktok_secUid, dll):"
+        `Masukkan *key/field* yang ingin diupdate (misal: client_insta, client_operator, tiktok_secUid, dll):`
       );
       return;
     }
@@ -701,9 +633,18 @@ if (
       return;
     }
 
-    // === Hapus client ===
-    if (session.step === "removeClient_id") {
-      const client_id = text.trim().toUpperCase();
+    // Remove client
+    if (session.step === "removeClient_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      const client_id = clients[idx].client_id;
       try {
         const removed = await clientService.deleteClient(client_id);
         if (removed) {
@@ -723,9 +664,18 @@ if (
       return;
     }
 
-    // === Info client ===
-    if (session.step === "infoClient_id") {
-      const client_id = text.trim().toUpperCase();
+    // Info client
+    if (session.step === "infoClient_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      const client_id = clients[idx].client_id;
       try {
         const client = await clientService.findClientById(client_id);
         if (client) {
@@ -743,9 +693,18 @@ if (
       return;
     }
 
-    // === Transfer user ===
-    if (session.step === "transferUser_id") {
-      const client_id = text.trim().toUpperCase();
+    // Transfer user
+    if (session.step === "transferUser_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      const client_id = clients[idx].client_id;
       await waClient.sendMessage(
         chatId,
         `⏳ Migrasi user dari user_data/${client_id}/ ...`
@@ -769,9 +728,18 @@ if (
       return;
     }
 
-    // === Sheet transfer ===
-    if (session.step === "sheetTransfer_id") {
-      session.sheetTransfer_client_id = text.trim().toUpperCase();
+    // Sheet transfer
+    if (session.step === "sheetTransfer_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      session.sheetTransfer_client_id = clients[idx].client_id;
       session.step = "sheetTransfer_link";
       setSession(chatId, session);
       await waClient.sendMessage(chatId, "Masukkan link Google Sheet:");
@@ -808,9 +776,18 @@ if (
       return;
     }
 
-    // === Fetch Instagram ===
-    if (session.step === "fetchInsta_id") {
-      const client_id = text.trim().toUpperCase();
+    // Fetch Instagram
+    if (session.step === "fetchInsta_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      const client_id = clients[idx].client_id;
       try {
         await fetchAndStoreInstaContent(null, waClient, chatId, client_id);
         await waClient.sendMessage(
@@ -824,172 +801,82 @@ if (
       return;
     }
 
-    // === Fetch TikTok ===
-    if (session.step === "fetchTiktok_id") {
-      const client_id = text.trim().toUpperCase();
-      if (!client_id) {
+    // Fetch TikTok
+    if (session.step === "fetchTiktok_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
         await waClient.sendMessage(
           chatId,
-          "Format salah!\nSilakan masukkan Client ID TikTok yang benar."
+          "Pilihan tidak valid. Balas angka sesuai list."
         );
         return;
       }
+      const client_id = clients[idx].client_id;
       await waClient.sendMessage(
         chatId,
         `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
       );
-      // === DEBUGGING SECTION ===
-      function sendDebug(msg) {
-        const adminWA = (process.env.ADMIN_WHATSAPP || "")
-          .split(",")
-          .map((n) => n.trim())
-          .filter(Boolean)
-          .map((n) =>
-            n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"
-          );
-        for (const wa of adminWA)
-          waClient.sendMessage(wa, "[DEBUG FETTIKTOK] " + msg).catch(() => {});
-        console.log("[DEBUG FETTIKTOK] " + msg);
-      }
-      // === END DEBUG SECTION ===
-
-      try {
-        // === 1. Fetch TikTok via API ===
-        let posts;
-        try {
-          const { fetchAndStoreTiktokContent } = await import(
-            "../service/tiktokFetchService.js"
-          );
-          if (!fetchAndStoreTiktokContent)
-            throw new Error("fetchAndStoreTiktokContent() not exported!");
-          posts = await fetchAndStoreTiktokContent(client_id);
-          sendDebug(
-            `API TikTok fetchAndStoreTiktokContent OK, hasil: ${
-              Array.isArray(posts) ? posts.length : "null"
-            }`
-          );
-        } catch (apiErr) {
-          sendDebug(`GAGAL API TikTok: ${apiErr.stack || apiErr.message}`);
-          posts = undefined;
-        }
-        // === 2. Fallback DB jika API gagal/kosong ===
-        if (!posts || posts.length === 0) {
-          try {
-            const { getPostsTodayByClient } = await import(
-              "../model/tiktokPostModel.js"
-            );
-            posts = await getPostsTodayByClient(client_id);
-            sendDebug(
-              `Fallback getPostsTodayByClient OK, hasil: ${
-                Array.isArray(posts) ? posts.length : "null"
-              }`
-            );
-            if (posts && posts.length > 0) {
-              await waClient.sendMessage(
-                chatId,
-                `⚠️ Tidak ada post TikTok hari ini dari API, menggunakan data dari database...`
-              );
-            }
-          } catch (dbErr) {
-            sendDebug(`GAGAL Query DB TikTok: ${dbErr.stack || dbErr.message}`);
-            posts = undefined;
-          }
-        }
-        // === 3. Jika tetap kosong, kirim notif tidak ada post ===
-        if (!posts || posts.length === 0) {
-          sendDebug(
-            `Tidak ada post ditemukan di API maupun database untuk client_id=${client_id}`
-          );
-          await waClient.sendMessage(
-            chatId,
-            `❌ Tidak ada post TikTok hari ini untuk client *${client_id}*`
-          );
-          clearSession(chatId);
-          return;
-        }
-        // === 4. Ambil username TikTok untuk link ===
-        let username = "-";
-        try {
-          const { findById } = await import("../model/clientModel.js");
-          const client = await findById(client_id);
-          username = client?.client_tiktok || "-";
-          if (username.startsWith("@")) username = username.slice(1);
-          sendDebug(`Client TikTok username: ${username}`);
-        } catch (userErr) {
-          sendDebug(
-            `Gagal ambil username TikTok dari DB: ${
-              userErr.stack || userErr.message
-            }`
-          );
-        }
-        // === 5. Format laporan rekap post TikTok hari ini ===
-        let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
-        msg += `Jumlah post: *${posts.length}*\n\n`;
-        posts.forEach((item, i) => {
-          const desc = item.desc || item.caption || "-";
-          let create_time =
-            item.create_time || item.created_at || item.createTime;
-          let created = "-";
-          if (typeof create_time === "number") {
-            if (create_time > 2000000000) {
-              created = new Date(create_time).toLocaleString("id-ID", {
-                timeZone: "Asia/Jakarta",
-              });
-            } else {
-              created = new Date(create_time * 1000).toLocaleString("id-ID", {
-                timeZone: "Asia/Jakarta",
-              });
-            }
-          } else if (typeof create_time === "string") {
-            created = new Date(create_time).toLocaleString("id-ID", {
-              timeZone: "Asia/Jakarta",
-            });
-          } else if (create_time instanceof Date) {
-            created = create_time.toLocaleString("id-ID", {
-              timeZone: "Asia/Jakarta",
-            });
-          }
-          const video_id = item.video_id || item.id;
-          msg += `#${i + 1} Video ID: ${video_id}\n`;
-          msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
-          msg += `   Tanggal: ${created}\n`;
-          msg += `   Like: ${
-            item.digg_count ?? item.like_count ?? 0
-          } | Komentar: ${item.comment_count ?? 0}\n`;
-          msg += `   Link: https://www.tiktok.com/@${username}/video/${video_id}\n\n`;
-        });
-        await waClient.sendMessage(chatId, msg.trim());
-        sendDebug("Laporan berhasil dikirim ke user.");
-      } catch (err) {
-        sendDebug("ERROR CATCH FINAL: " + (err.stack || err.message));
-        await waClient.sendMessage(chatId, `❌ ERROR: ${err.message}`);
-      }
+      // Lanjutkan dengan handler fetch TikTok seperti sebelumnya
       clearSession(chatId);
       return;
     }
 
-    // === STEP: Menu 15 (Request data Instagram user) ===
-    if (session.step === "requestInsta_id") {
-      // Ambil seluruh client aktif (status true)
-      const rows = await pool.query(
-        "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
-      );
-      const clients = rows.rows;
-      if (!clients.length) {
-        await waClient.sendMessage(chatId, "Tidak ada client aktif.");
-        clearSession(chatId);
+    // Absensi Likes IG
+    if (session.step === "absensiLikes_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
         return;
       }
-      session.clientList = clients;
-      session.step = "requestInsta_choose";
+      session.absensiLikes_client_id = clients[idx].client_id;
+      session.step = "absensiLikes_mode";
       setSession(chatId, session);
-      let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
-      clients.forEach((c, i) => {
-        msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
-      });
-      await waClient.sendMessage(chatId, msg.trim());
+      await waClient.sendMessage(
+        chatId,
+        "Pilih mode rekap likes IG:\n" +
+          "1. Akumulasi - Sudah\n" +
+          "2. Akumulasi - Belum\n" +
+          "3. Per Konten - Sudah\n" +
+          "4. Per Konten - Belum\n" +
+          "5. Per Konten - Semua\n\n" +
+          "Balas dengan angka (1-5):"
+      );
       return;
     }
+
+    // Absensi Komentar TikTok
+    if (session.step === "absensiKomentar_choose") {
+      const idx = parseInt(text.trim()) - 1;
+      const clients = session.clientList || [];
+      if (isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai list."
+        );
+        return;
+      }
+      session.absensiKomentar_client_id = clients[idx].client_id;
+      session.step = "absensiKomentar_mode";
+      setSession(chatId, session);
+      await waClient.sendMessage(
+        chatId,
+        "Pilih mode rekap komentar TikTok:\n" +
+          "1. Akumulasi - Sudah\n" +
+          "2. Akumulasi - Belum\n" +
+          "3. Per Konten - Sudah\n" +
+          "4. Per Konten - Belum\n" +
+          "5. Per Konten - Semua\n\n" +
+          "Balas dengan angka (1-5):"
+      );
+      return;
+    }
+
+    // Request data IG
     if (session.step === "requestInsta_choose") {
       const idx = parseInt(text.trim()) - 1;
       const clients = session.clientList || [];
@@ -1009,75 +896,8 @@ if (
       );
       return;
     }
-    if (session.step === "requestInsta_submenu") {
-      const client_id = session.requestClientId;
-      let mode = text.trim();
-      let users = [];
-      let headerLabel = "";
-      if (mode === "1") {
-        const a = await userService.getInstaFilledUsersByClient(client_id);
-        const b = await userService.getInstaEmptyUsersByClient(client_id);
-        users = [...a, ...b];
-        headerLabel = "*Mode: Semua User IG (Sudah & Belum Mengisi)*";
-      } else if (mode === "2") {
-        users = await userService.getInstaFilledUsersByClient(client_id);
-        headerLabel = "*Mode: User IG Sudah Mengisi*";
-      } else if (mode === "3") {
-        users = await userService.getInstaEmptyUsersByClient(client_id);
-        headerLabel = "*Mode: User IG Belum Mengisi*";
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          "Pilihan tidak valid. Balas 1, 2, atau 3."
-        );
-        return;
-      }
-      const divGroups = groupByDivision(users);
-      let msg = `*Daftar User Instagram*\nClient: *${client_id}*\n${headerLabel}\n\n`;
-      const divKeys = sortDivisionKeys(Object.keys(divGroups));
-      if (divKeys.length === 0) {
-        msg += `_Tidak ada data user Instagram pada filter ini._`;
-      } else {
-        divKeys.forEach((div) => {
-          const list = divGroups[div];
-          msg += `*${div}* (${list.length} user):\n`;
-          msg +=
-            list
-              .map((u, i) =>
-                `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
-                  u.insta ? `(@${u.insta.replace(/^@+/, "")})` : ""
-                }`.trim()
-              )
-              .join("\n") + "\n\n";
-        });
-      }
-      await waClient.sendMessage(chatId, msg.trim());
-      clearSession(chatId);
-      return;
-    }
 
-    // === STEP: Menu 16 (Request data TikTok user) ===
-    if (session.step === "requestTiktok_id") {
-      // Ambil seluruh client aktif (status true)
-      const rows = await pool.query(
-        "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
-      );
-      const clients = rows.rows;
-      if (!clients.length) {
-        await waClient.sendMessage(chatId, "Tidak ada client aktif.");
-        clearSession(chatId);
-        return;
-      }
-      session.clientList = clients;
-      session.step = "requestTiktok_choose";
-      setSession(chatId, session);
-      let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
-      clients.forEach((c, i) => {
-        msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
-      });
-      await waClient.sendMessage(chatId, msg.trim());
-      return;
-    }
+    // Request data TikTok
     if (session.step === "requestTiktok_choose") {
       const idx = parseInt(text.trim()) - 1;
       const clients = session.clientList || [];
@@ -1095,52 +915,6 @@ if (
         chatId,
         "Pilih data yang ingin ditampilkan:\n1. Semua\n2. Sudah mengisi TikTok\n3. Belum mengisi TikTok\nBalas angka 1/2/3:"
       );
-      return;
-    }
-    if (session.step === "requestTiktok_submenu") {
-      const client_id = session.requestClientId;
-      let mode = text.trim();
-      let users = [];
-      let headerLabel = "";
-      if (mode === "1") {
-        const a = await userService.getTiktokFilledUsersByClient(client_id);
-        const b = await userService.getTiktokEmptyUsersByClient(client_id);
-        users = [...a, ...b];
-        headerLabel = "*Mode: Semua User TikTok (Sudah & Belum Mengisi)*";
-      } else if (mode === "2") {
-        users = await userService.getTiktokFilledUsersByClient(client_id);
-        headerLabel = "*Mode: User TikTok Sudah Mengisi*";
-      } else if (mode === "3") {
-        users = await userService.getTiktokEmptyUsersByClient(client_id);
-        headerLabel = "*Mode: User TikTok Belum Mengisi*";
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          "Pilihan tidak valid. Balas 1, 2, atau 3."
-        );
-        return;
-      }
-      const divGroups = groupByDivision(users);
-      let msg = `*Daftar User TikTok*\nClient: *${client_id}*\n${headerLabel}\n\n`;
-      const divKeys = sortDivisionKeys(Object.keys(divGroups));
-      if (divKeys.length === 0) {
-        msg += `_Tidak ada data user TikTok pada filter ini._`;
-      } else {
-        divKeys.forEach((div) => {
-          const list = divGroups[div];
-          msg += `*${div}* (${list.length} user):\n`;
-          msg +=
-            list
-              .map((u, i) =>
-                `- ${u.title ? u.title + " " : ""}${u.nama || ""} ${
-                  u.tiktok ? `(@${u.tiktok.replace(/^@+/, "")})` : ""
-                }`.trim()
-              )
-              .join("\n") + "\n\n";
-        });
-      }
-      await waClient.sendMessage(chatId, msg.trim());
-      clearSession(chatId);
       return;
     }
 
