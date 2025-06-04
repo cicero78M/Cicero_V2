@@ -36,6 +36,14 @@ const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit timeout
 const userMenuContext = {};
 const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
 
+
+// Pada scope global file (agar session per chatId tetap nyantol)
+const updateUsernameSession = {}; // key: chatId
+
+// Regex untuk deteksi link IG/TikTok
+const IG_PROFILE_REGEX = /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i;
+const TT_PROFILE_REGEX = /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
+
 // --- Utility helper untuk session timeout ---
 function setMenuTimeout(chatId) {
   if (userMenuContext[chatId]?.timeout) {
@@ -173,156 +181,152 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  // --- Handler otomatis update username dari link IG/TikTok ---
-  // Sesi sementara untuk update username via link (gunakan di konteks handler global)
-  const updateUsernameSession = {}; // key: chatId
 
-  // Tangkap pesan yang hanya berisi link Instagram/TikTok
-  if (
-    !text.includes("#") &&
-    (text.match(/^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]+\/?$/i) ||
-      text.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i))
-  ) {
-    updateUsernameSession[chatId] = {
-      link: text.trim(),
-      step: "confirm",
-    };
+// Tangkap pesan hanya link IG/TikTok (tanpa # dan lain-lain)
+if (
+  !text.includes("#") &&
+  (IG_PROFILE_REGEX.test(text.trim()) || TT_PROFILE_REGEX.test(text.trim()))
+) {
+  updateUsernameSession[chatId] = {
+    link: text.trim(),
+    step: "confirm",
+  };
+  await waClient.sendMessage(
+    chatId,
+    `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
+  );
+  return;
+}
+
+// Proses konfirmasi update username
+if (
+  updateUsernameSession[chatId] &&
+  updateUsernameSession[chatId].step === "confirm"
+) {
+  const jawaban = text.trim().toLowerCase();
+  if (["tidak", "batal", "no", "cancel"].includes(jawaban)) {
+    delete updateUsernameSession[chatId];
+    await waClient.sendMessage(chatId, "Update username dibatalkan.");
+    return;
+  }
+  if (jawaban !== "ya") {
     await waClient.sendMessage(
       chatId,
-      `Apakah Anda ingin mengupdate username akun Anda sesuai link ini?\n*${text.trim()}*\n\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
+      "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
     );
     return;
   }
 
-  // Proses konfirmasi (step=confirm)
-  if (
-    updateUsernameSession[chatId] &&
-    updateUsernameSession[chatId].step === "confirm"
-  ) {
-    const jawaban = text.trim().toLowerCase();
-    if (jawaban === "tidak" || jawaban === "batal") {
-      delete updateUsernameSession[chatId];
-      await waClient.sendMessage(chatId, "Update username dibatalkan.");
-      return;
-    }
-    if (jawaban !== "ya") {
-      await waClient.sendMessage(
-        chatId,
-        "Balas *ya* untuk melanjutkan update username atau *tidak* untuk membatalkan."
-      );
-      return;
-    }
-
-    // Jawaban "ya", lanjut cek binding WA
-    const pengirim = chatId.replace(/[^0-9]/g, "");
-    let username = null;
-    let field = null;
-    let match = null;
-    if (
-      (match = updateUsernameSession[chatId].link.match(
-        /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i
-      ))
-    ) {
-      username = match[2];
-      field = "insta";
-    } else if (
-      (match = updateUsernameSession[chatId].link.match(
-        /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i
-      ))
-    ) {
-      username = "@" + match[2];
-      field = "tiktok";
-    }
-
-    if (!username || !field) {
-      await waClient.sendMessage(
-        chatId,
-        "Link tidak valid atau sistem gagal membaca username."
-      );
-      delete updateUsernameSession[chatId];
-      return;
-    }
-
-    // Cek user berdasarkan nomor WhatsApp
-    const user = await userService.findUserByWhatsApp(pengirim);
-    if (user) {
-      // Update username
-      await userService.updateUserField(user.user_id, field, username);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Username *${
-          field === "insta" ? "Instagram" : "TikTok"
-        }* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${
-          user.user_id
-        }*.`
-      );
-      delete updateUsernameSession[chatId];
-      return;
-    } else {
-      // WA belum terdaftar, minta NRP
-      updateUsernameSession[chatId].step = "ask_nrp";
-      updateUsernameSession[chatId].username = username;
-      updateUsernameSession[chatId].field = field;
-      await waClient.sendMessage(
-        chatId,
-        "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
-      );
-      return;
-    }
+  // Jawaban "ya", lanjut cek binding WA
+  // Ekstrak username dan field (IG atau TikTok)
+  let username = null;
+  let field = null;
+  let match = null;
+  if ((match = updateUsernameSession[chatId].link.match(IG_PROFILE_REGEX))) {
+    username = match[2].toLowerCase();
+    field = "insta";
+  } else if ((match = updateUsernameSession[chatId].link.match(TT_PROFILE_REGEX))) {
+    username = "@" + match[2].replace(/^@+/, "").toLowerCase();
+    field = "tiktok";
   }
 
-  // Proses binding NRP (step=ask_nrp)
-  if (
-    updateUsernameSession[chatId] &&
-    updateUsernameSession[chatId].step === "ask_nrp"
-  ) {
-    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-    if (!nrp) {
-      await waClient.sendMessage(
-        chatId,
-        "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
-      );
-      return;
-    }
-    const user = await userService.findUserById(nrp);
-    if (!user) {
-      await waClient.sendMessage(
-        chatId,
-        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
-      );
-      return;
-    }
-    // Cek WA sudah digunakan oleh user lain belum?
-    const pengirim = chatId.replace(/[^0-9]/g, "");
-    const waUsed = await userService.findUserByWA(pengirim);
-    if (waUsed && waUsed.user_id !== user.user_id) {
-      await waClient.sendMessage(
-        chatId,
-        `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
-      );
-      delete updateUsernameSession[chatId];
-      return;
-    }
-    // Update username dan bind WA
-    await userService.updateUserField(
-      user.user_id,
-      updateUsernameSession[chatId].field,
-      updateUsernameSession[chatId].username
+  if (!username || !field) {
+    await waClient.sendMessage(
+      chatId,
+      "Link tidak valid atau sistem gagal membaca username."
     );
-    await userService.updateUserField(user.user_id, "whatsapp", pengirim);
+    delete updateUsernameSession[chatId];
+    return;
+  }
+
+  // Ambil nomor WA (selalu angka, tanpa @c.us)
+  let waNum = chatId.replace(/[^0-9]/g, "");
+  // Cek user berdasarkan nomor WhatsApp
+  let user = await userService.findUserByWhatsApp
+    ? await userService.findUserByWhatsApp(waNum)
+    : await userService.findUserByWA(waNum);
+  if (user) {
+    // Update username (standar: IG tanpa @, TT selalu pakai @)
+    await userService.updateUserField(user.user_id, field, username);
     await waClient.sendMessage(
       chatId,
       `✅ Username *${
-        updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"
-      }* berhasil diupdate menjadi *${
-        updateUsernameSession[chatId].username
-      }* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${
+        field === "insta" ? "Instagram" : "TikTok"
+      }* berhasil diupdate menjadi *${username}* untuk user NRP/NIP *${
         user.user_id
       }*.`
     );
     delete updateUsernameSession[chatId];
     return;
+  } else {
+    // WA belum terdaftar, minta NRP/NIP
+    updateUsernameSession[chatId].step = "ask_nrp";
+    updateUsernameSession[chatId].username = username;
+    updateUsernameSession[chatId].field = field;
+    await waClient.sendMessage(
+      chatId,
+      "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
+    );
+    return;
   }
+}
+
+// Proses binding NRP/NIP
+if (
+  updateUsernameSession[chatId] &&
+  updateUsernameSession[chatId].step === "ask_nrp"
+) {
+  const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
+  if (!nrp) {
+    await waClient.sendMessage(
+      chatId,
+      "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
+    );
+    return;
+  }
+  const user = await userService.findUserById(nrp);
+  if (!user) {
+    await waClient.sendMessage(
+      chatId,
+      `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
+    );
+    return;
+  }
+  // Ambil nomor WA dari pengirim
+  let waNum = chatId.replace(/[^0-9]/g, "");
+  // Pastikan nomor WA belum dipakai user lain!
+  let waUsed = await userService.findUserByWhatsApp
+    ? await userService.findUserByWhatsApp(waNum)
+    : await userService.findUserByWA(waNum);
+  if (waUsed && waUsed.user_id !== user.user_id) {
+    await waClient.sendMessage(
+      chatId,
+      `Nomor WhatsApp ini sudah terpakai pada NRP/NIP *${waUsed.user_id}*. Hanya satu user per WA yang diizinkan.`
+    );
+    delete updateUsernameSession[chatId];
+    return;
+  }
+  // Update username dan bind WA
+  await userService.updateUserField(
+    user.user_id,
+    updateUsernameSession[chatId].field,
+    updateUsernameSession[chatId].username
+  );
+  await userService.updateUserField(user.user_id, "whatsapp", waNum);
+  await waClient.sendMessage(
+    chatId,
+    `✅ Username *${
+      updateUsernameSession[chatId].field === "insta" ? "Instagram" : "TikTok"
+    }* berhasil diupdate menjadi *${
+      updateUsernameSession[chatId].username
+    }* dan nomor WhatsApp Anda telah di-bind ke user NRP/NIP *${
+      user.user_id
+    }*.`
+  );
+  delete updateUsernameSession[chatId];
+  return;
+}
+
 
   // =======================
   // HANDLER PERINTAH INTERAKTIF USER REQUEST
