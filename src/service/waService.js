@@ -931,68 +931,9 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // === Absensi likes IG ===
-    if (session.step === "absensiLikes_id") {
-      session.absensiLikes_client_id = text.trim().toUpperCase();
-      session.step = "absensiLikes_mode";
-      setSession(chatId, session);
-      await waClient.sendMessage(
-        chatId,
-        "Pilih mode rekap likes IG:\n" +
-          "1. Akumulasi - Sudah\n" +
-          "2. Akumulasi - Belum\n" +
-          "3. Per Konten - Sudah\n" +
-          "4. Per Konten - Belum\n" +
-          "5. Per Konten - Semua\n\n" +
-          "Balas dengan angka (1-5):"
-      );
-      return;
-    }
-    if (session.step === "absensiLikes_mode") {
-      let filter1 = "";
-      let filter2 = "";
-      switch (text.trim()) {
-        case "1":
-          filter1 = "akumulasi";
-          filter2 = "sudah";
-          break;
-        case "2":
-          filter1 = "akumulasi";
-          filter2 = "belum";
-          break;
-        case "3":
-          filter1 = "sudah";
-          break;
-        case "4":
-          filter1 = "belum";
-          break;
-        case "5":
-          filter1 = "";
-          break;
-        default:
-          await waClient.sendMessage(
-            chatId,
-            "Pilihan tidak valid. Balas dengan angka 1-5:"
-          );
-          return;
-      }
-      const client_id = session.absensiLikes_client_id;
-      clearSession(chatId); // clear agar tidak bentrok
-
-      // Panggil logika absensilikes yang sudah ada, modifikasi sedikit
-      await waClient.sendMessage(
-        chatId,
-        "⏳ Memproses rekap absensi likes IG..."
-      );
-
-      // ... LOGIKA ABSENSILIKES di sini ...
-      // Bisa refactor kode absensilikes#... menjadi fungsi terpisah:
-      await handleAbsensiLikes(waClient, chatId, client_id, filter1, filter2);
-      return;
-    }
-
-    // --- STEP: Menu 15 (Request data Instagram user) ---
+    // === STEP: Menu 15 (Request data Instagram user) ===
     if (session.step === "requestInsta_id") {
+      // Ambil seluruh client aktif (status true)
       const rows = await pool.query(
         "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
       );
@@ -1005,7 +946,7 @@ waClient.on("message", async (msg) => {
       session.clientList = clients;
       session.step = "requestInsta_choose";
       setSession(chatId, session);
-      let msg = `*Daftar Client Aktif*\nPilih client (balas angka):\n`;
+      let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
       clients.forEach((c, i) => {
         msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
       });
@@ -1069,8 +1010,9 @@ waClient.on("message", async (msg) => {
       return;
     }
 
-    // --- STEP: Menu 16 (Request data TikTok user) ---
+    // === STEP: Menu 16 (Request data TikTok user) ===
     if (session.step === "requestTiktok_id") {
+      // Ambil seluruh client aktif (status true)
       const rows = await pool.query(
         "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
       );
@@ -1083,7 +1025,7 @@ waClient.on("message", async (msg) => {
       session.clientList = clients;
       session.step = "requestTiktok_choose";
       setSession(chatId, session);
-      let msg = `*Daftar Client Aktif*\nPilih client (balas angka):\n`;
+      let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
       clients.forEach((c, i) => {
         msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
       });
