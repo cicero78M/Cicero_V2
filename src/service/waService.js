@@ -850,7 +850,22 @@ waClient.on("message", async (msg) => {
         chatId,
         `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
       );
-      // Lanjutkan dengan handler fetch TikTok seperti sebelumnya
+      try {
+        // (import dinamis jika perlu, contoh jika pakai ESM)
+        const { fetchAndStoreTiktokContent } = await import(
+          "../service/tiktokFetchService.js"
+        );
+        await fetchAndStoreTiktokContent(client_id);
+        await waClient.sendMessage(
+          chatId,
+          `✅ Selesai fetch TikTok untuk ${client_id}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Error fetch TikTok: ${e.message}`
+        );
+      }
       clearSession(chatId);
       return;
     }
