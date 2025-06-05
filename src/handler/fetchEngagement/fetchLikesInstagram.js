@@ -28,14 +28,13 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
     let likesRes;
   try {
     likesRes = await axios.get(/* ... */);
-  } catch (e) {
-    sendDebug({
-      tag: "IG LIKES ERROR",
-      msg: `Fetch likes page gagal: ${e.response?.data ? JSON.stringify(e.response.data) : (e.message || String(e))}`,
-      client_id: shortcode
-    });
-    break;
-  }
+} catch (err) {
+  sendDebug({
+    tag: "TAG_ERROR",
+    msg: (err && err.message) ? err.message : String(err),
+    client_id
+  });
+}
 
     const likeItems = likesRes.data?.data?.items || [];
     sendDebug({
