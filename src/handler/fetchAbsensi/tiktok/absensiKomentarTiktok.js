@@ -105,4 +105,4 @@ export function formatRekapPostTikTok(client_id, username, posts) {
 }
 
 // Export default/utama supaya waService.js bisa import { handleKomentarTiktok }
-export const handleKomentarTiktok = rekapKomentarTikTok;
+export const handleAbsensiKomentar = rekapKomentarTikTok;
