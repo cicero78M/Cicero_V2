@@ -40,7 +40,7 @@ import {
   sortDivisionKeys,
   normalizeKomentarArr,
 } from "../utils/utilsHelper.js";
-import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
+import { isAdminWhatsApp, formatToWhatsAppId, formatClientData } from "../utils/waHelper.js";
 import {
   setMenuTimeout,
   setSession,
@@ -58,51 +58,16 @@ import {
 
 dotenv.config();
 
-// =======================
-// HELPER FUNCTIONS
-// =======================
-
 // Tambah di atas (global scope)
 const userMenuContext = {};
 const updateUsernameSession = {};
 const knownUserSet = new Set();
 
-// Format output data client (untuk WA)
-function formatClientData(obj, title = "") {
-  let keysOrder = [
-    "client_id",
-    "nama",
-    "client_type",
-    "client_status",
-    "client_insta",
-    "client_insta_status",
-    "client_tiktok",
-    "client_tiktok_status",
-    "client_operator",
-    "client_super",
-    "client_group",
-    "tiktok_secUid",
-  ];
-  let dataText = title ? `${title}\n` : "";
-  for (const key of keysOrder) {
-    if (key in obj) {
-      let v = obj[key];
-      if (typeof v === "object" && v !== null) v = JSON.stringify(v);
-      dataText += `*${key}*: ${v}\n`;
-    }
-  }
-  Object.keys(obj).forEach((key) => {
-    if (!keysOrder.includes(key)) {
-      let v = obj[key];
-      if (typeof v === "object" && v !== null) v = JSON.stringify(v);
-      dataText += `*${key}*: ${v}\n`;
-    }
-  });
-  return dataText;
-}
 // =======================
 // INISIALISASI CLIENT WA
 // =======================
+
+// Inisialisasi WhatsApp client dengan LocalAuth
 const waClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: { headless: true },
@@ -114,7 +79,7 @@ waClient.on("qr", (qr) => {
   console.log("[WA] Scan QR dengan WhatsApp Anda!");
 });
 
-// Siap digunakan
+// Wa Bot siap
 waClient.on("ready", () => {
   console.log("[WA] WhatsApp client is ready!");
 });

@@ -26,4 +26,12 @@ export const adminCommands = [
   "status#",
 ];
 
-
+export const hariIndo = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];

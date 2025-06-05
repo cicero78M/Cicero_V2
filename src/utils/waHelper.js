@@ -44,6 +44,40 @@ export function formatToWhatsAppId(nohp) {
   return `${number}@c.us`;
 }
 
+// Format output data client (untuk WA)
+export function formatClientData(obj, title = "") {
+  let keysOrder = [
+    "client_id",
+    "nama",
+    "client_type",
+    "client_status",
+    "client_insta",
+    "client_insta_status",
+    "client_tiktok",
+    "client_tiktok_status",
+    "client_operator",
+    "client_super",
+    "client_group",
+    "tiktok_secUid",
+  ];
+  let dataText = title ? `${title}\n` : "";
+  for (const key of keysOrder) {
+    if (key in obj) {
+      let v = obj[key];
+      if (typeof v === "object" && v !== null) v = JSON.stringify(v);
+      dataText += `*${key}*: ${v}\n`;
+    }
+  }
+  Object.keys(obj).forEach((key) => {
+    if (!keysOrder.includes(key)) {
+      let v = obj[key];
+      if (typeof v === "object" && v !== null) v = JSON.stringify(v);
+      dataText += `*${key}*: ${v}\n`;
+    }
+  });
+  return dataText;
+}
+
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
   .map((n) => n.trim())
