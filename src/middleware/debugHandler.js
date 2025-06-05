@@ -1,4 +1,4 @@
-import { getAdminWAIds } from "../utils/waHelper";
+import { getAdminWAIds } from "../utils/waHelper.js";
 import waClient from "../utils/waClient.js";
 
 export function sendCronDebug(client_id, msg) {
