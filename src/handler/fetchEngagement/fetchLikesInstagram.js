@@ -26,15 +26,23 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
     if (nextCursor) params.cursor = nextCursor;
 
     let likesRes;
-  try {
-    likesRes = await axios.get(/* ... */);
-} catch (err) {
-  sendDebug({
-    tag: "TAG_ERROR",
-    msg: (err && err.message) ? err.message : String(err),
-    client_id
-  });
-}
+    try {
+      likesRes = await axios.get(`https://${RAPIDAPI_HOST}/v1/likes`, {
+        params,
+        headers: {
+          "x-cache-control": "no-cache",
+          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Host": RAPIDAPI_HOST,
+        },
+      });
+    } catch (e) {
+      sendDebug({
+        tag: "IG LIKES ERROR",
+        msg: `Fetch likes page gagal: ${e.response?.data ? JSON.stringify(e.response.data) : (e.message || String(e))}`,
+        client_id: shortcode
+      });
+      break;
+    }
 
     const likeItems = likesRes.data?.data?.items || [];
     sendDebug({
