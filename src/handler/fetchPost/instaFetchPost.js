@@ -4,7 +4,7 @@ import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
-import * as instaLikeService from "../fetchEngagement/fetchLikesInsta.js";
+import * as instaLikeService from "../fetchEngagement/fetchLikesInstagram.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")

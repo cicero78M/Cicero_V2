@@ -2,12 +2,12 @@
 
 import waClient from "../service/waService.js";
 
-// Helper: stringifier aman
+// Helper: stringifier aman untuk circular object
 function safeStringify(obj) {
   try {
     if (typeof obj === "string") return obj;
-    // Hindari circular structure error
-    return JSON.stringify(obj, (key, value) => {
+    const seen = new WeakSet(); // PENTING: harus baru setiap pemanggilan!
+    return JSON.stringify(obj, function (key, value) {
       if (typeof value === "object" && value !== null) {
         if (seen.has(value)) return "[Circular]";
         seen.add(value);
@@ -15,7 +15,6 @@ function safeStringify(obj) {
       return value;
     });
   } catch {
-    // Jika gagal, fallback ke .toString() atau static '[Object]'
     try {
       return obj && obj.toString ? obj.toString() : "[Object]";
     } catch {
@@ -39,25 +38,7 @@ function parseAdminWA() {
  * @param {string} [client_id] - Opsional, client_id untuk prefix (jika ada)
  */
 export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
-  // **Proteksi circular object**
-  let safeMsg;
-  try {
-    if (typeof msg === "string") {
-      safeMsg = msg;
-    } else {
-      // Buat Set baru setiap pemanggilan agar seen-nya reset
-      const seen = new WeakSet();
-      safeMsg = JSON.stringify(msg, (key, value) => {
-        if (typeof value === "object" && value !== null) {
-          if (seen.has(value)) return "[Circular]";
-          seen.add(value);
-        }
-        return value;
-      });
-    }
-  } catch {
-    safeMsg = (msg && msg.toString) ? msg.toString() : "[Object]";
-  }
+  let safeMsg = typeof msg === "string" ? msg : safeStringify(msg);
 
   const adminWA = parseAdminWA();
   let prefix = `[${tag}]`;

@@ -1,3 +1,5 @@
+
+
 export const clientRequestHandlers = {
   main: async (
     session,
@@ -690,7 +692,10 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-// ====== Fetch Likes Instagram ======
+// Pastikan import sesuai:
+// import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
+
+// ... lalu gunakan pada menu seperti di contoh Anda:
 fetchLikesInsta_choose: async (
   session,
   chatId,
@@ -704,7 +709,7 @@ fetchLikesInsta_choose: async (
   ___,
   ____,
   _______,
-  handleFetchLikesInstagram // <--- Import sesuai handler yang benar
+  handleFetchLikesInstagram // <--- sudah sesuai
 ) => {
   const idx = parseInt(text.trim()) - 1;
   const clients = session.clientList || [];
@@ -724,10 +729,13 @@ fetchLikesInsta_choose: async (
     await handleFetchLikesInstagram(waClient, chatId, client_id);
     // Pesan sukses sudah dikirim dari dalam handler jika tidak error
   } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error fetch likes IG: ${e.message}`);
+    // Proteksi circular
+    let msg = (e && e.message) || (typeof e === "string" ? e : "Unknown error");
+    await waClient.sendMessage(chatId, `❌ Error fetch likes IG: ${msg}`);
   }
   session.step = "main";
 },
+
 
 
   // ====== Fetch Komentar TikTok ======
