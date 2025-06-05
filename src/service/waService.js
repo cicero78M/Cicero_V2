@@ -53,7 +53,7 @@ import { sendDebug } from "../middleware/debugHandler.js";
 import {
   IG_PROFILE_REGEX,
   TT_PROFILE_REGEX,
-  isAdminCommand,
+  adminCommands,
 } from "../utils/constants.js";
 
 dotenv.config();
@@ -126,6 +126,10 @@ waClient.on("ready", () => {
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
+
+  const isAdminCommand = adminCommands.some((cmd) =>
+    text.toLowerCase().startsWith(cmd)
+  );
 
   // ===== Keluar dari menu user =====
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {

@@ -25,6 +25,5 @@ export const adminCommands = [
   "exception#",
   "status#",
 ];
-export const isAdminCommand = adminCommands.some((cmd) =>
-  text.toLowerCase().startsWith(cmd)
-);
+
+
