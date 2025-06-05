@@ -690,42 +690,45 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // ====== Fetch Likes Instagram ======
-  fetchLikesInsta_choose: async (
-    session,
+// ====== Fetch Likes Instagram ======
+fetchLikesInsta_choose: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  _,
+  __,
+  ___,
+  ____,
+  _______,
+  handleFetchLikesInstagram // <--- Import sesuai handler yang benar
+) => {
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(
+      chatId,
+      "Pilihan tidak valid. Balas angka sesuai list."
+    );
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  await waClient.sendMessage(
     chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    _,
-    __,
-    ___,
-    ____,
-    fetchAndStoreLikesInstaContent
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    try {
-      await fetchAndStoreLikesInstaContent(null, waClient, chatId, client_id);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch likes Instagram untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
+    `⏳ Memulai fetch likes Instagram untuk *${client_id}* ...`
+  );
+  try {
+    await handleFetchLikesInstagram(waClient, chatId, client_id);
+    // Pesan sukses sudah dikirim dari dalam handler jika tidak error
+  } catch (e) {
+    await waClient.sendMessage(chatId, `❌ Error fetch likes IG: ${e.message}`);
+  }
+  session.step = "main";
+},
+
 
   // ====== Fetch Komentar TikTok ======
   fetchKomentarTiktok_choose: async (
