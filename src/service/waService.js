@@ -28,7 +28,7 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
-import { handleAbsensiKomentar } from "../handler/fetchAbsensi/absensiKomentarHandlers.js";
+import { handleAbsensiKomentar } from "../handler/fetchAbsensi/tiktok/absenisKomentarTiktok.js";
 
 // helper functions
 import {
