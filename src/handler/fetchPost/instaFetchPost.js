@@ -186,3 +186,61 @@ export async function fetchAndStoreInstaContent(
       });
     }
   }
+
+  // Hapus konten hari ini yang sudah tidak ada di hasil fetch hari ini
+  const shortcodesToDelete = dbShortcodesToday.filter(
+    (x) => !fetchedShortcodesToday.includes(x)
+  );
+  sendDebug({
+    tag: "IG SYNC",
+    msg: `Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`
+  });
+  await deleteShortcodes(shortcodesToDelete);
+
+  processing = false;
+  clearInterval(intervalId);
+
+  // Ringkasan WA/console
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const kontenHariIniRes = await pool.query(
+    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
+    [`${yyyy}-${mm}-${dd}`]
+  );
+  const kontenLinksToday = kontenHariIniRes.rows.map(
+    (r) => `https://www.instagram.com/p/${r.shortcode}`
+  );
+
+  let msg = `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
+  let maxPerMsg = 30;
+  const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
+
+  if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
+    const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
+    for (const target of sendTargets) {
+      await waClient.sendMessage(target, msg);
+      for (let i = 0; i < totalMsg; i++) {
+        const linksMsg = kontenLinksToday
+          .slice(i * maxPerMsg, (i + 1) * maxPerMsg)
+          .join("\n");
+        await waClient.sendMessage(
+          target,
+          `Link konten Instagram:\n${linksMsg}`
+        );
+      }
+    }
+  } else {
+    sendDebug({
+      tag: "IG FETCH",
+      msg: msg
+    });
+    if (kontenLinksToday.length) {
+      sendDebug({
+        tag: "IG FETCH",
+        msg: kontenLinksToday.join("\n")
+      });
+    }
+  }
+}
