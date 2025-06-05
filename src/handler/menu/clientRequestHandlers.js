@@ -1,5 +1,3 @@
-// /src/handler/clientRequestHandlers.js
-
 export const clientRequestHandlers = {
   main: async (
     session,
@@ -14,7 +12,9 @@ export const clientRequestHandlers = {
     importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
-    formatClientData
+    formatClientData,
+    fetchAndStoreLikesInstaContent,      // handler likes IG
+    fetchAndStoreTiktokComments          // handler komentar TikTok
   ) => {
     switch (text) {
       case "1":
@@ -32,7 +32,9 @@ export const clientRequestHandlers = {
       case "7":
       case "8":
       case "9":
-      case "10": {
+      case "10":
+      case "17":
+      case "18": {
         const rows = await pool.query(
           "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
         );
@@ -52,6 +54,8 @@ export const clientRequestHandlers = {
           8: "fetchTiktok_choose",
           9: "absensiLikes_choose",
           10: "absensiKomentar_choose",
+          17: "fetchLikesInsta_choose",
+          18: "fetchKomentarTiktok_choose"
         };
         session.step = stepMap[text];
         let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
@@ -128,11 +132,12 @@ export const clientRequestHandlers = {
       default:
         await waClient.sendMessage(
           chatId,
-          "Pilihan tidak valid. Balas angka 1-16, atau *batal* untuk keluar."
+          "Pilihan tidak valid. Balas angka 1-18, atau *batal* untuk keluar."
         );
         return;
     }
   },
+
 
   // ====== Add Client ======
   addClient_id: async (
@@ -649,8 +654,8 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // ====== Absensi Komentar TikTok ======
-  absensiKomentar_choose: async (
+  // ====== Fetch Instagram ======
+  fetchInsta_choose: async (
     session,
     chatId,
     text,
@@ -661,9 +666,7 @@ export const clientRequestHandlers = {
     _,
     __,
     ___,
-    ____,
-    _____,
-    handleAbsensiKomentar
+    fetchAndStoreInstaContent
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -675,23 +678,20 @@ export const clientRequestHandlers = {
       return;
     }
     const client_id = clients[idx].client_id;
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Menyiapkan rekap absensi komentar TikTok untuk *${client_id}* ...`
-    );
     try {
-      await handleAbsensiKomentar(waClient, chatId, client_id);
-    } catch (e) {
+      await fetchAndStoreInstaContent(null, waClient, chatId, client_id);
       await waClient.sendMessage(
         chatId,
-        `❌ Error rekap absensi komentar: ${e.message}`
+        `✅ Selesai fetch Instagram untuk ${client_id}.`
       );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
     }
     session.step = "main";
   },
 
-  // ====== Absensi Likes IG ======
-  absensiLikes_choose: async (
+  // ====== Fetch Likes Instagram ======
+  fetchLikesInsta_choose: async (
     session,
     chatId,
     text,
@@ -703,9 +703,7 @@ export const clientRequestHandlers = {
     __,
     ___,
     ____,
-    _____,
-    ______,
-    handleAbsensiLikes // <-- pastikan urutan ke-14 (setelah handleAbsensiKomentar jika ada)
+    fetchAndStoreLikesInstaContent
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -717,21 +715,54 @@ export const clientRequestHandlers = {
       return;
     }
     const client_id = clients[idx].client_id;
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Menyiapkan rekap absensi likes Instagram untuk *${client_id}* ...`
-    );
     try {
-      await handleAbsensiLikes(waClient, chatId, client_id);
-    } catch (e) {
+      await fetchAndStoreLikesInstaContent(null, waClient, chatId, client_id);
       await waClient.sendMessage(
         chatId,
-        `❌ Error rekap absensi likes: ${e.message}`
+        `✅ Selesai fetch likes Instagram untuk ${client_id}.`
       );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
     }
     session.step = "main";
   },
 
-  // ====== Info/Absensi/Request data handler (bisa extend sesuai kebutuhan) ======
-  // ... Sesuaikan dan tambah jika ada step lain, atau split bila lebih modular
+  // ====== Fetch Komentar TikTok ======
+  fetchKomentarTiktok_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    _,
+    __,
+    ___,
+    ____,
+    fetchAndStoreTiktokComments
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    try {
+      await fetchAndStoreTiktokComments(client_id);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Selesai fetch komentar TikTok untuk ${client_id}.`
+      );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+  },
+
+  // ... handler lain tetap sama ...
 };

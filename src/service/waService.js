@@ -16,7 +16,10 @@ import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 
 import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
-import { getTiktokSecUid, fetchAndStoreTiktokContent } from "../handler/fetchPost/tiktokFetchPost.js";
+import {
+  getTiktokSecUid,
+  fetchAndStoreTiktokContent,
+} from "../handler/fetchPost/tiktokFetchPost.js";
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
@@ -37,7 +40,11 @@ import {
   sortDivisionKeys,
   normalizeKomentarArr,
 } from "../utils/utilsHelper.js";
-import { isAdminWhatsApp, formatToWhatsAppId, formatClientData } from "../utils/waHelper.js";
+import {
+  isAdminWhatsApp,
+  formatToWhatsAppId,
+  formatClientData,
+} from "../utils/waHelper.js";
 import {
   setMenuTimeout,
   setSession,
@@ -358,7 +365,7 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
-    // PERBAIKAN PENTING: Tambahkan menu agar routing session benar
+    // PENTING: Routing session harus benar
     setSession(chatId, { menu: "clientrequest", step: "main" });
     await waClient.sendMessage(
       chatId,
@@ -379,7 +386,9 @@ waClient.on("message", async (msg) => {
         `1️⃣3️⃣. Update *status* user\n` +
         `1️⃣4️⃣. Daftar *allexception* user\n` +
         `1️⃣5️⃣. Request data *Instagram* user\n` +
-        `1️⃣6️⃣. Request data *TikTok* user\n\n` +
+        `1️⃣6️⃣. Request data *TikTok* user\n` +
+        `1️⃣7️⃣. Fetch *likes* Instagram (semua konten hari ini)\n` +
+        `1️⃣8️⃣. Fetch *komentar* TikTok (semua konten hari ini)\n\n` +
         `Ketik *batal* untuk keluar dari menu.`
     );
     return;
