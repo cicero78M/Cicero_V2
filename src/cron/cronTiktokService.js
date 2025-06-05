@@ -149,7 +149,7 @@ function formatRekapPostTikTok(client_id, username, posts) {
 // ========== CRON JOB TIKTOK ==========
 
 cron.schedule(
-  "35 6-22 * * *",
+  "37 6-22 * * *",
   async () => {
     console.log("[CRON TIKTOK] Mulai tugas fetch post, rekap post, & absensi komentar ...");
     try {
