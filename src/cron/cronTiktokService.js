@@ -16,7 +16,7 @@ import {
   getClientTiktokUsername,
   rekapKomentarTikTok,
   formatRekapPostTikTok,
-} from "../handler/menu/tiktokHandlers.js";
+} from "../handler/tiktokHandlers.js";
 import { sortDivisionKeys, groupByDivision } from "../utils/utilsHelper.js";
 import { getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
