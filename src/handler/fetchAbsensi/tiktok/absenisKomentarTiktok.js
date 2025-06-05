@@ -90,3 +90,5 @@ export function formatRekapPostTikTok(client_id, username, posts) {
   });
   return msg.trim();
 }
+
+export const handleKomentarTiktok = rekapKomentarTikTok;
