@@ -1,5 +1,5 @@
 import { getAdminWAIds } from "../utils/waHelper.js";
-import waClient from "../utils/waClient.js";
+import waClient from "../service/waService.js";
 
 export function sendCronDebug(client_id, msg) {
   const adminWA = getAdminWAIds();
