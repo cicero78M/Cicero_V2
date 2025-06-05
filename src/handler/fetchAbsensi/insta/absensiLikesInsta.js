@@ -1,10 +1,10 @@
-import { pool } from "../config/db.js";
+import { pool } from "../../../config/db.js";
 
-import { getUsersByClient } from "../model/userModel.js";
-import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
-import { getLikesByShortcode } from "../model/instaLikeModel.js";
-import { hariIndo } from "../utils/constants.js";
-import { sortDivisionKeys, groupByDivision } from "../utils/utilsHelper.js";
+import { getUsersByClient } from "../../../model/userModel.js";
+import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
+import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
+import { hariIndo } from "../../../utils/constants.js";
+import { sortDivisionKeys, groupByDivision } from "../../../utils/utilsHelper.js";
 
 
 export async function getActiveClientsIG() {

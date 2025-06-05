@@ -1,7 +1,8 @@
 import axios from "axios";
 import pLimit from "p-limit";
-import * as instaLikeModel from "../model/instaLikeModel.js";
-import { pool } from "../config/db.js";
+import { pool } from "../../config/db.js";
+import { sendDebug } from "../middleware/debugHandler.js";
+import * as instaLikeService from "./instaFetchLikeService.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -55,81 +56,17 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-// PATCH: fetch all likes via pagination (cursor), debug hanya jumlah
-async function fetchAllLikes(shortcode) {
-  let allLikes = [];
-  let nextCursor = null;
-  let page = 1;
-  const maxTry = 20;
-  do {
-    let params = { code_or_id_or_url: shortcode };
-    if (nextCursor) params.cursor = nextCursor;
-
-    let likesRes;
-    try {
-      likesRes = await axios.get(`https://${RAPIDAPI_HOST}/v1/likes`, {
-        params,
-        headers: {
-          "x-cache-control": "no-cache",
-          "X-RapidAPI-Key": RAPIDAPI_KEY,
-          "X-RapidAPI-Host": RAPIDAPI_HOST,
-        },
-      });
-    } catch (e) {
-      console.error(
-        `[ERROR][FETCH IG LIKES PAGE][${shortcode}]`,
-        e.response?.data || e.message
-      );
-      break;
-    }
-
-    // Debug jumlah likes di page ini
-    const likeItems = likesRes.data?.data?.items || [];
-    console.log(
-      `[DEBUG][LIKES PAGE][${shortcode}] Page ${page}: ${likeItems.length} username dihalaman ini`
-    );
-
-    allLikes.push(
-      ...likeItems
-        .map((like) => (like.username ? like.username : like))
-        .filter(Boolean)
-    );
-
-    nextCursor =
-      likesRes.data?.data?.next_cursor ||
-      likesRes.data?.data?.end_cursor ||
-      null;
-    const hasMore =
-      likesRes.data?.data?.has_more || (nextCursor && nextCursor !== "");
-
-    // Debug progress jumlah total so far
-    console.log(
-      `[DEBUG][LIKES PAGING][${shortcode}] Total fetched sementara: ${
-        allLikes.length
-      } | next_cursor: ${!!nextCursor}`
-    );
-
-    if (!hasMore || !nextCursor || page++ >= maxTry) break;
-  } while (true);
-
-  const result = [...new Set(allLikes)];
-  console.log(
-    `[DEBUG][LIKES PAGING][${shortcode}] FINAL jumlah unique: ${result.length}`
-  );
-  return result;
-}
-
-// PATCH FINAL: semua debug hanya jumlah data (angka)
+// Export utama: fetch & simpan post
 export async function fetchAndStoreInstaContent(
   keys,
   waClient = null,
   chatId = null
 ) {
   let processing = true;
-
   if (!waClient)
-    console.log("[DEBUG] fetchAndStoreInstaContent: mode cronjob/auto");
-  else console.log("[DEBUG] fetchAndStoreInstaContent: mode WA handler");
+    sendDebug({ tag: "IG FETCH", msg: "fetchAndStoreInstaContent: mode cronjob/auto" });
+  else
+    sendDebug({ tag: "IG FETCH", msg: "fetchAndStoreInstaContent: mode WA handler" });
 
   const intervalId = setInterval(() => {
     if (
@@ -148,17 +85,19 @@ export async function fetchAndStoreInstaContent(
   let kontenCount = 0;
 
   const clients = await getEligibleClients();
-  console.log(
-    `[DEBUG] Eligible clients for Instagram fetch: jumlah client: ${clients.length}`
-  );
+  sendDebug({
+    tag: "IG FETCH",
+    msg: `Eligible clients for Instagram fetch: jumlah client: ${clients.length}`
+  });
 
   for (const client of clients) {
     const username = client.client_insta;
     let postsRes;
     try {
-      console.log(
-        `[DEBUG] Fetch posts for client: ${client.id} / @${username}`
-      );
+      sendDebug({
+        tag: "IG FETCH",
+        msg: `Fetch posts for client: ${client.id} / @${username}`
+      });
       postsRes = await limit(() =>
         axios.get(`https://${RAPIDAPI_HOST}/v1/posts`, {
           params: { username_or_id_or_url: username },
@@ -169,16 +108,17 @@ export async function fetchAndStoreInstaContent(
           },
         })
       );
-      console.log(
-        `[DEBUG] API /v1/posts response: jumlah konten ditemukan: ${
-          postsRes.data?.data?.items?.length || 0
-        }`
-      );
+      sendDebug({
+        tag: "IG FETCH",
+        msg: `API /v1/posts response: jumlah konten ditemukan: ${postsRes.data?.data?.items?.length || 0}`,
+        client_id: client.id
+      });
     } catch (err) {
-      console.error(
-        "[ERROR][FETCH IG POST]",
-        err.response?.data || err.message
-      );
+      sendDebug({
+        tag: "IG POST ERROR",
+        msg: err.response?.data ? JSON.stringify(err.response.data) : err.message,
+        client_id: client.id
+      });
       continue;
     }
     const items =
@@ -187,7 +127,11 @@ export async function fetchAndStoreInstaContent(
       Array.isArray(postsRes.data.data.items)
         ? postsRes.data.data.items
         : [];
-    console.log(`[DEBUG] Jumlah post IG hari ini:`, items.length);
+    sendDebug({
+      tag: "IG FETCH",
+      msg: `Jumlah post IG hari ini: ${items.length}`,
+      client_id: client.id
+    });
 
     for (const post of items) {
       if (!isToday(post.taken_at)) continue;
@@ -211,7 +155,11 @@ export async function fetchAndStoreInstaContent(
       kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
       // INSERT/UPDATE
-      console.log(`[DEBUG][DB] Upsert IG post: ${toSave.shortcode}`);
+      sendDebug({
+        tag: "IG FETCH",
+        msg: `[DB] Upsert IG post: ${toSave.shortcode}`,
+        client_id: client.id
+      });
       await pool.query(
         `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
          VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
@@ -230,47 +178,15 @@ export async function fetchAndStoreInstaContent(
           post.taken_at,
         ]
       );
-      console.log(`[DEBUG][DB] Sukses upsert IG post: ${toSave.shortcode}`);
+      sendDebug({
+        tag: "IG FETCH",
+        msg: `[DB] Sukses upsert IG post: ${toSave.shortcode}`,
+        client_id: client.id
+      });
 
-      // Likes merge
+      // Fetch & save likes (delegasi ke like service)
       if (post.code) {
-        await limit(async () => {
-          let likesUsernames = await fetchAllLikes(post.code);
-
-          // Jumlah likes: API vs username hasil fetch
-          const reportedLikeCount =
-            typeof post.like_count === "number" ? post.like_count : null;
-          console.log(
-            `[DEBUG][LIKES COUNT] Post ${post.code}: like_count (API post): ${reportedLikeCount} | likesUsernames.length: ${likesUsernames.length}`
-          );
-          if (
-            reportedLikeCount !== null &&
-            Math.abs(likesUsernames.length - reportedLikeCount) > 0
-          ) {
-            console.warn(
-              `[WARNING][LIKES MISMATCH] Post ${post.code}: Jumlah likes API: ${reportedLikeCount}, username hasil fetch: ${likesUsernames.length}`
-            );
-          }
-
-          // DB LIKE: hanya jumlah
-          const dbLike = await instaLikeModel.getLikeUsernamesByShortcode(
-            post.code
-          );
-          if (dbLike) {
-            console.log(
-              `[DEBUG][DB LIKE] Likes di DB sebelum merge (${post.code}): jumlah=${dbLike.length}`
-            );
-            likesUsernames = [...new Set([...dbLike, ...likesUsernames])];
-          }
-          console.log(
-            `[DEBUG][DB LIKE] Likes setelah merge untuk ${post.code}: jumlah=${likesUsernames.length}`
-          );
-
-          await instaLikeModel.upsertInstaLike(post.code, likesUsernames);
-          console.log(
-            `[DEBUG][DB] Sukses upsert likes IG: ${post.code} | Total likes disimpan: ${likesUsernames.length}`
-          );
-        });
+        await instaLikeService.fetchAndStoreLikes(post.code, client.id);
       }
     }
   }
@@ -279,9 +195,10 @@ export async function fetchAndStoreInstaContent(
   const shortcodesToDelete = dbShortcodesToday.filter(
     (x) => !fetchedShortcodesToday.includes(x)
   );
-  console.log(
-    `[DEBUG][SYNC] Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`
-  );
+  sendDebug({
+    tag: "IG SYNC",
+    msg: `Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`
+  });
   await deleteShortcodes(shortcodesToDelete);
 
   processing = false;
@@ -320,9 +237,15 @@ export async function fetchAndStoreInstaContent(
       }
     }
   } else {
-    console.log(msg);
+    sendDebug({
+      tag: "IG FETCH",
+      msg: msg
+    });
     if (kontenLinksToday.length) {
-      console.log(kontenLinksToday.join("\n"));
+      sendDebug({
+        tag: "IG FETCH",
+        msg: kontenLinksToday.join("\n")
+      });
     }
   }
 }

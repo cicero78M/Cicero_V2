@@ -1,13 +1,12 @@
 // src/service/cronService.js
-
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchAndStoreInstaContent } from "../service/instaFetchService.js";
+import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
 import waClient from "../service/waService.js";
 
-import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/instaHandlers.js";
+import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(

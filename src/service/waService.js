@@ -15,7 +15,7 @@ import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 
-import { fetchAndStoreInstaContent } from "./instaFetchService.js";
+import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
 import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
@@ -31,7 +31,7 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
-import { handleAbsensiKomentar } from "../handler/absensi/absensiKomentarHandlers.js";
+import { handleAbsensiKomentar } from "../handler/fetchAbsensi/absensiKomentarHandlers.js";
 
 // helper functions
 import {
