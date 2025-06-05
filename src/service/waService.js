@@ -33,6 +33,10 @@ import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 
 import { handleAbsensiKomentar } from "../handler/absensi/absensiKomentarHandlers.js";
 
+// helper functions
+
+import { isAdminWhatsApp, formatToWhatsAppId} from "../utils/waHelper.js";
+import { setMenuTimeout, setSession, getSession, clearSession} from "../utils/sessionsHelper.js";
 
 dotenv.config();
 
@@ -40,12 +44,8 @@ dotenv.config();
 // HELPER FUNCTIONS
 // =======================
 
-const clientRequestSessions = {}; // { chatId: {step, data, ...} }
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit timeout
-
 // Tambah di atas (global scope)
 const userMenuContext = {};
-const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
 
 // Pada scope global file (agar session per chatId tetap nyantol)
 const updateUsernameSession = {}; // key: chatId
@@ -56,41 +56,6 @@ const IG_PROFILE_REGEX =
 const TT_PROFILE_REGEX =
   /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
 
-// --- Utility helper untuk session timeout ---
-function setMenuTimeout(chatId) {
-  if (userMenuContext[chatId]?.timeout) {
-    clearTimeout(userMenuContext[chatId].timeout);
-  }
-  userMenuContext[chatId].timeout = setTimeout(() => {
-    delete userMenuContext[chatId];
-  }, MENU_TIMEOUT);
-}
-
-function setSession(chatId, data) {
-  clientRequestSessions[chatId] = { ...data, time: Date.now() };
-}
-function getSession(chatId) {
-  const s = clientRequestSessions[chatId];
-  if (!s) return null;
-  if (Date.now() - s.time > SESSION_TIMEOUT) {
-    delete clientRequestSessions[chatId];
-    return null;
-  }
-  return s;
-}
-function clearSession(chatId) {
-  delete clientRequestSessions[chatId];
-}
-
-// Mengecek apakah nomor WhatsApp adalah admin (dari ENV)
-function isAdminWhatsApp(number) {
-  const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean)
-    .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
-  return adminNumbers.includes(number);
-}
 
 // Format output data client (untuk WA)
 function formatClientData(obj, title = "") {
@@ -126,12 +91,7 @@ function formatClientData(obj, title = "") {
   return dataText;
 }
 
-// Konversi nomor ke WhatsAppID (xxxx@c.us)
-function formatToWhatsAppId(nohp) {
-  let number = nohp.replace(/\D/g, "");
-  if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
-  return `${number}@c.us`;
-}
+
 
 // =======================
 // INISIALISASI CLIENT WA

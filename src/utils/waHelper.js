@@ -26,3 +26,20 @@ export async function sendWAReport(waClient, message, chatIds = null) {
     }
   }
 }
+
+// Cek apakah nomor WhatsApp adalah admin
+export function isAdminWhatsApp(number) {
+  const adminNumbers = (process.env.ADMIN_WHATSAPP || "")
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
+  return adminNumbers.includes(number);
+}
+
+// Konversi nomor ke WhatsAppID (xxxx@c.us)
+export function formatToWhatsAppId(nohp) {
+  let number = nohp.replace(/\D/g, "");
+  if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
+  return `${number}@c.us`;
+}
