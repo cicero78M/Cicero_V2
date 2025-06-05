@@ -691,41 +691,46 @@ export const clientRequestHandlers = {
   },
 
   // ====== Absensi Likes IG ======
-absensiLikes_choose: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  _,
-  __,
-  ___,
-  ____,
-  _____,
-  ______,
-  handleAbsensiLikes // <-- pastikan urutan ke-14 (setelah handleAbsensiKomentar jika ada)
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  await waClient.sendMessage(
+  absensiLikes_choose: async (
+    session,
     chatId,
-    `⏳ Menyiapkan rekap absensi likes Instagram untuk *${client_id}* ...`
-  );
-  try {
-    await handleAbsensiLikes(waClient, chatId, client_id);
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error rekap absensi likes: ${e.message}`);
-  }
-  session.step = "main";
-},
-
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    _,
+    __,
+    ___,
+    ____,
+    _____,
+    ______,
+    handleAbsensiLikes // <-- pastikan urutan ke-14 (setelah handleAbsensiKomentar jika ada)
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Menyiapkan rekap absensi likes Instagram untuk *${client_id}* ...`
+    );
+    try {
+      await handleAbsensiLikes(waClient, chatId, client_id);
+    } catch (e) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Error rekap absensi likes: ${e.message}`
+      );
+    }
+    session.step = "main";
+  },
 
   // ====== Info/Absensi/Request data handler (bisa extend sesuai kebutuhan) ======
   // ... Sesuaikan dan tambah jika ada step lain, atau split bila lebih modular
