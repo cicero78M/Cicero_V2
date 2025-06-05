@@ -2,8 +2,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { pool } from "../../../config/db.js";
+import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
+import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 
-
+/**
+ * Mengambil semua client TikTok yang aktif.
+ */
 export async function getActiveClientsTiktok() {
   const res = await pool.query(
     `SELECT client_id FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
@@ -11,6 +15,9 @@ export async function getActiveClientsTiktok() {
   return res.rows.map((row) => row.client_id);
 }
 
+/**
+ * Mendapatkan username TikTok dari client_id (tanpa @).
+ */
 export async function getClientTiktokUsername(client_id) {
   try {
     const q = `SELECT client_tiktok FROM clients WHERE client_id = $1 LIMIT 1`;
@@ -21,7 +28,10 @@ export async function getClientTiktokUsername(client_id) {
   return "-";
 }
 
-
+/**
+ * Rekap komentar TikTok harian berdasarkan database,
+ * menghasilkan teks rekap dengan total & detail komentar tiap video.
+ */
 export async function rekapKomentarTikTok(client_id, client_tiktok) {
   const posts = await getPostsTodayByClient(client_id);
   if (!posts.length) return null;
@@ -54,6 +64,9 @@ export async function rekapKomentarTikTok(client_id, client_tiktok) {
   return msg.trim();
 }
 
+/**
+ * Format teks rekap post TikTok (untuk laporan WA/manual).
+ */
 export function formatRekapPostTikTok(client_id, username, posts) {
   let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
   msg += `Jumlah post: *${posts.length}*\n\n`;
@@ -91,4 +104,5 @@ export function formatRekapPostTikTok(client_id, username, posts) {
   return msg.trim();
 }
 
+// Export default/utama supaya waService.js bisa import { handleKomentarTiktok }
 export const handleKomentarTiktok = rekapKomentarTikTok;
