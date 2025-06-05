@@ -1,7 +1,7 @@
 import axios from "axios";
 import { findById, update } from "../../model/clientModel.js";
 import { upsertTiktokPosts } from "../../model/tiktokPostModel.js";
-import { sendAdminDebug } from "../middleware/debugHandler.js";
+import { sendAdminDebug } from "../../middleware/debugHandler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
