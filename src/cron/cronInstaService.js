@@ -8,7 +8,7 @@ import { fetchAndStoreInstaContent } from "../service/instaFetchService.js";
 import waClient from "../service/waService.js";
 
 import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/instaHandler.js";
-import { sendDebug } from "../middleware/debugHelper.js";
+import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(
   "40 6-22 * * *",
