@@ -7,7 +7,7 @@ dotenv.config();
 import { fetchAndStoreInstaContent } from "../service/instaFetchService.js";
 import waClient from "../service/waService.js";
 
-import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/instaHandler.js";
+import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/instaHandlers.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(
