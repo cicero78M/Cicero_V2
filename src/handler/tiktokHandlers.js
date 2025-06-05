@@ -3,6 +3,7 @@ dotenv.config();
 
 import { pool } from "../config/db.js";
 
+
 export async function getActiveClientsTiktok() {
   const res = await pool.query(
     `SELECT client_id FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`

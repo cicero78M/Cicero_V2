@@ -11,9 +11,15 @@ import { getUsersByClient } from "../model/userModel.js";
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 import waClient from "../service/waService.js";
 
-import { getActiveClientsTiktok, getClientTiktokUsername, rekapKomentarTikTok, formatRekapPostTikTok} from "../utils/tiktokUtils.js";
-import { sortDivisionKeys, groupByDivision  } from "../utils/utilsHelper.js";
+import {
+  getActiveClientsTiktok,
+  getClientTiktokUsername,
+  rekapKomentarTikTok,
+  formatRekapPostTikTok,
+} from "../handler/menu/tiktokHandlers.js";
+import { sortDivisionKeys, groupByDivision } from "../utils/utilsHelper.js";
 import { getAdminWAIds } from "../utils/waHelper.js";
+import { sendDebug } from "../middleware/debugHandler.js";
 
 const hariIndo = [
   "Minggu",
@@ -32,46 +38,68 @@ const hariIndo = [
 cron.schedule(
   "45 6-22 * * *",
   async () => {
-    console.log("[CRON TIKTOK] Mulai tugas fetch post, rekap post, & absensi komentar ...");
+    sendDebug({
+      tag: "CRON TIKTOK",
+      msg: "Mulai tugas fetch post, rekap post, & absensi komentar ...",
+    });
     try {
       const clients = await getActiveClientsTiktok();
 
       for (const client_id of clients) {
         try {
-          sendCronDebug(client_id, "Memulai proses cron TikTok");
+          sendDebug({
+            tag: "CRON TIKTOK",
+            client_id,
+            msg: "Memulai proses cron TikTok",
+          });
 
           // === Ambil username TikTok ===
           let client_tiktok = "-";
           try {
-            client_tiktok = await getClientTiktokUsername(client_id) || "-";
-            sendCronDebug(client_id, `Username TikTok: ${client_tiktok}`);
+            client_tiktok = (await getClientTiktokUsername(client_id)) || "-";
+            sendDebug({
+              tag: "CRON TIKTOK",
+              client_id,
+              msg: `Username TikTok: ${client_tiktok}`,
+            });
           } catch (e) {
-            sendCronDebug(client_id, `Gagal ambil username TikTok: ${e.message}`);
+            sendDebug({
+              tag: "CRON TIKTOK",
+              client_id,
+              msg: `Gagal ambil username TikTok: ${e.message}`,
+            });
           }
 
           // === 1. FETCH POST TIKTOK (API dulu, fallback DB) ===
           let posts;
           try {
             posts = await fetchAndStoreTiktokContent(client_id);
-            sendCronDebug(
+            sendDebug({
+              tag: "CRON TIKTOK",
               client_id,
-              `fetchAndStoreTiktokContent OK: ${Array.isArray(posts) ? posts.length : "null"}`
-            );
+              msg: `fetchAndStoreTiktokContent OK: ${
+                Array.isArray(posts) ? posts.length : "null"
+              }`,
+            });
           } catch (e) {
-            sendCronDebug(
+            sendDebug({
+              tag: "CRON TIKTOK",
               client_id,
-              `GAGAL API fetchAndStoreTiktokContent: ${e.stack || e.message}`
-            );
+              msg: `GAGAL API fetchAndStoreTiktokContent: ${e.stack || e.message}`,
+            });
             posts = undefined;
           }
 
           if (!posts || !Array.isArray(posts) || posts.length === 0) {
             try {
               posts = await getPostsTodayByClient(client_id);
-              sendCronDebug(
+              sendDebug({
+                tag: "CRON TIKTOK",
                 client_id,
-                `Fallback getPostsTodayByClient OK: ${Array.isArray(posts) ? posts.length : "null"}`
-              );
+                msg: `Fallback getPostsTodayByClient OK: ${
+                  Array.isArray(posts) ? posts.length : "null"
+                }`,
+              });
               if (posts && posts.length > 0) {
                 await waClient
                   .sendMessage(
@@ -81,19 +109,21 @@ cron.schedule(
                   .catch(() => {});
               }
             } catch (dbErr) {
-              sendCronDebug(
+              sendDebug({
+                tag: "CRON TIKTOK",
                 client_id,
-                `GAGAL Query DB TikTok: ${dbErr.stack || dbErr.message}`
-              );
+                msg: `GAGAL Query DB TikTok: ${dbErr.stack || dbErr.message}`,
+              });
               posts = undefined;
             }
           }
 
           if (!posts || posts.length === 0) {
-            sendCronDebug(
+            sendDebug({
+              tag: "CRON TIKTOK",
               client_id,
-              `Tidak ada post ditemukan di API maupun database`
-            );
+              msg: "Tidak ada post ditemukan di API maupun database",
+            });
             for (const admin of getAdminWAIds()) {
               await waClient
                 .sendMessage(
@@ -116,12 +146,17 @@ cron.schedule(
               for (const admin of getAdminWAIds()) {
                 await waClient.sendMessage(admin, rekapPostMsg).catch(() => {});
               }
-              sendCronDebug(client_id, "Laporan post TikTok dikirim ke admin");
-            } catch (waErr) {
-              sendCronDebug(
+              sendDebug({
+                tag: "CRON TIKTOK",
                 client_id,
-                "GAGAL kirim laporan post TikTok ke admin: " + waErr.message
-              );
+                msg: "Laporan post TikTok dikirim ke admin",
+              });
+            } catch (waErr) {
+              sendDebug({
+                tag: "CRON TIKTOK",
+                client_id,
+                msg: "GAGAL kirim laporan post TikTok ke admin: " + waErr.message,
+              });
             }
           }
 
@@ -135,13 +170,18 @@ cron.schedule(
               for (const admin of getAdminWAIds()) {
                 await waClient.sendMessage(admin, rekapKomentarMsg).catch(() => {});
               }
-              sendCronDebug(client_id, "Laporan komentar TikTok dikirim ke admin");
+              sendDebug({
+                tag: "CRON TIKTOK",
+                client_id,
+                msg: "Laporan komentar TikTok dikirim ke admin",
+              });
             }
           } catch (e) {
-            sendCronDebug(
+            sendDebug({
+              tag: "CRON TIKTOK",
               client_id,
-              "GAGAL rekap komentar: " + (e.stack || e.message)
-            );
+              msg: "GAGAL rekap komentar: " + (e.stack || e.message),
+            });
           }
 
           // === Absensi komentar akumulasi belum ===
@@ -274,29 +314,28 @@ cron.schedule(
           for (const admin of getAdminWAIds()) {
             await waClient.sendMessage(admin, msg.trim()).catch(() => {});
           }
-          sendCronDebug(client_id, "Absensi komentar TikTok (akumulasi belum) dikirim ke admin");
+          sendDebug({
+            tag: "CRON TIKTOK",
+            client_id,
+            msg: "Absensi komentar TikTok (akumulasi belum) dikirim ke admin",
+          });
         } catch (err) {
-          sendCronDebug(client_id, "ERROR CATCH FINAL: " + (err.stack || err.message));
+          sendDebug({
+            tag: "CRON TIKTOK",
+            client_id,
+            msg: "ERROR CATCH FINAL: " + (err.stack || err.message),
+          });
         }
       }
-      console.log(
-        "[CRON TIKTOK] Laporan absensi komentar (akumulasi belum) berhasil dikirim ke admin."
-      );
+      sendDebug({
+        tag: "CRON TIKTOK",
+        msg: "Laporan absensi komentar (akumulasi belum) berhasil dikirim ke admin.",
+      });
     } catch (err) {
-      console.error("[CRON TIKTOK ERROR]", err);
-      for (const admin of getAdminWAIds()) {
-        try {
-          await waClient.sendMessage(
-            admin,
-            `[CRON TIKTOK ERROR] ${err.message || err}`
-          );
-        } catch (waErr) {
-          console.error(
-            `[CRON TIKTOK ERROR] Gagal kirim error ke ${admin}:`,
-            waErr.message
-          );
-        }
-      }
+      sendDebug({
+        tag: "CRON TIKTOK",
+        msg: `[CRON TIKTOK ERROR] ${err.message || err}`,
+      });
     }
   },
   {
