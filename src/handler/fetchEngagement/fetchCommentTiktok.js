@@ -3,7 +3,7 @@
 import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
-import { sendDebug } from "../middleware/debugHandler.js";
+import { sendDebug } from "../../middleware/debugHandler.js";
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
