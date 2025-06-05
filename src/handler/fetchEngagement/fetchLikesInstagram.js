@@ -26,23 +26,16 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
     if (nextCursor) params.cursor = nextCursor;
 
     let likesRes;
-    try {
-      likesRes = await axios.get(`https://${RAPIDAPI_HOST}/v1/likes`, {
-        params,
-        headers: {
-          "x-cache-control": "no-cache",
-          "X-RapidAPI-Key": RAPIDAPI_KEY,
-          "X-RapidAPI-Host": RAPIDAPI_HOST,
-        },
-      });
-    } catch (e) {
-      sendDebug({
-        tag: "IG LIKES ERROR",
-        msg: `Fetch likes page gagal: ${e.response?.data ? JSON.stringify(e.response.data) : e.message}`,
-        client_id: shortcode,
-      });
-      break;
-    }
+  try {
+    likesRes = await axios.get(/* ... */);
+  } catch (e) {
+    sendDebug({
+      tag: "IG LIKES ERROR",
+      msg: `Fetch likes page gagal: ${e.response?.data ? JSON.stringify(e.response.data) : (e.message || String(e))}`,
+      client_id: shortcode
+    });
+    break;
+  }
 
     const likeItems = likesRes.data?.data?.items || [];
     sendDebug({
@@ -129,8 +122,9 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
       } catch (err) {
         sendDebug({
           tag: "IG FETCH LIKES ERROR",
-          msg: `Gagal fetch likes untuk shortcode: ${r.shortcode}, error: ${(err && err.message) || err}`,
-          client_id,
+          // Hanya log message/error string, jangan objek error utuh!
+          msg: `Gagal fetch likes untuk shortcode: ${r.shortcode}, error: ${(err && err.message) || String(err)}`,
+          client_id
         });
         gagal++;
       }
@@ -143,12 +137,12 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
   } catch (err) {
     await waClient.sendMessage(
       chatId,
-      `❌ Error utama fetch likes IG: ${(err && err.message) || err}`
+      `❌ Error utama fetch likes IG: ${(err && err.message) || String(err)}`
     );
     sendDebug({
       tag: "IG FETCH LIKES ERROR",
-      msg: (err && err.message) || err,
-      client_id,
+      msg: (err && err.message) || String(err),
+      client_id
     });
   }
 }
