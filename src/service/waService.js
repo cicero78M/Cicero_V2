@@ -16,9 +16,10 @@ import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 
 import { fetchAndStoreInstaContent } from "./instaFetchService.js";
-import { fetchAndStoreTiktokContent } from "./tiktokFetchService.js";
-
-import { getTiktokSecUid } from "./tiktokFetchService.js";
+import {
+  getTiktokSecUid,
+  fetchAndStoreTiktokContent,
+} from "./tiktokFetchService.js";
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
@@ -30,13 +31,30 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
-
 import { handleAbsensiKomentar } from "../handler/absensi/absensiKomentarHandlers.js";
 
 // helper functions
+import {
+  formatNama,
+  groupByDivision,
+  sortDivisionKeys,
+  normalizeKomentarArr,
+} from "../utils/utilsHelper.js";
+import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
+import {
+  setMenuTimeout,
+  setSession,
+  getSession,
+  clearSession,
+} from "../utils/sessionsHelper.js";
 
-import { isAdminWhatsApp, formatToWhatsAppId} from "../utils/waHelper.js";
-import { setMenuTimeout, setSession, getSession, clearSession} from "../utils/sessionsHelper.js";
+import { sendDebug } from "../middleware/debugHandler.js";
+
+import {
+  IG_PROFILE_REGEX,
+  TT_PROFILE_REGEX,
+  isAdminCommand,
+} from "../utils/constants.js";
 
 dotenv.config();
 
@@ -46,16 +64,9 @@ dotenv.config();
 
 // Tambah di atas (global scope)
 const userMenuContext = {};
-
-// Pada scope global file (agar session per chatId tetap nyantol)
-const updateUsernameSession = {}; // key: chatId
-
-// Regex untuk deteksi link IG/TikTok
-const IG_PROFILE_REGEX =
-  /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(?:[/?].*)?$/i;
-const TT_PROFILE_REGEX =
-  /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
-
+const session = getSession(chatId);
+const updateUsernameSession = {};
+const knownUserSet = new Set();
 
 // Format output data client (untuk WA)
 function formatClientData(obj, title = "") {
@@ -90,9 +101,6 @@ function formatClientData(obj, title = "") {
   });
   return dataText;
 }
-
-
-
 // =======================
 // INISIALISASI CLIENT WA
 // =======================
@@ -112,9 +120,6 @@ waClient.on("ready", () => {
   console.log("[WA] WhatsApp client is ready!");
 });
 
-// Temporary in-memory, ideally simpan ke DB
-const knownUserSet = new Set();
-
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
@@ -122,9 +127,7 @@ waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
 
-  const session = getSession(chatId);
-
-  // Di handler utama pesan masuk
+  // ===== Keluar dari menu user =====
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
     delete userMenuContext[chatId];
     await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
@@ -160,6 +163,7 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
+
   if (session && session.menu === "clientrequest") {
     const handler = clientRequestHandlers[session.step || "main"];
     if (handler) {
@@ -198,29 +202,7 @@ waClient.on("message", async (msg) => {
     return;
   }
   // =======================
-  // === Proteksi untuk command admin only ===
-  const adminCommands = [
-    "addnewclient#",
-    "updateclient#",
-    "removeclient#",
-    "clientinfo#",
-    "clientrequest",
-    "advancedclientrequest",
-    "transferuser#",
-    "sheettransfer#",
-    "thisgroup#",
-    "requestinsta#",
-    "requesttiktok#",
-    "fetchinsta#",
-    "fetchtiktok#",
-    "absensilikes#",
-    "absensikomentar#",
-    "exception#",
-    "status#",
-  ];
-  const isAdminCommand = adminCommands.some((cmd) =>
-    text.toLowerCase().startsWith(cmd)
-  );
+
   if (isAdminCommand && !isAdminWhatsApp(chatId)) {
     await waClient.sendMessage(
       chatId,
@@ -492,33 +474,6 @@ waClient.on("message", async (msg) => {
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
 
-    function sortDivisionKeys(keys) {
-      const order = ["BAG", "SAT", "POLSEK"];
-      return keys.sort((a, b) => {
-        const ia = order.findIndex((prefix) =>
-          a.toUpperCase().startsWith(prefix)
-        );
-        const ib = order.findIndex((prefix) =>
-          b.toUpperCase().startsWith(prefix)
-        );
-        return (
-          (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
-        );
-      });
-    }
-    function groupByDivision(arr) {
-      const divGroups = {};
-      arr.forEach((u) => {
-        const div = u.divisi || "-";
-        if (!divGroups[div]) divGroups[div] = [];
-        divGroups[div].push(u);
-      });
-      return divGroups;
-    }
-    function formatNama(u) {
-      return [u.title, u.nama].filter(Boolean).join(" ");
-    }
-
     // 1. Fetch konten & likes IG terbaru (always update before check)
     await waClient.sendMessage(
       chatId,
@@ -779,33 +734,6 @@ waClient.on("message", async (msg) => {
     const filter1 = (parts[2] || "").toLowerCase();
     const filter2 = (parts[3] || "").toLowerCase();
 
-    function sortDivisionKeys(keys) {
-      const order = ["BAG", "SAT", "POLSEK"];
-      return keys.sort((a, b) => {
-        const ia = order.findIndex((prefix) =>
-          a.toUpperCase().startsWith(prefix)
-        );
-        const ib = order.findIndex((prefix) =>
-          b.toUpperCase().startsWith(prefix)
-        );
-        return (
-          (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
-        );
-      });
-    }
-    function groupByDivision(arr) {
-      const divGroups = {};
-      arr.forEach((u) => {
-        const div = u.divisi || "-";
-        if (!divGroups[div]) divGroups[div] = [];
-        divGroups[div].push(u);
-      });
-      return divGroups;
-    }
-    function formatNama(u) {
-      return [u.title, u.nama].filter(Boolean).join(" ");
-    }
-
     // Header laporan
     const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n`;
     const now = new Date();
@@ -909,19 +837,6 @@ waClient.on("message", async (msg) => {
     const { getCommentsByVideoId } = await import(
       "../model/tiktokCommentModel.js"
     );
-    function normalizeKomentarArr(arr) {
-      return arr
-        .map((c) => {
-          if (typeof c === "string") return c.replace(/^@/, "").toLowerCase();
-          if (c && typeof c === "object") {
-            return (c.user?.unique_id || c.username || "")
-              .replace(/^@/, "")
-              .toLowerCase();
-          }
-          return "";
-        })
-        .filter(Boolean);
-    }
 
     // === MODE AKUMULASI ===
     if (filter1 === "akumulasi") {
@@ -1180,19 +1095,6 @@ waClient.on("message", async (msg) => {
       chatId,
       `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
     );
-
-    // === DEBUGGING SECTION ===
-    function sendDebug(msg) {
-      const adminWA = (process.env.ADMIN_WHATSAPP || "")
-        .split(",")
-        .map((n) => n.trim())
-        .filter(Boolean)
-        .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
-      for (const wa of adminWA)
-        waClient.sendMessage(wa, "[DEBUG FETTIKTOK] " + msg).catch(() => {});
-      console.log("[DEBUG FETTIKTOK] " + msg);
-    }
-    // === END DEBUG SECTION ===
 
     try {
       // === 1. Fetch post TikTok via API ===
@@ -2475,6 +2377,5 @@ Jika ingin menggunakan menu manual, copy & paste perintah di atas sesuai kebutuh
 waClient.initialize();
 
 export default waClient;
-
 
 // ======================= end of file ======================

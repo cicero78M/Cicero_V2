@@ -1,1 +1,30 @@
-export const USER_DATA_PATH = './src/data/users.json';
+export const USER_DATA_PATH = "./src/data/users.json";
+
+// Regex untuk deteksi link IG/TikTok
+export const IG_PROFILE_REGEX =
+  /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)(?:[/?].*)?$/i;
+export const TT_PROFILE_REGEX =
+  /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
+
+export const adminCommands = [
+  "addnewclient#",
+  "updateclient#",
+  "removeclient#",
+  "clientinfo#",
+  "clientrequest",
+  "advancedclientrequest",
+  "transferuser#",
+  "sheettransfer#",
+  "thisgroup#",
+  "requestinsta#",
+  "requesttiktok#",
+  "fetchinsta#",
+  "fetchtiktok#",
+  "absensilikes#",
+  "absensikomentar#",
+  "exception#",
+  "status#",
+];
+export const isAdminCommand = adminCommands.some((cmd) =>
+  text.toLowerCase().startsWith(cmd)
+);

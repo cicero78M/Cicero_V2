@@ -1,5 +1,3 @@
-
-
 export function sortDivisionKeys(keys) {
   const order = ["BAG", "SAT", "SI", "POLSEK"];
   return keys.sort((a, b) => {
@@ -31,9 +29,11 @@ export function groupByDivision(arr) {
   });
   return divGroups;
 }
+
 export function formatNama(u) {
   return [u.title, u.nama].filter(Boolean).join(" ");
 }
+
 export function normalizeKomentarArr(arr) {
   return arr
     .map((c) => {

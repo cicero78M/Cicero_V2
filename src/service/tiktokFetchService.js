@@ -1,21 +1,9 @@
 import axios from "axios";
 import { findById, update } from "../model/clientModel.js";
 import { upsertTiktokPosts } from "../model/tiktokPostModel.js";
-import waClient from "./waService.js";
+import { sendAdminDebug } from "../middleware/debugHandler.js";
 import dotenv from "dotenv";
 dotenv.config();
-
-// Helper: Kirim log/debug ke ADMIN WhatsApp
-function sendAdminDebug(msg) {
-  const adminWA = (process.env.ADMIN_WHATSAPP || "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean)
-    .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
-  for (const wa of adminWA) {
-    waClient.sendMessage(wa, `[CICERO DEBUG]\n${msg}`).catch(() => {});
-  }
-}
 
 // Ambil secUid dari DB atau API TikTok
 export async function getTiktokSecUid(client_id) {

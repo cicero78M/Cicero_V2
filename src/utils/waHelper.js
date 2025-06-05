@@ -43,3 +43,14 @@ export function formatToWhatsAppId(nohp) {
   if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
   return `${number}@c.us`;
 }
+
+const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
+  .split(",")
+  .map((n) => n.trim())
+  .filter(Boolean);
+
+export function getAdminWAIds() {
+  return ADMIN_WHATSAPP.map((n) =>
+    n.endsWith("@c.us") ? n : n.replace(/[^0-9]/g, "") + "@c.us"
+  );
+}
