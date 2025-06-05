@@ -1,4 +1,4 @@
-import { sortDivisionKeys, sortTitleKeys } from "../utils/waUtils.js";
+import { sortDivisionKeys, sortTitleKeys } from "../utils/utilsHelper.js";
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
