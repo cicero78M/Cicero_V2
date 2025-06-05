@@ -62,7 +62,7 @@ async function getEligibleClients() {
 }
 
 /**
- * Fungsi utama: fetch & simpan post hari ini
+ * Fungsi utama: fetch & simpan post hari ini SAJA (update jika sudah ada)
  */
 export async function fetchAndStoreInstaContent(
   keys,
@@ -126,21 +126,20 @@ export async function fetchAndStoreInstaContent(
       });
       continue;
     }
+    // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI ====
     const items =
       postsRes.data &&
       postsRes.data.data &&
       Array.isArray(postsRes.data.data.items)
-        ? postsRes.data.data.items
+        ? postsRes.data.data.items.filter((post) => isToday(post.taken_at))
         : [];
     sendDebug({
       tag: "IG FETCH",
-      msg: `Jumlah post IG hari ini: ${items.length}`,
+      msg: `Jumlah post IG HARI INI SAJA: ${items.length}`,
       client_id: client.id
     });
 
     for (const post of items) {
-      if (!isToday(post.taken_at)) continue;
-
       const toSave = {
         client_id: client.id,
         shortcode: post.code,
@@ -157,7 +156,7 @@ export async function fetchAndStoreInstaContent(
 
       fetchedShortcodesToday.push(toSave.shortcode);
 
-      // INSERT/UPDATE ke DB
+      // UPSERT ke DB: update jika sudah ada (berdasarkan shortcode)
       sendDebug({
         tag: "IG FETCH",
         msg: `[DB] Upsert IG post: ${toSave.shortcode}`,
@@ -194,7 +193,7 @@ export async function fetchAndStoreInstaContent(
     }
   }
 
-  // Hapus konten hari ini yang sudah tidak ada (sinkronisasi)
+  // Hapus konten hari ini yang sudah tidak ada di hasil fetch hari ini
   const shortcodesToDelete = dbShortcodesToday.filter(
     (x) => !fetchedShortcodesToday.includes(x)
   );
