@@ -1,3 +1,5 @@
+import * as util from "../utils/utilsHelper.js";
+
 
 export async function handleAbsensiLikes(
   waClient,
@@ -6,32 +8,7 @@ export async function handleAbsensiLikes(
   filter1 = "",
   filter2 = ""
 ) {
-  function sortDivisionKeys(keys) {
-    const order = ["BAG", "SAT", "POLSEK"];
-    return keys.sort((a, b) => {
-      const ia = order.findIndex((prefix) =>
-        a.toUpperCase().startsWith(prefix)
-      );
-      const ib = order.findIndex((prefix) =>
-        b.toUpperCase().startsWith(prefix)
-      );
-      return (
-        (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
-      );
-    });
-  }
-  function groupByDivision(arr) {
-    const divGroups = {};
-    arr.forEach((u) => {
-      const div = u.divisi || "-";
-      if (!divGroups[div]) divGroups[div] = [];
-      divGroups[div].push(u);
-    });
-    return divGroups;
-  }
-  function formatNama(u) {
-    return [u.title, u.nama].filter(Boolean).join(" ");
-  }
+
 
   await waClient.sendMessage(
     chatId,
@@ -123,8 +100,8 @@ export async function handleAbsensiLikes(
 
     if (tipe === "sudah") {
       msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      const sudahDiv = groupByDivision(sudah);
-      sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+      const sudahDiv = util.groupByDivision(sudah);
+      util.sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
         const list = sudahDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg +=

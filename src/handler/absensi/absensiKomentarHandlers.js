@@ -1,3 +1,6 @@
+import * as utils from "../utils/utilsHelper.js";
+
+
 export async function handleAbsensiKomentar(
   waClient,
   chatId,
@@ -5,45 +8,6 @@ export async function handleAbsensiKomentar(
   filter1 = "",
   filter2 = ""
 ) {
-  function sortDivisionKeys(keys) {
-    const order = ["BAG", "SAT", "POLSEK"];
-    return keys.sort((a, b) => {
-      const ia = order.findIndex((prefix) =>
-        a.toUpperCase().startsWith(prefix)
-      );
-      const ib = order.findIndex((prefix) =>
-        b.toUpperCase().startsWith(prefix)
-      );
-      return (
-        (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b)
-      );
-    });
-  }
-  function groupByDivision(arr) {
-    const divGroups = {};
-    arr.forEach((u) => {
-      const div = u.divisi || "-";
-      if (!divGroups[div]) divGroups[div] = [];
-      divGroups[div].push(u);
-    });
-    return divGroups;
-  }
-  function formatNama(u) {
-    return [u.title, u.nama].filter(Boolean).join(" ");
-  }
-  function normalizeKomentarArr(arr) {
-    return arr
-      .map((c) => {
-        if (typeof c === "string") return c.replace(/^@/, "").toLowerCase();
-        if (c && typeof c === "object") {
-          return (c.user?.unique_id || c.username || "")
-            .replace(/^@/, "")
-            .toLowerCase();
-        }
-        return "";
-      })
-      .filter(Boolean);
-  }
 
   // Header laporan
   const headerLaporan = `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar pada Akun Official TikTok:\n\n`;
@@ -114,7 +78,7 @@ export async function handleAbsensiKomentar(
       let commentsArr = Array.isArray(komentar?.comments)
         ? komentar.comments
         : [];
-      commentsArr = normalizeKomentarArr(commentsArr);
+      commentsArr = utils.normalizeKomentarArr(commentsArr);
       const usernameSet = new Set(commentsArr);
 
       users.forEach((u) => {
@@ -158,15 +122,15 @@ export async function handleAbsensiKomentar(
 
     if (tipe === "sudah") {
       msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      const sudahDiv = groupByDivision(sudah);
-      sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+      const sudahDiv = utils.groupByDivision(sudah);
+      utils.sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
         const list = sudahDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 } (${u.count} video)${
                   !u.tiktok ? " (belum mengisi data tiktok)" : ""
@@ -176,15 +140,15 @@ export async function handleAbsensiKomentar(
       });
     } else {
       msg += `❌ Belum melaksanakan (${belum.length} user):\n`;
-      const belumDiv = groupByDivision(belum);
-      sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+      const belumDiv = utils.groupByDivision(belum);
+      utils.sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
         const list = belumDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok ? u.tiktok : "belum mengisi data tiktok"
                 } (0 video)${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -203,7 +167,7 @@ export async function handleAbsensiKomentar(
     let commentsArr = Array.isArray(komentar?.comments)
       ? komentar.comments
       : [];
-    commentsArr = normalizeKomentarArr(commentsArr);
+    commentsArr = utils.normalizeKomentarArr(commentsArr);
     const usernameSet = new Set(commentsArr);
 
     let sudah = [],
@@ -237,30 +201,30 @@ export async function handleAbsensiKomentar(
 
     if (!filter1) {
       msg += `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      const sudahDiv = groupByDivision(sudah);
-      sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+      const sudahDiv = utils.groupByDivision(sudah);
+      utils.sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
         const list = sudahDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
             .join("\n") + "\n\n";
       });
       msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
-      const belumDiv = groupByDivision(belum);
-      sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+      const belumDiv = utils.groupByDivision(belum);
+      utils.sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
         const list = belumDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok ? u.tiktok : "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -273,15 +237,15 @@ export async function handleAbsensiKomentar(
 
     if (filter1 === "sudah") {
       let msgSudah = msg + `✅ Sudah melaksanakan (${sudah.length} user):\n`;
-      const sudahDiv = groupByDivision(sudah);
-      sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+      const sudahDiv = utils.groupByDivision(sudah);
+      utils.sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
         const list = sudahDiv[div];
         msgSudah += `*${div}* (${list.length} user):\n`;
         msgSudah +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok || "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
@@ -294,15 +258,15 @@ export async function handleAbsensiKomentar(
 
     if (filter1 === "belum") {
       let msgBelum = msg + `❌ Belum melaksanakan (${belum.length} user):\n`;
-      const belumDiv = groupByDivision(belum);
-      sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+      const belumDiv = utils.groupByDivision(belum);
+      utils.sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
         const list = belumDiv[div];
         msgBelum += `*${div}* (${list.length} user):\n`;
         msgBelum +=
           list
             .map(
               (u) =>
-                `- ${formatNama(u)} : ${
+                `- ${utils.formatNama(u)} : ${
                   u.tiktok ? u.tiktok : "belum mengisi data tiktok"
                 }${!u.tiktok ? " (belum mengisi data tiktok)" : ""}`
             )
