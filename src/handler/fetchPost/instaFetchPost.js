@@ -1,8 +1,10 @@
+// src/handler/fetchPost/instaFetchPost.js
+
 import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
-import { sendDebug } from "../middleware/debugHandler.js";
-import * as instaLikeService from "./instaFetchLikeService.js";
+import { sendDebug } from "../../middleware/debugHandler.js";
+import * as instaLikeService from "../fetchEngagement/fetchLikesInsta.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -13,6 +15,9 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
 const limit = pLimit(6);
 
+/**
+ * Utility: Cek apakah unixTimestamp adalah hari ini (UTC)
+ */
 function isToday(unixTimestamp) {
   if (!unixTimestamp) return false;
   const d = new Date(unixTimestamp * 1000);
@@ -56,7 +61,9 @@ async function getEligibleClients() {
   return res.rows;
 }
 
-// Export utama: fetch & simpan post
+/**
+ * Fungsi utama: fetch & simpan post hari ini
+ */
 export async function fetchAndStoreInstaContent(
   keys,
   waClient = null,
@@ -81,8 +88,6 @@ export async function fetchAndStoreInstaContent(
 
   const dbShortcodesToday = await getShortcodesToday();
   let fetchedShortcodesToday = [];
-  let kontenLinks = [];
-  let kontenCount = 0;
 
   const clients = await getEligibleClients();
   sendDebug({
@@ -151,10 +156,8 @@ export async function fetchAndStoreInstaContent(
       };
 
       fetchedShortcodesToday.push(toSave.shortcode);
-      kontenCount++;
-      kontenLinks.push(`https://www.instagram.com/p/${toSave.shortcode}`);
 
-      // INSERT/UPDATE
+      // INSERT/UPDATE ke DB
       sendDebug({
         tag: "IG FETCH",
         msg: `[DB] Upsert IG post: ${toSave.shortcode}`,
@@ -184,14 +187,14 @@ export async function fetchAndStoreInstaContent(
         client_id: client.id
       });
 
-      // Fetch & save likes (delegasi ke like service)
+      // Fetch & simpan likes untuk post ini (modular, handler sendiri)
       if (post.code) {
         await instaLikeService.fetchAndStoreLikes(post.code, client.id);
       }
     }
   }
 
-  // Sinkronisasi: hapus yg tidak ada di fetch baru
+  // Hapus konten hari ini yang sudah tidak ada (sinkronisasi)
   const shortcodesToDelete = dbShortcodesToday.filter(
     (x) => !fetchedShortcodesToday.includes(x)
   );
@@ -204,7 +207,7 @@ export async function fetchAndStoreInstaContent(
   processing = false;
   clearInterval(intervalId);
 
-  // Ringkasan fetch
+  // Ringkasan WA/console
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
@@ -221,7 +224,6 @@ export async function fetchAndStoreInstaContent(
   let maxPerMsg = 30;
   const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
 
-  // Mode WA
   if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
     const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
     for (const target of sendTargets) {
