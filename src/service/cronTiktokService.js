@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { getActiveClientsTiktok, getClientTiktokUsername, rekapKomentarTikTok, formatRekapPostTikTok } from "../handler/fetchAbsensi/tiktok/absenisKomentarTiktok.js";
+import { getActiveClientsTiktok, getClientTiktokUsername, rekapKomentarTikTok, formatRekapPostTikTok } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 import { fetchAndStoreTiktokContent } from "../handler/fetchPost/tiktokFetchPost.js";
 import { fetchAndStoreTiktokCommentUserList } from "../handler/fetchEngagement/fetchCommentTiktok.js";
 import waClient from "../service/waService.js"; // pastikan waClient diexport default
