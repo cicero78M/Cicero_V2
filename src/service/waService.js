@@ -64,7 +64,6 @@ dotenv.config();
 
 // Tambah di atas (global scope)
 const userMenuContext = {};
-const session = getSession(chatId);
 const updateUsernameSession = {};
 const knownUserSet = new Set();
 
@@ -126,6 +125,8 @@ waClient.on("ready", () => {
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = msg.body.trim();
+
+  const session = getSession(chatId);
 
   const isAdminCommand = adminCommands.some((cmd) =>
     text.toLowerCase().startsWith(cmd)
