@@ -31,7 +31,6 @@ import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 
-import { handleAbsensiLikes } from "../handler/absensi/absensiLikesHandlers.js";
 import { handleAbsensiKomentar } from "../handler/absensi/absensiKomentarHandlers.js";
 
 dotenv.config();
