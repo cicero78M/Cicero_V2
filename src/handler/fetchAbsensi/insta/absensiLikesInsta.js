@@ -5,9 +5,19 @@ import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
 import { sortDivisionKeys, groupByDivision } from "../../../utils/utilsHelper.js";
 
-/**
- * Ambil nama client dari DB, fallback ke client_id jika tidak ditemukan
- */
+// Custom sorting satfung helper (urutan tetap BAG, SAT, SI, POLSEK)
+function sortSatfung(keys) {
+  const order = ["BAG", "SAT", "SI", "POLSEK"];
+  return keys.sort((a, b) => {
+    const ia = order.findIndex((p) => a.toUpperCase().startsWith(p));
+    const ib = order.findIndex((p) => b.toUpperCase().startsWith(p));
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 async function getClientNama(client_id) {
   const res = await pool.query(
     "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
@@ -16,18 +26,7 @@ async function getClientNama(client_id) {
   return res.rows[0]?.nama || client_id;
 }
 
-export async function getActiveClientsIG() {
-  const res = await pool.query(
-    `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
-  );
-  return res.rows;
-}
-
-/**
- * Handler utama absensi likes IG (mode: all, sudah, belum)
- * @param {string} client_id
- * @param {object} opts - opsi { mode: "all"|"sudah"|"belum" }
- */
+// === AKUMULASI ===
 export async function absensiLikes(client_id, opts = {}) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -65,7 +64,7 @@ export async function absensiLikes(client_id, opts = {}) {
 
   Object.values(userStats).forEach((u) => {
     if (u.exception === true) {
-      sudah.push(u);
+      sudah.push(u); // selalu masuk ke sudah!
     } else if (
       u.insta &&
       u.insta.trim() !== "" &&
@@ -77,7 +76,7 @@ export async function absensiLikes(client_id, opts = {}) {
     }
   });
 
-  // filter kembali, agar TIDAK ADA user exception di list belum!
+  // Hapus user exception dari list belum!
   belum = belum.filter(u => !u.exception);
 
   const kontenLinks = shortcodes.map(
@@ -98,7 +97,7 @@ export async function absensiLikes(client_id, opts = {}) {
     // Selalu tampilkan list user sudah!
     msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
     const sudahDiv = groupByDivision(sudah);
-    sortDivisionKeys(Object.keys(sudahDiv)).forEach((div) => {
+    sortSatfung(Object.keys(sudahDiv)).forEach((div) => {
       const list = sudahDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
@@ -121,7 +120,7 @@ export async function absensiLikes(client_id, opts = {}) {
     // Selalu tampilkan list user belum!
     msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
     const belumDiv = groupByDivision(belum);
-    sortDivisionKeys(Object.keys(belumDiv)).forEach((div) => {
+    sortSatfung(Object.keys(belumDiv)).forEach((div) => {
       const list = belumDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
@@ -148,41 +147,7 @@ export async function absensiLikes(client_id, opts = {}) {
   return msg.trim();
 }
 
-/**
- * Rekap Likes IG (total likes semua konten hari ini, pakai nama client)
- */
-export async function rekapLikesIG(client_id) {
-  const clientNama = await getClientNama(client_id);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
-  if (!shortcodes.length) return null;
-
-  let totalLikes = 0;
-  let detailLikes = [];
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
-    const jumlahLikes = (likes || []).length;
-    totalLikes += jumlahLikes;
-    detailLikes.push({
-      shortcode: sc,
-      link: `https://www.instagram.com/p/${sc}`,
-      jumlahLikes,
-    });
-  }
-  let msg =
-    `📊 Rekap Likes IG\n*Polres*: *${clientNama}*\n` +
-    `Jumlah konten hari ini: ${shortcodes.length}\n` +
-    `Total likes semua konten: ${totalLikes}\n\n` +
-    `Rincian:\n`;
-  detailLikes.forEach((d) => {
-    msg += `${d.link}: ${d.jumlahLikes} like\n`;
-  });
-  return msg.trim();
-}
-
-/**
- * Absensi per konten, breakdown sudah/belum per konten.
- * mode: all | sudah | belum
- */
+// === PER KONTEN ===
 export async function absensiLikesPerKonten(client_id, opts = {}) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -207,24 +172,48 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
-      if (u.insta && u.insta.trim() !== "" && likesSet.has(u.insta.toLowerCase())) {
+      if (u.exception === true) {
+        userSudah.push(u); // Selalu ke sudah!
+      } else if (u.insta && u.insta.trim() !== "" && likesSet.has(u.insta.toLowerCase())) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
       }
     });
+    // Hilangkan user exception dari belum!
+    userBelum = userBelum.filter(u => !u.exception);
+
     msg += `\nKonten: https://www.instagram.com/p/${sc}\n`;
+
     if (mode === "all" || mode === "sudah") {
       msg += `✅ Sudah: ${userSudah.length}\n`;
-      msg += userSudah.length
-        ? userSudah.map(u => `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}\n`).join("")
-        : "-\n";
+      // Group by divisi, urutkan satfung
+      const sudahDiv = groupByDivision(userSudah);
+      sortSatfung(Object.keys(sudahDiv)).forEach((div) => {
+        const list = sudahDiv[div];
+        msg += `*${div}* (${list.length} user):\n`;
+        msg += list.length
+          ? list.map(u =>
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}`
+            ).join("\n") + "\n"
+          : "-\n";
+      });
+      if (Object.keys(sudahDiv).length === 0) msg += "-\n";
     }
+
     if (mode === "all" || mode === "belum") {
       msg += `❌ Belum: ${userBelum.length}\n`;
-      msg += userBelum.length
-        ? userBelum.map(u => `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}\n`).join("")
-        : "-\n";
+      const belumDiv = groupByDivision(userBelum);
+      sortSatfung(Object.keys(belumDiv)).forEach((div) => {
+        const list = belumDiv[div];
+        msg += list.length
+          ? `*${div}* (${list.length} user):\n` +
+            list.map(u =>
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}`
+            ).join("\n") + "\n"
+          : "-\n";
+      });
+      if (Object.keys(belumDiv).length === 0) msg += "-\n";
     }
   }
   msg += `\nTerimakasih.`;
