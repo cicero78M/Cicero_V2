@@ -1,3 +1,5 @@
+// src/handler/fetchPost/tiktokFetchPost.js
+
 import axios from "axios";
 import { pool } from "../../config/db.js";
 import { findById, update } from "../../model/clientModel.js";
@@ -115,8 +117,8 @@ export async function fetchAndStoreTiktokContent(
     if (
       processing &&
       waClient &&
-      chatId &&
-      typeof waClient.sendMessage === "function"
+      typeof waClient.sendMessage === "function" &&
+      chatId
     ) {
       waClient.sendMessage(chatId, "⏳ Processing fetch TikTok data...");
     }
@@ -263,7 +265,11 @@ export async function fetchAndStoreTiktokContent(
   let maxPerMsg = 30;
   const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
 
-  if (waClient && (chatId || ADMIN_WHATSAPP.length)) {
+  if (
+    waClient &&
+    typeof waClient.sendMessage === "function" &&
+    (chatId || ADMIN_WHATSAPP.length)
+  ) {
     const sendTargets = chatId ? [chatId] : ADMIN_WHATSAPP;
     for (const target of sendTargets) {
       await waClient.sendMessage(target, msg);
