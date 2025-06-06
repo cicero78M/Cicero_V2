@@ -226,3 +226,33 @@ export async function getActiveClientsIG() {
   );
   return res.rows;
 }
+
+
+export async function rekapLikesIG(client_id) {
+  const client = await findClientById(client_id);
+  const polresNama = client?.nama || client_id;
+
+  const shortcodes = await getShortcodesTodayByClient(client_id);
+  if (!shortcodes.length) return null;
+  let totalLikes = 0;
+  let detailLikes = [];
+  for (const sc of shortcodes) {
+    const likes = await getLikesByShortcode(sc);
+    const jumlahLikes = (likes || []).length;
+    totalLikes += jumlahLikes;
+    detailLikes.push({
+      shortcode: sc,
+      link: `https://www.instagram.com/p/${sc}`,
+      jumlahLikes,
+    });
+  }
+  let msg =
+    `📊 Rekap Likes IG\n*Polres*: *${polresNama}*\n` +
+    `Jumlah konten hari ini: *${shortcodes.length}*\n` +
+    `Total likes semua konten: *${totalLikes}*\n\n` +
+    `Rincian:\n`;
+  detailLikes.forEach((d) => {
+    msg += `- ${d.link}: ${d.jumlahLikes} like\n`;
+  });
+  return msg.trim();
+}
