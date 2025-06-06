@@ -68,7 +68,7 @@ async function getEligibleTiktokClients() {
 }
 
 // Ambil secUid dari DB atau API TikTok
-async function getTiktokSecUid(client) {
+export async function getTiktokSecUid(client) {
   if (client && client.tiktok_secuid) return client.tiktok_secuid;
   if (!client || !client.client_tiktok)
     throw new Error("Username TikTok kosong di database.");
