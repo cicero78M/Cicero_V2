@@ -6,12 +6,10 @@ import { pool } from "../config/db.js";
 export async function upsertTiktokPosts(client_id, posts) {
   if (!Array.isArray(posts)) return;
   for (const post of posts) {
-    // Ambil waktu, fallback ke 0 jika null
-    const create_time =
-      post.create_time || post.created_at || post.createTime || 0;
+    // created_at sudah berupa Date/ISO string dari fetcher
     await pool.query(
       `INSERT INTO tiktok_post (client_id, video_id, caption, created_at, like_count, comment_count)
-      VALUES ($1, $2, $3, to_timestamp($4), $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (video_id) DO UPDATE SET
         caption = EXCLUDED.caption,
         created_at = EXCLUDED.created_at,
@@ -21,7 +19,7 @@ export async function upsertTiktokPosts(client_id, posts) {
         client_id,
         post.video_id || post.id,
         post.desc || post.caption || "",
-        create_time, // pastikan ini dalam satuan detik (Unix epoch)
+        post.created_at || post.create_time || post.createTime || null, // <<== PATCH, TIDAK pakai to_timestamp!
         post.digg_count ?? post.like_count ?? 0,
         post.comment_count ?? 0,
       ]
