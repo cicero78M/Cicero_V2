@@ -697,7 +697,24 @@ fetchLikesInsta_choose: async (session, chatId, text, waClient, pool, userServic
 },
 
 // Step pilih client untuk absensi likes IG (9)
-absensiLikes_choose: async (session, chatId, text, waClient, pool, userService, clientService, migrateUsersFromFolder, checkGoogleSheetCsvStatus, importUsersFromGoogleSheet, fetchAndStoreInstaContent, fetchAndStoreTiktokContent, formatClientData, fetchAndStoreLikesInstaContent) => {
+// Setelah pilih client
+absensiLikes_choose: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  migrateUsersFromFolder,
+  checkGoogleSheetCsvStatus,
+  importUsersFromGoogleSheet,
+  fetchAndStoreInstaContent,
+  fetchAndStoreTiktokContent,
+  formatClientData,
+  fetchAndStoreLikesInstaContent,
+  // ...tambahkan dependency handler jika ada
+) => {
   const idx = parseInt(text.trim()) - 1;
   const clients = session.clientList || [];
   if (isNaN(idx) || !clients[idx]) {
@@ -705,12 +722,75 @@ absensiLikes_choose: async (session, chatId, text, waClient, pool, userService, 
     return;
   }
   const client_id = clients[idx].client_id;
-  await waClient.sendMessage(chatId, `⏳ Menghitung absensi likes IG untuk ${client_id}...`);
+  session.absensi_client_id = client_id; // simpan di session
+  session.step = "absensiLikes_choose_submenu";
+  let msg = `Pilih tipe rekap absensi likes:\n`;
+  msg += `1. Akumulasi (Sudah & Belum)\n`;
+  msg += `2. Akumulasi Sudah\n`;
+  msg += `3. Akumulasi Belum\n`;
+  msg += `4. Per Konten (Sudah & Belum)\n`;
+  msg += `5. Per Konten Sudah\n`;
+  msg += `6. Per Konten Belum\n`;
+  msg += `\nBalas angka di atas.`;
+  await waClient.sendMessage(chatId, msg);
+},
+
+absensiLikes_choose_submenu: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  migrateUsersFromFolder,
+  checkGoogleSheetCsvStatus,
+  importUsersFromGoogleSheet,
+  fetchAndStoreInstaContent,
+  fetchAndStoreTiktokContent,
+  formatClientData,
+  fetchAndStoreLikesInstaContent,
+) => {
+  const pilihan = parseInt(text.trim());
+  const client_id = session.absensi_client_id;
+  if (!client_id) {
+    await waClient.sendMessage(chatId, "Client belum dipilih.");
+    session.step = "main";
+    return;
+  }
   try {
-    const msg = await absensiLikesAkumulasiBelum(client_id);
-    await waClient.sendMessage(chatId, msg);
+    let msg = "";
+    if (pilihan === 1) {
+      // Akumulasi (sudah & belum)
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
+      msg = await fn(client_id, { mode: "all" });
+    } else if (pilihan === 2) {
+      // Akumulasi Sudah
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
+      msg = await fn(client_id, { mode: "sudah" });
+    } else if (pilihan === 3) {
+      // Akumulasi Belum
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
+      msg = await fn(client_id, { mode: "belum" });
+    } else if (pilihan === 4) {
+      // Per konten (sudah & belum)
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
+      msg = await fn(client_id, { mode: "all" });
+    } else if (pilihan === 5) {
+      // Per konten Sudah
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
+      msg = await fn(client_id, { mode: "sudah" });
+    } else if (pilihan === 6) {
+      // Per konten Belum
+      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
+      msg = await fn(client_id, { mode: "belum" });
+    } else {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka 1-6.");
+      return;
+    }
+    await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
   } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error absensi likes IG: ${e.message}`);
+    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
   }
   session.step = "main";
 },
