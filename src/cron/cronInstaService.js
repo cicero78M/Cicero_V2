@@ -6,7 +6,8 @@ import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.j
 import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
 import waClient from "../service/waService.js";
 
-import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
+import { getActiveClientsIG, absensiLikes } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
+import { rekapLikesIG } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(
@@ -63,7 +64,7 @@ cron.schedule(
           });
         }
 
-        // --- REKAP LIKES IG ---
+        // --- OPTIONAL: REKAP LIKES IG (jika masih ingin dikirim ke admin) ---
         try {
           const rekapMsg = await rekapLikesIG(client.client_id);
           if (rekapMsg) {
@@ -71,7 +72,7 @@ cron.schedule(
               tag: "CRON IG",
               msg: `[client=${client.client_id}] Rekap likes IG akan dikirim ke admin.`,
             });
-            // KIRIM KE ADMIN
+            // Kirim ke admin WA (boleh dihapus kalau tidak perlu)
             await Promise.all(
               process.env.ADMIN_WHATSAPP.split(",")
                 .map((n) => n.trim())
@@ -91,15 +92,16 @@ cron.schedule(
           });
         }
 
-        // --- ABSENSI LIKES IG ---
+        // --- ABSENSI LIKES IG (HANYA "BELUM") ---
         try {
-          const msg = await absensiLikesAkumulasiBelum(client.client_id);
-          if (msg && msg.length > 0) {
+          // Hanya mode: "belum"
+          const msg = await absensiLikes(client.client_id, { mode: "belum" });
+          if (msg && msg.length > 0 && !/Belum melaksanakan: \*0\*/.test(msg)) {
             sendDebug({
               tag: "CRON IG",
-              msg: `[client=${client.client_id}] Absensi likes IG akan dikirim ke admin.`,
+              msg: `[client=${client.client_id}] Absensi likes IG (BELUM) akan dikirim ke admin.`,
             });
-            // KIRIM KE ADMIN
+            // Kirim ke semua admin WhatsApp
             await Promise.all(
               process.env.ADMIN_WHATSAPP.split(",")
                 .map((n) => n.trim())
@@ -111,6 +113,11 @@ cron.schedule(
                   ).catch(() => {})
                 )
             );
+          } else {
+            sendDebug({
+              tag: "CRON IG",
+              msg: `[client=${client.client_id}] Semua user sudah like, tidak ada laporan belum dikirim.`,
+            });
           }
         } catch (waErr) {
           sendDebug({
@@ -122,7 +129,7 @@ cron.schedule(
 
       sendDebug({
         tag: "CRON IG",
-        msg: "Laporan absensi likes berhasil dikirim ke admin.",
+        msg: "Laporan absensi likes (belum) selesai dikirim ke admin.",
       });
     } catch (err) {
       sendDebug({

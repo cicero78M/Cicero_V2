@@ -1,6 +1,5 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
-import { absensiLikesAkumulasiBelum } from "../fetchAbsensi/insta/absensiLikesInsta.js";
-
+import { absensiLikes, absensiLikesPerKonten } from "../fetchAbsensi/insta/absensiLikesInsta.js";
 
 export const clientRequestHandlers = {
   main: async (
@@ -17,8 +16,8 @@ export const clientRequestHandlers = {
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
-    fetchAndStoreLikesInstaContent,      // handler likes IG
-    fetchAndStoreTiktokComments          // handler komentar TikTok
+    fetchAndStoreLikesInstaContent, // handler likes IG
+    fetchAndStoreTiktokComments // handler komentar TikTok
   ) => {
     switch (text) {
       case "1":
@@ -59,7 +58,7 @@ export const clientRequestHandlers = {
           9: "absensiLikes_choose",
           10: "absensiKomentar_choose",
           17: "fetchLikesInsta_choose",
-          18: "fetchKomentarTiktok_choose"
+          18: "fetchKomentarTiktok_choose",
         };
         session.step = stepMap[text];
         let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
@@ -141,7 +140,6 @@ export const clientRequestHandlers = {
         return;
     }
   },
-
 
   // ====== Add Client ======
   addClient_id: async (
@@ -658,145 +656,194 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-// Step pilih client untuk fetch post IG (7)
-fetchInsta_choose: async (session, chatId, text, waClient, pool, userService, clientService, migrateUsersFromFolder, checkGoogleSheetCsvStatus, importUsersFromGoogleSheet, fetchAndStoreInstaContent) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  await waClient.sendMessage(chatId, `⏳ Memulai fetch konten IG untuk ${client_id}...`);
-  try {
-    await fetchAndStoreInstaContent(null, waClient, chatId, client_id); // pass client_id jika handler support
-    await waClient.sendMessage(chatId, `✅ Selesai fetch IG untuk ${client_id}.`);
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error fetch IG: ${e.message}`);
-  }
-  session.step = "main";
-},
-
-// Step pilih client untuk fetch likes IG (17)
-fetchLikesInsta_choose: async (session, chatId, text, waClient, pool, userService, clientService, migrateUsersFromFolder, checkGoogleSheetCsvStatus, importUsersFromGoogleSheet, fetchAndStoreInstaContent, fetchAndStoreTiktokContent, formatClientData, fetchAndStoreLikesInstaContent) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  await waClient.sendMessage(chatId, `⏳ Memulai fetch likes IG untuk ${client_id}...`);
-  try {
-    await handleFetchLikesInstagram(waClient, chatId, client_id); // dari fetchLikesInstagram.js
-    await waClient.sendMessage(chatId, `✅ Selesai fetch likes IG untuk ${client_id}.`);
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error fetch likes IG: ${e.message}`);
-  }
-  session.step = "main";
-},
-
-// Step pilih client untuk absensi likes IG (9)
-// Setelah pilih client
-absensiLikes_choose: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  migrateUsersFromFolder,
-  checkGoogleSheetCsvStatus,
-  importUsersFromGoogleSheet,
-  fetchAndStoreInstaContent,
-  fetchAndStoreTiktokContent,
-  formatClientData,
-  fetchAndStoreLikesInstaContent,
-  // ...tambahkan dependency handler jika ada
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.absensi_client_id = client_id; // simpan di session
-  session.step = "absensiLikes_choose_submenu";
-  let msg = `Pilih tipe rekap absensi likes:\n`;
-  msg += `1. Akumulasi (Sudah & Belum)\n`;
-  msg += `2. Akumulasi Sudah\n`;
-  msg += `3. Akumulasi Belum\n`;
-  msg += `4. Per Konten (Sudah & Belum)\n`;
-  msg += `5. Per Konten Sudah\n`;
-  msg += `6. Per Konten Belum\n`;
-  msg += `\nBalas angka di atas.`;
-  await waClient.sendMessage(chatId, msg);
-},
-
-absensiLikes_choose_submenu: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  migrateUsersFromFolder,
-  checkGoogleSheetCsvStatus,
-  importUsersFromGoogleSheet,
-  fetchAndStoreInstaContent,
-  fetchAndStoreTiktokContent,
-  formatClientData,
-  fetchAndStoreLikesInstaContent,
-) => {
-  const pilihan = parseInt(text.trim());
-  const client_id = session.absensi_client_id;
-  if (!client_id) {
-    await waClient.sendMessage(chatId, "Client belum dipilih.");
-    session.step = "main";
-    return;
-  }
-  try {
-    let msg = "";
-    if (pilihan === 1) {
-      // Akumulasi (sudah & belum)
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
-      msg = await fn(client_id, { mode: "all" });
-    } else if (pilihan === 2) {
-      // Akumulasi Sudah
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
-      msg = await fn(client_id, { mode: "sudah" });
-    } else if (pilihan === 3) {
-      // Akumulasi Belum
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesAkumulasiBelum;
-      msg = await fn(client_id, { mode: "belum" });
-    } else if (pilihan === 4) {
-      // Per konten (sudah & belum)
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
-      msg = await fn(client_id, { mode: "all" });
-    } else if (pilihan === 5) {
-      // Per konten Sudah
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
-      msg = await fn(client_id, { mode: "sudah" });
-    } else if (pilihan === 6) {
-      // Per konten Belum
-      const fn = (await import("../fetchAbsensi/insta/absensiLikesInsta.js")).absensiLikesPerKonten;
-      msg = await fn(client_id, { mode: "belum" });
-    } else {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka 1-6.");
+  // Step pilih client untuk fetch post IG (7)
+  fetchInsta_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
       return;
     }
-    await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-  }
-  session.step = "main";
-},
+    const client_id = clients[idx].client_id;
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Memulai fetch konten IG untuk ${client_id}...`
+    );
+    try {
+      await fetchAndStoreInstaContent(null, waClient, chatId, client_id); // pass client_id jika handler support
+      await waClient.sendMessage(
+        chatId,
+        `✅ Selesai fetch IG untuk ${client_id}.`
+      );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error fetch IG: ${e.message}`);
+    }
+    session.step = "main";
+  },
 
+  // Step pilih client untuk fetch likes IG (17)
+  fetchLikesInsta_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Memulai fetch likes IG untuk ${client_id}...`
+    );
+    try {
+      await handleFetchLikesInstagram(waClient, chatId, client_id); // dari fetchLikesInstagram.js
+      await waClient.sendMessage(
+        chatId,
+        `✅ Selesai fetch likes IG untuk ${client_id}.`
+      );
+    } catch (e) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Error fetch likes IG: ${e.message}`
+      );
+    }
+    session.step = "main";
+  },
 
+  // Step pilih client untuk absensi likes IG (9)
+  absensiLikes_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent
+    // tambahkan dependency handler jika perlu
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    session.absensi_client_id = client_id; // simpan ke session
+    session.step = "absensiLikes_choose_submenu";
+    let msg = `Pilih tipe rekap absensi likes:\n`;
+    msg += `1. Akumulasi (Sudah & Belum)\n`;
+    msg += `2. Akumulasi Sudah\n`;
+    msg += `3. Akumulasi Belum\n`;
+    msg += `4. Per Konten (Sudah & Belum)\n`;
+    msg += `5. Per Konten Sudah\n`;
+    msg += `6. Per Konten Belum\n`;
+    msg += `\nBalas angka di atas.`;
+    await waClient.sendMessage(chatId, msg);
+  },
+  // Submenu untuk absensi likes IG
+  absensiLikes_choose_submenu: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent
+    // tambahkan dependency handler jika perlu
+  ) => {
+    const pilihan = parseInt(text.trim());
+    const client_id = session.absensi_client_id;
+    if (!client_id) {
+      await waClient.sendMessage(chatId, "Client belum dipilih.");
+      session.step = "main";
+      return;
+    }
 
+    try {
+      let msg = "";
+      const absensiLikesPath = "../fetchAbsensi/insta/absensiLikesInsta.js";
+      if ([1, 2, 3].includes(pilihan)) {
+        // Akumulasi
+        const { absensiLikes } = await import(absensiLikesPath);
+        if (pilihan === 1) {
+          msg = await absensiLikes(client_id, { mode: "all" });
+        } else if (pilihan === 2) {
+          msg = await absensiLikes(client_id, { mode: "sudah" });
+        } else if (pilihan === 3) {
+          msg = await absensiLikes(client_id, { mode: "belum" });
+        }
+      } else if ([4, 5, 6].includes(pilihan)) {
+        // Per konten
+        const { absensiLikesPerKonten } = await import(absensiLikesPath);
+        if (pilihan === 4) {
+          msg = await absensiLikesPerKonten(client_id, { mode: "all" });
+        } else if (pilihan === 5) {
+          msg = await absensiLikesPerKonten(client_id, { mode: "sudah" });
+        } else if (pilihan === 6) {
+          msg = await absensiLikesPerKonten(client_id, { mode: "belum" });
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka 1-6."
+        );
+        return;
+      }
+      await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+  },
 
   // ====== Fetch Komentar TikTok ======
   fetchKomentarTiktok_choose: async (
