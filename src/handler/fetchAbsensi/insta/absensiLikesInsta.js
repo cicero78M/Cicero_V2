@@ -219,3 +219,10 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
   msg += `\nTerimakasih.`;
   return msg.trim();
 }
+
+export async function getActiveClientsIG() {
+  const res = await pool.query(
+    `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
+  );
+  return res.rows;
+}
