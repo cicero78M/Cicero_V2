@@ -199,7 +199,7 @@ export async function fetchAndStoreTiktokContent(
         client_id: client.id,
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
-        // === PATCH: Insert as Date (bukan epoch) ===
+        // PATCH: Insert as Date (atau ISO string), agar cocok dgn kolom timestamp
         created_at:
           typeof post.createTime === "number"
             ? new Date(post.createTime * 1000)
