@@ -1,4 +1,6 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
+import { absensiLikesAkumulasiBelum } from "../fetchAbsensi/insta/absensiLikesInsta.js";
+
 
 export const clientRequestHandlers = {
   main: async (
