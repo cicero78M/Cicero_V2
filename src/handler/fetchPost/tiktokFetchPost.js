@@ -20,9 +20,13 @@ const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 function isTodayJakarta(unixTimestamp) {
   if (!unixTimestamp) return false;
   const d = new Date(
-    new Date(unixTimestamp * 1000).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+    new Date(unixTimestamp * 1000).toLocaleString("en-US", {
+      timeZone: "Asia/Jakarta",
+    })
   );
-  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const today = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
   return (
     d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
@@ -39,11 +43,12 @@ async function getVideoIdsToday() {
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
   const res = await pool.query(
-    `SELECT video_id FROM tiktok_post WHERE DATE(TO_TIMESTAMP(created_at)) = $1`,
+    `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
   return res.rows.map((r) => r.video_id);
 }
+
 
 async function deleteVideoIds(videoIdsToDelete) {
   if (!videoIdsToDelete.length) return;
@@ -73,7 +78,9 @@ export async function getTiktokSecUid(client) {
   if (!client || !client.client_tiktok)
     throw new Error("Username TikTok kosong di database.");
   const username = client.client_tiktok.replace(/^@/, "");
-  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`;
+  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(
+    username
+  )}`;
   const headers = {
     "x-rapidapi-key": RAPIDAPI_KEY,
     "x-rapidapi-host": RAPIDAPI_HOST,
@@ -95,9 +102,15 @@ export async function fetchAndStoreTiktokContent(
 ) {
   let processing = true;
   if (!waClient)
-    sendDebug({ tag: "TIKTOK FETCH", msg: "fetchAndStoreTiktokContent: mode cronjob/auto" });
+    sendDebug({
+      tag: "TIKTOK FETCH",
+      msg: "fetchAndStoreTiktokContent: mode cronjob/auto",
+    });
   else
-    sendDebug({ tag: "TIKTOK FETCH", msg: "fetchAndStoreTiktokContent: mode WA handler" });
+    sendDebug({
+      tag: "TIKTOK FETCH",
+      msg: "fetchAndStoreTiktokContent: mode WA handler",
+    });
 
   const intervalId = setInterval(() => {
     if (
@@ -117,7 +130,7 @@ export async function fetchAndStoreTiktokContent(
   const clients = await getEligibleTiktokClients();
   sendDebug({
     tag: "TIKTOK FETCH",
-    msg: `Eligible clients for TikTok fetch: jumlah client: ${clients.length}`
+    msg: `Eligible clients for TikTok fetch: jumlah client: ${clients.length}`,
   });
 
   for (const client of clients) {
@@ -128,7 +141,7 @@ export async function fetchAndStoreTiktokContent(
       sendDebug({
         tag: "TIKTOK FETCH ERROR",
         msg: `Gagal fetch secUid: ${err.message || err}`,
-        client_id: client.id
+        client_id: client.id,
       });
       continue;
     }
@@ -137,29 +150,30 @@ export async function fetchAndStoreTiktokContent(
     try {
       sendDebug({
         tag: "TIKTOK FETCH",
-        msg: `Fetch posts for client: ${client.id} / @${client.client_tiktok}`
+        msg: `Fetch posts for client: ${client.id} / @${client.client_tiktok}`,
       });
-      postsRes = await axios.get(
-        `https://${RAPIDAPI_HOST}/api/user/posts`,
-        {
-          params: { secUid, count: 35, cursor: 0 },
-          headers: {
-            "x-cache-control": "no-cache",
-            "X-RapidAPI-Key": RAPIDAPI_KEY,
-            "X-RapidAPI-Host": RAPIDAPI_HOST,
-          },
-        }
-      );
+      postsRes = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
+        params: { secUid, count: 35, cursor: 0 },
+        headers: {
+          "x-cache-control": "no-cache",
+          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Host": RAPIDAPI_HOST,
+        },
+      });
       sendDebug({
         tag: "TIKTOK FETCH",
-        msg: `API /api/user/posts response: jumlah konten ditemukan: ${postsRes.data?.data?.itemList?.length || 0}`,
-        client_id: client.id
+        msg: `API /api/user/posts response: jumlah konten ditemukan: ${
+          postsRes.data?.data?.itemList?.length || 0
+        }`,
+        client_id: client.id,
       });
     } catch (err) {
       sendDebug({
         tag: "TIKTOK POST ERROR",
-        msg: err.response?.data ? JSON.stringify(err.response.data) : err.message,
-        client_id: client.id
+        msg: err.response?.data
+          ? JSON.stringify(err.response.data)
+          : err.message,
+        client_id: client.id,
       });
       continue;
     }
@@ -169,12 +183,14 @@ export async function fetchAndStoreTiktokContent(
       postsRes.data &&
       postsRes.data.data &&
       Array.isArray(postsRes.data.data.itemList)
-        ? postsRes.data.data.itemList.filter((post) => isTodayJakarta(post.createTime))
+        ? postsRes.data.data.itemList.filter((post) =>
+            isTodayJakarta(post.createTime)
+          )
         : [];
     sendDebug({
       tag: "TIKTOK FETCH",
       msg: `Jumlah post TikTok HARI INI SAJA: ${items.length}`,
-      client_id: client.id
+      client_id: client.id,
     });
 
     if (items.length > 0) hasSuccessfulFetch = true; // PATCH
@@ -184,7 +200,8 @@ export async function fetchAndStoreTiktokContent(
         client_id: client.id,
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
-        created_at: typeof post.createTime === "number" ? post.createTime : null, // epoch detik
+        created_at:
+          typeof post.createTime === "number" ? post.createTime : null, // epoch detik
         like_count:
           post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
         comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
@@ -196,16 +213,13 @@ export async function fetchAndStoreTiktokContent(
       sendDebug({
         tag: "TIKTOK FETCH",
         msg: `[DB] Upsert TikTok post: ${toSave.video_id}`,
-        client_id: client.id
+        client_id: client.id,
       });
-      await upsertTiktokPosts(
-        client.id,
-        [toSave]
-      );
+      await upsertTiktokPosts(client.id, [toSave]);
       sendDebug({
         tag: "TIKTOK FETCH",
         msg: `[DB] Sukses upsert TikTok post: ${toSave.video_id}`,
-        client_id: client.id
+        client_id: client.id,
       });
     }
   }
@@ -217,13 +231,13 @@ export async function fetchAndStoreTiktokContent(
     );
     sendDebug({
       tag: "TIKTOK SYNC",
-      msg: `Akan menghapus video_id yang tidak ada hari ini: jumlah=${videoIdsToDelete.length}`
+      msg: `Akan menghapus video_id yang tidak ada hari ini: jumlah=${videoIdsToDelete.length}`,
     });
     await deleteVideoIds(videoIdsToDelete);
   } else {
     sendDebug({
       tag: "TIKTOK SYNC",
-      msg: `Tidak ada fetch TikTok berhasil (mungkin API down atau semua kosong), database hari ini tidak dihapus!`
+      msg: `Tidak ada fetch TikTok berhasil (mungkin API down atau semua kosong), database hari ini tidak dihapus!`,
     });
   }
 
@@ -255,21 +269,18 @@ export async function fetchAndStoreTiktokContent(
         const linksMsg = kontenLinksToday
           .slice(i * maxPerMsg, (i + 1) * maxPerMsg)
           .join("\n");
-        await waClient.sendMessage(
-          target,
-          `Link konten TikTok:\n${linksMsg}`
-        );
+        await waClient.sendMessage(target, `Link konten TikTok:\n${linksMsg}`);
       }
     }
   } else {
     sendDebug({
       tag: "TIKTOK FETCH",
-      msg: msg
+      msg: msg,
     });
     if (kontenLinksToday.length) {
       sendDebug({
         tag: "TIKTOK FETCH",
-        msg: kontenLinksToday.join("\n")
+        msg: kontenLinksToday.join("\n"),
       });
     }
   }
