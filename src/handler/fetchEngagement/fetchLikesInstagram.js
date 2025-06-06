@@ -3,7 +3,7 @@
 import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
-import { sendDebug } from "../../utils/debugHelper.js";
+import { sendDebug } from "../../middleware/debugHandler.js";
 
 // Konfigurasi RapidAPI
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
