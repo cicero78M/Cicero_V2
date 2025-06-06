@@ -49,7 +49,6 @@ async function getVideoIdsToday() {
   return res.rows.map((r) => r.video_id);
 }
 
-
 async function deleteVideoIds(videoIdsToDelete) {
   if (!videoIdsToDelete.length) return;
   const today = new Date();
@@ -57,7 +56,7 @@ async function deleteVideoIds(videoIdsToDelete) {
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
   await pool.query(
-    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(TO_TIMESTAMP(created_at)) = $2`,
+    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`,
     [videoIdsToDelete, `${yyyy}-${mm}-${dd}`]
   );
 }
@@ -200,8 +199,11 @@ export async function fetchAndStoreTiktokContent(
         client_id: client.id,
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
+        // === PATCH: Insert as Date (bukan epoch) ===
         created_at:
-          typeof post.createTime === "number" ? post.createTime : null, // epoch detik
+          typeof post.createTime === "number"
+            ? new Date(post.createTime * 1000)
+            : null,
         like_count:
           post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
         comment_count: post.stats?.commentCount ?? post.comment_count ?? 0,
@@ -250,7 +252,7 @@ export async function fetchAndStoreTiktokContent(
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
   const kontenHariIniRes = await pool.query(
-    `SELECT video_id, created_at FROM tiktok_post WHERE DATE(TO_TIMESTAMP(created_at)) = $1`,
+    `SELECT video_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
   const kontenLinksToday = kontenHariIniRes.rows.map(
