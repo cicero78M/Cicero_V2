@@ -1,4 +1,4 @@
-import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram";
+import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
 
 export const clientRequestHandlers = {
   main: async (
