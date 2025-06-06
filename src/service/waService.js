@@ -138,28 +138,30 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  if (session && session.menu === "clientrequest") {
-    const handler = clientRequestHandlers[session.step || "main"];
-    if (handler) {
-      await handler(
-        session,
-        chatId,
-        text,
-        waClient,
-        pool,
-        userService,
-        clientService,
-        migrateUsersFromFolder,
-        checkGoogleSheetCsvStatus,
-        importUsersFromGoogleSheet,
-        fetchAndStoreInstaContent,
-        fetchAndStoreTiktokContent,
-        formatClientData,
-        handleAbsensiKomentar
-      );
-    }
-    return;
+if (session && session.menu === "clientrequest") {
+  const handler = clientRequestHandlers[session.step || "main"];
+  if (handler) {
+    await handler(
+      session,
+      chatId,
+      text,
+      waClient,
+      pool,
+      userService,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      handleFetchLikesInstagram, // <--- ini untuk likes IG
+      handleAbsensiKomentar // jika TikTok absensi komentar
+    );
   }
+  return;
+}
+
   if (userMenuContext[chatId]) {
     setMenuTimeout(chatId);
     const session = userMenuContext[chatId];

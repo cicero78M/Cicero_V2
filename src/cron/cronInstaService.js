@@ -1,9 +1,9 @@
-// src/service/cronService.js
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
 import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
+import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
 import waClient from "../service/waService.js";
 
 import { getActiveClientsIG, absensiLikesAkumulasiBelum, rekapLikesIG } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
@@ -14,7 +14,7 @@ cron.schedule(
   async () => {
     sendDebug({
       tag: "CRON IG",
-      msg: "Mulai tugas fetchInsta & absensiLikes akumulasi belum...",
+      msg: "Mulai tugas fetchInsta, fetchLikes & absensiLikes akumulasi belum...",
     });
     try {
       const clients = await getActiveClientsIG();
@@ -33,9 +33,7 @@ cron.schedule(
       })}\n`;
       if (fetchSummary && typeof fetchSummary === "object") {
         Object.entries(fetchSummary).forEach(([client, stat]) => {
-          debugMsg += `Client: ${client}\n  - Jumlah post hari ini: ${
-            stat.count || 0
-          }\n`;
+          debugMsg += `Client: ${client}\n  - Jumlah post hari ini: ${stat.count || 0}\n`;
           if (stat.error) debugMsg += `  - Error: ${stat.error}\n`;
         });
       } else {
@@ -47,7 +45,25 @@ cron.schedule(
       });
 
       for (const client of clients) {
-        // --- Rekap Likes IG ---
+        // --- FETCH LIKES IG ---
+        try {
+          sendDebug({
+            tag: "CRON IG",
+            msg: `[client=${client.client_id}] Memulai fetch likes IG...`
+          });
+          await handleFetchLikesInstagram(null, null, client.client_id); // Cron, tanpa WA, client_id saja
+          sendDebug({
+            tag: "CRON IG",
+            msg: `[client=${client.client_id}] Selesai fetch likes IG.`
+          });
+        } catch (waErr) {
+          sendDebug({
+            tag: "CRON IG",
+            msg: `[client=${client.client_id}] ERROR fetch likes IG: ${waErr.message}`,
+          });
+        }
+
+        // --- REKAP LIKES IG ---
         try {
           const rekapMsg = await rekapLikesIG(client.client_id);
           if (rekapMsg) {
@@ -55,7 +71,7 @@ cron.schedule(
               tag: "CRON IG",
               msg: `[client=${client.client_id}] Rekap likes IG akan dikirim ke admin.`,
             });
-            // KIRIM KE ADMIN, BUKAN KE CLIENT
+            // KIRIM KE ADMIN
             await Promise.all(
               process.env.ADMIN_WHATSAPP.split(",")
                 .map((n) => n.trim())
@@ -75,7 +91,7 @@ cron.schedule(
           });
         }
 
-        // --- Absensi Likes IG ---
+        // --- ABSENSI LIKES IG ---
         try {
           const msg = await absensiLikesAkumulasiBelum(client.client_id);
           if (msg && msg.length > 0) {
@@ -83,7 +99,7 @@ cron.schedule(
               tag: "CRON IG",
               msg: `[client=${client.client_id}] Absensi likes IG akan dikirim ke admin.`,
             });
-            // KIRIM KE ADMIN, BUKAN KE CLIENT
+            // KIRIM KE ADMIN
             await Promise.all(
               process.env.ADMIN_WHATSAPP.split(",")
                 .map((n) => n.trim())
@@ -119,5 +135,3 @@ cron.schedule(
     timezone: "Asia/Jakarta",
   }
 );
-
-// ===== END FILE =====
