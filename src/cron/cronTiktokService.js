@@ -15,9 +15,9 @@ async function getActiveClientsTiktok() {
   return rows.rows;
 }
 
-// CRON: Setiap jam 04:10 sampai 22:10 WIB
+// CRON: Setiap jam 06:10 sampai 20:10 WIB
 cron.schedule(
-  "10 4-22 * * *",
+  "10 6-20 * * *",
   async () => {
     sendDebug({
       tag: "CRON TTK KOMENTAR",
