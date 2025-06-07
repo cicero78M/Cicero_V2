@@ -28,7 +28,7 @@ function getAdminWAIds() {
 
 // Jadwalkan cron tiap jam 06:15 - 20:15 WIB
 cron.schedule(
-  "15 6-20 * * *",
+  "55 6-20 * * *",
   async () => {
     sendDebug({
       tag: "CRON TTK",
