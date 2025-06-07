@@ -47,3 +47,29 @@ export function normalizeKomentarArr(arr) {
     })
     .filter(Boolean);
 }
+
+// Helper untuk formatting info client
+export function formatClientInfo(client) {
+  return `
+🗂️ *Informasi Client*
+
+*Client ID*: \`${client.client_id}\`
+*Nama*: ${client.nama}
+*Tipe*: ${client.client_type}
+*Status*: ${client.client_status ? "✅ Aktif" : "❌ Tidak aktif"}
+
+*Instagram*: ${client.client_insta ? `[@${client.client_insta}](https://instagram.com/${client.client_insta})` : "-"} ${client.client_insta_status ? "✅ Aktif" : "❌ Tidak aktif"}
+*TikTok*: ${client.client_tiktok ? `[@${client.client_tiktok}](https://www.tiktok.com/@${client.client_tiktok})` : "-"} ${client.client_tiktok_status ? "✅ Aktif" : "❌ Tidak aktif"}
+
+*Operator WA*: [${client.client_operator}](https://wa.me/${client.client_operator})
+*Group WA*: ${client.client_group || "-"}
+*Super Admin*: [${client.client_super}](https://wa.me/${client.client_super})
+
+*TikTok secUid*:
+\`\`\`
+${client.tiktok_secuid || "-"}
+\`\`\`
+`.trim();
+}
+
+

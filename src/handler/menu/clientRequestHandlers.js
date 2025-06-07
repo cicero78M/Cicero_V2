@@ -1,4 +1,5 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
+import { formatClientInfo } from "../../utils/utilsHelper.js";
 
 export const clientRequestHandlers = {
  main: async (
@@ -331,38 +332,38 @@ export const clientRequestHandlers = {
   },
 
   // ====== Info Client ======
-  infoClient_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    ...deps
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
+infoClient_choose: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  ...deps
+) => {
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(
+      chatId,
+      "Pilihan tidak valid. Balas angka sesuai list."
+    );
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  try {
+    const client = await clientService.findClientById(client_id);
+    if (client) {
+      await waClient.sendMessage(chatId, formatClientInfo(client));
+    } else {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
     }
-    const client_id = clients[idx].client_id;
-    try {
-      const client = await clientService.findClientById(client_id);
-      if (client) {
-        await waClient.sendMessage(chatId, JSON.stringify(client, null, 2));
-      } else {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
-      }
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
+  } catch (e) {
+    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+  }
+  session.step = "main";
+},
 
   // ====== Transfer User ======
   transferUser_choose: async (
