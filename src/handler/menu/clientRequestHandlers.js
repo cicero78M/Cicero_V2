@@ -10,7 +10,7 @@ import {
 // Main handler untuk request client
 
 export const clientRequestHandlers = {
- main: async (
+  main: async (
     session,
     chatId,
     text,
@@ -30,7 +30,10 @@ export const clientRequestHandlers = {
     switch (text) {
       case "1":
         session.step = "addClient_id";
-        await waClient.sendMessage(chatId, "Masukkan *client_id* untuk client baru:");
+        await waClient.sendMessage(
+          chatId,
+          "Masukkan *client_id* untuk client baru:"
+        );
         return;
       case "2":
       case "3":
@@ -45,12 +48,13 @@ export const clientRequestHandlers = {
       case "12":
       case "17":
       case "18": {
+        // Ambil semua client (aktif & tidak aktif)
         const rows = await pool.query(
-          "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
+          "SELECT client_id, nama, client_status FROM clients ORDER BY client_id"
         );
         const clients = rows.rows;
         if (!clients.length) {
-          await waClient.sendMessage(chatId, "Tidak ada client aktif.");
+          await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
           return;
         }
         session.clientList = clients;
@@ -71,13 +75,16 @@ export const clientRequestHandlers = {
           18: "requestTiktok_choose",
         };
         session.step = stepMap[text];
-        let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
+        let msg = `*Daftar Client (Semua Status)*\nBalas angka untuk memilih client:\n`;
         clients.forEach((c, i) => {
-          msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+          msg += `${i + 1}. ${c.client_id} - ${c.nama} ${
+            c.client_status ? "✅" : "❌"
+          }\n`;
         });
         await waClient.sendMessage(chatId, msg.trim());
         return;
       }
+
       case "13":
         session.step = "manualCommandList";
         await waClient.sendMessage(
@@ -110,7 +117,9 @@ export const clientRequestHandlers = {
           } else {
             let msg = `*Daftar User Exception:*\n`;
             exceptionUsers.forEach((u) => {
-              msg += `- ${u.user_id}: ${u.nama || ""} (${u.insta || u.tiktok || "-"})\n`;
+              msg += `- ${u.user_id}: ${u.nama || ""} (${
+                u.insta || u.tiktok || "-"
+              })\n`;
             });
             await waClient.sendMessage(chatId, msg);
           }
@@ -340,38 +349,38 @@ export const clientRequestHandlers = {
   },
 
   // ====== Info Client ======
-infoClient_choose: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  ...deps
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(
-      chatId,
-      "Pilihan tidak valid. Balas angka sesuai list."
-    );
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  try {
-    const client = await clientService.findClientById(client_id);
-    if (client) {
-      await waClient.sendMessage(chatId, formatClientInfo(client));
-    } else {
-      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
+  infoClient_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    ...deps
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
+      return;
     }
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-  }
-  session.step = "main";
-},
+    const client_id = clients[idx].client_id;
+    try {
+      const client = await clientService.findClientById(client_id);
+      if (client) {
+        await waClient.sendMessage(chatId, formatClientInfo(client));
+      } else {
+        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
+      }
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+  },
 
   // ====== Transfer User ======
   transferUser_choose: async (
@@ -877,13 +886,16 @@ infoClient_choose: async (
     }
     session.step = "main";
   },
-// --- Submenu step untuk Request Instagram (case 17) ---
+  // --- Submenu step untuk Request Instagram (case 17) ---
   // === Request Instagram (menu 17) ===
   requestInsta_choose: async (session, chatId, text, waClient, pool) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
     if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
       return;
     }
     session.selected_client_id = clients[idx].client_id;
@@ -896,7 +908,10 @@ infoClient_choose: async (
 
   requestInsta_status_submenu: async (session, chatId, text, waClient) => {
     if (!session.selected_client_id) {
-      await waClient.sendMessage(chatId, "Session client tidak valid, ulangi dari awal.");
+      await waClient.sendMessage(
+        chatId,
+        "Session client tidak valid, ulangi dari awal."
+      );
       session.step = "main";
       return;
     }
@@ -904,13 +919,16 @@ infoClient_choose: async (
     if (text.trim() === "1") status = "sudah";
     else if (text.trim() === "2") status = "belum";
     else {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum."
+      );
       return;
     }
     // Simulasi emit handler (atau panggil langsung fungsi requestInsta, jika mau)
     waClient.emit("message", {
       from: chatId,
-      body: `requestinsta#${session.selected_client_id}#${status}`
+      body: `requestinsta#${session.selected_client_id}#${status}`,
     });
     session.step = "main";
   },
@@ -920,7 +938,10 @@ infoClient_choose: async (
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
     if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai list."
+      );
       return;
     }
     session.selected_client_id = clients[idx].client_id;
@@ -933,7 +954,10 @@ infoClient_choose: async (
 
   requestTiktok_status_submenu: async (session, chatId, text, waClient) => {
     if (!session.selected_client_id) {
-      await waClient.sendMessage(chatId, "Session client tidak valid, ulangi dari awal.");
+      await waClient.sendMessage(
+        chatId,
+        "Session client tidak valid, ulangi dari awal."
+      );
       session.step = "main";
       return;
     }
@@ -941,105 +965,122 @@ infoClient_choose: async (
     if (text.trim() === "1") status = "sudah";
     else if (text.trim() === "2") status = "belum";
     else {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum."
+      );
       return;
     }
     waClient.emit("message", {
       from: chatId,
-      body: `requesttiktok#${session.selected_client_id}#${status}`
+      body: `requesttiktok#${session.selected_client_id}#${status}`,
     });
     session.step = "main";
   },
 
   // Handler submenu (sederhana, tinggal copy logic dari absensiLikes_choose_submenu)
-absensiKomentar_choose: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  migrateUsersFromFolder,
-  checkGoogleSheetCsvStatus,
-  importUsersFromGoogleSheet,
-  fetchAndStoreInstaContent,
-  fetchAndStoreTiktokContent,
-  formatClientData,
-  fetchAndStoreLikesInstaContent
-  // tambahkan dependency handler jika perlu
-) => {
-  // Langkah pemilihan client
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.absensi_client_id = client_id; // simpan ke session
-  session.step = "absensiKomentar_choose_submenu";
-  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
-  msg += `1. Akumulasi minimal 50% (Sudah & Belum)\n`;
-  msg += `2. Akumulasi Sudah (min. 50%)\n`;
-  msg += `3. Akumulasi Belum (kurang dari 50%)\n`;
-  msg += `4. Per Konten (Sudah & Belum)\n`;
-  msg += `5. Per Konten Sudah\n`;
-  msg += `6. Per Konten Belum\n`;
-  msg += `\nBalas angka di atas.`;
-  await waClient.sendMessage(chatId, msg);
-},
-
-absensiKomentar_choose_submenu: async (
-  session,
-  chatId,
-  text,
-  waClient
-  // dependency lain jika butuh, misal: pool, userService, dst
-) => {
-  const pilihan = parseInt(text.trim());
-  const client_id = session.absensi_client_id;
-  if (!client_id) {
-    await waClient.sendMessage(chatId, "Client belum dipilih.");
-    session.step = "main";
-    return;
-  }
-
-  try {
-    let msg = "";
-    // Akumulasi 50%
-    if ([1, 2, 3].includes(pilihan)) {
-      if (pilihan === 1) {
-        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "all" });
-      } else if (pilihan === 2) {
-        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "sudah" });
-      } else if (pilihan === 3) {
-        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "belum" });
-      }
-    }
-    // Per konten
-    else if ([4, 5, 6].includes(pilihan)) {
-      if (pilihan === 4) {
-        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "all" });
-      } else if (pilihan === 5) {
-        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "sudah" });
-      } else if (pilihan === 6) {
-        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "belum" });
-      }
-    } else {
+  absensiKomentar_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent
+    // tambahkan dependency handler jika perlu
+  ) => {
+    // Langkah pemilihan client
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
       await waClient.sendMessage(
         chatId,
-        "Pilihan tidak valid. Balas angka 1-6."
+        "Pilihan tidak valid. Balas angka sesuai list."
       );
       return;
     }
-    await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
-  } catch (e) {
-    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-  }
-  session.step = "main";
-},
+    const client_id = clients[idx].client_id;
+    session.absensi_client_id = client_id; // simpan ke session
+    session.step = "absensiKomentar_choose_submenu";
+    let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
+    msg += `1. Akumulasi minimal 50% (Sudah & Belum)\n`;
+    msg += `2. Akumulasi Sudah (min. 50%)\n`;
+    msg += `3. Akumulasi Belum (kurang dari 50%)\n`;
+    msg += `4. Per Konten (Sudah & Belum)\n`;
+    msg += `5. Per Konten Sudah\n`;
+    msg += `6. Per Konten Belum\n`;
+    msg += `\nBalas angka di atas.`;
+    await waClient.sendMessage(chatId, msg);
+  },
 
+  absensiKomentar_choose_submenu: async (
+    session,
+    chatId,
+    text,
+    waClient
+    // dependency lain jika butuh, misal: pool, userService, dst
+  ) => {
+    const pilihan = parseInt(text.trim());
+    const client_id = session.absensi_client_id;
+    if (!client_id) {
+      await waClient.sendMessage(chatId, "Client belum dipilih.");
+      session.step = "main";
+      return;
+    }
+
+    try {
+      let msg = "";
+      // Akumulasi 50%
+      if ([1, 2, 3].includes(pilihan)) {
+        if (pilihan === 1) {
+          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
+            mode: "all",
+          });
+        } else if (pilihan === 2) {
+          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
+            mode: "sudah",
+          });
+        } else if (pilihan === 3) {
+          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
+            mode: "belum",
+          });
+        }
+      }
+      // Per konten
+      else if ([4, 5, 6].includes(pilihan)) {
+        if (pilihan === 4) {
+          msg = await absensiKomentarTiktokPerKonten(client_id, {
+            mode: "all",
+          });
+        } else if (pilihan === 5) {
+          msg = await absensiKomentarTiktokPerKonten(client_id, {
+            mode: "sudah",
+          });
+        } else if (pilihan === 6) {
+          msg = await absensiKomentarTiktokPerKonten(client_id, {
+            mode: "belum",
+          });
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka 1-6."
+        );
+        return;
+      }
+      await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+  },
 
   // ... handler lain tetap sama ...
 };
