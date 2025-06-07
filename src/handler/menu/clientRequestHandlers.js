@@ -869,5 +869,66 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
+  // Handler step pilih client Instagram (17)
+requestInsta_choose: async (
+  session, chatId, text, waClient, pool
+) => {
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  session.selected_client_id = client_id;
+  session.step = "requestInsta_status";
+  await waClient.sendMessage(
+    chatId,
+    `Ketik salah satu:\nrequestinsta#${client_id}#sudah\nrequestinsta#${client_id}#belum`
+  );
+},
+
+requestInsta_status: async (
+  session, chatId, text, waClient
+) => {
+  if (!text.toLowerCase().startsWith("requestinsta#")) {
+    await waClient.sendMessage(chatId, "Format salah! Ketik dengan format:\nrequestinsta#clientid#sudah/belum");
+    return;
+  }
+  // Langsung oper ke handler waService sesuai workflow asli
+  waClient.emit("message", { from: chatId, body: text });
+  session.step = "main";
+},
+
+// Handler step pilih client TikTok (18)
+requestTiktok_choose: async (
+  session, chatId, text, waClient, pool
+) => {
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  session.selected_client_id = client_id;
+  session.step = "requestTiktok_status";
+  await waClient.sendMessage(
+    chatId,
+    `Ketik salah satu:\nrequesttiktok#${client_id}#sudah\nrequesttiktok#${client_id}#belum`
+  );
+},
+
+requestTiktok_status: async (
+  session, chatId, text, waClient
+) => {
+  if (!text.toLowerCase().startsWith("requesttiktok#")) {
+    await waClient.sendMessage(chatId, "Format salah! Ketik dengan format:\nrequesttiktok#clientid#sudah/belum");
+    return;
+  }
+  waClient.emit("message", { from: chatId, body: text });
+  session.step = "main";
+},
+
   // ... handler lain tetap sama ...
 };
