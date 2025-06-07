@@ -11,7 +11,7 @@ export const oprRequestHandlers = {
 3️⃣ Cek data user (NRP/NIP)
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
     session.step = "chooseMenu";
     await waClient.sendMessage(chatId, msg);
   },
