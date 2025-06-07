@@ -161,13 +161,29 @@ export async function fetchAndStoreTiktokContent(
           "X-RapidAPI-Host": RAPIDAPI_HOST,
         },
       });
+
+      // PATCH: LOG seluruh createTime post yang diterima
+      const itemList = Array.isArray(postsRes.data?.data?.itemList)
+        ? postsRes.data.data.itemList
+        : [];
+      for (const post of itemList) {
+        sendDebug({
+          tag: "TIKTOK RAW",
+          msg: `ID: ${post.id} | createTime: ${post.createTime} | Lokal: ${new Date(
+            post.createTime * 1000
+          ).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`,
+          client_id: client.id,
+        });
+      }
       sendDebug({
         tag: "TIKTOK FETCH",
         msg: `API /api/user/posts response: jumlah konten ditemukan: ${
-          postsRes.data?.data?.itemList?.length || 0
+          itemList.length
         }`,
         client_id: client.id,
       });
+      // --- PATCH END ---
+
     } catch (err) {
       sendDebug({
         tag: "TIKTOK POST ERROR",
@@ -180,17 +196,17 @@ export async function fetchAndStoreTiktokContent(
     }
 
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====
-    const items =
+    const itemList =
       postsRes.data &&
       postsRes.data.data &&
       Array.isArray(postsRes.data.data.itemList)
-        ? postsRes.data.data.itemList.filter((post) =>
-            isTodayJakarta(post.createTime)
-          )
+        ? postsRes.data.data.itemList
         : [];
+    const items = itemList.filter((post) => isTodayJakarta(post.createTime));
+
     sendDebug({
-      tag: "TIKTOK FETCH",
-      msg: `Jumlah post TikTok HARI INI SAJA: ${items.length}`,
+      tag: "TIKTOK FILTER",
+      msg: `Filtered post hari ini: ${items.length} dari ${itemList.length} (client: ${client.id})`,
       client_id: client.id,
     });
 
@@ -201,7 +217,6 @@ export async function fetchAndStoreTiktokContent(
         client_id: client.id,
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
-        // PATCH: Insert as Date (atau ISO string), agar cocok dgn kolom timestamp
         created_at:
           typeof post.createTime === "number"
             ? new Date(post.createTime * 1000)
