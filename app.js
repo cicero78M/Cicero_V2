@@ -3,12 +3,14 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import routes from './src/routes/index.js';
+import authRoutes from './src/routes/authRoutes.js';        // <--- tambahkan
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
+import { authRequired } from './src/middleware/authMiddleware.js'; // <--- tambahkan
 
-// Pastikan environment variables sudah dimuat sebelum require file lain
+// Load environment variables dulu
 dotenv.config();
 
-// Import semua cron jobs
+// Import semua cron jobs (jalankan di background)
 import './src/cron/cronInstaService.js';
 import './src/cron/cronTiktokService.js';
 import './src/cron/cronInstaLaphar.js';
@@ -16,15 +18,20 @@ import './src/cron/cronTiktokLaphar.js';
 
 const app = express();
 
-// === Tambahkan CORS agar bisa diakses dari Next.js (domain berbeda) ===
+// === CORS agar Next.js (beda domain/port) bisa akses API ===
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*', // Ganti dengan URL dashboard Next.js untuk security, misal: 'https://dashboard.domainkamu.com'
+  origin: process.env.CORS_ORIGIN || '*', // Production: ganti jadi url Next.js-mu
   credentials: true,
 }));
 
 app.use(express.json());
 app.use(morgan('dev'));
-app.use('/api', routes);
+
+// ===== ROUTE LOGIN (TANPA TOKEN) =====
+app.use('/api/auth', authRoutes);
+
+// ===== ROUTE LAIN (WAJIB TOKEN) =====
+app.use('/api', authRequired, routes);
 
 // Handler NotFound dan Error
 app.use(notFound);

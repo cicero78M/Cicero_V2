@@ -1,16 +1,13 @@
-import jwt from "jsonwebtoken";
-
+// src/middleware/authMiddleware.js
+import jwt from 'jsonwebtoken';
 export function authRequired(req, res, next) {
-  const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) {
-    return res.status(401).json({ success: false, message: "Token diperlukan" });
-  }
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'Token required' });
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "secretkey");
-    req.user = payload; // untuk akses role/client_id di handler berikutnya
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
-  } catch (err) {
-    return res.status(401).json({ success: false, message: "Token tidak valid" });
+  } catch {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
   }
 }
