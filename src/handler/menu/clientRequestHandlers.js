@@ -1,14 +1,11 @@
-import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
-import { formatClientInfo } from "../../utils/utilsHelper.js";
-// Import fungsi absensi TikTok Komentar
-// Import di atas file handler, misal:
+// src/handler/menu/clientRequestHandlers.js
 
+import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
 import {
-  absensiKomentar, // <- rename dari absensiKomentarTiktokAkumulasi50 agar konsisten
+  absensiKomentar,
   absensiKomentarTiktokPerKonten,
 } from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
-
-// Main handler untuk request client
+import { formatClientInfo } from "../../utils/utilsHelper.js";
 
 export const clientRequestHandlers = {
   main: async (
@@ -25,133 +22,63 @@ export const clientRequestHandlers = {
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
-    fetchAndStoreLikesInstaContent, // handler likes IG
-    handleFetchKomentarTiktokBatch // handler batch fetch komentar TikTok!
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
   ) => {
-    switch (text) {
-      case "1":
-        session.step = "addClient_id";
-        await waClient.sendMessage(
-          chatId,
-          "Masukkan *client_id* untuk client baru:"
-        );
-        return;
-      case "2":
-      case "3":
-      case "4":
-      case "5":
-      case "6":
-      case "7":
-      case "8":
-      case "9":
-      case "10":
-      case "11":
-      case "12":
-      case "17":
-      case "18": {
-        // Ambil semua client (aktif & tidak aktif)
-        const rows = await pool.query(
-          "SELECT client_id, nama, client_status FROM clients ORDER BY client_id"
-        );
-        const clients = rows.rows;
-        if (!clients.length) {
-          await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
-          return;
-        }
-        session.clientList = clients;
-        // Step map sesuai menu
-        const stepMap = {
-          2: "updateClient_choose",
-          3: "removeClient_choose",
-          4: "infoClient_choose",
-          5: "transferUser_choose",
-          6: "sheetTransfer_choose",
-          7: "fetchInsta_choose",
-          8: "fetchTiktok_choose",
-          9: "fetchLikesInsta_choose",
-          10: "fetchKomentarTiktok_choose", // Handler batch komentar TikTok!
-          11: "absensiLikes_choose",
-          12: "absensiKomentar_choose",
-          17: "requestInsta_choose",
-          18: "requestTiktok_choose",
-        };
-        session.step = stepMap[text];
-        let msg = `*Daftar Client (Semua Status)*\nBalas angka untuk memilih client:\n`;
-        clients.forEach((c, i) => {
-          msg += `${i + 1}. ${c.client_id} - ${c.nama} ${
-            c.client_status ? "✅" : "❌"
-          }\n`;
-        });
-        await waClient.sendMessage(chatId, msg.trim());
-        return;
-      }
+    // Menu utama
+    let msg = `
+┏━━━ *MENU CLIENT CICERO* ━━━
+1️⃣ Tambah client baru
+2️⃣ Kelola client (update/hapus/info)
+3️⃣ Kelola user (update/exception/status)
+4️⃣ Proses Instagram
+5️⃣ Proses TikTok
+6️⃣ Rekap Absensi Likes IG
+7️⃣ Rekap Absensi Komentar TikTok
+8️⃣ Lainnya
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk keluar.
+`.trim();
 
-      case "13":
-        session.step = "manualCommandList";
-        await waClient.sendMessage(
-          chatId,
-          "(Lihat daftar command manual seperti handler lama)"
-        );
-        return;
-      case "14":
-        session.step = "updateUserException_id";
-        await waClient.sendMessage(
-          chatId,
-          "Masukkan *user_id* yang akan di-update exception-nya:"
-        );
-        return;
-      case "15":
-        session.step = "updateUserStatus_id";
-        await waClient.sendMessage(
-          chatId,
-          "Masukkan *user_id* yang akan di-update status-nya:"
-        );
-        return;
-      case "16":
-        try {
-          const exceptionUsers = await userService.getAllExceptionUsers();
-          if (!exceptionUsers.length) {
-            await waClient.sendMessage(
-              chatId,
-              "Tidak ada user dengan exception."
-            );
-          } else {
-            let msg = `*Daftar User Exception:*\n`;
-            exceptionUsers.forEach((u) => {
-              msg += `- ${u.user_id}: ${u.nama || ""} (${
-                u.insta || u.tiktok || "-"
-              })\n`;
-            });
-            await waClient.sendMessage(chatId, msg);
-          }
-        } catch (e) {
-          await waClient.sendMessage(
-            chatId,
-            "Gagal mengambil data exception: " + e.message
-          );
-        }
-        return;
-      default:
-        await waClient.sendMessage(
-          chatId,
-          "Pilihan tidak valid. Balas angka 1-18, atau *batal* untuk keluar."
-        );
-        return;
+    if (!/^[1-8]$/.test(text.trim())) {
+      session.step = "main";
+      await waClient.sendMessage(chatId, msg);
+      return;
     }
+    // Mapping step dari menu utama
+    const mapStep = {
+      1: "addClient_id",
+      2: "kelolaClient_choose",
+      3: "kelolaUser_choose",
+      4: "prosesInstagram_choose",
+      5: "prosesTiktok_choose",
+      6: "absensiLikes_choose",
+      7: "absensiKomentar_choose",
+      8: "lainnya_menu",
+    };
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userService,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
   },
 
-  // ====== Add Client ======
-  addClient_id: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService
-  ) => {
-    const client_id = text.trim().toUpperCase();
-    session.addClient_id = client_id;
+  // ================== TAMBAH CLIENT ==================
+  addClient_id: async (session, chatId, text, waClient) => {
+    session.addClient_id = text.trim().toUpperCase();
     session.step = "addClient_nama";
     await waClient.sendMessage(chatId, "Masukkan *nama* client:");
   },
@@ -207,8 +134,8 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // ====== Update Client ======
-  updateClient_choose: async (
+  // ================== KELENGKAPAN CLIENT ==================
+  kelolaClient_choose: async (
     session,
     chatId,
     text,
@@ -217,6 +144,27 @@ export const clientRequestHandlers = {
     userService,
     clientService
   ) => {
+    // List client
+    const rows = await pool.query(
+      "SELECT client_id, nama, client_status FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk memilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. ${c.client_id} - ${c.nama} ${
+        c.client_status ? "✅" : "❌"
+      }\n`;
+    });
+    session.step = "kelolaClient_action";
+    await waClient.sendMessage(chatId, msg.trim());
+  },
+  kelolaClient_action: async (session, chatId, text, waClient) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
     if (isNaN(idx) || !clients[idx]) {
@@ -226,32 +174,17 @@ export const clientRequestHandlers = {
       );
       return;
     }
-    session.targetClient_id = clients[idx].client_id;
-    session.step = "updateClient_field";
-    const fields = [
-      { key: "client_insta", label: "Username Instagram" },
-      { key: "client_operator", label: "Operator Client" },
-      { key: "client_super", label: "Super Admin Client" },
-      { key: "client_group", label: "Group Client" },
-      { key: "tiktok_secUid", label: "TikTok SecUID" },
-      { key: "client_tiktok", label: "Username TikTok" },
-      { key: "client_status", label: "Status Aktif (true/false)" },
-      { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
-      {
-        key: "client_tiktok_status",
-        label: "Status TikTok Aktif (true/false)",
-      },
-      { key: "client_type", label: "Tipe Client" },
-    ];
-    session.updateFieldList = fields;
-    let msg = `Pilih field yang ingin diupdate:\n`;
-    fields.forEach((f, i) => {
-      msg += `${i + 1}. ${f.label} [${f.key}]\n`;
-    });
-    msg += `\nBalas dengan angka sesuai daftar di atas.`;
-    await waClient.sendMessage(chatId, msg);
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "kelolaClient_menu";
+    await waClient.sendMessage(
+      chatId,
+      `Kelola Client: *${clients[idx].nama}* (${clients[idx].client_id})\n` +
+        `1️⃣ Update Data Client\n` +
+        `2️⃣ Hapus Client\n` +
+        `3️⃣ Info Client\nKetik angka menu di atas atau *batal* untuk keluar.`
+    );
   },
-  updateClient_field: async (
+  kelolaClient_menu: async (
     session,
     chatId,
     text,
@@ -260,6 +193,63 @@ export const clientRequestHandlers = {
     userService,
     clientService
   ) => {
+    if (text.trim() === "1") {
+      // Update client
+      session.step = "kelolaClient_updatefield";
+      const fields = [
+        { key: "client_insta", label: "Username Instagram" },
+        { key: "client_operator", label: "Operator Client" },
+        { key: "client_super", label: "Super Admin Client" },
+        { key: "client_group", label: "Group Client" },
+        { key: "tiktok_secUid", label: "TikTok SecUID" },
+        { key: "client_tiktok", label: "Username TikTok" },
+        { key: "client_status", label: "Status Aktif (true/false)" },
+        { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
+        {
+          key: "client_tiktok_status",
+          label: "Status TikTok Aktif (true/false)",
+        },
+        { key: "client_type", label: "Tipe Client" },
+      ];
+      session.updateFieldList = fields;
+      let msg = `Pilih field yang ingin diupdate:\n`;
+      fields.forEach((f, i) => {
+        msg += `${i + 1}. ${f.label} [${f.key}]\n`;
+      });
+      msg += `\nBalas dengan angka sesuai daftar di atas.`;
+      await waClient.sendMessage(chatId, msg);
+    } else if (text.trim() === "2") {
+      // Hapus client
+      try {
+        const removed = await clientService.deleteClient(
+          session.selected_client_id
+        );
+        await waClient.sendMessage(
+          chatId,
+          removed ? `🗑️ Client berhasil dihapus.` : "❌ Client tidak ditemukan."
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+      }
+      session.step = "main";
+    } else if (text.trim() === "3") {
+      // Info client
+      const client = await clientService.findClientById(
+        session.selected_client_id
+      );
+      await waClient.sendMessage(
+        chatId,
+        client ? formatClientInfo(client) : "❌ Client tidak ditemukan."
+      );
+      session.step = "main";
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai menu."
+      );
+    }
+  },
+  kelolaClient_updatefield: async (session, chatId, text, waClient) => {
     const idx = parseInt(text.trim()) - 1;
     const fields = session.updateFieldList || [];
     if (isNaN(idx) || !fields[idx]) {
@@ -271,46 +261,13 @@ export const clientRequestHandlers = {
       return;
     }
     session.updateField = fields[idx].key;
-    session.step = "updateClient_value";
+    session.step = "kelolaClient_updatevalue";
     await waClient.sendMessage(
       chatId,
       `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key})\nUntuk boolean, isi dengan true/false:`
     );
   },
-  updateClient_value: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    ...deps
-  ) => {
-    try {
-      const updated = await clientService.updateClient(
-        session.targetClient_id,
-        { [session.updateField]: text.trim() }
-      );
-      if (updated) {
-        await waClient.sendMessage(
-          chatId,
-          `✅ Update berhasil:\n${JSON.stringify(updated, null, 2)}`
-        );
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Client tidak ditemukan atau update gagal."
-        );
-      }
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
-
-  // ====== Remove Client ======
-  removeClient_choose: async (
+  kelolaClient_updatevalue: async (
     session,
     chatId,
     text,
@@ -319,259 +276,58 @@ export const clientRequestHandlers = {
     userService,
     clientService
   ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
+    try {
+      const updated = await clientService.updateClient(
+        session.selected_client_id,
+        { [session.updateField]: text.trim() }
+      );
       await waClient.sendMessage(
         chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
+        updated
+          ? `✅ Update berhasil:\n${JSON.stringify(updated, null, 2)}`
+          : "❌ Client tidak ditemukan atau update gagal."
       );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    try {
-      const removed = await clientService.deleteClient(client_id);
-      if (removed) {
-        await waClient.sendMessage(
-          chatId,
-          `🗑️ Client ${client_id} berhasil dihapus.\n${JSON.stringify(
-            removed,
-            null,
-            2
-          )}`
-        );
-      } else {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
-      }
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
     }
     session.step = "main";
   },
 
-  // ====== Info Client ======
-  infoClient_choose: async (
+  // ================== KELENGKAPAN USER (ALL) ==================
+  kelolaUser_choose: async (
     session,
     chatId,
     text,
     waClient,
     pool,
-    userService,
-    clientService,
-    ...deps
+    userService
   ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    try {
-      const client = await clientService.findClientById(client_id);
-      if (client) {
-        await waClient.sendMessage(chatId, formatClientInfo(client));
-      } else {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
-      }
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
-
-  // ====== Transfer User ======
-  transferUser_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    migrateUsersFromFolder
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
     await waClient.sendMessage(
       chatId,
-      `⏳ Migrasi user dari user_data/${client_id}/ ...`
+      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\nKetik angka menu atau *batal* untuk keluar.`
     );
-    try {
-      const result = await migrateUsersFromFolder(client_id);
-      let report = `*Hasil transfer user dari client ${client_id}:*\n`;
-      result.forEach((r) => {
-        report += `- ${r.file}: ${r.status}${
-          r.error ? " (" + r.error + ")" : ""
-        }\n`;
-      });
-      await waClient.sendMessage(chatId, report);
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal proses transfer: ${err.message}`
-      );
-    }
-    session.step = "main";
+    session.step = "kelolaUser_menu";
   },
-
-  // ====== Sheet Transfer ======
-  sheetTransfer_choose: async (
+  kelolaUser_menu: async (
     session,
     chatId,
     text,
     waClient,
     pool,
-    userService,
-    clientService,
-    _,
-    checkGoogleSheetCsvStatus
+    userService
   ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
+    if (!/^[1-3]$/.test(text.trim())) {
       await waClient.sendMessage(
         chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
+        "Pilihan tidak valid. Balas angka menu."
       );
       return;
     }
-    session.sheetTransfer_client_id = clients[idx].client_id;
-    session.step = "sheetTransfer_link";
-    await waClient.sendMessage(chatId, "Masukkan link Google Sheet:");
+    session.kelolaUser_mode = text.trim();
+    session.step = "kelolaUser_nrp";
+    await waClient.sendMessage(chatId, "Masukkan *user_id* / NRP/NIP user:");
   },
-  sheetTransfer_link: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    _,
-    __,
-    importUsersFromGoogleSheet,
-    checkGoogleSheetCsvStatus
-  ) => {
-    const sheetUrl = text.trim();
-    const client_id = session.sheetTransfer_client_id;
-    try {
-      const check = await checkGoogleSheetCsvStatus(sheetUrl);
-      if (!check.ok) {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Sheet tidak bisa diakses:\n${check.reason}`
-        );
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          "⏳ Mengambil & migrasi data dari Google Sheet..."
-        );
-        const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
-        let report = `*Hasil import user ke client ${client_id}:*\n`;
-        result.forEach((r) => {
-          report += `- ${r.user_id}: ${r.status}${
-            r.error ? " (" + r.error + ")" : ""
-          }\n`;
-        });
-        await waClient.sendMessage(chatId, report);
-      }
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
-
-  // ====== Fetch Instagram ======
-  fetchInsta_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    _,
-    __,
-    ___,
-    fetchAndStoreInstaContent
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    try {
-      await fetchAndStoreInstaContent(null, waClient, chatId, client_id);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch Instagram untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
-
-  // ====== Fetch TikTok ======
-  fetchTiktok_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    _,
-    __,
-    ___,
-    ____,
-    fetchAndStoreTiktokContent
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Memulai fetch TikTok untuk *${client_id}* ...`
-    );
-    try {
-      await fetchAndStoreTiktokContent(client_id);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch TikTok untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error fetch TikTok: ${e.message}`);
-    }
-    session.step = "main";
-  },
-
-  // ====== Update User Exception ======
-  updateUserException_id: async (
+  kelolaUser_nrp: async (
     session,
     chatId,
     text,
@@ -580,13 +336,81 @@ export const clientRequestHandlers = {
     userService
   ) => {
     session.target_user_id = text.trim();
-    session.step = "updateUserException_value";
+    if (session.kelolaUser_mode === "1") {
+      session.step = "kelolaUser_updatefield";
+      // Add list fields, boleh tambah custom
+      let msg = `Pilih field user yang ingin diupdate:\n1. Nama\n2. Pangkat\n3. Satfung\n4. Jabatan\n5. Instagram\n6. TikTok\n7. WhatsApp\nBalas angka field.`;
+      await waClient.sendMessage(chatId, msg);
+    } else if (session.kelolaUser_mode === "2") {
+      session.step = "kelolaUser_updateexception";
+      await waClient.sendMessage(
+        chatId,
+        "Ketik *true* untuk exception, *false* untuk tidak exception:"
+      );
+    } else if (session.kelolaUser_mode === "3") {
+      session.step = "kelolaUser_updatestatus";
+      await waClient.sendMessage(
+        chatId,
+        "Ketik *true* untuk aktif, *false* untuk non-aktif:"
+      );
+    }
+  },
+  kelolaUser_updatefield: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    const fields = [
+      "nama",
+      "title",
+      "divisi",
+      "jabatan",
+      "insta",
+      "tiktok",
+      "whatsapp",
+    ];
+    const idx = parseInt(text.trim()) - 1;
+    if (isNaN(idx) || !fields[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai field."
+      );
+      return;
+    }
+    session.updateField = fields[idx];
+    session.step = "kelolaUser_updatevalue";
     await waClient.sendMessage(
       chatId,
-      "Ketik *true* untuk exception, *false* untuk batal exception:"
+      `Ketik value baru untuk *${fields[idx]}* :`
     );
   },
-  updateUserException_value: async (
+  kelolaUser_updatevalue: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
+    try {
+      await userService.updateUserField(
+        session.target_user_id,
+        session.updateField,
+        text.trim()
+      );
+      await waClient.sendMessage(
+        chatId,
+        `✅ Data *${session.updateField}* untuk user *${session.target_user_id}* berhasil diupdate.`
+      );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error update: ${e.message}`);
+    }
+    session.step = "main";
+  },
+  kelolaUser_updateexception: async (
     session,
     chatId,
     text,
@@ -613,24 +437,7 @@ export const clientRequestHandlers = {
     }
     session.step = "main";
   },
-
-  // ====== Update User Status ======
-  updateUserStatus_id: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService
-  ) => {
-    session.target_user_id = text.trim();
-    session.step = "updateUserStatus_value";
-    await waClient.sendMessage(
-      chatId,
-      "Ketik *true* untuk aktif, *false* untuk non-aktif:"
-    );
-  },
-  updateUserStatus_value: async (
+  kelolaUser_updatestatus: async (
     session,
     chatId,
     text,
@@ -642,7 +449,7 @@ export const clientRequestHandlers = {
       const newStatus = text.trim().toLowerCase() === "true";
       await userService.updateUserField(
         session.target_user_id,
-        "user_status",
+        "status",
         newStatus
       );
       await waClient.sendMessage(
@@ -655,8 +462,8 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // Step pilih client untuk fetch post IG (7)
-  fetchInsta_choose: async (
+  // ================== PROSES INSTAGRAM (ALL) ==================
+  prosesInstagram_choose: async (
     session,
     chatId,
     text,
@@ -667,36 +474,30 @@ export const clientRequestHandlers = {
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
     importUsersFromGoogleSheet,
-    fetchAndStoreInstaContent
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent
   ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
+    // List client
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients WHERE client_insta_status = true ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client IG aktif.");
+      session.step = "main";
       return;
     }
-    const client_id = clients[idx].client_id;
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Memulai fetch konten IG untuk ${client_id}...`
-    );
-    try {
-      await fetchAndStoreInstaContent(null, waClient, chatId, client_id); // pass client_id jika handler support
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch IG untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error fetch IG: ${e.message}`);
-    }
-    session.step = "main";
+    session.clientList = clients;
+    let msg = `*Daftar Client IG Aktif*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+    });
+    session.step = "prosesInstagram_action";
+    await waClient.sendMessage(chatId, msg.trim());
   },
-
-  // Step pilih client untuk fetch likes IG (17)
-  fetchLikesInsta_choose: async (
+  prosesInstagram_action: async (
     session,
     chatId,
     text,
@@ -722,27 +523,14 @@ export const clientRequestHandlers = {
       return;
     }
     const client_id = clients[idx].client_id;
+    session.selected_client_id = client_id;
+    session.step = "prosesInstagram_menu";
     await waClient.sendMessage(
       chatId,
-      `⏳ Memulai fetch likes IG untuk ${client_id}...`
+      `Proses Instagram untuk *${client_id}*:\n1️⃣ Fetch Konten IG\n2️⃣ Fetch Likes IG\n3️⃣ Absensi Likes IG\nBalas angka menu di atas atau *batal* untuk keluar.`
     );
-    try {
-      await handleFetchLikesInstagram(waClient, chatId, client_id); // dari fetchLikesInstagram.js
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch likes IG untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Error fetch likes IG: ${e.message}`
-      );
-    }
-    session.step = "main";
   },
-
-  // Step pilih client untuk absensi likes IG (9)
-  absensiLikes_choose: async (
+  prosesInstagram_menu: async (
     session,
     chatId,
     text,
@@ -757,7 +545,95 @@ export const clientRequestHandlers = {
     fetchAndStoreTiktokContent,
     formatClientData,
     fetchAndStoreLikesInstaContent
-    // tambahkan dependency handler jika perlu
+  ) => {
+    const client_id = session.selected_client_id;
+    if (text.trim() === "1") {
+      try {
+        await fetchAndStoreInstaContent(null, waClient, chatId, client_id);
+        await waClient.sendMessage(
+          chatId,
+          `✅ Selesai fetch Instagram untuk ${client_id}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+      }
+    } else if (text.trim() === "2") {
+      try {
+        await handleFetchLikesInstagram(waClient, chatId, client_id);
+        await waClient.sendMessage(
+          chatId,
+          `✅ Selesai fetch likes IG untuk ${client_id}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+      }
+    } else if (text.trim() === "3") {
+      session.step = "absensiLikes_choose_submenu";
+      session.absensi_client_id = client_id;
+      let msg = `Pilih tipe rekap absensi likes IG:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`;
+      await waClient.sendMessage(chatId, msg);
+      return;
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka menu."
+      );
+    }
+    session.step = "main";
+  },
+
+  // ================== PROSES TIKTOK (ALL) ==================
+  prosesTiktok_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    // List client TikTok
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients WHERE client_tiktok_status = true ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client TikTok aktif.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client TikTok Aktif*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
+    });
+    session.step = "prosesTiktok_action";
+    await waClient.sendMessage(chatId, msg.trim());
+  },
+  prosesTiktok_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -769,19 +645,66 @@ export const clientRequestHandlers = {
       return;
     }
     const client_id = clients[idx].client_id;
-    session.absensi_client_id = client_id; // simpan ke session
-    session.step = "absensiLikes_choose_submenu";
-    let msg = `Pilih tipe rekap absensi likes:\n`;
-    msg += `1. Akumulasi (Sudah & Belum)\n`;
-    msg += `2. Akumulasi Sudah\n`;
-    msg += `3. Akumulasi Belum\n`;
-    msg += `4. Per Konten (Sudah & Belum)\n`;
-    msg += `5. Per Konten Sudah\n`;
-    msg += `6. Per Konten Belum\n`;
-    msg += `\nBalas angka di atas.`;
-    await waClient.sendMessage(chatId, msg);
+    session.selected_client_id = client_id;
+    session.step = "prosesTiktok_menu";
+    await waClient.sendMessage(
+      chatId,
+      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+    );
   },
-  // Submenu untuk absensi likes IG
+  prosesTiktok_menu: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    const client_id = session.selected_client_id;
+    if (text.trim() === "1") {
+      try {
+        await fetchAndStoreTiktokContent(client_id);
+        await waClient.sendMessage(
+          chatId,
+          `✅ Selesai fetch TikTok untuk ${client_id}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+      }
+    } else if (text.trim() === "2") {
+      try {
+        await handleFetchKomentarTiktokBatch(waClient, chatId, client_id);
+        await waClient.sendMessage(
+          chatId,
+          `✅ Selesai fetch komentar TikTok untuk ${client_id}.`
+        );
+      } catch (e) {
+        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+      }
+    } else if (text.trim() === "3") {
+      session.step = "absensiKomentar_choose_submenu";
+      session.absensi_client_id = client_id;
+      let msg = `Pilih tipe rekap absensi komentar TikTok:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`;
+      await waClient.sendMessage(chatId, msg);
+      return;
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka menu."
+      );
+    }
+    session.step = "main";
+  },
+  // ================== ABSENSI LIKES INSTAGRAM ==================
   absensiLikes_choose_submenu: async (
     session,
     chatId,
@@ -844,183 +767,7 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // ====== Fetch Komentar TikTok ======
-  fetchKomentarTiktok_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    migrateUsersFromFolder,
-    checkGoogleSheetCsvStatus,
-    importUsersFromGoogleSheet,
-    fetchAndStoreInstaContent,
-    fetchAndStoreTiktokContent,
-    formatClientData,
-    fetchAndStoreLikesInstaContent,
-    handleFetchKomentarTiktokBatch // ← batch handler yang benar!
-  ) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Memulai fetch komentar TikTok untuk ${client_id}...`
-    );
-    try {
-      await handleFetchKomentarTiktokBatch(waClient, chatId, client_id);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Selesai fetch komentar TikTok untuk ${client_id}.`
-      );
-    } catch (e) {
-      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-    }
-    session.step = "main";
-  },
-  // --- Submenu step untuk Request Instagram (case 17) ---
-  // === Request Instagram (menu 17) ===
-  requestInsta_choose: async (session, chatId, text, waClient, pool) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    session.selected_client_id = clients[idx].client_id;
-    session.step = "requestInsta_status_submenu";
-    await waClient.sendMessage(
-      chatId,
-      `Pilih salah satu:\n1️⃣ Sudah mengisi Instagram\n2️⃣ Belum mengisi Instagram`
-    );
-  },
-
-  requestInsta_status_submenu: async (session, chatId, text, waClient) => {
-    if (!session.selected_client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Session client tidak valid, ulangi dari awal."
-      );
-      session.step = "main";
-      return;
-    }
-    let status = null;
-    if (text.trim() === "1") status = "sudah";
-    else if (text.trim() === "2") status = "belum";
-    else {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum."
-      );
-      return;
-    }
-    // Simulasi emit handler (atau panggil langsung fungsi requestInsta, jika mau)
-    waClient.emit("message", {
-      from: chatId,
-      body: `requestinsta#${session.selected_client_id}#${status}`,
-    });
-    session.step = "main";
-  },
-
-  // === Request TikTok (menu 18) ===
-  requestTiktok_choose: async (session, chatId, text, waClient, pool) => {
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    session.selected_client_id = clients[idx].client_id;
-    session.step = "requestTiktok_status_submenu";
-    await waClient.sendMessage(
-      chatId,
-      `Pilih salah satu:\n1️⃣ Sudah mengisi TikTok\n2️⃣ Belum mengisi TikTok`
-    );
-  },
-
-  requestTiktok_status_submenu: async (session, chatId, text, waClient) => {
-    if (!session.selected_client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Session client tidak valid, ulangi dari awal."
-      );
-      session.step = "main";
-      return;
-    }
-    let status = null;
-    if (text.trim() === "1") status = "sudah";
-    else if (text.trim() === "2") status = "belum";
-    else {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum."
-      );
-      return;
-    }
-    waClient.emit("message", {
-      from: chatId,
-      body: `requesttiktok#${session.selected_client_id}#${status}`,
-    });
-    session.step = "main";
-  },
-
-  // Handler submenu (sederhana, tinggal copy logic dari absensiLikes_choose_submenu)
-absensiKomentar_choose: async (
-  session,
-  chatId,
-  text,
-  waClient,
-  pool,
-  userService,
-  clientService,
-  migrateUsersFromFolder,
-  checkGoogleSheetCsvStatus,
-  importUsersFromGoogleSheet,
-  fetchAndStoreInstaContent,
-  fetchAndStoreTiktokContent,
-  formatClientData,
-  fetchAndStoreLikesInstaContent
-) => {
-  // Langkah pemilihan client
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(
-      chatId,
-      "Pilihan tidak valid. Balas angka sesuai list."
-    );
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.absensi_client_id = client_id; // simpan ke session
-  session.step = "absensiKomentar_choose_submenu";
-  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
-  msg += `1. Akumulasi  (Sudah & Belum)\n`;
-  msg += `2. Akumulasi Sudah \n`;
-  msg += `3. Akumulasi Belum \n`;
-  msg += `4. Per Konten (Sudah & Belum)\n`;
-  msg += `5. Per Konten Sudah\n`;
-  msg += `6. Per Konten Belum\n`;
-  msg += `\nBalas angka di atas.`;
-  await waClient.sendMessage(chatId, msg);
-},
-
-
+  // ================== ABSENSI KOMENTAR TIKTOK ==================
   absensiKomentar_choose_submenu: async (
     session,
     chatId,
@@ -1077,5 +824,11 @@ absensiKomentar_choose: async (
     session.step = "main";
   },
 
-  // ... handler lain tetap sama ...
+  // ================== LAINNYA ==================
+  lainnya_menu: async (session, chatId, text, waClient) => {
+    await waClient.sendMessage(chatId, "Fitur lain belum tersedia.");
+    session.step = "main";
+  },
 };
+
+export default clientRequestHandlers;
