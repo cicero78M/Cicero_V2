@@ -3,11 +3,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import waClient from "../service/waService.js";
+import { sendDebug } from "../middleware/debugHandler.js";
 import { fetchAndStoreTiktokContent } from "../handler/fetchPost/tiktokFetchPost.js";
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
-import { absensiKomentarTiktokAkumulasi50 } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+import { absensiKomentar } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 
-// Helper: ambil client TikTok aktif lengkap data
+// Helper ambil client TikTok aktif + notif WA
 async function getActiveClientsTiktok() {
   const { pool } = await import("../config/db.js");
   const rows = await pool.query(
@@ -19,7 +20,7 @@ async function getActiveClientsTiktok() {
   return rows.rows;
 }
 
-// Helper: format WhatsApp ID (biar aman)
+// Format nomor WhatsApp ke @c.us
 function toWAid(nomor) {
   if (!nomor || typeof nomor !== "string") return null;
   const no = nomor.trim();
@@ -36,7 +37,7 @@ function getAdminWAIds() {
     .filter(Boolean);
 }
 function getAllNotifRecipients(client) {
-  // Semua target (unik, valid, tidak double)
+  // Gabung admin, operator, super admin, group (unik & valid)
   const result = new Set();
   getAdminWAIds().forEach(n => result.add(n));
   [client.client_operator, client.client_super, client.client_group]
@@ -46,67 +47,107 @@ function getAllNotifRecipients(client) {
   return Array.from(result);
 }
 
+// Jadwalkan cron tiap jam 06:25 - 20:25 WIB
 cron.schedule(
-  "00 15,18,21 * * *",
+  "25 6-20 * * *",
   async () => {
+    sendDebug({
+      tag: "CRON TTK",
+      msg: "Mulai tugas fetch TikTok, fetch komentar, absensi komentar...",
+    });
+
     try {
       const clients = await getActiveClientsTiktok();
-      let fetchSummary = {};
 
-      // 1. Fetch post TikTok hari ini untuk setiap client
+      // Step 1: Fetch Post TikTok Hari Ini (semua client aktif)
+      let fetchSummary = {};
       for (const client of clients) {
         try {
           await fetchAndStoreTiktokContent(client.client_id);
           fetchSummary[client.client_id] = "OK";
-        } catch (e) {
-          fetchSummary[client.client_id] = e.message;
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] Selesai fetch TikTok.`,
+          });
+        } catch (err) {
+          fetchSummary[client.client_id] = err.message;
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] ERROR fetch TikTok: ${err.message}`,
+          });
         }
       }
-
-      // DEBUG: ringkasan fetch post, hanya ke admin
-      let debugMsg = `[CRON TIKTOK] Ringkasan fetch TikTok\nTanggal: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}\n`;
-      Object.entries(fetchSummary).forEach(([client, status]) => {
-        debugMsg += `- ${client} : ${status}\n`;
+      // Kirim ringkasan fetch TikTok (debug WA admin)
+      let summaryMsg = `[CRON TTK] Ringkasan fetch TikTok\nTanggal: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}\n`;
+      Object.entries(fetchSummary).forEach(([cid, status]) => {
+        summaryMsg += `- ${cid} : ${status}\n`;
       });
       for (const admin of getAdminWAIds()) {
-        await waClient.sendMessage(admin, debugMsg).catch(() => {});
+        await waClient.sendMessage(admin, summaryMsg).catch(() => {});
       }
 
-      // 2. FETCH KOMENTAR TikTok per client
+      // Step 2: Fetch Komentar TikTok (dan hanya username!)
       for (const client of clients) {
         try {
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] Mulai fetch komentar TikTok...`,
+          });
           await handleFetchKomentarTiktokBatch(null, null, client.client_id);
-        } catch (e) {
-          for (const admin of getAdminWAIds()) {
-            await waClient.sendMessage(admin, `[CRON TIKTOK][${client.client_id}] ERROR fetch komentar TikTok: ${e.message}`).catch(() => {});
-          }
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] Selesai fetch komentar TikTok.`,
+          });
+        } catch (err) {
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] ERROR fetch komentar TikTok: ${err.message}`,
+          });
         }
+      }
 
-        // 3. ABSENSI KOMENTAR TikTok ("belum", akumulasi 50%)
+      // Step 3: Absensi Komentar TikTok ("belum" saja, ke admin, operator, super, group)
+      for (const client of clients) {
         try {
-          const msg = await absensiKomentarTiktokAkumulasi50(client.client_id, { mode: "belum" });
+          // Hanya mode: "belum"
+          const msg = await absensiKomentar(client.client_id, { mode: "belum" });
           if (msg && msg.length > 0 && !/Belum melaksanakan: \*0\*/.test(msg)) {
+            sendDebug({
+              tag: "CRON TTK",
+              msg: `[client=${client.client_id}] Absensi komentar TTK (BELUM) akan dikirim ke semua penerima.`,
+            });
+            // Kirim ke admin, operator, super, group
             for (const wa of getAllNotifRecipients(client)) {
               await waClient.sendMessage(wa, msg).catch(() => {});
             }
           } else {
-            for (const admin of getAdminWAIds()) {
-              await waClient.sendMessage(admin, `[CRON TIKTOK][${client.client_id}] Semua user sudah komentar, tidak ada laporan belum.`).catch(() => {});
-            }
+            sendDebug({
+              tag: "CRON TTK",
+              msg: `[client=${client.client_id}] Semua user sudah komentar, tidak ada laporan belum dikirim.`,
+            });
           }
-        } catch (e) {
-          for (const admin of getAdminWAIds()) {
-            await waClient.sendMessage(admin, `[CRON TIKTOK][${client.client_id}] ERROR absensi TikTok: ${e.message}`).catch(() => {});
-          }
+        } catch (err) {
+          sendDebug({
+            tag: "CRON TTK",
+            msg: `[client=${client.client_id}] ERROR absensi TTK: ${err.message}`,
+          });
         }
       }
+
+      sendDebug({
+        tag: "CRON TTK",
+        msg: "Laporan absensi komentar (belum) selesai dikirim.",
+      });
     } catch (err) {
-      for (const admin of getAdminWAIds()) {
-        await waClient.sendMessage(admin, `[CRON TIKTOK][GLOBAL ERROR] ${err.message || err}`).catch(() => {});
-      }
+      sendDebug({
+        tag: "CRON TTK",
+        msg: `[ERROR GLOBAL] ${err.message || err}`,
+      });
     }
   },
-  { timezone: "Asia/Jakarta" }
+  {
+    timezone: "Asia/Jakarta",
+  }
 );
 
 export default null;
