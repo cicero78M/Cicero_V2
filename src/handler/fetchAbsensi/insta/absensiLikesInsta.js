@@ -86,16 +86,15 @@ export async function absensiLikes(client_id, opts = {}) {
   // --- PATCH: Mode support ---
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
-    `Mohon Ijin Komandan,\n\nMelaporkan Rekap Pelaksanaan Komentar dan Likes pada Akun Official:\n\n` +
-    `📋 Rekap Akumulasi Likes IG\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+    `Mohon ijin Komandan,\n\n` +
+    `📋 *Rekap Akumulasi Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${totalKonten}\n` +
-    `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
-    `*Jumlah user:* ${users.length}\n`;
+    `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+    `*Jumlah user:* ${users.length}\n\n`;
 
-  if (mode === "all" || mode === "sudah") {
-    msg += `✅ Sudah melaksanakan: *${sudah.length}*\n`;
-    // Selalu tampilkan list user sudah!
-    msg += `\n✅ Sudah melaksanakan (${sudah.length} user):\n`;
+  // ==== Selalu tampilkan bagian Sudah Melaksanakan ====
+  msg += `✅ *Sudah melaksanakan* : *${sudah.length} user*${sudah.length === 0 ? " (tidak ada)" : ""}\n`;
+  if (sudah.length > 0) {
     const sudahDiv = groupByDivision(sudah);
     sortSatfung(Object.keys(sudahDiv)).forEach((div) => {
       const list = sudahDiv[div];
@@ -104,21 +103,20 @@ export async function absensiLikes(client_id, opts = {}) {
         list
           .map((u) => {
             let ket = "";
-            if (u.count) ket = `sudah melaksanakan ${u.count} dari ${totalKonten} konten`;
+            if (u.count) ket = `(${u.count}/${totalKonten} konten)`;
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              `${u.insta ? u.insta : "belum mengisi data insta"}` +
-              (ket ? ` (${ket})` : "")
+              `${u.insta ? u.insta : "belum mengisi data insta"} ${ket}`
             );
           })
-          .join("\n") + "\n\n";
+          .join("\n") + "\n";
     });
-    if (Object.keys(sudahDiv).length === 0) msg += "-\n\n";
+    if (Object.keys(sudahDiv).length === 0) msg += "-\n";
   }
-  if (mode === "all" || mode === "belum") {
-    msg += `❌ Belum melaksanakan: *${belum.length}*\n`;
-    // Selalu tampilkan list user belum!
-    msg += `\n❌ Belum melaksanakan (${belum.length} user):\n`;
+
+  // ==== Selalu tampilkan bagian Belum Melaksanakan ====
+  msg += `\n❌ *Belum melaksanakan* : *${belum.length} user*${belum.length === 0 ? " (tidak ada)" : ""}\n`;
+  if (belum.length > 0) {
     const belumDiv = groupByDivision(belum);
     sortSatfung(Object.keys(belumDiv)).forEach((div) => {
       const list = belumDiv[div];
@@ -128,22 +126,21 @@ export async function absensiLikes(client_id, opts = {}) {
           .map((u) => {
             let ket = "";
             if (!u.count || u.count === 0) {
-              ket = `sudah melaksanakan 0 dari ${totalKonten} konten`;
+              ket = `(0/${totalKonten} konten)`;
             } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
-              ket = `sudah melaksanakan ${u.count} dari ${totalKonten} konten`;
+              ket = `(${u.count}/${totalKonten} konten)`;
             }
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              `${u.insta ? u.insta : "belum mengisi data insta"}` +
-              (ket ? ` (${ket})` : "")
+              `${u.insta ? u.insta : "belum mengisi data insta"} ${ket}`
             );
           })
-          .join("\n") + "\n\n";
+          .join("\n") + "\n";
     });
-    if (Object.keys(belumDiv).length === 0) msg += "-\n\n";
+    if (Object.keys(belumDiv).length === 0) msg += "-\n";
   }
-  msg += `\nTerimakasih.`;
 
+  msg += `\nTerimakasih.`;
   return msg.trim();
 }
 
@@ -163,7 +160,8 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
-    `Mohon Ijin Komandan,\n\nRekap Per Konten Likes IG\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n` +
+    `Mohon ijin Komandan,\n\n` +
+    `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
 
   for (const sc of shortcodes) {
@@ -185,9 +183,9 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
     msg += `\nKonten: https://www.instagram.com/p/${sc}\n`;
 
-    if (mode === "all" || mode === "sudah") {
-      msg += `✅ Sudah: ${userSudah.length}\n`;
-      // Group by divisi, urutkan satfung
+    // Sudah
+    msg += `✅ *Sudah melaksanakan* : *${userSudah.length} user*${userSudah.length === 0 ? " (tidak ada)" : ""}\n`;
+    if (userSudah.length > 0) {
       const sudahDiv = groupByDivision(userSudah);
       sortSatfung(Object.keys(sudahDiv)).forEach((div) => {
         const list = sudahDiv[div];
@@ -201,8 +199,9 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
       if (Object.keys(sudahDiv).length === 0) msg += "-\n";
     }
 
-    if (mode === "all" || mode === "belum") {
-      msg += `❌ Belum: ${userBelum.length}\n`;
+    // Belum
+    msg += `❌ *Belum melaksanakan* : *${userBelum.length} user*${userBelum.length === 0 ? " (tidak ada)" : ""}\n`;
+    if (userBelum.length > 0) {
       const belumDiv = groupByDivision(userBelum);
       sortSatfung(Object.keys(belumDiv)).forEach((div) => {
         const list = belumDiv[div];
@@ -226,7 +225,6 @@ export async function getActiveClientsIG() {
   );
   return res.rows;
 }
-
 
 export async function rekapLikesIG(client_id) {
   const client = await findClientById(client_id);

@@ -11,9 +11,14 @@ export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all"
   const totalPost = posts.length;
   if (!totalPost) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
+  // Map user_id ke data user
   const userTiktokMap = {};
+  const userMeta = {};
   users.forEach(u => {
-    if (u.user_id && u.tiktok) userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+    if (u.user_id && u.tiktok) {
+      userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+      userMeta[u.user_id] = u;
+    }
   });
 
   const userKomentar = {};
@@ -34,18 +39,31 @@ export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all"
   const sudah = [], belum = [];
   for (const user_id in userKomentar) {
     const persen = (userKomentar[user_id] / totalPost) * 100;
-    const label = `${user_id} (@${userTiktokMap[user_id] || "-"}) [${userKomentar[user_id]}/${totalPost} = ${Math.round(persen)}%]`;
+    const user = userMeta[user_id] || {};
+    const label = 
+      `- ${user.title ? user.title + " " : ""}${user.nama || user_id} : ` +
+      `@${userTiktokMap[user_id] || "-"} (${userKomentar[user_id]}/${totalPost} post, ${Math.round(persen)}%)`;
     if (persen >= 50) sudah.push(label);
     else belum.push(label);
   }
 
-  let msg = `📊 *Absensi Komentar TikTok - Akumulasi Minimal 50%*\nClient: *${client_id}*\nTotal post: *${totalPost}*\n\n`;
-  if (["all", "sudah"].includes(mode)) {
-    msg += `✅ Sudah komentar minimal 50%: ${sudah.length}\n${sudah.map(u => "- " + u).join("\n")}\n\n`;
-  }
-  if (["all", "belum"].includes(mode)) {
-    msg += `❌ Belum (kurang dari 50% post): ${belum.length}\n${belum.map(u => "- " + u).join("\n")}\n\n`;
-  }
+  let msg = 
+    `Mohon ijin Komandan,\n\n` +
+    `📋 *Rekap Akumulasi Komentar TikTok*\n*Client*: *${client_id}*\n` +
+    `Tanggal: ${new Date().toLocaleDateString("id-ID")}\n` +
+    `Jam: ${new Date().toLocaleTimeString("id-ID", { hour12: false })}\n\n` +
+    `*Jumlah Konten (post):* ${totalPost}\n` +
+    `*Jumlah User:* ${users.length}\n\n`;
+
+  // Selalu tampilkan bagian sudah
+  msg += `✅ *Sudah melaksanakan (>=50% post)* : *${sudah.length} user*\n`;
+  msg += sudah.length ? sudah.join("\n") + "\n\n" : "-\n\n";
+  
+  // Selalu tampilkan bagian belum
+  msg += `❌ *Belum melaksanakan (<50% post)* : *${belum.length} user*\n`;
+  msg += belum.length ? belum.join("\n") + "\n\n" : "-\n\n";
+
+  msg += "Terimakasih.";
   return msg.trim();
 }
 
@@ -55,14 +73,23 @@ export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all"
 export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" } = {}) {
   const users = await getUsersByClient(client_id);
   const userTiktokMap = {};
+  const userMeta = {};
   users.forEach(u => {
-    if (u.user_id && u.tiktok) userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+    if (u.user_id && u.tiktok) {
+      userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+      userMeta[u.user_id] = u;
+    }
   });
 
   const posts = await getPostsTodayByClient(client_id);
   if (!posts.length) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
-  let msg = `📊 *Absensi Komentar TikTok Per Konten*\nClient: *${client_id}*\nJumlah post: *${posts.length}*\n\n`;
+  let msg = 
+    `Mohon ijin Komandan,\n\n` +
+    `📋 *Rekap Komentar TikTok Per Konten*\n*Client*: *${client_id}*\n` +
+    `Tanggal: ${new Date().toLocaleDateString("id-ID")}\n` +
+    `Jam: ${new Date().toLocaleTimeString("id-ID", { hour12: false })}\n` +
+    `*Jumlah post:* ${posts.length}\n\n`;
 
   for (const [i, post] of posts.entries()) {
     const video_id = post.video_id || post.id;
@@ -73,20 +100,19 @@ export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" }
     }
     let sudah = [], belum = [];
     for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
-      if (komentator.includes(tiktok)) sudah.push(user_id + " (@" + tiktok + ")");
-      else belum.push(user_id + " (@" + tiktok + ")");
+      const user = userMeta[user_id] || {};
+      const label = `- ${user.title ? user.title + " " : ""}${user.nama || user_id} : @${tiktok}`;
+      if (komentator.includes(tiktok)) sudah.push(label);
+      else belum.push(label);
     }
     msg += `#${i + 1} Video ID: ${video_id}\n`;
-    if (["all", "sudah"].includes(mode)) {
-      msg += `   ✅ Sudah komentar: ${sudah.length}\n`;
-      if (mode !== "belum" && sudah.length) msg += sudah.map((u) => "     - " + u).join("\n") + "\n";
-    }
-    if (["all", "belum"].includes(mode)) {
-      msg += `   ❌ Belum komentar: ${belum.length}\n`;
-      if (mode !== "sudah" && belum.length) msg += belum.map((u) => "     - " + u).join("\n") + "\n";
-    }
+    msg += `   ✅ *Sudah komentar* : ${sudah.length}\n`;
+    msg += sudah.length ? sudah.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
+    msg += `   ❌ *Belum komentar* : ${belum.length}\n`;
+    msg += belum.length ? belum.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
     msg += `   Link: https://www.tiktok.com/@_/video/${video_id}\n\n`;
   }
+  msg += "Terimakasih.";
   return msg.trim();
 }
 
