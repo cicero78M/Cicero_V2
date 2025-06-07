@@ -258,7 +258,8 @@ Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 5️⃣ Proses TikTok
 6️⃣ Rekap Absensi Likes IG
 7️⃣ Rekap Absensi Komentar TikTok
-8️⃣ Lainnya
+8️⃣ Absensi Username Instagram
+9️⃣ Absensi Username TikTok
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()

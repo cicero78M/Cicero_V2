@@ -1,4 +1,3 @@
-
 // src/handler/menu/clientRequestHandlers.js
 
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
@@ -8,52 +7,57 @@ import {
 } from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 
-// ==========================
-// === ABSENSI USERNAME IG ===
+// ============= ABSENSI USERNAME IG DAN TIKTOK LANGSUNG DARI DB =================
 async function absensiUsernameInsta(client_id, userService, mode = "all") {
-  const users = await userService.getUsersByClient(client_id);
-  const result = { sudah: [], belum: [] };
-  for (const u of users) {
-    if (u.insta && u.insta.trim()) result.sudah.push(u);
-    else result.belum.push(u);
+  let sudah = [], belum = [];
+  if (mode === "sudah") {
+    sudah = await userService.getInstaFilledUsersByClient(client_id);
+  } else if (mode === "belum") {
+    belum = await userService.getInstaEmptyUsersByClient(client_id);
+  } else {
+    sudah = await userService.getInstaFilledUsersByClient(client_id);
+    belum = await userService.getInstaEmptyUsersByClient(client_id);
   }
   let msg = `*Absensi Username Instagram*\nClient: *${client_id}*`;
-  if (mode === "all") {
-    msg += `\n\n*Sudah mengisi IG* (${result.sudah.length}):\n`;
-    msg += result.sudah.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id}) @${u.insta}`).join("\n") || "-";
-    msg += `\n\n*Belum mengisi IG* (${result.belum.length}):\n`;
-    msg += result.belum.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id})`).join("\n") || "-";
-  } else if (mode === "sudah") {
-    msg += `\n\n*Sudah mengisi IG* (${result.sudah.length}):\n`;
-    msg += result.sudah.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id}) @${u.insta}`).join("\n") || "-";
-  } else if (mode === "belum") {
-    msg += `\n\n*Belum mengisi IG* (${result.belum.length}):\n`;
-    msg += result.belum.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id})`).join("\n") || "-";
+  if (mode === "all" || mode === "sudah") {
+    msg += `\n\n*Sudah mengisi IG* (${sudah.length}):\n`;
+    msg += sudah.length
+      ? sudah.map((u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id}) @${u.insta}`).join("\n")
+      : "-";
+  }
+  if (mode === "all") msg += "\n";
+  if (mode === "all" || mode === "belum") {
+    msg += `\n*Belum mengisi IG* (${belum.length}):\n`;
+    msg += belum.length
+      ? belum.map((u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id})`).join("\n")
+      : "-";
   }
   return msg;
 }
 
-// ==========================
-// === ABSENSI USERNAME TIKTOK ===
 async function absensiUsernameTiktok(client_id, userService, mode = "all") {
-  const users = await userService.getUsersByClient(client_id);
-  const result = { sudah: [], belum: [] };
-  for (const u of users) {
-    if (u.tiktok && u.tiktok.trim()) result.sudah.push(u);
-    else result.belum.push(u);
+  let sudah = [], belum = [];
+  if (mode === "sudah") {
+    sudah = await userService.getTiktokFilledUsersByClient(client_id);
+  } else if (mode === "belum") {
+    belum = await userService.getTiktokEmptyUsersByClient(client_id);
+  } else {
+    sudah = await userService.getTiktokFilledUsersByClient(client_id);
+    belum = await userService.getTiktokEmptyUsersByClient(client_id);
   }
   let msg = `*Absensi Username TikTok*\nClient: *${client_id}*`;
-  if (mode === "all") {
-    msg += `\n\n*Sudah mengisi TikTok* (${result.sudah.length}):\n`;
-    msg += result.sudah.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id}) @${u.tiktok}`).join("\n") || "-";
-    msg += `\n\n*Belum mengisi TikTok* (${result.belum.length}):\n`;
-    msg += result.belum.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id})`).join("\n") || "-";
-  } else if (mode === "sudah") {
-    msg += `\n\n*Sudah mengisi TikTok* (${result.sudah.length}):\n`;
-    msg += result.sudah.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id}) @${u.tiktok}`).join("\n") || "-";
-  } else if (mode === "belum") {
-    msg += `\n\n*Belum mengisi TikTok* (${result.belum.length}):\n`;
-    msg += result.belum.map((u, i) => `${i + 1}. ${u.nama} (${u.user_id})`).join("\n") || "-";
+  if (mode === "all" || mode === "sudah") {
+    msg += `\n\n*Sudah mengisi TikTok* (${sudah.length}):\n`;
+    msg += sudah.length
+      ? sudah.map((u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id}) @${u.tiktok}`).join("\n")
+      : "-";
+  }
+  if (mode === "all") msg += "\n";
+  if (mode === "all" || mode === "belum") {
+    msg += `\n*Belum mengisi TikTok* (${belum.length}):\n`;
+    msg += belum.length
+      ? belum.map((u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id})`).join("\n")
+      : "-";
   }
   return msg;
 }
@@ -198,7 +202,6 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     userService,
     clientService
   ) => {
-    // List client, tampilkan semua aktif & non-aktif
     const rows = await pool.query(
       "SELECT client_id, nama, client_status FROM clients ORDER BY client_status DESC, client_id"
     );
@@ -982,4 +985,3 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 };
 
 export default clientRequestHandlers;
-
