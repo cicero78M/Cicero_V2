@@ -5,19 +5,16 @@ import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
 import dotenv from "dotenv";
-import { pool } from "../config/db.js"; // Pastikan path ini sesuai projek Anda
+import { pool } from "../config/db.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
 import * as userService from "./userService.js";
-
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
-
 import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
-
 import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
@@ -28,17 +25,24 @@ import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 
-// handlers
-
+// Handler Imports
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { handleAbsensiKomentar } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
 
+// >>> HANYA SATU INI <<< (Pastikan di helper semua diekspor)
+import {
+  userMenuContext,
+  updateUsernameSession,
+  knownUserSet,
+  setMenuTimeout,
+  setSession,
+  getSession,
+  clearSession,
+} from "../utils/sessionsHelper.js";
 
-
-// helper functions
 import {
   formatNama,
   groupByDivision,
@@ -50,15 +54,7 @@ import {
   formatToWhatsAppId,
   formatClientData,
 } from "../utils/waHelper.js";
-import {
-  setMenuTimeout,
-  setSession,
-  getSession,
-  clearSession,
-} from "../utils/sessionsHelper.js";
-
 import { sendDebug } from "../middleware/debugHandler.js";
-
 import {
   IG_PROFILE_REGEX,
   TT_PROFILE_REGEX,
