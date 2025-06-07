@@ -115,15 +115,14 @@ export function formatUserData(user) {
     ["TikTok", user.tiktok || "-"],
     ["Polres", user.client_id || "-"],
   ];
-  const pad = Math.max(...labels.map(([label]) => label.length)) + 1; // +1 biar nyaman
-  return (
-    "══════════════════════════\n" +
-    labels
-      .map(
-        ([label, value]) =>
-          `*${label}*${" ".repeat(pad - label.length)}: ${value}`
-      )
-      .join("\n") +
-    "\n══════════════════════════"
-  );
+  const pad = Math.max(...labels.map(([label]) => label.length));
+  return [
+    "```",
+    ...labels.map(
+      ([label, value]) =>
+        label.padEnd(pad) + " : " + value
+    ),
+    "```",
+  ].join("\n");
 }
+
