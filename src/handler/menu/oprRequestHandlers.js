@@ -23,19 +23,28 @@ export const oprRequestHandlers = {
     if (text.trim() === "1") {
       clean();
       session.step = "addUser_nrp";
-      await waClient.sendMessage(chatId, "Masukkan NRP/NIP (belum terdaftar di database):");
+      await waClient.sendMessage(
+        chatId,
+        "Masukkan NRP/NIP (belum terdaftar di database):"
+      );
       return;
     }
     if (text.trim() === "2") {
       clean();
       session.step = "updateStatus_nrp";
-      await waClient.sendMessage(chatId, "Masukkan NRP/NIP user yang ingin diubah statusnya:");
+      await waClient.sendMessage(
+        chatId,
+        "Masukkan NRP/NIP user yang ingin diubah statusnya:"
+      );
       return;
     }
     if (text.trim() === "3") {
       clean();
       session.step = "cekUser_nrp";
-      await waClient.sendMessage(chatId, "Masukkan NRP/NIP user yang ingin dicek:");
+      await waClient.sendMessage(
+        chatId,
+        "Masukkan NRP/NIP user yang ingin dicek:"
+      );
       return;
     }
     if (text.trim().toLowerCase() === "batal") {
@@ -45,7 +54,10 @@ export const oprRequestHandlers = {
       await waClient.sendMessage(chatId, "Keluar dari menu operator.");
       return;
     }
-    await waClient.sendMessage(chatId, "Menu tidak dikenali. Pilih 1, 2, atau 3, atau *batal*.");
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenali. Pilih 1, 2, atau 3, atau *batal*."
+    );
   },
 
   // ==== TAMBAH USER ====
@@ -53,51 +65,108 @@ export const oprRequestHandlers = {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     if (!nrp) {
-      await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Silakan masukkan ulang.");
+      await waClient.sendMessage(
+        chatId,
+        "NRP/NIP tidak valid. Silakan masukkan ulang."
+      );
       return;
     }
     const existing = await userService.findUserById(nrp);
     if (existing) {
       let msg = `NRP/NIP *${nrp}* sudah terdaftar atas nama berikut:\n`;
-      msg += `*Nama*: ${existing.nama || "-"}\n*Pangkat*: ${existing.title || "-"}\n*Satfung*: ${existing.divisi || "-"}\n*Jabatan*: ${existing.jabatan || "-"}\n*Status*: ${existing.status ? "AKTIF" : "NONAKTIF"}\n`;
-      await waClient.sendMessage(chatId, msg + "\nTidak bisa menambahkan user baru dengan NRP/NIP ini.");
+      msg += `*Nama*: ${existing.nama || "-"}\n*Pangkat*: ${
+        existing.title || "-"
+      }\n*Satfung*: ${existing.divisi || "-"}\n*Jabatan*: ${
+        existing.jabatan || "-"
+      }\n*Status*: ${existing.status ? "AKTIF" : "NONAKTIF"}\n`;
+      await waClient.sendMessage(
+        chatId,
+        msg + "\nTidak bisa menambahkan user baru dengan NRP/NIP ini."
+      );
       session.step = "main";
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     session.addUser = { user_id: nrp };
     session.step = "addUser_nama";
-    await waClient.sendMessage(chatId, "Masukkan *Nama Lengkap* (gunakan huruf kapital, contoh: ANDI PRASETYO):");
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan *Nama Lengkap* (gunakan huruf kapital, contoh: ANDI PRASETYO):"
+    );
   },
 
   addUser_nama: async (session, chatId, text, waClient, pool, userService) => {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const nama = text.trim().toUpperCase();
     if (!nama) {
-      await waClient.sendMessage(chatId, "Nama tidak boleh kosong. Masukkan ulang.");
+      await waClient.sendMessage(
+        chatId,
+        "Nama tidak boleh kosong. Masukkan ulang."
+      );
       return;
     }
     session.addUser.nama = nama;
     session.step = "addUser_pangkat";
-    await waClient.sendMessage(chatId, "Masukkan *Pangkat* (huruf kapital, contoh: BRIPKA):");
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan *Pangkat* (huruf kapital, contoh: BRIPKA):"
+    );
   },
 
-  addUser_pangkat: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_pangkat: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const pangkat = text.trim().toUpperCase();
     if (!pangkat) {
-      await waClient.sendMessage(chatId, "Pangkat tidak boleh kosong. Masukkan ulang.");
+      await waClient.sendMessage(
+        chatId,
+        "Pangkat tidak boleh kosong. Masukkan ulang."
+      );
       return;
     }
     session.addUser.title = pangkat;
@@ -110,11 +179,25 @@ export const oprRequestHandlers = {
     await waClient.sendMessage(chatId, msg);
   },
 
-  addUser_satfung: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_satfung: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const satfungList = session.availableSatfung || [];
     let satfung = text.trim().toUpperCase();
@@ -129,18 +212,38 @@ export const oprRequestHandlers = {
     }
     session.addUser.divisi = satfung;
     session.step = "addUser_jabatan";
-    await waClient.sendMessage(chatId, "Masukkan *Jabatan* (huruf kapital, contoh: BAURMIN):");
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan *Jabatan* (huruf kapital, contoh: BAURMIN):"
+    );
   },
 
-  addUser_jabatan: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_jabatan: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const jabatan = text.trim().toUpperCase();
     if (!jabatan) {
-      await waClient.sendMessage(chatId, "Jabatan tidak boleh kosong. Masukkan ulang.");
+      await waClient.sendMessage(
+        chatId,
+        "Jabatan tidak boleh kosong. Masukkan ulang."
+      );
       return;
     }
     session.addUser.jabatan = jabatan;
@@ -157,61 +260,143 @@ export const oprRequestHandlers = {
         `✅ User baru berhasil ditambahkan:\n*NRP*: ${session.addUser.user_id}\n*Nama*: ${session.addUser.nama}\n*Pangkat*: ${session.addUser.title}\n*Satfung*: ${session.addUser.divisi}\n*Jabatan*: ${session.addUser.jabatan}\n(Status: Aktif, Exception: False)`
       );
     } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal menambahkan user: ${err.message}`);
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menambahkan user: ${err.message}`
+      );
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userService
+    );
   },
 
   // ==== UPDATE STATUS USER ====
-  updateStatus_nrp: async (session, chatId, text, waClient, pool, userService) => {
-    if (text.trim().toLowerCase() === "batal") {
-      session.step = "main";
-      await waClient.sendMessage(chatId, "Keluar dari proses update status user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
-    }
+  updateStatus_nrp: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     const user = await userService.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      await waClient.sendMessage(
+        chatId,
+        `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`
+      );
       session.step = "main";
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      await oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
+      return;
     }
-    let msg =
-      `*Data User:*\n` +
-      `NRP/NIP: ${user.user_id}\n` +
-      `Nama: ${user.nama}\n` +
-      `Pangkat: ${user.title}\n` +
-      `Satfung: ${user.divisi}\n` +
-      `Jabatan: ${user.jabatan}\n` +
-      `Status: ${user.status ? "AKTIF" : "NONAKTIF"}\n\n` +
-      `Status baru yang akan di-set:\n1. AKTIF\n2. NONAKTIF\nBalas angka 1 atau 2.`;
+    // Percantik tampilan info user
+    let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+    let msg = `
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *Data User* ━━━━━━━━━━
+
+*NRP/NIP*   : ${user.user_id}
+*Nama*      : ${user.nama || "-"}
+*Pangkat*   : ${user.title || "-"}
+*Satfung*   : ${user.divisi || "-"}
+*Jabatan*   : ${user.jabatan || "-"}
+*Status*    : ${statusStr}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Status baru yang akan di-set:
+1. 🟢 *AKTIF*
+2. 🔴 *NONAKTIF*
+
+Balas *angka* (1 atau 2) sesuai status baru yang ingin diubah.
+Ketik *batal* untuk kembali ke menu utama operator.
+`.trim();
+
     session.updateStatusNRP = nrp;
     session.step = "updateStatus_value";
     await waClient.sendMessage(chatId, msg);
   },
 
-  updateStatus_value: async (session, chatId, text, waClient, pool, userService) => {
+  updateStatus_value: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  ) => {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
-      await waClient.sendMessage(chatId, "Keluar dari proses update status user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      await waClient.sendMessage(
+        chatId,
+        "Keluar dari proses update status user."
+      );
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     let status = null;
     if (text.trim() === "1") status = true;
     if (text.trim() === "2") status = false;
     if (status === null) {
-      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk AKTIF atau 2 untuk NONAKTIF.");
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas 1 untuk *AKTIF* atau 2 untuk *NONAKTIF*."
+      );
       return;
     }
     try {
-      await userService.updateUserField(session.updateStatusNRP, "status", status);
-      await waClient.sendMessage(chatId, `Status user berhasil diubah menjadi *${status ? "AKTIF" : "NONAKTIF"}*`);
+      await userService.updateUserField(
+        session.updateStatusNRP,
+        "status",
+        status
+      );
+      const user = await userService.findUserById(session.updateStatusNRP);
+      let statusStr = status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+      let msg = `
+✅ *Status user berhasil diubah!*
+
+━━━━━━━━━━━━━━━━━━━━━━
+*NRP/NIP*   : ${user.user_id}
+*Nama*      : ${user.nama || "-"}
+*Status*    : ${statusStr}
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim();
+      await waClient.sendMessage(chatId, msg);
     } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal update status: ${err.message}`);
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal update status: ${err.message}`
+      );
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userService
+    );
   },
 
   // ==== CEK DATA USER ====
@@ -219,25 +404,48 @@ export const oprRequestHandlers = {
     if (text.trim().toLowerCase() === "batal") {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses cek user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userService
+      );
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     const user = await userService.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      await waClient.sendMessage(
+        chatId,
+        `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`
+      );
     } else {
-      let msg =
-        `*Data User:*\n` +
-        `NRP/NIP: ${user.user_id}\n` +
-        `Nama: ${user.nama}\n` +
-        `Pangkat: ${user.title}\n` +
-        `Satfung: ${user.divisi}\n` +
-        `Jabatan: ${user.jabatan}\n` +
-        `Status: ${user.status ? "AKTIF" : "NONAKTIF"}\n`;
+      let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+      let msg = `
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *Data User* ━━━━━━━━━━
+
+*NRP/NIP*   : ${user.user_id}
+*Nama*      : ${user.nama || "-"}
+*Pangkat*   : ${user.title || "-"}
+*Satfung*   : ${user.divisi || "-"}
+*Jabatan*   : ${user.jabatan || "-"}
+*Status*    : ${statusStr}
+
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim();
       await waClient.sendMessage(chatId, msg);
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userService
+    );
   },
 };
 
