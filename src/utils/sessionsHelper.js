@@ -3,6 +3,11 @@ const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit timeout
 const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
 
 
+// Tambah di atas (global scope)
+export const userMenuContext = {};
+export const updateUsernameSession = {};
+export const knownUserSet = new Set();
+
 // --- Utility helper untuk session timeout ---
 export function setMenuTimeout(chatId) {
   if (userMenuContext[chatId]?.timeout) {
