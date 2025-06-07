@@ -151,7 +151,15 @@ waClient.on("message", async (msg) => {
     await oprRequestHandlers.main(
       getSession(chatId),
       chatId,
-      "",
+      `┏━━━ *MENU OPERATOR CICERO* ━━━┓
+👮‍♂️  Hanya untuk operator client.
+  
+1️⃣ Tambah user baru
+2️⃣ Ubah status user (aktif/nonaktif)
+3️⃣ Cek data user (NRP/NIP)
+
+Ketik *angka menu* di atas, atau *batal* untuk keluar.
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
       waClient,
       pool,
       userService
@@ -228,7 +236,7 @@ waClient.on("message", async (msg) => {
   2️⃣  Update Data Saya
   3️⃣  Daftar Perintah Manual
   4️⃣  Hubungi Operator
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 `.trim()

@@ -29,7 +29,7 @@ function menuUtama() {
   2️⃣  Update Data Saya
   3️⃣  Daftar Perintah Manual
   4️⃣  Hubungi Operator
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 `.trim();
