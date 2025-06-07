@@ -53,15 +53,21 @@ export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all"
     `Tanggal: ${new Date().toLocaleDateString("id-ID")}\n` +
     `Jam: ${new Date().toLocaleTimeString("id-ID", { hour12: false })}\n\n` +
     `*Jumlah Konten (post):* ${totalPost}\n` +
-    `*Jumlah User:* ${users.length}\n\n`;
+    `*Jumlah User:* ${users.length}\n` +
+    `✅ *Sudah melaksanakan (>=50% post)* : *${sudah.length} user*\n` +
+    `❌ *Belum melaksanakan (<50% post)* : *${belum.length} user*\n\n`;
 
-  // Selalu tampilkan bagian sudah
-  msg += `✅ *Sudah melaksanakan (>=50% post)* : *${sudah.length} user*\n`;
-  msg += sudah.length ? sudah.join("\n") + "\n\n" : "-\n\n";
-  
-  // Selalu tampilkan bagian belum
-  msg += `❌ *Belum melaksanakan (<50% post)* : *${belum.length} user*\n`;
-  msg += belum.length ? belum.join("\n") + "\n\n" : "-\n\n";
+  // List user sudah
+  if (mode === "all" || mode === "sudah") {
+    msg += `✅ *Sudah melaksanakan (>=50% post)* (${sudah.length} user):\n`;
+    msg += sudah.length ? sudah.join("\n") + "\n\n" : "-\n\n";
+  }
+
+  // List user belum
+  if (mode === "all" || mode === "belum") {
+    msg += `❌ *Belum melaksanakan (<50% post)* (${belum.length} user):\n`;
+    msg += belum.length ? belum.join("\n") + "\n\n" : "-\n\n";
+  }
 
   msg += "Terimakasih.";
   return msg.trim();
@@ -105,11 +111,20 @@ export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" }
       if (komentator.includes(tiktok)) sudah.push(label);
       else belum.push(label);
     }
+
+    // Header per konten: selalu tampilkan jumlah sudah & belum
     msg += `#${i + 1} Video ID: ${video_id}\n`;
-    msg += `   ✅ *Sudah komentar* : ${sudah.length}\n`;
-    msg += sudah.length ? sudah.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
-    msg += `   ❌ *Belum komentar* : ${belum.length}\n`;
-    msg += belum.length ? belum.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
+    msg += `   ✅ *Sudah komentar* : ${sudah.length} user\n`;
+    msg += `   ❌ *Belum komentar* : ${belum.length} user\n`;
+
+    if (mode === "all" || mode === "sudah") {
+      msg += `   ✅ *Sudah komentar* (${sudah.length} user):\n`;
+      msg += sudah.length ? sudah.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
+    }
+    if (mode === "all" || mode === "belum") {
+      msg += `   ❌ *Belum komentar* (${belum.length} user):\n`;
+      msg += belum.length ? belum.map((u) => "     " + u).join("\n") + "\n" : "     -\n";
+    }
     msg += `   Link: https://www.tiktok.com/@_/video/${video_id}\n\n`;
   }
   msg += "Terimakasih.";
