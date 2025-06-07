@@ -159,7 +159,7 @@ waClient.on("message", async (msg) => {
 3️⃣ Cek data user (NRP/NIP)
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
       waClient,
       pool,
       userService
@@ -249,27 +249,19 @@ Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
     setSession(chatId, { menu: "clientrequest", step: "main" });
     await waClient.sendMessage(
       chatId,
-      `🗂️ *Menu Client Cicero System*\n\n` +
-        `Balas angka pilihan:\n` +
-        `1. Tambah Client Baru\n` +
-        `2. Update Data Client\n` +
-        `3. Hapus Client\n` +
-        `4. Lihat Info Client\n` +
-        `5. Migrasi User dari Folder\n` +
-        `6. Migrasi User dari Google Sheet\n` +
-        `7. Fetch Data Instagram\n` +
-        `8. Fetch Data TikTok\n` +
-        `9. Fetch Likes Instagram\n` +
-        `10. Fetch Komentar TikTok (Batch)\n` +
-        `11. Absensi Likes Instagram\n` +
-        `12. Absensi Komentar TikTok\n` +
-        `13. Daftar Command Manual\n` +
-        `14. Update Exception User\n` +
-        `15. Update Status User\n` +
-        `16. Lihat Daftar Exception User\n` +
-        `17. Request Instagram\n` +
-        `18. Request TikTok\n\n` +
-        `Ketik *batal* untuk keluar dari menu client.`
+`
+┏━━━ *MENU CLIENT CICERO* ━━━
+1️⃣ Tambah client baru
+2️⃣ Kelola client (update/hapus/info)
+3️⃣ Kelola user (update/exception/status)
+4️⃣ Proses Instagram
+5️⃣ Proses TikTok
+6️⃣ Rekap Absensi Likes IG
+7️⃣ Rekap Absensi Komentar TikTok
+8️⃣ Lainnya
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk keluar.
+`.trim()
     );
     return;
   }
