@@ -6,11 +6,11 @@ import {
   absensiKomentarTiktokPerKonten,
 } from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
+import { groupByDivision, sortDivisionKeys } from "../../utils/utilsHelper.js";
 
 // ============= ABSENSI USERNAME IG DAN TIKTOK LANGSUNG DARI DB =================
 async function absensiUsernameInsta(client_id, userService, mode = "all") {
-  let sudah = [],
-    belum = [];
+  let sudah = [], belum = [];
   if (mode === "sudah") {
     sudah = await userService.getInstaFilledUsersByClient(client_id);
   } else if (mode === "belum") {
@@ -19,37 +19,47 @@ async function absensiUsernameInsta(client_id, userService, mode = "all") {
     sudah = await userService.getInstaFilledUsersByClient(client_id);
     belum = await userService.getInstaEmptyUsersByClient(client_id);
   }
+
   let msg = `*Absensi Username Instagram*\nClient: *${client_id}*`;
+
+  // --- Sudah isi IG ---
   if (mode === "all" || mode === "sudah") {
-    msg += `\n\n*Sudah mengisi IG* (${sudah.length}):\n`;
-    msg += sudah.length
-      ? sudah
-          .map(
-            (u, i) =>
-              `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id}) @${
-                u.insta
-              }`
-          )
-          .join("\n")
-      : "-";
+    msg += `\n\n*Sudah mengisi IG* (${sudah.length}):`;
+    if (sudah.length) {
+      const byDiv = groupByDivision(sudah);
+      const keys = sortDivisionKeys(Object.keys(byDiv));
+      keys.forEach((div) => {
+        msg += `\n• *${div}* (${byDiv[div].length})\n`;
+        msg += byDiv[div]
+          .map((u, i) => `  ${i + 1}. ${u.nama} (${u.user_id}) @${u.insta}`)
+          .join("\n");
+      });
+    } else {
+      msg += `\n-`;
+    }
   }
   if (mode === "all") msg += "\n";
+  // --- Belum isi IG ---
   if (mode === "all" || mode === "belum") {
-    msg += `\n*Belum mengisi IG* (${belum.length}):\n`;
-    msg += belum.length
-      ? belum
-          .map(
-            (u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id})`
-          )
-          .join("\n")
-      : "-";
+    msg += `\n*Belum mengisi IG* (${belum.length}):`;
+    if (belum.length) {
+      const byDiv = groupByDivision(belum);
+      const keys = sortDivisionKeys(Object.keys(byDiv));
+      keys.forEach((div) => {
+        msg += `\n• *${div}* (${byDiv[div].length})\n`;
+        msg += byDiv[div]
+          .map((u, i) => `  ${i + 1}. ${u.nama} (${u.user_id})`)
+          .join("\n");
+      });
+    } else {
+      msg += `\n-`;
+    }
   }
   return msg;
 }
 
 async function absensiUsernameTiktok(client_id, userService, mode = "all") {
-  let sudah = [],
-    belum = [];
+  let sudah = [], belum = [];
   if (mode === "sudah") {
     sudah = await userService.getTiktokFilledUsersByClient(client_id);
   } else if (mode === "belum") {
@@ -58,33 +68,43 @@ async function absensiUsernameTiktok(client_id, userService, mode = "all") {
     sudah = await userService.getTiktokFilledUsersByClient(client_id);
     belum = await userService.getTiktokEmptyUsersByClient(client_id);
   }
+
   let msg = `*Absensi Username TikTok*\nClient: *${client_id}*`;
+
   if (mode === "all" || mode === "sudah") {
-    msg += `\n\n*Sudah mengisi TikTok* (${sudah.length}):\n`;
-    msg += sudah.length
-      ? sudah
-          .map(
-            (u, i) =>
-              `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id}) @${
-                u.tiktok
-              }`
-          )
-          .join("\n")
-      : "-";
+    msg += `\n\n*Sudah mengisi TikTok* (${sudah.length}):`;
+    if (sudah.length) {
+      const byDiv = groupByDivision(sudah);
+      const keys = sortDivisionKeys(Object.keys(byDiv));
+      keys.forEach((div) => {
+        msg += `\n• *${div}* (${byDiv[div].length})\n`;
+        msg += byDiv[div]
+          .map((u, i) => `  ${i + 1}. ${u.nama} (${u.user_id}) @${u.tiktok}`)
+          .join("\n");
+      });
+    } else {
+      msg += `\n-`;
+    }
   }
   if (mode === "all") msg += "\n";
   if (mode === "all" || mode === "belum") {
-    msg += `\n*Belum mengisi TikTok* (${belum.length}):\n`;
-    msg += belum.length
-      ? belum
-          .map(
-            (u, i) => `${i + 1}. [${u.divisi || "-"}] ${u.nama} (${u.user_id})`
-          )
-          .join("\n")
-      : "-";
+    msg += `\n*Belum mengisi TikTok* (${belum.length}):`;
+    if (belum.length) {
+      const byDiv = groupByDivision(belum);
+      const keys = sortDivisionKeys(Object.keys(byDiv));
+      keys.forEach((div) => {
+        msg += `\n• *${div}* (${byDiv[div].length})\n`;
+        msg += byDiv[div]
+          .map((u, i) => `  ${i + 1}. ${u.nama} (${u.user_id})`)
+          .join("\n");
+      });
+    } else {
+      msg += `\n-`;
+    }
   }
   return msg;
 }
+
 
 // ====================
 // MAIN HANDLER OBJECT
