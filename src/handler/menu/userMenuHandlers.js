@@ -1,5 +1,4 @@
 import { sortTitleKeys, sortDivisionKeys } from "../../utils/utilsHelper.js";
-import { findUserByWhatsApp } from "../../services/userService.js";
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
