@@ -1,7 +1,7 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
 
 export const clientRequestHandlers = {
-  main: async (
+ main: async (
     session,
     chatId,
     text,
@@ -21,10 +21,7 @@ export const clientRequestHandlers = {
     switch (text) {
       case "1":
         session.step = "addClient_id";
-        await waClient.sendMessage(
-          chatId,
-          "Masukkan *client_id* untuk client baru:"
-        );
+        await waClient.sendMessage(chatId, "Masukkan *client_id* untuk client baru:");
         return;
       case "2":
       case "3":
@@ -48,7 +45,7 @@ export const clientRequestHandlers = {
           return;
         }
         session.clientList = clients;
-        // Step map urut dan sesuai menu baru Anda!
+        // Step map sesuai menu
         const stepMap = {
           2: "updateClient_choose",
           3: "removeClient_choose",
@@ -104,9 +101,7 @@ export const clientRequestHandlers = {
           } else {
             let msg = `*Daftar User Exception:*\n`;
             exceptionUsers.forEach((u) => {
-              msg += `- ${u.user_id}: ${u.nama || ""} (${
-                u.insta || u.tiktok || "-"
-              })\n`;
+              msg += `- ${u.user_id}: ${u.nama || ""} (${u.insta || u.tiktok || "-"})\n`;
             });
             await waClient.sendMessage(chatId, msg);
           }
