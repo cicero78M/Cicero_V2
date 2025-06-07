@@ -133,17 +133,34 @@ waClient.on("message", async (msg) => {
   }
 
   // ===== Handler Menu Operator =====
-  if (session && session.menu === "oprrequest") {
-    await oprRequestHandlers[session.step || "main"](
-      session,
-      chatId,
-      text,
-      waClient,
-      pool,
-      userService
-    );
-    return;
-  }
+// ===== Handler Menu Operator =====
+if (session && session.menu === "oprrequest") {
+  // Routing pesan sesuai langkah/session operator (tambah user, update status, dst)
+  await oprRequestHandlers[session.step || "main"](
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userService
+  );
+  return;
+}
+
+// ===== MULAI Menu Operator dari command manual =====
+if (text.toLowerCase() === "oprrequest") {
+  setSession(chatId, { menu: "oprrequest", step: "main" });
+  await oprRequestHandlers.main(
+    getSession(chatId),
+    chatId,
+    "",
+    waClient,
+    pool,
+    userService
+  );
+  return;
+}
+
 
 
   // -- Routing semua step session clientrequest ke handler step terkait --
