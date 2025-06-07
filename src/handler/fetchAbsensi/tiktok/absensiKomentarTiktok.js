@@ -2,7 +2,6 @@ import { getUsersByClient } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 
-
 /**
  * Akumulasi minimal 50%: yang sudah komentar >= 50% post hari ini
  */
@@ -12,32 +11,31 @@ export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all"
   const totalPost = posts.length;
   if (!totalPost) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
-  // Buat map: user_id -> username tiktok
   const userTiktokMap = {};
   users.forEach(u => {
     if (u.user_id && u.tiktok) userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
   });
 
-  // Buat: user_id -> set komentar hari ini
   const userKomentar = {};
   for (const user_id in userTiktokMap) userKomentar[user_id] = 0;
+
   for (const post of posts) {
     const video_id = post.video_id || post.id;
-    let komentarDb = await getCommentsByVideoId(video_id);
+    const komentarDb = await getCommentsByVideoId(video_id);
     let komentator = [];
     if (komentarDb && Array.isArray(komentarDb.comments)) {
-      komentator = komentarDb.comments.map((c) => (c || "").replace(/^@/, "").toLowerCase());
+      komentator = komentarDb.comments.map(c => (c || "").replace(/^@/, "").toLowerCase());
     }
     for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
       if (komentator.includes(tiktok)) userKomentar[user_id]++;
     }
   }
 
-  let sudah = [], belum = [];
+  const sudah = [], belum = [];
   for (const user_id in userKomentar) {
-    const persentase = (userKomentar[user_id] / totalPost) * 100;
-    const label = `${user_id} (@${userTiktokMap[user_id] || "-"}) [${userKomentar[user_id]}/${totalPost} = ${Math.round(persentase)}%]`;
-    if (persentase >= 50) sudah.push(label);
+    const persen = (userKomentar[user_id] / totalPost) * 100;
+    const label = `${user_id} (@${userTiktokMap[user_id] || "-"}) [${userKomentar[user_id]}/${totalPost} = ${Math.round(persen)}%]`;
+    if (persen >= 50) sudah.push(label);
     else belum.push(label);
   }
 
@@ -68,10 +66,10 @@ export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" }
 
   for (const [i, post] of posts.entries()) {
     const video_id = post.video_id || post.id;
-    let komentarDb = await getCommentsByVideoId(video_id);
+    const komentarDb = await getCommentsByVideoId(video_id);
     let komentator = [];
     if (komentarDb && Array.isArray(komentarDb.comments)) {
-      komentator = komentarDb.comments.map((c) => (c || "").replace(/^@/, "").toLowerCase());
+      komentator = komentarDb.comments.map(c => (c || "").replace(/^@/, "").toLowerCase());
     }
     let sudah = [], belum = [];
     for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
@@ -81,13 +79,15 @@ export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" }
     msg += `#${i + 1} Video ID: ${video_id}\n`;
     if (["all", "sudah"].includes(mode)) {
       msg += `   ✅ Sudah komentar: ${sudah.length}\n`;
-      if (mode !== "belum") msg += sudah.map((u) => "     - " + u).join("\n") + "\n";
+      if (mode !== "belum" && sudah.length) msg += sudah.map((u) => "     - " + u).join("\n") + "\n";
     }
     if (["all", "belum"].includes(mode)) {
       msg += `   ❌ Belum komentar: ${belum.length}\n`;
-      if (mode !== "sudah") msg += belum.map((u) => "     - " + u).join("\n") + "\n";
+      if (mode !== "sudah" && belum.length) msg += belum.map((u) => "     - " + u).join("\n") + "\n";
     }
     msg += `   Link: https://www.tiktok.com/@_/video/${video_id}\n\n`;
   }
   return msg.trim();
 }
+
+// Export untuk dipanggil dari handler manapun (import by name)

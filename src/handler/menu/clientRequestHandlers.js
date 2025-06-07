@@ -1,11 +1,11 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 // Import fungsi absensi TikTok Komentar
+// Import di atas file handler, misal:
 import {
   absensiKomentarTiktokAkumulasi50,
-  absensiKomentarTiktokPerKonten
-} from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js"; // path sesuaikan
-
+  absensiKomentarTiktokPerKonten,
+} from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 
 // Main handler untuk request client
 
@@ -951,7 +951,8 @@ infoClient_choose: async (
     session.step = "main";
   },
 
-  absensiKomentar_choose: async (
+  // Handler submenu (sederhana, tinggal copy logic dari absensiLikes_choose_submenu)
+absensiKomentar_choose: async (
   session,
   chatId,
   text,
@@ -965,38 +966,7 @@ infoClient_choose: async (
   fetchAndStoreInstaContent,
   fetchAndStoreTiktokContent,
   formatClientData,
-  fetchAndStoreLikesInstaContent,
-  handleFetchKomentarTiktokBatch
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(
-      chatId,
-      "Pilihan tidak valid. Balas angka sesuai list."
-    );
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.absensi_client_id = client_id;
-  session.step = "absensiKomentar_choose_submenu";
-  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
-  msg += `1. Akumulasi (Sudah & Belum, minimal 50%)\n`;
-  msg += `2. Akumulasi Sudah (>= 50%)\n`;
-  msg += `3. Akumulasi Belum (< 50%)\n`;
-  msg += `4. Per Konten (Sudah & Belum)\n`;
-  msg += `5. Per Konten Sudah\n`;
-  msg += `6. Per Konten Belum\n`;
-  msg += `\nBalas angka di atas.`;
-  await waClient.sendMessage(chatId, msg);
-},
-
-// === Submenu untuk absensi komentar TikTok ===
-absensiKomentar_choose_submenu: async (
-  session,
-  chatId,
-  text,
-  waClient
+  fetchAndStoreLikesInstaContent
   // tambahkan dependency handler jika perlu
 ) => {
   const pilihan = parseInt(text.trim());
@@ -1009,8 +979,8 @@ absensiKomentar_choose_submenu: async (
 
   try {
     let msg = "";
+    // Akumulasi 50%
     if ([1, 2, 3].includes(pilihan)) {
-      // Akumulasi
       if (pilihan === 1) {
         msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "all" });
       } else if (pilihan === 2) {
@@ -1018,8 +988,9 @@ absensiKomentar_choose_submenu: async (
       } else if (pilihan === 3) {
         msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "belum" });
       }
-    } else if ([4, 5, 6].includes(pilihan)) {
-      // Per konten
+    }
+    // Per konten
+    else if ([4, 5, 6].includes(pilihan)) {
       if (pilihan === 4) {
         msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "all" });
       } else if (pilihan === 5) {
@@ -1039,6 +1010,7 @@ absensiKomentar_choose_submenu: async (
     await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
   }
   session.step = "main";
-},
+}
+
   // ... handler lain tetap sama ...
 };
