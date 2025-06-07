@@ -159,7 +159,7 @@ waClient.on("message", async (msg) => {
 3️⃣ Cek data user (NRP/NIP)
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
       waClient,
       pool,
       userService
