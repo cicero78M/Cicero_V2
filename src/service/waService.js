@@ -18,7 +18,6 @@ import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
 
-
 import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
@@ -35,6 +34,7 @@ import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { handleAbsensiKomentar } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
 
 // helper functions
 import {
@@ -141,29 +141,29 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-if (session && session.menu === "clientrequest") {
-  const handler = clientRequestHandlers[session.step || "main"];
-  if (handler) {
-    await handler(
-      session,
-      chatId,
-      text,
-      waClient,
-      pool,
-      userService,
-      clientService,
-      migrateUsersFromFolder,
-      checkGoogleSheetCsvStatus,
-      importUsersFromGoogleSheet,
-      fetchAndStoreInstaContent,
-      fetchAndStoreTiktokContent,
-      formatClientData,
-      handleFetchLikesInstagram, // <--- ini untuk likes IG
-      handleAbsensiKomentar // jika TikTok absensi komentar
-    );
+  if (session && session.menu === "clientrequest") {
+    const handler = clientRequestHandlers[session.step || "main"];
+    if (handler) {
+      await handler(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userService,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        handleFetchLikesInstagram, // <--- ini untuk likes IG
+        handleAbsensiKomentar // jika TikTok absensi komentar
+      );
+    }
+    return;
   }
-  return;
-}
 
   if (userMenuContext[chatId]) {
     setMenuTimeout(chatId);
@@ -316,6 +316,7 @@ if (session && session.menu === "clientrequest") {
       delete updateUsernameSession[chatId];
       return;
     }
+
     // Update username dan bind WA
     await userService.updateUserField(
       user.user_id,
@@ -361,6 +362,21 @@ if (session && session.menu === "clientrequest") {
   // =======================
   // HANDLER PERINTAH ADMIN CICERO
   // =======================
+  // ...dalam waClient.on("message", async (msg) => { ... })
+
+  if (text.toLowerCase().startsWith("fetchkomentartiktok#")) {
+    const [, client_id_raw] = text.split("#");
+    const client_id = (client_id_raw || "").trim();
+    if (!client_id) {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah!\nGunakan: fetchkomentartiktok#clientid"
+      );
+      return;
+    }
+    await handleFetchKomentarTiktokBatch(waClient, chatId, client_id);
+    return;
+  }
 
   if (text.toLowerCase() === "clientrequest") {
     if (!isAdminWhatsApp(chatId)) {

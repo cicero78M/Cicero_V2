@@ -1,5 +1,4 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
-import { absensiLikes, absensiLikesPerKonten } from "../fetchAbsensi/insta/absensiLikesInsta.js";
 
 export const clientRequestHandlers = {
   main: async (
@@ -17,7 +16,7 @@ export const clientRequestHandlers = {
     fetchAndStoreTiktokContent,
     formatClientData,
     fetchAndStoreLikesInstaContent, // handler likes IG
-    fetchAndStoreTiktokComments // handler komentar TikTok
+    handleFetchKomentarTiktokBatch // handler batch fetch komentar TikTok!
   ) => {
     switch (text) {
       case "1":
@@ -36,6 +35,8 @@ export const clientRequestHandlers = {
       case "8":
       case "9":
       case "10":
+      case "11":
+      case "12":
       case "17":
       case "18": {
         const rows = await pool.query(
@@ -47,6 +48,7 @@ export const clientRequestHandlers = {
           return;
         }
         session.clientList = clients;
+        // Step map urut dan sesuai menu baru Anda!
         const stepMap = {
           2: "updateClient_choose",
           3: "removeClient_choose",
@@ -55,10 +57,12 @@ export const clientRequestHandlers = {
           6: "sheetTransfer_choose",
           7: "fetchInsta_choose",
           8: "fetchTiktok_choose",
-          9: "absensiLikes_choose",
-          10: "absensiKomentar_choose",
-          17: "fetchLikesInsta_choose",
-          18: "fetchKomentarTiktok_choose",
+          9: "fetchLikesInsta_choose",
+          10: "fetchKomentarTiktok_choose", // Handler batch komentar TikTok!
+          11: "absensiLikes_choose",
+          12: "absensiKomentar_choose",
+          17: "requestInsta_choose",
+          18: "requestTiktok_choose",
         };
         session.step = stepMap[text];
         let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
@@ -68,27 +72,28 @@ export const clientRequestHandlers = {
         await waClient.sendMessage(chatId, msg.trim());
         return;
       }
-      case "11":
+      case "13":
+        session.step = "manualCommandList";
         await waClient.sendMessage(
           chatId,
           "(Lihat daftar command manual seperti handler lama)"
         );
         return;
-      case "12":
+      case "14":
         session.step = "updateUserException_id";
         await waClient.sendMessage(
           chatId,
           "Masukkan *user_id* yang akan di-update exception-nya:"
         );
         return;
-      case "13":
+      case "15":
         session.step = "updateUserStatus_id";
         await waClient.sendMessage(
           chatId,
           "Masukkan *user_id* yang akan di-update status-nya:"
         );
         return;
-      case "14":
+      case "16":
         try {
           const exceptionUsers = await userService.getAllExceptionUsers();
           if (!exceptionUsers.length) {
@@ -112,26 +117,6 @@ export const clientRequestHandlers = {
           );
         }
         return;
-      case "15":
-      case "16": {
-        const rows = await pool.query(
-          "SELECT client_id, nama FROM clients WHERE client_status = true ORDER BY client_id"
-        );
-        const clients = rows.rows;
-        if (!clients.length) {
-          await waClient.sendMessage(chatId, "Tidak ada client aktif.");
-          return;
-        }
-        session.clientList = clients;
-        session.step =
-          text === "15" ? "requestInsta_choose" : "requestTiktok_choose";
-        let msg = `*Daftar Client Aktif*\nBalas angka untuk memilih client:\n`;
-        clients.forEach((c, i) => {
-          msg += `${i + 1}. ${c.client_id} - ${c.nama}\n`;
-        });
-        await waClient.sendMessage(chatId, msg.trim());
-        return;
-      }
       default:
         await waClient.sendMessage(
           chatId,
@@ -854,11 +839,14 @@ export const clientRequestHandlers = {
     pool,
     userService,
     clientService,
-    _,
-    __,
-    ___,
-    ____,
-    fetchAndStoreTiktokComments
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch // ← batch handler yang benar!
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -870,8 +858,12 @@ export const clientRequestHandlers = {
       return;
     }
     const client_id = clients[idx].client_id;
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Memulai fetch komentar TikTok untuk ${client_id}...`
+    );
     try {
-      await fetchAndStoreTiktokComments(client_id);
+      await handleFetchKomentarTiktokBatch(waClient, chatId, client_id);
       await waClient.sendMessage(
         chatId,
         `✅ Selesai fetch komentar TikTok untuk ${client_id}.`

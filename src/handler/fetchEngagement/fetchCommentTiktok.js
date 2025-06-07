@@ -1,4 +1,4 @@
-// src/service/tiktokCommentService.js
+// src/handler/fetchEngagement/fetchCommentTiktok.js
 
 import axios from "axios";
 import pLimit from "p-limit";
@@ -7,34 +7,13 @@ import { sendDebug } from "../../middleware/debugHandler.js";
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
-const limit = pLimit(4);
+const limit = pLimit(4); // parallel fetch
 
-/**
- * Ambil daftar video_id TikTok hari ini dari DB.
- */
-async function getVideoIdsToday(client_id = null) {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  let query = `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`;
-  let params = [`${yyyy}-${mm}-${dd}`];
-  if (client_id) {
-    query += ` AND client_id = $2`;
-    params.push(client_id);
-  }
-  const res = await pool.query(query, params);
-  return res.rows.map((r) => r.video_id);
-}
-
-/**
- * Fetch semua username pemberi komentar pada satu video TikTok.
- */
 async function fetchAllTiktokCommentUsernames(video_id) {
   let allUsernames = [];
   let nextCursor = null;
   let page = 1;
-  const maxTry = 15;
+  const maxTry = 20;
   do {
     let params = { video_id };
     if (nextCursor) params.cursor = nextCursor;
@@ -51,14 +30,14 @@ async function fetchAllTiktokCommentUsernames(video_id) {
     } catch (e) {
       sendDebug({
         tag: "TTK COMMENT ERROR",
-        msg: `Fetch gagal: ${e.response?.data ? JSON.stringify(e.response.data) : e.message}`,
+        msg: `Fetch page gagal: ${e.response?.data ? JSON.stringify(e.response.data) : e.message}`,
         client_id: video_id
       });
       break;
     }
     const items = commentsRes.data?.data?.items || [];
     sendDebug({
-      tag: "TTK COMMENT",
+      tag: "TTK COMMENT PAGE",
       msg: `Video ${video_id} Page ${page}: ${items.length} komentar`,
       client_id: video_id
     });
@@ -68,19 +47,15 @@ async function fetchAllTiktokCommentUsernames(video_id) {
     if (!hasMore || !nextCursor || page++ >= maxTry) break;
   } while (true);
 
-  // Unik
   const result = [...new Set(allUsernames)];
   sendDebug({
-    tag: "TTK COMMENT",
-    msg: `Video ${video_id}: Jumlah username komentar unik (hasil fetch): ${result.length}`,
+    tag: "TTK COMMENT FINAL",
+    msg: `Video ${video_id}: FINAL jumlah username komentar unik: ${result.length}`,
     client_id: video_id
   });
   return result;
 }
 
-/**
- * Ambil existing username dari DB (comments jsonb).
- */
 async function getExistingUsernames(video_id) {
   const res = await pool.query(
     "SELECT comments FROM tiktok_comment WHERE video_id = $1",
@@ -92,9 +67,6 @@ async function getExistingUsernames(video_id) {
   return [];
 }
 
-/**
- * Upsert hasil merge username ke DB.
- */
 async function upsertTiktokCommentUsernamesMerged(video_id, usernames) {
   const query = `
     INSERT INTO tiktok_comment (video_id, comments, updated_at)
@@ -105,56 +77,84 @@ async function upsertTiktokCommentUsernamesMerged(video_id, usernames) {
   await pool.query(query, [video_id, JSON.stringify(usernames)]);
 }
 
-/**
- * Main: fetch & store TikTok comments (merge dengan existing username).
- */
-export async function fetchAndStoreTiktokCommentUserList(waClient = null, chatId = null, client_id = null) {
-  let processing = true;
-  if (!waClient)
-    sendDebug({ tag: "TTK COMMENT", msg: "fetchAndStoreTiktokCommentUserList: mode cronjob/auto" });
-  else
-    sendDebug({ tag: "TTK COMMENT", msg: "fetchAndStoreTiktokCommentUserList: mode WA handler" });
-
-  const intervalId = setInterval(() => {
-    if (processing && waClient && chatId && typeof waClient.sendMessage === "function") {
-      waClient.sendMessage(chatId, "⏳ Sedang fetch username komentar TikTok...");
+export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = null, client_id = null) {
+  try {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const { rows } = await pool.query(
+      `SELECT video_id FROM tiktok_post WHERE client_id = $1 AND DATE(created_at) = $2`,
+      [client_id, `${yyyy}-${mm}-${dd}`]
+    );
+    const videoIds = rows.map((r) => r.video_id);
+    sendDebug({
+      tag: "TTK COMMENT",
+      msg: `Client ${client_id}: Jumlah video hari ini: ${videoIds.length}`,
+      client_id,
+    });
+    if (waClient && chatId) {
+      await waClient.sendMessage(chatId, `⏳ Fetch komentar ${videoIds.length} video TikTok...`);
     }
-  }, 5000);
 
-  const videoIds = await getVideoIdsToday(client_id);
-  sendDebug({
-    tag: "TTK COMMENT",
-    msg: `Jumlah video_id hari ini: ${videoIds.length}`
-  });
-
-  let totalNew = 0, totalUnique = 0;
-  for (const video_id of videoIds) {
-    await limit(async () => {
-      // Fetch username terbaru hari ini
-      const usernamesToday = await fetchAllTiktokCommentUsernames(video_id);
-      // Ambil existing dari DB
-      const usernamesExisting = await getExistingUsernames(video_id);
-      // Merge
-      const mergedUsernames = [...new Set([...(usernamesExisting || []), ...usernamesToday])];
-      totalNew += usernamesToday.length;
-      totalUnique += mergedUsernames.length;
-      // Simpan
-      await upsertTiktokCommentUsernamesMerged(video_id, mergedUsernames);
+    if (!videoIds.length) {
+      if (waClient && chatId) await waClient.sendMessage(chatId, `Tidak ada konten TikTok hari ini untuk client ${client_id}.`);
       sendDebug({
         tag: "TTK COMMENT",
-        msg: `Video ${video_id}: total username komentar unik setelah merge: ${mergedUsernames.length}`,
-        client_id: video_id
+        msg: `Tidak ada video TikTok untuk client ${client_id} hari ini.`,
+        client_id,
       });
+      return;
+    }
+
+    let sukses = 0, gagal = 0;
+    for (const video_id of videoIds) {
+      await limit(async () => {
+        try {
+          const usernamesToday = await fetchAllTiktokCommentUsernames(video_id);
+          const usernamesExisting = await getExistingUsernames(video_id);
+          const mergedUsernames = [...new Set([...(usernamesExisting || []), ...usernamesToday])];
+          await upsertTiktokCommentUsernamesMerged(video_id, mergedUsernames);
+          sukses++;
+          sendDebug({
+            tag: "TTK COMMENT MERGE",
+            msg: `Video ${video_id}: Berhasil simpan/merge komentar (${mergedUsernames.length} username)`,
+            client_id: video_id
+          });
+        } catch (err) {
+          sendDebug({
+            tag: "TTK COMMENT ERROR",
+            msg: `Gagal fetch/merge video ${video_id}: ${(err && err.message) || String(err)}`,
+            client_id: video_id
+          });
+          gagal++;
+        }
+      });
+    }
+
+    if (waClient && chatId) {
+      await waClient.sendMessage(
+        chatId,
+        `✅ Selesai fetch komentar TikTok client ${client_id}. Berhasil: ${sukses}, Gagal: ${gagal}`
+      );
+    }
+    sendDebug({
+      tag: "TTK COMMENT FINAL",
+      msg: `Fetch komentar TikTok client ${client_id} selesai. Berhasil: ${sukses}, Gagal: ${gagal}`,
+      client_id,
     });
-  }
 
-  processing = false;
-  clearInterval(intervalId);
-
-  const msg = `✅ Merge fetch username komentar TikTok selesai!\nVideo hari ini: *${videoIds.length}*\nTotal username hasil fetch hari ini: *${totalNew}*\nTotal username unik setelah merge (semua video): *${totalUnique}*`;
-  if (waClient && chatId) {
-    await waClient.sendMessage(chatId, msg);
-  } else {
-    sendDebug({ tag: "TTK COMMENT", msg });
+  } catch (err) {
+    if (waClient && chatId) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Error utama fetch komentar TikTok: ${(err && err.message) || String(err)}`
+      );
+    }
+    sendDebug({
+      tag: "TTK COMMENT ERROR",
+      msg: (err && err.message) || String(err),
+      client_id,
+    });
   }
 }
