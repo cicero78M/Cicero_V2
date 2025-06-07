@@ -256,10 +256,8 @@ Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 3️⃣ Kelola user (update/exception/status)
 4️⃣ Proses Instagram
 5️⃣ Proses TikTok
-6️⃣ Rekap Absensi Likes IG
-7️⃣ Rekap Absensi Komentar TikTok
-8️⃣ Absensi Username Instagram
-9️⃣ Absensi Username TikTok
+6️⃣ Absensi Username Instagram
+7️⃣ Absensi Username TikTok
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()

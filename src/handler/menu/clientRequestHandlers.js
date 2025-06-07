@@ -140,10 +140,8 @@ export const clientRequestHandlers = {
 3️⃣ Kelola user (update/exception/status)
 4️⃣ Proses Instagram
 5️⃣ Proses TikTok
-6️⃣ Rekap Absensi Likes IG
-7️⃣ Rekap Absensi Komentar TikTok
-8️⃣ Absensi Username Instagram
-9️⃣ Absensi Username TikTok
+6️⃣ Absensi Username Instagram
+7️⃣ Absensi Username TikTok
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim();
@@ -159,10 +157,8 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       3: "kelolaUser_choose",
       4: "prosesInstagram_choose",
       5: "prosesTiktok_choose",
-      6: "absensiLikes_choose",
-      7: "absensiKomentar_choose",
-      8: "absensiUsernameInsta_choose",
-      9: "absensiUsernameTiktok_choose",
+      6: "absensiUsernameInsta_choose",
+      7: "absensiUsernameTiktok_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
