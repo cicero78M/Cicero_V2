@@ -1274,14 +1274,39 @@ waClient.on("message", async (msg) => {
   // === GET CLIENT INFO (ADMIN)
   // =========================
   if (text.toLowerCase().startsWith("clientinfo#")) {
-    const [, client_id] = text.split("#");
+    const [, client_id_raw] = text.split("#");
+    const client_id = (client_id_raw || "").trim();
+    // Jika tidak ada client_id: tampilkan daftar semua client
     if (!client_id) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah!\nGunakan: clientinfo#clientid"
-      );
+      try {
+        // Pastikan fungsi ini sudah diekspor dari clientService.js
+        const { getAllClientIds } = await import("../service/clientService.js");
+        const list = await getAllClientIds();
+        if (!list.length) {
+          await waClient.sendMessage(chatId, "Belum ada client terdaftar.");
+          return;
+        }
+        let msg = "*Daftar Client Terdaftar:*\n";
+        msg += list
+          .map(
+            (c, i) =>
+              `${i + 1}. *${c.client_id}* - ${c.nama || "-"} [${
+                c.status ? "AKTIF" : "TIDAK AKTIF"
+              }]`
+          )
+          .join("\n");
+        msg += "\n\nKetik: clientinfo#clientid\nContoh: clientinfo#JAKARTA";
+        await waClient.sendMessage(chatId, msg);
+      } catch (e) {
+        await waClient.sendMessage(
+          chatId,
+          "Gagal mengambil daftar client: " + e.message
+        );
+      }
       return;
     }
+
+    // Lanjut: clientinfo#clientid
     try {
       const client = await clientService.findClientById(client_id);
       if (client) {

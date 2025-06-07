@@ -39,3 +39,13 @@ export async function updateClientSecUid(client_id, secUid) {
   );
   return res.rowCount > 0;
 }
+
+export async function getAllClientIds() {
+  const { pool } = await import("../config/db.js");
+  const rows = await pool.query("SELECT client_id, nama, client_status FROM clients ORDER BY client_id");
+  return rows.rows.map(r => ({
+    client_id: r.client_id,
+    nama: r.nama,
+    status: r.client_status,
+  }));
+}
