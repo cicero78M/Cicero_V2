@@ -5,7 +5,7 @@ import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision } from "../../../utils/utilsHelper.js";
 
-// Helper untuk urutan divisi/satfung (BAG, SAT, SI, POLSEK)
+// Helper sorting satfung
 function sortSatfung(keys) {
   const order = ["BAG", "SAT", "SI", "POLSEK"];
   return keys.sort((a, b) => {
@@ -26,11 +26,18 @@ async function getClientNama(client_id) {
   return res.rows[0]?.nama || client_id;
 }
 
-/**
- * Absensi komentar TikTok akumulasi:
- * Minimal sudah komentar di setengah dari jumlah post hari ini (dibulatkan ke atas).
- * Exception tetap auto-lolos.
- */
+// Helper ekstrak username dari komentar
+function extractUsernamesFromComments(comments) {
+  return (comments || [])
+    .map((x) => {
+      if (typeof x === "string") return x.toLowerCase();
+      if (x && typeof x.username === "string") return x.username.toLowerCase();
+      return "";
+    })
+    .filter(Boolean);
+}
+
+// === AKUMULASI (min 50%) ===
 export async function absensiKomentar(client_id, opts = {}) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -50,14 +57,13 @@ export async function absensiKomentar(client_id, opts = {}) {
   });
 
   for (const post of posts) {
-    // Ambil semua username yang komentar (sudah lowercase)
     const { comments } = await getCommentsByVideoId(post.video_id);
-    const commentSet = new Set((comments || []).map((x) => (x || "").toLowerCase()));
+    const commentSet = new Set(extractUsernamesFromComments(comments));
     users.forEach((u) => {
       if (
         u.tiktok &&
         u.tiktok.trim() !== "" &&
-        commentSet.has(u.tiktok.toLowerCase())
+        commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())
       ) {
         userStats[u.user_id].count += 1;
       }
@@ -69,7 +75,7 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   Object.values(userStats).forEach((u) => {
     if (u.exception === true) {
-      sudah.push(u); // selalu masuk ke sudah!
+      sudah.push(u);
     } else if (
       u.tiktok &&
       u.tiktok.trim() !== "" &&
@@ -155,7 +161,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
-// --- Per konten, jika dibutuhkan (opsional, sama pola seperti IG) ---
+// === PER KONTEN ===
 export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -177,22 +183,20 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
 
   for (const p of posts) {
     const { comments } = await getCommentsByVideoId(p.video_id);
-    const commentSet = new Set((comments || []).map((x) => (x || "").toLowerCase()));
+    const commentSet = new Set(extractUsernamesFromComments(comments));
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
       if (u.exception === true) {
-        userSudah.push(u); // Selalu ke sudah!
-      } else if (u.tiktok && u.tiktok.trim() !== "" && commentSet.has(u.tiktok.toLowerCase())) {
+        userSudah.push(u);
+      } else if (u.tiktok && u.tiktok.trim() !== "" && commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
       }
     });
-    // Hilangkan user exception dari belum!
     userBelum = userBelum.filter(u => !u.exception);
 
-    // Header per konten
     msg += `\nKonten: https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}\n`;
     msg += `✅ *Sudah melaksanakan* : *${userSudah.length} user*\n`;
     msg += `❌ *Belum melaksanakan* : *${userBelum.length} user*\n`;
@@ -235,35 +239,3 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   return msg.trim();
 }
 
-// Helper, jika ingin rekap total komentar (jumlah per konten)
-export async function rekapKomentarTiktok(client_id) {
-  const res = await pool.query(
-    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
-    [client_id]
-  );
-  const clientNama = res.rows[0]?.nama || client_id;
-
-  const posts = await getPostsTodayByClient(client_id);
-  if (!posts.length) return null;
-  let totalKomentar = 0;
-  let detailKomentar = [];
-  for (const p of posts) {
-    const { comments } = await getCommentsByVideoId(p.video_id);
-    const jumlahKomentar = (comments || []).length;
-    totalKomentar += jumlahKomentar;
-    detailKomentar.push({
-      video_id: p.video_id,
-      link: `https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}`,
-      jumlahKomentar,
-    });
-  }
-  let msg =
-    `📊 Rekap Komentar TikTok\n*Polres*: *${clientNama}*\n` +
-    `Jumlah konten hari ini: *${posts.length}*\n` +
-    `Total komentar semua konten: *${totalKomentar}*\n\n` +
-    `Rincian:\n`;
-  detailKomentar.forEach((d) => {
-    msg += `- ${d.link}: ${d.jumlahKomentar} komentar\n`;
-  });
-  return msg.trim();
-}
