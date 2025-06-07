@@ -37,6 +37,30 @@ function isTodayJakarta(unixTimestamp) {
 }
 
 /**
+ * Parse dan normalisasi TikTok post dari response API (string, objek, atau skema baru).
+ * Support itemList, result.videos, dsb.
+ */
+function parseTiktokPostsFromApiResponse(postsRes) {
+  let dataObj = postsRes?.data?.data || postsRes?.data?.result || postsRes?.data;
+
+  // Jika 'data' adalah string (case tertentu dari RapidAPI), parse ke objek
+  if (typeof dataObj === "string") {
+    try {
+      dataObj = JSON.parse(dataObj);
+    } catch (e) {
+      dataObj = {};
+    }
+  }
+  // Cek semua kemungkinan tempat list post
+  if (Array.isArray(dataObj.itemList)) return dataObj.itemList;
+  if (Array.isArray(dataObj.items)) return dataObj.items;
+  if (Array.isArray(postsRes?.data?.result?.videos)) return postsRes.data.result.videos;
+  if (Array.isArray(dataObj.videos)) return dataObj.videos;
+  // Fallback: kalau tidak ada, return array kosong
+  return [];
+}
+
+/**
  * Dapatkan semua video_id tiktok hari ini dari DB
  */
 async function getVideoIdsToday() {
@@ -175,13 +199,8 @@ export async function fetchAndStoreTiktokContent(
         },
       });
 
-      // PATCH: Ambil itemList dari response baru (handle berbagai skema response)
-      itemList =
-        Array.isArray(postsRes.data?.data?.itemList) && postsRes.data.data.itemList.length > 0
-          ? postsRes.data.data.itemList
-          : Array.isArray(postsRes.data?.result?.videos)
-            ? postsRes.data.result.videos
-            : [];
+      // Gunakan universal parser (support string, itemList, result.videos, dsb)
+      itemList = parseTiktokPostsFromApiResponse(postsRes);
 
       sendDebug({
         tag: "TIKTOK FETCH",
