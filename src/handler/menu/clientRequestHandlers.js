@@ -869,74 +869,77 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 // --- Submenu step untuk Request Instagram (case 17) ---
-requestInsta_choose: async (
-  session, chatId, text, waClient, pool
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.selected_client_id = client_id;
-  session.step = "requestInsta_status_submenu";
-  await waClient.sendMessage(
-    chatId,
-    `Pilih salah satu:\n1️⃣ Sudah mengisi Instagram\n2️⃣ Belum mengisi Instagram`
-  );
-},
+  // === Request Instagram (menu 17) ===
+  requestInsta_choose: async (session, chatId, text, waClient, pool) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "requestInsta_status_submenu";
+    await waClient.sendMessage(
+      chatId,
+      `Pilih salah satu:\n1️⃣ Sudah mengisi Instagram\n2️⃣ Belum mengisi Instagram`
+    );
+  },
 
-requestInsta_status_submenu: async (
-  session, chatId, text, waClient
-) => {
-  const client_id = session.selected_client_id;
-  let status;
-  if (text.trim() === "1") status = "sudah";
-  else if (text.trim() === "2") status = "belum";
-  else {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
-    return;
-  }
-  // Otomatis trigger request ke waService sesuai format
-  waClient.emit("message", { from: chatId, body: `requestinsta#${client_id}#${status}` });
-  session.step = "main";
-},
+  requestInsta_status_submenu: async (session, chatId, text, waClient) => {
+    if (!session.selected_client_id) {
+      await waClient.sendMessage(chatId, "Session client tidak valid, ulangi dari awal.");
+      session.step = "main";
+      return;
+    }
+    let status = null;
+    if (text.trim() === "1") status = "sudah";
+    else if (text.trim() === "2") status = "belum";
+    else {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
+      return;
+    }
+    // Simulasi emit handler (atau panggil langsung fungsi requestInsta, jika mau)
+    waClient.emit("message", {
+      from: chatId,
+      body: `requestinsta#${session.selected_client_id}#${status}`
+    });
+    session.step = "main";
+  },
 
-// --- Submenu step untuk Request TikTok (case 18) ---
-requestTiktok_choose: async (
-  session, chatId, text, waClient, pool
-) => {
-  const idx = parseInt(text.trim()) - 1;
-  const clients = session.clientList || [];
-  if (isNaN(idx) || !clients[idx]) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
-    return;
-  }
-  const client_id = clients[idx].client_id;
-  session.selected_client_id = client_id;
-  session.step = "requestTiktok_status_submenu";
-  await waClient.sendMessage(
-    chatId,
-    `Pilih salah satu:\n1️⃣ Sudah mengisi TikTok\n2️⃣ Belum mengisi TikTok`
-  );
-},
+  // === Request TikTok (menu 18) ===
+  requestTiktok_choose: async (session, chatId, text, waClient, pool) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "requestTiktok_status_submenu";
+    await waClient.sendMessage(
+      chatId,
+      `Pilih salah satu:\n1️⃣ Sudah mengisi TikTok\n2️⃣ Belum mengisi TikTok`
+    );
+  },
 
-requestTiktok_status_submenu: async (
-  session, chatId, text, waClient
-) => {
-  const client_id = session.selected_client_id;
-  let status;
-  if (text.trim() === "1") status = "sudah";
-  else if (text.trim() === "2") status = "belum";
-  else {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
-    return;
-  }
-  waClient.emit("message", { from: chatId, body: `requesttiktok#${client_id}#${status}` });
-  session.step = "main";
-},
-
-
+  requestTiktok_status_submenu: async (session, chatId, text, waClient) => {
+    if (!session.selected_client_id) {
+      await waClient.sendMessage(chatId, "Session client tidak valid, ulangi dari awal.");
+      session.step = "main";
+      return;
+    }
+    let status = null;
+    if (text.trim() === "1") status = "sudah";
+    else if (text.trim() === "2") status = "belum";
+    else {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1 untuk Sudah, 2 untuk Belum.");
+      return;
+    }
+    waClient.emit("message", {
+      from: chatId,
+      body: `requesttiktok#${session.selected_client_id}#${status}`
+    });
+    session.step = "main";
+  },
   // ... handler lain tetap sama ...
 };
