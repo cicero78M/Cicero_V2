@@ -1,4 +1,4 @@
-// D:\Cicero_V2\Cicero_V2\src\handler\fetchEngagement\fetchCommentTiktok.js
+// src/handler/fetchEngagement/fetchCommentTiktok.js
 
 import axios from "axios";
 import pLimit from "p-limit";
@@ -9,14 +9,13 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
 
-// Helper: delay untuk rate limit
 function delay(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
 /**
  * Fetch semua komentar TikTok untuk 1 video_id dari API terbaru
- * Return: array komentar (bukan username saja!)
+ * Return: array komentar (object asli dari API)
  */
 async function fetchAllTiktokComments(video_id) {
   let allComments = [];
@@ -27,7 +26,7 @@ async function fetchAllTiktokComments(video_id) {
       method: 'GET',
       url: `https://${RAPIDAPI_HOST}/api/post/comments`,
       params: {
-        videoId: video_id, // param wajib
+        videoId: video_id,
         count: '50',
         cursor: String(cursor)
       },
@@ -90,40 +89,64 @@ async function fetchAllTiktokComments(video_id) {
   return allComments;
 }
 
-// Ambil komentar lama (existing) di DB
-async function getExistingComments(video_id) {
+/**
+ * Ekstrak & normalisasi username dari array objek komentar TikTok.
+ * Diprioritaskan dari: user.unique_id, fallback: username (kalau ada)
+ * Return: array string username unik (lowercase, tanpa @)
+ */
+function extractUniqueUsernamesFromComments(commentsArr) {
+  const usernames = [];
+  for (const c of commentsArr) {
+    let uname = null;
+    if (c && c.user && typeof c.user.unique_id === "string") {
+      uname = c.user.unique_id;
+    } else if (c && typeof c.username === "string") {
+      uname = c.username;
+    }
+    if (uname && uname.length > 0)
+      usernames.push(uname.trim().toLowerCase().replace(/^@/, ""));
+  }
+  // Unikkan username (no duplicate)
+  return [...new Set(usernames)];
+}
+
+// Ambil komentar lama (existing) dari DB (username string array)
+async function getExistingUsernames(video_id) {
   const res = await pool.query(
     "SELECT comments FROM tiktok_comment WHERE video_id = $1",
     [video_id]
   );
   if (res.rows.length && Array.isArray(res.rows[0].comments)) {
-    return res.rows[0].comments;
+    // pastikan string array
+    return res.rows[0].comments
+      .map(u => (typeof u === "string" ? u.trim().toLowerCase().replace(/^@/, "") : null))
+      .filter(Boolean);
   }
   return [];
 }
 
-// Upsert komentar TikTok ke DB, merge data lama (no duplicate)
-async function upsertTiktokCommentsMerged(video_id, comments) {
-  // Gabungkan unik berdasarkan cid/comment_id/id/JSON
-  const uniqMap = {};
-  comments.forEach(c => {
-    const key = c?.cid || c?.comment_id || c?.id || JSON.stringify(c);
-    uniqMap[key] = c;
-  });
-  const finalComments = Object.values(uniqMap);
+/**
+ * Upsert ke DB hanya username (string array).
+ * - Gabungkan username baru + lama, unikkan.
+ */
+async function upsertTiktokUserComments(video_id, usernamesArr) {
+  // Existing username dari DB
+  const existing = await getExistingUsernames(video_id);
+  const finalUsernames = [...new Set([...existing, ...usernamesArr])];
 
   const query = `
     INSERT INTO tiktok_comment (video_id, comments, updated_at)
     VALUES ($1, $2, NOW())
     ON CONFLICT (video_id)
-    DO UPDATE SET comments = EXCLUDED.comments, updated_at = EXCLUDED.updated_at
+    DO UPDATE SET comments = $2, updated_at = NOW()
   `;
-  await pool.query(query, [video_id, JSON.stringify(finalComments)]);
-  return finalComments;
+  await pool.query(query, [video_id, JSON.stringify(finalUsernames)]);
+  return finalUsernames;
 }
 
 /**
  * Handler: Fetch komentar semua video TikTok hari ini (per client)
+ * Simpan ke DB: hanya array username unik!
  */
 export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = null, client_id = null) {
   try {
@@ -160,15 +183,15 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
       await limit(async () => {
         try {
           const commentsToday = await fetchAllTiktokComments(video_id);
-          const commentsExisting = await getExistingComments(video_id);
-          const mergedComments = await upsertTiktokCommentsMerged(
+          const uniqueUsernames = extractUniqueUsernamesFromComments(commentsToday);
+          const mergedUsernames = await upsertTiktokUserComments(
             video_id,
-            [...(commentsExisting || []), ...(commentsToday || [])]
+            uniqueUsernames
           );
           sukses++;
           sendDebug({
             tag: "TTK COMMENT MERGE",
-            msg: `Video ${video_id}: Berhasil simpan/merge komentar (${mergedComments.length} data)`,
+            msg: `Video ${video_id}: Berhasil simpan/merge komentar (${mergedUsernames.length} username unik)`,
             client_id: video_id
           });
         } catch (err) {
