@@ -110,7 +110,8 @@ export async function absensiLikes(client_id, opts = {}) {
             if (u.count) ket = `(${u.count}/${totalKonten} konten)`;
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              `${u.insta ? u.insta : "belum mengisi data insta"} ${ket}`
+              (u.insta ? `@${u.insta.replace(/^@/, "")}` : "-") +
+              ` ${ket}`
             );
           })
           .join("\n") + "\n";
@@ -138,7 +139,8 @@ export async function absensiLikes(client_id, opts = {}) {
             }
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              `${u.insta ? u.insta : "belum mengisi data insta"} ${ket}`
+              (u.insta ? `@${u.insta.replace(/^@/, "")}` : "-") +
+              ` ${ket}`
             );
           })
           .join("\n") + "\n";
@@ -202,7 +204,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
         msg += `*${div}* (${list.length} user):\n`;
         msg += list.length
           ? list.map(u =>
-              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}`
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta ? `@${u.insta.replace(/^@/, "")}` : "-"}`
             ).join("\n") + "\n"
           : "-\n";
         if (idx < arr.length - 1) msg += "\n";
@@ -219,7 +221,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
         msg += list.length
           ? `*${div}* (${list.length} user):\n` +
             list.map(u =>
-              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta || "-"}`
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.insta ? `@${u.insta.replace(/^@/, "")}` : "-"}`
             ).join("\n") + "\n"
           : "-\n";
         if (idx < arr.length - 1) msg += "\n";
