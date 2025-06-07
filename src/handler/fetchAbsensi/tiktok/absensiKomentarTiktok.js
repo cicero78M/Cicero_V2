@@ -1,6 +1,7 @@
-import { getUsersByClient } from "../../model/userModel.js";
-import { getPostsTodayByClient } from "../../model/tiktokPostModel.js";
-import { getCommentsByVideoId } from "../../model/tiktokCommentModel.js";
+import { getUsersByClient } from "../../../model/userModel.js";
+import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
+import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
+
 
 /**
  * Akumulasi minimal 50%: yang sudah komentar >= 50% post hari ini
