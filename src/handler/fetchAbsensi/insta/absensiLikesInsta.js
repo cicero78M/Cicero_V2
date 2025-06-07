@@ -3,7 +3,7 @@ import { getUsersByClient } from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
-import { sortDivisionKeys, groupByDivision } from "../../../utils/utilsHelper.js";
+import { groupByDivision } from "../../../utils/utilsHelper.js";
 
 // Custom sorting satfung helper (urutan tetap BAG, SAT, SI, POLSEK)
 function sortSatfung(keys) {

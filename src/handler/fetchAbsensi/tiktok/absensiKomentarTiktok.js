@@ -1,108 +1,92 @@
-import dotenv from "dotenv";
-dotenv.config();
-
-import { pool } from "../../../config/db.js";
-import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
-import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
+import { getUsersByClient } from "../../model/userModel.js";
+import { getPostsTodayByClient } from "../../model/tiktokPostModel.js";
+import { getCommentsByVideoId } from "../../model/tiktokCommentModel.js";
 
 /**
- * Mengambil semua client TikTok yang aktif.
+ * Akumulasi minimal 50%: yang sudah komentar >= 50% post hari ini
  */
-export async function getActiveClientsTiktok() {
-  const res = await pool.query(
-    `SELECT client_id FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
-  );
-  return res.rows.map((row) => row.client_id);
-}
-
-/**
- * Mendapatkan username TikTok dari client_id (tanpa @).
- */
-export async function getClientTiktokUsername(client_id) {
-  try {
-    const q = `SELECT client_tiktok FROM clients WHERE client_id = $1 LIMIT 1`;
-    const result = await pool.query(q, [client_id]);
-    if (result.rows[0] && result.rows[0].client_tiktok)
-      return result.rows[0].client_tiktok.replace(/^@/, "");
-  } catch (e) {}
-  return "-";
-}
-
-/**
- * Rekap komentar TikTok harian berdasarkan database,
- * menghasilkan teks rekap dengan total & detail komentar tiap video.
- */
-export async function rekapKomentarTikTok(client_id, client_tiktok) {
+export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all" } = {}) {
+  const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
-  if (!posts.length) return null;
+  const totalPost = posts.length;
+  if (!totalPost) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
-  let totalKomentar = 0;
-  let detailKomentar = [];
+  // Buat map: user_id -> username tiktok
+  const userTiktokMap = {};
+  users.forEach(u => {
+    if (u.user_id && u.tiktok) userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
+  });
+
+  // Buat: user_id -> set komentar hari ini
+  const userKomentar = {};
+  for (const user_id in userTiktokMap) userKomentar[user_id] = 0;
   for (const post of posts) {
     const video_id = post.video_id || post.id;
     let komentarDb = await getCommentsByVideoId(video_id);
-    let jumlahKomentar = 0;
+    let komentator = [];
     if (komentarDb && Array.isArray(komentarDb.comments)) {
-      jumlahKomentar = komentarDb.comments.length;
+      komentator = komentarDb.comments.map((c) => (c || "").replace(/^@/, "").toLowerCase());
     }
-    totalKomentar += jumlahKomentar;
-    detailKomentar.push({
-      video_id,
-      link: `https://www.tiktok.com/@${client_tiktok}/video/${video_id}`,
-      jumlahKomentar,
-    });
+    for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
+      if (komentator.includes(tiktok)) userKomentar[user_id]++;
+    }
   }
-  let msg =
-    `📊 Rekap Komentar TikTok\n` +
-    `Client: ${client_id}\n` +
-    `Jumlah konten hari ini: ${posts.length}\n` +
-    `Total komentar semua konten: ${totalKomentar}\n\n` +
-    `Rincian:\n`;
-  detailKomentar.forEach((d) => {
-    msg += `${d.link}: ${d.jumlahKomentar} komentar\n`;
-  });
+
+  let sudah = [], belum = [];
+  for (const user_id in userKomentar) {
+    const persentase = (userKomentar[user_id] / totalPost) * 100;
+    const label = `${user_id} (@${userTiktokMap[user_id] || "-"}) [${userKomentar[user_id]}/${totalPost} = ${Math.round(persentase)}%]`;
+    if (persentase >= 50) sudah.push(label);
+    else belum.push(label);
+  }
+
+  let msg = `📊 *Absensi Komentar TikTok - Akumulasi Minimal 50%*\nClient: *${client_id}*\nTotal post: *${totalPost}*\n\n`;
+  if (["all", "sudah"].includes(mode)) {
+    msg += `✅ Sudah komentar minimal 50%: ${sudah.length}\n${sudah.map(u => "- " + u).join("\n")}\n\n`;
+  }
+  if (["all", "belum"].includes(mode)) {
+    msg += `❌ Belum (kurang dari 50% post): ${belum.length}\n${belum.map(u => "- " + u).join("\n")}\n\n`;
+  }
   return msg.trim();
 }
 
 /**
- * Format teks rekap post TikTok (untuk laporan WA/manual).
+ * Absensi komentar TikTok per konten: siapa yang sudah/belum komentar di tiap post
  */
-export function formatRekapPostTikTok(client_id, username, posts) {
-  let msg = `*Rekap Post TikTok Hari Ini*\nClient: *${client_id}*\n\n`;
-  msg += `Jumlah post: *${posts.length}*\n\n`;
-  posts.forEach((item, i) => {
-    const desc = item.desc || item.caption || "-";
-    let create_time =
-      item.create_time || item.created_at || item.createTime;
-    let created = "-";
-    if (typeof create_time === "number") {
-      if (create_time > 2000000000) {
-        created = new Date(create_time).toLocaleString("id-ID", {
-          timeZone: "Asia/Jakarta",
-        });
-      } else {
-        created = new Date(create_time * 1000).toLocaleString("id-ID", {
-          timeZone: "Asia/Jakarta",
-        });
-      }
-    } else if (typeof create_time === "string") {
-      created = new Date(create_time).toLocaleString("id-ID", {
-        timeZone: "Asia/Jakarta",
-      });
-    } else if (create_time instanceof Date) {
-      created = create_time.toLocaleString("id-ID", {
-        timeZone: "Asia/Jakarta",
-      });
-    }
-    const video_id = item.video_id || item.id;
-    msg += `#${i + 1} Video ID: ${video_id}\n`;
-    msg += `   Deskripsi: ${desc.slice(0, 50)}\n`;
-    msg += `   Tanggal: ${created}\n`;
-    msg += `   Like: ${item.digg_count ?? item.like_count ?? 0} | Komentar: ${item.comment_count ?? 0}\n`;
-    msg += `   Link: https://www.tiktok.com/@${username}/video/${video_id}\n\n`;
+export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" } = {}) {
+  const users = await getUsersByClient(client_id);
+  const userTiktokMap = {};
+  users.forEach(u => {
+    if (u.user_id && u.tiktok) userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
   });
+
+  const posts = await getPostsTodayByClient(client_id);
+  if (!posts.length) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
+
+  let msg = `📊 *Absensi Komentar TikTok Per Konten*\nClient: *${client_id}*\nJumlah post: *${posts.length}*\n\n`;
+
+  for (const [i, post] of posts.entries()) {
+    const video_id = post.video_id || post.id;
+    let komentarDb = await getCommentsByVideoId(video_id);
+    let komentator = [];
+    if (komentarDb && Array.isArray(komentarDb.comments)) {
+      komentator = komentarDb.comments.map((c) => (c || "").replace(/^@/, "").toLowerCase());
+    }
+    let sudah = [], belum = [];
+    for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
+      if (komentator.includes(tiktok)) sudah.push(user_id + " (@" + tiktok + ")");
+      else belum.push(user_id + " (@" + tiktok + ")");
+    }
+    msg += `#${i + 1} Video ID: ${video_id}\n`;
+    if (["all", "sudah"].includes(mode)) {
+      msg += `   ✅ Sudah komentar: ${sudah.length}\n`;
+      if (mode !== "belum") msg += sudah.map((u) => "     - " + u).join("\n") + "\n";
+    }
+    if (["all", "belum"].includes(mode)) {
+      msg += `   ❌ Belum komentar: ${belum.length}\n`;
+      if (mode !== "sudah") msg += belum.map((u) => "     - " + u).join("\n") + "\n";
+    }
+    msg += `   Link: https://www.tiktok.com/@_/video/${video_id}\n\n`;
+  }
   return msg.trim();
 }
-
-// Export default/utama supaya waService.js bisa import { handleKomentarTiktok }
-export const handleAbsensiKomentar = rekapKomentarTikTok;

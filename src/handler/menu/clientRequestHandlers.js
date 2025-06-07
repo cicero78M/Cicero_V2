@@ -1,5 +1,13 @@
 import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
+// Import fungsi absensi TikTok Komentar
+import {
+  absensiKomentarTiktokAkumulasi50,
+  absensiKomentarTiktokPerKonten
+} from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js"; // path sesuaikan
+
+
+// Main handler untuk request client
 
 export const clientRequestHandlers = {
  main: async (
@@ -942,5 +950,95 @@ infoClient_choose: async (
     });
     session.step = "main";
   },
+
+  absensiKomentar_choose: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  migrateUsersFromFolder,
+  checkGoogleSheetCsvStatus,
+  importUsersFromGoogleSheet,
+  fetchAndStoreInstaContent,
+  fetchAndStoreTiktokContent,
+  formatClientData,
+  fetchAndStoreLikesInstaContent,
+  handleFetchKomentarTiktokBatch
+) => {
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(
+      chatId,
+      "Pilihan tidak valid. Balas angka sesuai list."
+    );
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  session.absensi_client_id = client_id;
+  session.step = "absensiKomentar_choose_submenu";
+  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
+  msg += `1. Akumulasi (Sudah & Belum, minimal 50%)\n`;
+  msg += `2. Akumulasi Sudah (>= 50%)\n`;
+  msg += `3. Akumulasi Belum (< 50%)\n`;
+  msg += `4. Per Konten (Sudah & Belum)\n`;
+  msg += `5. Per Konten Sudah\n`;
+  msg += `6. Per Konten Belum\n`;
+  msg += `\nBalas angka di atas.`;
+  await waClient.sendMessage(chatId, msg);
+},
+
+// === Submenu untuk absensi komentar TikTok ===
+absensiKomentar_choose_submenu: async (
+  session,
+  chatId,
+  text,
+  waClient
+  // tambahkan dependency handler jika perlu
+) => {
+  const pilihan = parseInt(text.trim());
+  const client_id = session.absensi_client_id;
+  if (!client_id) {
+    await waClient.sendMessage(chatId, "Client belum dipilih.");
+    session.step = "main";
+    return;
+  }
+
+  try {
+    let msg = "";
+    if ([1, 2, 3].includes(pilihan)) {
+      // Akumulasi
+      if (pilihan === 1) {
+        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "all" });
+      } else if (pilihan === 2) {
+        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "sudah" });
+      } else if (pilihan === 3) {
+        msg = await absensiKomentarTiktokAkumulasi50(client_id, { mode: "belum" });
+      }
+    } else if ([4, 5, 6].includes(pilihan)) {
+      // Per konten
+      if (pilihan === 4) {
+        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "all" });
+      } else if (pilihan === 5) {
+        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "sudah" });
+      } else if (pilihan === 6) {
+        msg = await absensiKomentarTiktokPerKonten(client_id, { mode: "belum" });
+      }
+    } else {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1-6."
+      );
+      return;
+    }
+    await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
+  } catch (e) {
+    await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+  }
+  session.step = "main";
+},
   // ... handler lain tetap sama ...
 };
