@@ -313,18 +313,30 @@ export async function fetchAndStoreTiktokContent(
   processing = false;
   clearInterval(intervalId);
 
-  // Ringkasan WA/console
+  // PATCH: Ambil semua client TikTok untuk mapping client_id => username
+  const clientsForMap = await pool.query(
+    `SELECT client_id, client_tiktok FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
+  );
+  const clientMap = {};
+  for (const c of clientsForMap.rows) {
+    clientMap[c.client_id] = c.client_tiktok?.replace(/^@/, "") || "_";
+  }
+
+  // Ambil konten hari ini beserta client_id
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
   const kontenHariIniRes = await pool.query(
-    `SELECT video_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
+    `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
-  const kontenLinksToday = kontenHariIniRes.rows.map(
-    (r) => `https://www.tiktok.com/@_/video/${r.video_id}`
-  );
+
+  // Bangun link dengan username TikTok asli (jika ada)
+  const kontenLinksToday = kontenHariIniRes.rows.map((r) => {
+    const username = clientMap[r.client_id] || "_";
+    return `https://www.tiktok.com/@${username}/video/${r.video_id}`;
+  });
 
   let msg = `✅ Fetch TikTok selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
   let maxPerMsg = 30;

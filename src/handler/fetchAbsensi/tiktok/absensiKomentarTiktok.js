@@ -18,12 +18,16 @@ function sortSatfung(keys) {
   });
 }
 
-async function getClientNama(client_id) {
+// Dapatkan nama dan username tiktok client
+async function getClientInfo(client_id) {
   const res = await pool.query(
-    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_tiktok FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
-  return res.rows[0]?.nama || client_id;
+  return {
+    nama: res.rows[0]?.nama || client_id,
+    tiktok: (res.rows[0]?.client_tiktok || "").replace(/^@/, "") || "username",
+  };
 }
 
 // Helper ekstrak username dari komentar
@@ -44,7 +48,9 @@ export async function absensiKomentar(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
+  const clientInfo = await getClientInfo(client_id);
+  const clientNama = clientInfo.nama;
+  const tiktokUsername = clientInfo.tiktok;
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
 
@@ -90,8 +96,9 @@ export async function absensiKomentar(client_id, opts = {}) {
   // Hapus user exception dari list belum!
   belum = belum.filter(u => !u.exception);
 
+  // *** PATCH: Gunakan username client untuk membangun link ***
   const kontenLinks = posts.map(
-    (p) => `https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}`
+    (p) => `https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}`
   );
 
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
@@ -168,7 +175,9 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
+  const clientInfo = await getClientInfo(client_id);
+  const clientNama = clientInfo.nama;
+  const tiktokUsername = clientInfo.tiktok;
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
 
@@ -197,7 +206,8 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     });
     userBelum = userBelum.filter(u => !u.exception);
 
-    msg += `\nKonten: https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}\n`;
+    // *** PATCH: Gunakan username client untuk membangun link ***
+    msg += `\nKonten: https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}\n`;
     msg += `✅ *Sudah melaksanakan* : *${userSudah.length} user*\n`;
     msg += `❌ *Belum melaksanakan* : *${userBelum.length} user*\n`;
 
@@ -238,4 +248,3 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   msg += `Terimakasih.`;
   return msg.trim();
 }
-
