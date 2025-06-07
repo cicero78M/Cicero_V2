@@ -150,7 +150,7 @@ export async function fetchAndStoreTiktokContent(
 
   const dbVideoIdsToday = await getVideoIdsToday();
   let fetchedVideoIdsToday = [];
-  let hasSuccessfulFetch = false; // PATCH: flag untuk cek ada fetch sukses
+  let hasSuccessfulFetch = false;
 
   const clients = await getEligibleTiktokClients();
   sendDebug({
@@ -179,11 +179,9 @@ export async function fetchAndStoreTiktokContent(
         msg: `Fetch posts for client: ${client.id} / @${client.client_tiktok}`,
       });
 
-      // API TikTok terbaru, prefer uniqueId jika secUid gagal
       let url = `https://${RAPIDAPI_HOST}/api/user/posts`;
       let params = { count: 35, cursor: 0 };
 
-      // Gunakan secUid jika ada (lebih akurat), fallback uniqueId jika perlu
       if (secUid) {
         params.secUid = secUid;
       } else if (client.client_tiktok) {
@@ -199,7 +197,25 @@ export async function fetchAndStoreTiktokContent(
         },
       });
 
-      // Gunakan universal parser (support string, itemList, result.videos, dsb)
+      // === DEBUG RAW RESPONSE ke CONSOLE & WA
+      console.log(
+        `[DEBUG TIKTOK][${client.id}] RAW RESPONSE:\n`,
+        JSON.stringify(postsRes.data, null, 2)
+      );
+
+      let rawPreview = "";
+      try {
+        rawPreview = JSON.stringify(postsRes.data).slice(0, 1500);
+      } catch (e) {}
+      sendDebug({
+        tag: "TIKTOK RAW RESPONSE",
+        msg: rawPreview.length > 1500
+          ? rawPreview + "\n...[TRUNCATED]"
+          : rawPreview,
+        client_id: client.id,
+      });
+
+      // Universal parser
       itemList = parseTiktokPostsFromApiResponse(postsRes);
 
       sendDebug({
@@ -208,7 +224,6 @@ export async function fetchAndStoreTiktokContent(
         client_id: client.id,
       });
 
-      // PATCH: LOG seluruh createTime post yang diterima
       for (const post of itemList) {
         sendDebug({
           tag: "TIKTOK RAW",
@@ -219,6 +234,11 @@ export async function fetchAndStoreTiktokContent(
         });
       }
     } catch (err) {
+      // CETAK ERROR DETAIL DI CONSOLE
+      console.error(
+        `[ERROR][TIKTOK][${client.id}] RAW ERROR:\n`,
+        err?.response?.data || err
+      );
       sendDebug({
         tag: "TIKTOK POST ERROR",
         msg: err.response?.data
@@ -230,7 +250,6 @@ export async function fetchAndStoreTiktokContent(
     }
 
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====
-    // PATCH: Toleransi berbagai field waktu & struktur post
     const items = itemList.filter((post) => {
       const ts = post.createTime || post.create_time || post.timestamp;
       return isTodayJakarta(ts);
@@ -242,7 +261,7 @@ export async function fetchAndStoreTiktokContent(
       client_id: client.id,
     });
 
-    if (items.length > 0) hasSuccessfulFetch = true; // PATCH
+    if (items.length > 0) hasSuccessfulFetch = true;
 
     for (const post of items) {
       const toSave = {
@@ -260,7 +279,6 @@ export async function fetchAndStoreTiktokContent(
 
       fetchedVideoIdsToday.push(toSave.video_id);
 
-      // UPSERT ke DB: update jika sudah ada (berdasarkan video_id)
       sendDebug({
         tag: "TIKTOK FETCH",
         msg: `[DB] Upsert TikTok post: ${toSave.video_id}`,
