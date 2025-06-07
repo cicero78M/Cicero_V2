@@ -64,7 +64,6 @@ import {
 dotenv.config();
 
 // Tambah di atas (global scope)
-const updateUsernameSession = {};
 const knownUserSet = new Set();
 
 // =======================
