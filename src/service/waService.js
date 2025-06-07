@@ -63,8 +63,6 @@ import {
 
 dotenv.config();
 
-// Tambah di atas (global scope)
-const knownUserSet = new Set();
 
 // =======================
 // INISIALISASI CLIENT WA
