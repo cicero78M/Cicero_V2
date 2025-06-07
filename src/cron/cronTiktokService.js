@@ -1,3 +1,5 @@
+// src/cron/cronTiktokComment.js
+
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
@@ -38,43 +40,55 @@ cron.schedule(
             tag: "CRON TTK KOMENTAR",
             msg: `[client=${client.client_id}] Mulai fetch komentar TikTok...`,
           });
+
+          // Sesuai handler terbaru, hanya menyimpan username array
           await handleFetchKomentarTiktokBatch(
             waClient,
             process.env.ADMIN_WHATSAPP,
             client.client_id
           );
+
           sendDebug({
             tag: "CRON TTK KOMENTAR",
             msg: `[client=${client.client_id}] Selesai fetch komentar TikTok.`,
           });
+
           // Kirim laporan selesai ke admin
+          const adminList = (process.env.ADMIN_WHATSAPP || "")
+            .split(",")
+            .map((n) => n.trim())
+            .filter(Boolean);
+
           await Promise.all(
-            process.env.ADMIN_WHATSAPP.split(",")
-              .map((n) => n.trim())
-              .filter(Boolean)
-              .map((admin) =>
-                waClient.sendMessage(
+            adminList.map((admin) =>
+              waClient
+                .sendMessage(
                   admin.endsWith("@c.us")
                     ? admin
                     : admin.replace(/\D/g, "") + "@c.us",
                   `✅ [CRON] Selesai fetch komentar TikTok untuk ${client.client_id} - ${client.nama}.`
-                ).catch(() => {})
-              )
+                )
+                .catch(() => {})
+            )
           );
         } catch (err) {
           // Kirim error ke admin
+          const adminList = (process.env.ADMIN_WHATSAPP || "")
+            .split(",")
+            .map((n) => n.trim())
+            .filter(Boolean);
+
           await Promise.all(
-            process.env.ADMIN_WHATSAPP.split(",")
-              .map((n) => n.trim())
-              .filter(Boolean)
-              .map((admin) =>
-                waClient.sendMessage(
+            adminList.map((admin) =>
+              waClient
+                .sendMessage(
                   admin.endsWith("@c.us")
                     ? admin
                     : admin.replace(/\D/g, "") + "@c.us",
                   `❌ [CRON] Gagal fetch komentar TikTok untuk ${client.client_id}: ${err.message || err}`
-                ).catch(() => {})
-              )
+                )
+                .catch(() => {})
+            )
           );
           sendDebug({
             tag: "CRON TTK KOMENTAR",
