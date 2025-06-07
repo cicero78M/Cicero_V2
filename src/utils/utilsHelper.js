@@ -60,37 +60,49 @@ export function getGreeting() {
 
 // Helper untuk formatting info client
 export function formatClientInfo(client) {
-  return `
-🗂️ *Informasi Client*
-
-*Client ID*: \`${client.client_id}\`
-*Nama*: ${client.nama}
-*Tipe*: ${client.client_type}
-*Status*: ${client.client_status ? "✅ Aktif" : "❌ Tidak aktif"}
-
-*Instagram*: ${
-    client.client_insta
-      ? `[@${client.client_insta}](https://instagram.com/${client.client_insta})`
-      : "-"
-  } ${client.client_insta_status ? "✅ Aktif" : "❌ Tidak aktif"}
-*TikTok*: ${
-    client.client_tiktok
-      ? `[@${client.client_tiktok}](https://www.tiktok.com/@${client.client_tiktok})`
-      : "-"
-  } ${client.client_tiktok_status ? "✅ Aktif" : "❌ Tidak aktif"}
-
-*Operator WA*: [${client.client_operator}](https://wa.me/${
-    client.client_operator
-  })
-*Group WA*: ${client.client_group || "-"}
-*Super Admin*: [${client.client_super}](https://wa.me/${client.client_super})
-
-*TikTok secUid*:
-\`\`\`
-${client.tiktok_secuid || "-"}
-\`\`\`
-`.trim();
+  const lines = [
+    `Client ID       : ${client.client_id || "-"}`,
+    `Nama            : ${client.nama || "-"}`,
+    `Tipe            : ${client.client_type || "-"}`,
+    `Status          : ${client.client_status ? "✅ Aktif" : "❌ Tidak aktif"}`,
+    `Instagram       : ${client.client_insta ? "@" + client.client_insta : "-"}`,
+    `IG Aktif        : ${client.client_insta_status ? "✅ Aktif" : "❌ Tidak aktif"}`,
+    `TikTok          : ${client.client_tiktok ? "@" + client.client_tiktok : "-"}`,
+    `TikTok Aktif    : ${client.client_tiktok_status ? "✅ Aktif" : "❌ Tidak aktif"}`,
+    `Operator WA     : ${client.client_operator || "-"}`,
+    `Group WA        : ${client.client_group || "-"}`,
+    `Super Admin     : ${client.client_super || "-"}`,
+  ];
+  return [
+    "🗂️ *Informasi Client*",
+    "```",
+    ...lines,
+    "```",
+    "",
+    "*Instagram Link*: " + 
+      (client.client_insta
+        ? `https://instagram.com/${client.client_insta}`
+        : "-"),
+    "*TikTok Link*: " +
+      (client.client_tiktok
+        ? `https://www.tiktok.com/@${client.client_tiktok}`
+        : "-"),
+    "*Operator WA*: " + 
+      (client.client_operator
+        ? `https://wa.me/${client.client_operator.replace(/\D/g, "")}`
+        : "-"),
+    "*Super Admin*: " +
+      (client.client_super
+        ? `https://wa.me/${client.client_super.replace(/\D/g, "")}`
+        : "-"),
+    "",
+    "*TikTok secUid:*",
+    "```",
+    client.tiktok_secuid || "-",
+    "```",
+  ].join("\n");
 }
+
 
 export function formatUserData(user) {
   const labels = [
