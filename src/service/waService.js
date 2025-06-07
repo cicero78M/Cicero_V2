@@ -26,9 +26,10 @@ import {
 } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
 
 import {
-  absensiKomentarTiktokAkumulasi50,
+  absensiKomentar,
   absensiKomentarTiktokPerKonten,
 } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
