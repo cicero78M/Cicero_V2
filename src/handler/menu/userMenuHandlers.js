@@ -1,58 +1,14 @@
-import { sortTitleKeys, sortDivisionKeys } from "../../utils/utilsHelper.js";
+import {
+  sortTitleKeys,
+  sortDivisionKeys,
+  formatUserData, getGreeting
+} from "../../utils/utilsHelper.js";
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
   main: async (session, chatId, text, waClient, pool, userService) => {
-    // Helper salam
-    function getGreeting() {
-      const now = new Date();
-      const hour = now.getHours();
-      if (hour >= 4 && hour < 10) return "Selamat pagi";
-      if (hour >= 10 && hour < 15) return "Selamat siang";
-      if (hour >= 15 && hour < 18) return "Selamat sore";
-      return "Selamat malam";
-    }
 
-    // Helper untuk tampil data user
-    function formatUserData(user) {
-      const fieldMap = {
-        user_id: "NRP/NIP",
-        nama: "Nama",
-        title: "Pangkat",
-        divisi: "Satfung",
-        jabatan: "Jabatan",
-        status: "Status",
-        whatsapp: "WhatsApp",
-        insta: "Instagram",
-        tiktok: "TikTok",
-        client_id: "POLRES",
-      };
-      const order = [
-        "user_id",
-        "nama",
-        "title",
-        "divisi",
-        "jabatan",
-        "status",
-        "whatsapp",
-        "insta",
-        "tiktok",
-        "client_id",
-      ];
-      let msgText = "";
-      order.forEach((k) => {
-        if (user[k] !== undefined && user[k] !== null) {
-          let val = user[k];
-          let label = fieldMap[k] || k;
-          if (k === "status")
-            val = val === true || val === "true" ? "AKTIF" : "AKUN DIHAPUS";
-          msgText += `*${label}*: ${val}\n`;
-        }
-      });
-      return msgText;
-    }
 
-    // === CASE 1: Lihat Data Saya ===
     if (text === "1") {
       const pengirim = chatId.replace(/[^0-9]/g, "");
       const userByWA = (await userService.findUserByWhatsApp)
@@ -64,12 +20,16 @@ export const userMenuHandlers = {
         const pangkat = userByWA.title || "-";
         const nama = userByWA.nama || "-";
         const nrp = userByWA.user_id || "-";
-        let msgText =
-          `👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
-          `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n` +
-          formatUserData(userByWA) +
-          `\nApakah data di atas benar milik Anda?\n` +
-          `Balas *ya* jika benar, atau *tidak* jika bukan.`;
+        let msgText = `
+👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)
+
+Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:
+
+${formatUserData(userByWA)}
+
+Apakah data di atas benar milik Anda?
+Balas *ya* jika benar, atau *tidak* jika bukan.
+`.trim();
 
         session.step = "confirmUserByWaIdentity";
         session.user_id = userByWA.user_id;
@@ -97,12 +57,16 @@ export const userMenuHandlers = {
         const pangkat = userByWA.title || "-";
         const nama = userByWA.nama || "-";
         const nrp = userByWA.user_id || "-";
-        let msgText =
-          `👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)\n\n` +
-          `Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:\n\n` +
-          formatUserData(userByWA) +
-          `\nApakah data di atas benar milik Anda dan ingin melakukan perubahan?\n` +
-          `Balas *ya* jika benar, atau *tidak* jika bukan.`;
+        let msgText = `
+👋 ${salam}, Bapak/Ibu *${pangkat} ${nama}* (NRP/NIP: *${nrp}*)
+
+Nomor WhatsApp Anda *${pengirim}* terdaftar atas nama berikut:
+
+${formatUserData(userByWA)}
+
+Apakah data di atas benar milik Anda dan ingin melakukan perubahan?
+Balas *ya* jika benar, atau *tidak* jika bukan.
+`.trim();
 
         session.step = "confirmUserByWaUpdate";
         session.user_id = userByWA.user_id;
@@ -116,9 +80,7 @@ export const userMenuHandlers = {
         );
         return;
       }
-    }
-
-    // === CASE 3: Daftar Perintah User ===
+    } // === CASE 3: Daftar Perintah User ===
     if (text === "3") {
       await waClient.sendMessage(
         chatId,
