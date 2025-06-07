@@ -30,6 +30,7 @@ import {
   absensiKomentarTiktokPerKonten,
 } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 
+// Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getUsersByClient } from "../model/userModel.js";
@@ -38,6 +39,7 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
+
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
 
 // >>> HANYA SATU INI <<< (Pastikan di helper semua diekspor)
@@ -62,6 +64,7 @@ import {
   formatToWhatsAppId,
   formatClientData,
 } from "../utils/waHelper.js";
+import { sendDebug } from "../middleware/debugHandler.js";
 import {
   IG_PROFILE_REGEX,
   TT_PROFILE_REGEX,
@@ -73,16 +76,20 @@ dotenv.config();
 // =======================
 // INISIALISASI CLIENT WA
 // =======================
+
+// Inisialisasi WhatsApp client dengan LocalAuth
 const waClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: { headless: true },
 });
 
+// Handle QR code (scan)
 waClient.on("qr", (qr) => {
   qrcode.generate(qr, { small: true });
   console.log("[WA] Scan QR dengan WhatsApp Anda!");
 });
 
+// Wa Bot siap
 waClient.on("ready", () => {
   console.log("[WA] WhatsApp client is ready!");
 });
@@ -138,13 +145,17 @@ waClient.on("message", async (msg) => {
     return;
   }
 
+
   // -- Routing semua step session clientrequest ke handler step terkait --
   if (session && session.menu === "clientrequest") {
+    // Jika user membatalkan menu clientrequest
     if (text.toLowerCase() === "batal") {
       clearSession(chatId);
       await waClient.sendMessage(chatId, "✅ Menu Client ditutup.");
       return;
     }
+
+    // Panggil handler berdasarkan step
     const handler = clientRequestHandlers[session.step || "main"];
     if (typeof handler === "function") {
       await handler(
@@ -165,6 +176,7 @@ waClient.on("message", async (msg) => {
         handleFetchKomentarTiktokBatch
       );
     } else {
+      // Step tidak dikenali, reset session
       clearSession(chatId);
       await waClient.sendMessage(
         chatId,
@@ -173,6 +185,8 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
+
+
 
   // ===== Handler Menu User Interaktif Step Lanjut =====
   if (userMenuContext[chatId]) {
@@ -191,7 +205,8 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  // ========== Mulai Menu Interaktif User ==========
+
+      // ========== Mulai Menu Interaktif User ==========
   if (text.toLowerCase() === "userrequest") {
     userMenuContext[chatId] = { step: "main" };
     setMenuTimeout(chatId);
@@ -208,7 +223,7 @@ waClient.on("message", async (msg) => {
     return;
   }
 
-  // ===== Handler Menu Client =====
+    // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
     await waClient.sendMessage(
@@ -237,6 +252,7 @@ waClient.on("message", async (msg) => {
     );
     return;
   }
+
 
   // ========== VALIDASI ADMIN COMMAND ==========
   if (isAdminCommand && !isAdmin) {
@@ -281,6 +297,7 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
+    // Ekstrak username
     let username = null;
     let field = null;
     let match = null;
@@ -328,7 +345,6 @@ waClient.on("message", async (msg) => {
       return;
     }
   }
-
 
   // ========== Proses Binding NRP/NIP ==========
   if (
@@ -1375,7 +1391,6 @@ waClient.on("message", async (msg) => {
     }
     return;
   }
-
 
   // ========== Fallback Handler ==========
   const isFirstTime = !knownUserSet.has(userWaNum);
