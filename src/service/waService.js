@@ -30,7 +30,6 @@ import {
   absensiKomentarTiktokPerKonten,
 } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 
-
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
@@ -65,7 +64,6 @@ import {
   formatToWhatsAppId,
   formatClientData,
 } from "../utils/waHelper.js";
-import { sendDebug } from "../middleware/debugHandler.js";
 import {
   IG_PROFILE_REGEX,
   TT_PROFILE_REGEX,
@@ -224,13 +222,16 @@ waClient.on("message", async (msg) => {
     setMenuTimeout(chatId);
     await waClient.sendMessage(
       chatId,
-      `📝 *Menu User Cicero System*\n` +
-        `Balas dengan angka pilihan:\n` +
-        `1. Lihat data saya\n` +
-        `2. Update data saya\n` +
-        `3. Daftar perintah\n` +
-        `4. Kontak operator\n\n` +
-        `Ketik *batal* untuk keluar dari menu.`
+      `
+┏━━━━━━━ *MENU UTAMA USER* ━━━━━━━┓
+  1️⃣  Lihat Data Saya
+  2️⃣  Update Data Saya
+  3️⃣  Daftar Perintah Manual
+  4️⃣  Hubungi Operator
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
+`.trim()
     );
     return;
   }
