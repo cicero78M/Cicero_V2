@@ -133,35 +133,32 @@ waClient.on("message", async (msg) => {
   }
 
   // ===== Handler Menu Operator =====
-// ===== Handler Menu Operator =====
-if (session && session.menu === "oprrequest") {
-  // Routing pesan sesuai langkah/session operator (tambah user, update status, dst)
-  await oprRequestHandlers[session.step || "main"](
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService
-  );
-  return;
-}
+  if (session && session.menu === "oprrequest") {
+    // Routing pesan sesuai langkah/session operator (tambah user, update status, dst)
+    await oprRequestHandlers[session.step || "main"](
+      session,
+      chatId,
+      text,
+      waClient,
+      pool,
+      userService
+    );
+    return;
+  }
 
-// ===== MULAI Menu Operator dari command manual =====
-if (text.toLowerCase() === "oprrequest") {
-  setSession(chatId, { menu: "oprrequest", step: "main" });
-  await oprRequestHandlers.main(
-    getSession(chatId),
-    chatId,
-    "",
-    waClient,
-    pool,
-    userService
-  );
-  return;
-}
-
-
+  // ===== MULAI Menu Operator dari command manual =====
+  if (text.toLowerCase() === "oprrequest") {
+    setSession(chatId, { menu: "oprrequest", step: "main" });
+    await oprRequestHandlers.main(
+      getSession(chatId),
+      chatId,
+      "",
+      waClient,
+      pool,
+      userService
+    );
+    return;
+  }
 
   // -- Routing semua step session clientrequest ke handler step terkait --
   if (session && session.menu === "clientrequest") {
@@ -203,8 +200,6 @@ if (text.toLowerCase() === "oprrequest") {
     return;
   }
 
-
-
   // ===== Handler Menu User Interaktif Step Lanjut =====
   if (userMenuContext[chatId]) {
     setMenuTimeout(chatId);
@@ -222,8 +217,7 @@ if (text.toLowerCase() === "oprrequest") {
     return;
   }
 
-
-      // ========== Mulai Menu Interaktif User ==========
+  // ========== Mulai Menu Interaktif User ==========
   if (text.toLowerCase() === "userrequest") {
     userMenuContext[chatId] = { step: "main" };
     setMenuTimeout(chatId);
@@ -240,7 +234,7 @@ if (text.toLowerCase() === "oprrequest") {
     return;
   }
 
-    // ===== Handler Menu Client =====
+  // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
     await waClient.sendMessage(
@@ -269,7 +263,6 @@ if (text.toLowerCase() === "oprrequest") {
     );
     return;
   }
-
 
   // ========== VALIDASI ADMIN COMMAND ==========
   if (isAdminCommand && !isAdmin) {
