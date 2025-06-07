@@ -148,13 +148,26 @@ export async function fetchAndStoreTiktokContent(
     }
 
     let postsRes;
+    let itemList = [];
     try {
       sendDebug({
         tag: "TIKTOK FETCH",
         msg: `Fetch posts for client: ${client.id} / @${client.client_tiktok}`,
       });
-      postsRes = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-        params: { secUid, count: 35, cursor: 0 },
+
+      // API TikTok terbaru, prefer uniqueId jika secUid gagal
+      let url = `https://${RAPIDAPI_HOST}/api/user/posts`;
+      let params = { count: 35, cursor: 0 };
+
+      // Gunakan secUid jika ada (lebih akurat), fallback uniqueId jika perlu
+      if (secUid) {
+        params.secUid = secUid;
+      } else if (client.client_tiktok) {
+        params.uniqueId = client.client_tiktok.replace(/^@/, "");
+      }
+
+      postsRes = await axios.get(url, {
+        params,
         headers: {
           "x-cache-control": "no-cache",
           "X-RapidAPI-Key": RAPIDAPI_KEY,
@@ -162,28 +175,30 @@ export async function fetchAndStoreTiktokContent(
         },
       });
 
+      // PATCH: Ambil itemList dari response baru (handle berbagai skema response)
+      itemList =
+        Array.isArray(postsRes.data?.data?.itemList) && postsRes.data.data.itemList.length > 0
+          ? postsRes.data.data.itemList
+          : Array.isArray(postsRes.data?.result?.videos)
+            ? postsRes.data.result.videos
+            : [];
+
+      sendDebug({
+        tag: "TIKTOK FETCH",
+        msg: `API /api/user/posts response: jumlah konten ditemukan: ${itemList.length}`,
+        client_id: client.id,
+      });
+
       // PATCH: LOG seluruh createTime post yang diterima
-      const itemList = Array.isArray(postsRes.data?.data?.itemList)
-        ? postsRes.data.data.itemList
-        : [];
       for (const post of itemList) {
         sendDebug({
           tag: "TIKTOK RAW",
-          msg: `ID: ${post.id} | createTime: ${post.createTime} | Lokal: ${new Date(
-            post.createTime * 1000
+          msg: `ID: ${post.id || post.video_id} | createTime: ${post.createTime || post.create_time || "-"} | Lokal: ${new Date(
+            ((post.createTime || post.create_time || 0) * 1000)
           ).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`,
           client_id: client.id,
         });
       }
-      sendDebug({
-        tag: "TIKTOK FETCH",
-        msg: `API /api/user/posts response: jumlah konten ditemukan: ${
-          itemList.length
-        }`,
-        client_id: client.id,
-      });
-      // --- PATCH END ---
-
     } catch (err) {
       sendDebug({
         tag: "TIKTOK POST ERROR",
@@ -196,13 +211,11 @@ export async function fetchAndStoreTiktokContent(
     }
 
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====
-    const itemList =
-      postsRes.data &&
-      postsRes.data.data &&
-      Array.isArray(postsRes.data.data.itemList)
-        ? postsRes.data.data.itemList
-        : [];
-    const items = itemList.filter((post) => isTodayJakarta(post.createTime));
+    // PATCH: Toleransi berbagai field waktu & struktur post
+    const items = itemList.filter((post) => {
+      const ts = post.createTime || post.create_time || post.timestamp;
+      return isTodayJakarta(ts);
+    });
 
     sendDebug({
       tag: "TIKTOK FILTER",
@@ -218,8 +231,8 @@ export async function fetchAndStoreTiktokContent(
         video_id: post.id || post.video_id,
         caption: post.desc || post.caption || "",
         created_at:
-          typeof post.createTime === "number"
-            ? new Date(post.createTime * 1000)
+          typeof (post.createTime || post.create_time) === "number"
+            ? new Date((post.createTime || post.create_time) * 1000)
             : null,
         like_count:
           post.stats?.diggCount ?? post.digg_count ?? post.like_count ?? 0,
