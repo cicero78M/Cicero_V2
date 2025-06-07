@@ -1,14 +1,25 @@
-const clientRequestSessions = {}; // { chatId: {step, data, ...} }
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit timeout
-const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit timeout
+// utils/sessionsHelper.js
 
+// =======================
+// KONSTANTA & GLOBAL SESSIONS
+// =======================
 
-// Tambah di atas (global scope)
-export const userMenuContext = {};
-export const updateUsernameSession = {};
-export const knownUserSet = new Set();
+const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit
+const MENU_TIMEOUT = 2 * 60 * 1000;    // 2 menit
 
-// --- Utility helper untuk session timeout ---
+export const userMenuContext = {};         // { chatId: {step, ...} }
+export const updateUsernameSession = {};   // { chatId: {step, ...} }
+export const knownUserSet = new Set();     // Set of WA number or chatId (untuk first time/fallback)
+const clientRequestSessions = {};          // { chatId: {step, data, ...} }
+
+// =======================
+// UTILITY UNTUK MENU USER (INTERAKTIF)
+// =======================
+
+/**
+ * Set timeout auto-expire pada userMenuContext (menu interaktif user).
+ * @param {string} chatId 
+ */
 export function setMenuTimeout(chatId) {
   if (userMenuContext[chatId]?.timeout) {
     clearTimeout(userMenuContext[chatId].timeout);
@@ -17,9 +28,25 @@ export function setMenuTimeout(chatId) {
     delete userMenuContext[chatId];
   }, MENU_TIMEOUT);
 }
+
+// =======================
+// UTILITY UNTUK SESSION CLIENTREQUEST
+// =======================
+
+/**
+ * Set session untuk clientrequest.
+ * @param {string} chatId 
+ * @param {object} data 
+ */
 export function setSession(chatId, data) {
   clientRequestSessions[chatId] = { ...data, time: Date.now() };
 }
+
+/**
+ * Get session untuk clientrequest. Otomatis auto-expire setelah timeout.
+ * @param {string} chatId 
+ * @returns {object|null}
+ */
 export function getSession(chatId) {
   const s = clientRequestSessions[chatId];
   if (!s) return null;
@@ -29,6 +56,15 @@ export function getSession(chatId) {
   }
   return s;
 }
+
+/**
+ * Hapus session clientrequest untuk chatId.
+ * @param {string} chatId 
+ */
 export function clearSession(chatId) {
   delete clientRequestSessions[chatId];
 }
+
+// =======================
+// END OF FILE
+// =======================

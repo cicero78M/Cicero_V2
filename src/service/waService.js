@@ -137,9 +137,47 @@ waClient.on("message", async (msg) => {
   }
 
   // ===== Handler Menu Client =====
+  if (text.toLowerCase() === "clientrequest") {
+    setSession(chatId, { menu: "clientrequest", step: "main" });
+    await waClient.sendMessage(
+      chatId,
+      `🗂️ *Menu Client Cicero System*\n\n` +
+      `Balas angka pilihan:\n` +
+      `1. Tambah Client Baru\n` +
+      `2. Update Data Client\n` +
+      `3. Hapus Client\n` +
+      `4. Lihat Info Client\n` +
+      `5. Migrasi User dari Folder\n` +
+      `6. Migrasi User dari Google Sheet\n` +
+      `7. Fetch Data Instagram\n` +
+      `8. Fetch Data TikTok\n` +
+      `9. Fetch Likes Instagram\n` +
+      `10. Fetch Komentar TikTok (Batch)\n` +
+      `11. Absensi Likes Instagram\n` +
+      `12. Absensi Komentar TikTok\n` +
+      `13. Daftar Command Manual\n` +
+      `14. Update Exception User\n` +
+      `15. Update Status User\n` +
+      `16. Lihat Daftar Exception User\n` +
+      `17. Request Instagram\n` +
+      `18. Request TikTok\n\n` +
+      `Ketik *batal* untuk keluar dari menu client.`
+    );
+    return;
+  }
+
+  // -- Routing semua step session clientrequest ke handler step terkait --
   if (session && session.menu === "clientrequest") {
+    // Jika user membatalkan menu clientrequest
+    if (text.toLowerCase() === "batal") {
+      clearSession(chatId);
+      await waClient.sendMessage(chatId, "✅ Menu Client ditutup.");
+      return;
+    }
+
+    // Panggil handler berdasarkan step
     const handler = clientRequestHandlers[session.step || "main"];
-    if (handler) {
+    if (typeof handler === "function") {
       await handler(
         session,
         chatId,
@@ -155,11 +193,20 @@ waClient.on("message", async (msg) => {
         fetchAndStoreTiktokContent,
         formatClientData,
         handleFetchLikesInstagram,
-        handleAbsensiKomentar
+        handleFetchKomentarTiktokBatch
+      );
+    } else {
+      // Step tidak dikenali, reset session
+      clearSession(chatId);
+      await waClient.sendMessage(
+        chatId,
+        "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*."
       );
     }
     return;
   }
+
+
 
   // ===== Handler Menu User Interaktif Step Lanjut =====
   if (userMenuContext[chatId]) {
