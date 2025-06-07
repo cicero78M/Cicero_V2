@@ -1,9 +1,11 @@
+import { pool } from "../../../config/db.js";
 import { getUsersByClient } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
+import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision } from "../../../utils/utilsHelper.js";
 
-// Helper: urutan satfung tetap
+// Helper untuk urutan divisi/satfung (BAG, SAT, SI, POLSEK)
 function sortSatfung(keys) {
   const order = ["BAG", "SAT", "SI", "POLSEK"];
   return keys.sort((a, b) => {
@@ -16,167 +18,252 @@ function sortSatfung(keys) {
   });
 }
 
-// Helper normalisasi username komentar (string/object)
-function extractTiktokUsername(c) {
-  if (typeof c === "object" && c !== null)
-    return (c.username || c.user || "").replace(/^@/, "").toLowerCase();
-  if (typeof c === "string")
-    return c.replace(/^@/, "").toLowerCase();
-  return "";
+async function getClientNama(client_id) {
+  const res = await pool.query(
+    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    [client_id]
+  );
+  return res.rows[0]?.nama || client_id;
 }
 
 /**
- * Absensi komentar TikTok: akumulasi minimal 50% post hari ini
- * Mode: all (default), sudah, belum
+ * Absensi komentar TikTok akumulasi:
+ * Minimal sudah komentar di setengah dari jumlah post hari ini (dibulatkan ke atas).
+ * Exception tetap auto-lolos.
  */
-export async function absensiKomentarTiktokAkumulasi50(client_id, { mode = "all" } = {}) {
+export async function absensiKomentar(client_id, opts = {}) {
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const clientNama = await getClientNama(client_id);
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
-  const totalPost = posts.length;
-  if (!totalPost) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
-  // Map user_id ke data user dan username
-  const userTiktokMap = {};
-  const userMeta = {};
-  users.forEach(u => {
-    if (u.user_id && u.tiktok) {
-      userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
-      userMeta[u.user_id] = u;
-    }
+  if (!posts.length)
+    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+
+  const userStats = {};
+  users.forEach((u) => {
+    userStats[u.user_id] = { ...u, count: 0 };
   });
-
-  // Hitung jumlah komentar per user
-  const userKomentar = {};
-  for (const user_id in userTiktokMap) userKomentar[user_id] = 0;
 
   for (const post of posts) {
-    const video_id = post.video_id || post.id;
-    const komentarDb = await getCommentsByVideoId(video_id);
-    let komentator = [];
-    if (komentarDb && Array.isArray(komentarDb.comments)) {
-      komentator = komentarDb.comments.map(extractTiktokUsername).filter(Boolean);
-    }
-    for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
-      if (komentator.includes(tiktok)) userKomentar[user_id]++;
-    }
+    // Ambil semua username yang komentar (sudah lowercase)
+    const { comments } = await getCommentsByVideoId(post.video_id);
+    const commentSet = new Set((comments || []).map((x) => (x || "").toLowerCase()));
+    users.forEach((u) => {
+      if (
+        u.tiktok &&
+        u.tiktok.trim() !== "" &&
+        commentSet.has(u.tiktok.toLowerCase())
+      ) {
+        userStats[u.user_id].count += 1;
+      }
+    });
   }
 
-  // Group user: sudah (>=50%), belum (<50%)
+  const totalKonten = posts.length;
   let sudah = [], belum = [];
-  Object.keys(userKomentar).forEach(user_id => {
-    const u = userMeta[user_id] || {};
+
+  Object.values(userStats).forEach((u) => {
     if (u.exception === true) {
-      sudah.push({ ...u, count: totalPost });
-    } else if (userKomentar[user_id] >= Math.ceil(totalPost / 2)) {
-      sudah.push({ ...u, count: userKomentar[user_id] });
+      sudah.push(u); // selalu masuk ke sudah!
+    } else if (
+      u.tiktok &&
+      u.tiktok.trim() !== "" &&
+      u.count >= Math.ceil(totalKonten / 2)
+    ) {
+      sudah.push(u);
     } else {
-      belum.push({ ...u, count: userKomentar[user_id] });
+      belum.push(u);
     }
   });
 
-  // Hapus user exception dari belum
+  // Hapus user exception dari list belum!
   belum = belum.filter(u => !u.exception);
 
-  // --- Format laporan ---
-  const now = new Date();
+  const kontenLinks = posts.map(
+    (p) => `https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}`
+  );
+
+  const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
+
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Akumulasi Komentar TikTok*\n*Client*: *${client_id}*\n` +
-    `Tanggal: ${now.toLocaleDateString("id-ID")}\n` +
-    `Jam: ${now.toLocaleTimeString("id-ID", { hour12: false })}\n\n` +
-    `*Jumlah Konten (post):* ${totalPost}\n` +
-    `*Jumlah User:* ${users.length}\n` +
-    `✅ *Sudah melaksanakan (>=50% post)* : *${sudah.length} user*\n` +
-    `❌ *Belum melaksanakan (<50% post)* : *${belum.length} user*\n\n`;
+    `📋 *Rekap Akumulasi Komentar TikTok*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `*Jumlah Konten:* ${totalKonten}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+    `*Jumlah user:* ${users.length}\n` +
+    `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
+    `❌ *Belum melaksanakan* : *${belum.length} user*\n\n`;
 
-  // --- List data user sesuai mode ---
+  // === List User Sudah ===
   if (mode === "all" || mode === "sudah") {
-    msg += `✅ *Sudah melaksanakan*\n`;
-    if (sudah.length > 0) {
-      const sudahDiv = groupByDivision(sudah);
-      sortSatfung(Object.keys(sudahDiv)).forEach((div, i, arr) => {
-        const list = sudahDiv[div];
-        msg += `*${div}* (${list.length} user):\n`;
-        msg += list
-          .map(u =>
-            `- ${u.title ? u.title + " " : ""}${u.nama || u.user_id} : @${u.tiktok} (${u.count}/${totalPost} post)`
-          )
-          .join("\n") + (i < arr.length - 1 ? "\n" : "");
-      });
-    } else {
-      msg += "-";
-    }
-    msg += "\n\n";
-  }
-  if (mode === "all" || mode === "belum") {
-    msg += `❌ *Belum melaksanakan*\n`;
-    if (belum.length > 0) {
-      const belumDiv = groupByDivision(belum);
-      sortSatfung(Object.keys(belumDiv)).forEach((div, i, arr) => {
-        const list = belumDiv[div];
-        msg += `*${div}* (${list.length} user):\n`;
-        msg += list
-          .map(u =>
-            `- ${u.title ? u.title + " " : ""}${u.nama || u.user_id} : @${u.tiktok || "-"} (${u.count}/${totalPost} post)`
-          )
-          .join("\n") + (i < arr.length - 1 ? "\n" : "");
-      });
-    } else {
-      msg += "-";
-    }
-    msg += "\n\n";
+    msg += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
+    const sudahDiv = groupByDivision(sudah);
+    sortSatfung(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
+      const list = sudahDiv[div];
+      msg += `*${div}* (${list.length} user):\n`;
+      msg +=
+        list
+          .map((u) => {
+            let ket = "";
+            if (u.count) ket = `(${u.count}/${totalKonten} konten)`;
+            return (
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
+              `${u.tiktok ? u.tiktok : "belum mengisi data tiktok"} ${ket}`
+            );
+          })
+          .join("\n") + "\n";
+      if (idx < arr.length - 1) msg += "\n";
+    });
+    if (Object.keys(sudahDiv).length === 0) msg += "-\n";
+    msg += "\n";
   }
 
-  msg += "Terimakasih.";
+  // === List User Belum ===
+  if (mode === "all" || mode === "belum") {
+    msg += `❌ *Belum melaksanakan* (${belum.length} user):\n`;
+    const belumDiv = groupByDivision(belum);
+    sortSatfung(Object.keys(belumDiv)).forEach((div, idx, arr) => {
+      const list = belumDiv[div];
+      msg += `*${div}* (${list.length} user):\n`;
+      msg +=
+        list
+          .map((u) => {
+            let ket = "";
+            if (!u.count || u.count === 0) {
+              ket = `(0/${totalKonten} konten)`;
+            } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
+              ket = `(${u.count}/${totalKonten} konten)`;
+            }
+            return (
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
+              `${u.tiktok ? u.tiktok : "belum mengisi data tiktok"} ${ket}`
+            );
+          })
+          .join("\n") + "\n";
+      if (idx < arr.length - 1) msg += "\n";
+    });
+    if (Object.keys(belumDiv).length === 0) msg += "-\n";
+    msg += "\n";
+  }
+
+  msg += `Terimakasih.`;
   return msg.trim();
 }
 
-/**
- * Absensi komentar TikTok per konten: siapa yang sudah/belum komentar di tiap post
- */
-export async function absensiKomentarTiktokPerKonten(client_id, { mode = "all" } = {}) {
+// --- Per konten, jika dibutuhkan (opsional, sama pola seperti IG) ---
+export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const clientNama = await getClientNama(client_id);
   const users = await getUsersByClient(client_id);
-  const userTiktokMap = {};
-  const userMeta = {};
-  users.forEach(u => {
-    if (u.user_id && u.tiktok) {
-      userTiktokMap[u.user_id] = (u.tiktok || "").replace(/^@/, "").toLowerCase();
-      userMeta[u.user_id] = u;
-    }
-  });
-
   const posts = await getPostsTodayByClient(client_id);
-  if (!posts.length) return `Tidak ada konten TikTok hari ini untuk client ${client_id}.`;
 
+  if (!posts.length)
+    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+
+  const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Komentar TikTok Per Konten*\n*Client*: *${client_id}*\n` +
-    `Tanggal: ${new Date().toLocaleDateString("id-ID")}\n` +
-    `Jam: ${new Date().toLocaleTimeString("id-ID", { hour12: false })}\n` +
-    `*Jumlah post:* ${posts.length}\n\n`;
+    `📋 *Rekap Per Konten Komentar TikTok*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `*Jumlah Konten:* ${posts.length}\n`;
 
-  for (const [i, post] of posts.entries()) {
-    const video_id = post.video_id || post.id;
-    const komentarDb = await getCommentsByVideoId(video_id);
-    let komentator = [];
-    if (komentarDb && Array.isArray(komentarDb.comments)) {
-      komentator = komentarDb.comments.map(extractTiktokUsername).filter(Boolean);
+  for (const p of posts) {
+    const { comments } = await getCommentsByVideoId(p.video_id);
+    const commentSet = new Set((comments || []).map((x) => (x || "").toLowerCase()));
+    let userSudah = [];
+    let userBelum = [];
+    users.forEach((u) => {
+      if (u.exception === true) {
+        userSudah.push(u); // Selalu ke sudah!
+      } else if (u.tiktok && u.tiktok.trim() !== "" && commentSet.has(u.tiktok.toLowerCase())) {
+        userSudah.push(u);
+      } else {
+        userBelum.push(u);
+      }
+    });
+    // Hilangkan user exception dari belum!
+    userBelum = userBelum.filter(u => !u.exception);
+
+    // Header per konten
+    msg += `\nKonten: https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}\n`;
+    msg += `✅ *Sudah melaksanakan* : *${userSudah.length} user*\n`;
+    msg += `❌ *Belum melaksanakan* : *${userBelum.length} user*\n`;
+
+    if (mode === "all" || mode === "sudah") {
+      msg += `✅ *Sudah melaksanakan* (${userSudah.length} user):\n`;
+      const sudahDiv = groupByDivision(userSudah);
+      sortSatfung(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
+        const list = sudahDiv[div];
+        msg += `*${div}* (${list.length} user):\n`;
+        msg += list.length
+          ? list.map(u =>
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.tiktok || "-"}`
+            ).join("\n") + "\n"
+          : "-\n";
+        if (idx < arr.length - 1) msg += "\n";
+      });
+      if (Object.keys(sudahDiv).length === 0) msg += "-\n";
+      msg += "\n";
     }
-    let sudah = [], belum = [];
-    for (const [user_id, tiktok] of Object.entries(userTiktokMap)) {
-      const user = userMeta[user_id] || {};
-      const label = `- ${user.title ? user.title + " " : ""}${user.nama || user_id} : @${tiktok}`;
-      if (komentator.includes(tiktok)) sudah.push(label);
-      else belum.push(label);
+
+    if (mode === "all" || mode === "belum") {
+      msg += `❌ *Belum melaksanakan* (${userBelum.length} user):\n`;
+      const belumDiv = groupByDivision(userBelum);
+      sortSatfung(Object.keys(belumDiv)).forEach((div, idx, arr) => {
+        const list = belumDiv[div];
+        msg += list.length
+          ? `*${div}* (${list.length} user):\n` +
+            list.map(u =>
+              `- ${u.title ? u.title + " " : ""}${u.nama} : ${u.tiktok || "-"}`
+            ).join("\n") + "\n"
+          : "-\n";
+        if (idx < arr.length - 1) msg += "\n";
+      });
+      if (Object.keys(belumDiv).length === 0) msg += "-\n";
+      msg += "\n";
     }
-    msg += `#${i + 1} Video ID: ${video_id}\n`;
-    msg += `   ✅ *Sudah komentar* : ${sudah.length}\n`;
-    msg += sudah.length ? sudah.map((u) => "     " + u).join("\n") : "     -";
-    msg += "\n";
-    msg += `   ❌ *Belum komentar* : ${belum.length}\n`;
-    msg += belum.length ? belum.map((u) => "     " + u).join("\n") : "     -";
-    msg += `\n   Link: https://www.tiktok.com/@_/video/${video_id}\n\n`;
   }
-  msg += "Terimakasih.";
+  msg += `Terimakasih.`;
+  return msg.trim();
+}
+
+// Helper, jika ingin rekap total komentar (jumlah per konten)
+export async function rekapKomentarTiktok(client_id) {
+  const res = await pool.query(
+    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    [client_id]
+  );
+  const clientNama = res.rows[0]?.nama || client_id;
+
+  const posts = await getPostsTodayByClient(client_id);
+  if (!posts.length) return null;
+  let totalKomentar = 0;
+  let detailKomentar = [];
+  for (const p of posts) {
+    const { comments } = await getCommentsByVideoId(p.video_id);
+    const jumlahKomentar = (comments || []).length;
+    totalKomentar += jumlahKomentar;
+    detailKomentar.push({
+      video_id: p.video_id,
+      link: `https://www.tiktok.com/@${p.author || "username"}/video/${p.video_id}`,
+      jumlahKomentar,
+    });
+  }
+  let msg =
+    `📊 Rekap Komentar TikTok\n*Polres*: *${clientNama}*\n` +
+    `Jumlah konten hari ini: *${posts.length}*\n` +
+    `Total komentar semua konten: *${totalKomentar}*\n\n` +
+    `Rincian:\n`;
+  detailKomentar.forEach((d) => {
+    msg += `- ${d.link}: ${d.jumlahKomentar} komentar\n`;
+  });
   return msg.trim();
 }

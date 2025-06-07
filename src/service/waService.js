@@ -946,6 +946,7 @@ waClient.on("message", async (msg) => {
   // =========================
   // === TIKTOK: ABSENSI KOMENTAR
   // =========================
+
   if (text.toLowerCase().startsWith("absensikomentar#")) {
     const parts = text.split("#");
     if (parts.length < 2) {
@@ -964,17 +965,11 @@ waClient.on("message", async (msg) => {
       // === Akumulasi Mode ===
       if (filter1 === "akumulasi") {
         if (filter2 === "sudah") {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "sudah",
-          });
+          msg = await absensiKomentar(client_id, { mode: "sudah" });
         } else if (filter2 === "belum") {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "belum",
-          });
+          msg = await absensiKomentar(client_id, { mode: "belum" });
         } else {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "all",
-          });
+          msg = await absensiKomentar(client_id, { mode: "all" });
         }
       }
       // === Per-Konten Mode ===

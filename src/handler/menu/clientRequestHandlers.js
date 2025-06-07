@@ -2,8 +2,9 @@ import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagra
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 // Import fungsi absensi TikTok Komentar
 // Import di atas file handler, misal:
+
 import {
-  absensiKomentarTiktokAkumulasi50,
+  absensiKomentar, // <- rename dari absensiKomentarTiktokAkumulasi50 agar konsisten
   absensiKomentarTiktokPerKonten,
 } from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 
@@ -979,53 +980,53 @@ export const clientRequestHandlers = {
   },
 
   // Handler submenu (sederhana, tinggal copy logic dari absensiLikes_choose_submenu)
-  absensiKomentar_choose: async (
-    session,
-    chatId,
-    text,
-    waClient,
-    pool,
-    userService,
-    clientService,
-    migrateUsersFromFolder,
-    checkGoogleSheetCsvStatus,
-    importUsersFromGoogleSheet,
-    fetchAndStoreInstaContent,
-    fetchAndStoreTiktokContent,
-    formatClientData,
-    fetchAndStoreLikesInstaContent
-    // tambahkan dependency handler jika perlu
-  ) => {
-    // Langkah pemilihan client
-    const idx = parseInt(text.trim()) - 1;
-    const clients = session.clientList || [];
-    if (isNaN(idx) || !clients[idx]) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas angka sesuai list."
-      );
-      return;
-    }
-    const client_id = clients[idx].client_id;
-    session.absensi_client_id = client_id; // simpan ke session
-    session.step = "absensiKomentar_choose_submenu";
-    let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
-    msg += `1. Akumulasi minimal 50% (Sudah & Belum)\n`;
-    msg += `2. Akumulasi Sudah (min. 50%)\n`;
-    msg += `3. Akumulasi Belum (kurang dari 50%)\n`;
-    msg += `4. Per Konten (Sudah & Belum)\n`;
-    msg += `5. Per Konten Sudah\n`;
-    msg += `6. Per Konten Belum\n`;
-    msg += `\nBalas angka di atas.`;
-    await waClient.sendMessage(chatId, msg);
-  },
+absensiKomentar_choose: async (
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userService,
+  clientService,
+  migrateUsersFromFolder,
+  checkGoogleSheetCsvStatus,
+  importUsersFromGoogleSheet,
+  fetchAndStoreInstaContent,
+  fetchAndStoreTiktokContent,
+  formatClientData,
+  fetchAndStoreLikesInstaContent
+) => {
+  // Langkah pemilihan client
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(
+      chatId,
+      "Pilihan tidak valid. Balas angka sesuai list."
+    );
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  session.absensi_client_id = client_id; // simpan ke session
+  session.step = "absensiKomentar_choose_submenu";
+  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
+  msg += `1. Akumulasi  (Sudah & Belum)\n`;
+  msg += `2. Akumulasi Sudah \n`;
+  msg += `3. Akumulasi Belum \n`;
+  msg += `4. Per Konten (Sudah & Belum)\n`;
+  msg += `5. Per Konten Sudah\n`;
+  msg += `6. Per Konten Belum\n`;
+  msg += `\nBalas angka di atas.`;
+  await waClient.sendMessage(chatId, msg);
+},
+
 
   absensiKomentar_choose_submenu: async (
     session,
     chatId,
     text,
     waClient
-    // dependency lain jika butuh, misal: pool, userService, dst
+    // dependency lain jika perlu
   ) => {
     const pilihan = parseInt(text.trim());
     const client_id = session.absensi_client_id;
@@ -1040,17 +1041,11 @@ export const clientRequestHandlers = {
       // Akumulasi 50%
       if ([1, 2, 3].includes(pilihan)) {
         if (pilihan === 1) {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "all",
-          });
+          msg = await absensiKomentar(client_id, { mode: "all" });
         } else if (pilihan === 2) {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "sudah",
-          });
+          msg = await absensiKomentar(client_id, { mode: "sudah" });
         } else if (pilihan === 3) {
-          msg = await absensiKomentarTiktokAkumulasi50(client_id, {
-            mode: "belum",
-          });
+          msg = await absensiKomentar(client_id, { mode: "belum" });
         }
       }
       // Per konten
