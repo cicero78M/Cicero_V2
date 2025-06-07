@@ -969,6 +969,34 @@ absensiKomentar_choose: async (
   fetchAndStoreLikesInstaContent
   // tambahkan dependency handler jika perlu
 ) => {
+  // Langkah pemilihan client
+  const idx = parseInt(text.trim()) - 1;
+  const clients = session.clientList || [];
+  if (isNaN(idx) || !clients[idx]) {
+    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai list.");
+    return;
+  }
+  const client_id = clients[idx].client_id;
+  session.absensi_client_id = client_id; // simpan ke session
+  session.step = "absensiKomentar_choose_submenu";
+  let msg = `Pilih tipe rekap absensi komentar TikTok:\n`;
+  msg += `1. Akumulasi minimal 50% (Sudah & Belum)\n`;
+  msg += `2. Akumulasi Sudah (min. 50%)\n`;
+  msg += `3. Akumulasi Belum (kurang dari 50%)\n`;
+  msg += `4. Per Konten (Sudah & Belum)\n`;
+  msg += `5. Per Konten Sudah\n`;
+  msg += `6. Per Konten Belum\n`;
+  msg += `\nBalas angka di atas.`;
+  await waClient.sendMessage(chatId, msg);
+},
+
+absensiKomentar_choose_submenu: async (
+  session,
+  chatId,
+  text,
+  waClient
+  // dependency lain jika butuh, misal: pool, userService, dst
+) => {
   const pilihan = parseInt(text.trim());
   const client_id = session.absensi_client_id;
   if (!client_id) {
@@ -1010,7 +1038,8 @@ absensiKomentar_choose: async (
     await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
   }
   session.step = "main";
-}
+},
+
 
   // ... handler lain tetap sama ...
 };
