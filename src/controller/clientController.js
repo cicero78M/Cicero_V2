@@ -9,20 +9,11 @@ export const getAllClients = async (req, res, next) => {
     next(err);
   }
 };
-
 export const getClientById = async (req, res, next) => {
   try {
     const client = await clientService.findClientById(req.params.id);
+    if (!client) return res.status(404).json({ error: 'Client not found' });
     sendSuccess(res, client);
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const createClient = async (req, res, next) => {
-  try {
-    const client = await clientService.createClient(req.body);
-    sendSuccess(res, client, 201);
   } catch (err) {
     next(err);
   }
@@ -31,6 +22,7 @@ export const createClient = async (req, res, next) => {
 export const updateClient = async (req, res, next) => {
   try {
     const client = await clientService.updateClient(req.params.id, req.body);
+    if (!client) return res.status(404).json({ error: 'Client not found' });
     sendSuccess(res, client);
   } catch (err) {
     next(err);
@@ -40,8 +32,16 @@ export const updateClient = async (req, res, next) => {
 export const deleteClient = async (req, res, next) => {
   try {
     const client = await clientService.deleteClient(req.params.id);
+    if (!client) return res.status(404).json({ error: 'Client not found' });
     sendSuccess(res, client);
   } catch (err) {
     next(err);
   }
 };
+
+export function sendSuccess(res, data, status = 200) {
+  res.status(status).json({
+    success: true,
+    data,
+  });
+}

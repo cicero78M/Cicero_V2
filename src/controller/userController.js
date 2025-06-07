@@ -1,9 +1,10 @@
-import * as userService from '../service/userService.js';
+import * as userModel from '../model/userModel.js';
 import { sendSuccess } from '../utils/response.js';
 
 export const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userService.findAllUsers();
+    // Ambil semua user (dari file json, legacy)
+    const users = await userModel.findAll();
     sendSuccess(res, users);
   } catch (err) {
     next(err);
@@ -12,7 +13,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const getUserById = async (req, res, next) => {
   try {
-    const user = await userService.findUserById(req.params.id);
+    const user = await userModel.findById(req.params.id);
     sendSuccess(res, user);
   } catch (err) {
     next(err);
@@ -21,7 +22,7 @@ export const getUserById = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const user = await userService.createUser(req.body);
+    const user = await userModel.create(req.body);
     sendSuccess(res, user, 201);
   } catch (err) {
     next(err);
@@ -30,7 +31,7 @@ export const createUser = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const user = await userService.updateUser(req.params.id, req.body);
+    const user = await userModel.update(req.params.id, req.body);
     sendSuccess(res, user);
   } catch (err) {
     next(err);
@@ -39,8 +40,28 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const user = await userService.deleteUser(req.params.id);
+    const user = await userModel.remove(req.params.id);
     sendSuccess(res, user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// --- Query DB: User by client_id (aktif)
+export const getUsersByClient = async (req, res, next) => {
+  try {
+    const users = await userModel.getUsersByClient(req.params.client_id);
+    sendSuccess(res, users);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// --- Query DB: User by client_id (full, semua status)
+export const getUsersByClientFull = async (req, res, next) => {
+  try {
+    const users = await userModel.getUsersByClientFull(req.params.client_id);
+    sendSuccess(res, users);
   } catch (err) {
     next(err);
   }
