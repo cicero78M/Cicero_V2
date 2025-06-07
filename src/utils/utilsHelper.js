@@ -93,20 +93,37 @@ ${client.tiktok_secuid || "-"}
 }
 
 export function formatUserData(user) {
-  return `
-══════════════════════════
-*NRP/NIP*     : ${user.user_id || "-"}
-*Nama*        : ${user.nama || "-"}
-*Pangkat*     : ${user.title || "-"}
-*Satfung*     : ${user.divisi || "-"}
-*Jabatan*     : ${user.jabatan || "-"}
-*Status*      : ${
-    user.status === true || user.status === "true" ? "✅ AKTIF" : "❌ NON-AKTIF"
-  }
-*WhatsApp*    : ${user.whatsapp || "-"}
-*Instagram*   : ${user.insta ? "@" + user.insta.replace(/^@/, "") : "-"}
-*TikTok*      : ${user.tiktok || "-"}
-*Polres*      : ${user.client_id || "-"}
-══════════════════════════
-`.trim();
+  const labels = [
+    ["NRP/NIP", user.user_id || "-"],
+    ["Nama", user.nama || "-"],
+    ["Pangkat", user.title || "-"],
+    ["Satfung", user.divisi || "-"],
+    ["Jabatan", user.jabatan || "-"],
+    [
+      "Status",
+      user.status === true || user.status === "true"
+        ? "✅ AKTIF"
+        : "❌ NON-AKTIF",
+    ],
+    ["WhatsApp", user.whatsapp || "-"],
+    [
+      "Instagram",
+      user.insta
+        ? (user.insta.startsWith("@") ? user.insta : "@" + user.insta)
+        : "-",
+    ],
+    ["TikTok", user.tiktok || "-"],
+    ["Polres", user.client_id || "-"],
+  ];
+  const pad = Math.max(...labels.map(([label]) => label.length)) + 1; // +1 biar nyaman
+  return (
+    "══════════════════════════\n" +
+    labels
+      .map(
+        ([label, value]) =>
+          `*${label}*${" ".repeat(pad - label.length)}: ${value}`
+      )
+      .join("\n") +
+    "\n══════════════════════════"
+  );
 }
