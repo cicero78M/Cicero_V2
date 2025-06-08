@@ -3,7 +3,6 @@ import userRoutes from './userRoutes.js';
 import clientRoutes from './clientRoutes.js';
 import authRoutes from './authRoutes.js';
 
-
 const router = express.Router();
 
 router.use('/clients', clientRoutes);
