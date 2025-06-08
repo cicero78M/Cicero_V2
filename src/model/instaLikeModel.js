@@ -79,27 +79,36 @@ export async function getLikesByShortcode(shortcode) {
  * @returns {Promise<Array>}
  */
 
+
 export async function getRekapLikesByClient(client_id, periode = "harian") {
-  let dateFilter = "p.created_at::date = NOW()::date";
+  let tanggalFilter = "p.created_at::date = NOW()::date";
   if (periode === "bulanan") {
-    dateFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+    tanggalFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
   }
 
+  // CTE untuk likes valid di periode yang tepat (join sudah clean)
   const { rows } = await pool.query(`
+    WITH valid_likes AS (
+      SELECT
+        l.shortcode,
+        p.client_id,
+        p.created_at,
+        l.likes
+      FROM insta_like l
+      JOIN insta_post p ON p.shortcode = l.shortcode
+      WHERE p.client_id = $1
+        AND ${tanggalFilter}
+    )
     SELECT
       u.user_id,
       u.nama,
       u.insta AS username,
       u.divisi,
       u.exception,
-      COALESCE(COUNT(DISTINCT l.shortcode), 0) AS jumlah_like
+      COALESCE(COUNT(DISTINCT vl.shortcode), 0) AS jumlah_like
     FROM "user" u
-    LEFT JOIN insta_like l
-      ON l.likes @> to_jsonb(u.insta)
-    LEFT JOIN insta_post p
-      ON p.shortcode = l.shortcode
-      AND p.client_id = $1
-      AND ${dateFilter}
+    LEFT JOIN valid_likes vl
+      ON vl.likes @> to_jsonb(u.insta)
     WHERE u.client_id = $1
       AND u.status = true
       AND u.insta IS NOT NULL
