@@ -108,6 +108,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
     )
     SELECT
       u.user_id,
+      u.title,
       u.nama,
       u.insta AS username,
       u.divisi,
@@ -119,7 +120,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
     WHERE u.client_id = $1
       AND u.status = true
       AND u.insta IS NOT NULL
-    GROUP BY u.user_id, u.nama, u.insta, u.divisi, u.exception
+    GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception
     ORDER BY jumlah_like DESC, u.nama ASC
   `, [client_id]);
 
