@@ -18,6 +18,9 @@ import './src/cron/cronTiktokLaphar.js';
 
 const app = express();
 
+
+
+
 // === CORS agar Next.js (beda domain/port) bisa akses API ===
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*', // Production: ganti jadi url Next.js-mu

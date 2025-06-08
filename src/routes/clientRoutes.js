@@ -27,4 +27,19 @@ router.get('/:client_id/posts/tiktok/comments', clientController.getTiktokCommen
 // Ringkasan aktivitas client (dashboard)
 router.get('/:client_id/summary', clientController.getSummary);
 
+router.get('/profile', async (req, res) => {
+  const client_id = req.query.client_id || req.user?.client_id;
+  if (!client_id) return res.status(400).json({ success: false, message: 'client_id required' });
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
+    const client = rows[0];
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    res.json({ success: true, profile: client });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'DB error', error: err.message });
+  }
+});
+
 export default router;
