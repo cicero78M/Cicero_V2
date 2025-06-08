@@ -35,3 +35,12 @@ export async function getShortcodesTodayByClient(client_id) {
   );
   return res.rows.map(r => r.shortcode);
 }
+
+
+export async function getPostsTodayByClient(client_id) {
+  const res = await pool.query(
+    `SELECT * FROM insta_post WHERE client_id = $1 AND created_at::date = NOW()::date`,
+    [client_id]
+  );
+  return res.rows;
+}
