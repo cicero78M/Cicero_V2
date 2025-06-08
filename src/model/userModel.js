@@ -101,3 +101,18 @@ export async function getUsersByClientWithTiktok(client_id) {
   );
   return res.rows;
 }
+
+// Ambil seluruh user dari semua client
+export async function getAllUsers(client_id) {
+  if (client_id) {
+    const res = await pool.query(
+      'SELECT * FROM "user" WHERE client_id = $1',
+      [client_id]
+    );
+    return res.rows;
+  } else {
+    // Jika tanpa client_id, ambil semua user di seluruh client
+    const res = await pool.query('SELECT * FROM "user"');
+    return res.rows;
+  }
+}
