@@ -71,3 +71,39 @@ export async function getLikesByShortcode(shortcode) {
     return [];
   }
 }
+
+export async function getRekapLikesByClient(client_id) {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      u.user_id,
+      u.nama,
+      u.insta AS username,
+      COUNT(like_users.username) AS jumlah_like
+    FROM
+      "user" u
+    LEFT JOIN LATERAL (
+      SELECT
+        t.username
+      FROM
+        insta_post p
+        JOIN insta_like l ON l.shortcode = p.shortcode
+        CROSS JOIN LATERAL jsonb_array_elements_text(l.likes) AS t(username)
+      WHERE
+        p.client_id = $1
+        AND p.created_at::date = NOW()::date
+        AND t.username = u.insta
+    ) like_users ON TRUE
+    WHERE
+      u.client_id = $1
+      AND u.status = true
+      AND u.insta IS NOT NULL
+    GROUP BY
+      u.user_id, u.nama, u.insta
+    ORDER BY
+      jumlah_like DESC
+    `,
+    [client_id]
+  );
+  return rows;
+}
