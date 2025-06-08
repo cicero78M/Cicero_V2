@@ -80,9 +80,9 @@ export async function getLikesByShortcode(shortcode) {
  */
 
 export async function getRekapLikesByClient(client_id, periode = "harian") {
-  let dateFilter = "l.created_at::date = NOW()::date";
+  let dateFilter = "p.created_at::date = NOW()::date";
   if (periode === "bulanan") {
-    dateFilter = "date_trunc('month', l.created_at) = date_trunc('month', NOW())";
+    dateFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
   }
 
   const { rows } = await pool.query(`
@@ -96,7 +96,9 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
     FROM "user" u
     LEFT JOIN insta_like l
       ON l.likes @> to_jsonb(u.insta)
-      AND l.client_id = $1
+    LEFT JOIN insta_post p
+      ON p.shortcode = l.shortcode
+      AND p.client_id = $1
       AND ${dateFilter}
     WHERE u.client_id = $1
       AND u.status = true
@@ -106,4 +108,3 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
   `, [client_id]);
   return rows;
 }
-
