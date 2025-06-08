@@ -79,19 +79,29 @@ export async function getRekapLikesByClient(client_id) {
       u.user_id,
       u.nama,
       u.insta AS username,
-      u.exception,  -- <==== Tambahkan!
+      u.exception,
+      u.divisi,
       COUNT(like_users.username) AS jumlah_like
     FROM
       "user" u
     LEFT JOIN LATERAL (
-      ...
+      SELECT
+        t.username
+      FROM
+        insta_post p
+        JOIN insta_like l ON l.shortcode = p.shortcode
+        CROSS JOIN LATERAL jsonb_array_elements_text(l.likes) AS t(username)
+      WHERE
+        p.client_id = $1
+        AND p.created_at::date = NOW()::date
+        AND t.username = u.insta
     ) like_users ON TRUE
     WHERE
       u.client_id = $1
       AND u.status = true
       AND u.insta IS NOT NULL
     GROUP BY
-      u.user_id, u.nama, u.insta, u.exception
+      u.user_id, u.nama, u.insta, u.exception, u.divisi
     ORDER BY
       jumlah_like DESC
     `,
