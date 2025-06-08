@@ -81,12 +81,19 @@ export async function getLikesByShortcode(shortcode) {
 
 
 export async function getRekapLikesByClient(client_id, periode = "harian") {
-  let tanggalFilter = "p.created_at::date = NOW()::date";
+  let tanggalFilter = "created_at::date = NOW()::date";
   if (periode === "bulanan") {
-    tanggalFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+    tanggalFilter = "date_trunc('month', created_at) = date_trunc('month', NOW())";
   }
 
-  // CTE untuk likes valid di periode yang tepat (join sudah clean)
+  // 1. Ambil total post IG client untuk periode ini (max_like)
+  const { rows: postRows } = await pool.query(
+    `SELECT COUNT(*) AS jumlah_post FROM insta_post WHERE client_id = $1 AND ${tanggalFilter}`,
+    [client_id]
+  );
+  const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
+
+  // 2. Rekap likes user
   const { rows } = await pool.query(`
     WITH valid_likes AS (
       SELECT
@@ -115,5 +122,15 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
     GROUP BY u.user_id, u.nama, u.insta, u.divisi, u.exception
     ORDER BY jumlah_like DESC, u.nama ASC
   `, [client_id]);
+
+  // 3. Untuk user exception, set jumlah_like = max_like
+  for (const user of rows) {
+    if (user.exception === true || user.exception === "true" || user.exception === 1 || user.exception === "1") {
+      user.jumlah_like = max_like;
+    } else {
+      user.jumlah_like = parseInt(user.jumlah_like, 10);
+    }
+  }
+
   return rows;
 }
