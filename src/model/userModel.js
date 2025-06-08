@@ -1,8 +1,12 @@
+// src/model/userModel.js
+
 import fs from 'fs/promises';
 import { USER_DATA_PATH } from '../utils/constants.js';
 import { pool } from '../config/db.js';
 
 const dataPath = USER_DATA_PATH || './src/data/users.json';
+
+// ========== CRUD BERBASIS FILE ==========
 
 const getUsers = async () => {
   try {
@@ -50,6 +54,8 @@ export const remove = async (id) => {
   return deleted;
 };
 
+// ========== QUERY DATABASE ==========
+
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
   const res = await pool.query(
@@ -61,11 +67,7 @@ export async function getUsersByClient(client_id) {
   return res.rows;
 }
 
-// src/model/userModel.js
-
-// ... fungsi lama tetap ada
-
-// Fungsi KHUSUS absensi TikTok (semua user aktif, include field tiktok, dst)
+// Ambil semua user aktif (status = true/NULL), khusus absensi TikTok
 export async function getUsersByClientFull(client_id) {
   const res = await pool.query(
     `SELECT user_id, nama, tiktok, divisi, title, exception
@@ -78,4 +80,24 @@ export async function getUsersByClientFull(client_id) {
   return res.rows;
 }
 
+// [OPSI] Ambil user by Instagram (status = true)
+export async function getUsersByClientWithInsta(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, insta, divisi, title, exception
+     FROM "user"
+     WHERE client_id = $1 AND status = true AND insta IS NOT NULL`,
+    [client_id]
+  );
+  return res.rows;
+}
 
+// [OPSI] Ambil user by TikTok (status = true)
+export async function getUsersByClientWithTiktok(client_id) {
+  const res = await pool.query(
+    `SELECT user_id, nama, tiktok, divisi, title, exception
+     FROM "user"
+     WHERE client_id = $1 AND status = true AND tiktok IS NOT NULL`,
+    [client_id]
+  );
+  return res.rows;
+}

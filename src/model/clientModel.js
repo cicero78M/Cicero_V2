@@ -1,3 +1,5 @@
+// src/model/clientModel.js
+
 import { pool } from '../config/db.js';
 
 // Ambil semua client
@@ -32,7 +34,7 @@ export const create = async (client) => {
     client.client_tiktok_status ?? true,
     client.client_operator || '',
     client.client_group || '',
-    client.tiktok_secuid || '',       // PATCH: lowercase, match DB!
+    client.tiktok_secuid || '',
     client.client_super || ''
   ];
   const res = await pool.query(q, values);
@@ -56,7 +58,7 @@ export const update = async (client_id, clientData) => {
       client_tiktok_status = $8,
       client_operator = $9,
       client_group = $10,
-      tiktok_secuid = $11,           -- PATCH: lowercase, match DB!
+      tiktok_secuid = $11,
       client_super = $12
     WHERE client_id = $1
     RETURNING *
@@ -72,7 +74,7 @@ export const update = async (client_id, clientData) => {
     merged.client_tiktok_status,
     merged.client_operator,
     merged.client_group,
-    merged.tiktok_secuid || '',     // PATCH: lowercase, match DB!
+    merged.tiktok_secuid || '',
     merged.client_super || ''
   ];
   const res = await pool.query(q, values);
@@ -90,5 +92,19 @@ export async function findAllActiveWithInstagram() {
   const res = await pool.query(
     `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true`
   );
+  return res.rows;
+}
+
+// Ambil semua client aktif TikTok
+export async function findAllActiveWithTiktok() {
+  const res = await pool.query(
+    `SELECT * FROM clients WHERE client_status = true AND client_tiktok_status = true`
+  );
+  return res.rows;
+}
+
+// [Opsional] Untuk statistik/rekap dashboard
+export async function getAllClients() {
+  const res = await pool.query('SELECT * FROM clients');
   return res.rows;
 }
