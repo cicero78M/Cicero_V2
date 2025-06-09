@@ -173,7 +173,7 @@ export async function getClientProfile(req, res, next) {
   
   try {
     const client_id = req.query.client_id || (req.user && req.user.client_id);
-    console.log(client_id)
+    console.log(req)
 
     if (!client_id) {
       return res.status(400).json({ message: "client_id required" });
