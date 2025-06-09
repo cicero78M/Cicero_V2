@@ -170,8 +170,11 @@ export const getSummary = async (req, res, next) => {
 
 
 export async function getClientProfile(req, res, next) {
+  
   try {
     const client_id = req.query.client_id || (req.user && req.user.client_id);
+    console.log(client_id)
+
     if (!client_id) {
       return res.status(400).json({ message: "client_id required" });
     }
@@ -184,4 +187,6 @@ export async function getClientProfile(req, res, next) {
     next(err);
   }
 }
+
+
 
