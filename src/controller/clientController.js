@@ -169,7 +169,7 @@ export const getSummary = async (req, res, next) => {
 };
 
 
-export async function getProfile(req, res, next) {
+export async function getClientProfile(req, res, next) {
   try {
     const client_id = req.query.client_id || (req.user && req.user.client_id);
     if (!client_id) {
