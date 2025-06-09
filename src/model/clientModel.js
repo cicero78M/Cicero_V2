@@ -10,6 +10,7 @@ export const findAll = async () => {
 
 // Ambil client by client_id
 export const findById = async (client_id) => {
+  console.log(client_id);
   const res = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
   return res.rows[0] || null;
 };
