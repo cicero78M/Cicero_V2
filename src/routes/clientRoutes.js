@@ -37,6 +37,6 @@ router.get(
 router.get("/:client_id/summary", authRequired, clientController.getSummary);
 
 // Profil client
-router.get("/profile", authRequired, clientController.getClientProfile);
+router.get("/profile/:client_id", authRequired, clientController.getClientProfile);
 
 export default router;
