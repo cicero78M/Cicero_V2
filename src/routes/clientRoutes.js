@@ -7,6 +7,8 @@ const router = express.Router();
 
 // === CRUD Dasar ===
 router.get("/", clientController.getAllClients);
+router.get("/profile", authRequired, clientController.getClientProfile);
+
 router.get("/active", clientController.getActiveClients);
 router.get("/:client_id", clientController.getClientById);
 router.put("/:client_id", clientController.updateClient);
@@ -37,6 +39,5 @@ router.get(
 router.get("/:client_id/summary", authRequired, clientController.getSummary);
 
 // Profil client
-router.get("/profile", authRequired, clientController.getClientProfile);
 
 export default router;
