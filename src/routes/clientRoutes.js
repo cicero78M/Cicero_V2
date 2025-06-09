@@ -33,11 +33,13 @@ router.get(
 // Ringkasan aktivitas client (dashboard)
 router.get("/:client_id/summary", clientController.getSummary);
 
+
 router.get("/profile", async (req, res) => {
+  console.log("==== DEBUG PROFILE ====");
   console.log("Query params:", req.query);
   console.log("User from JWT:", req.user);
-  const client_id = req.query.client_id || req.user?.client_id;
-  console.log("Final client_id for query:", client_id);
+  const client_id = req.query.client_id || (req.user && req.user.client_id);
+  console.log("Final client_id for query:", JSON.stringify(client_id));
 
   if (!client_id)
     return res
@@ -45,17 +47,16 @@ router.get("/profile", async (req, res) => {
       .json({ success: false, message: "client_id required" });
 
   try {
-    // TAMBAHKAN LOGGING QUERY
-    const { rows } = await pool.query(
-      "SELECT * FROM clients WHERE client_id = $1",
-      [client_id]
-    );
+    const queryText = "SELECT * FROM clients WHERE client_id = $1";
+    console.log("RUN SQL:", queryText, "with", client_id);
+    const { rows } = await pool.query(queryText, [client_id]);
     console.log("SQL result:", rows);
+
     const client = rows[0];
     if (!client)
       return res
         .status(404)
-        .json({ success: false, message: "Client not found" });
+        .json({ success: false, message: "Client not found", debug: { rows, client_id } });
 
     res.json({ success: true, profile: client });
   } catch (err) {
@@ -64,5 +65,6 @@ router.get("/profile", async (req, res) => {
       .json({ success: false, message: "DB error", error: err.message });
   }
 });
+
 
 export default router;
