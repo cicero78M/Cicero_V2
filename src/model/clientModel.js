@@ -108,11 +108,3 @@ export async function getAllClients() {
   const res = await pool.query('SELECT * FROM clients');
   return res.rows;
 }
-
-export async function findById(client_id) {
-  const { rows } = await pool.query(
-    "SELECT * FROM clients WHERE client_id = $1",
-    [client_id]
-  );
-  return rows[0] || null;
-}
