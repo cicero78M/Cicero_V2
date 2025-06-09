@@ -5,6 +5,7 @@ import * as instaLikeService from '../service/instaLikeService.js';
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
 import { sendSuccess } from '../utils/response.js';
+import * as clientModel from '../model/clientModel.js';
 
 // List semua client (bisa filter by group)
 export const getAllClients = async (req, res, next) => {
@@ -168,38 +169,19 @@ export const getSummary = async (req, res, next) => {
 };
 
 
-export async function getClientProfile(req, res) {
-  console.log("==== DEBUG PROFILE ====");
-  console.log("Query params:", req.query);
-  console.log("User from JWT:", req.user);
-  const client_id = req.query.client_id || (req.user && req.user.client_id);
-  console.log("Final client_id for query:", JSON.stringify(client_id));
-
-  if (!client_id)
-    return res
-      .status(400)
-      .json({ success: false, message: "client_id required" });
-
+export async function getProfile(req, res, next) {
   try {
-    const queryText = "SELECT * FROM clients WHERE client_id = $1";
-    console.log("RUN SQL:", queryText, "with", client_id);
-    const { rows } = await pool.query(queryText, [client_id]);
-    console.log("SQL result:", rows);
-
-    const client = rows[0];
-    if (!client)
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Client not found",
-          debug: { rows, client_id },
-        });
-
+    const client_id = req.query.client_id || (req.user && req.user.client_id);
+    if (!client_id) {
+      return res.status(400).json({ message: "client_id required" });
+    }
+    const client = await clientModel.findById(client_id);
+    if (!client) {
+      return res.status(404).json({ message: "Client not found" });
+    }
     res.json({ success: true, profile: client });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "DB error", error: err.message });
+    next(err);
   }
 }
+
