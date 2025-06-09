@@ -5,7 +5,6 @@ import * as instaLikeService from '../service/instaLikeService.js';
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
 import { sendSuccess } from '../utils/response.js';
-import * as clientModel from '../model/clientModel.js';
 
 // List semua client (bisa filter by group)
 export const getAllClients = async (req, res, next) => {
@@ -168,25 +167,21 @@ export const getSummary = async (req, res, next) => {
   }
 };
 
-
-export async function getClientProfile(req, res, next) {
-      console.log(req)
-
+export const getClientProfile = async (req, res, next) => {
   try {
     const client_id = req.query.client_id || (req.user && req.user.client_id);
-
     if (!client_id) {
-      return res.status(400).json({ message: "client_id required" });
+      return res.status(400).json({ error: "client_id required" });
     }
-    const client = await clientModel.findById(client_id);
+    const client = await clientService.findClientById(client_id);
+
     if (!client) {
-      return res.status(404).json({ message: "Client not found" });
+      return res.status(404).json({ error: "Client not found" });
     }
-    res.json({ success: true, profile: client });
+
+    // Sesuaikan key hasil jika ingin (client/profile)
+    res.json({ success: true, client });
   } catch (err) {
     next(err);
   }
-}
-
-
-
+};
