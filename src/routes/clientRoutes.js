@@ -34,19 +34,23 @@ router.get(
 router.get("/:client_id/summary", clientController.getSummary);
 
 router.get("/profile", async (req, res) => {
-  console.log("Query:", req.query);
-  console.log("User:", req.user);
+  console.log("Query params:", req.query);
+  console.log("User from JWT:", req.user);
   const client_id = req.query.client_id || req.user?.client_id;
+  console.log("Final client_id for query:", client_id);
+
   if (!client_id)
     return res
       .status(400)
       .json({ success: false, message: "client_id required" });
 
   try {
+    // TAMBAHKAN LOGGING QUERY
     const { rows } = await pool.query(
       "SELECT * FROM clients WHERE client_id = $1",
       [client_id]
     );
+    console.log("SQL result:", rows);
     const client = rows[0];
     if (!client)
       return res
