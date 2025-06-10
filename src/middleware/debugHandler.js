@@ -1,4 +1,4 @@
-// src/utils/debugHelper.js
+// src/middleware/debugHandler.js
 
 import waClient from "../service/waService.js";
 
