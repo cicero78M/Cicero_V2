@@ -9,7 +9,7 @@ import { pool } from "../config/db.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
-import * as userService from "./userService.js";
+import * as userModel from "../model/userModel.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
@@ -140,7 +140,7 @@ waClient.on("message", async (msg) => {
       text,
       waClient,
       pool,
-      userService
+      userModel
     );
     return;
   }
@@ -162,7 +162,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
       waClient,
       pool,
-      userService
+      userModel
     );
     return;
   }
@@ -185,7 +185,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         text,
         waClient,
         pool,
-        userService,
+        userModel,
         clientService,
         migrateUsersFromFolder,
         checkGoogleSheetCsvStatus,
@@ -213,7 +213,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     const session = userMenuContext[chatId];
     const handler = userMenuHandlers[session.step];
     if (handler) {
-      await handler(session, chatId, text, waClient, pool, userService);
+      await handler(session, chatId, text, waClient, pool, userModel);
     } else {
       await waClient.sendMessage(
         chatId,
@@ -330,11 +330,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let user = (await userService.findUserByWhatsApp)
-      ? await userService.findUserByWhatsApp(waNum)
-      : await userService.findUserByWA(waNum);
+    let user = (await userModel.findUserByWhatsApp)
+      ? await userModel.findUserByWhatsApp(waNum)
+      : await userModel.findUserByWA(waNum);
     if (user) {
-      await userService.updateUserField(user.user_id, field, username);
+      await userModel.updateUserField(user.user_id, field, username);
       await waClient.sendMessage(
         chatId,
         `✅ Username *${
@@ -370,7 +370,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
       return;
     }
-    const user = await userService.findUserById(nrp);
+    const user = await userModel.findUserById(nrp);
     if (!user) {
       await waClient.sendMessage(
         chatId,
@@ -379,9 +379,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let waUsed = (await userService.findUserByWhatsApp)
-      ? await userService.findUserByWhatsApp(waNum)
-      : await userService.findUserByWA(waNum);
+    let waUsed = (await userModel.findUserByWhatsApp)
+      ? await userModel.findUserByWhatsApp(waNum)
+      : await userModel.findUserByWA(waNum);
     if (waUsed && waUsed.user_id !== user.user_id) {
       await waClient.sendMessage(
         chatId,
@@ -390,12 +390,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       delete updateUsernameSession[chatId];
       return;
     }
-    await userService.updateUserField(
+    await userModel.updateUserField(
       user.user_id,
       updateUsernameSession[chatId].field,
       updateUsernameSession[chatId].username
     );
-    await userService.updateUserField(user.user_id, "whatsapp", waNum);
+    await userModel.updateUserField(user.user_id, "whatsapp", waNum);
     await waClient.sendMessage(
       chatId,
       `✅ Username *${
