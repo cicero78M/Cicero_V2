@@ -9,8 +9,6 @@ router.get('/:id', userController.getUserById);
 router.post('/', userController.createUser);
 router.put('/:id', userController.updateUser);
 router.delete('/:id', userController.deleteUser);
-
-// === DB endpoints
 router.get('/by-client/:client_id', userController.getUsersByClient);
 router.get('/by-client-full/:client_id', userController.getUsersByClientFull);
 

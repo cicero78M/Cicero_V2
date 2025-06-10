@@ -108,3 +108,19 @@ export async function getAllClients() {
   const res = await pool.query('SELECT * FROM clients');
   return res.rows;
 }
+export async function updateClientSecUid(client_id, secUid) {
+  const res = await pool.query(
+    `UPDATE client SET tiktok_secuid = $1 WHERE client_id = $2`,
+    [secUid, client_id]
+  );
+  return res.rowCount > 0;
+}
+
+export async function getAllClientIds() {
+  const rows = await pool.query("SELECT client_id, nama, client_status FROM clients ORDER BY client_id");
+  return rows.rows.map(r => ({
+    client_id: r.client_id,
+    nama: r.nama,
+    status: r.client_status,
+  }));
+}
