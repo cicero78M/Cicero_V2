@@ -330,9 +330,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let user = (await userModel.findUserByWhatsApp)
-      ? await userModel.findUserByWhatsApp(waNum)
-      : await userModel.findUserByWA(waNum);
+    let user = await userModel.findUserByWhatsApp(waNum);
     if (user) {
       await userModel.updateUserField(user.user_id, field, username);
       await waClient.sendMessage(
@@ -379,9 +377,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let waUsed = (await userModel.findUserByWhatsApp)
-      ? await userModel.findUserByWhatsApp(waNum)
-      : await userModel.findUserByWA(waNum);
+    let waUsed = await userModel.findUserByWhatsApp(waNum);
     if (waUsed && waUsed.user_id !== user.user_id) {
       await waClient.sendMessage(
         chatId,

@@ -67,9 +67,7 @@ export const userMenuHandlers = {
     // === CASE 1: Lihat Data Saya ===
     if (text === "1" || text.toLowerCase().includes("data")) {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userModel.findUserByWhatsApp)
-        ? await userModel.findUserByWhatsApp(pengirim)
-        : await findUserByWhatsApp(pengirim);
+      const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
       if (userByWA) {
         const salam = getGreeting();
@@ -97,9 +95,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     // === CASE 2: Update Data Saya ===
     if (text === "2" || text.toLowerCase().includes("update")) {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userModel.findUserByWhatsApp)
-        ? await userModel.findUserByWhatsApp(pengirim)
-        : await findUserByWhatsApp(pengirim);
+      const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
       if (userByWA) {
         const salam = getGreeting();
