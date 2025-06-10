@@ -1123,7 +1123,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         client_operator: "",
         client_super: "",
         client_group: "",
-        tiktok_secUid: "",
+        tiktok_secuid: "",
       });
 
       let dataText = formatClientData(
@@ -1153,8 +1153,8 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   if (text.toLowerCase().startsWith("updateclient#")) {
     const parts = text.split("#");
 
-    // === OTOMATIS UPDATE tiktok_secUid ===
-    if (parts.length === 3 && parts[2] === "tiktok_secUid") {
+    // === OTOMATIS UPDATE tiktok_secuid ===
+    if (parts.length === 3 && parts[2] === "tiktok_secuid") {
       const [, client_id, key] = parts;
       try {
         const client = await clientService.findClientById(client_id);
@@ -1175,12 +1175,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         }
         const secUid = await getTiktokSecUid(username);
         const updated = await clientService.updateClient(client_id, {
-          tiktok_secUid: secUid,
+          tiktok_secuid: secUid,
         });
         if (updated) {
           let dataText = formatClientData(
             updated,
-            `✅ tiktok_secUid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*`
+            `✅ tiktok_secuid untuk client *${client_id}* berhasil diupdate dari username *@${username}*:\n\n*secUid*: ${secUid}\n\n*Data Terbaru:*`
           );
           await waClient.sendMessage(chatId, dataText);
           if (updated.client_operator && updated.client_operator.length >= 8) {
@@ -1261,7 +1261,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       chatId,
       "Format salah!\n" +
         "updateclient#clientid#key#value\n" +
-        "atau updateclient#clientid#tiktok_secUid (untuk update secUid otomatis dari username TikTok)"
+        "atau updateclient#clientid#tiktok_secuid (untuk update secUid otomatis dari username TikTok)"
     );
     return;
   }

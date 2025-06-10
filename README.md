@@ -172,7 +172,7 @@ CREATE TABLE clients (
   client_tiktok_status BOOLEAN DEFAULT TRUE,
   client_operator VARCHAR,
   client_group VARCHAR,
-  tiktok_secUid VARCHAR,
+  tiktok_secuid VARCHAR,
   client_super VARCHAR
 );
 
