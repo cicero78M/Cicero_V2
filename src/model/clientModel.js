@@ -110,7 +110,7 @@ export async function getAllClients() {
 }
 export async function updateClientSecUid(client_id, secUid) {
   const res = await pool.query(
-    `UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2`,
+    'UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2',
     [secUid, client_id]
   );
   return res.rowCount > 0;
