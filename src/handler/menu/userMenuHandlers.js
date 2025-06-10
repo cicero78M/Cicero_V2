@@ -57,7 +57,7 @@ function formatOperatorContact(nama, wa) {
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
-  main: async (session, chatId, text, waClient, pool, userService) => {
+  main: async (session, chatId, text, waClient, pool, userModel) => {
     // --- Menu utama / Default
     if (!text || text.toLowerCase() === "menu") {
       await waClient.sendMessage(chatId, menuUtama());
@@ -67,8 +67,8 @@ export const userMenuHandlers = {
     // === CASE 1: Lihat Data Saya ===
     if (text === "1" || text.toLowerCase().includes("data")) {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userService.findUserByWhatsApp)
-        ? await userService.findUserByWhatsApp(pengirim)
+      const userByWA = (await userModel.findUserByWhatsApp)
+        ? await userModel.findUserByWhatsApp(pengirim)
         : await findUserByWhatsApp(pengirim);
 
       if (userByWA) {
@@ -97,8 +97,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     // === CASE 2: Update Data Saya ===
     if (text === "2" || text.toLowerCase().includes("update")) {
       const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = (await userService.findUserByWhatsApp)
-        ? await userService.findUserByWhatsApp(pengirim)
+      const userByWA = (await userModel.findUserByWhatsApp)
+        ? await userModel.findUserByWhatsApp(pengirim)
         : await findUserByWhatsApp(pengirim);
 
       if (userByWA) {
@@ -156,7 +156,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   // --- Konfirmasi identitas (lihat data)
-  confirmUserByWaIdentity: async (session, chatId, text, waClient, pool, userService) => {
+  confirmUserByWaIdentity: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
       session.step = "tanyaUpdateMyData";
       await waClient.sendMessage(
@@ -178,7 +178,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   // --- Konfirmasi identitas untuk update data
-  confirmUserByWaUpdate: async (session, chatId, text, waClient, pool, userService) => {
+  confirmUserByWaUpdate: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
@@ -199,14 +199,14 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   // --- Input User ID manual
-  inputUserId: async (session, chatId, text, waClient, pool, userService) => {
+  inputUserId: async (session, chatId, text, waClient, pool, userModel) => {
     const user_id = text.replace(/[^0-9a-zA-Z]/g, "");
     if (!user_id) {
       await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Coba lagi atau ketik *batal*.");
       return;
     }
     try {
-      const user = await userService.findUserById(user_id);
+      const user = await userModel.findUserById(user_id);
       if (!user) {
         await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`);
       } else {
@@ -220,14 +220,14 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   // --- Update User ID manual
-  updateAskUserId: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
     session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
     session.step = "updateAskField";
     await waClient.sendMessage(chatId, formatFieldList());
   },
 
   // --- Pilih field update
-  updateAskField: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskField: async (session, chatId, text, waClient, pool, userModel) => {
     const allowedFields = [
       { key: "nama", label: "Nama" },
       { key: "pangkat", label: "Pangkat" },
@@ -259,7 +259,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
     // Tampilkan list pangkat/satfung jika perlu
     if (field === "pangkat") {
-      const titles = await userService.getAvailableTitles();
+      const titles = await userModel.getAvailableTitles();
       if (titles && titles.length) {
         let msgList = sortTitleKeys(titles, titles)
           .map((t, i) => `${i + 1}. ${t}`)
@@ -268,7 +268,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       }
     }
     if (field === "satfung") {
-      const satfung = await userService.getAvailableSatfung();
+      const satfung = await userModel.getAvailableSatfung();
       if (satfung && satfung.length) {
         let msgList = sortDivisionKeys(satfung)
           .map((s, i) => `${i + 1}. ${s}`)
@@ -283,10 +283,10 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     );
   },
 
-  konfirmasiHapusWhatsapp: async (session, chatId, text, waClient, pool, userService) => {
+  konfirmasiHapusWhatsapp: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
       const user_id = session.updateUserId;
-      await userService.updateUserField(user_id, "whatsapp", "");
+      await userModel.updateUserField(user_id, "whatsapp", "");
       await waClient.sendMessage(
         chatId,
         `✅ Nomor WhatsApp untuk NRP/NIP ${user_id} berhasil dihapus dari database.`
@@ -307,7 +307,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     );
   },
 
-  updateAskValue: async (session, chatId, text, waClient, pool, userService) => {
+  updateAskValue: async (session, chatId, text, waClient, pool, userModel) => {
     const user_id = session.updateUserId;
     let field = session.updateField;
     let value = text.trim();
@@ -341,7 +341,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
 
-    await userService.updateUserField(user_id, field, value);
+    await userModel.updateUserField(user_id, field, value);
     await waClient.sendMessage(
       chatId,
       `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
@@ -350,7 +350,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     await waClient.sendMessage(chatId, menuUtama());
   },
 
-  tanyaUpdateMyData: async (session, chatId, text, waClient, pool, userService) => {
+  tanyaUpdateMyData: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
       session.step = "confirmUserByWaUpdate";
       await userMenuHandlers.confirmUserByWaUpdate(
@@ -359,7 +359,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         "ya",
         waClient,
         pool,
-        userService
+        userModel
       );
       return;
     } else if (text.trim().toLowerCase() === "tidak") {

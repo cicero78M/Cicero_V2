@@ -8,15 +8,15 @@ import {
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 import { groupByDivision, sortDivisionKeys } from "../../utils/utilsHelper.js";
 
-async function absensiUsernameInsta(client_id, userService, mode = "all") {
+async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
   if (mode === "sudah") {
-    sudah = await userService.getInstaFilledUsersByClient(client_id);
+    sudah = await userModel.getInstaFilledUsersByClient(client_id);
   } else if (mode === "belum") {
-    belum = await userService.getInstaEmptyUsersByClient(client_id);
+    belum = await userModel.getInstaEmptyUsersByClient(client_id);
   } else {
-    sudah = await userService.getInstaFilledUsersByClient(client_id);
-    belum = await userService.getInstaEmptyUsersByClient(client_id);
+    sudah = await userModel.getInstaFilledUsersByClient(client_id);
+    belum = await userModel.getInstaEmptyUsersByClient(client_id);
   }
 
   let msg = `*Absensi Username Instagram*\nClient: *${client_id}*`;
@@ -61,15 +61,15 @@ async function absensiUsernameInsta(client_id, userService, mode = "all") {
   return msg;
 }
 
-async function absensiUsernameTiktok(client_id, userService, mode = "all") {
+async function absensiUsernameTiktok(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
   if (mode === "sudah") {
-    sudah = await userService.getTiktokFilledUsersByClient(client_id);
+    sudah = await userModel.getTiktokFilledUsersByClient(client_id);
   } else if (mode === "belum") {
-    belum = await userService.getTiktokEmptyUsersByClient(client_id);
+    belum = await userModel.getTiktokEmptyUsersByClient(client_id);
   } else {
-    sudah = await userService.getTiktokFilledUsersByClient(client_id);
-    belum = await userService.getTiktokEmptyUsersByClient(client_id);
+    sudah = await userModel.getTiktokFilledUsersByClient(client_id);
+    belum = await userModel.getTiktokEmptyUsersByClient(client_id);
   }
 
   let msg = `*Absensi Username TikTok*\nClient: *${client_id}*`;
@@ -122,7 +122,7 @@ export const clientRequestHandlers = {
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -167,7 +167,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       "",
       waClient,
       pool,
-      userService,
+      userModel,
       clientService,
       migrateUsersFromFolder,
       checkGoogleSheetCsvStatus,
@@ -192,7 +192,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService
   ) => {
     session.addClient_nama = text.trim();
@@ -208,7 +208,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService
   ) => {
     if (text.trim().toLowerCase() === "ya") {
@@ -245,7 +245,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService
   ) => {
     const rows = await pool.query(
@@ -293,7 +293,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService
   ) => {
     if (text.trim() === "1") {
@@ -382,7 +382,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService
   ) => {
     try {
@@ -409,7 +409,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     await waClient.sendMessage(
       chatId,
@@ -423,7 +423,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     if (!/^[1-3]$/.test(text.trim())) {
       await waClient.sendMessage(
@@ -442,7 +442,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     session.target_user_id = text.trim();
     if (session.kelolaUser_mode === "1") {
@@ -469,7 +469,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     const fields = [
       "nama",
@@ -501,10 +501,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     try {
-      await userService.updateUserField(
+      await userModel.updateUserField(
         session.target_user_id,
         session.updateField,
         text.trim()
@@ -524,11 +524,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     try {
       const newException = text.trim().toLowerCase() === "true";
-      await userService.updateUserField(
+      await userModel.updateUserField(
         session.target_user_id,
         "exception",
         newException
@@ -551,11 +551,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     try {
       const newStatus = text.trim().toLowerCase() === "true";
-      await userService.updateUserField(
+      await userModel.updateUserField(
         session.target_user_id,
         "status",
         newStatus
@@ -577,7 +577,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -615,7 +615,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -648,7 +648,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -701,7 +701,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -740,7 +740,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -774,7 +774,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,
@@ -828,7 +828,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     // Pilih client (tambahkan client_status di query)
     const rows = await pool.query(
@@ -857,7 +857,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -880,7 +880,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     const client_id = session.selected_client_id;
     let mode = "all";
@@ -893,7 +893,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
       return;
     }
-    const msg = await absensiUsernameInsta(client_id, userService, mode);
+    const msg = await absensiUsernameInsta(client_id, userModel, mode);
     await waClient.sendMessage(chatId, msg);
     session.step = "main";
   },
@@ -905,7 +905,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     // Ambil semua client, sertakan status aktif
     const rows = await pool.query(
@@ -934,7 +934,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     const client_id = session.selected_client_id;
     let mode = "all";
@@ -947,7 +947,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
       return;
     }
-    const msg = await absensiUsernameTiktok(client_id, userService, mode);
+    const msg = await absensiUsernameTiktok(client_id, userModel, mode);
     await waClient.sendMessage(chatId, msg);
     session.step = "main";
   },
@@ -958,7 +958,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService
+    userModel
   ) => {
     const idx = parseInt(text.trim()) - 1;
     const clients = session.clientList || [];
@@ -983,7 +983,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     text,
     waClient,
     pool,
-    userService,
+    userModel,
     clientService,
     migrateUsersFromFolder,
     checkGoogleSheetCsvStatus,

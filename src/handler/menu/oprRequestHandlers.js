@@ -1,7 +1,7 @@
 // src/handler/menu/oprRequestHandlers.js
 
 export const oprRequestHandlers = {
-  main: async (session, chatId, text, waClient, pool, userService) => {
+  main: async (session, chatId, text, waClient, pool, userModel) => {
     let msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
@@ -16,7 +16,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     await waClient.sendMessage(chatId, msg);
   },
 
-  chooseMenu: async (session, chatId, text, waClient, pool, userService) => {
+  chooseMenu: async (session, chatId, text, waClient, pool, userModel) => {
     const clean = () => {
       delete session.addUser;
       delete session.availableSatfung;
@@ -64,35 +64,35 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   },
 
   // ==== TAMBAH USER ====
-  addUser_nrp: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_nrp: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     if (!nrp) {
       await waClient.sendMessage(chatId, "❌ NRP/NIP tidak valid. Masukkan ulang atau ketik *batal*.");
       return;
     }
-    const existing = await userService.findUserById(nrp);
+    const existing = await userModel.findUserById(nrp);
     if (existing) {
       let msg = `⚠️ NRP/NIP *${nrp}* sudah terdaftar:\n`;
       msg += `  • Nama: *${existing.nama || "-"}*\n  • Pangkat: *${existing.title || "-"}*\n  • Satfung: *${existing.divisi || "-"}*\n  • Jabatan: *${existing.jabatan || "-"}*\n  • Status: ${existing.status ? "🟢 AKTIF" : "🔴 NONAKTIF"}\n`;
       await waClient.sendMessage(chatId, msg + "\nTidak bisa menambahkan user baru dengan NRP/NIP ini.");
       session.step = "main";
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.addUser = { user_id: nrp };
     session.step = "addUser_nama";
     await waClient.sendMessage(chatId, "Masukkan *Nama Lengkap* (huruf kapital):");
   },
 
-  addUser_nama: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_nama: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nama = text.trim().toUpperCase();
     if (!nama) {
@@ -104,11 +104,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     await waClient.sendMessage(chatId, "Masukkan *Pangkat* (huruf kapital, misal: BRIPKA):");
   },
 
-  addUser_pangkat: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_pangkat: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const pangkat = text.trim().toUpperCase();
     if (!pangkat) {
@@ -118,18 +118,18 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     session.addUser.title = pangkat;
     session.step = "addUser_satfung";
     // List satfung
-    const satfung = await userService.getAvailableSatfung();
+    const satfung = await userModel.getAvailableSatfung();
     let msg = "*Pilih Satfung* (balas angka atau ketik nama persis):\n";
     msg += satfung.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
     session.availableSatfung = satfung;
     await waClient.sendMessage(chatId, msg);
   },
 
-  addUser_satfung: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_satfung: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const satfungList = session.availableSatfung || [];
     let satfung = text.trim().toUpperCase();
@@ -147,11 +147,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     await waClient.sendMessage(chatId, "Masukkan *Jabatan* (huruf kapital, contoh: BAURMIN):");
   },
 
-  addUser_jabatan: async (session, chatId, text, waClient, pool, userService) => {
+  addUser_jabatan: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const jabatan = text.trim().toUpperCase();
     if (!jabatan) {
@@ -164,7 +164,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 
     // Simpan ke DB
     try {
-      await userService.createUser(session.addUser);
+      await userModel.createUser(session.addUser);
       await waClient.sendMessage(
         chatId,
         `✅ *User baru berhasil ditambahkan:*\n━━━━━━━━━━━━━━━━━━━━━━
@@ -180,22 +180,22 @@ Status: 🟢 AKTIF, Exception: False
       await waClient.sendMessage(chatId, `❌ Gagal menambahkan user: ${err.message}`);
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   // ==== UPDATE STATUS USER ====
-  updateStatus_nrp: async (session, chatId, text, waClient, pool, userService) => {
+  updateStatus_nrp: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses ubah status user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    const user = await userService.findUserById(nrp);
+    const user = await userModel.findUserById(nrp);
     if (!user) {
       await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
       session.step = "main";
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
     let msg = `
@@ -222,11 +222,11 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     await waClient.sendMessage(chatId, msg);
   },
 
-  updateStatus_value: async (session, chatId, text, waClient, pool, userService) => {
+  updateStatus_value: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "❎ Keluar dari proses update status user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     let status = null;
     if (text.trim() === "1") status = true;
@@ -236,8 +236,8 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return;
     }
     try {
-      await userService.updateUserField(session.updateStatusNRP, "status", status);
-      const user = await userService.findUserById(session.updateStatusNRP);
+      await userModel.updateUserField(session.updateStatusNRP, "status", status);
+      const user = await userModel.findUserById(session.updateStatusNRP);
       let statusStr = status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
       let msg = `✅ *Status user berhasil diubah!*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -250,18 +250,18 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, `❌ Gagal update status: ${err.message}`);
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   // ==== CEK DATA USER ====
-  cekUser_nrp: async (session, chatId, text, waClient, pool, userService) => {
+  cekUser_nrp: async (session, chatId, text, waClient, pool, userModel) => {
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, "Keluar dari proses cek user.");
-      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    const user = await userService.findUserById(nrp);
+    const user = await userModel.findUserById(nrp);
     if (!user) {
       await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
     } else {
@@ -281,7 +281,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, msg);
     }
     session.step = "main";
-    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userService);
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 };
 
