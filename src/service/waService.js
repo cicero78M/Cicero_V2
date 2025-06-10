@@ -33,7 +33,7 @@ import {
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
-import { getUsersByClient } from "../model/userModel.js";
+import { getUsersByClient, findUserByWA } from "../model/userModel.js";
 
 // Handler Imports
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
@@ -330,9 +330,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let user = (await userService.findUserByWhatsApp)
-      ? await userService.findUserByWhatsApp(waNum)
-      : await userService.findUserByWA(waNum);
+    let user = await findUserByWA(waNum);
     if (user) {
       await userService.updateUserField(user.user_id, field, username);
       await waClient.sendMessage(
@@ -379,9 +377,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     let waNum = chatId.replace(/[^0-9]/g, "");
-    let waUsed = (await userService.findUserByWhatsApp)
-      ? await userService.findUserByWhatsApp(waNum)
-      : await userService.findUserByWA(waNum);
+    let waUsed = await findUserByWA(waNum);
     if (waUsed && waUsed.user_id !== user.user_id) {
       await waClient.sendMessage(
         chatId,

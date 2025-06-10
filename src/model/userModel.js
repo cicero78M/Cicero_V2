@@ -116,3 +116,13 @@ export async function getAllUsers(client_id) {
     return res.rows;
   }
 }
+
+// Cari user berdasarkan nomor WhatsApp
+export async function findUserByWhatsApp(wa) {
+  if (!wa) return null;
+  const res = await pool.query('SELECT * FROM "user" WHERE whatsapp = $1', [wa]);
+  return res.rows[0];
+}
+
+// Alias findUserByWA untuk kompatibilitas
+export const findUserByWA = findUserByWhatsApp;
