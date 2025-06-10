@@ -116,3 +116,9 @@ export async function getAllUsers(client_id) {
     return res.rows;
   }
 }
+
+// Helper alias untuk mengambil seluruh user aktif berdasarkan client_id
+export async function findUsersByClientId(client_id) {
+  // Saat ini menggunakan implementasi getUsersByClient
+  return getUsersByClient(client_id);
+}

@@ -1,5 +1,6 @@
 import * as clientService from '../service/clientService.js';
-import * as userService from '../service/userService.js';
+// Mengambil data user langsung via model
+import { findUsersByClientId } from '../model/userModel.js';
 import * as instaPostService from '../service/instaPostService.js';
 import * as instaLikeService from '../service/instaLikeService.js';
 import * as tiktokPostService from '../service/tiktokPostService.js';
@@ -68,7 +69,7 @@ export const deleteClient = async (req, res, next) => {
 // Semua user di bawah client
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await userService.findUsersByClientId(req.params.client_id);
+    const users = await findUsersByClientId(req.params.client_id);
     sendSuccess(res, users);
   } catch (err) {
     next(err);
@@ -140,7 +141,7 @@ export const getSummary = async (req, res, next) => {
     const client = await clientService.findClientById(client_id);
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
-    const users = await userService.findUsersByClientId(client_id);
+    const users = await findUsersByClientId(client_id);
     const instaPosts = await instaPostService.findByClientId(client_id);
     let instaLikes = 0;
     for (const post of instaPosts) {
