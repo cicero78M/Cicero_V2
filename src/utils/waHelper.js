@@ -58,7 +58,7 @@ export function formatClientData(obj, title = "") {
     "client_operator",
     "client_super",
     "client_group",
-    "tiktok_secUid",
+    "tiktok_secuid",
   ];
   let dataText = title ? `${title}\n` : "";
   for (const key of keysOrder) {

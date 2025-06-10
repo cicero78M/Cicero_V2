@@ -303,7 +303,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         { key: "client_operator", label: "Operator Client" },
         { key: "client_super", label: "Super Admin Client" },
         { key: "client_group", label: "Group Client" },
-        { key: "tiktok_secUid", label: "TikTok SecUID" },
+        { key: "tiktok_secuid", label: "TikTok SecUID" },
         { key: "client_tiktok", label: "Username TikTok" },
         { key: "client_status", label: "Status Aktif (true/false)" },
         { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
