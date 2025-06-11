@@ -1,6 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
+import { fetchInstagramPosts } from "../service/instaRapidService.js";
 import { sendSuccess } from "../utils/response.js";
 
 export async function getInstaRekapLikes(req, res) {
@@ -30,6 +31,20 @@ export async function getInstaPosts(req, res) {
     }
 
     const posts = await instaPostService.findByClientId(client_id);
+    sendSuccess(res, posts);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getRapidInstagramPosts(req, res) {
+  try {
+    const username = req.query.username;
+    const limit = parseInt(req.query.limit) || 10;
+    if (!username) {
+      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    }
+    const posts = await fetchInstagramPosts(username, limit);
     sendSuccess(res, posts);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
