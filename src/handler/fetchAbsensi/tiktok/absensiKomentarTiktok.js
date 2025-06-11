@@ -238,7 +238,11 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     users.forEach((u) => {
       if (u.exception === true) {
         userSudah.push(u);
-      } else if (u.tiktok && u.tiktok.trim() !== "" && commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())) {
+      } else if (
+        u.tiktok &&
+        u.tiktok.trim() !== "" &&
+        commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())
+      ) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
