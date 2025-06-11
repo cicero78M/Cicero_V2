@@ -66,3 +66,14 @@ export const getUsersByClientFull = async (req, res, next) => {
     next(err);
   }
 };
+
+// --- API: Ambil daftar user untuk User Directory ---
+export const getUserList = async (req, res, next) => {
+  try {
+    // Ambil dari database, semua user aktif
+    const users = await userModel.getAllUsers(); // ini DB, bukan legacy file
+    sendSuccess(res, users);
+  } catch (err) {
+    next(err);
+  }
+};
