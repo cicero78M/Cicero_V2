@@ -53,3 +53,6 @@ export async function getCommentsByVideoId(video_id) {
   const res = await pool.query(q, [video_id]);
   return res.rows[0] ? { comments: res.rows[0].comments } : { comments: [] };
 }
+
+// Alias untuk kompatibilitas service lama
+export const findByVideoId = getCommentsByVideoId;

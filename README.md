@@ -96,6 +96,13 @@ Cicero_V2-main/
 ]
 ```
 
+### 3. TikTok API
+
+| Endpoint            | Method | Handler            | Deskripsi                          |
+|---------------------|--------|-------------------|------------------------------------|
+| `/tiktok/comments`  | GET    | getTiktokComments | Ambil komentar seluruh video client |
+
+
 ---
 
 ## Fitur & Flow Bisnis Utama
