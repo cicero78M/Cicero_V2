@@ -73,3 +73,5 @@ export async function getPostsByClientId(client_id) {
   );
   return res.rows;
 }
+
+export const findByClientId = getPostsByClientId;
