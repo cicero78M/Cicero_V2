@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 
@@ -39,3 +41,23 @@ export async function fetchInstagramProfile(username) {
   const data = await res.json();
   return data?.data || null;
 }
+
+export async function fetchInstagramInfo(username) {
+  if (!username) return null;
+  try {
+    const response = await axios.get(`https://${RAPIDAPI_HOST}/v1/info`, {
+      params: { username_or_id_or_url: username },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+      },
+    });
+    return response.data?.data || null;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    throw new Error(msg);
+  }
+}
+

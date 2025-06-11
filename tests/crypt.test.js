@@ -1,10 +1,15 @@
-import { encrypt, decrypt } from '../src/utils/crypt.js';
+
+let encrypt;
+let decrypt;
 
 describe('crypt utilities', () => {
   const KEY = 'jest-secret-key';
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.SECRET_KEY = KEY;
+    const module = await import('../src/utils/crypt.js');
+    encrypt = module.encrypt;
+    decrypt = module.decrypt;
   });
 
   test('decrypt(encrypt(text)) returns original text', () => {
