@@ -44,3 +44,15 @@ export async function getPostsTodayByClient(client_id) {
   );
   return res.rows;
 }
+
+export async function getPostsByClientId(client_id) {
+  const res = await pool.query(
+    `SELECT * FROM insta_post WHERE client_id = $1 ORDER BY created_at DESC`,
+    [client_id]
+  );
+  return res.rows;
+}
+
+export async function findByClientId(client_id) {
+  return getPostsByClientId(client_id);
+}
