@@ -83,9 +83,7 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   for (const post of posts) {
     const { comments } = await getCommentsByVideoId(post.video_id);
-    const commentSet = new Set(
-      extractUsernamesFromComments(comments).map((u) => `@${u}`)
-    );
+    const commentSet = new Set(extractUsernamesFromComments(comments));
     sendDebug({
       tag: "ABSEN TTK",
       msg: `Post ${post.video_id} comments=${commentSet.size}`,
@@ -95,9 +93,7 @@ export async function absensiKomentar(client_id, opts = {}) {
       if (
         u.tiktok &&
         u.tiktok.trim() !== "" &&
-        commentSet.has(
-          `@${u.tiktok.replace(/^@/, "").toLowerCase()}`
-        )
+        commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())
       ) {
         userStats[u.user_id].count += 1;
       }
@@ -231,9 +227,7 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
 
   for (const p of posts) {
     const { comments } = await getCommentsByVideoId(p.video_id);
-    const commentSet = new Set(
-      extractUsernamesFromComments(comments).map((u) => `@${u}`)
-    );
+    const commentSet = new Set(extractUsernamesFromComments(comments));
     sendDebug({
       tag: "ABSEN TTK",
       msg: `Per konten ${p.video_id} comments=${commentSet.size}`,
@@ -247,7 +241,7 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
       } else if (
         u.tiktok &&
         u.tiktok.trim() !== "" &&
-        commentSet.has(`@${u.tiktok.replace(/^@/, "").toLowerCase()}`)
+        commentSet.has(u.tiktok.replace(/^@/, "").toLowerCase())
       ) {
         userSudah.push(u);
       } else {
