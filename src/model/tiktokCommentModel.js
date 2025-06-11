@@ -2,7 +2,8 @@ import { pool } from "../config/db.js";
 
 /**
  * Simpan/Update komentar TikTok untuk video tertentu.
- * Yang disimpan ke DB: hanya array username unik (string), bukan objek komentar.
+ * Yang disimpan ke DB: hanya array username unik (string) tanpa awalan "@",
+ * bukan objek komentar.
  * @param {string} video_id - ID video TikTok
  * @param {Array} commentsArr - Array of comment objects dari API
  */
@@ -16,7 +17,9 @@ export async function upsertTiktokComments(video_id, commentsArr) {
     } else if (c && typeof c.username === "string") {
       uname = c.username;
     }
-    if (uname && uname.length > 0) usernames.push(uname.toLowerCase());
+    if (uname && uname.length > 0) {
+      usernames.push(uname.toLowerCase().replace(/^@/, ""));
+    }
   }
   // Unikkan username (no duplicate)
   const uniqUsernames = [...new Set(usernames)];
@@ -27,7 +30,9 @@ export async function upsertTiktokComments(video_id, commentsArr) {
   let existing = [];
   if (res.rows[0] && Array.isArray(res.rows[0].comments)) {
     existing = res.rows[0].comments
-      .map((u) => (typeof u === "string" ? u.toLowerCase() : null))
+      .map((u) =>
+        typeof u === "string" ? u.toLowerCase().replace(/^@/, "") : null
+      )
       .filter(Boolean);
   }
   // Merge dan unikkan lagi
@@ -87,7 +92,7 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
       COALESCE(COUNT(DISTINCT vc.video_id), 0) AS jumlah_komentar
     FROM "user" u
     LEFT JOIN valid_comments vc
-      ON vc.comments @> to_jsonb(u.tiktok)
+      ON vc.comments @> to_jsonb(lower(replace(trim(u.tiktok), '@', '')))
     WHERE u.client_id = $1
       AND u.status = true
       AND u.tiktok IS NOT NULL
