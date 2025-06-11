@@ -34,9 +34,15 @@ async function getClientInfo(client_id) {
 function extractUsernamesFromComments(comments) {
   return (comments || [])
     .map((x) => {
-      if (typeof x === "string") return x.toLowerCase();
-      if (x && typeof x.username === "string") return x.username.toLowerCase();
-      return "";
+      let uname = "";
+      if (typeof x === "string") {
+        uname = x;
+      } else if (x && typeof x.username === "string") {
+        uname = x.username;
+      } else if (x && x.user && typeof x.user.unique_id === "string") {
+        uname = x.user.unique_id;
+      }
+      return uname.toLowerCase().replace(/^@/, "");
     })
     .filter(Boolean);
 }
