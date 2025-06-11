@@ -5,3 +5,8 @@ export const findByVideoId = async (video_id) => {
 };
 
 
+
+export const getRekapByClient = async (client_id, periode = 'harian') => {
+  return await tiktokCommentModel.getRekapKomentarByClient(client_id, periode);
+};
+

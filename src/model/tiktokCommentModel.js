@@ -56,3 +56,54 @@ export async function getCommentsByVideoId(video_id) {
 
 export const findByVideoId = getCommentsByVideoId;
 
+
+export async function getRekapKomentarByClient(client_id, periode = "harian") {
+  let tanggalFilter = "p.created_at::date = NOW()::date";
+  if (periode === "bulanan") {
+    tanggalFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+  }
+
+  const { rows: postRows } = await pool.query(
+    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p WHERE p.client_id = $1 AND ${tanggalFilter}`,
+    [client_id]
+  );
+  const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
+
+  const { rows } = await pool.query(`
+    WITH valid_comments AS (
+      SELECT c.video_id, p.client_id, p.created_at, c.comments
+      FROM tiktok_comment c
+      JOIN tiktok_post p ON p.video_id = c.video_id
+      WHERE p.client_id = $1
+        AND ${tanggalFilter}
+    )
+    SELECT
+      u.user_id,
+      u.title,
+      u.nama,
+      u.tiktok AS username,
+      u.divisi,
+      u.exception,
+      COALESCE(COUNT(DISTINCT vc.video_id), 0) AS jumlah_komentar
+    FROM "user" u
+    LEFT JOIN valid_comments vc
+      ON vc.comments @> to_jsonb(u.tiktok)
+    WHERE u.client_id = $1
+      AND u.status = true
+      AND u.tiktok IS NOT NULL
+    GROUP BY u.user_id, u.title, u.nama, u.tiktok, u.divisi, u.exception
+    ORDER BY jumlah_komentar DESC, u.nama ASC
+  `, [client_id]);
+
+  for (const user of rows) {
+    if (user.exception === true || user.exception === "true" || user.exception == 1 || user.exception === "1") {
+      user.jumlah_komentar = max_comment;
+    } else {
+      user.jumlah_komentar = parseInt(user.jumlah_komentar, 10);
+    }
+    user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
+  }
+
+  return rows;
+}
+
