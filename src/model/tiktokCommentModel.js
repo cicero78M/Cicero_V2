@@ -92,7 +92,10 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
       COALESCE(COUNT(DISTINCT vc.video_id), 0) AS jumlah_komentar
     FROM "user" u
     LEFT JOIN valid_comments vc
-      ON vc.comments @> to_jsonb(lower(replace(trim(u.tiktok), '@', '')))
+      ON EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(vc.comments) cmt
+        WHERE lower(replace(trim(cmt), '@', '')) = lower(replace(trim(u.tiktok), '@', ''))
+      )
     WHERE u.client_id = $1
       AND u.status = true
       AND u.tiktok IS NOT NULL
@@ -101,7 +104,12 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
   `, [client_id]);
 
   for (const user of rows) {
-    if (user.exception === true || user.exception === "true" || user.exception == 1 || user.exception === "1") {
+    if (
+      user.exception === true ||
+      user.exception === "true" ||
+      user.exception == 1 ||
+      user.exception === "1"
+    ) {
       user.jumlah_komentar = max_comment;
     } else {
       user.jumlah_komentar = parseInt(user.jumlah_komentar, 10);
@@ -111,4 +119,5 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
 
   return rows;
 }
+
 
