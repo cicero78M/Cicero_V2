@@ -4,7 +4,6 @@ const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 export async function fetchInstagramPosts(username, limit = 10) {
   if (!username) return [];
   const params = new URLSearchParams({ username_or_id_or_url: username });
-  if (limit) params.append('limit', limit);
 
   const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
     headers: {
