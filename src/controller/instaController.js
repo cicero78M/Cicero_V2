@@ -1,7 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
-import { fetchInstagramPosts, fetchInstagramProfile } from "../service/instaRapidService.js";
+import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo } from "../service/instaRapidService.js";
 import { sendSuccess } from "../utils/response.js";
 
 export async function getInstaRekapLikes(req, res) {
@@ -70,6 +70,19 @@ export async function getRapidInstagramProfile(req, res) {
     }
     const profile = await fetchInstagramProfile(username);
     sendSuccess(res, profile);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getRapidInstagramInfo(req, res) {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    }
+    const info = await fetchInstagramInfo(username);
+    sendSuccess(res, info);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
