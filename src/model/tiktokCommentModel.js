@@ -87,7 +87,7 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
       COALESCE(COUNT(DISTINCT vc.video_id), 0) AS jumlah_komentar
     FROM "user" u
     LEFT JOIN valid_comments vc
-      ON vc.comments @> to_jsonb(u.tiktok)
+      ON vc.comments @> to_jsonb(lower(replace(trim(u.tiktok), '@', '')))
     WHERE u.client_id = $1
       AND u.status = true
       AND u.tiktok IS NOT NULL
