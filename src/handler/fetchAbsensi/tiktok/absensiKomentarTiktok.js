@@ -4,6 +4,7 @@ import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision } from "../../../utils/utilsHelper.js";
+import { sendDebug } from "../../../middleware/debugHandler.js";
 
 // Helper sorting satfung
 function sortSatfung(keys) {
@@ -34,9 +35,15 @@ async function getClientInfo(client_id) {
 function extractUsernamesFromComments(comments) {
   return (comments || [])
     .map((x) => {
-      if (typeof x === "string") return x.toLowerCase();
-      if (x && typeof x.username === "string") return x.username.toLowerCase();
-      return "";
+      let uname = "";
+      if (typeof x === "string") {
+        uname = x;
+      } else if (x && typeof x.username === "string") {
+        uname = x.username;
+      } else if (x && x.user && typeof x.user.unique_id === "string") {
+        uname = x.user.unique_id;
+      }
+      return uname.toLowerCase().replace(/^@/, "");
     })
     .filter(Boolean);
 }
@@ -54,6 +61,18 @@ export async function absensiKomentar(client_id, opts = {}) {
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
 
+  sendDebug({
+    tag: "ABSEN TTK",
+    msg: `Start per-konten absensi. Posts=${posts.length} users=${users.length}`,
+    client_id,
+  });
+
+  sendDebug({
+    tag: "ABSEN TTK",
+    msg: `Start absensi komentar. Posts=${posts.length} users=${users.length}`,
+    client_id,
+  });
+
   if (!posts.length)
     return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
 
@@ -65,6 +84,11 @@ export async function absensiKomentar(client_id, opts = {}) {
   for (const post of posts) {
     const { comments } = await getCommentsByVideoId(post.video_id);
     const commentSet = new Set(extractUsernamesFromComments(comments));
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Post ${post.video_id} comments=${commentSet.size}`,
+      client_id,
+    });
     users.forEach((u) => {
       if (
         u.tiktok &&
@@ -95,6 +119,12 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   // Hapus user exception dari list belum!
   belum = belum.filter(u => !u.exception);
+
+  sendDebug({
+    tag: "ABSEN TTK",
+    msg: `UserStats: ${JSON.stringify(userStats)}`,
+    client_id,
+  });
 
   // *** PATCH: Gunakan username client untuk membangun link ***
   const kontenLinks = posts.map(
@@ -180,6 +210,11 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const tiktokUsername = clientInfo.tiktok;
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
+  sendDebug({
+    tag: "ABSEN TTK",
+    msg: `Start per-konten absensi. Posts=${posts.length} users=${users.length}`,
+    client_id,
+  });
 
   if (!posts.length)
     return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
@@ -193,6 +228,11 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   for (const p of posts) {
     const { comments } = await getCommentsByVideoId(p.video_id);
     const commentSet = new Set(extractUsernamesFromComments(comments));
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Per konten ${p.video_id} comments=${commentSet.size}`,
+      client_id,
+    });
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
