@@ -96,6 +96,13 @@ Cicero_V2-main/
 ]
 ```
 
+### 3. Instagram Rapid API
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/insta/rapid-profile` | GET | Ambil profil Instagram via RapidAPI |
+| `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI |
+
 ---
 
 ## Fitur & Flow Bisnis Utama
