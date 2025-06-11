@@ -27,7 +27,7 @@ export async function fetchInstagramProfile(username) {
   if (!username) return null;
   const params = new URLSearchParams({ username_or_id_or_url: username });
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/profile?${params.toString()}`, {
+  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/info?${params.toString()}`, {
     headers: {
       'X-RapidAPI-Key': RAPIDAPI_KEY,
       'X-RapidAPI-Host': RAPIDAPI_HOST,
