@@ -67,11 +67,15 @@ export const getUsersByClientFull = async (req, res, next) => {
   }
 };
 
-// --- API: Ambil daftar user untuk User Directory ---
+// --- API: Ambil daftar user untuk User Directory, hanya dari client tertentu ---
 export const getUserList = async (req, res, next) => {
   try {
-    // Ambil dari database, semua user aktif
-    const users = await userModel.getAllUsers(); // ini DB, bukan legacy file
+    const client_id = req.query.client_id;
+    if (!client_id) {
+      return res.status(400).json({ success: false, message: "client_id wajib diisi" });
+    }
+    // Hanya ambil user milik client_id, status aktif
+    const users = await userModel.getUsersByClient(client_id);
     sendSuccess(res, users);
   } catch (err) {
     next(err);
