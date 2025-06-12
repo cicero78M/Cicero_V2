@@ -1,7 +1,6 @@
 import * as clientModel from '../model/clientModel.js';
 // src/service/clientService.js
 import axios from 'axios';
-import { pool } from '../config/db.js';
 
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
