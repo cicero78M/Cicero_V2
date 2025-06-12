@@ -1,7 +1,7 @@
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
 import { sendSuccess } from '../utils/response.js';
-import { fetchTiktokProfile, fetchTiktokPosts } from '../service/tiktokRapidService.js';
+import { fetchTiktokProfile, fetchTiktokPosts, fetchTiktokInfo } from '../service/tiktokRapidService.js';
 
 export async function getTiktokComments(req, res, next) {
   try {
@@ -75,6 +75,19 @@ export async function getRapidTiktokProfile(req, res) {
     }
     const profile = await fetchTiktokProfile(username);
     sendSuccess(res, profile);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getRapidTiktokInfo(req, res) {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    }
+    const info = await fetchTiktokInfo(username);
+    sendSuccess(res, info);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
