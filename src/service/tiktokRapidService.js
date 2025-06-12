@@ -42,6 +42,26 @@ export async function fetchTiktokProfile(username) {
   };
 }
 
+export async function fetchTiktokInfo(username) {
+  if (!username) return null;
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
+      params: { uniqueId: username.replace(/^@/, '') },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+    return res.data || null;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    throw new Error(msg);
+  }
+}
+
 export async function fetchTiktokPosts(username, limit = 10) {
   if (!username) return [];
   const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
