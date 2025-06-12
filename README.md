@@ -234,6 +234,14 @@ CREATE TABLE tiktok_comment (
   comments JSONB,
   updated_at TIMESTAMP
 );
+
+-- Cache hasil fetch posting Instagram per username
+CREATE TABLE insta_post_cache (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR NOT NULL,
+  posts JSONB,
+  fetched_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ---
