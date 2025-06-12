@@ -1,7 +1,12 @@
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
 import { sendSuccess } from '../utils/response.js';
-import { fetchTiktokProfile, fetchTiktokPosts, fetchTiktokInfo } from '../service/tiktokRapidService.js';
+import {
+  fetchTiktokProfile,
+  fetchTiktokPosts,
+  fetchTiktokPostsBySecUid,
+  fetchTiktokInfo
+} from '../service/tiktokRapidService.js';
 
 export async function getTiktokComments(req, res, next) {
   try {
@@ -95,13 +100,15 @@ export async function getRapidTiktokInfo(req, res) {
 
 export async function getRapidTiktokPosts(req, res) {
   try {
-    const username = req.query.username;
+    const { username, secUid } = req.query;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
-    if (!username) {
-      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    if (!username && !secUid) {
+      return res.status(400).json({ success: false, message: 'username atau secUid wajib diisi' });
     }
-    const posts = await fetchTiktokPosts(username, limit);
+    const posts = secUid
+      ? await fetchTiktokPostsBySecUid(secUid, limit)
+      : await fetchTiktokPosts(username, limit);
     sendSuccess(res, posts);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

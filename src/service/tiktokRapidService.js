@@ -79,3 +79,21 @@ export async function fetchTiktokPosts(username, limit = 10) {
   const items = parsePosts(res);
   return limit ? items.slice(0, limit) : items;
 }
+
+export async function fetchTiktokPostsBySecUid(secUid, limit = 10) {
+  if (!secUid) return [];
+  const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
+    params: {
+      secUid,
+      count: String(limit > 0 ? limit : 10),
+      cursor: '0'
+    },
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  const items = parsePosts(res);
+  return limit ? items.slice(0, limit) : items;
+}
