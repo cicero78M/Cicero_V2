@@ -22,13 +22,13 @@ export async function fetchTiktokSecUid(username) {
   if (!username) return null;
   try {
     const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
-      params: { unique_id: username },
+      params: { uniqueId: username.replace(/^@/, "") },
       headers: {
-        'x-rapidapi-key': RAPIDAPI_KEY,
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST,
+      },
     });
-    return res.data?.data?.user?.secUid || null;
+    return res.data?.userInfo?.user?.secUid || null;
   } catch {
     return null;
   }
