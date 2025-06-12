@@ -1,5 +1,6 @@
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
+import * as clientService from '../service/clientService.js';
 import { sendSuccess } from '../utils/response.js';
 import {
   fetchTiktokProfile,
@@ -87,9 +88,21 @@ export async function getRapidTiktokProfile(req, res) {
 
 export async function getRapidTiktokInfo(req, res) {
   try {
-    const username = req.query.username;
+    const client_id =
+      req.query.client_id ||
+      req.user?.client_id ||
+      req.headers['x-client-id'];
+    if (!client_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'client_id wajib diisi' });
+    }
+    const client = await clientService.findClientById(client_id);
+    const username = client?.client_tiktok;
     if (!username) {
-      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+      return res
+        .status(404)
+        .json({ success: false, message: 'Username TikTok tidak ditemukan' });
     }
     const info = await fetchTiktokInfo(username);
     sendSuccess(res, info);
@@ -100,12 +113,27 @@ export async function getRapidTiktokInfo(req, res) {
 
 export async function getRapidTiktokPosts(req, res) {
   try {
-    const { username, secUid } = req.query;
+    const client_id =
+      req.query.client_id ||
+      req.user?.client_id ||
+      req.headers['x-client-id'];
+    let { username, secUid } = req.query;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+
     if (!username && !secUid) {
-      return res.status(400).json({ success: false, message: 'username atau secUid wajib diisi' });
+      if (!client_id) {
+        return res.status(400).json({ success: false, message: 'client_id wajib diisi' });
+      }
+      const client = await clientService.findClientById(client_id);
+      username = client?.client_tiktok;
+      secUid = client?.tiktok_secuid || secUid;
     }
+
+    if (!username && !secUid) {
+      return res.status(404).json({ success: false, message: 'Username TikTok tidak ditemukan' });
+    }
+
     const posts = secUid
       ? await fetchTiktokPostsBySecUid(secUid, limit)
       : await fetchTiktokPosts(username, limit);
