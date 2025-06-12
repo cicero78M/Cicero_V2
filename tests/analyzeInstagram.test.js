@@ -10,6 +10,8 @@ describe('analyzeInstagramData', () => {
     expect(result.stats.total_posts).toBe(2);
     expect(result.stats.total_likes).toBe(15);
     expect(result.posts[0].thumbnail_url).toBe('a');
+    expect(result.posts[0].thumbnail).toBe('a');
     expect(result.posts[1].thumbnail_url).toBe('b');
+    expect(result.posts[1].thumbnail).toBe('b');
   });
 });
