@@ -48,16 +48,25 @@ export async function getRapidInstagramPosts(req, res) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
     const rawPosts = await fetchInstagramPosts(username, limit);
-    const posts = rawPosts.map(p => ({
-      id: p.code || p.id || p.pk,
-      created_at: p.taken_at ? new Date(p.taken_at * 1000).toISOString() : p.created_at,
-      type: p.media_type || p.type,
-      caption: p.caption && typeof p.caption === 'object' ? p.caption.text : p.caption,
-      like_count: p.like_count,
-      comment_count: p.comment_count,
-      share_count: p.share_count,
-      thumbnail: p.thumbnail || p.display_url
-    }));
+    const posts = rawPosts.map(p => {
+      const thumbnail =
+        p.thumbnail_url ||
+        p.thumbnail_src ||
+        p.thumbnail ||
+        p.display_url ||
+        (p.image_versions?.items?.[0]?.url) ||
+        (p.image_versions2?.candidates?.[0]?.url);
+      return {
+        id: p.code || p.id || p.pk,
+        created_at: p.taken_at ? new Date(p.taken_at * 1000).toISOString() : p.created_at,
+        type: p.media_type || p.type,
+        caption: p.caption && typeof p.caption === 'object' ? p.caption.text : p.caption,
+        like_count: p.like_count,
+        comment_count: p.comment_count,
+        share_count: p.share_count,
+        thumbnail
+      };
+    });
     sendSuccess(res, posts);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -73,16 +82,25 @@ export async function getRapidInstagramPostsStore(req, res) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
     const rawPosts = await fetchInstagramPosts(username, limit);
-    const posts = rawPosts.map(p => ({
-      id: p.code || p.id || p.pk,
-      created_at: p.taken_at ? new Date(p.taken_at * 1000).toISOString() : p.created_at,
-      type: p.media_type || p.type,
-      caption: p.caption && typeof p.caption === 'object' ? p.caption.text : p.caption,
-      like_count: p.like_count,
-      comment_count: p.comment_count,
-      share_count: p.share_count,
-      thumbnail: p.thumbnail || p.display_url
-    }));
+    const posts = rawPosts.map(p => {
+      const thumbnail =
+        p.thumbnail_url ||
+        p.thumbnail_src ||
+        p.thumbnail ||
+        p.display_url ||
+        (p.image_versions?.items?.[0]?.url) ||
+        (p.image_versions2?.candidates?.[0]?.url);
+      return {
+        id: p.code || p.id || p.pk,
+        created_at: p.taken_at ? new Date(p.taken_at * 1000).toISOString() : p.created_at,
+        type: p.media_type || p.type,
+        caption: p.caption && typeof p.caption === 'object' ? p.caption.text : p.caption,
+        like_count: p.like_count,
+        comment_count: p.comment_count,
+        share_count: p.share_count,
+        thumbnail
+      };
+    });
     await instaPostCacheService.insertCache(username, posts);
     sendSuccess(res, posts);
   } catch (err) {
