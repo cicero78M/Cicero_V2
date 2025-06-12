@@ -64,6 +64,13 @@ export async function getRapidInstagramPosts(req, res) {
         like_count: p.like_count,
         comment_count: p.comment_count,
         share_count: p.share_count,
+        view_count:
+          p.play_count ??
+          p.view_count ??
+          p.playCount ??
+          p.viewCount ??
+          p.video_view_count ??
+          0,
         thumbnail
       };
     });
@@ -98,6 +105,13 @@ export async function getRapidInstagramPostsStore(req, res) {
         like_count: p.like_count,
         comment_count: p.comment_count,
         share_count: p.share_count,
+        view_count:
+          p.play_count ??
+          p.view_count ??
+          p.playCount ??
+          p.viewCount ??
+          p.video_view_count ??
+          0,
         thumbnail
       };
     });
