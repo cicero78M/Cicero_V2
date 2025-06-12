@@ -2,6 +2,7 @@
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
 import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo } from "../service/instaRapidService.js";
+import * as instaProfileService from "../service/instaProfileService.js";
 import { sendSuccess } from "../utils/response.js";
 
 export async function getInstaRekapLikes(req, res) {
@@ -69,6 +70,17 @@ export async function getRapidInstagramProfile(req, res) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
     const profile = await fetchInstagramProfile(username);
+    if (profile && profile.username) {
+      await instaProfileService.upsertProfile({
+        username: profile.username,
+        full_name: profile.full_name,
+        biography: profile.biography,
+        follower_count: profile.followers_count ?? profile.follower_count,
+        following_count: profile.following_count,
+        post_count: profile.media_count ?? profile.posts_count,
+        profile_pic_url: profile.profile_pic_url,
+      });
+    }
     sendSuccess(res, profile);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -83,6 +95,22 @@ export async function getRapidInstagramInfo(req, res) {
     }
     const info = await fetchInstagramInfo(username);
     sendSuccess(res, info);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getInstagramProfile(req, res) {
+  try {
+    const username = req.query.username;
+    if (!username) {
+      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    }
+    const profile = await instaProfileService.findByUsername(username);
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'profile not found' });
+    }
+    sendSuccess(res, profile);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

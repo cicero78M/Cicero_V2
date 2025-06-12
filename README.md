@@ -102,6 +102,7 @@ Cicero_V2-main/
 |----------|--------|-----------|
 | `/insta/rapid-profile` | GET | Ambil profil Instagram via RapidAPI |
 | `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI |
+| `/insta/profile`       | GET | Ambil profil Instagram dari database |
 
 ---
 
@@ -205,6 +206,17 @@ CREATE TABLE insta_post (
 CREATE TABLE insta_like (
   shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
   likes JSONB,
+  updated_at TIMESTAMP
+);
+
+CREATE TABLE insta_profile (
+  username VARCHAR PRIMARY KEY,
+  full_name VARCHAR,
+  biography TEXT,
+  follower_count INT,
+  following_count INT,
+  post_count INT,
+  profile_pic_url TEXT,
   updated_at TIMESTAMP
 );
 
