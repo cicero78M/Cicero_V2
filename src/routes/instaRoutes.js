@@ -1,6 +1,6 @@
 // src/routes/instaRoutes.js
 import { Router } from "express";
-import { getInstaRekapLikes, getInstaPosts, getRapidInstagramPosts, getRapidInstagramProfile, getRapidInstagramInfo, getInstagramProfile } from "../controller/instaController.js";
+import { getInstaRekapLikes, getInstaPosts, getRapidInstagramPosts, getRapidInstagramProfile, getRapidInstagramInfo, getInstagramProfile, getRapidInstagramPostsStore } from "../controller/instaController.js";
 import { authRequired } from "../middleware/authMiddleware.js"; // tambahkan import ini
 
 const router = Router();
@@ -8,6 +8,7 @@ const router = Router();
 router.get("/rekap-likes", authRequired, getInstaRekapLikes);
 router.get("/posts", authRequired, getInstaPosts);
 router.get("/rapid-posts", authRequired, getRapidInstagramPosts);
+router.get("/rapid-posts-store", authRequired, getRapidInstagramPostsStore);
 router.get("/rapid-profile", authRequired, getRapidInstagramProfile);
 router.get("/rapid-info", authRequired, getRapidInstagramInfo);
 router.get("/profile", authRequired, getInstagramProfile);
