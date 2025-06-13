@@ -119,9 +119,10 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     session.step = "addUser_satfung";
     // List satfung
     const satfung = await userModel.getAvailableSatfung();
-    let msg = "*Pilih Satfung* (balas angka atau ketik nama persis):\n";
-    msg += satfung.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
-    session.availableSatfung = satfung;
+    const sorted = sortDivisionKeys(satfung);
+    let msg = "*Pilih Satfung* (ketik nama persis sesuai daftar):\n";
+    msg += sorted.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
+    session.availableSatfung = sorted;
     await waClient.sendMessage(chatId, msg);
   },
 
@@ -133,8 +134,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     const satfungList = session.availableSatfung || [];
     let satfung = text.trim().toUpperCase();
-    if (Number(satfung) > 0 && Number(satfung) <= satfungList.length) {
-      satfung = satfungList[Number(satfung) - 1];
+    if (/^\d+$/.test(satfung)) {
+      let msg = "❌ Satfung harus diisi sesuai daftar, gunakan nama pada daftar:\n";
+      msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
+      await waClient.sendMessage(chatId, msg);
+      return;
     }
     if (!satfungList.map((s) => s.toUpperCase()).includes(satfung)) {
       let msg = "❌ Satfung tidak valid! Pilih sesuai daftar:\n";
