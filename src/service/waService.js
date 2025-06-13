@@ -112,10 +112,7 @@ waClient.on("ready", () => {
 // =======================
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
-  if (!msg.body || typeof msg.body !== "string") return;
   const text = msg.body.trim();
-  if (!text) return;
-  console.log(`[WA MSG] From ${chatId}: ${text}`);
 
   // ===== Deklarasi State dan Konstanta =====
   const session = getSession(chatId);

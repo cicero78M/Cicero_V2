@@ -2,6 +2,9 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { pool } from "../config/db.js";
 import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
+import redis from "../config/redis.js";
+
+const MAX_LOGINS_PER_CLIENT = 3;
 
 const router = express.Router();
 
@@ -48,6 +51,29 @@ router.post("/login", async (req, res) => {
       message: "Login gagal: client operator tidak valid",
     });
   }
+
+  // === Batasi jumlah login per client ===
+  try {
+    const setKey = `login:${client_id}`;
+    const tokens = await redis.sMembers(setKey);
+    let activeCount = 0;
+    for (const t of tokens) {
+      const exists = await redis.exists(`login_token:${t}`);
+      if (exists) {
+        activeCount++;
+      } else {
+        await redis.sRem(setKey, t);
+      }
+    }
+    if (activeCount >= MAX_LOGINS_PER_CLIENT) {
+      return res.status(403).json({
+        success: false,
+        message: `Maksimal ${MAX_LOGINS_PER_CLIENT} user dapat login untuk client ini`,
+      });
+    }
+  } catch (err) {
+    console.error('[AUTH] Gagal memeriksa limit login:', err.message);
+  }
   // Generate JWT token
   const payload = {
     client_id: client.client_id,
@@ -57,6 +83,13 @@ router.post("/login", async (req, res) => {
   const token = jwt.sign(payload, process.env.JWT_SECRET || "secretkey", {
     expiresIn: "2h",
   });
+  try {
+    const setKey = `login:${client_id}`;
+    await redis.sAdd(setKey, token);
+    await redis.set(`login_token:${token}`, client_id, { EX: 2 * 60 * 60 });
+  } catch (err) {
+    console.error('[AUTH] Gagal menyimpan token login:', err.message);
+  }
   // Kembalikan token dan data client
   return res.json({ success: true, token, client: payload });
 });
