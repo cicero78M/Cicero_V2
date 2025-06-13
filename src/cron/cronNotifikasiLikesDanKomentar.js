@@ -1,3 +1,4 @@
+import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 import { pool } from "../config/db.js";
@@ -128,3 +129,16 @@ export async function cronNotifikasiAbsenLikesKomentar() {
   }
   console.log("[CRON] Notifikasi absen likes/komentar selesai!");
 }
+
+// Jalankan setiap jam 12:00, 16:00, dan 19:00 WIB
+cron.schedule(
+  "0 12,16,19 * * *",
+  () =>
+    cronNotifikasiAbsenLikesKomentar().catch((err) =>
+      console.error(
+        `[CRON] Error notifikasi likes/komentar: ${err.message}`
+      )
+    ),
+  { timezone: "Asia/Jakarta" }
+);
+
