@@ -50,6 +50,8 @@ import {
   setMenuTimeout,
   waBindSessions,
   setBindTimeout,
+  operatorOptionSessions,
+  setOperatorOptionTimeout,
   setSession,
   getSession,
   clearSession,
@@ -163,6 +165,44 @@ waClient.on("message", async (msg) => {
       chatId,
       "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
     );
+    return;
+  }
+
+  // ===== Pilihan awal untuk nomor operator =====
+  if (operatorOptionSessions[chatId]) {
+    if (/^1$/.test(text.trim())) {
+      delete operatorOptionSessions[chatId];
+      setSession(chatId, { menu: "oprrequest", step: "main" });
+      await oprRequestHandlers.main(
+        getSession(chatId),
+        chatId,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        waClient,
+        pool,
+        userModel
+      );
+      return;
+    }
+    if (/^2$/.test(text.trim())) {
+      delete operatorOptionSessions[chatId];
+      const pengirim = chatId.replace(/[^0-9]/g, "");
+      const userByWA = await userModel.findUserByWhatsApp(pengirim);
+      const salam = getGreeting();
+      if (userByWA) {
+        userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
+        setMenuTimeout(chatId);
+        const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+        await waClient.sendMessage(chatId, msg.trim());
+      } else {
+        userMenuContext[chatId] = { step: "inputUserId" };
+        setMenuTimeout(chatId);
+        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.`;
+        await waClient.sendMessage(chatId, msg.trim());
+      }
+      return;
+    }
+    await waClient.sendMessage(chatId, "Balas *1* untuk Menu Operator atau *2* untuk perubahan data username.");
+    setOperatorOptionTimeout(chatId);
     return;
   }
 
@@ -1460,6 +1500,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   knownUserSet.add(userWaNum);
 
   let clientInfoText = "";
+  let operatorRow = null;
   try {
     const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
     const waId = userWaNum.startsWith("62")
@@ -1467,33 +1508,48 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       : "62" + userWaNum.replace(/^0/, "");
     const res = await pool.query(q, [waId]);
     if (res.rows && res.rows[0]) {
-      const row = res.rows[0];
-      const waOperator = row.client_operator.replace(/\D/g, "");
+      operatorRow = res.rows[0];
+      const waOperator = operatorRow.client_operator.replace(/\D/g, "");
       clientInfoText =
         `\n\nHubungi operator Anda:\n` +
-        `*${row.nama || row.client_id}* (WA: https://wa.me/${waOperator})`;
+        `*${operatorRow.nama || operatorRow.client_id}* (WA: https://wa.me/${waOperator})`;
     }
   } catch (e) {
     clientInfoText = "";
   }
 
   if (isFirstTime) {
-  const pengirim = chatId.replace(/[^0-9]/g, "");
-  const userByWA = await userModel.findUserByWhatsApp(pengirim);
-  const salam = getGreeting();
-  if (userByWA) {
-    userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-    setMenuTimeout(chatId);
-    const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
-    await waClient.sendMessage(chatId, msg.trim());
-  } else {
-    userMenuContext[chatId] = { step: "inputUserId" };
-    setMenuTimeout(chatId);
-    const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.` + clientInfoText;
-    await waClient.sendMessage(chatId, msg.trim());
+    if (operatorRow) {
+      operatorOptionSessions[chatId] = {};
+      setOperatorOptionTimeout(chatId);
+      const salam = getGreeting();
+      await waClient.sendMessage(
+        chatId,
+        `${salam}! Nomor ini terdaftar sebagai *operator* untuk client *${
+          operatorRow.nama || operatorRow.client_id
+        }*.` +
+          "\n1️⃣ Menu Operator" +
+          "\n2️⃣ Perubahan Data Username" +
+          "\nBalas angka *1* atau *2*."
+      );
+      return;
+    }
+    const pengirim = chatId.replace(/[^0-9]/g, "");
+    const userByWA = await userModel.findUserByWhatsApp(pengirim);
+    const salam = getGreeting();
+    if (userByWA) {
+      userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
+      setMenuTimeout(chatId);
+      const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+      await waClient.sendMessage(chatId, msg.trim());
+    } else {
+      userMenuContext[chatId] = { step: "inputUserId" };
+      setMenuTimeout(chatId);
+      const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.` + clientInfoText;
+      await waClient.sendMessage(chatId, msg.trim());
+    }
+    return;
   }
-  return;
-}
 
   // Proses binding WhatsApp jika nomor belum terdaftar
   const senderWa = chatId.replace(/[^0-9]/g, "");
