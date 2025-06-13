@@ -150,6 +150,12 @@ Cicero_V2-main/
     ```ini
     DATABASE_URL=postgresql://user:pass@host:port/db
     ADMIN_WHATSAPP=628xxxxxx@c.us,628yyyyyy@c.us
+    # Default operator untuk login frontend
+    CLIENT_OPERATOR=628123456789
+    # URL API backend (untuk dashboard/Next.js)
+    NEXT_PUBLIC_API_URL=http://localhost:3000/api
+    NEXT_PUBLIC_ADMIN_WHATSAPP=628xxxxxx@c.us
+    NEXT_PUBLIC_CLIENT_OPERATOR=628123456789
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
     ```
