@@ -142,6 +142,7 @@ export const clientRequestHandlers = {
 5️⃣ Proses TikTok
 6️⃣ Absensi Username Instagram
 7️⃣ Absensi Username TikTok
+8️⃣ Transfer User
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim();
@@ -159,6 +160,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       5: "prosesTiktok_choose",
       6: "absensiUsernameInsta_choose",
       7: "absensiUsernameTiktok_choose",
+      8: "transferUser_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1073,6 +1075,80 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+  },
+
+  // ================== TRANSFER USER FROM FOLDER ==================
+  transferUser_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "transferUser_action";
+  },
+  transferUser_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Migrasi user dari user_data/${client_id}/ ...`
+    );
+    try {
+      const result = await migrateUsersFromFolder(client_id);
+      let report = `*Hasil transfer user dari client ${client_id}:*\n`;
+      result.forEach((r) => {
+        report += `- ${r.file}: ${r.status}${
+          r.error ? " (" + r.error + ")" : ""}\n`;
+      });
+
+      if (result.length > 0 && result.every((r) => r.status === "✅ Sukses")) {
+        report += "\n🎉 Semua user berhasil ditransfer!";
+      }
+      if (result.length === 0) {
+        report += "\n(Tidak ada file user yang ditemukan atau diproses)";
+      }
+
+      await waClient.sendMessage(chatId, report);
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal proses transfer: ${err.message}`
+      );
     }
     session.step = "main";
   },
