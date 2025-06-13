@@ -143,11 +143,12 @@ export const clientRequestHandlers = {
 6️⃣ Absensi Username Instagram
 7️⃣ Absensi Username TikTok
 8️⃣ Transfer User
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ketik *angka* menu, atau *batal* untuk keluar.
+9️⃣ Info Client
+ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim();
 
-    if (!/^[1-8]$/.test(text.trim())) {
+    if (!/^[1-9]$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -161,6 +162,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       6: "absensiUsernameInsta_choose",
       7: "absensiUsernameTiktok_choose",
       8: "transferUser_choose",
+      9: "infoClient_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1149,6 +1151,66 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         chatId,
         `❌ Gagal proses transfer: ${err.message}`
       );
+    }
+    session.step = "main";
+  },
+
+  // ================== INFO CLIENT ==================
+  infoClient_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "infoClient_show";
+  },
+
+  infoClient_show: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    const client = await clientService.findClientById(client_id);
+    if (client) {
+      const statusLine = client.client_status ? "🟢 Aktif" : "🔴 Tidak Aktif";
+      const infoMsg =
+        `*${client.client_id}*\n` +
+        `_${client.nama}_\n` +
+        `${statusLine}\n\n` +
+        formatClientInfo(client);
+      await waClient.sendMessage(chatId, infoMsg.trim());
+    } else {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
     }
     session.step = "main";
   },
