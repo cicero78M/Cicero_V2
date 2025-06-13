@@ -4,8 +4,13 @@ import redis from '../config/redis.js';
 const TTL_SEC = 5 * 60; // 5 minutes
 
 export async function dedupRequest(req, res, next) {
-  // Allow duplicate requests for the root path
-  if (req.path === '/') {
+  // Skip all checks if disabled via env var
+  if (process.env.ALLOW_DUPLICATE_REQUESTS === 'true') {
+    return next();
+  }
+
+  // Allow duplicate requests for the root path or for all GET requests
+  if (req.path === '/' || req.method === 'GET') {
     return next();
   }
   try {
