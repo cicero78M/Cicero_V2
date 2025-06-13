@@ -257,9 +257,12 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (field === "pangkat") {
       const titles = await userModel.getAvailableTitles();
       if (titles && titles.length) {
-        let msgList = sortTitleKeys(titles, titles)
+        const sorted = sortTitleKeys(titles, titles);
+        let msgList = sorted
           .map((t, i) => `${i + 1}. ${t}`)
           .join("\n");
+        // Simpan list pangkat di session agar bisa dipakai saat validasi
+        session.availableTitles = sorted;
         await waClient.sendMessage(chatId, "Daftar pangkat yang dapat dipilih:\n" + msgList);
       }
     }
@@ -313,6 +316,24 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (field === "satfung") field = "divisi";
 
     // Validasi khusus
+    if (field === "title") {
+      const titles = session.availableTitles || (await userModel.getAvailableTitles());
+      const normalizedTitles = titles.map((t) => t.toUpperCase());
+      if (/^\d+$/.test(value)) {
+        const idx = parseInt(value) - 1;
+        if (idx >= 0 && idx < titles.length) {
+          value = titles[idx];
+        } else {
+          const msgList = titles.map((t, i) => `${i + 1}. ${t}`).join("\n");
+          await waClient.sendMessage(chatId, `❌ Pangkat tidak valid! Pilih sesuai daftar:\n${msgList}`);
+          return;
+        }
+      } else if (!normalizedTitles.includes(value.toUpperCase())) {
+        const msgList = titles.map((t, i) => `${i + 1}. ${t}`).join("\n");
+        await waClient.sendMessage(chatId, `❌ Pangkat tidak valid! Pilih sesuai daftar:\n${msgList}`);
+        return;
+      }
+    }
     if (field === "insta") {
       const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
       if (!igMatch) {
@@ -342,6 +363,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       chatId,
       `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
     );
+    delete session.availableTitles;
     session.step = "main";
     await waClient.sendMessage(chatId, menuUtama());
   },
