@@ -203,6 +203,15 @@ export async function getAllExceptionUsers() {
   return rows;
 }
 
+// Ambil user dengan exception per client
+export async function getExceptionUsersByClient(client_id) {
+  const { rows } = await pool.query(
+    'SELECT * FROM "user" WHERE exception = true AND client_id = $1',
+    [client_id]
+  );
+  return rows;
+}
+
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const result = await pool.query('SELECT * FROM "user" WHERE whatsapp = $1', [

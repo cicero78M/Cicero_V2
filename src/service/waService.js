@@ -262,6 +262,7 @@ Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 6️⃣ Absensi Username Instagram
 7️⃣ Absensi Username TikTok
 8️⃣ Transfer User
+9️⃣ Exception Info
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
