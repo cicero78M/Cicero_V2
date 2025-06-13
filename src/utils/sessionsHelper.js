@@ -6,10 +6,12 @@
 
 const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit
 const MENU_TIMEOUT = 2 * 60 * 1000;    // 2 menit
+const BIND_TIMEOUT = 2 * 60 * 1000;    // 2 menit
 
 export const userMenuContext = {};         // { chatId: {step, ...} }
 export const updateUsernameSession = {};   // { chatId: {step, ...} }
 export const knownUserSet = new Set();     // Set of WA number or chatId (untuk first time/fallback)
+export const waBindSessions = {};          // { chatId: {step, ...} }
 const clientRequestSessions = {};          // { chatId: {step, data, ...} }
 
 // =======================
@@ -27,6 +29,16 @@ export function setMenuTimeout(chatId) {
   userMenuContext[chatId].timeout = setTimeout(() => {
     delete userMenuContext[chatId];
   }, MENU_TIMEOUT);
+}
+
+// Timeout untuk proses binding WhatsApp
+export function setBindTimeout(chatId) {
+  if (waBindSessions[chatId]?.timeout) {
+    clearTimeout(waBindSessions[chatId].timeout);
+  }
+  waBindSessions[chatId].timeout = setTimeout(() => {
+    delete waBindSessions[chatId];
+  }, BIND_TIMEOUT);
 }
 
 // =======================
