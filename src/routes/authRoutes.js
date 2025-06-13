@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { pool } from "../config/db.js";
+import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
 
 const router = express.Router();
 
@@ -15,20 +16,37 @@ router.post("/login", async (req, res) => {
         message: "client_id dan client_operator wajib diisi",
       });
   }
-  // Cari client dari DB
+  // Cari client berdasarkan ID saja
   const { rows } = await pool.query(
-    "SELECT * FROM clients WHERE client_id = $1 AND client_operator = $2",
-    [client_id, client_operator]
+    "SELECT * FROM clients WHERE client_id = $1",
+    [client_id]
   );
   const client = rows[0];
   // Jika client tidak ditemukan
   if (!client) {
-    return res
-      .status(401)
-      .json({
-        success: false,
-        message: "Login gagal: client_id/operator salah",
-      });
+    return res.status(401).json({
+      success: false,
+      message: "Login gagal: client_id tidak ditemukan",
+    });
+  }
+
+  // Cek operator yang diberikan: boleh operator asli atau admin
+  const inputId = formatToWhatsAppId(client_operator);
+  const dbOperator = client.client_operator
+    ? formatToWhatsAppId(client.client_operator)
+    : "";
+
+  const isValidOperator =
+    inputId === dbOperator ||
+    client_operator === client.client_operator ||
+    isAdminWhatsApp(inputId) ||
+    isAdminWhatsApp(client_operator);
+
+  if (!isValidOperator) {
+    return res.status(401).json({
+      success: false,
+      message: "Login gagal: client operator tidak valid",
+    });
   }
   // Generate JWT token
   const payload = {

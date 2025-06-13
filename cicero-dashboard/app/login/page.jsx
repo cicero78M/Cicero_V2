@@ -1,12 +1,19 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { login } from "@/utils/api";
 
 export default function LoginPage() {
   const [clientId, setClientId] = useState("");
   const [wa, setWa] = useState(process.env.NEXT_PUBLIC_CLIENT_OPERATOR || "");
+  const [useAdmin, setUseAdmin] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const adminWa = (process.env.NEXT_PUBLIC_ADMIN_WHATSAPP || "").split(",")[0] || "";
+    const defaultOp = process.env.NEXT_PUBLIC_CLIENT_OPERATOR || "";
+    setWa(useAdmin ? adminWa : defaultOp);
+  }, [useAdmin]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +59,15 @@ export default function LoginPage() {
             placeholder={process.env.NEXT_PUBLIC_ADMIN_WHATSAPP}
             required
           />
+        </label>
+        <label className="flex items-center mb-2 text-sm">
+          <input
+            type="checkbox"
+            className="mr-2"
+            checked={useAdmin}
+            onChange={(e) => setUseAdmin(e.target.checked)}
+          />
+          Login sebagai Admin
         </label>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
