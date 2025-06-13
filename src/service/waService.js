@@ -82,7 +82,6 @@ const waClient = new Client({
   puppeteer: { headless: true },
 });
 
-// Track readiness state
 let waReady = false;
 
 // Handle QR code (scan)
