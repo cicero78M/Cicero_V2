@@ -4,6 +4,10 @@ import redis from '../config/redis.js';
 const TTL_SEC = 5 * 60; // 5 minutes
 
 export async function dedupRequest(req, res, next) {
+  // Allow duplicate requests for the root path
+  if (req.path === '/') {
+    return next();
+  }
   try {
     const tokenPart = req.headers.authorization
       ? req.headers.authorization.split(' ')[1]
