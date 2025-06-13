@@ -6,7 +6,11 @@ import {
   absensiKomentarTiktokPerKonten,
 } from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
-import { groupByDivision, sortDivisionKeys } from "../../utils/utilsHelper.js";
+import {
+  groupByDivision,
+  sortDivisionKeys,
+  formatNama,
+} from "../../utils/utilsHelper.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -143,11 +147,12 @@ export const clientRequestHandlers = {
 6️⃣ Absensi Username Instagram
 7️⃣ Absensi Username TikTok
 8️⃣ Transfer User
+9️⃣ Exception Info
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim();
 
-    if (!/^[1-8]$/.test(text.trim())) {
+    if (!/^[1-9]$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -161,6 +166,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       6: "absensiUsernameInsta_choose",
       7: "absensiUsernameTiktok_choose",
       8: "transferUser_choose",
+      9: "exceptionInfo_chooseClient",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1150,6 +1156,72 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         `❌ Gagal proses transfer: ${err.message}`
       );
     }
+    session.step = "main";
+  },
+
+  // ================== EXCEPTION INFO ==================
+  exceptionInfo_chooseClient: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "exceptionInfo_show";
+  },
+  exceptionInfo_show: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    let users = await userModel.getExceptionUsersByClient(client_id);
+    if (!users.length) {
+      await waClient.sendMessage(
+        chatId,
+        `Tidak ada user exception untuk *${client_id}*.`
+      );
+      session.step = "main";
+      return;
+    }
+    let msg = `*Daftar User Exception*\nClient: *${client_id}*\nTotal: ${users.length}\n`;
+    const byDiv = groupByDivision(users);
+    const keys = sortDivisionKeys(Object.keys(byDiv));
+    keys.forEach((div) => {
+      msg += `\n*${div}* (${byDiv[div].length} user):\n`;
+      msg += byDiv[div]
+        .map((u) => `- ${formatNama(u)} (${u.user_id})`)
+        .join("\n");
+      msg += "\n";
+    });
+    await waClient.sendMessage(chatId, msg.trim());
     session.step = "main";
   },
 
