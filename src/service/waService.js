@@ -82,6 +82,7 @@ const waClient = new Client({
   puppeteer: { headless: true },
 });
 
+let waReady = false;
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
@@ -91,6 +92,7 @@ waClient.on("qr", (qr) => {
 
 // Wa Bot siap
 waClient.on("ready", () => {
+  waReady = true;
   console.log("[WA] WhatsApp client is ready!");
 });
 
@@ -1507,8 +1509,13 @@ Jika ingin menggunakan menu manual, copy & paste perintah di atas sesuai kebutuh
 // =======================
 // INISIALISASI WA CLIENT
 // =======================
-waClient.initialize();
+try {
+  waClient.initialize();
+} catch (err) {
+  console.error("[WA] Initialization failed:", err.message);
+}
 
 export default waClient;
+export { waReady };
 
 // ======================= end of file ======================

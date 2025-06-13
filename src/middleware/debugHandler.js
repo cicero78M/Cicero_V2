@@ -1,6 +1,6 @@
 // src/middleware/debugHandler.js
 
-import waClient from "../service/waService.js";
+import waClient, { waReady } from "../service/waService.js";
 
 // Helper: stringifier aman untuk circular object
 function safeStringify(obj) {
@@ -45,8 +45,10 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
   if (client_id) prefix += `[${client_id}]`;
 
   const fullMsg = `${prefix} ${safeMsg}`;
-  for (const wa of adminWA) {
-    waClient.sendMessage(wa, fullMsg).catch(() => {});
+  if (waReady) {
+    for (const wa of adminWA) {
+      waClient.sendMessage(wa, fullMsg).catch(() => {});
+    }
   }
   console.log(fullMsg);
 }
