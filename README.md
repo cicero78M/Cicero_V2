@@ -160,6 +160,10 @@ Cicero_V2-main/
     REDIS_URL=redis://localhost:6379
     ```
 
+    Untuk login dashboard, Anda dapat menggunakan nomor operator masing-masing
+    atau salah satu nomor pada `ADMIN_WHATSAPP`. Cukup isi `client_id` yang ada
+    dan masukkan nomor admin tersebut pada kolom WhatsApp.
+
 3. **Install Redis:**
     ```bash
     sudo apt-get install redis-server
