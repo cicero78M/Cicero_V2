@@ -11,6 +11,7 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
+import { getAdminWAIds } from "../../utils/waHelper.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -138,7 +139,7 @@ export const clientRequestHandlers = {
     handleFetchKomentarTiktokBatch
   ) => {
     let msg = `
-┏━━━ *MENU CLIENT CICERO* ━━━
+  ┏━━━ *MENU CLIENT CICERO* ━━━
 1️⃣ Tambah client baru
 2️⃣ Kelola client (update/hapus/info)
 3️⃣ Kelola user (update/exception/status)
@@ -148,11 +149,12 @@ export const clientRequestHandlers = {
 7️⃣ Absensi Username TikTok
 8️⃣ Transfer User
 9️⃣ Exception Info
+🔟 Hapus WA Admin
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ketik *angka* menu, atau *batal* untuk keluar.
-`.trim();
+  Ketik *angka* menu, atau *batal* untuk keluar.
+  `.trim();
 
-    if (!/^[1-9]$/.test(text.trim())) {
+    if (!/^([1-9]|10)$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -167,6 +169,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       7: "absensiUsernameTiktok_choose",
       8: "transferUser_choose",
       9: "exceptionInfo_chooseClient",
+      10: "hapusWAAdmin_confirm",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1222,6 +1225,42 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       msg += "\n";
     });
     await waClient.sendMessage(chatId, msg.trim());
+    session.step = "main";
+  },
+
+  // ================== HAPUS WA ADMIN ==================
+  hapusWAAdmin_confirm: async (session, chatId, text, waClient) => {
+    session.step = "hapusWAAdmin_execute";
+    await waClient.sendMessage(
+      chatId,
+      "⚠️ Semua user dengan nomor WhatsApp yang sama seperti ADMIN_WHATSAPP akan dihapus field WhatsApp-nya.\nBalas *ya* untuk melanjutkan atau *tidak* untuk membatalkan."
+    );
+  },
+  hapusWAAdmin_execute: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    if (text.trim().toLowerCase() !== "ya") {
+      await waClient.sendMessage(chatId, "Dibatalkan.");
+      session.step = "main";
+      return;
+    }
+    try {
+      const updated = await userModel.clearUsersWithAdminWA(getAdminWAIds());
+      await waClient.sendMessage(
+        chatId,
+        `✅ WhatsApp dikosongkan untuk ${updated.length} user.`
+      );
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menghapus WA admin: ${err.message}`
+      );
+    }
     session.step = "main";
   },
 

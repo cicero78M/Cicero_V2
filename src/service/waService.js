@@ -293,6 +293,7 @@ Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
 7️⃣ Absensi Username TikTok
 8️⃣ Transfer User
 9️⃣ Exception Info
+🔟 Hapus WA Admin
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()

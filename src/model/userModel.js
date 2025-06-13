@@ -310,6 +310,16 @@ export async function createUser(userData) {
   return res.rows[0];
 }
 
+// Hapus field WhatsApp untuk semua user yang nomornya terdapat pada adminWAList
+export async function clearUsersWithAdminWA(adminWAList) {
+  if (!adminWAList || adminWAList.length === 0) return [];
+  const { rows } = await pool.query(
+    "UPDATE \"user\" SET whatsapp = '' WHERE whatsapp = ANY($1::text[]) RETURNING user_id",
+    [adminWAList]
+  );
+  return rows;
+}
+
 // --- Alias for backward compatibility ---
 export const findUsersByClientId = getUsersByClient;
 export const findUserByWA = findUserByWhatsApp;
