@@ -82,6 +82,7 @@ const waClient = new Client({
   puppeteer: { headless: true },
 });
 
+
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
   qrcode.generate(qr, { small: true });
