@@ -48,6 +48,8 @@ import {
   updateUsernameSession,
   knownUserSet,
   setMenuTimeout,
+  waBindSessions,
+  setBindTimeout,
   setSession,
   getSession,
   clearSession,
@@ -1493,6 +1495,76 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   }
   return;
 }
+
+  // Proses binding WhatsApp jika nomor belum terdaftar
+  const senderWa = chatId.replace(/[^0-9]/g, "");
+  const userByWAExist = await userModel.findUserByWhatsApp(senderWa);
+
+  if (!userByWAExist) {
+    if (waBindSessions[chatId]) {
+      const session = waBindSessions[chatId];
+      if (session.step === "ask_nrp") {
+        if (text.trim().toLowerCase() === "batal") {
+          delete waBindSessions[chatId];
+          await waClient.sendMessage(chatId, "Proses dibatalkan. Silakan masukkan NRP/NIP Anda untuk memulai.");
+          waBindSessions[chatId] = { step: "ask_nrp" };
+          setBindTimeout(chatId);
+          return;
+        }
+        const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
+        if (!nrp) {
+          await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Coba lagi atau ketik *batal*.");
+          return;
+        }
+        const user = await userModel.findUserById(nrp);
+        if (!user) {
+          await waClient.sendMessage(chatId, `NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau ketik *batal*.`);
+          return;
+        }
+        session.step = "confirm";
+        session.user_id = user.user_id;
+        setBindTimeout(chatId);
+        await waClient.sendMessage(
+          chatId,
+          `Apakah Anda ingin menghubungkan nomor WhatsApp ini dengan NRP/NIP *${nrp}*?\n` +
+            "Satu username hanya bisa menggunakan satu akun WhatsApp.\n" +
+            "Balas *ya* untuk menyetujui atau *tidak* untuk membatalkan."
+        );
+        return;
+      }
+      if (session.step === "confirm") {
+        if (text.trim().toLowerCase() === "ya") {
+          const nrp = session.user_id;
+          await userModel.updateUserField(nrp, "whatsapp", senderWa);
+          const user = await userModel.findUserById(nrp);
+          await waClient.sendMessage(
+            chatId,
+            `✅ Nomor WhatsApp berhasil dihubungkan ke NRP/NIP *${nrp}*.\n` +
+              `${formatUserSummary(user)}`
+          );
+          delete waBindSessions[chatId];
+          return;
+        }
+        if (text.trim().toLowerCase() === "tidak") {
+          delete waBindSessions[chatId];
+          await waClient.sendMessage(chatId, "Baik, proses dibatalkan. Silakan masukkan NRP/NIP Anda untuk melanjutkan.");
+          waBindSessions[chatId] = { step: "ask_nrp" };
+          setBindTimeout(chatId);
+          return;
+        }
+        await waClient.sendMessage(chatId, "Balas *ya* untuk menyetujui, atau *tidak* untuk membatalkan.");
+        return;
+      }
+    } else {
+      waBindSessions[chatId] = { step: "ask_nrp" };
+      setBindTimeout(chatId);
+      await waClient.sendMessage(
+        chatId,
+        "🤖 Maaf, perintah yang Anda kirim belum dikenali. Masukkan NRP/NIP Anda untuk melanjutkan proses binding akun:"
+      );
+      return;
+    }
+  }
 
   // Untuk user lama (pesan tidak dikenal)
   await waClient.sendMessage(
