@@ -150,11 +150,12 @@ export const clientRequestHandlers = {
 8️⃣ Transfer User
 9️⃣ Exception Info
 🔟 Hapus WA Admin
+1️⃣1️⃣ Hapus WA User
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
 
-    if (!/^([1-9]|10)$/.test(text.trim())) {
+    if (!/^([1-9]|10|11)$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -170,6 +171,7 @@ export const clientRequestHandlers = {
       8: "transferUser_choose",
       9: "exceptionInfo_chooseClient",
       10: "hapusWAAdmin_confirm",
+      11: "hapusWAUser_start",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1225,6 +1227,50 @@ export const clientRequestHandlers = {
       msg += "\n";
     });
     await waClient.sendMessage(chatId, msg.trim());
+    session.step = "main";
+  },
+
+  // ================== HAPUS WA USER ==================
+  hapusWAUser_start: async (session, chatId, text, waClient) => {
+    session.step = "hapusWAUser_nrp";
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan *user_id* / NRP/NIP yang akan dihapus WhatsApp-nya:"
+    );
+  },
+  hapusWAUser_nrp: async (session, chatId, text, waClient) => {
+    session.target_user_id = text.trim();
+    session.step = "hapusWAUser_confirm";
+    await waClient.sendMessage(
+      chatId,
+      `Konfirmasi hapus WhatsApp untuk user *${session.target_user_id}*? Balas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
+    );
+  },
+  hapusWAUser_confirm: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    if (text.trim().toLowerCase() !== "ya") {
+      await waClient.sendMessage(chatId, "Dibatalkan.");
+      session.step = "main";
+      return;
+    }
+    try {
+      await userModel.updateUserField(session.target_user_id, "whatsapp", "");
+      await waClient.sendMessage(
+        chatId,
+        `✅ WhatsApp untuk user ${session.target_user_id} berhasil dihapus.`
+      );
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menghapus WhatsApp user: ${err.message}`
+      );
+    }
     session.step = "main";
   },
 
