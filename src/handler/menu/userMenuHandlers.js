@@ -174,7 +174,15 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       if (!user) {
         await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`);
       } else {
-        await waClient.sendMessage(chatId, formatUserReport(user));
+        session.step = "confirmBindUser";
+        session.bindUserId = user_id;
+        await waClient.sendMessage(
+          chatId,
+          `NRP/NIP *${user_id}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
+            "Apakah Anda ingin menghubungkannya dengan akun tersebut?\n" +
+            "Balas *ya* untuk menghubungkan atau *tidak* untuk membatalkan."
+        );
+        return;
       }
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
@@ -183,11 +191,73 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     await waClient.sendMessage(chatId, menuUtama());
   },
 
+  confirmBindUser: async (session, chatId, text, waClient, pool, userModel) => {
+    const answer = text.trim().toLowerCase();
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    if (answer === "ya") {
+      const user_id = session.bindUserId;
+      await userModel.updateUserField(user_id, "whatsapp", waNum);
+      const user = await userModel.findUserById(user_id);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Nomor WhatsApp telah dihubungkan ke NRP/NIP *${user_id}*. Berikut datanya:\n` +
+          formatUserReport(user)
+      );
+      session.step = "main";
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    if (answer === "tidak") {
+      await waClient.sendMessage(chatId, "Baik, nomor tidak dihubungkan.");
+      session.step = "main";
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
+  },
+
   // --- Update User ID manual
   updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
-    session.updateUserId = text.replace(/[^0-9a-zA-Z]/g, "");
-    session.step = "updateAskField";
-    await waClient.sendMessage(chatId, formatFieldList());
+    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
+    if (!nrp) {
+      await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Coba lagi atau ketik *batal*.");
+      return;
+    }
+    const user = await userModel.findUserById(nrp);
+    if (!user) {
+      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      session.step = "main";
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    session.updateUserId = nrp;
+    session.step = "confirmBindUpdate";
+    await waClient.sendMessage(
+      chatId,
+      `NRP/NIP *${nrp}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
+        "Apakah Anda ingin menghubungkannya dan melanjutkan update?\n" +
+        "Balas *ya* untuk menghubungkan atau *tidak* untuk membatalkan."
+    );
+  },
+
+  confirmBindUpdate: async (session, chatId, text, waClient, pool, userModel) => {
+    const ans = text.trim().toLowerCase();
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    if (ans === "ya") {
+      const nrp = session.updateUserId;
+      await userModel.updateUserField(nrp, "whatsapp", waNum);
+      await waClient.sendMessage(chatId, `✅ Nomor berhasil dihubungkan ke NRP/NIP *${nrp}*.`);
+      session.step = "updateAskField";
+      await waClient.sendMessage(chatId, formatFieldList());
+      return;
+    }
+    if (ans === "tidak") {
+      await waClient.sendMessage(chatId, "Proses update dibatalkan.");
+      session.step = "main";
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
   },
 
   // --- Pilih field update
