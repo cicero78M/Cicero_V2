@@ -77,10 +77,18 @@ dotenv.config();
 // =======================
 
 // Inisialisasi WhatsApp client dengan LocalAuth
-const waClient = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: { headless: true },
+export const waClient = new Client({
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: true
+
+    },
+    authStrategy: new LocalAuth({
+        clientId: process.env.APP_SESSION_NAME,
+    }),
+    
 });
+
 
 let waReady = false;
 
