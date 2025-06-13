@@ -269,11 +269,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┏━━━━━━━ *MENU UTAMA USER* ━━━━━━━┓
   1️⃣  Lihat Data Saya
   2️⃣  Update Data Saya
-  3️⃣  Daftar Perintah Manual
-  4️⃣  Hubungi Operator
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
+Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
 `.trim()
     );
     return;

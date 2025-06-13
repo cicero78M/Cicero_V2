@@ -27,11 +27,9 @@ function menuUtama() {
 ┏━━━━━━━ *MENU UTAMA USER* ━━━━━━━┓
   1️⃣  Lihat Data Saya
   2️⃣  Update Data Saya
-  3️⃣  Daftar Perintah Manual
-  4️⃣  Hubungi Operator
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
+Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
 `.trim();
 }
 
@@ -50,10 +48,7 @@ Balas angka field di atas atau *batal* untuk keluar.
 `.trim();
 }
 
-function formatOperatorContact(nama, wa) {
-  const nomor = wa.replace(/\D/g, "");
-  return `Hubungi Operator: *${nama}* (WA: https://wa.me/${nomor})`;
-}
+
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
@@ -120,33 +115,6 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       }
     }
 
-    // === CASE 3: Daftar Perintah Manual ===
-    if (text === "3" || text.toLowerCase().includes("perintah")) {
-      await waClient.sendMessage(
-        chatId,
-        `🛠️ *Daftar Perintah Manual:*\n\n- mydata#NRP/NIP\n- updateuser#NRP/NIP#field#value\nContoh: updateuser#75070206#pangkat#AKP\n\nKetik *batal* untuk keluar dari menu.`
-      );
-      return;
-    }
-
-    // === CASE 4: Hubungi Operator ===
-    if (text === "4" || text.toLowerCase().includes("operator")) {
-      let operatorText = "Operator tidak ditemukan di database.";
-      try {
-        const userWaNum = chatId.replace(/[^0-9]/g, "");
-        const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
-        const waId = userWaNum.startsWith("62")
-          ? userWaNum
-          : "62" + userWaNum.replace(/^0/, "");
-        const res = await pool.query(q, [waId]);
-        if (res.rows && res.rows[0]) {
-          const op = res.rows[0];
-          operatorText = formatOperatorContact(op.nama || op.client_id, op.client_operator);
-        }
-      } catch (e) {}
-      await waClient.sendMessage(chatId, operatorText);
-      return;
-    }
 
     await waClient.sendMessage(chatId, menuUtama());
   },
