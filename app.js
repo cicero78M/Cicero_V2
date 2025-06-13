@@ -6,6 +6,7 @@ import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';        // <--- tambahkan
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js'; // <--- tambahkan
+import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
 
 // Load environment variables dulu
 dotenv.config();
@@ -29,6 +30,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(dedupRequest);
 
 // ===== ROUTE LOGIN (TANPA TOKEN) =====
 app.use('/api/auth', authRoutes);
