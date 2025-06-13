@@ -58,6 +58,8 @@ import {
   groupByDivision,
   sortDivisionKeys,
   normalizeKomentarArr,
+  getGreeting,
+  formatUserData,
 } from "../utils/utilsHelper.js";
 import {
   isAdminWhatsApp,
@@ -71,6 +73,23 @@ import {
 } from "../utils/constants.js";
 
 dotenv.config();
+
+// Helper ringkas untuk menampilkan data user
+function formatUserSummary(user) {
+  return (
+    "👤 *Identitas Anda*\n" +
+    `*Nama*     : ${user.nama || "-"}\n` +
+    `*Pangkat*  : ${user.title || "-"}\n` +
+    `*NRP/NIP*  : ${user.user_id || "-"}\n` +
+    `*Satfung*  : ${user.divisi || "-"}\n` +
+    `*Jabatan*  : ${user.jabatan || "-"}\n` +
+    `*Instagram*: ${user.insta ? "@" + user.insta.replace(/^@/, "") : "-"}\n` +
+    `*TikTok*   : ${user.tiktok || "-"}\n` +
+    `*Status*   : ${
+      user.status === true || user.status === "true" ? "🟢 AKTIF" : "🔴 NONAKTIF"
+    }`
+  ).trim();
+}
 
 // =======================
 // INISIALISASI CLIENT WA
@@ -1458,55 +1477,22 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   }
 
   if (isFirstTime) {
-    const menu = `
-📝 *Menu User Cicero System*
-
-Balas *angka pilihan* untuk menggunakan menu interaktif:
-
-1️⃣ *Lihat data saya*  
-2️⃣ *Update data saya*  
-3️⃣ *Daftar perintah manual (userrequest manual)*  
-4️⃣ *Kontak operator*
-
-➖➖➖
-*Ketik* *userrequest* *untuk membuka menu ini lagi*  
-*Ketik* *batal* *untuk keluar dari menu*
-
-${clientInfoText || ""}
-
---------------------
-*Daftar Perintah Manual Lengkap:*
-- *mydata#NRP/NIP*  
-  > Melihat data user (hanya dapat dilakukan oleh WA yang sudah terdaftar pada user tsb)
-  Contoh:  
-  \`mydata#75070206\`
-
-- *updateuser#NRP/NIP#field#value*  
-  > Mengubah data user (nama, pangkat, satfung, jabatan, insta, tiktok, whatsapp).  
-  Contoh:  
-  \`updateuser#75070206#pangkat#AKP\`  
-  \`updateuser#75070206#satfung#BAGOPS\`  
-  \`updateuser#75070206#jabatan#KABAGOPS\`  
-  \`updateuser#75070206#insta#https://instagram.com/edisuyono\`  
-  \`updateuser#75070206#tiktok#https://tiktok.com/@edisuyono\`  
-  \`updateuser#75070206#whatsapp#6281234567890\`
-
-  _Catatan:_
-  - Field pangkat & satfung hanya boleh dipilih dari daftar valid.
-  - Nomor WhatsApp hanya dapat digunakan satu user.
-  - Instagram & TikTok, masukkan link profil (sistem ambil otomatis username).
-  - Semua update hanya bisa dilakukan oleh user dengan nomor WhatsApp terdaftar. Jika kosong, akan otomatis terhubung ke nomor pengirim pertama.
-
-- *userrequest*  
-  > Membuka menu interaktif ini kapan saja.
-
---------------------
-Jika ingin menggunakan menu manual, copy & paste perintah di atas sesuai kebutuhan.
-
-`.trim();
-    await waClient.sendMessage(chatId, menu);
-    return;
+  const pengirim = chatId.replace(/[^0-9]/g, "");
+  const userByWA = await userModel.findUserByWhatsApp(pengirim);
+  const salam = getGreeting();
+  if (userByWA) {
+    userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
+    setMenuTimeout(chatId);
+    const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+    await waClient.sendMessage(chatId, msg.trim());
+  } else {
+    userMenuContext[chatId] = { step: "inputUserId" };
+    setMenuTimeout(chatId);
+    const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.` + clientInfoText;
+    await waClient.sendMessage(chatId, msg.trim());
   }
+  return;
+}
 
   // Untuk user lama (pesan tidak dikenal)
   await waClient.sendMessage(
