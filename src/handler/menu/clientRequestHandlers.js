@@ -147,7 +147,7 @@ export const clientRequestHandlers = {
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim();
 
-    if (!/^[1-9]$/.test(text.trim())) {
+    if (!/^[1-8]$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
