@@ -12,6 +12,7 @@ export const userMenuContext = {};         // { chatId: {step, ...} }
 export const updateUsernameSession = {};   // { chatId: {step, ...} }
 export const knownUserSet = new Set();     // Set of WA number or chatId (untuk first time/fallback)
 export const waBindSessions = {};          // { chatId: {step, ...} }
+export const operatorOptionSessions = {};  // { chatId: {timeout} }
 const clientRequestSessions = {};          // { chatId: {step, data, ...} }
 
 // =======================
@@ -39,6 +40,16 @@ export function setBindTimeout(chatId) {
   waBindSessions[chatId].timeout = setTimeout(() => {
     delete waBindSessions[chatId];
   }, BIND_TIMEOUT);
+}
+
+// Timeout untuk pilihan operator/menu user
+export function setOperatorOptionTimeout(chatId) {
+  if (operatorOptionSessions[chatId]?.timeout) {
+    clearTimeout(operatorOptionSessions[chatId].timeout);
+  }
+  operatorOptionSessions[chatId].timeout = setTimeout(() => {
+    delete operatorOptionSessions[chatId];
+  }, MENU_TIMEOUT);
 }
 
 // =======================
