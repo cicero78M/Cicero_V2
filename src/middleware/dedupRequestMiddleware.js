@@ -5,8 +5,15 @@ const TTL_SEC = 5 * 60; // 5 minutes
 
 export async function dedupRequest(req, res, next) {
   try {
+    const tokenPart = req.headers.authorization
+      ? req.headers.authorization.split(' ')[1]
+      : '';
     const userPart =
-      req.user?.client_id || req.headers['x-client-id'] || req.ip || '';
+      tokenPart ||
+      req.user?.client_id ||
+      req.headers['x-client-id'] ||
+      req.ip ||
+      '';
     const hash = crypto
       .createHash('sha1')
       .update(
