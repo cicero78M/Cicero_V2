@@ -52,6 +52,8 @@ import {
   setBindTimeout,
   operatorOptionSessions,
   setOperatorOptionTimeout,
+  adminOptionSessions,
+  setAdminOptionTimeout,
   setSession,
   getSession,
   clearSession,
@@ -203,6 +205,53 @@ waClient.on("message", async (msg) => {
     }
     await waClient.sendMessage(chatId, "Balas *1* untuk Menu Operator atau *2* untuk perubahan data username.");
     setOperatorOptionTimeout(chatId);
+    return;
+  }
+
+  // ===== Pilihan awal untuk nomor admin =====
+  if (adminOptionSessions[chatId]) {
+    if (/^1$/.test(text.trim())) {
+      delete adminOptionSessions[chatId];
+      setSession(chatId, { menu: "clientrequest", step: "main" });
+      await waClient.sendMessage(
+        chatId,
+        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (/^2$/.test(text.trim())) {
+      delete adminOptionSessions[chatId];
+      setSession(chatId, { menu: "oprrequest", step: "main" });
+      await oprRequestHandlers.main(
+        getSession(chatId),
+        chatId,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        waClient,
+        pool,
+        userModel
+      );
+      return;
+    }
+    if (/^3$/.test(text.trim())) {
+      delete adminOptionSessions[chatId];
+      const pengirim = chatId.replace(/[^0-9]/g, "");
+      const userByWA = await userModel.findUserByWhatsApp(pengirim);
+      const salam = getGreeting();
+      if (userByWA) {
+        userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
+        setMenuTimeout(chatId);
+        const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+        await waClient.sendMessage(chatId, msg.trim());
+      } else {
+        userMenuContext[chatId] = { step: "inputUserId" };
+        setMenuTimeout(chatId);
+        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.`;
+        await waClient.sendMessage(chatId, msg.trim());
+      }
+      return;
+    }
+    await waClient.sendMessage(chatId, "Balas *1* untuk Menu Client, *2* untuk Menu Operator, atau *3* untuk perubahan data username.");
+    setAdminOptionTimeout(chatId);
     return;
   }
 
@@ -1519,6 +1568,20 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   }
 
   if (isFirstTime) {
+    if (isAdmin) {
+      adminOptionSessions[chatId] = {};
+      setAdminOptionTimeout(chatId);
+      const salam = getGreeting();
+      await waClient.sendMessage(
+        chatId,
+        `${salam}! Nomor ini terdaftar sebagai *admin*.` +
+          "\n1️⃣ Menu Client" +
+          "\n2️⃣ Menu Operator" +
+          "\n3️⃣ Perubahan Data Username" +
+          "\nBalas angka *1*, *2*, atau *3*."
+      );
+      return;
+    }
     if (operatorRow) {
       operatorOptionSessions[chatId] = {};
       setOperatorOptionTimeout(chatId);

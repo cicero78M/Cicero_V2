@@ -13,6 +13,7 @@ export const updateUsernameSession = {};   // { chatId: {step, ...} }
 export const knownUserSet = new Set();     // Set of WA number or chatId (untuk first time/fallback)
 export const waBindSessions = {};          // { chatId: {step, ...} }
 export const operatorOptionSessions = {};  // { chatId: {timeout} }
+export const adminOptionSessions = {};     // { chatId: {timeout} }
 const clientRequestSessions = {};          // { chatId: {step, data, ...} }
 
 // =======================
@@ -49,6 +50,16 @@ export function setOperatorOptionTimeout(chatId) {
   }
   operatorOptionSessions[chatId].timeout = setTimeout(() => {
     delete operatorOptionSessions[chatId];
+  }, MENU_TIMEOUT);
+}
+
+// Timeout untuk pilihan admin
+export function setAdminOptionTimeout(chatId) {
+  if (adminOptionSessions[chatId]?.timeout) {
+    clearTimeout(adminOptionSessions[chatId].timeout);
+  }
+  adminOptionSessions[chatId].timeout = setTimeout(() => {
+    delete adminOptionSessions[chatId];
   }, MENU_TIMEOUT);
 }
 
