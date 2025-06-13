@@ -279,9 +279,15 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       }
     }
     session.step = "updateAskValue";
+    let extra = "";
+    if (field === "pangkat") extra = " (pilih dari daftar pangkat)";
+    else if (field === "satfung") extra = " (pilih dari daftar satfung)";
+    else if (field === "insta") extra = " (masukkan link profil Instagram)";
+    else if (field === "tiktok") extra = " (masukkan link profil TikTok)";
+
     await waClient.sendMessage(
       chatId,
-      `Ketik nilai baru untuk field *${allowedFields[idx].label}* (pilih dari daftar jika pangkat/satfung):`
+      `Ketik nilai baru untuk field *${allowedFields[idx].label}*${extra}:`
     );
   },
 
