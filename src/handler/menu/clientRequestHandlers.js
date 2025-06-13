@@ -11,7 +11,7 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
-import { getAdminWAIds } from "../../utils/waHelper.js";
+import { getAdminWAIds, getAdminWANumbers } from "../../utils/waHelper.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -1296,7 +1296,12 @@ export const clientRequestHandlers = {
       return;
     }
     try {
-      const updated = await userModel.clearUsersWithAdminWA(getAdminWAIds());
+      const numbers0 = getAdminWANumbers();
+      const numbers62 = numbers0.map((n) =>
+        n.startsWith("0") ? "62" + n.slice(1) : n
+      );
+      const targets = Array.from(new Set([...numbers0, ...numbers62]));
+      const updated = await userModel.clearUsersWithAdminWA(targets);
       await waClient.sendMessage(
         chatId,
         `✅ WhatsApp dikosongkan untuk ${updated.length} user.`
