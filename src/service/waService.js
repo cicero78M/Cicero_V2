@@ -258,6 +258,7 @@ Silakan balas angka *1-4* atau ketik *batal* untuk keluar.
 5️⃣ Proses TikTok
 6️⃣ Absensi Username Instagram
 7️⃣ Absensi Username TikTok
+8️⃣ Transfer User
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
