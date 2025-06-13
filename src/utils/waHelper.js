@@ -88,3 +88,14 @@ export function getAdminWAIds() {
     n.endsWith("@c.us") ? n : n.replace(/[^0-9]/g, "") + "@c.us"
   );
 }
+
+// Normalisasi nomor admin ke awalan 0 (tanpa @c.us)
+export function getAdminWANumbers() {
+  const numbers = ADMIN_WHATSAPP.map((n) => {
+    let num = String(n).replace(/[^0-9]/g, "");
+    if (num.startsWith("62")) num = "0" + num.slice(2);
+    if (!num.startsWith("0")) num = "0" + num;
+    return num;
+  });
+  return Array.from(new Set(numbers));
+}
