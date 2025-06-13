@@ -269,10 +269,13 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (field === "satfung") {
       const satfung = await userModel.getAvailableSatfung();
       if (satfung && satfung.length) {
-        let msgList = sortDivisionKeys(satfung)
-          .map((s, i) => `${i + 1}. ${s}`)
-          .join("\n");
-        await waClient.sendMessage(chatId, "Daftar satfung yang dapat dipilih:\n" + msgList);
+        const sorted = sortDivisionKeys(satfung);
+        let msgList = sorted.map((s, i) => `${i + 1}. ${s}`).join("\n");
+        session.availableSatfung = sorted;
+        await waClient.sendMessage(
+          chatId,
+          "Daftar satfung yang dapat dipilih:\n" + msgList
+        );
       }
     }
     session.step = "updateAskValue";
@@ -334,6 +337,26 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         return;
       }
     }
+    if (field === "divisi") {
+      const satfungList = session.availableSatfung || (await userModel.getAvailableSatfung());
+      const normalizedSatfung = satfungList.map((s) => s.toUpperCase());
+      if (/^\d+$/.test(value)) {
+        const msgList = satfungList.map((s, i) => `${i + 1}. ${s}`).join("\n");
+        await waClient.sendMessage(
+          chatId,
+          `❌ Satfung harus diisi sesuai daftar, gunakan nama pada daftar:\n${msgList}`
+        );
+        return;
+      }
+      if (!normalizedSatfung.includes(value.toUpperCase())) {
+        const msgList = satfungList.map((s, i) => `${i + 1}. ${s}`).join("\n");
+        await waClient.sendMessage(
+          chatId,
+          `❌ Satfung tidak valid! Pilih sesuai daftar:\n${msgList}`
+        );
+        return;
+      }
+    }
     if (field === "insta") {
       const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
       if (!igMatch) {
@@ -364,6 +387,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP/NIP ${user_id} berhasil diupdate menjadi *${value}*.`
     );
     delete session.availableTitles;
+    delete session.availableSatfung;
     session.step = "main";
     await waClient.sendMessage(chatId, menuUtama());
   },
