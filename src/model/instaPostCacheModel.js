@@ -1,20 +1,15 @@
-import { pool } from '../config/db.js';
+import redis from '../config/redis.js';
 
 export async function insertCache(username, posts) {
   if (!username) return;
-  await pool.query(
-    `INSERT INTO insta_post_cache (username, posts, fetched_at)
-     VALUES ($1, $2, NOW())`,
-    [username, JSON.stringify(posts)]
-  );
+  const key = `insta:posts:${username}`;
+  const value = JSON.stringify({ posts, fetched_at: new Date().toISOString() });
+  await redis.set(key, value);
 }
 
 export async function getLatestCache(username) {
-  const res = await pool.query(
-    `SELECT posts, fetched_at FROM insta_post_cache
-     WHERE username = $1
-     ORDER BY fetched_at DESC LIMIT 1`,
-    [username]
-  );
-  return res.rows[0] || null;
+  const key = `insta:posts:${username}`;
+  const val = await redis.get(key);
+  if (!val) return null;
+  return JSON.parse(val);
 }

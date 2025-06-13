@@ -1,37 +1,24 @@
 import crypto from 'crypto';
+import redis from '../config/redis.js';
 
-// Simple LRU cache to store recent request hashes and timestamps
-const cache = new Map();
-const MAX_ENTRIES = 1000; // limit memory usage
-const TTL_MS = 5 * 60 * 1000; // 5 minutes
+const TTL_SEC = 5 * 60; // 5 minutes
 
-function cleanup() {
-  const now = Date.now();
-  for (const [key, ts] of cache) {
-    if (now - ts > TTL_MS) cache.delete(key);
-  }
-  while (cache.size > MAX_ENTRIES) {
-    const firstKey = cache.keys().next().value;
-    cache.delete(firstKey);
-  }
-}
-
-export function dedupRequest(req, res, next) {
+export async function dedupRequest(req, res, next) {
   try {
     const hash = crypto
       .createHash('sha1')
       .update(req.method + req.originalUrl + JSON.stringify(req.body || {}))
       .digest('hex');
-    const now = Date.now();
-    if (cache.has(hash) && now - cache.get(hash) < TTL_MS) {
+    const key = `dedup:${hash}`;
+    const exists = await redis.exists(key);
+    if (exists) {
       return res
         .status(429)
         .json({ success: false, message: 'Duplicate request detected' });
     }
-    cache.set(hash, now);
-    cleanup();
+    await redis.set(key, '1', { EX: TTL_SEC });
   } catch (e) {
-    // If hashing fails, ignore dedup check to avoid blocking requests
+    // If hashing fails or redis error, ignore dedup check
   }
   next();
 }

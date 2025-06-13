@@ -151,11 +151,19 @@ Cicero_V2-main/
     DATABASE_URL=postgresql://user:pass@host:port/db
     ADMIN_WHATSAPP=628xxxxxx@c.us,628yyyyyy@c.us
     RAPIDAPI_KEY=xxxx
+    REDIS_URL=redis://localhost:6379
     ```
 
-3. **Setup DB:** migrasikan semua tabel (lihat bagian migrasi DB di bawah).
+3. **Install Redis:**
+    ```bash
+    sudo apt-get install redis-server
+    sudo systemctl enable redis-server
+    sudo systemctl start redis-server
+    ```
 
-4. **Jalankan aplikasi:**
+4. **Setup DB:** migrasikan semua tabel (lihat bagian migrasi DB di bawah).
+
+5. **Jalankan aplikasi:**
     ```bash
     npm start
     ```
