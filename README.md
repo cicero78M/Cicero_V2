@@ -112,8 +112,8 @@ dengan tanggal di luar rentang bulan yang diminta.
 Hal ini karena data dari RapidAPI sudah diurutkan dari yang terbaru
 sehingga setelah ada tanggal lebih lama, tidak ada lagi posting
 dari bulan tersebut di halaman selanjutnya. Semua posting yang
-terkumpul kemudian difilter sehingga hanya tersisa data pada bulan
-yang diminta.
+terkumpul dari setiap halaman kemudian digabung dan difilter sehingga
+semua data pada bulan yang diminta dapat masuk ke dalam daftar.
 Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
 postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
 ditunda selama 1.5 detik untuk menghindari batasan API.
