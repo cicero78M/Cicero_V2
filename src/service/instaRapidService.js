@@ -86,7 +86,7 @@ export async function fetchInstagramInfo(username) {
 export async function fetchInstagramPostsPage(username, cursor = null) {
   if (!username) return { items: [], next_cursor: null, has_more: false };
   const params = new URLSearchParams({ username_or_id_or_url: username });
-  if (cursor) params.append('cursor', cursor);
+  if (cursor) params.append('pagination_token', cursor);
 
   logDebug('fetchInstagramPostsPage request', { username, cursor });
 
@@ -106,8 +106,13 @@ export async function fetchInstagramPostsPage(username, cursor = null) {
   }
   const data = await res.json();
   const items = data?.data?.items || [];
-  const next_cursor = data?.data?.next_cursor || data?.data?.end_cursor || null;
-  const has_more = data?.data?.has_more || (next_cursor && next_cursor !== '');
+  const next_cursor =
+    data?.data?.pagination_token ||
+    data?.data?.next_cursor ||
+    data?.data?.end_cursor ||
+    null;
+  const has_more =
+    (data?.data?.has_more || false) || (next_cursor && next_cursor !== '');
   logDebug('fetchInstagramPostsPage success', { items: items.length, next_cursor, has_more });
   return { items, next_cursor, has_more };
 }
@@ -173,8 +178,12 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
   // log raw response data for debugging and to inspect pagination token
   logDebug('fetchInstagramPostsPageToken raw', data);
   const items = data?.data?.items || [];
-  const next_token = data?.data?.next_pagination_token || data?.data?.pagination_token || null;
-  const has_more = data?.data?.has_more || (next_token && next_token !== '');
+  const next_token =
+    data?.data?.pagination_token ||
+    data?.data?.next_pagination_token ||
+    null;
+  const has_more =
+    (data?.data?.has_more || false) || (next_token && next_token !== '');
   logDebug('fetchInstagramPostsPageToken success', { items: items.length, next_token, has_more });
   return { items, next_token, has_more };
 }
