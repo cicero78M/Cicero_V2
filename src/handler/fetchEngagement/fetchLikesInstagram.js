@@ -10,6 +10,26 @@ const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
 const limit = pLimit(3); // Rate limit parallel request
 
+// Ambil likes lama (existing) dari database dan kembalikan sebagai array string
+async function getExistingLikes(shortcode) {
+  const res = await pool.query(
+    "SELECT likes FROM insta_like WHERE shortcode = $1",
+    [shortcode]
+  );
+  if (!res.rows.length) return [];
+  const val = res.rows[0].likes;
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      return JSON.parse(val) || [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /**
  * Ambil likes dari Instagram, upsert ke DB insta_like
  * @param {string} shortcode
@@ -74,24 +94,26 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
   } while (true);
 
   const uniqueLikes = [...new Set(allLikes)];
+  const existingLikes = await getExistingLikes(shortcode);
+  const mergedLikes = [...new Set([...existingLikes, ...uniqueLikes])];
   sendDebug({
     tag: "IG LIKES FINAL",
-    msg: `Shortcode ${shortcode} FINAL jumlah unique: ${uniqueLikes.length}`,
+    msg: `Shortcode ${shortcode} FINAL jumlah unique: ${mergedLikes.length}`,
     client_id: client_id || shortcode,
   });
 
-  // Simpan ke database (upsert)
+  // Simpan ke database (upsert), gabungkan dengan data lama
   await pool.query(
     `INSERT INTO insta_like (shortcode, likes, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (shortcode) DO UPDATE
      SET likes = EXCLUDED.likes, updated_at = NOW()`,
-    [shortcode, JSON.stringify(uniqueLikes)]
+    [shortcode, JSON.stringify(mergedLikes)]
   );
 
   sendDebug({
     tag: "IG FETCH",
-    msg: `[DB] Sukses upsert likes IG: ${shortcode} | Total likes disimpan: ${uniqueLikes.length}`,
+    msg: `[DB] Sukses upsert likes IG: ${shortcode} | Total likes disimpan: ${mergedLikes.length}`,
     client_id: client_id || shortcode,
   });
 }
