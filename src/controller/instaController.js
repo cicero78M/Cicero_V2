@@ -49,6 +49,7 @@ export async function getRapidInstagramPosts(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
+
     const rawPosts = await fetchInstagramPosts(username, limit);
     const posts = rawPosts.map(p => {
       const thumbnail =
@@ -72,7 +73,7 @@ export async function getRapidInstagramPosts(req, res) {
           p.playCount ??
           p.viewCount ??
           p.video_view_count ??
-          0,
+        0,
         thumbnail
       };
     });
