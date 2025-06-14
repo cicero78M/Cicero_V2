@@ -1,7 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
-import { fetchInstagramPosts, fetchInstagramPostsByMonth, fetchInstagramProfile, fetchInstagramInfo } from "../service/instaRapidService.js";
+import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo } from "../service/instaRapidService.js";
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import { sendSuccess } from "../utils/response.js";
@@ -45,19 +45,13 @@ export async function getRapidInstagramPosts(req, res) {
   try {
     const username = req.query.username;
     let limit = parseInt(req.query.limit);
-    if (Number.isNaN(limit) || limit <= 0) limit = 100;
-    const month = req.query.month;
-    const year = req.query.year;
+    if (Number.isNaN(limit) || limit <= 0) limit = 10;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    let rawPosts;
-    if (month || year) {
-      rawPosts = await fetchInstagramPostsByMonth(username, month, year);
-    } else {
-      rawPosts = await fetchInstagramPosts(username, limit);
-    }
-    let posts = rawPosts.map(p => {
+
+    const rawPosts = await fetchInstagramPosts(username, limit);
+    const posts = rawPosts.map(p => {
       const thumbnail =
         p.thumbnail_url ||
         p.thumbnail_src ||
@@ -83,11 +77,6 @@ export async function getRapidInstagramPosts(req, res) {
         thumbnail
       };
     });
-    if (!month && !year && limit) {
-      posts = posts.slice(0, limit);
-    } else if (limit && posts.length > limit) {
-      posts = posts.slice(0, limit);
-    }
     sendSuccess(res, posts);
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;
