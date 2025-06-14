@@ -187,8 +187,8 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
 }
 
 export async function fetchInstagramPostsByMonthToken(username, month, year) {
-  sendConsoledebug('fetchInstagramPostsByMonthToken XXX', {username});
 
+  sendConsoledebug('fetchInstagramPostsByMonthToken XXX', {username});
 
   if (!username) return [];
 
