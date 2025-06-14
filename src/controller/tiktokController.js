@@ -52,7 +52,8 @@ export async function getTiktokPosts(req, res) {
     const posts = await tiktokPostService.findByClientId(client_id);
     sendSuccess(res, posts);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -68,7 +69,8 @@ export async function getTiktokRekapKomentar(req, res) {
     const data = await getRekapKomentarByClient(client_id, periode);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -82,7 +84,8 @@ export async function getRapidTiktokProfile(req, res) {
     const profile = await fetchTiktokProfile(username);
     sendSuccess(res, profile);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -107,7 +110,8 @@ export async function getRapidTiktokInfo(req, res) {
     const info = await fetchTiktokInfo(username);
     sendSuccess(res, info);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -139,6 +143,7 @@ export async function getRapidTiktokPosts(req, res) {
       : await fetchTiktokPosts(username, limit);
     sendSuccess(res, posts);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }

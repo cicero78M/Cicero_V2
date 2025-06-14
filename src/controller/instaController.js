@@ -16,7 +16,8 @@ export async function getInstaRekapLikes(req, res) {
     const data = await getRekapLikesByClient(client_id, periode);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -35,7 +36,8 @@ export async function getInstaPosts(req, res) {
     const posts = await instaPostService.findByClientId(client_id);
     sendSuccess(res, posts);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -76,7 +78,8 @@ export async function getRapidInstagramPosts(req, res) {
     });
     sendSuccess(res, posts);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -118,7 +121,8 @@ export async function getRapidInstagramPostsStore(req, res) {
     await instaPostCacheService.insertCache(username, posts);
     sendSuccess(res, posts);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -142,7 +146,8 @@ export async function getRapidInstagramProfile(req, res) {
     }
     sendSuccess(res, profile);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -155,7 +160,8 @@ export async function getRapidInstagramInfo(req, res) {
     const info = await fetchInstagramInfo(username);
     sendSuccess(res, info);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
 
@@ -171,6 +177,7 @@ export async function getInstagramProfile(req, res) {
     }
     sendSuccess(res, profile);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
   }
 }
