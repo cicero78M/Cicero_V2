@@ -155,7 +155,7 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
 }
 
 export async function fetchInstagramPostsPageToken(username, token = null) {
-  if (!username) return { items: [], pagination_token: null};
+  if (!username) return { items: [], next_token: null, has_more: false};
   const params = new URLSearchParams({ username_or_id_or_url: username });
   if (token) params.append('pagination_token', token);
 
@@ -179,11 +179,10 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
   // log raw response data for debugging and to inspect pagination token
   sendConsoledebug('fetchInstagramPostsPageToken raw', data);
   const items = data?.data?.items || [];
-  const next_token =
-    data?.pagination_token ||
-    null;
-  sendConsoledebug('fetchInstagramPostsPageToken success', { items: items.length, next_token });
-  return { items, next_token };
+  const next_token = data?.pagination_token || null;
+  const has_more = (data?.has_more || false) || (next_token && next_token !== '');
+  sendConsoledebug('fetchInstagramPostsPageToken success', { items: items.length, next_token, has_more });
+  return { items, next_token, has_more };
 }
 
 export async function fetchInstagramPostsByMonthToken(username, month, year) {
@@ -207,8 +206,8 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
   do {
 
     sendConsoledebug('fetchInstagramPostsPageToken', { token });
-    const { items, pagination_token } = await fetchInstagramPostsPageToken(username, token);
-    sendConsoledebug('fetched page', { items: items.length, pagination_token });
+    const { items, next_token } = await fetchInstagramPostsPageToken(username, token);
+    sendConsoledebug('fetched page', { items: items.length, next_token });
     // show raw items for debugging
     sendConsoledebug('page items', items);
     if (!items.length) break;
@@ -216,7 +215,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
 
     const last = items[items.length - 1];
     const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
-    token = pagination_token;
+    token = next_token;
     sendConsoledebug('pagination token updated', { token });
     // Stop early when the last item falls before the requested month
     // because results are returned in descending order. Once a date is
