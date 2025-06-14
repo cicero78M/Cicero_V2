@@ -16,7 +16,9 @@ export async function fetchInstagramPosts(username, limit = 10) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text);
+    const err = new Error(text);
+    err.statusCode = res.status;
+    throw err;
   }
   const data = await res.json();
   const items = data?.data?.items || [];
@@ -36,7 +38,9 @@ export async function fetchInstagramProfile(username) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text);
+    const err = new Error(text);
+    err.statusCode = res.status;
+    throw err;
   }
   const data = await res.json();
   return data?.data || null;
@@ -57,7 +61,9 @@ export async function fetchInstagramInfo(username) {
     const msg = err.response?.data
       ? JSON.stringify(err.response.data)
       : err.message;
-    throw new Error(msg);
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
   }
 }
 

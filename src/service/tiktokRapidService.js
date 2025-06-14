@@ -21,25 +21,34 @@ function parsePosts(resData) {
 
 export async function fetchTiktokProfile(username) {
   if (!username) return null;
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
-    params: { uniqueId: username.replace(/^@/, '') },
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
-  const data = res.data?.userInfo;
-  if (!data) return res.data;
-  return {
-    username: data.user?.uniqueId,
-    nickname: data.user?.nickname,
-    follower_count: data.stats?.followerCount,
-    following_count: data.stats?.followingCount,
-    like_count: data.stats?.heart,
-    video_count: data.stats?.videoCount,
-    avatar_url: data.user?.avatarThumb
-  };
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/info`, {
+      params: { uniqueId: username.replace(/^@/, '') },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+    const data = res.data?.userInfo;
+    if (!data) return res.data;
+    return {
+      username: data.user?.uniqueId,
+      nickname: data.user?.nickname,
+      follower_count: data.stats?.followerCount,
+      following_count: data.stats?.followingCount,
+      like_count: data.stats?.heart,
+      video_count: data.stats?.videoCount,
+      avatar_url: data.user?.avatarThumb
+    };
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
+  }
 }
 
 export async function fetchTiktokInfo(username) {
@@ -58,42 +67,62 @@ export async function fetchTiktokInfo(username) {
     const msg = err.response?.data
       ? JSON.stringify(err.response.data)
       : err.message;
-    throw new Error(msg);
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
   }
 }
 
 export async function fetchTiktokPosts(username, limit = 10) {
   if (!username) return [];
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-    params: {
-      uniqueId: username.replace(/^@/, ''),
-      count: String(limit > 0 ? limit : 10),
-      cursor: '0'
-    },
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
-  const items = parsePosts(res);
-  return limit ? items.slice(0, limit) : items;
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
+      params: {
+        uniqueId: username.replace(/^@/, ''),
+        count: String(limit > 0 ? limit : 10),
+        cursor: '0'
+      },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+    const items = parsePosts(res);
+    return limit ? items.slice(0, limit) : items;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
+  }
 }
 
 export async function fetchTiktokPostsBySecUid(secUid, limit = 10) {
   if (!secUid) return [];
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-    params: {
-      secUid,
-      count: String(limit > 0 ? limit : 10),
-      cursor: '0'
-    },
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
-  const items = parsePosts(res);
-  return limit ? items.slice(0, limit) : items;
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
+      params: {
+        secUid,
+        count: String(limit > 0 ? limit : 10),
+        cursor: '0'
+      },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+    const items = parsePosts(res);
+    return limit ? items.slice(0, limit) : items;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
+  }
 }
