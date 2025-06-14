@@ -101,7 +101,7 @@ Cicero_V2-main/
 | Endpoint | Method | Deskripsi |
 |----------|--------|-----------|
 | `/insta/rapid-profile` | GET | Ambil profil Instagram via RapidAPI |
-| `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI. Tambahkan query `month` dan `year` untuk filter bulan tertentu |
+| `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI |
 | `/insta/profile`       | GET | Ambil profil Instagram dari database |
 
 ---
