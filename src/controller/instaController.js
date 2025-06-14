@@ -153,6 +153,8 @@ export async function getRapidInstagramPostsByMonth(req, res) {
     sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPostsByMonth ${username} ${monthNum}-${yearNum}` });
 
     const rawPosts = await fetchInstagramPostsByMonthToken(username, monthNum, yearNum);
+      logDebug('fetchInstagramPostsPageToken load success', { rawPosts });
+
     const posts = rawPosts.map(p => {
       const thumbnail =
         p.thumbnail_url ||
