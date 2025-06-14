@@ -72,3 +72,11 @@ export const sendAdminDebug = (msg) =>
 
 export const sendTiktokDebug = (msg) =>
   sendDebug({ tag: "REGULAR", msg });
+
+// Debug khusus yang hanya dicetak di console tanpa mengirim pesan WhatsApp
+export function sendConsoleDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
+  const safeMsg = typeof msg === "string" ? msg : safeStringify(msg);
+  let prefix = `[${tag}]`;
+  if (client_id) prefix += `[${client_id}]`;
+  console.log(`${prefix} ${safeMsg}`);
+}
