@@ -99,8 +99,6 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
 
   let cursor = null;
   const all = [];
-  let page = 0;
-  const MAX_PAGE = 20;
 
   do {
     const { items, next_cursor, has_more } = await fetchInstagramPostsPage(username, cursor);
@@ -110,8 +108,7 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
     const last = items[items.length - 1];
     const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
     cursor = next_cursor;
-    page += 1;
-    if (!has_more || !cursor || lastDate < start || page >= MAX_PAGE) break;
+    if (!has_more || !cursor || lastDate < start) break;
   } while (true);
 
   return all.filter(p => {
@@ -157,8 +154,6 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
 
   let token = null;
   const all = [];
-  let page = 0;
-  const MAX_PAGE = 20;
 
   do {
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
@@ -168,8 +163,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     const last = items[items.length - 1];
     const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
     token = next_token;
-    page += 1;
-    if (!has_more || !token || lastDate < start || page >= MAX_PAGE) break;
+    if (!has_more || !token || lastDate < start) break;
   } while (true);
 
   return all.filter(p => {
