@@ -53,17 +53,6 @@ export async function getPostsByClientId(client_id) {
   return res.rows;
 }
 
-export async function getPostsThisMonthByClient(client_id) {
-  const res = await pool.query(
-    `SELECT * FROM insta_post
-     WHERE client_id = $1
-       AND created_at >= date_trunc('month', CURRENT_DATE)
-     ORDER BY created_at DESC`,
-    [client_id]
-  );
-  return res.rows;
-}
-
 export async function findByClientId(client_id) {
-  return getPostsThisMonthByClient(client_id);
+  return getPostsByClientId(client_id);
 }
