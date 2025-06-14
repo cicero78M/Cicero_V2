@@ -134,6 +134,7 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
 
   do {
     logDebug('fetchInstagramPostsPage', { cursor });
+
     const { items, pagination_token } = await fetchInstagramPostsPage(username, cursor);
     logDebug('fetched page', { items: items.length, pagination_token });
     if (!items.length) break;
@@ -186,7 +187,11 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
 }
 
 export async function fetchInstagramPostsByMonthToken(username, month, year) {
+  logDebug('fetchInstagramPostsByMonthToken XXX', {username});
+
+
   if (!username) return [];
+
   const now = new Date();
   const m = parseInt(month);
   const y = parseInt(year);
@@ -201,6 +206,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
   logDebug('fetchInstagramPostsByMonthToken start', { username, month: monthNum, year: yearNum });
 
   do {
+
     logDebug('fetchInstagramPostsPageToken', { token });
     const { items, pagination_token } = await fetchInstagramPostsPageToken(username, token);
     logDebug('fetched page', { items: items.length, pagination_token });
