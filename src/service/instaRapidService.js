@@ -5,24 +5,19 @@ const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
 
 export async function fetchInstagramPosts(username, limit = 10) {
   if (!username) return [];
-  const params = new URLSearchParams({ username_or_id_or_url: username });
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    const err = new Error(text);
-    err.statusCode = res.status;
-    throw err;
-  }
-  const data = await res.json();
-  const items = data?.data?.items || [];
-  return limit ? items.slice(0, limit) : items;
+  const all = [];
+  let token = null;
+
+  do {
+    const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
+    if (!items.length) break;
+    all.push(...items);
+    token = next_token;
+    if (!has_more || !token || (limit && all.length >= limit)) break;
+  } while (true);
+
+  return limit ? all.slice(0, limit) : all;
 }
 
 export async function fetchInstagramProfile(username) {
