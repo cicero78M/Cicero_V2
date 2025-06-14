@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fetchTiktokSecUid } from './clientService.js';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
@@ -91,10 +92,16 @@ export async function fetchTiktokPosts(username, limit = 10) {
     const items = parsePosts(res);
     return limit ? items.slice(0, limit) : items;
   } catch (err) {
-    const msg = err.response?.data
-      ? JSON.stringify(err.response.data)
-      : err.message;
-    const error = new Error(msg);
+    const msg = err.response?.data || err.message;
+    if (typeof msg === 'object' && /missing required params/i.test(msg.error || '')) {
+      try {
+        const secUid = await fetchTiktokSecUid(username);
+        if (secUid) {
+          return await fetchTiktokPostsBySecUid(secUid, limit);
+        }
+      } catch {}
+    }
+    const error = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     error.statusCode = err.response?.status;
     throw error;
   }
