@@ -139,6 +139,9 @@ export async function getRapidInstagramPostsStore(req, res) {
 
 export async function getRapidInstagramPostsByMonth(req, res) {
   try {
+
+        sendConsoleDebug({ tag: "INSTA", msg: `Executed` });
+
     const username = req.query.username;
     const monthInput = parseInt(req.query.month);
     const yearInput = parseInt(req.query.year);
