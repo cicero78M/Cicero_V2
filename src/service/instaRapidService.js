@@ -20,9 +20,12 @@ export async function fetchInstagramPosts(username, limit = 10) {
     logDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
     logDebug('fetched page', { items: items.length, next_token, has_more });
+    // show raw items for debugging
+    logDebug('page items', items);
     if (!items.length) break;
     all.push(...items);
     token = next_token;
+    logDebug('pagination token updated', { token });
     if (!has_more || !token || (limit && all.length >= limit)) break;
   } while (true);
 
@@ -167,6 +170,8 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
     throw err;
   }
   const data = await res.json();
+  // log raw response data for debugging and to inspect pagination token
+  logDebug('fetchInstagramPostsPageToken raw', data);
   const items = data?.data?.items || [];
   const next_token = data?.data?.next_pagination_token || data?.data?.pagination_token || null;
   const has_more = data?.data?.has_more || (next_token && next_token !== '');
@@ -193,12 +198,15 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     logDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
     logDebug('fetched page', { items: items.length, next_token, has_more });
+    // show raw items for debugging
+    logDebug('page items', items);
     if (!items.length) break;
     all.push(...items);
 
     const last = items[items.length - 1];
     const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
     token = next_token;
+    logDebug('pagination token updated', { token });
     // Stop early when the last item falls before the requested month
     // because results are returned in descending order. Once a date is
     // older than the start of the month, no further pages will contain
