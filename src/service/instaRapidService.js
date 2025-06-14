@@ -179,7 +179,7 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
   logDebug('fetchInstagramPostsPageToken raw', data);
   const items = data?.data?.items || [];
   const next_token =
-    data?.data?.pagination_token ||
+    data?.pagination_token ||
     null;
   logDebug('fetchInstagramPostsPageToken success', { items: items.length, next_token });
   return { items, next_token };
