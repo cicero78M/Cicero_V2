@@ -2,20 +2,31 @@ import axios from 'axios';
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
+const DEBUG_FETCH_IG = process.env.DEBUG_FETCH_INSTAGRAM === 'true';
+
+function logDebug(...args) {
+  if (DEBUG_FETCH_IG) console.log('[DEBUG IG]', ...args);
+}
 
 export async function fetchInstagramPosts(username, limit = 10) {
   if (!username) return [];
+
+  logDebug('fetchInstagramPosts start', { username, limit });
 
   const all = [];
   let token = null;
 
   do {
+    logDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
+    logDebug('fetched page', { items: items.length, next_token, has_more });
     if (!items.length) break;
     all.push(...items);
     token = next_token;
     if (!has_more || !token || (limit && all.length >= limit)) break;
   } while (true);
+
+  logDebug('fetchInstagramPosts done', { total: all.length });
 
   return limit ? all.slice(0, limit) : all;
 }
@@ -23,6 +34,8 @@ export async function fetchInstagramPosts(username, limit = 10) {
 export async function fetchInstagramProfile(username) {
   if (!username) return null;
   const params = new URLSearchParams({ username_or_id_or_url: username });
+
+  logDebug('fetchInstagramProfile request', params.toString());
 
   const res = await fetch(`https://${RAPIDAPI_HOST}/v1/info?${params.toString()}`, {
     headers: {
@@ -35,15 +48,18 @@ export async function fetchInstagramProfile(username) {
     const text = await res.text();
     const err = new Error(text);
     err.statusCode = res.status;
+    logDebug('fetchInstagramProfile error', err.message);
     throw err;
   }
   const data = await res.json();
+  logDebug('fetchInstagramProfile success');
   return data?.data || null;
 }
 
 export async function fetchInstagramInfo(username) {
   if (!username) return null;
   try {
+    logDebug('fetchInstagramInfo request', username);
     const response = await axios.get(`https://${RAPIDAPI_HOST}/v1/info`, {
       params: { username_or_id_or_url: username },
       headers: {
@@ -51,6 +67,7 @@ export async function fetchInstagramInfo(username) {
         'X-RapidAPI-Host': RAPIDAPI_HOST,
       },
     });
+    logDebug('fetchInstagramInfo success');
     return response.data?.data || null;
   } catch (err) {
     const msg = err.response?.data
@@ -58,6 +75,7 @@ export async function fetchInstagramInfo(username) {
       : err.message;
     const error = new Error(msg);
     error.statusCode = err.response?.status;
+    logDebug('fetchInstagramInfo error', error.message);
     throw error;
   }
 }
@@ -66,6 +84,8 @@ export async function fetchInstagramPostsPage(username, cursor = null) {
   if (!username) return { items: [], next_cursor: null, has_more: false };
   const params = new URLSearchParams({ username_or_id_or_url: username });
   if (cursor) params.append('cursor', cursor);
+
+  logDebug('fetchInstagramPostsPage request', { username, cursor });
 
   const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
     headers: {
@@ -78,12 +98,14 @@ export async function fetchInstagramPostsPage(username, cursor = null) {
     const text = await res.text();
     const err = new Error(text);
     err.statusCode = res.status;
+    logDebug('fetchInstagramPostsPage error', err.message);
     throw err;
   }
   const data = await res.json();
   const items = data?.data?.items || [];
   const next_cursor = data?.data?.next_cursor || data?.data?.end_cursor || null;
   const has_more = data?.data?.has_more || (next_cursor && next_cursor !== '');
+  logDebug('fetchInstagramPostsPage success', { items: items.length, next_cursor, has_more });
   return { items, next_cursor, has_more };
 }
 
@@ -100,8 +122,12 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
   let cursor = null;
   const all = [];
 
+  logDebug('fetchInstagramPostsByMonth start', { username, month: monthNum, year: yearNum });
+
   do {
+    logDebug('fetchInstagramPostsPage', { cursor });
     const { items, next_cursor, has_more } = await fetchInstagramPostsPage(username, cursor);
+    logDebug('fetched page', { items: items.length, next_cursor, has_more });
     if (!items.length) break;
     all.push(...items);
 
@@ -110,6 +136,8 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
     cursor = next_cursor;
     if (!has_more || !cursor || lastDate < start) break;
   } while (true);
+
+  logDebug('fetchInstagramPostsByMonth done', { total: all.length });
 
   return all.filter(p => {
     const d = new Date(p.taken_at ? p.taken_at * 1000 : p.created_at || 0);
@@ -122,6 +150,8 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
   const params = new URLSearchParams({ username_or_id_or_url: username });
   if (token) params.append('pagination_token', token);
 
+  logDebug('fetchInstagramPostsPageToken request', { token });
+
   const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
     headers: {
       'X-RapidAPI-Key': RAPIDAPI_KEY,
@@ -133,12 +163,14 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
     const text = await res.text();
     const err = new Error(text);
     err.statusCode = res.status;
+    logDebug('fetchInstagramPostsPageToken error', err.message);
     throw err;
   }
   const data = await res.json();
   const items = data?.data?.items || [];
   const next_token = data?.data?.next_pagination_token || data?.data?.pagination_token || null;
   const has_more = data?.data?.has_more || (next_token && next_token !== '');
+  logDebug('fetchInstagramPostsPageToken success', { items: items.length, next_token, has_more });
   return { items, next_token, has_more };
 }
 
@@ -155,8 +187,12 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
   let token = null;
   const all = [];
 
+  logDebug('fetchInstagramPostsByMonthToken start', { username, month: monthNum, year: yearNum });
+
   do {
+    logDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
+    logDebug('fetched page', { items: items.length, next_token, has_more });
     if (!items.length) break;
     all.push(...items);
 
@@ -169,6 +205,8 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     // newer posts from that month.
     if (!has_more || !token || lastDate < start) break;
   } while (true);
+
+  logDebug('fetchInstagramPostsByMonthToken done', { total: all.length });
 
   return all.filter(p => {
     const d = new Date(p.taken_at ? p.taken_at * 1000 : p.created_at || 0);
