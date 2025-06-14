@@ -114,6 +114,9 @@ sehingga setelah ada tanggal lebih lama, tidak ada lagi posting
 dari bulan tersebut di halaman selanjutnya. Semua posting yang
 terkumpul kemudian difilter sehingga hanya tersisa data pada bulan
 yang diminta.
+Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
+postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
+ditunda selama 1.5 detik untuk menghindari batasan API.
 
 ---
 

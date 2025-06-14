@@ -221,6 +221,9 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     // older than the start of the month, no further pages will contain
     // newer posts from that month.
     if (!has_more || !token || lastDate < start) break;
+
+    // add delay between pagination requests
+    await new Promise(resolve => setTimeout(resolve, 1500));
   } while (true);
 
   logDebug('fetchInstagramPostsByMonthToken done', { total: all.length });
