@@ -125,3 +125,61 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
   });
 }
 
+export async function fetchInstagramPostsPageToken(username, token = null) {
+  if (!username) return { items: [], next_token: null, has_more: false };
+  const params = new URLSearchParams({ username_or_id_or_url: username });
+  if (token) params.append('pagination_token', token);
+
+  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(text);
+    err.statusCode = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  const items = data?.data?.items || [];
+  const next_token = data?.data?.next_pagination_token || data?.data?.pagination_token || null;
+  const has_more = data?.data?.has_more || (next_token && next_token !== '');
+  return { items, next_token, has_more };
+}
+
+export async function fetchInstagramPostsByMonthToken(username, month, year) {
+  if (!username) return [];
+  const now = new Date();
+  const m = parseInt(month);
+  const y = parseInt(year);
+  const monthNum = Number.isNaN(m) ? now.getMonth() + 1 : m;
+  const yearNum = Number.isNaN(y) ? now.getFullYear() : y;
+  const start = new Date(yearNum, monthNum - 1, 1);
+  const end = new Date(yearNum, monthNum, 1);
+
+  let token = null;
+  const all = [];
+  let page = 0;
+  const MAX_PAGE = 20;
+
+  do {
+    const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
+    if (!items.length) break;
+    all.push(...items);
+
+    const last = items[items.length - 1];
+    const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
+    token = next_token;
+    page += 1;
+    if (!has_more || !token || lastDate < start || page >= MAX_PAGE) break;
+  } while (true);
+
+  return all.filter(p => {
+    const d = new Date(p.taken_at ? p.taken_at * 1000 : p.created_at || 0);
+    return d >= start && d < end;
+  });
+}
+

@@ -104,6 +104,10 @@ Cicero_V2-main/
 | `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI |
 | `/insta/profile`       | GET | Ambil profil Instagram dari database |
 
+Fungsi utilitas `fetchInstagramPostsByMonthToken(username, bulan, tahun)`
+tersedia pada kode untuk mengambil seluruh postingan bulan tertentu
+dengan memanfaatkan parameter `pagination_token` dari RapidAPI.
+
 ---
 
 ## Fitur & Flow Bisnis Utama
