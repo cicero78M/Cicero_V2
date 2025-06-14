@@ -1,7 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
-import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo } from "../service/instaRapidService.js";
+import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo, fetchInstagramPostsByMonthToken } from "../service/instaRapidService.js";
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import { sendSuccess } from "../utils/response.js";
@@ -120,6 +120,49 @@ export async function getRapidInstagramPostsStore(req, res) {
       };
     });
     await instaPostCacheService.insertCache(username, posts);
+    sendSuccess(res, posts);
+  } catch (err) {
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
+
+export async function getRapidInstagramPostsByMonth(req, res) {
+  try {
+    const username = req.query.username;
+    const month = req.query.month;
+    const year = req.query.year;
+    if (!username) {
+      return res.status(400).json({ success: false, message: 'username wajib diisi' });
+    }
+
+    const rawPosts = await fetchInstagramPostsByMonthToken(username, month, year);
+    const posts = rawPosts.map(p => {
+      const thumbnail =
+        p.thumbnail_url ||
+        p.thumbnail_src ||
+        p.thumbnail ||
+        p.display_url ||
+        (p.image_versions?.items?.[0]?.url) ||
+        (p.image_versions2?.candidates?.[0]?.url);
+      return {
+        id: p.code || p.id || p.pk,
+        created_at: p.taken_at ? new Date(p.taken_at * 1000).toISOString() : p.created_at,
+        type: p.media_type || p.type,
+        caption: p.caption && typeof p.caption === 'object' ? p.caption.text : p.caption,
+        like_count: p.like_count,
+        comment_count: p.comment_count,
+        share_count: p.share_count,
+        view_count:
+          p.play_count ??
+          p.view_count ??
+          p.playCount ??
+          p.viewCount ??
+          p.video_view_count ??
+          0,
+        thumbnail
+      };
+    });
     sendSuccess(res, posts);
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;
