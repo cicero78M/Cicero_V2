@@ -45,11 +45,21 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
   if (client_id) prefix += `[${client_id}]`;
 
   const fullMsg = `${prefix} ${safeMsg}`;
-  if (waReady) {
+
+  const isStartOrEnd = /\b(mulai|start|selesai|end)\b/i.test(safeMsg);
+  const isError = /error/i.test(safeMsg);
+
+  if (waReady && (isStartOrEnd || isError)) {
+    let waMsg = fullMsg;
+    if (isError) {
+      // kirim hanya potongan pendek agar tidak mengandung raw data
+      waMsg = `${prefix} ${safeMsg.toString().substring(0, 200)}`;
+    }
     for (const wa of adminWA) {
-      waClient.sendMessage(wa, fullMsg).catch(() => {});
+      waClient.sendMessage(wa, waMsg).catch(() => {});
     }
   }
+
   console.log(fullMsg);
 }
 
