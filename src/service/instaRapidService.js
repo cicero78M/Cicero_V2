@@ -163,6 +163,10 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     const last = items[items.length - 1];
     const lastDate = new Date((last.taken_at ? last.taken_at * 1000 : last.created_at || 0));
     token = next_token;
+    // Stop early when the last item falls before the requested month
+    // because results are returned in descending order. Once a date is
+    // older than the start of the month, no further pages will contain
+    // newer posts from that month.
     if (!has_more || !token || lastDate < start) break;
   } while (true);
 
