@@ -5,7 +5,6 @@ import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo, fetchIn
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import { sendSuccess } from "../utils/response.js";
-import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 export async function getInstaRekapLikes(req, res) {
   const client_id = req.query.client_id;
@@ -14,11 +13,9 @@ export async function getInstaRekapLikes(req, res) {
     return res.status(400).json({ success: false, message: "client_id wajib diisi" });
   }
   try {
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode}` });
     const data = await getRekapLikesByClient(client_id, periode);
     res.json({ success: true, data });
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -36,11 +33,9 @@ export async function getInstaPosts(req, res) {
         .json({ success: false, message: "client_id wajib diisi" });
     }
 
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaPosts ${client_id}` });
     const posts = await instaPostService.findByClientId(client_id);
     sendSuccess(res, posts);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaPosts: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -54,8 +49,6 @@ export async function getRapidInstagramPosts(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPosts ${username} ${limit}` });
 
     const rawPosts = await fetchInstagramPosts(username, limit);
     const posts = rawPosts.map(p => {
@@ -86,7 +79,6 @@ export async function getRapidInstagramPosts(req, res) {
     });
     sendSuccess(res, posts);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramPosts: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -100,7 +92,6 @@ export async function getRapidInstagramPostsStore(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPostsStore ${username} ${limit}` });
     const rawPosts = await fetchInstagramPosts(username, limit);
     const posts = rawPosts.map(p => {
       const thumbnail =
@@ -131,7 +122,6 @@ export async function getRapidInstagramPostsStore(req, res) {
     await instaPostCacheService.insertCache(username, posts);
     sendSuccess(res, posts);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramPostsStore: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -140,19 +130,13 @@ export async function getRapidInstagramPostsStore(req, res) {
 export async function getRapidInstagramPostsByMonth(req, res) {
   try {
     const username = req.query.username;
-    const monthInput = parseInt(req.query.month);
-    const yearInput = parseInt(req.query.year);
+    const month = req.query.month;
+    const year = req.query.year;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
 
-    const now = new Date();
-    const monthNum = Number.isNaN(monthInput) ? now.getMonth() + 1 : monthInput;
-    const yearNum = Number.isNaN(yearInput) ? now.getFullYear() : yearInput;
-
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPostsByMonth ${username} ${monthNum}-${yearNum}` });
-
-    const rawPosts = await fetchInstagramPostsByMonthToken(username, monthNum, yearNum);
+    const rawPosts = await fetchInstagramPostsByMonthToken(username, month, year);
     const posts = rawPosts.map(p => {
       const thumbnail =
         p.thumbnail_url ||
@@ -181,7 +165,6 @@ export async function getRapidInstagramPostsByMonth(req, res) {
     });
     sendSuccess(res, posts);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramPostsByMonth: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -193,7 +176,6 @@ export async function getRapidInstagramProfile(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramProfile ${username}` });
     const profile = await fetchInstagramProfile(username);
     if (profile && profile.username) {
       await instaProfileService.upsertProfile({
@@ -208,7 +190,6 @@ export async function getRapidInstagramProfile(req, res) {
     }
     sendSuccess(res, profile);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramProfile: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -220,11 +201,9 @@ export async function getRapidInstagramInfo(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramInfo ${username}` });
     const info = await fetchInstagramInfo(username);
     sendSuccess(res, info);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramInfo: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
@@ -236,14 +215,12 @@ export async function getInstagramProfile(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstagramProfile ${username}` });
     const profile = await instaProfileService.findByUsername(username);
     if (!profile) {
       return res.status(404).json({ success: false, message: 'profile not found' });
     }
     sendSuccess(res, profile);
   } catch (err) {
-    sendConsoleDebug({ tag: "INSTA", msg: `Error getInstagramProfile: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
