@@ -140,15 +140,19 @@ export async function getRapidInstagramPostsStore(req, res) {
 export async function getRapidInstagramPostsByMonth(req, res) {
   try {
     const username = req.query.username;
-    const month = req.query.month;
-    const year = req.query.year;
+    const monthInput = parseInt(req.query.month);
+    const yearInput = parseInt(req.query.year);
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
 
-    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPostsByMonth ${username} ${month}-${year}` });
+    const now = new Date();
+    const monthNum = Number.isNaN(monthInput) ? now.getMonth() + 1 : monthInput;
+    const yearNum = Number.isNaN(yearInput) ? now.getFullYear() : yearInput;
 
-    const rawPosts = await fetchInstagramPostsByMonthToken(username, month, year);
+    sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramPostsByMonth ${username} ${monthNum}-${yearNum}` });
+
+    const rawPosts = await fetchInstagramPostsByMonthToken(username, monthNum, yearNum);
     const posts = rawPosts.map(p => {
       const thumbnail =
         p.thumbnail_url ||
