@@ -107,8 +107,13 @@ Cicero_V2-main/
 Fungsi utilitas `fetchInstagramPostsByMonthToken(username, bulan, tahun)`
 tersedia pada kode untuk mengambil seluruh postingan bulan tertentu
 dengan memanfaatkan parameter `pagination_token` dari RapidAPI.
-Fungsi ini akan menelusuri semua halaman hingga token paginasi habis
-agar seluruh data posting pada bulan tersebut tersimpan.
+Pengambilan data akan berhenti ketika sudah ditemukan posting
+dengan tanggal di luar rentang bulan yang diminta.
+Hal ini karena data dari RapidAPI sudah diurutkan dari yang terbaru
+sehingga setelah ada tanggal lebih lama, tidak ada lagi posting
+dari bulan tersebut di halaman selanjutnya. Semua posting yang
+terkumpul kemudian difilter sehingga hanya tersisa data pada bulan
+yang diminta.
 
 ---
 
