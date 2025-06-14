@@ -110,6 +110,25 @@ dengan memanfaatkan parameter `pagination_token` dari RapidAPI.
 Fungsi ini akan menelusuri semua halaman hingga token paginasi habis
 agar seluruh data posting pada bulan tersebut tersimpan.
 
+Contoh penggunaannya:
+
+```javascript
+import { fetchInstagramPostsByMonthToken } from './src/service/instaRapidService.js';
+
+async function fetchPosts() {
+  const username = 'polresbojonegoroofficial';
+  // bulan menggunakan format 1-12, tahun format 4 digit
+  const posts = await fetchInstagramPostsByMonthToken(username, 6, 2025);
+  console.log('total posts', posts.length);
+}
+
+fetchPosts();
+```
+
+Fungsi di atas akan melakukan request awal tanpa `pagination_token` dan
+secara otomatis melanjutkan ke halaman berikutnya menggunakan token yang
+diberikan hingga semua data pada bulan tersebut diperoleh.
+
 ---
 
 ## Fitur & Flow Bisnis Utama
