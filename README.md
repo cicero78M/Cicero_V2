@@ -162,9 +162,8 @@ Cicero_V2-main/
 
     Untuk login dashboard, Anda dapat menggunakan nomor operator masing-masing
     atau salah satu nomor pada `ADMIN_WHATSAPP`. Cukup isi `client_id` yang ada
-    dan masukkan nomor admin tersebut pada kolom WhatsApp. Setiap `client_id`
-    dibatasi maksimal **3** sesi login aktif sekaligus (termasuk yang memakai
-    `ADMIN_WHATSAPP`).
+    dan masukkan nomor admin tersebut pada kolom WhatsApp. Saat ini tidak ada
+    batas jumlah sesi login aktif per `client_id`.
 
 3. **Install Redis:**
     ```bash
