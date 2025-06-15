@@ -15,12 +15,18 @@ const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
 const limit = pLimit(6);
 
 /**
- * Utility: Cek apakah unixTimestamp adalah hari ini (UTC)
+ * Utility: Cek apakah unixTimestamp adalah hari ini (Asia/Jakarta)
  */
-function isToday(unixTimestamp) {
+function isTodayJakarta(unixTimestamp) {
   if (!unixTimestamp) return false;
-  const d = new Date(unixTimestamp * 1000);
-  const today = new Date();
+  const d = new Date(
+    new Date(unixTimestamp * 1000).toLocaleString("en-US", {
+      timeZone: "Asia/Jakarta",
+    })
+  );
+  const today = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
   return (
     d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
@@ -28,28 +34,35 @@ function isToday(unixTimestamp) {
   );
 }
 
-async function getShortcodesToday() {
+async function getShortcodesToday(clientId = null) {
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const res = await pool.query(
-    `SELECT shortcode FROM insta_post WHERE DATE(created_at) = $1`,
-    [`${yyyy}-${mm}-${dd}`]
-  );
+  let query = `SELECT shortcode FROM insta_post WHERE DATE(created_at) = $1`;
+  const params = [`${yyyy}-${mm}-${dd}`];
+  if (clientId) {
+    query += ` AND client_id = $2`;
+    params.push(clientId);
+  }
+  const res = await pool.query(query, params);
   return res.rows.map((r) => r.shortcode);
 }
 
-async function deleteShortcodes(shortcodesToDelete) {
+async function deleteShortcodes(shortcodesToDelete, clientId = null) {
   if (!shortcodesToDelete.length) return;
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  await pool.query(
-    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = $2`,
-    [shortcodesToDelete, `${yyyy}-${mm}-${dd}`]
-  );
+  let query =
+    `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = $2`;
+  const params = [shortcodesToDelete, `${yyyy}-${mm}-${dd}`];
+  if (clientId) {
+    query += ` AND client_id = $3`;
+    params.push(clientId);
+  }
+  await pool.query(query, params);
 }
 
 async function getEligibleClients() {
@@ -66,7 +79,8 @@ async function getEligibleClients() {
 export async function fetchAndStoreInstaContent(
   keys,
   waClient = null,
-  chatId = null
+  chatId = null,
+  targetClientId = null
 ) {
   let processing = true;
   if (!waClient)
@@ -85,16 +99,28 @@ export async function fetchAndStoreInstaContent(
     }
   }, 4000);
 
-  const dbShortcodesToday = await getShortcodesToday();
-  let fetchedShortcodesToday = [];
-
   const clients = await getEligibleClients();
+  const clientsToFetch = targetClientId
+    ? clients.filter((c) => c.id === targetClientId)
+    : clients;
+
+  if (targetClientId && clientsToFetch.length === 0) {
+    processing = false;
+    clearInterval(intervalId);
+    throw new Error(`Client ID ${targetClientId} tidak ditemukan atau tidak aktif`);
+  }
+
+  const summary = {};
+
   sendDebug({
     tag: "IG FETCH",
-    msg: `Eligible clients for Instagram fetch: jumlah client: ${clients.length}`
+    msg: `Eligible clients for Instagram fetch: jumlah client: ${clientsToFetch.length}`
   });
 
-  for (const client of clients) {
+  for (const client of clientsToFetch) {
+    const dbShortcodesToday = await getShortcodesToday(client.id);
+    let fetchedShortcodesToday = [];
+    let hasSuccessfulFetch = false;
     const username = client.client_insta;
     let postsRes;
     try {
@@ -130,13 +156,16 @@ export async function fetchAndStoreInstaContent(
       postsRes.data &&
       postsRes.data.data &&
       Array.isArray(postsRes.data.data.items)
-        ? postsRes.data.data.items.filter((post) => isToday(post.taken_at))
+        ? postsRes.data.data.items.filter((post) =>
+            isTodayJakarta(post.taken_at)
+          )
         : [];
     sendDebug({
       tag: "IG FETCH",
       msg: `Jumlah post IG HARI INI SAJA: ${items.length}`,
       client_id: client.id
     });
+    if (items.length > 0) hasSuccessfulFetch = true;
 
     for (const post of items) {
       const toSave = {
@@ -185,17 +214,38 @@ export async function fetchAndStoreInstaContent(
         client_id: client.id
       });
     }
-  }
 
-  // Hapus konten hari ini yang sudah tidak ada di hasil fetch hari ini
-  const shortcodesToDelete = dbShortcodesToday.filter(
-    (x) => !fetchedShortcodesToday.includes(x)
-  );
-  sendDebug({
-    tag: "IG SYNC",
-    msg: `Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`
-  });
-  await deleteShortcodes(shortcodesToDelete);
+    // Hapus konten hari ini yang sudah tidak ada di hasil fetch hari ini
+    const shortcodesToDelete = dbShortcodesToday.filter(
+      (x) => !fetchedShortcodesToday.includes(x)
+    );
+
+    if (hasSuccessfulFetch) {
+      sendDebug({
+        tag: "IG SYNC",
+        msg: `Akan menghapus shortcodes yang tidak ada hari ini: jumlah=${shortcodesToDelete.length}`,
+        client_id: client.id
+      });
+      await deleteShortcodes(shortcodesToDelete, client.id);
+    } else {
+      sendDebug({
+        tag: "IG SYNC",
+        msg: `Tidak ada fetch IG berhasil untuk client ${client.id}, database tidak dihapus`,
+        client_id: client.id
+      });
+    }
+
+    // Hitung jumlah konten hari ini untuk summary
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const countRes = await pool.query(
+      `SELECT shortcode FROM insta_post WHERE client_id = $1 AND DATE(created_at) = $2`,
+      [client.id, `${yyyy}-${mm}-${dd}`]
+    );
+    summary[client.id] = { count: countRes.rows.length };
+  }
 
   processing = false;
   clearInterval(intervalId);
@@ -243,4 +293,5 @@ export async function fetchAndStoreInstaContent(
       });
     }
   }
+  return summary;
 }
