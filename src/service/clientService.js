@@ -1,6 +1,10 @@
-import * as clientModel from '../model/clientModel.js';
-// src/service/clientService.js
 import axios from 'axios';
+import * as clientModel from '../model/clientModel.js';
+import * as userModel from '../model/userModel.js';
+import * as instaPostService from './instaPostService.js';
+import * as instaLikeService from './instaLikeService.js';
+import * as tiktokPostService from './tiktokPostService.js';
+import * as tiktokCommentService from './tiktokCommentService.js';
 
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
@@ -31,4 +35,34 @@ export async function fetchTiktokSecUid(username) {
   } catch {
     return null;
   }
+}
+
+export async function getClientSummary(client_id) {
+  const client = await clientModel.findById(client_id);
+  if (!client) return null;
+
+  const users = await userModel.findUsersByClientId(client_id);
+
+  const instaPosts = await instaPostService.findByClientId(client_id);
+  let instaLikes = 0;
+  for (const post of instaPosts) {
+    const like = await instaLikeService.findByShortcode(post.shortcode);
+    instaLikes += Array.isArray(like?.likes) ? like.likes.length : 0;
+  }
+
+  const tiktokPosts = await tiktokPostService.findByClientId(client_id);
+  let tiktokComments = 0;
+  for (const post of tiktokPosts) {
+    const comm = await tiktokCommentService.findByVideoId(post.video_id);
+    tiktokComments += Array.isArray(comm?.comments) ? comm.comments.length : 0;
+  }
+
+  return {
+    client,
+    user_count: users.length,
+    insta_post_count: instaPosts.length,
+    tiktok_post_count: tiktokPosts.length,
+    total_insta_likes: instaLikes,
+    total_tiktok_comments: tiktokComments,
+  };
 }
