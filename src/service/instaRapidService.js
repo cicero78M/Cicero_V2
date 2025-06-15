@@ -21,8 +21,6 @@ export async function fetchInstagramPosts(username, limit = 10) {
     sendConsoleDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token, has_more } = await fetchInstagramPostsPageToken(username, token);
     sendConsoleDebug('fetched page', { items: items.length, next_token, has_more });
-    // show raw items for debugging
-    sendConsoleDebug('page items', items);
     if (!items.length) break;
     all.push(...items);
     token = next_token;
@@ -177,9 +175,8 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
     throw err;
   }
   const data = await res.json();
-  // log raw response data for debugging and to inspect pagination token
-  sendConsoleDebug('fetchInstagramPostsPageToken raw', data);
   const items = data?.data?.items || [];
+  sendConsoleDebug('fetchInstagramPostsPageToken received', { items: items.length });
   const next_token = data?.pagination_token || null;
   const has_more = (data?.has_more || false) || (next_token && next_token !== '');
   sendConsoleDebug('fetchInstagramPostsPageToken success', { items: items.length, next_token, has_more });
@@ -187,7 +184,6 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
 }
 
 export async function fetchInstagramPostsByMonthToken(username, month, year) {
-  sendConsoleDebug('fetchInstagramPostsByMonthToken XXX', {username});
 
   if (!username) return [];
 
@@ -209,8 +205,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
     sendConsoleDebug('fetchInstagramPostsPageToken', { token });
     const { items, next_token } = await fetchInstagramPostsPageToken(username, token);
     sendConsoleDebug('fetched page', { items: items.length, next_token });
-    // show raw items for debugging
-    sendConsoleDebug('page items', items);
+    sendConsoleDebug('page item count', { count: items.length });
     if (!items.length) break;
     all.push(...items);
 

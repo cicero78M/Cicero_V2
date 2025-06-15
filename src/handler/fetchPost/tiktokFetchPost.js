@@ -197,30 +197,14 @@ export async function fetchAndStoreTiktokContent(
         },
       });
 
-      // === DEBUG RAW RESPONSE ke CONSOLE & WA
-      console.log(
-        `[DEBUG TIKTOK][${client.id}] RAW RESPONSE:\n`,
-        JSON.stringify(postsRes.data, null, 2)
-      );
-
-      let rawPreview = "";
-      try {
-        rawPreview = JSON.stringify(postsRes.data).slice(0, 1500);
-      } catch (e) {}
-      sendDebug({
-        tag: "TIKTOK RAW RESPONSE",
-        msg: rawPreview.length > 1500
-          ? rawPreview + "\n...[TRUNCATED]"
-          : rawPreview,
-        client_id: client.id,
-      });
-
-      // Universal parser
       itemList = parseTiktokPostsFromApiResponse(postsRes);
 
+      console.log(
+        `[DEBUG TIKTOK][${client.id}] Response items: ${itemList.length}`
+      );
       sendDebug({
         tag: "TIKTOK FETCH",
-        msg: `API /api/user/posts response: jumlah konten ditemukan: ${itemList.length}`,
+        msg: `API /api/user/posts jumlah konten: ${itemList.length}`,
         client_id: client.id,
       });
 
@@ -233,21 +217,15 @@ export async function fetchAndStoreTiktokContent(
           client_id: client.id,
         });
       }
-    } catch (err) {
-      // CETAK ERROR DETAIL DI CONSOLE
-      console.error(
-        `[ERROR][TIKTOK][${client.id}] RAW ERROR:\n`,
-        err?.response?.data || err
-      );
-      sendDebug({
-        tag: "TIKTOK POST ERROR",
-        msg: err.response?.data
-          ? JSON.stringify(err.response.data)
-          : err.message,
-        client_id: client.id,
-      });
-      continue;
-    }
+      } catch (err) {
+        console.error(`[ERROR][TIKTOK][${client.id}]`, err.message);
+        sendDebug({
+          tag: "TIKTOK POST ERROR",
+          msg: err.message,
+          client_id: client.id,
+        });
+        continue;
+      }
 
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====
     const items = itemList.filter((post) => {
