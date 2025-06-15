@@ -77,6 +77,7 @@ import {
   TT_PROFILE_REGEX,
   adminCommands,
 } from "../utils/constants.js";
+import { saveNumberToGoogleContacts } from "./googleContactsService.js";
 
 dotenv.config();
 
@@ -142,6 +143,16 @@ waClient.on("message", async (msg) => {
     text.toLowerCase().startsWith(cmd)
   );
   const isAdmin = isAdminWhatsApp(chatId);
+
+  // ===== Simpan nomor ke Google Contacts jika belum ada =====
+  try {
+    const contact = await msg.getContact();
+    if (!contact.isMyContact) {
+      await saveNumberToGoogleContacts(userWaNum, contact.pushname || contact.number || "");
+    }
+  } catch (e) {
+    console.error("[GoogleContacts]", e.message);
+  }
 
   // =========== Menu User Interaktif ===========
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
