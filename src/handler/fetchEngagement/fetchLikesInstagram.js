@@ -139,7 +139,12 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
     );
 
     if (!rows.length) {
-      await waClient.sendMessage(chatId, `Tidak ada konten IG hari ini untuk client ${client_id}.`);
+      if (waClient && chatId) {
+        await waClient.sendMessage(
+          chatId,
+          `Tidak ada konten IG hari ini untuk client ${client_id}.`
+        );
+      }
       return;
     }
 
@@ -159,15 +164,19 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
       }
     }
 
-    await waClient.sendMessage(
-      chatId,
-      `✅ Selesai fetch likes IG client ${client_id}. Berhasil: ${sukses}, Gagal: ${gagal}`
-    );
+    if (waClient && chatId) {
+      await waClient.sendMessage(
+        chatId,
+        `✅ Selesai fetch likes IG client ${client_id}. Berhasil: ${sukses}, Gagal: ${gagal}`
+      );
+    }
   } catch (err) {
-    await waClient.sendMessage(
-      chatId,
-      `❌ Error utama fetch likes IG: ${(err && err.message) || String(err)}`
-    );
+    if (waClient && chatId) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Error utama fetch likes IG: ${(err && err.message) || String(err)}`
+      );
+    }
     sendDebug({
       tag: "IG FETCH LIKES ERROR",
       msg: (err && err.message) || String(err),
