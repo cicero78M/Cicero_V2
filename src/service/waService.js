@@ -102,8 +102,6 @@ function formatUserSummary(user) {
 // =======================
 
 // Inisialisasi WhatsApp client dengan LocalAuth
-
-// Inisialisasi WhatsApp client dengan LocalAuth
 export const waClient = new Client({
     puppeteer: {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -115,8 +113,6 @@ export const waClient = new Client({
     }),
     
 });
-
-
 
 let waReady = false;
 
