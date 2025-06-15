@@ -47,7 +47,7 @@ function getAllNotifRecipients(client) {
 }
 
 cron.schedule(
-  "08 17,18,21 * * *",
+  "00 15,18,21 * * *",
   async () => {
     // Step 1: Fetch post IG
     try {
