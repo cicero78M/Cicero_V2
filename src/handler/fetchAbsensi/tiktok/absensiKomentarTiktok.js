@@ -3,21 +3,8 @@ import { getUsersByClient } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
-import { groupByDivision } from "../../../utils/utilsHelper.js";
+import { groupByDivision, sortDivisionKeys } from "../../../utils/utilsHelper.js";
 import { sendDebug } from "../../../middleware/debugHandler.js";
-
-// Helper sorting satfung
-function sortSatfung(keys) {
-  const order = ["BAG", "SAT", "SI", "POLSEK"];
-  return keys.sort((a, b) => {
-    const ia = order.findIndex((p) => a.toUpperCase().startsWith(p));
-    const ib = order.findIndex((p) => b.toUpperCase().startsWith(p));
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-}
 
 // Dapatkan nama dan username tiktok client
 async function getClientInfo(client_id) {
@@ -146,7 +133,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   if (mode === "all" || mode === "sudah") {
     msg += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
     const sudahDiv = groupByDivision(sudah);
-    sortSatfung(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
+    sortDivisionKeys(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
       const list = sudahDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
@@ -170,7 +157,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   if (mode === "all" || mode === "belum") {
     msg += `❌ *Belum melaksanakan* (${belum.length} user):\n`;
     const belumDiv = groupByDivision(belum);
-    sortSatfung(Object.keys(belumDiv)).forEach((div, idx, arr) => {
+    sortDivisionKeys(Object.keys(belumDiv)).forEach((div, idx, arr) => {
       const list = belumDiv[div];
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
@@ -258,7 +245,7 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     if (mode === "all" || mode === "sudah") {
       msg += `✅ *Sudah melaksanakan* (${userSudah.length} user):\n`;
       const sudahDiv = groupByDivision(userSudah);
-      sortSatfung(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
+      sortDivisionKeys(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
         const list = sudahDiv[div];
         msg += `*${div}* (${list.length} user):\n`;
         msg += list.length
@@ -275,7 +262,7 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     if (mode === "all" || mode === "belum") {
       msg += `❌ *Belum melaksanakan* (${userBelum.length} user):\n`;
       const belumDiv = groupByDivision(userBelum);
-      sortSatfung(Object.keys(belumDiv)).forEach((div, idx, arr) => {
+      sortDivisionKeys(Object.keys(belumDiv)).forEach((div, idx, arr) => {
         const list = belumDiv[div];
         msg += list.length
           ? `*${div}* (${list.length} user):\n` +
