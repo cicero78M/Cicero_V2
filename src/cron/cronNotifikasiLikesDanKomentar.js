@@ -37,16 +37,16 @@ export async function cronNotifikasiAbsenLikesKomentar() {
     // IG: Likes
     // ================================
     const shortcodes = await getShortcodesTodayByClient(client_id);
-    // Map: user_id -> set likes
+    // Map: user_id -> set shortcodes yang belum di-like
     const likesStatus = {};
-    for (const u of users) likesStatus[u.user_id] = false;
+    for (const u of users) likesStatus[u.user_id] = new Set(shortcodes);
 
     for (const shortcode of shortcodes) {
       const likes = await getLikesByShortcode(shortcode);
       const likesSet = new Set(likes.map((l) => (l || "").toLowerCase()));
       for (const u of users) {
         if (u.insta && likesSet.has(u.insta.toLowerCase())) {
-          likesStatus[u.user_id] = true;
+          likesStatus[u.user_id].delete(shortcode);
         }
       }
     }
@@ -55,9 +55,10 @@ export async function cronNotifikasiAbsenLikesKomentar() {
     // TikTok: Komentar
     // ================================
     const posts = await getPostsTodayByClient(client_id);
-    // Map: user_id -> set komentar
+    // Map: user_id -> set video_id yang belum dikomentari
     const komentarStatus = {};
-    for (const u of users) komentarStatus[u.user_id] = false;
+    const postIds = posts.map(p => p.video_id || p.id);
+    for (const u of users) komentarStatus[u.user_id] = new Set(postIds);
 
     for (const post of posts) {
       const video_id = post.video_id || post.id;
@@ -71,7 +72,7 @@ export async function cronNotifikasiAbsenLikesKomentar() {
       const komentarSet = new Set(commentsArr);
       for (const u of users) {
         if (u.tiktok && komentarSet.has(u.tiktok.replace(/^@/, "").toLowerCase())) {
-          komentarStatus[u.user_id] = true;
+          komentarStatus[u.user_id].delete(video_id);
         }
       }
     }
@@ -83,21 +84,21 @@ export async function cronNotifikasiAbsenLikesKomentar() {
       if (user.exception === true) continue;
       if (!user.whatsapp || String(user.whatsapp).length < 8) continue;
 
-      const belumLikes = !likesStatus[user.user_id] && shortcodes.length > 0;
-      const belumKomentar = !komentarStatus[user.user_id] && posts.length > 0;
+      const belumLikes = likesStatus[user.user_id].size > 0;
+      const belumKomentar = komentarStatus[user.user_id].size > 0;
       if (!belumLikes && !belumKomentar) continue; // Sudah dua-duanya
 
       // Kumpulkan list link yang belum dilaksanakan
       let listLink = [];
       if (belumLikes) {
-        listLink.push(...shortcodes.map((sc) => `https://instagram.com/p/${sc}`));
+        listLink.push(...[...likesStatus[user.user_id]].map((sc) => `https://instagram.com/p/${sc}`));
       }
       if (belumKomentar) {
         const client_tiktok = user.tiktok ? user.tiktok.replace(/^@/, "") : "-";
         listLink.push(
-          ...posts.map(
-            (p) =>
-              `https://www.tiktok.com/@${client_tiktok}/video/${p.video_id || p.id}`
+          ...[...komentarStatus[user.user_id]].map(
+            (id) =>
+              `https://www.tiktok.com/@${client_tiktok}/video/${id}`
           )
         );
       }
@@ -121,7 +122,7 @@ export async function cronNotifikasiAbsenLikesKomentar() {
       try {
         await waClient.sendMessage(formatToWhatsAppId(user.whatsapp), pesan);
         console.log(`[WA] Notifikasi dikirim ke ${user.nama} (${user.whatsapp})`);
-        await new Promise(r => setTimeout(r, 3000)); // JEDA 3 DETIK
+        await new Promise(r => setTimeout(r, 1000)); // JEDA 1 DETIK
       } catch (err) {
         console.error(`[WA] Gagal kirim notifikasi ke ${user.nama} (${user.whatsapp}): ${err.message}`);
       }
