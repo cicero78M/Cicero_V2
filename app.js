@@ -1,6 +1,6 @@
 import express from 'express';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
+import { env } from './src/config/env.js';
 import cors from 'cors';
 import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';        // <--- tambahkan
@@ -8,8 +8,7 @@ import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js'; // <--- tambahkan
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
 
-// Load environment variables dulu
-dotenv.config();
+// env imported above validates env vars
 
 // Import semua cron jobs (jalankan di background)
 import './src/cron/cronInstaService.js';
@@ -25,7 +24,7 @@ const app = express();
 
 // === CORS agar Next.js (beda domain/port) bisa akses API ===
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*', // Production: ganti jadi url Next.js-mu
+  origin: env.CORS_ORIGIN,
   credentials: true,
 }));
 
@@ -43,5 +42,5 @@ app.use('/api', authRequired, routes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

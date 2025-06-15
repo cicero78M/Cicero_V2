@@ -1,11 +1,12 @@
-import crypto from 'crypto';
+import { env } from '../config/env.js';
 import redis from '../config/redis.js';
+import { createRequestHash, storeRequestHash } from '../utils/requestHash.js';
 
 const TTL_SEC = 5 * 60; // 5 minutes
 
 export async function dedupRequest(req, res, next) {
   // Skip all checks if disabled via env var
-  if (process.env.ALLOW_DUPLICATE_REQUESTS === 'true') {
+  if (env.ALLOW_DUPLICATE_REQUESTS) {
     return next();
   }
 
@@ -23,15 +24,7 @@ export async function dedupRequest(req, res, next) {
       req.headers['x-client-id'] ||
       req.ip ||
       '';
-    const hash = crypto
-      .createHash('sha1')
-      .update(
-        req.method +
-          req.originalUrl +
-          JSON.stringify(req.body || {}) +
-          userPart
-      )
-      .digest('hex');
+    const hash = createRequestHash(req, userPart);
     const key = `dedup:${hash}`;
     const exists = await redis.exists(key);
     if (exists) {
@@ -39,7 +32,7 @@ export async function dedupRequest(req, res, next) {
         .status(429)
         .json({ success: false, message: 'Duplicate request detected' });
     }
-    await redis.set(key, '1', { EX: TTL_SEC });
+    await storeRequestHash(hash, TTL_SEC);
   } catch (e) {
     // If hashing fails or redis error, ignore dedup check
   }

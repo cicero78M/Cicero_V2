@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { env } from '../config/env.js';
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
-const DEBUG_FETCH_IG = process.env.DEBUG_FETCH_INSTAGRAM === 'true';
+const DEBUG_FETCH_IG = env.DEBUG_FETCH_INSTAGRAM;
 
 function sendConsoleDebug(...args) {
   if (DEBUG_FETCH_IG) console.log('[DEBUG IG]', ...args);

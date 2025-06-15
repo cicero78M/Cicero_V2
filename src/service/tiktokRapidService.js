@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { fetchTiktokSecUid } from './clientService.js';
+import { env } from '../config/env.js';
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 
 function parsePosts(resData) {
