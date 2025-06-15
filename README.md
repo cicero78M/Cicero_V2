@@ -144,14 +144,10 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
   Mapping komentar user untuk absensi.  
   Semua data TikTok tersimpan di tabel DB.
 
-- **Integrasi Google Sheet**
-  Import data user/client massal via Google Sheet.
-  Sheet harus publik ("Anyone with the link can view").
+- **Integrasi Google Sheet**  
+  Import data user/client massal via Google Sheet.  
+  Sheet harus publik ("Anyone with the link can view").  
   Fitur cek akses sheet otomatis, instruksi jika tidak valid.
-
-- **Integrasi Google Contacts**
-  Nomor WhatsApp yang menghubungi bot akan otomatis disimpan ke Google
-  Contacts jika belum ada. Membutuhkan setup OAuth People API.
 
 ---
 
@@ -176,8 +172,6 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
     NEXT_PUBLIC_CLIENT_OPERATOR=628123456789
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
-    GOOGLE_CREDENTIALS_PATH=credentials.json
-    GOOGLE_TOKEN_PATH=token.json
     ```
 
     Untuk login dashboard, Anda dapat menggunakan nomor operator masing-masing
@@ -185,28 +179,16 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
     dan masukkan nomor admin tersebut pada kolom WhatsApp. Saat ini tidak ada
     batas jumlah sesi login aktif per `client_id`.
 
-3. **Setup OAuth Google Contacts:**
-    1. Buat project di [Google Cloud Console](https://console.cloud.google.com/).
-       Aktifkan *People API*.
-    2. Buat OAuth client type **Desktop** dan unduh file `credentials.json`.
-    3. Jalankan perintah:
-       ```bash
-       npm run google-auth
-       ```
-       Ikuti URL yang muncul dan simpan token ke `token.json`.
-    4. Simpan lokasi kedua file di variabel `GOOGLE_CREDENTIALS_PATH` dan
-       `GOOGLE_TOKEN_PATH` pada berkas `.env`.
-
-4. **Install Redis:**
+3. **Install Redis:**
     ```bash
     sudo apt-get install redis-server
     sudo systemctl enable redis-server
     sudo systemctl start redis-server
     ```
 
-5. **Setup DB:** migrasikan semua tabel (lihat bagian migrasi DB di bawah).
+4. **Setup DB:** migrasikan semua tabel (lihat bagian migrasi DB di bawah).
 
-6. **Jalankan aplikasi:**
+5. **Jalankan aplikasi:**
     ```bash
     npm start
     ```
