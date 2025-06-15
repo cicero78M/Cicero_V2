@@ -1,4 +1,4 @@
-import { pool } from "../config/db.js";
+import { query } from '../repository/db.js';
 
 /**
  * Simpan/Update komentar TikTok untuk video tertentu.
@@ -26,7 +26,7 @@ export async function upsertTiktokComments(video_id, commentsArr) {
 
   // Gabungkan dengan yang sudah ada (jika ada di DB)
   const qSelect = `SELECT comments FROM tiktok_comment WHERE video_id = $1`;
-  const res = await pool.query(qSelect, [video_id]);
+  const res = await query(qSelect, [video_id]);
   let existing = [];
   if (res.rows[0] && Array.isArray(res.rows[0].comments)) {
     existing = res.rows[0].comments
@@ -45,7 +45,7 @@ export async function upsertTiktokComments(video_id, commentsArr) {
     ON CONFLICT (video_id)
     DO UPDATE SET comments = $2, updated_at = NOW()
   `;
-  await pool.query(qUpsert, [video_id, JSON.stringify(finalUsernames)]);
+  await query(qUpsert, [video_id, JSON.stringify(finalUsernames)]);
 }
 
 /**
@@ -55,7 +55,7 @@ export async function upsertTiktokComments(video_id, commentsArr) {
  */
 export async function getCommentsByVideoId(video_id) {
   const q = `SELECT comments FROM tiktok_comment WHERE video_id = $1`;
-  const res = await pool.query(q, [video_id]);
+  const res = await query(q, [video_id]);
   return res.rows[0] ? { comments: res.rows[0].comments } : { comments: [] };
 }
 
@@ -68,13 +68,13 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
     tanggalFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
   }
 
-  const { rows: postRows } = await pool.query(
+  const { rows: postRows } = await query(
     `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p WHERE p.client_id = $1 AND ${tanggalFilter}`,
     [client_id]
   );
   const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
-  const { rows } = await pool.query(`
+  const { rows } = await query(`
     WITH valid_comments AS (
       SELECT c.video_id, p.client_id, p.created_at, c.comments
       FROM tiktok_comment c

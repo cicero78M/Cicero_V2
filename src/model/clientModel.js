@@ -1,16 +1,16 @@
 // src/model/clientModel.js
 
-import { pool } from '../config/db.js';
+import { query } from '../repository/db.js';
 
 // Ambil semua client
 export const findAll = async () => {
-  const res = await pool.query('SELECT * FROM clients');
+  const res = await query('SELECT * FROM clients');
   return res.rows;
 };
 
 // Ambil client by client_id
 export const findById = async (client_id) => {
-  const res = await pool.query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
+  const res = await query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
   return res.rows[0] || null;
 };
 
@@ -37,7 +37,7 @@ export const create = async (client) => {
     client.tiktok_secuid || '',
     client.client_super || ''
   ];
-  const res = await pool.query(q, values);
+  const res = await query(q, values);
   return res.rows[0];
 };
 
@@ -77,19 +77,19 @@ export const update = async (client_id, clientData) => {
     merged.tiktok_secuid || '',
     merged.client_super || ''
   ];
-  const res = await pool.query(q, values);
+  const res = await query(q, values);
   return res.rows[0];
 };
 
 // Hapus client
 export const remove = async (client_id) => {
-  const res = await pool.query('DELETE FROM clients WHERE client_id = $1 RETURNING *', [client_id]);
+  const res = await query('DELETE FROM clients WHERE client_id = $1 RETURNING *', [client_id]);
   return res.rows[0] || null;
 };
 
 // Ambil semua client aktif IG
 export async function findAllActiveWithInstagram() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true`
   );
   return res.rows;
@@ -97,7 +97,7 @@ export async function findAllActiveWithInstagram() {
 
 // Ambil semua client aktif TikTok
 export async function findAllActiveWithTiktok() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM clients WHERE client_status = true AND client_tiktok_status = true`
   );
   return res.rows;
@@ -105,11 +105,11 @@ export async function findAllActiveWithTiktok() {
 
 // [Opsional] Untuk statistik/rekap dashboard
 export async function getAllClients() {
-  const res = await pool.query('SELECT * FROM clients');
+  const res = await query('SELECT * FROM clients');
   return res.rows;
 }
 export async function updateClientSecUid(client_id, secUid) {
-  const res = await pool.query(
+  const res = await query(
     'UPDATE clients SET tiktok_secuid = $1 WHERE client_id = $2',
     [secUid, client_id]
   );
@@ -117,7 +117,7 @@ export async function updateClientSecUid(client_id, secUid) {
 }
 
 export async function getAllClientIds() {
-  const rows = await pool.query("SELECT client_id, nama, client_status FROM clients ORDER BY client_id");
+  const rows = await query("SELECT client_id, nama, client_status FROM clients ORDER BY client_id");
   return rows.rows.map(r => ({
     client_id: r.client_id,
     nama: r.nama,

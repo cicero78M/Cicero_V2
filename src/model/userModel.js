@@ -2,7 +2,7 @@
 
 import fs from 'fs/promises';
 import { USER_DATA_PATH } from '../utils/constants.js';
-import { pool } from '../config/db.js';
+import { query } from '../repository/db.js';
 
 const dataPath = USER_DATA_PATH || './src/data/users.json';
 
@@ -58,7 +58,7 @@ export const remove = async (id) => {
 
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT user_id, nama, tiktok, insta, divisi, title, status, exception
      FROM "user"
      WHERE client_id = $1 AND status = true`,
@@ -69,7 +69,7 @@ export async function getUsersByClient(client_id) {
 
 // Ambil semua user aktif (status = true/NULL), khusus absensi TikTok
 export async function getUsersByClientFull(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT user_id, nama, tiktok, divisi, title, exception
      FROM "user"
      WHERE client_id = $1 AND (status IS TRUE OR status IS NULL)`,
@@ -82,7 +82,7 @@ export async function getUsersByClientFull(client_id) {
 
 // [OPSI] Ambil user by Instagram (status = true)
 export async function getUsersByClientWithInsta(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT user_id, nama, insta, divisi, title, exception
      FROM "user"
      WHERE client_id = $1 AND status = true AND insta IS NOT NULL`,
@@ -93,7 +93,7 @@ export async function getUsersByClientWithInsta(client_id) {
 
 // [OPSI] Ambil user by TikTok (status = true)
 export async function getUsersByClientWithTiktok(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT user_id, nama, tiktok, divisi, title, exception
      FROM "user"
      WHERE client_id = $1 AND status = true AND tiktok IS NOT NULL`,
@@ -105,21 +105,21 @@ export async function getUsersByClientWithTiktok(client_id) {
 // Ambil seluruh user dari semua client
 export async function getAllUsers(client_id) {
   if (client_id) {
-    const res = await pool.query(
+    const res = await query(
       'SELECT * FROM "user" WHERE client_id = $1',
       [client_id]
     );
     return res.rows;
   } else {
     // Jika tanpa client_id, ambil semua user di seluruh client
-    const res = await pool.query('SELECT * FROM "user"');
+    const res = await query('SELECT * FROM "user"');
     return res.rows;
   }
 }
 
 // Ambil user yang SUDAH mengisi Instagram (status true)
 export async function getInstaFilledUsersByClient(clientId) {
-  const result = await pool.query(
+  const result = await query(
     `SELECT divisi, nama, user_id, title, insta
      FROM "user"
      WHERE client_id = $1 AND insta IS NOT NULL AND insta <> '' AND status = true
@@ -131,7 +131,7 @@ export async function getInstaFilledUsersByClient(clientId) {
 
 // Ambil user yang BELUM mengisi Instagram (status true)
 export async function getInstaEmptyUsersByClient(clientId) {
-  const result = await pool.query(
+  const result = await query(
     `SELECT divisi, nama, user_id, title
      FROM "user"
      WHERE client_id = $1 AND (insta IS NULL OR insta = '') AND status = true
@@ -143,7 +143,7 @@ export async function getInstaEmptyUsersByClient(clientId) {
 
 // Ambil user yang SUDAH mengisi TikTok (status true)
 export async function getTiktokFilledUsersByClient(clientId) {
-  const result = await pool.query(
+  const result = await query(
     `SELECT divisi, nama, user_id, title, tiktok
      FROM "user"
      WHERE client_id = $1 AND tiktok IS NOT NULL AND tiktok <> '' AND status = true
@@ -155,7 +155,7 @@ export async function getTiktokFilledUsersByClient(clientId) {
 
 // Ambil user yang BELUM mengisi TikTok (status true)
 export async function getTiktokEmptyUsersByClient(clientId) {
-  const result = await pool.query(
+  const result = await query(
     `SELECT divisi, nama, user_id, title
      FROM "user"
      WHERE client_id = $1 AND (tiktok IS NULL OR tiktok = '') AND status = true
@@ -166,7 +166,7 @@ export async function getTiktokEmptyUsersByClient(clientId) {
 }
 
 export async function findUserById(user_id) {
-  const { rows } = await pool.query('SELECT * FROM "user" WHERE user_id=$1', [
+  const { rows } = await query('SELECT * FROM "user" WHERE user_id=$1', [
     user_id,
   ]);
   return rows[0];
@@ -188,7 +188,7 @@ export async function updateUserField(user_id, field, value) {
     "jabatan",
   ];
   if (!allowed.includes(field)) throw new Error("Field tidak diizinkan!");
-  const { rows } = await pool.query(
+  const { rows } = await query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
     [value, user_id]
   );
@@ -197,7 +197,7 @@ export async function updateUserField(user_id, field, value) {
 
 // Ambil semua user yang exception = true
 export async function getAllExceptionUsers() {
-  const { rows } = await pool.query(
+  const { rows } = await query(
     'SELECT * FROM "user" WHERE exception = true'
   );
   return rows;
@@ -205,7 +205,7 @@ export async function getAllExceptionUsers() {
 
 // Ambil user dengan exception per client
 export async function getExceptionUsersByClient(client_id) {
-  const { rows } = await pool.query(
+  const { rows } = await query(
     'SELECT * FROM "user" WHERE exception = true AND client_id = $1',
     [client_id]
   );
@@ -214,7 +214,7 @@ export async function getExceptionUsersByClient(client_id) {
 
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
-  const result = await pool.query('SELECT * FROM "user" WHERE whatsapp = $1', [
+  const result = await query('SELECT * FROM "user" WHERE whatsapp = $1', [
     wa,
   ]);
   return result.rows[0];
@@ -222,7 +222,7 @@ export async function findUserByWhatsApp(wa) {
 
 export async function findUserByInsta(username) {
   if (!username) return null;
-  const result = await pool.query('SELECT * FROM "user" WHERE insta = $1', [
+  const result = await query('SELECT * FROM "user" WHERE insta = $1', [
     username,
   ]);
   return result.rows[0];
@@ -231,7 +231,7 @@ export async function findUserByInsta(username) {
 export async function findUserByTiktok(username) {
   if (!username) return null;
   // Query string langsung, tidak ada normalisasi
-  const result = await pool.query('SELECT * FROM "user" WHERE tiktok = $1', [
+  const result = await query('SELECT * FROM "user" WHERE tiktok = $1', [
     username,
   ]);
   return result.rows[0];
@@ -239,7 +239,7 @@ export async function findUserByTiktok(username) {
 
 // Ambil semua pangkat/title unik (distinct)
 export async function getDistinctUserTitles() {
-  const { rows } = await pool.query(
+  const { rows } = await query(
     "SELECT DISTINCT title FROM \"user\" WHERE title IS NOT NULL AND title <> '' ORDER BY title"
   );
   return rows.map((r) => r.title);
@@ -247,7 +247,7 @@ export async function getDistinctUserTitles() {
 
 // Ambil semua divisi unik untuk client_id tertentu
 export async function getDistinctUserDivisions(client_id) {
-  const { rows } = await pool.query(
+  const { rows } = await query(
     "SELECT DISTINCT divisi FROM \"user\" WHERE client_id = $1 AND divisi IS NOT NULL AND divisi <> '' ORDER BY divisi",
     [client_id]
   );
@@ -259,7 +259,7 @@ export async function findUserByField(field, value) {
   const allowed = ["insta", "tiktok"];
   if (!allowed.includes(field))
     throw new Error("Hanya field insta/tiktok yang didukung");
-  const { rows } = await pool.query(
+  const { rows } = await query(
     `SELECT user_id FROM "user" WHERE ${field} = $1`,
     [value]
   );
@@ -268,8 +268,8 @@ export async function findUserByField(field, value) {
 
 // Mendapatkan daftar pangkat unik dari tabel user (atau dari tabel/enum khusus jika ada)
 export async function getAvailableTitles() {
-  // Jika ada table titles: return await pool.query('SELECT DISTINCT title FROM titles');
-  const res = await pool.query(
+  // Jika ada table titles: return await query('SELECT DISTINCT title FROM titles');
+  const res = await query(
     'SELECT DISTINCT title FROM "user" WHERE title IS NOT NULL ORDER BY title'
   );
   return res.rows.map((r) => r.title).filter(Boolean);
@@ -278,7 +278,7 @@ export async function getAvailableTitles() {
 // Ambil daftar Satfung unik dari database
 export async function getAvailableSatfung() {
   // Gunakan "user" (pakai kutip dua) karena user adalah reserved word di Postgres
-  const res = await pool.query(
+  const res = await query(
     'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL ORDER BY divisi'
   );
   return res.rows.map((r) => r.divisi).filter(Boolean);
@@ -306,14 +306,14 @@ export async function createUser(userData) {
     userData.client_id || null,
     userData.exception ?? false
   ];
-  const res = await pool.query(q, params);
+  const res = await query(q, params);
   return res.rows[0];
 }
 
 // Hapus field WhatsApp untuk semua user yang nomornya terdapat pada adminWAList
 export async function clearUsersWithAdminWA(adminWAList) {
   if (!adminWAList || adminWAList.length === 0) return [];
-  const { rows } = await pool.query(
+  const { rows } = await query(
     "UPDATE \"user\" SET whatsapp = '' WHERE whatsapp = ANY($1::text[]) RETURNING user_id",
     [adminWAList]
   );

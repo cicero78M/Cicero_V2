@@ -1,4 +1,4 @@
-import { pool } from '../config/db.js';
+import { query } from '../repository/db.js';
 
 export async function upsertInstaProfile(data) {
   const {
@@ -11,7 +11,7 @@ export async function upsertInstaProfile(data) {
     profile_pic_url = null,
   } = data;
   if (!username) return;
-  await pool.query(
+  await query(
     `INSERT INTO insta_profile (username, full_name, biography, follower_count, following_count, post_count, profile_pic_url, updated_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
      ON CONFLICT (username) DO UPDATE
@@ -27,6 +27,6 @@ export async function upsertInstaProfile(data) {
 }
 
 export async function findByUsername(username) {
-  const res = await pool.query('SELECT * FROM insta_profile WHERE username = $1', [username]);
+  const res = await query('SELECT * FROM insta_profile WHERE username = $1', [username]);
   return res.rows[0] || null;
 }
