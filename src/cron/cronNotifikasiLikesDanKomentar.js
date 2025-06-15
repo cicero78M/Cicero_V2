@@ -133,7 +133,7 @@ export async function cronNotifikasiAbsenLikesKomentar() {
 
 // Jalankan setiap jam 12:00, 16:00, dan 19:00 WIB
 cron.schedule(
-  "5 12,16,19 * * *",
+  "10 12,16,19 * * *",
   () =>
     cronNotifikasiAbsenLikesKomentar().catch((err) =>
       console.error(
