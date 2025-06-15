@@ -3,12 +3,10 @@ import morgan from 'morgan';
 import { env } from './src/config/env.js';
 import cors from 'cors';
 import routes from './src/routes/index.js';
-import authRoutes from './src/routes/authRoutes.js';        // <--- tambahkan
+import authRoutes from './src/routes/authRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
-import { authRequired } from './src/middleware/authMiddleware.js'; // <--- tambahkan
+import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
-
-// env imported above validates env vars
 
 // Import semua cron jobs (jalankan di background)
 import './src/cron/cronInstaService.js';
@@ -19,10 +17,6 @@ import './src/cron/cronNotifikasiLikesDanKomentar.js';
 
 const app = express();
 
-
-
-
-// === CORS agar Next.js (beda domain/port) bisa akses API ===
 app.use(cors({
   origin: env.CORS_ORIGIN,
   credentials: true,
