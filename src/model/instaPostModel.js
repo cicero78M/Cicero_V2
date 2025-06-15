@@ -1,5 +1,5 @@
 // src/model/instaPostModel.js
-import { pool } from '../config/db.js';
+import { query } from '../repository/db.js';
 
 export async function upsertInstaPost(data) {
   // Pastikan field yang dipakai sesuai dengan kolom di DB
@@ -11,7 +11,7 @@ export async function upsertInstaPost(data) {
   } = data;
 
   // created_at bisa dihandle via taken_at di service (lihat service)
-  await pool.query(
+  await query(
     `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, created_at)
      VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
      ON CONFLICT (shortcode) DO UPDATE
@@ -28,7 +28,7 @@ export async function getShortcodesTodayByClient(client_id) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
-  const res = await pool.query(
+  const res = await query(
     `SELECT shortcode FROM insta_post
      WHERE client_id = $1 AND DATE(created_at) = $2`,
     [client_id, `${yyyy}-${mm}-${dd}`]
@@ -38,7 +38,7 @@ export async function getShortcodesTodayByClient(client_id) {
 
 
 export async function getPostsTodayByClient(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM insta_post WHERE client_id = $1 AND created_at::date = NOW()::date`,
     [client_id]
   );
@@ -46,7 +46,7 @@ export async function getPostsTodayByClient(client_id) {
 }
 
 export async function getPostsByClientId(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM insta_post WHERE client_id = $1 ORDER BY created_at DESC`,
     [client_id]
   );

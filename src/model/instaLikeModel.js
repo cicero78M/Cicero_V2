@@ -1,12 +1,12 @@
 // src/model/instaLikeModel.js
-import { pool } from '../config/db.js';
+import { query } from '../repository/db.js';
 
 /**
  * Upsert (insert/update) daftar username likes untuk sebuah shortcode.
  * Disarankan kolom likes bertipe JSONB.
  */
 export async function upsertInstaLike(shortcode, likes) {
-  const result = await pool.query(
+  const result = await query(
     `INSERT INTO insta_like (shortcode, likes, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (shortcode) DO UPDATE
@@ -22,7 +22,7 @@ export async function upsertInstaLike(shortcode, likes) {
  * Return: array of username (jika belum ada, array kosong)
  */
 export async function getLikeUsernamesByShortcode(shortcode) {
-  const res = await pool.query('SELECT likes FROM insta_like WHERE shortcode = $1', [shortcode]);
+  const res = await query('SELECT likes FROM insta_like WHERE shortcode = $1', [shortcode]);
   if (res.rows.length === 0) return [];
   const likesVal = res.rows[0].likes;
   if (!likesVal) return [];
@@ -41,7 +41,7 @@ export async function getLikeUsernamesByShortcode(shortcode) {
  * Hapus data likes berdasarkan shortcode (optional, untuk sinkronisasi)
  */
 export async function deleteInstaLikeByShortcode(shortcode) {
-  const result = await pool.query('DELETE FROM insta_like WHERE shortcode = $1', [shortcode]);
+  const result = await query('DELETE FROM insta_like WHERE shortcode = $1', [shortcode]);
   return result.rowCount;
 }
 
@@ -49,7 +49,7 @@ export async function deleteInstaLikeByShortcode(shortcode) {
  * (Optional) Ambil semua shortcode likes yang diupdate hari ini
  */
 export async function getAllShortcodesToday() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT shortcode FROM insta_like WHERE DATE(updated_at) = CURRENT_DATE`
   );
   return res.rows.map(r => r.shortcode);
@@ -57,7 +57,7 @@ export async function getAllShortcodesToday() {
 
 
 export async function getLikesByShortcode(shortcode) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT likes FROM insta_like WHERE shortcode = $1`,
     [shortcode]
   );
@@ -86,14 +86,14 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
   }
 
   // Ambil jumlah post IG untuk periode
-  const { rows: postRows } = await pool.query(
+  const { rows: postRows } = await query(
     `SELECT COUNT(*) AS jumlah_post FROM insta_post WHERE client_id = $1 AND ${tanggalFilter}`,
     [client_id]
   );
   const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
   // CTE
-  const { rows } = await pool.query(`
+  const { rows } = await query(`
     WITH valid_likes AS (
       SELECT
         l.shortcode,

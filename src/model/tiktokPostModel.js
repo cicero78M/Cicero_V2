@@ -1,5 +1,5 @@
 // src/model/tiktokPostModel.js
-import { pool } from "../config/db.js";
+import { query } from '../repository/db.js';
 
 /**
  * Simpan/update satu atau banyak post TikTok (array of objects)
@@ -9,7 +9,7 @@ import { pool } from "../config/db.js";
 export async function upsertTiktokPosts(client_id, posts) {
   if (!Array.isArray(posts)) return;
   for (const post of posts) {
-    await pool.query(
+    await query(
       `INSERT INTO tiktok_post (client_id, video_id, caption, like_count, comment_count, created_at)
        VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
        ON CONFLICT (video_id) DO UPDATE
@@ -40,7 +40,7 @@ export async function getVideoIdsTodayByClient(client_id) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const res = await pool.query(
+  const res = await query(
     `SELECT video_id FROM tiktok_post
      WHERE client_id = $1 AND DATE(created_at) = $2`,
     [client_id, `${yyyy}-${mm}-${dd}`]
@@ -54,7 +54,7 @@ export async function getVideoIdsTodayByClient(client_id) {
  * @returns {Array} Array of post object
  */
 export async function getPostsTodayByClient(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM tiktok_post WHERE client_id = $1 AND created_at::date = NOW()::date`,
     [client_id]
   );
@@ -67,7 +67,7 @@ export async function getPostsTodayByClient(client_id) {
  * @returns {Array} Array of post object
  */
 export async function getPostsByClientId(client_id) {
-  const res = await pool.query(
+  const res = await query(
     `SELECT * FROM tiktok_post WHERE client_id = $1 ORDER BY created_at DESC`,
     [client_id]
   );
