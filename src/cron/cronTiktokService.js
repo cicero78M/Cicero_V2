@@ -10,8 +10,8 @@ import { absensiKomentar } from "../handler/fetchAbsensi/tiktok/absensiKomentarT
 
 // Helper ambil client TikTok aktif
 async function getActiveClientsTiktok() {
-  const { pool } = await import("../config/db.js");
-  const rows = await pool.query(
+  const { query } = await import("../db/index.js");
+  const rows = await query(
     "SELECT client_id, nama FROM clients WHERE client_status = true AND client_tiktok_status = true ORDER BY client_id"
   );
   return rows.rows;

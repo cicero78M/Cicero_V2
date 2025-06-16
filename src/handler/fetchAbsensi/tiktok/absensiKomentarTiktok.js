@@ -1,4 +1,4 @@
-import { pool } from "../../../config/db.js";
+import { query } from "../../../db/index.js";
 import { getUsersByClient } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
@@ -8,7 +8,7 @@ import { sendDebug } from "../../../middleware/debugHandler.js";
 
 // Dapatkan nama dan username tiktok client
 async function getClientInfo(client_id) {
-  const res = await pool.query(
+  const res = await query(
     "SELECT nama, client_tiktok FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );

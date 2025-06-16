@@ -9,8 +9,8 @@ import waClient from "../service/waService.js";
 
 // Helper: ambil client IG aktif lengkap data
 async function getActiveClientsIG() {
-  const { pool } = await import("../config/db.js");
-  const rows = await pool.query(
+  const { query } = await import("../db/index.js");
+  const rows = await query(
     `SELECT client_id, nama, client_operator, client_super, client_group
      FROM clients
      WHERE client_status = true AND client_insta_status = true

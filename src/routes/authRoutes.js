@@ -1,6 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import { pool } from "../config/db.js";
+import { query } from "../db/index.js";
 import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
 
@@ -18,7 +18,7 @@ router.post("/login", async (req, res) => {
       });
   }
   // Cari client berdasarkan ID saja
-  const { rows } = await pool.query(
+  const { rows } = await query(
     "SELECT * FROM clients WHERE client_id = $1",
     [client_id]
   );

@@ -1,7 +1,7 @@
 // src/handler/fetchPost/instaFetchPost.js
 
 import pLimit from "p-limit";
-import { pool } from "../../config/db.js";
+import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchInstagramPosts } from "../../service/instagramApi.js";
 
@@ -43,7 +43,7 @@ async function getShortcodesToday(clientId = null) {
     query += ` AND client_id = $2`;
     params.push(clientId);
   }
-  const res = await pool.query(query, params);
+  const res = await query(query, params);
   return res.rows.map((r) => r.shortcode);
 }
 
@@ -60,11 +60,11 @@ async function deleteShortcodes(shortcodesToDelete, clientId = null) {
     query += ` AND client_id = $3`;
     params.push(clientId);
   }
-  await pool.query(query, params);
+  await query(query, params);
 }
 
 async function getEligibleClients() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT client_ID as id, client_insta FROM clients
       WHERE client_status=true AND client_insta_status=true AND client_insta IS NOT NULL`
   );
@@ -174,7 +174,7 @@ export async function fetchAndStoreInstaContent(
         msg: `[DB] Upsert IG post: ${toSave.shortcode}`,
         client_id: client.id
       });
-      await pool.query(
+      await query(
         `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
          VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
          ON CONFLICT (shortcode) DO UPDATE
@@ -224,10 +224,10 @@ export async function fetchAndStoreInstaContent(
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
-    const countRes = await pool.query(
-      `SELECT shortcode FROM insta_post WHERE client_id = $1 AND DATE(created_at) = $2`,
-      [client.id, `${yyyy}-${mm}-${dd}`]
-    );
+      const countRes = await query(
+        `SELECT shortcode FROM insta_post WHERE client_id = $1 AND DATE(created_at) = $2`,
+        [client.id, `${yyyy}-${mm}-${dd}`]
+      );
     summary[client.id] = { count: countRes.rows.length };
   }
 
@@ -239,10 +239,10 @@ export async function fetchAndStoreInstaContent(
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const kontenHariIniRes = await pool.query(
-    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
-    [`${yyyy}-${mm}-${dd}`]
-  );
+    const kontenHariIniRes = await query(
+      `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
+      [`${yyyy}-${mm}-${dd}`]
+    );
   const kontenLinksToday = kontenHariIniRes.rows.map(
     (r) => `https://www.instagram.com/p/${r.shortcode}`
   );
