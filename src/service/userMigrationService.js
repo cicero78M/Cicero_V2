@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { pool } from '../config/db.js';
+import { query } from '../db/index.js';
 import { decrypt } from '../utils/crypt.js';
 
 const jsonToDbMap = {
@@ -64,7 +64,7 @@ export async function migrateUsersFromFolder(clientId) {
         const index = columns.map((col, i) => `$${i + 1}`).join(',');
         const update = columns.map(col => `${col}=EXCLUDED.${col}`).join(',');
 
-        await pool.query(
+        await query(
           `INSERT INTO "user" (${columns.join(',')}) VALUES (${index})
            ON CONFLICT (user_id) DO UPDATE SET ${update};`,
           values

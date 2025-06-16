@@ -1,4 +1,4 @@
-import { pool } from "../../../config/db.js";
+import { query } from "../../../db/index.js";
 import { getUsersByClient } from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
@@ -7,7 +7,7 @@ import { groupByDivision, sortDivisionKeys } from "../../../utils/utilsHelper.js
 import { findClientById } from "../../../service/clientService.js";
 
 async function getClientNama(client_id) {
-  const res = await pool.query(
+  const res = await query(
     "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
@@ -223,7 +223,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 }
 
 export async function getActiveClientsIG() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true AND client_insta IS NOT NULL`
   );
   return res.rows;

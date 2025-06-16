@@ -12,6 +12,7 @@ import {
   formatNama,
 } from "../../utils/utilsHelper.js";
 import { getAdminWAIds, getAdminWANumbers } from "../../utils/waHelper.js";
+import { query } from "../../db/index.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -261,7 +262,7 @@ export const clientRequestHandlers = {
     userModel,
     clientService
   ) => {
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama, client_status FROM clients ORDER BY client_status DESC, client_id"
     );
     const clients = rows.rows;
@@ -601,7 +602,7 @@ export const clientRequestHandlers = {
     fetchAndStoreLikesInstaContent
   ) => {
     // List client IG aktif, tapi tampilkan juga status
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama, client_insta_status FROM clients ORDER BY client_id"
     );
     // Filter yang IG aktif
@@ -726,7 +727,7 @@ export const clientRequestHandlers = {
     handleFetchKomentarTiktokBatch
   ) => {
     // Ambil status juga untuk emoji
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama, client_tiktok_status FROM clients ORDER BY client_id"
     );
     // Hanya tampilkan yang TikTok aktif (atau bisa filter di SQL)
@@ -844,7 +845,7 @@ export const clientRequestHandlers = {
     userModel
   ) => {
     // Pilih client (tambahkan client_status di query)
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama, client_status FROM clients ORDER BY client_id"
     );
     const clients = rows.rows;
@@ -921,7 +922,7 @@ export const clientRequestHandlers = {
     userModel
   ) => {
     // Ambil semua client, sertakan status aktif
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama, client_status FROM clients ORDER BY client_id"
     );
     const clients = rows.rows;
@@ -1098,7 +1099,7 @@ export const clientRequestHandlers = {
     waClient,
     pool
   ) => {
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama FROM clients ORDER BY client_id"
     );
     const clients = rows.rows;
@@ -1172,7 +1173,7 @@ export const clientRequestHandlers = {
     waClient,
     pool
   ) => {
-    const rows = await pool.query(
+    const rows = await query(
       "SELECT client_id, nama FROM clients ORDER BY client_id"
     );
     const clients = rows.rows;

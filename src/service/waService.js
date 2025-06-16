@@ -5,7 +5,8 @@ import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
 import dotenv from "dotenv";
-import { pool } from "../config/db.js";
+import { query } from "../db/index.js";
+const pool = { query };
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -880,10 +881,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     // Ambil username TikTok client
     let client_tiktok = "-";
     try {
-      const { pool } = await import("../config/db.js");
+      const { query } = await import("../db/index.js");
       const q =
         "SELECT client_tiktok FROM clients WHERE client_id = $1 LIMIT 1";
-      const result = await pool.query(q, [client_id]);
+      const result = await query(q, [client_id]);
       if (result.rows[0] && result.rows[0].client_tiktok) {
         client_tiktok = result.rows[0].client_tiktok.replace(/^@/, "");
       }
@@ -1552,7 +1553,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     const waId = userWaNum.startsWith("62")
       ? userWaNum
       : "62" + userWaNum.replace(/^0/, "");
-    const res = await pool.query(q, [waId]);
+    const res = await query(q, [waId]);
     if (res.rows && res.rows[0]) {
       operatorRow = res.rows[0];
       const waOperator = operatorRow.client_operator.replace(/\D/g, "");

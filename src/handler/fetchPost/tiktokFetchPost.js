@@ -1,6 +1,6 @@
 // src/handler/fetchPost/tiktokFetchPost.js
 
-import { pool } from "../../config/db.js";
+import { query } from "../../db/index.js";
 import { findById, update } from "../../model/clientModel.js";
 import { upsertTiktokPosts } from "../../model/tiktokPostModel.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
@@ -46,7 +46,7 @@ async function getVideoIdsToday() {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const res = await pool.query(
+  const res = await query(
     `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );
@@ -59,7 +59,7 @@ async function deleteVideoIds(videoIdsToDelete) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  await pool.query(
+  await query(
     `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`,
     [videoIdsToDelete, `${yyyy}-${mm}-${dd}`]
   );
@@ -69,7 +69,7 @@ async function deleteVideoIds(videoIdsToDelete) {
  * Get all eligible TikTok clients from DB
  */
 async function getEligibleTiktokClients() {
-  const res = await pool.query(
+  const res = await query(
     `SELECT client_id as id, client_tiktok, tiktok_secuid FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
   );
   return res.rows;
@@ -247,7 +247,7 @@ export async function fetchAndStoreTiktokContent(
   clearInterval(intervalId);
 
   // PATCH: Ambil semua client TikTok untuk mapping client_id => username
-  const clientsForMap = await pool.query(
+  const clientsForMap = await query(
     `SELECT client_id, client_tiktok FROM clients WHERE client_status = true AND client_tiktok IS NOT NULL`
   );
   const clientMap = {};
@@ -260,7 +260,7 @@ export async function fetchAndStoreTiktokContent(
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const kontenHariIniRes = await pool.query(
+  const kontenHariIniRes = await query(
     `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
     [`${yyyy}-${mm}-${dd}`]
   );

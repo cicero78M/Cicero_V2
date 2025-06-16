@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { pool } from '../config/db.js';
+import { query } from '../db/index.js';
 import csv from 'csv-parser'; // npm install csv-parser
 
 export async function importUsersFromSpreadsheet(filePath, clientId) {
@@ -40,7 +40,7 @@ export async function importUsersFromSpreadsheet(filePath, clientId) {
             const index = columns.map((col, i) => `$${i + 1}`).join(',');
             const update = columns.map(col => `${col}=EXCLUDED.${col}`).join(',');
 
-            await pool.query(
+            await query(
               `INSERT INTO "user" (${columns.join(',')}) VALUES (${index})
                 ON CONFLICT (user_id) DO UPDATE SET ${update};`,
               values

@@ -1,7 +1,7 @@
 // src/handler/fetchEngagement/fetchCommentTiktok.js
 
 import pLimit from "p-limit";
-import { pool } from "../../config/db.js";
+import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
 
@@ -35,7 +35,7 @@ function extractUniqueUsernamesFromComments(commentsArr) {
 
 // Ambil komentar lama (existing) dari DB (username string array)
 async function getExistingUsernames(video_id) {
-  const res = await pool.query(
+  const res = await query(
     "SELECT comments FROM tiktok_comment WHERE video_id = $1",
     [video_id]
   );
@@ -63,7 +63,7 @@ async function upsertTiktokUserComments(video_id, usernamesArr) {
     ON CONFLICT (video_id)
     DO UPDATE SET comments = $2, updated_at = NOW()
   `;
-  await pool.query(query, [video_id, JSON.stringify(finalUsernames)]);
+  await query(query, [video_id, JSON.stringify(finalUsernames)]);
   return finalUsernames;
 }
 
@@ -77,7 +77,7 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
-    const { rows } = await pool.query(
+    const { rows } = await query(
       `SELECT video_id FROM tiktok_post WHERE client_id = $1 AND DATE(created_at) = $2`,
       [client_id, `${yyyy}-${mm}-${dd}`]
     );

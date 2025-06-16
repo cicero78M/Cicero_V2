@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
-import { pool } from "../config/db.js";
+import { query } from "../db/index.js";
 import waClient from "../service/waService.js";
 
 import { getUsersByClient } from "../model/userModel.js";
@@ -26,7 +26,7 @@ function formatNama(user) {
 export async function cronNotifikasiAbsenLikesKomentar() {
   console.log("[CRON] Mulai pengecekan tugas Likes & Komentar seluruh client...");
   // Ambil seluruh client aktif
-  const { rows: clients } = await pool.query("SELECT client_id, nama FROM clients WHERE client_status = true");
+  const { rows: clients } = await query("SELECT client_id, nama FROM clients WHERE client_status = true");
   for (const client of clients) {
     const client_id = client.client_id;
     // Ambil user aktif untuk client

@@ -1,7 +1,7 @@
 // src/handler/fetchEngagement/fetchLikesInstagram.js
 
 import pLimit from "p-limit";
-import { pool } from "../../config/db.js";
+import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllInstagramLikes } from "../../service/instagramApi.js";
 
@@ -9,7 +9,7 @@ const limit = pLimit(3); // Rate limit parallel request
 
 // Ambil likes lama (existing) dari database dan kembalikan sebagai array string
 async function getExistingLikes(shortcode) {
-  const res = await pool.query(
+  const res = await query(
     "SELECT likes FROM insta_like WHERE shortcode = $1",
     [shortcode]
   );
@@ -45,7 +45,7 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
   });
 
   // Simpan ke database (upsert), gabungkan dengan data lama
-  await pool.query(
+  await query(
     `INSERT INTO insta_like (shortcode, likes, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (shortcode) DO UPDATE
@@ -75,7 +75,7 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
-    const { rows } = await pool.query(
+    const { rows } = await query(
       `SELECT shortcode FROM insta_post WHERE client_id = $1 AND DATE(created_at) = $2`,
       [client_id, `${yyyy}-${mm}-${dd}`]
     );
