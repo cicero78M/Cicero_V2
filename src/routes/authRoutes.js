@@ -66,8 +66,14 @@ router.post("/login", async (req, res) => {
   } catch (err) {
     console.error('[AUTH] Gagal menyimpan token login:', err.message);
   }
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 2 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production'
+  });
   // Kembalikan token dan data client
-  return res.json({ success: true, token, client: payload });
+  return res.json({ success: true, client: payload });
 });
 
 export default router;

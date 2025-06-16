@@ -8,6 +8,7 @@ import {
   fetchTiktokPostsBySecUid,
   fetchTiktokInfo
 } from '../service/tiktokApi.js';
+import * as profileCache from '../service/profileCacheService.js';
 
 export async function getTiktokComments(req, res, next) {
   try {
@@ -81,7 +82,13 @@ export async function getRapidTiktokProfile(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    const profile = await fetchTiktokProfile(username);
+    let profile = await profileCache.getProfile('tiktok', username);
+    if (!profile) {
+      profile = await fetchTiktokProfile(username);
+      if (profile) {
+        await profileCache.setProfile('tiktok', username, profile);
+      }
+    }
     sendSuccess(res, profile);
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;

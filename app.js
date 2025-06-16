@@ -2,6 +2,7 @@ import express from 'express';
 import morgan from 'morgan';
 import { env } from './src/config/env.js';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
@@ -23,6 +24,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(dedupRequest);
 
