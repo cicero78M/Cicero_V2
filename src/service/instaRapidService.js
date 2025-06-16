@@ -259,12 +259,37 @@ export async function fetchInstagramLikesPage(shortcode, cursor = null) {
   return { usernames, next_cursor, has_more };
 }
 
+export async function fetchInstagramLikesPageRetry(
+  shortcode,
+  cursor = null,
+  retries = 3
+) {
+  let attempt = 0;
+  while (attempt < retries) {
+    try {
+      if (attempt > 0) {
+        sendConsoleDebug('retry fetchInstagramLikesPage', { attempt, shortcode });
+      }
+      return await fetchInstagramLikesPage(shortcode, cursor);
+    } catch (err) {
+      attempt++;
+      if (attempt >= retries) throw err;
+      sendConsoleDebug('fetchInstagramLikesPage error', {
+        attempt,
+        message: err.message,
+      });
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  return { usernames: [], next_cursor: null, has_more: false };
+}
+
 export async function fetchAllInstagramLikes(shortcode, maxPage = 20) {
   const all = [];
   let cursor = null;
   let page = 0;
   do {
-    const { usernames, next_cursor, has_more } = await fetchInstagramLikesPage(shortcode, cursor);
+    const { usernames, next_cursor, has_more } = await fetchInstagramLikesPageRetry(shortcode, cursor);
     if (!usernames.length) break;
     all.push(...usernames);
     cursor = next_cursor;
