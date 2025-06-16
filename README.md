@@ -118,6 +118,16 @@ Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
 postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
 ditunda selama 1.5 detik untuk menghindari batasan API.
 
+### 4. OAuth Callback
+
+| Endpoint          | Method | Deskripsi                                          |
+|-------------------|--------|----------------------------------------------------|
+| `/oauth/callback` | GET    | Callback URL setelah proses OAuth dari provider |
+
+Endpoint ini menerima parameter `code` dan `state` dari penyedia OAuth.
+Saat ini fungsinya hanya mencatat parameter tersebut, tetapi dapat
+diperluas untuk menukar kode menjadi access token.
+
 ---
 
 ## Fitur & Flow Bisnis Utama
