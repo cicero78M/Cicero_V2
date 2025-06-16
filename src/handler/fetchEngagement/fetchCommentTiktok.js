@@ -57,13 +57,13 @@ async function upsertTiktokUserComments(video_id, usernamesArr) {
   const existing = await getExistingUsernames(video_id);
   const finalUsernames = [...new Set([...existing, ...usernamesArr])];
 
-  const query = `
+  const sql = `
     INSERT INTO tiktok_comment (video_id, comments, updated_at)
     VALUES ($1, $2, NOW())
     ON CONFLICT (video_id)
     DO UPDATE SET comments = $2, updated_at = NOW()
   `;
-  await query(query, [video_id, JSON.stringify(finalUsernames)]);
+  await query(sql, [video_id, JSON.stringify(finalUsernames)]);
   return finalUsernames;
 }
 
