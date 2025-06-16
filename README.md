@@ -16,7 +16,10 @@ Cicero_V2-main/
 ├── package.json                 # Konfigurasi NPM
 ├── src/
 │   ├── config/
-│   │   └── db.js                # Koneksi PostgreSQL
+│   │   ├── env.js              # Konfigurasi ENV menggunakan envalid
+│   │   └── redis.js            # Klien Redis
+│   ├── db/
+│   │   └── index.js           # Adapter database (PostgreSQL/MySQL/SQLite)
 │   ├── controller/
 │   │   ├── clientController.js  # CRUD data client
 │   │   └── userController.js    # CRUD data user
