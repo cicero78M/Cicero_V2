@@ -37,13 +37,13 @@ async function getShortcodesToday(clientId = null) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  let query = `SELECT shortcode FROM insta_post WHERE DATE(created_at) = $1`;
+  let sql = `SELECT shortcode FROM insta_post WHERE DATE(created_at) = $1`;
   const params = [`${yyyy}-${mm}-${dd}`];
   if (clientId) {
-    query += ` AND client_id = $2`;
+    sql += ` AND client_id = $2`;
     params.push(clientId);
   }
-  const res = await query(query, params);
+  const res = await query(sql, params);
   return res.rows.map((r) => r.shortcode);
 }
 
@@ -53,14 +53,14 @@ async function deleteShortcodes(shortcodesToDelete, clientId = null) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  let query =
+  let sql =
     `DELETE FROM insta_post WHERE shortcode = ANY($1) AND DATE(created_at) = $2`;
   const params = [shortcodesToDelete, `${yyyy}-${mm}-${dd}`];
   if (clientId) {
-    query += ` AND client_id = $3`;
+    sql += ` AND client_id = $3`;
     params.push(clientId);
   }
-  await query(query, params);
+  await query(sql, params);
 }
 
 async function getEligibleClients() {
