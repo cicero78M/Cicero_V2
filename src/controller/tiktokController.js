@@ -7,7 +7,7 @@ import {
   fetchTiktokPosts,
   fetchTiktokPostsBySecUid,
   fetchTiktokInfo
-} from '../service/tiktokRapidService.js';
+} from '../service/tiktokApi.js';
 
 export async function getTiktokComments(req, res, next) {
   try {

@@ -1,93 +1,16 @@
 // src/handler/fetchEngagement/fetchCommentTiktok.js
 
-import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
+import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
-
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
 
 /**
  * Fetch semua komentar TikTok untuk 1 video_id dari API terbaru
  * Return: array komentar (object asli dari API)
  */
-async function fetchAllTiktokComments(video_id) {
-  let allComments = [];
-  let cursor = 0, page = 1, reqCount = 0;
-  let total = null;
-  while (true) {
-    const options = {
-      method: 'GET',
-      url: `https://${RAPIDAPI_HOST}/api/post/comments`,
-      params: {
-        videoId: video_id,
-        count: '50',
-        cursor: String(cursor)
-      },
-      headers: {
-        "x-cache-control": "no-cache",
-        "X-RapidAPI-Key": RAPIDAPI_KEY,
-        "X-RapidAPI-Host": RAPIDAPI_HOST,
-      }
-    };
-    let response, data;
-    try {
-      reqCount++;
-      const msgReq = `[DEBUG][fetchKomentar] video_id=${video_id} | page=${page} | cursor=${cursor} | req#${reqCount}`;
-      console.log(msgReq);
-      sendDebug({ tag: "TTK COMMENT REQ", msg: msgReq, client_id: video_id });
-
-      response = await axios.request(options);
-      data = response.data;
-
-      // Debug response structure
-      const keys = Object.keys(data);
-      const dataKeys = data?.data ? Object.keys(data.data) : [];
-      sendDebug({
-        tag: "TTK COMMENT API_RESPONSE",
-        msg: `[page=${page}] keys=${JSON.stringify(keys)} dataKeys=${JSON.stringify(dataKeys)}`,
-        client_id: video_id
-      });
-    } catch (err) {
-      sendDebug({
-        tag: "TTK COMMENT ERROR",
-        msg: `[ERROR] Gagal fetch komentar TikTok video_id=${video_id} page=${page}: ${err.message}`,
-        client_id: video_id
-      });
-      break;
-    }
-
-    let comments = [];
-    if (Array.isArray(data?.data?.comments)) {
-      comments = data.data.comments;
-      if (typeof data.data.total === "number") total = data.data.total;
-    } else if (Array.isArray(data?.comments)) {
-      comments = data.comments;
-      if (typeof data.total === "number") total = data.total;
-    }
-    sendDebug({
-      tag: "TTK COMMENT PAGE",
-      msg: `Video ${video_id} Page ${page}: ${comments.length} komentar, cursor=${cursor}, total=${total}`,
-      client_id: video_id
-    });
-
-    if (!comments.length) break;
-    allComments.push(...comments);
-
-    if (total !== null && cursor > (total + 50)) break;
-    cursor += 50;
-    page++;
-
-    await delay(2000); // rate limit
-  }
-  return allComments;
-}
 
 /**
  * Ekstrak & normalisasi username dari array objek komentar TikTok.

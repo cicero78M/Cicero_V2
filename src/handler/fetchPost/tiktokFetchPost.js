@@ -1,10 +1,14 @@
 // src/handler/fetchPost/tiktokFetchPost.js
 
-import axios from "axios";
 import { pool } from "../../config/db.js";
 import { findById, update } from "../../model/clientModel.js";
 import { upsertTiktokPosts } from "../../model/tiktokPostModel.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
+import {
+  fetchTiktokPosts,
+  fetchTiktokPostsBySecUid,
+  fetchTiktokInfo,
+} from "../../service/tiktokApi.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -13,8 +17,6 @@ const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = "tiktok-api23.p.rapidapi.com";
 
 /**
  * Cek apakah unixTimestamp adalah hari ini (Asia/Jakarta)
@@ -34,30 +36,6 @@ function isTodayJakarta(unixTimestamp) {
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate()
   );
-}
-
-/**
- * Parse dan normalisasi TikTok post dari response API (string, objek, atau skema baru).
- * Support itemList, result.videos, dsb.
- */
-function parseTiktokPostsFromApiResponse(postsRes) {
-  let dataObj = postsRes?.data?.data || postsRes?.data?.result || postsRes?.data;
-
-  // Jika 'data' adalah string (case tertentu dari RapidAPI), parse ke objek
-  if (typeof dataObj === "string") {
-    try {
-      dataObj = JSON.parse(dataObj);
-    } catch (e) {
-      dataObj = {};
-    }
-  }
-  // Cek semua kemungkinan tempat list post
-  if (Array.isArray(dataObj.itemList)) return dataObj.itemList;
-  if (Array.isArray(dataObj.items)) return dataObj.items;
-  if (Array.isArray(postsRes?.data?.result?.videos)) return postsRes.data.result.videos;
-  if (Array.isArray(dataObj.videos)) return dataObj.videos;
-  // Fallback: kalau tidak ada, return array kosong
-  return [];
 }
 
 /**
@@ -103,15 +81,7 @@ export async function getTiktokSecUid(client) {
   if (!client || !client.client_tiktok)
     throw new Error("Username TikTok kosong di database.");
   const username = client.client_tiktok.replace(/^@/, "");
-  const url = `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(
-    username
-  )}`;
-  const headers = {
-    "x-rapidapi-key": RAPIDAPI_KEY,
-    "x-rapidapi-host": RAPIDAPI_HOST,
-  };
-  const response = await axios.get(url, { headers });
-  const data = response.data;
+  const data = await fetchTiktokInfo(username);
   const secUid = data?.userInfo?.user?.secUid;
   if (!secUid) throw new Error("Gagal fetch secUid dari API.");
   await update(client.id, { tiktok_secuid: secUid });
@@ -171,7 +141,6 @@ export async function fetchAndStoreTiktokContent(
       continue;
     }
 
-    let postsRes;
     let itemList = [];
     try {
       sendDebug({
@@ -179,25 +148,11 @@ export async function fetchAndStoreTiktokContent(
         msg: `Fetch posts for client: ${client.id} / @${client.client_tiktok}`,
       });
 
-      let url = `https://${RAPIDAPI_HOST}/api/user/posts`;
-      let params = { count: 35, cursor: 0 };
-
       if (secUid) {
-        params.secUid = secUid;
+        itemList = await fetchTiktokPostsBySecUid(secUid, 35);
       } else if (client.client_tiktok) {
-        params.uniqueId = client.client_tiktok.replace(/^@/, "");
+        itemList = await fetchTiktokPosts(client.client_tiktok, 35);
       }
-
-      postsRes = await axios.get(url, {
-        params,
-        headers: {
-          "x-cache-control": "no-cache",
-          "X-RapidAPI-Key": RAPIDAPI_KEY,
-          "X-RapidAPI-Host": RAPIDAPI_HOST,
-        },
-      });
-
-      itemList = parseTiktokPostsFromApiResponse(postsRes);
 
       console.log(
         `[DEBUG TIKTOK][${client.id}] Response items: ${itemList.length}`

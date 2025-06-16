@@ -1,7 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
-import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo, fetchInstagramPostsByMonthToken } from "../service/instaRapidService.js";
+import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo, fetchInstagramPostsByMonthToken } from "../service/instagramApi.js";
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import { sendSuccess } from "../utils/response.js";

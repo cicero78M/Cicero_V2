@@ -231,3 +231,46 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
   });
 }
 
+export async function fetchInstagramLikesPage(shortcode, cursor = null) {
+  if (!shortcode) return { usernames: [], next_cursor: null, has_more: false };
+  const params = new URLSearchParams({ code_or_id_or_url: shortcode });
+  if (cursor) params.append('cursor', cursor);
+
+  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/likes?${params.toString()}`, {
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(text);
+    err.statusCode = res.status;
+    throw err;
+  }
+  const data = await res.json();
+  const items = Array.isArray(data?.data?.items) ? data.data.items : [];
+  const usernames = items
+    .map(l => (l.username ? l.username : l))
+    .filter(Boolean);
+  const next_cursor = data?.data?.next_cursor || data?.data?.end_cursor || null;
+  const has_more = data?.data?.has_more || (next_cursor && next_cursor !== '');
+  return { usernames, next_cursor, has_more };
+}
+
+export async function fetchAllInstagramLikes(shortcode, maxPage = 20) {
+  const all = [];
+  let cursor = null;
+  let page = 0;
+  do {
+    const { usernames, next_cursor, has_more } = await fetchInstagramLikesPage(shortcode, cursor);
+    if (!usernames.length) break;
+    all.push(...usernames);
+    cursor = next_cursor;
+    page++;
+    if (!has_more || !cursor || page >= maxPage) break;
+  } while (true);
+  return all;
+}
+
