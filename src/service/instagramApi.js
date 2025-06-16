@@ -4,5 +4,10 @@ export {
   fetchInstagramInfo,
   fetchInstagramPostsByMonthToken,
   fetchInstagramLikesPage,
-  fetchAllInstagramLikes
+  fetchAllInstagramLikes,
 } from './instaRapidService.js';
+
+export {
+  fetchBasicProfile,
+  fetchBasicPosts,
+} from './instaOfficialService.js';
