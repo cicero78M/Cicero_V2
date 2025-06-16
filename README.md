@@ -329,6 +329,13 @@ CREATE TABLE insta_post_cache (
 - Tambahkan monitoring health DB, cron, dan log WhatsApp.
 - Optimasi DB dengan index pada field utama.
 
+## High Volume Queue (RabbitMQ)
+
+- Untuk memproses pekerjaan berjumlah besar secara asinkron gunakan RabbitMQ.
+- Atur URL koneksi pada variabel `AMQP_URL` di `.env`.
+- Service queue tersedia di `src/service/rabbitMQService.js` dengan fungsi
+  `publishToQueue` dan `consumeQueue`.
+
 ---
 
 ## License
