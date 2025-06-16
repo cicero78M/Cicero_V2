@@ -132,6 +132,7 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
 |-------------------|--------|----------------------------------------------------|
 | `/oauth/callback` | GET    | Callback URL setelah proses OAuth dari provider |
 | `/oauth/instagram/callback` | GET | Tukar kode otorisasi Instagram menjadi token |
+| `/oauth/instagram/deauthorize` | POST | Terima notifikasi de-authorize dari Instagram |
 
 Endpoint ini menerima parameter `code` dan `state` dari penyedia OAuth.
 Saat ini fungsinya hanya mencatat parameter tersebut, tetapi dapat
