@@ -6,6 +6,8 @@
 **Cicero_V2** adalah sistem otomatisasi monitoring, absensi sosial media, dan analitik konten (Instagram & TikTok) untuk organisasi/institusi (Polri, humas, dsb).  
 Sistem ini mendukung multi-client, rekap otomatis likes dan komentar, serta pengiriman laporan ke WhatsApp admin.
 
+Dokumentasi arsitektur lengkap tersedia pada [docs/enterprise_architecture.md](docs/enterprise_architecture.md).
+
 ---
 
 ## Struktur Folder & Modul
@@ -317,8 +319,9 @@ CREATE TABLE insta_post_cache (
     curl -X GET http://localhost:3000/clients
     curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{"nama":"Budi","client_id":"polres_x"}'
     ```
-- **Otomatis:**  
+- **Otomatis:**
   Dapat menggunakan Mocha/Jest (lihat dokumentasi lanjutan/test).
+  Jalankan `npm test` untuk menjalankan suite Jest bawaan.
 
 ---
 
@@ -345,6 +348,7 @@ CREATE TABLE insta_post_cache (
 - Gunakan PM2 cluster, pisah proses jika beban tinggi.
 - Tambahkan monitoring health DB, cron, dan log WhatsApp.
 - Optimasi DB dengan index pada field utama.
+- Cache profil Instagram dan TikTok di Redis (`profileCacheService.js`) untuk mempercepat respons.
 
 ## High Volume Queue (RabbitMQ)
 
