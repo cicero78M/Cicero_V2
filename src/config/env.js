@@ -19,5 +19,8 @@ export const env = cleanEnv(process.env, {
   APP_SESSION_NAME: str({ default: '' }),
   IG_VERIFY_TOKEN: str({ default: '' }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
+  INSTAGRAM_APP_ID: str({ default: '' }),
+  INSTAGRAM_APP_SECRET: str({ default: '' }),
+  INSTAGRAM_REDIRECT_URI: str({ default: '' }),
   AMQP_URL: str({ default: 'amqp://localhost' })
 });
