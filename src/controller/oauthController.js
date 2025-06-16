@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { verifySignedRequest } from '../utils/instagramWebhooks.js';
 
 /**
  * Handle OAuth provider callback.
@@ -57,6 +58,34 @@ export async function handleInstagramOAuthCallback(req, res) {
   } catch (err) {
     console.error('[IG OAUTH ERROR]', err.message);
     return res.status(500).json({ success: false, message: 'Failed to retrieve Instagram token' });
+  }
+}
+
+/**
+ * Instagram deauthorization callback handler.
+ * Validates the signed_request sent by Instagram when a user revokes access.
+ */
+export async function handleInstagramDeauthorize(req, res) {
+  const { signed_request } = req.body || {};
+
+  if (!signed_request) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'Missing signed_request' });
+  }
+
+  try {
+    const payload = verifySignedRequest(
+      signed_request,
+      env.INSTAGRAM_APP_SECRET
+    );
+    console.log('[IG DEAUTH]', payload);
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('[IG DEAUTH ERROR]', err.message);
+    return res
+      .status(400)
+      .json({ success: false, message: 'Invalid signed_request' });
   }
 }
 
