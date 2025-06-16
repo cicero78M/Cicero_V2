@@ -4,6 +4,7 @@ import clientRoutes from './clientRoutes.js';
 import authRoutes from './authRoutes.js';
 import dashboardRoutes from "./dashboardRoutes.js";
 import instaRoutes from "./instaRoutes.js";
+import instaCallbackRoutes from "./instaCallbackRoutes.js";
 import tiktokRoutes from "./tiktokRoutes.js";
 
 const router = express.Router();
@@ -12,6 +13,7 @@ router.use('/clients', clientRoutes);
 router.use('/users', userRoutes); // Pastikan sudah ada baris ini!
 router.use('/auth', authRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/insta/callback", instaCallbackRoutes);
 router.use("/insta", instaRoutes);
 router.use("/tiktok", tiktokRoutes);
 

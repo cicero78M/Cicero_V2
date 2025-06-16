@@ -17,6 +17,7 @@ export const env = cleanEnv(process.env, {
   RAPIDAPI_KEY: str({ default: '' }),
   ADMIN_WHATSAPP: str({ default: '' }),
   APP_SESSION_NAME: str({ default: '' }),
+  IG_VERIFY_TOKEN: str({ default: '' }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' })
 });
