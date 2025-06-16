@@ -214,12 +214,6 @@ menukar kode menjadi access token melalui API Instagram.
     pm2 start app.js --name cicero_v2
     ```
 
-6. **Folder `public/` untuk aset statis**
-   
-   Server Express kini menyajikan berkas statis dari folder `public`. Pastikan
-   ikon atau aset seperti `file.svg` berada di sana agar tidak muncul lagi
-   kesalahan 404 saat dashboard dimuat.
-
 ---
 
 ## Migrasi Database (Struktur Tabel Contoh)
