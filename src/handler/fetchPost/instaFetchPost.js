@@ -1,17 +1,15 @@
 // src/handler/fetchPost/instaFetchPost.js
 
-import axios from "axios";
 import pLimit from "p-limit";
 import { pool } from "../../config/db.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
+import { fetchInstagramPosts } from "../../service/instagramApi.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = "social-api4.p.rapidapi.com";
 const limit = pLimit(6);
 
 /**
@@ -128,19 +126,10 @@ export async function fetchAndStoreInstaContent(
         tag: "IG FETCH",
         msg: `Fetch posts for client: ${client.id} / @${username}`
       });
-      postsRes = await limit(() =>
-        axios.get(`https://${RAPIDAPI_HOST}/v1/posts`, {
-          params: { username_or_id_or_url: username },
-          headers: {
-            "x-cache-control": "no-cache",
-            "X-RapidAPI-Key": RAPIDAPI_KEY,
-            "X-RapidAPI-Host": RAPIDAPI_HOST,
-          },
-        })
-      );
+      postsRes = await limit(() => fetchInstagramPosts(username, 50));
       sendDebug({
         tag: "IG FETCH",
-        msg: `API /v1/posts response: jumlah konten ditemukan: ${postsRes.data?.data?.items?.length || 0}`,
+        msg: `RapidAPI posts fetched: ${postsRes.length}`,
         client_id: client.id
       });
     } catch (err) {
@@ -152,14 +141,9 @@ export async function fetchAndStoreInstaContent(
       continue;
     }
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI ====
-    const items =
-      postsRes.data &&
-      postsRes.data.data &&
-      Array.isArray(postsRes.data.data.items)
-        ? postsRes.data.data.items.filter((post) =>
-            isTodayJakarta(post.taken_at)
-          )
-        : [];
+    const items = Array.isArray(postsRes)
+      ? postsRes.filter((post) => isTodayJakarta(post.taken_at))
+      : [];
     sendDebug({
       tag: "IG FETCH",
       msg: `Jumlah post IG HARI INI SAJA: ${items.length}`,

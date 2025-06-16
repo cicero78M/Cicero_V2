@@ -134,3 +134,51 @@ export async function fetchTiktokPostsBySecUid(secUid, limit = 10) {
     throw error;
   }
 }
+
+export async function fetchTiktokCommentsPage(videoId, cursor = 0, count = 50) {
+  if (!videoId) return { comments: [], next_cursor: null, total: null };
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
+      params: { videoId, count: String(count), cursor: String(cursor) },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+    let comments = [];
+    let total = null;
+    const data = res.data;
+    if (Array.isArray(data?.data?.comments)) {
+      comments = data.data.comments;
+      if (typeof data.data.total === 'number') total = data.data.total;
+    } else if (Array.isArray(data?.comments)) {
+      comments = data.comments;
+      if (typeof data.total === 'number') total = data.total;
+    }
+    const next_cursor = cursor + count;
+    const has_more = comments.length > 0 && (total === null || next_cursor <= total);
+    return { comments, next_cursor: has_more ? next_cursor : null, total };
+  } catch (err) {
+    const msg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
+  }
+}
+
+export async function fetchAllTiktokComments(videoId) {
+  const all = [];
+  let cursor = 0;
+  let total = null;
+  while (true) {
+    const { comments, next_cursor, total: tot } = await fetchTiktokCommentsPage(videoId, cursor);
+    if (tot !== null) total = tot;
+    if (!comments.length) break;
+    all.push(...comments);
+    if (!next_cursor) break;
+    cursor = next_cursor;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return all;
+}
