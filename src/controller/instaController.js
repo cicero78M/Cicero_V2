@@ -4,6 +4,7 @@ import * as instaPostService from "../service/instaPostService.js";
 import { fetchInstagramPosts, fetchInstagramProfile, fetchInstagramInfo, fetchInstagramPostsByMonthToken } from "../service/instagramApi.js";
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
+import * as profileCache from "../service/profileCacheService.js";
 import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
@@ -198,7 +199,13 @@ export async function getRapidInstagramProfile(req, res) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
     sendConsoleDebug({ tag: "INSTA", msg: `getRapidInstagramProfile ${username}` });
-    const profile = await fetchInstagramProfile(username);
+    let profile = await profileCache.getProfile('insta', username);
+    if (!profile) {
+      profile = await fetchInstagramProfile(username);
+      if (profile) {
+        await profileCache.setProfile('insta', username, profile);
+      }
+    }
     if (profile && profile.username) {
       await instaProfileService.upsertProfile({
         username: profile.username,
