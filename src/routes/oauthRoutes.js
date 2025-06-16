@@ -3,6 +3,7 @@ import {
   handleOAuthCallback,
   handleInstagramOAuthCallback,
   handleInstagramDeauthorize,
+  removeInstagramCallback,
 } from '../controller/oauthController.js';
 
 const router = Router();
@@ -11,5 +12,6 @@ const router = Router();
 router.get('/callback', handleOAuthCallback);
 router.get('/instagram/callback', handleInstagramOAuthCallback);
 router.post('/instagram/deauthorize', handleInstagramDeauthorize);
+router.delete('/instagram/callback-url', removeInstagramCallback);
 
 export default router;
