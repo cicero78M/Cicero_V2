@@ -59,3 +59,4 @@ export async function handleInstagramOAuthCallback(req, res) {
     return res.status(500).json({ success: false, message: 'Failed to retrieve Instagram token' });
   }
 }
+
