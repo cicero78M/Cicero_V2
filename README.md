@@ -7,6 +7,7 @@
 Sistem ini mendukung multi-client, rekap otomatis likes dan komentar, serta pengiriman laporan ke WhatsApp admin.
 
 Dokumentasi arsitektur lengkap tersedia pada [docs/enterprise_architecture.md](docs/enterprise_architecture.md).
+Dokumentasi jadwal aktivitas sistem terdapat pada [docs/activity_schedule.md](docs/activity_schedule.md).
 
 ---
 
