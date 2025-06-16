@@ -81,26 +81,6 @@ export async function getUsersByClientFull(client_id) {
 }
 
 // [OPSI] Ambil user by Instagram (status = true)
-export async function getUsersByClientWithInsta(client_id) {
-  const res = await query(
-    `SELECT user_id, nama, insta, divisi, title, exception
-     FROM "user"
-     WHERE client_id = $1 AND status = true AND insta IS NOT NULL`,
-    [client_id]
-  );
-  return res.rows;
-}
-
-// [OPSI] Ambil user by TikTok (status = true)
-export async function getUsersByClientWithTiktok(client_id) {
-  const res = await query(
-    `SELECT user_id, nama, tiktok, divisi, title, exception
-     FROM "user"
-     WHERE client_id = $1 AND status = true AND tiktok IS NOT NULL`,
-    [client_id]
-  );
-  return res.rows;
-}
 
 // Ambil seluruh user dari semua client
 export async function getAllUsers(client_id) {
@@ -195,14 +175,6 @@ export async function updateUserField(user_id, field, value) {
   return rows[0];
 }
 
-// Ambil semua user yang exception = true
-export async function getAllExceptionUsers() {
-  const { rows } = await query(
-    'SELECT * FROM "user" WHERE exception = true'
-  );
-  return rows;
-}
-
 // Ambil user dengan exception per client
 export async function getExceptionUsersByClient(client_id) {
   const { rows } = await query(
@@ -220,51 +192,7 @@ export async function findUserByWhatsApp(wa) {
   return result.rows[0];
 }
 
-export async function findUserByInsta(username) {
-  if (!username) return null;
-  const result = await query('SELECT * FROM "user" WHERE insta = $1', [
-    username,
-  ]);
-  return result.rows[0];
-}
-
-export async function findUserByTiktok(username) {
-  if (!username) return null;
-  // Query string langsung, tidak ada normalisasi
-  const result = await query('SELECT * FROM "user" WHERE tiktok = $1', [
-    username,
-  ]);
-  return result.rows[0];
-}
-
 // Ambil semua pangkat/title unik (distinct)
-export async function getDistinctUserTitles() {
-  const { rows } = await query(
-    "SELECT DISTINCT title FROM \"user\" WHERE title IS NOT NULL AND title <> '' ORDER BY title"
-  );
-  return rows.map((r) => r.title);
-}
-
-// Ambil semua divisi unik untuk client_id tertentu
-export async function getDistinctUserDivisions(client_id) {
-  const { rows } = await query(
-    "SELECT DISTINCT divisi FROM \"user\" WHERE client_id = $1 AND divisi IS NOT NULL AND divisi <> '' ORDER BY divisi",
-    [client_id]
-  );
-  return rows.map((r) => r.divisi);
-}
-
-// Cek duplikat insta/tiktok: query langsung, tidak perlu normalisasi
-export async function findUserByField(field, value) {
-  const allowed = ["insta", "tiktok"];
-  if (!allowed.includes(field))
-    throw new Error("Hanya field insta/tiktok yang didukung");
-  const { rows } = await query(
-    `SELECT user_id FROM "user" WHERE ${field} = $1`,
-    [value]
-  );
-  return rows[0];
-}
 
 // Mendapatkan daftar pangkat unik dari tabel user (atau dari tabel/enum khusus jika ada)
 export async function getAvailableTitles() {
