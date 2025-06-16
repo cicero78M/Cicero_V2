@@ -118,6 +118,20 @@ Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
 postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
 ditunda selama 1.5 detik untuk menghindari batasan API.
 
+### 4. OAuth Callback
+
+| Endpoint          | Method | Deskripsi                                          |
+|-------------------|--------|----------------------------------------------------|
+| `/oauth/callback` | GET    | Callback URL setelah proses OAuth dari provider |
+| `/oauth/instagram/callback` | GET | Tukar kode otorisasi Instagram menjadi token |
+
+Endpoint ini menerima parameter `code` dan `state` dari penyedia OAuth.
+Saat ini fungsinya hanya mencatat parameter tersebut, tetapi dapat
+diperluas untuk menukar kode menjadi access token.
+
+Untuk Instagram, gunakan `/oauth/instagram/callback` agar server otomatis
+menukar kode menjadi access token melalui API Instagram.
+
 ---
 
 ## Fitur & Flow Bisnis Utama
