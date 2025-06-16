@@ -73,7 +73,7 @@ router.post("/login", async (req, res) => {
     secure: process.env.NODE_ENV === 'production'
   });
   // Kembalikan token dan data client
-  return res.json({ success: true, client: payload });
+  return res.json({ success: true, token, client: payload });
 });
 
 export default router;
