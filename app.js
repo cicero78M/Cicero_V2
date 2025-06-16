@@ -24,6 +24,8 @@ app.use(cors({
 
 app.use(express.json());
 app.use(morgan('dev'));
+// Serve static files such as icons or logos
+app.use(express.static('public'));
 app.use(dedupRequest);
 
 // ===== ROUTE LOGIN (TANPA TOKEN) =====
