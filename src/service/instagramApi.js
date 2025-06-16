@@ -11,3 +11,5 @@ export {
   fetchBasicProfile,
   fetchBasicPosts,
 } from './instaOfficialService.js';
+
+export { deleteInstagramCallback } from './instagramWebhookService.js';
