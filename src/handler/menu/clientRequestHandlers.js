@@ -13,6 +13,8 @@ import {
 } from "../../utils/utilsHelper.js";
 import { getAdminWAIds, getAdminWANumbers } from "../../utils/waHelper.js";
 import { query } from "../../db/index.js";
+import { initPoldaPolres } from "../../service/poldaService.js";
+import { searchAllCities, fetchInfoForAllUsers } from "../../service/instaSearchService.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -140,7 +142,7 @@ export const clientRequestHandlers = {
     handleFetchKomentarTiktokBatch
   ) => {
     let msg = `
-  ┏━━━ *MENU CLIENT CICERO* ━━━
+ ┏━━━ *MENU CLIENT CICERO* ━━━
 1️⃣ Tambah client baru
 2️⃣ Kelola client (update/hapus/info)
 3️⃣ Kelola user (update/exception/status)
@@ -152,11 +154,12 @@ export const clientRequestHandlers = {
 9️⃣ Exception Info
 🔟 Hapus WA Admin
 1️⃣1️⃣ Hapus WA User
+1️⃣2️⃣ Instagram Data Mining
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
 
-    if (!/^([1-9]|10|11)$/.test(text.trim())) {
+    if (!/^([1-9]|10|11|12)$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -173,6 +176,7 @@ export const clientRequestHandlers = {
       9: "exceptionInfo_chooseClient",
       10: "hapusWAAdmin_confirm",
       11: "hapusWAUser_start",
+      12: "instagramDataMining_execute",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1312,6 +1316,25 @@ export const clientRequestHandlers = {
         chatId,
         `❌ Gagal menghapus WA admin: ${err.message}`
       );
+    }
+    session.step = "main";
+  },
+
+  // ================== INSTAGRAM DATA MINING ==================
+  instagramDataMining_execute: async (
+    session,
+    chatId,
+    text,
+    waClient
+  ) => {
+    await waClient.sendMessage(chatId, "⏳ Memulai Instagram data mining...");
+    try {
+      await initPoldaPolres();
+      await searchAllCities();
+      await fetchInfoForAllUsers();
+      await waClient.sendMessage(chatId, "✅ Instagram data mining selesai.");
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Error: ${err.message}`);
     }
     session.step = "main";
   },

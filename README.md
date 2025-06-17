@@ -148,6 +148,23 @@ diperluas untuk menukar kode menjadi access token.
 Untuk Instagram, gunakan `/oauth/instagram/callback` agar server otomatis
 menukar kode menjadi access token melalui API Instagram.
 
+### 6. Instagram Data Mining
+
+Struktur data untuk otomasi pencarian akun IG menggunakan konvensi
+`polda_polres` dengan primary key `nama_polda`. Contoh data dapat dilihat
+pada `src/data/polda_polres.json`.
+
+Endpoint terkait:
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/polda/init` | POST | Inisialisasi tabel polda & polres |
+| `/polda/search-instagram` | POST | Cari akun Instagram berdasarkan nama polres |
+| `/polda/fetch-info` | POST | Ambil detail profil dari hasil pencarian |
+
+Proses lengkap juga dapat dijalankan lewat menu WhatsApp `clientrequest`
+dengan memilih *Instagram Data Mining*.
+
 ---
 
 ## Fitur & Flow Bisnis Utama
