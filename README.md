@@ -252,7 +252,13 @@ dengan memilih *Instagram Data Mining*.
 
 2. **Konfigurasi .env:**
     ```ini
-    DATABASE_URL=postgresql://user:pass@host:port/db
+    PORT=3000
+    DB_USER=cicero
+    DB_HOST=localhost
+    DB_NAME=cicero_db
+    DB_PASS=secret
+    DB_PORT=5432
+    DB_DRIVER=postgres
     ADMIN_WHATSAPP=628xxxxxx@c.us,628yyyyyy@c.us
     # Default operator untuk login frontend
     CLIENT_OPERATOR=628123456789
@@ -262,6 +268,8 @@ dengan memilih *Instagram Data Mining*.
     NEXT_PUBLIC_CLIENT_OPERATOR=628123456789
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
+    SECRET_KEY=your-secret
+    AMQP_URL=amqp://localhost
     ```
 
     Untuk login dashboard, Anda dapat menggunakan nomor operator masing-masing
