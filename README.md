@@ -23,7 +23,10 @@ Cicero_V2-main/
 │   │   ├── env.js              # Konfigurasi ENV menggunakan envalid
 │   │   └── redis.js            # Klien Redis
 │   ├── db/
-│   │   └── index.js           # Adapter database (PostgreSQL/MySQL/SQLite)
+│   │   ├── index.js           # Adapter database
+│   │   ├── postgres.js        # Helper PostgreSQL
+│   │   ├── mysql.js           # Helper MySQL
+│   │   └── sqlite.js          # Helper SQLite
 │   ├── controller/
 │   │   ├── clientController.js  # CRUD data client
 │   │   └── userController.js    # CRUD data user
@@ -34,16 +37,33 @@ Cicero_V2-main/
 │   │   ├── instaPostModel.js    # Model post IG
 │   │   ├── tiktokPostModel.js   # Model post TikTok
 │   │   ├── tiktokCommentModel.js# Model komen TikTok
+│   ├── cron/
+│   │   ├── cronInstaService.js   # Fetch IG tiap jam
+│   │   ├── cronTiktokService.js  # Fetch TikTok tiap jam
+│   │   ├── cronInstaLaphar.js    # Laporan harian IG
+│   │   ├── cronTiktokLaphar.js   # Laporan harian TikTok
+│   │   └── cronNotifikasiLikesDanKomentar.js # Pengingat via WA
+│   ├── handler/                  # Logic menu WhatsApp & fetch
 │   ├── service/
-│   │   ├── cronService.js       # Jadwal otomatis (cron)
-│   │   ├── instaFetchService.js # Fetch konten IG
-│   │   ├── tiktokFetchService.js# Fetch TikTok
-│   │   ├── waService.js         # Notifikasi WhatsApp
-│   │   ├── clientService.js     # Utility client
+│   │   ├── instaRapidService.js  # Akses RapidAPI Instagram
+│   │   ├── tiktokRapidService.js # Akses RapidAPI TikTok
+│   │   ├── instaPostService.js   # Simpan posting IG
+│   │   ├── tiktokPostService.js  # Simpan posting TikTok
+│   │   ├── waService.js          # Notifikasi WhatsApp
+│   │   ├── clientService.js      # Utility client
 │   │   └── checkGoogleSheetAccess.js # Cek akses Google Sheet
+│   ├── repository/
+│   │   └── db.js                # Helper query DB
+│   ├── utils/                   # Fungsi utilitas
 │   ├── routes/
 │   │   ├── clientRoutes.js      # Endpoint client
 │   │   ├── userRoutes.js        # Endpoint user
+│   │   ├── instaRoutes.js       # Endpoint Instagram
+│   │   ├── tiktokRoutes.js      # Endpoint TikTok
+│   │   ├── oauthRoutes.js       # Endpoint OAuth
+│   │   ├── poldaRoutes.js       # Endpoint Polda/Polres
+│   │   ├── dashboardRoutes.js   # Endpoint dashboard
+│   │   ├── metaRoutes.js        # Metadata API
 │   │   └── index.js             # Router utama
 │   ├── middleware/
 │   │   └── errorHandler.js      # Handler error global
@@ -127,13 +147,24 @@ Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
 postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
 ditunda selama 1.5 detik untuk menghindari batasan API.
 
-### 4. Polres Instagram
+### 4. TikTok API
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/tiktok/comments` | GET | Ambil komentar TikTok dari database |
+| `/tiktok/rekap-komentar` | GET | Rekap absensi komentar TikTok |
+| `/tiktok/posts` | GET | Ambil postingan TikTok dari database |
+| `/tiktok/rapid-profile` | GET | Profil TikTok via RapidAPI |
+| `/tiktok/rapid-posts` | GET | Postingan TikTok via RapidAPI |
+| `/tiktok/rapid-info`  | GET | Info akun TikTok via RapidAPI |
+
+### 5. Polres Instagram
 
 | Endpoint | Method | Deskripsi |
 |----------|--------|-----------|
 | `/polres/search` | GET | Cari akun polres melalui RapidAPI dan simpan jika ada posting 3 hari terakhir |
 
-### 5. OAuth Callback
+### 6. OAuth Callback
 
 | Endpoint          | Method | Deskripsi                                          |
 |-------------------|--------|----------------------------------------------------|
@@ -149,7 +180,7 @@ diperluas untuk menukar kode menjadi access token.
 Untuk Instagram, gunakan `/oauth/instagram/callback` agar server otomatis
 menukar kode menjadi access token melalui API Instagram.
 
-### 6. Instagram Data Mining
+### 7. Instagram Data Mining
 
 Struktur data untuk otomasi pencarian akun IG menggunakan konvensi
 `polda_polres` dengan primary key `nama_polda`. Contoh data dapat dilihat
@@ -166,7 +197,7 @@ Endpoint terkait:
 Proses lengkap juga dapat dijalankan lewat menu WhatsApp `clientrequest`
 dengan memilih *Instagram Data Mining*.
 
-### 7. Metadata API
+### 8. Metadata API
 
 | Endpoint    | Method | Deskripsi                               |
 |-------------|--------|-----------------------------------------|
