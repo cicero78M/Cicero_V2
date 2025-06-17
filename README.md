@@ -132,8 +132,6 @@ Cicero_V2-main/
 | `/insta/rapid-profile` | GET | Ambil profil Instagram via RapidAPI |
 | `/insta/rapid-posts`   | GET | Ambil postingan Instagram via RapidAPI |
 | `/insta/profile`       | GET | Ambil profil Instagram dari database |
-| `/insta/basic-posts`   | GET | Ambil postingan user melalui Instagram Basic Display API |
-| `/insta/basic-profile` | GET | Ambil profil user melalui Instagram Basic Display API |
 
 Fungsi utilitas `fetchInstagramPostsByMonthToken(username, bulan, tahun)`
 tersedia pada kode untuk mengambil seluruh postingan bulan tertentu
@@ -171,16 +169,10 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
 | Endpoint          | Method | Deskripsi                                          |
 |-------------------|--------|----------------------------------------------------|
 | `/oauth/callback` | GET    | Callback URL setelah proses OAuth dari provider |
-| `/oauth/instagram/callback` | GET | Tukar kode otorisasi Instagram menjadi token |
-| `/oauth/instagram/deauthorize` | POST | Terima notifikasi de-authorize dari Instagram |
-| `/oauth/instagram/callback-url` | DELETE | Hapus URL callback dari API Instagram |
 
 Endpoint ini menerima parameter `code` dan `state` dari penyedia OAuth.
 Saat ini fungsinya hanya mencatat parameter tersebut, tetapi dapat
 diperluas untuk menukar kode menjadi access token.
-
-Untuk Instagram, gunakan `/oauth/instagram/callback` agar server otomatis
-menukar kode menjadi access token melalui API Instagram.
 
 ### 7. Instagram Data Mining
 

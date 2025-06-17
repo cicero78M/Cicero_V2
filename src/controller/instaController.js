@@ -6,8 +6,6 @@ import {
   fetchInstagramProfile,
   fetchInstagramInfo,
   fetchInstagramPostsByMonthToken,
-  fetchBasicProfile,
-  fetchBasicPosts,
 } from "../service/instagramApi.js";
 import * as instaProfileService from "../service/instaProfileService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
@@ -267,36 +265,3 @@ export async function getInstagramProfile(req, res) {
   }
 }
 
-export async function getBasicInstagramPosts(req, res) {
-  try {
-    const accessToken = req.query.access_token || req.headers['x-instagram-token'];
-    let limit = parseInt(req.query.limit);
-    if (Number.isNaN(limit) || limit <= 0) limit = 10;
-    if (!accessToken) {
-      return res.status(400).json({ success: false, message: 'access_token wajib diisi' });
-    }
-    sendConsoleDebug({ tag: 'INSTA', msg: `getBasicInstagramPosts ${limit}` });
-    const posts = await fetchBasicPosts(accessToken, limit);
-    sendSuccess(res, posts);
-  } catch (err) {
-    sendConsoleDebug({ tag: 'INSTA', msg: `Error getBasicInstagramPosts: ${err.message}` });
-    const code = err.statusCode || err.response?.status || 500;
-    res.status(code).json({ success: false, message: err.message });
-  }
-}
-
-export async function getBasicInstagramProfile(req, res) {
-  try {
-    const accessToken = req.query.access_token || req.headers['x-instagram-token'];
-    if (!accessToken) {
-      return res.status(400).json({ success: false, message: 'access_token wajib diisi' });
-    }
-    sendConsoleDebug({ tag: 'INSTA', msg: 'getBasicInstagramProfile' });
-    const profile = await fetchBasicProfile(accessToken);
-    sendSuccess(res, profile);
-  } catch (err) {
-    sendConsoleDebug({ tag: 'INSTA', msg: `Error getBasicInstagramProfile: ${err.message}` });
-    const code = err.statusCode || err.response?.status || 500;
-    res.status(code).json({ success: false, message: err.message });
-  }
-}
