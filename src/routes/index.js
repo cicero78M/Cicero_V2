@@ -7,6 +7,7 @@ import instaRoutes from "./instaRoutes.js";
 import oauthRoutes from './oauthRoutes.js';
 import tiktokRoutes from "./tiktokRoutes.js";
 import polresRoutes from './polresRoutes.js';
+import poldaRoutes from './poldaRoutes.js';
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.use("/insta", instaRoutes);
 router.use("/tiktok", tiktokRoutes);
 router.use('/oauth', oauthRoutes);
 router.use('/polres', polresRoutes);
+router.use('/polda', poldaRoutes);
 
 
 export default router;
