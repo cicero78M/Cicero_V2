@@ -126,7 +126,13 @@ Jika `bulan` atau `tahun` tidak diberikan, fungsi otomatis mengambil
 postingan pada bulan dan tahun berjalan. Setiap permintaan paginasi
 ditunda selama 1.5 detik untuk menghindari batasan API.
 
-### 4. OAuth Callback
+### 4. Polres Instagram
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/polres/search` | GET | Cari akun polres melalui RapidAPI dan simpan jika ada posting 3 hari terakhir |
+
+### 5. OAuth Callback
 
 | Endpoint          | Method | Deskripsi                                          |
 |-------------------|--------|----------------------------------------------------|
@@ -225,6 +231,10 @@ menukar kode menjadi access token melalui API Instagram.
 
 ## Migrasi Database (Struktur Tabel Contoh)
 
+Semua perintah `CREATE TABLE` di bawah juga tersedia pada file
+[`sql/schema.sql`](sql/schema.sql). Jalankan dengan `psql -f sql/schema.sql`
+untuk membuat seluruh tabel sekaligus.
+
 ```sql
 CREATE TABLE clients (
   client_id VARCHAR PRIMARY KEY,
@@ -298,6 +308,13 @@ CREATE TABLE insta_post_cache (
   username VARCHAR NOT NULL,
   posts JSONB,
   fetched_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Daftar akun Instagram Polres (validasi posting 3 hari terakhir)
+CREATE TABLE polres_insta (
+  username VARCHAR PRIMARY KEY,
+  last_post_at TIMESTAMP,
+  checked_at TIMESTAMP DEFAULT NOW()
 );
 ```
 

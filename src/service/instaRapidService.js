@@ -299,3 +299,29 @@ export async function fetchAllInstagramLikes(shortcode, maxPage = 20) {
   return all;
 }
 
+
+export async function searchInstagramUsers(query, limit = 10) {
+  if (!query) return [];
+  try {
+    sendConsoleDebug('searchInstagramUsers request', query);
+    const response = await axios.get(`https://${RAPIDAPI_HOST}/v1/search_users`, {
+      params: { search_query: query },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+      },
+    });
+    const users = Array.isArray(response.data?.data?.users)
+      ? response.data.data.users
+      : [];
+    return limit ? users.slice(0, limit) : users;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    sendConsoleDebug('searchInstagramUsers error', error.message);
+    throw error;
+  }
+}

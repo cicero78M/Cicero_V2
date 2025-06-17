@@ -6,6 +6,7 @@ import dashboardRoutes from "./dashboardRoutes.js";
 import instaRoutes from "./instaRoutes.js";
 import oauthRoutes from './oauthRoutes.js';
 import tiktokRoutes from "./tiktokRoutes.js";
+import polresRoutes from './polresRoutes.js';
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/insta", instaRoutes);
 router.use("/tiktok", tiktokRoutes);
 router.use('/oauth', oauthRoutes);
+router.use('/polres', polresRoutes);
 
 
 export default router;
