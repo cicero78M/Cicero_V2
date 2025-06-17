@@ -8,7 +8,7 @@ Sistem ini mendukung multi-client, rekap otomatis likes dan komentar, serta peng
 
 Dokumentasi arsitektur lengkap tersedia pada [docs/enterprise_architecture.md](docs/enterprise_architecture.md).
 Dokumentasi jadwal aktivitas sistem terdapat pada [docs/activity_schedule.md](docs/activity_schedule.md).
-Dokumentasi struktur database terdapat pada [docs/database_structure.md](docs/database_structure.md).
+Dokumentasi alur metadata tersedia pada [docs/metadata_flow.md](docs/metadata_flow.md).
 
 ---
 
