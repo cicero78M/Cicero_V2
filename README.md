@@ -166,6 +166,22 @@ Endpoint terkait:
 Proses lengkap juga dapat dijalankan lewat menu WhatsApp `clientrequest`
 dengan memilih *Instagram Data Mining*.
 
+### 7. Metadata API
+
+| Endpoint    | Method | Deskripsi                               |
+|-------------|--------|-----------------------------------------|
+| `/metadata` | GET    | Menampilkan informasi versi aplikasi API |
+
+**Contoh Response:**
+```json
+{
+  "name": "cicero-clean-build",
+  "version": "1.0.0",
+  "description": "Cicero V2 with postgresql",
+  "uptime": 123.456
+}
+```
+
 ---
 
 ## Fitur & Flow Bisnis Utama
