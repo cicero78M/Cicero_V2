@@ -19,12 +19,21 @@ Key tables defined in [`sql/schema.sql`](../sql/schema.sql):
 |--------------------|-------------------------------------------|
 | `clients`          | Stores client information and social media identifiers. |
 | `user`             | Holds user profiles linked to a client.   |
-| `insta_post`       | Instagram posts fetched via RapidAPI.     |
-| `insta_like`       | List of likes for each Instagram post.    |
-| `insta_profile`    | Profile metadata for Instagram accounts.  |
-| `tiktok_post`      | TikTok posts associated with a client.    |
-| `tiktok_comment`   | Comments for each TikTok post.            |
-| `insta_post_cache` | Cached raw JSON posts per username.       |
+| `insta_post`                | Instagram posts fetched via RapidAPI.     |
+| `insta_like`                | List of likes for each Instagram post.    |
+| `insta_profile`             | Basic profile info for Instagram accounts. |
+| `instagram_user`            | Detailed Instagram profile data.          |
+| `instagram_user_about`      | Additional user metadata.                 |
+| `instagram_bio_link`        | Links that appear in the profile bio.     |
+| `instagram_profile_pic_version` | History of profile pictures.           |
+| `instagram_user_metrics`    | Statistics such as follower counts.       |
+| `instagram_user_location`   | Location information for an account.      |
+| `tiktok_post`               | TikTok posts associated with a client.    |
+| `tiktok_comment`            | Comments for each TikTok post.            |
+| `insta_post_cache`          | Cached raw JSON posts per username.       |
+| `insta_user_search`         | Results of Instagram account lookups.     |
+| `polda` / `polda_kota`      | Reference tables for regional police.     |
+| `polres_insta`              | Track official Instagram accounts.        |
 
 These tables are updated regularly by scheduled jobs and form the basis for analytics and attendance calculations.
 

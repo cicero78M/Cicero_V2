@@ -80,6 +80,44 @@ Caching results of Instagram user lookups.
 - `full_name`, `instagram_id`, `is_private`, `is_verified`,
   `profile_pic_url`, `searched_at`
 
+### `instagram_user`
+Core profile details returned from Instagram scraping.
+- `user_id` – primary key
+- `username`, `full_name`, `biography`
+- `business_contact_method`, `category`, `category_id`, `account_type`
+- `contact_phone_number`, `external_url`, `fbid_v2`
+- `is_business`, `is_private`, `is_verified`
+- `public_email`, `public_phone_country_code`, `public_phone_number`
+- `profile_pic_url`, `profile_pic_url_hd`
+
+### `instagram_user_about`
+Additional account metadata.
+- `user_id` – foreign key to `instagram_user`
+- `country`, `date_joined`, `date_joined_timestamp`, `former_usernames`
+
+### `instagram_bio_link`
+Links found in the account bio.
+- `user_id` – foreign key to `instagram_user`
+- `link_id` – primary key per user
+- `link_type`, `lynx_url`, `open_in_app`, `title`, `url`, `is_pinned`
+
+### `instagram_profile_pic_version`
+Historical profile picture versions.
+- `user_id` – foreign key to `instagram_user`
+- `height`, `width`, `url`
+
+### `instagram_user_metrics`
+Follower and media statistics.
+- `user_id` – primary key referencing `instagram_user`
+- `follower_count`, `following_count`, `media_count`
+- `total_igtv_videos`, `latest_reel_media`
+
+### `instagram_user_location`
+Location information if available.
+- `user_id` – primary key referencing `instagram_user`
+- `address_street`, `city_id`, `city_name`
+- `instagram_location_id`, `latitude`, `longitude`, `zip`
+
 ## Relationships
 
 ```mermaid
