@@ -103,3 +103,80 @@ CREATE TABLE insta_user_search (
   profile_pic_url TEXT,
   searched_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Instagram data tables
+-- Tabel utama dengan informasi profil dasar
+CREATE TABLE instagram_user (
+    user_id                 VARCHAR(30) PRIMARY KEY,
+    username                VARCHAR(100) NOT NULL,
+    full_name               VARCHAR(100),
+    biography               TEXT,
+    business_contact_method VARCHAR(50),
+    category                VARCHAR(100),
+    category_id             INT,
+    account_type            SMALLINT,
+    contact_phone_number    VARCHAR(30),
+    external_url            TEXT,
+    fbid_v2                 VARCHAR(40),
+    is_business             BOOLEAN,
+    is_private              BOOLEAN,
+    is_verified             BOOLEAN,
+    public_email            VARCHAR(100),
+    public_phone_country_code VARCHAR(10),
+    public_phone_number     VARCHAR(30),
+    profile_pic_url         TEXT,
+    profile_pic_url_hd      TEXT
+);
+
+-- Data "About" dari profil
+CREATE TABLE instagram_user_about (
+    user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
+    country                 VARCHAR(100),
+    date_joined             VARCHAR(50),
+    date_joined_timestamp   BIGINT,
+    former_usernames        INT
+);
+
+-- Link pada bio (bisa lebih dari satu per pengguna)
+CREATE TABLE instagram_bio_link (
+    user_id                 VARCHAR(30) REFERENCES instagram_user(user_id),
+    link_id                 BIGINT,
+    link_type               VARCHAR(30),
+    lynx_url                TEXT,
+    open_in_app             BOOLEAN,
+    title                   VARCHAR(255),
+    url                     TEXT,
+    is_pinned               BOOLEAN,
+    PRIMARY KEY (user_id, link_id)
+);
+
+-- Versi foto profil HD (bisa lebih dari satu per pengguna)
+CREATE TABLE instagram_profile_pic_version (
+    user_id                 VARCHAR(30) REFERENCES instagram_user(user_id),
+    height                  INT,
+    width                   INT,
+    url                     TEXT,
+    PRIMARY KEY (user_id, url)
+);
+
+-- Statistik/metric akun
+CREATE TABLE instagram_user_metrics (
+    user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
+    follower_count          INT,
+    following_count         INT,
+    media_count             INT,
+    total_igtv_videos       INT,
+    latest_reel_media       BIGINT
+);
+
+-- Data lokasi akun (jika tersedia)
+CREATE TABLE instagram_user_location (
+    user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
+    address_street          VARCHAR(255),
+    city_id                 VARCHAR(50),
+    city_name               VARCHAR(100),
+    instagram_location_id   VARCHAR(50),
+    latitude                DOUBLE PRECISION,
+    longitude               DOUBLE PRECISION,
+    zip                     VARCHAR(20)
+);
