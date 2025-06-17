@@ -22,7 +22,8 @@ Panduan ditujukan bagi admin sistem agar proses migrasi berlangsung aman tanpa k
    ```bash
    psql -U <user> -d <dbname> -f backup.sql
    ```
-6. Sesuaikan konfigurasi `nginx`/`reverse proxy` bila digunakan.
+6. Sesuaikan konfigurasi `nginx`/`reverse proxy` bila digunakan (lihat
+   [docs/reverse_proxy_config.md](reverse_proxy_config.md)).
 
 ## 3. Deploy Aplikasi
 
