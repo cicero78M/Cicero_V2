@@ -2,9 +2,9 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
-import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
-import { absensiLikes } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
+import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
+import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
+import { absensiLikes } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import waClient from "../service/waService.js";
 
 // Helper: ambil client IG aktif lengkap data

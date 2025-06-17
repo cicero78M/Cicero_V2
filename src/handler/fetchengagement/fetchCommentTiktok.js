@@ -1,4 +1,4 @@
-// src/handler/fetchEngagement/fetchCommentTiktok.js
+// src/handler/fetchengagement/fetchCommentTiktok.js
 
 import pLimit from "p-limit";
 import { query } from "../../db/index.js";

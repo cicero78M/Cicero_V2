@@ -1,4 +1,4 @@
-// src/handler/fetchPost/instaFetchPost.js
+// src/handler/fetchpost/instaFetchPost.js
 
 import pLimit from "p-limit";
 import { query } from "../../db/index.js";
