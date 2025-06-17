@@ -14,22 +14,22 @@ import * as userModel from "../model/userModel.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
-import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
-import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
+import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
+import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
-} from "../handler/fetchPost/tiktokFetchPost.js";
+} from "../handler/fetchpost/tiktokFetchPost.js";
 
 import {
   absensiLikes,
   absensiLikesPerKonten,
-} from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
+} from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 
 import {
   absensiKomentar,
   absensiKomentarTiktokPerKonten,
-} from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+} from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 
 // Model Imports
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
@@ -41,7 +41,7 @@ import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 
-import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
+import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 
 // >>> HANYA SATU INI <<< (Pastikan di helper semua diekspor)
 import {

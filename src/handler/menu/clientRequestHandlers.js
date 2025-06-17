@@ -1,10 +1,10 @@
 // src/handler/menu/clientRequestHandlers.js
 
-import { handleFetchLikesInstagram } from "../fetchEngagement/fetchLikesInstagram.js";
+import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
 import {
   absensiKomentar,
   absensiKomentarTiktokPerKonten,
-} from "../fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+} from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 import {
   groupByDivision,
@@ -1020,7 +1020,7 @@ export const clientRequestHandlers = {
     }
     try {
       let msg = "";
-      const absensiLikesPath = "../fetchAbsensi/insta/absensiLikesInsta.js";
+      const absensiLikesPath = "../fetchabsensi/insta/absensiLikesInsta.js";
       if ([1, 2, 3].includes(pilihan)) {
         const { absensiLikes } = await import(absensiLikesPath);
         if (pilihan === 1) msg = await absensiLikes(client_id, { mode: "all" });

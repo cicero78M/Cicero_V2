@@ -4,9 +4,9 @@ dotenv.config();
 
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
-import { fetchAndStoreTiktokContent } from "../handler/fetchPost/tiktokFetchPost.js";
-import { handleFetchKomentarTiktokBatch } from "../handler/fetchEngagement/fetchCommentTiktok.js";
-import { absensiKomentar } from "../handler/fetchAbsensi/tiktok/absensiKomentarTiktok.js";
+import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
+import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
+import { absensiKomentar } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 
 // Helper ambil client TikTok aktif + notif WA
 async function getActiveClientsTiktok() {

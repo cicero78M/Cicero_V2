@@ -2,12 +2,12 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchAndStoreInstaContent } from "../handler/fetchPost/instaFetchPost.js";
-import { handleFetchLikesInstagram } from "../handler/fetchEngagement/fetchLikesInstagram.js";
+import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
+import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import waClient from "../service/waService.js";
 
-import { getActiveClientsIG, absensiLikes } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
-import { rekapLikesIG } from "../handler/fetchAbsensi/insta/absensiLikesInsta.js";
+import { getActiveClientsIG, absensiLikes } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
+import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(

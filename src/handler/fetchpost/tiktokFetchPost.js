@@ -1,4 +1,4 @@
-// src/handler/fetchPost/tiktokFetchPost.js
+// src/handler/fetchpost/tiktokFetchPost.js
 
 import { query } from "../../db/index.js";
 import { findById, update } from "../../model/clientModel.js";
