@@ -78,3 +78,28 @@ CREATE TABLE polres_insta (
   last_post_at TIMESTAMP,
   checked_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Data Polda dan Kota
+CREATE TABLE polda (
+  id SERIAL PRIMARY KEY,
+  nama VARCHAR UNIQUE NOT NULL
+);
+
+CREATE TABLE polda_kota (
+  id SERIAL PRIMARY KEY,
+  polda_id INTEGER REFERENCES polda(id),
+  nama VARCHAR NOT NULL,
+  UNIQUE(polda_id, nama)
+);
+
+-- Hasil pencarian akun Instagram
+CREATE TABLE insta_user_search (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR UNIQUE NOT NULL,
+  full_name VARCHAR,
+  instagram_id VARCHAR,
+  is_private BOOLEAN,
+  is_verified BOOLEAN,
+  profile_pic_url TEXT,
+  searched_at TIMESTAMP DEFAULT NOW()
+);
