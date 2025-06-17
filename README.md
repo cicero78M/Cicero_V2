@@ -11,6 +11,7 @@ Dokumentasi jadwal aktivitas sistem terdapat pada [docs/activity_schedule.md](do
 Dokumentasi alur metadata tersedia pada [docs/metadata_flow.md](docs/metadata_flow.md).
 Panduan migrasi server tersedia pada [docs/server_migration.md](docs/server_migration.md).
 Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
+Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 
 ---
 
