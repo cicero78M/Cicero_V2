@@ -10,6 +10,7 @@ Dokumentasi arsitektur lengkap tersedia pada [docs/enterprise_architecture.md](d
 Dokumentasi jadwal aktivitas sistem terdapat pada [docs/activity_schedule.md](docs/activity_schedule.md).
 Dokumentasi alur metadata tersedia pada [docs/metadata_flow.md](docs/metadata_flow.md).
 Panduan migrasi server tersedia pada [docs/server_migration.md](docs/server_migration.md).
+Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 
 ---
