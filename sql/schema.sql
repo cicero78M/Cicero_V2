@@ -69,22 +69,6 @@ CREATE TABLE tiktok_comment (
   comments JSONB,
   updated_at TIMESTAMP
 );
-
--- Cache hasil fetch posting Instagram per username
-CREATE TABLE insta_post_cache (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR NOT NULL,
-  posts JSONB,
-  fetched_at TIMESTAMP DEFAULT NOW()
-);
-
--- Daftar akun Instagram Polres (validasi posting 3 hari terakhir)
-CREATE TABLE polres_insta (
-  username VARCHAR PRIMARY KEY,
-  last_post_at TIMESTAMP,
-  checked_at TIMESTAMP DEFAULT NOW()
-);
-
 -- Data Polda dan Kota
 CREATE TABLE polda (
   id SERIAL PRIMARY KEY,
@@ -123,37 +107,6 @@ CREATE TABLE instagram_user (
     profile_pic_url_hd      TEXT
 );
 
--- Data "About" dari profil
-CREATE TABLE instagram_user_about (
-    user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
-    country                 VARCHAR(100),
-    date_joined             VARCHAR(50),
-    date_joined_timestamp   BIGINT,
-    former_usernames        INT
-);
-
--- Link pada bio (bisa lebih dari satu per pengguna)
-CREATE TABLE instagram_bio_link (
-    user_id                 VARCHAR(30) REFERENCES instagram_user(user_id),
-    link_id                 BIGINT,
-    link_type               VARCHAR(30),
-    lynx_url                TEXT,
-    open_in_app             BOOLEAN,
-    title                   VARCHAR(255),
-    url                     TEXT,
-    is_pinned               BOOLEAN,
-    PRIMARY KEY (user_id, link_id)
-);
-
--- Versi foto profil HD (bisa lebih dari satu per pengguna)
-CREATE TABLE instagram_profile_pic_version (
-    user_id                 VARCHAR(30) REFERENCES instagram_user(user_id),
-    height                  INT,
-    width                   INT,
-    url                     TEXT,
-    PRIMARY KEY (user_id, url)
-);
-
 -- Statistik/metric akun
 CREATE TABLE instagram_user_metrics (
     user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
@@ -162,18 +115,6 @@ CREATE TABLE instagram_user_metrics (
     media_count             INT,
     total_igtv_videos       INT,
     latest_reel_media       BIGINT
-);
-
--- Data lokasi akun (jika tersedia)
-CREATE TABLE instagram_user_location (
-    user_id                 VARCHAR(30) PRIMARY KEY REFERENCES instagram_user(user_id),
-    address_street          VARCHAR(255),
-    city_id                 VARCHAR(50),
-    city_name               VARCHAR(100),
-    instagram_location_id   VARCHAR(50),
-    latitude                DOUBLE PRECISION,
-    longitude               DOUBLE PRECISION,
-    zip                     VARCHAR(20)
 );
 
 -- Extended tables for storing detailed Instagram data fetched from RapidAPI
@@ -250,25 +191,6 @@ CREATE TABLE IF NOT EXISTS ig_post_metrics (
     view_count INT,
     fb_like_count INT,
     fb_play_count INT
-);
-
--- Komentar Instagram pada setiap post
-CREATE TABLE IF NOT EXISTS ig_post_comments (
-    comment_id VARCHAR(50) PRIMARY KEY,
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
-    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
-    parent_comment_id VARCHAR(50),
-    text TEXT,
-    like_count INT,
-    created_at TIMESTAMP
-);
-
--- Daftar pengguna yang menyukai setiap post
-CREATE TABLE IF NOT EXISTS ig_post_likes (
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
-    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
-    retrieved_at TIMESTAMP DEFAULT NOW(),
-    PRIMARY KEY (post_id, user_id)
 );
 
 CREATE TABLE visitor_logs (
