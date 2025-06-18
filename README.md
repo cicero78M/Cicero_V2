@@ -10,6 +10,7 @@ Dokumentasi arsitektur lengkap tersedia pada [docs/enterprise_architecture.md](d
 Dokumentasi jadwal aktivitas sistem terdapat pada [docs/activity_schedule.md](docs/activity_schedule.md).
 Dokumentasi alur metadata tersedia pada [docs/metadata_flow.md](docs/metadata_flow.md).
 Panduan migrasi server tersedia pada [docs/server_migration.md](docs/server_migration.md).
+Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
 Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 
@@ -208,6 +209,19 @@ dengan memilih *Instagram Data Mining*.
 }
 ```
 
+### 9. Event Notifikasi
+
+| Endpoint      | Method | Deskripsi                                                |
+|---------------|--------|----------------------------------------------------------|
+| `/auth/login` | POST   | Login client (sukses atau gagal) akan memicu notifikasi WhatsApp |
+| `/auth/open`  | GET    | Dipanggil saat dashboard dibuka untuk pemberitahuan WA   |
+
+### 10. Visitor Log API
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/logs/visitors` | GET | Ambil daftar log kunjungan dashboard |
+
 ---
 
 ## Fitur & Flow Bisnis Utama
@@ -217,11 +231,12 @@ dengan memilih *Instagram Data Mining*.
   Jadwal cron: 06:30–21:30 tiap hari (atau sesuai konfigurasi).  
   Semua task bisa dijalankan manual via WA oleh admin.
 
-- **WhatsApp Service**  
-  Bot WhatsApp otomatis kirim rekap absensi dan status fetch ke admin/group.  
-  Hanya admin di ENV yang bisa trigger perintah manual.  
-  Koneksi via QR code (whatsapp-web.js).  
+- **WhatsApp Service**
+  Bot WhatsApp otomatis kirim rekap absensi dan status fetch ke admin/group.
+  Hanya admin di ENV yang bisa trigger perintah manual.
+  Koneksi via QR code (whatsapp-web.js).
   Semua rekap bisa dipicu manual via perintah chat WA.
+  Backend juga mengirim pesan ke admin setiap kali ada percobaan login (berhasil ataupun gagal) serta ketika halaman dashboard dibuka.
 
 - **Absensi Like & Komentar Sosial Media**  
   Absensi likes IG: bandingkan user terdaftar dengan likes posting IG hari ini.  
@@ -252,7 +267,13 @@ dengan memilih *Instagram Data Mining*.
 
 2. **Konfigurasi .env:**
     ```ini
-    DATABASE_URL=postgresql://user:pass@host:port/db
+    PORT=3000
+    DB_USER=cicero
+    DB_HOST=localhost
+    DB_NAME=cicero_db
+    DB_PASS=secret
+    DB_PORT=5432
+    DB_DRIVER=postgres
     ADMIN_WHATSAPP=628xxxxxx@c.us,628yyyyyy@c.us
     # Default operator untuk login frontend
     CLIENT_OPERATOR=628123456789
@@ -262,6 +283,8 @@ dengan memilih *Instagram Data Mining*.
     NEXT_PUBLIC_CLIENT_OPERATOR=628123456789
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
+    SECRET_KEY=your-secret
+    AMQP_URL=amqp://localhost
     ```
 
     Untuk login dashboard, Anda dapat menggunakan nomor operator masing-masing
@@ -375,6 +398,14 @@ CREATE TABLE polres_insta (
   username VARCHAR PRIMARY KEY,
   last_post_at TIMESTAMP,
   checked_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Log kunjungan dashboard
+CREATE TABLE visitor_logs (
+  id SERIAL PRIMARY KEY,
+  ip VARCHAR,
+  user_agent TEXT,
+  visited_at TIMESTAMP DEFAULT NOW()
 );
 ```
 

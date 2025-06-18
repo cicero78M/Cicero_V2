@@ -4,6 +4,13 @@ import pLimit from "p-limit";
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchInstagramPosts } from "../../service/instagramApi.js";
+import {
+  upsertIgUser,
+  upsertIgPost,
+  upsertIgMedia,
+  insertHashtags,
+  upsertTaggedUsers,
+} from "../../model/instaPostExtendedModel.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -197,6 +204,24 @@ export async function fetchAndStoreInstaContent(
         msg: `[DB] Sukses upsert IG post: ${toSave.shortcode}`,
         client_id: client.id
       });
+
+      // store extended post data
+      try {
+        await upsertIgUser(post.user);
+        await upsertIgPost(post, post.user?.id);
+        if (Array.isArray(post.hashtags)) {
+          await insertHashtags(post.id, post.hashtags);
+        }
+        const medias = post.carousel_media || [post];
+        for (const m of medias) {
+          await upsertIgMedia(m, post.id);
+          if (Array.isArray(m.tagged_users)) {
+            await upsertTaggedUsers(m.id, m.tagged_users);
+          }
+        }
+      } catch (err) {
+        sendDebug({ tag: "IG EXT", msg: err.message });
+      }
     }
 
     // Hapus konten hari ini yang sudah tidak ada di hasil fetch hari ini

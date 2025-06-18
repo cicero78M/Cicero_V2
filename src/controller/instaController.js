@@ -8,6 +8,7 @@ import {
   fetchInstagramPostsByMonthToken,
 } from "../service/instagramApi.js";
 import * as instaProfileService from "../service/instaProfileService.js";
+import * as instagramUserService from "../service/instagramUserService.js";
 import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import * as profileCache from "../service/profileCacheService.js";
 import { sendSuccess } from "../utils/response.js";
@@ -57,6 +58,7 @@ export async function getRapidInstagramPosts(req, res) {
     const username = req.query.username;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+    else if (limit > 100) limit = 100;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
@@ -103,6 +105,7 @@ export async function getRapidInstagramPostsStore(req, res) {
     const username = req.query.username;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+    else if (limit > 100) limit = 100;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
@@ -221,6 +224,40 @@ export async function getRapidInstagramProfile(req, res) {
         post_count: profile.media_count ?? profile.posts_count,
         profile_pic_url: profile.profile_pic_url,
       });
+
+      const userId = profile.pk || profile.id || profile.user_id;
+      if (userId) {
+        await instagramUserService.upsertInstagramUser({
+          user_id: String(userId),
+          username: profile.username,
+          full_name: profile.full_name,
+          biography: profile.biography,
+          business_contact_method: profile.business_contact_method,
+          category: profile.category_name || profile.category,
+          category_id: profile.category_id,
+          account_type: profile.account_type,
+          contact_phone_number: profile.contact_phone_number,
+          external_url: profile.external_url,
+          fbid_v2: profile.fbid_v2,
+          is_business: profile.is_business,
+          is_private: profile.is_private,
+          is_verified: profile.is_verified,
+          public_email: profile.public_email,
+          public_phone_country_code: profile.public_phone_country_code,
+          public_phone_number: profile.public_phone_number,
+          profile_pic_url: profile.profile_pic_url,
+          profile_pic_url_hd: profile.profile_pic_url_hd
+        });
+
+        await instagramUserService.upsertInstagramUserMetrics({
+          user_id: String(userId),
+          follower_count: profile.followers_count ?? profile.follower_count,
+          following_count: profile.following_count,
+          media_count: profile.media_count ?? profile.posts_count,
+          total_igtv_videos: profile.total_igtv_videos,
+          latest_reel_media: profile.latest_reel_media
+        });
+      }
     }
     sendSuccess(res, profile);
   } catch (err) {
@@ -260,6 +297,28 @@ export async function getInstagramProfile(req, res) {
     sendSuccess(res, profile);
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstagramProfile: ${err.message}` });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
+
+export async function getInstagramUser(req, res) {
+  try {
+    const user_id = req.query.user_id;
+    const username = req.query.username;
+    if (!user_id && !username) {
+      return res.status(400).json({ success: false, message: 'username atau user_id wajib diisi' });
+    }
+    sendConsoleDebug({ tag: 'INSTA', msg: `getInstagramUser ${user_id || username}` });
+    let profile;
+    if (user_id) profile = await instagramUserService.findByUserId(user_id);
+    else profile = await instagramUserService.findByUsername(username);
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'profile not found' });
+    }
+    sendSuccess(res, profile);
+  } catch (err) {
+    sendConsoleDebug({ tag: 'INSTA', msg: `Error getInstagramUser: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }

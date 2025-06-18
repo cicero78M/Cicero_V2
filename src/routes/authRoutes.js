@@ -1,8 +1,21 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { query } from "../db/index.js";
-import { isAdminWhatsApp, formatToWhatsAppId } from "../utils/waHelper.js";
+import {
+  isAdminWhatsApp,
+  formatToWhatsAppId,
+  getAdminWAIds,
+} from "../utils/waHelper.js";
 import redis from "../config/redis.js";
+import waClient, { waReady } from "../service/waService.js";
+import { insertVisitorLog } from "../model/visitorLogModel.js";
+
+function notifyAdmin(message) {
+  if (!waReady) return;
+  for (const wa of getAdminWAIds()) {
+    waClient.sendMessage(wa, message).catch(() => {});
+  }
+}
 
 const router = express.Router();
 
@@ -10,12 +23,17 @@ router.post("/login", async (req, res) => {
   const { client_id, client_operator } = req.body;
   // Validasi input
   if (!client_id || !client_operator) {
+    const reason = "client_id dan client_operator wajib diisi";
+    const time = new Date().toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+    });
+    notifyAdmin(
+      `❌ Login gagal\nAlasan: ${reason}\nID: ${client_id || "-"}\nOperator: ${
+        client_operator || "-"}\nWaktu: ${time}`
+    );
     return res
       .status(400)
-      .json({
-        success: false,
-        message: "client_id dan client_operator wajib diisi",
-      });
+      .json({ success: false, message: reason });
   }
   // Cari client berdasarkan ID saja
   const { rows } = await query(
@@ -25,9 +43,14 @@ router.post("/login", async (req, res) => {
   const client = rows[0];
   // Jika client tidak ditemukan
   if (!client) {
+    const reason = "client_id tidak ditemukan";
+    const time = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    notifyAdmin(
+      `❌ Login gagal\nAlasan: ${reason}\nID: ${client_id}\nOperator: ${client_operator}\nWaktu: ${time}`
+    );
     return res.status(401).json({
       success: false,
-      message: "Login gagal: client_id tidak ditemukan",
+      message: `Login gagal: ${reason}`,
     });
   }
 
@@ -44,9 +67,14 @@ router.post("/login", async (req, res) => {
     isAdminWhatsApp(client_operator);
 
   if (!isValidOperator) {
+    const reason = "client operator tidak valid";
+    const time = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    notifyAdmin(
+      `❌ Login gagal\nAlasan: ${reason}\nID: ${client_id}\nOperator: ${client_operator}\nWaktu: ${time}`
+    );
     return res.status(401).json({
       success: false,
-      message: "Login gagal: client operator tidak valid",
+      message: `Login gagal: ${reason}`,
     });
   }
 
@@ -72,8 +100,24 @@ router.post("/login", async (req, res) => {
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production'
   });
+  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  notifyAdmin(
+    `\uD83D\uDD11 Login: ${client.nama} (${client.client_id})\nOperator: ${client_operator}\nWaktu: ${time}`
+  );
   // Kembalikan token dan data client
   return res.json({ success: true, token, client: payload });
 });
+
+router.get('/open', async (req, res) => {
+  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+  const ua = req.headers['user-agent'] || '';
+  await insertVisitorLog({ ip, userAgent: ua });
+  notifyAdmin(
+    `\uD83D\uDD0D Web dibuka\nIP: ${ip}\nUA: ${ua}\nWaktu: ${time}`
+  );
+  return res.json({ success: true });
+});
+
 
 export default router;
