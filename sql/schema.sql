@@ -230,6 +230,52 @@ CREATE TABLE IF NOT EXISTS ig_ext_hashtags (
     PRIMARY KEY (post_id, hashtag)
 );
 
+-- Informasi detail hashtag dari endpoint RapidAPI
+CREATE TABLE IF NOT EXISTS ig_hashtag_info (
+    hashtag_id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    profile_pic_url TEXT,
+    media_count INT,
+    formatted_media_count VARCHAR(20),
+    is_trending BOOLEAN,
+    allow_muting_story BOOLEAN,
+    hide_use_hashtag_button BOOLEAN,
+    show_follow_drop_down BOOLEAN,
+    content_advisory TEXT,
+    subtitle TEXT,
+    warning_message TEXT
+);
+
+-- Statistik lanjutan untuk setiap post
+CREATE TABLE IF NOT EXISTS ig_post_metrics (
+    post_id VARCHAR(50) PRIMARY KEY REFERENCES ig_ext_posts(post_id),
+    play_count INT,
+    save_count INT,
+    share_count INT,
+    view_count INT,
+    fb_like_count INT,
+    fb_play_count INT
+);
+
+-- Komentar Instagram pada setiap post
+CREATE TABLE IF NOT EXISTS ig_post_comments (
+    comment_id VARCHAR(50) PRIMARY KEY,
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    parent_comment_id VARCHAR(50),
+    text TEXT,
+    like_count INT,
+    created_at TIMESTAMP
+);
+
+-- Daftar pengguna yang menyukai setiap post
+CREATE TABLE IF NOT EXISTS ig_post_likes (
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    retrieved_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+);
+
 CREATE TABLE visitor_logs (
     id SERIAL PRIMARY KEY,
     ip VARCHAR,
