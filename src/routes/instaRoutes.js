@@ -7,6 +7,7 @@ import {
   getRapidInstagramProfile,
   getRapidInstagramInfo,
   getInstagramProfile,
+  getInstagramUser,
   getRapidInstagramPostsStore,
   getRapidInstagramPostsByMonth,
 } from "../controller/instaController.js";
@@ -22,5 +23,6 @@ router.get("/rapid-posts-store", authRequired, getRapidInstagramPostsStore);
 router.get("/rapid-profile", authRequired, getRapidInstagramProfile);
 router.get("/rapid-info", authRequired, getRapidInstagramInfo);
 router.get("/profile", authRequired, getInstagramProfile);
+router.get("/instagram-user", authRequired, getInstagramUser);
 
 export default router;
