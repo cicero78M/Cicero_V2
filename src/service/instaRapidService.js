@@ -233,7 +233,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
 }
 
 export async function fetchInstagramLikesPage(shortcode, cursor = null) {
-  if (!shortcode) return { usernames: [], next_cursor: null, has_more: false };
+  if (!shortcode) return { usernames: [], items: [], next_cursor: null, has_more: false };
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (cursor) params.append('cursor', cursor);
 
@@ -253,11 +253,11 @@ export async function fetchInstagramLikesPage(shortcode, cursor = null) {
   const data = await res.json();
   const items = Array.isArray(data?.data?.items) ? data.data.items : [];
   const usernames = items
-    .map(l => (l.username ? l.username : l))
+    .map(l => (l && l.username ? l.username : l))
     .filter(Boolean);
   const next_cursor = data?.data?.next_cursor || data?.data?.end_cursor || null;
   const has_more = data?.data?.has_more || (next_cursor && next_cursor !== '');
-  return { usernames, next_cursor, has_more };
+  return { usernames, items, next_cursor, has_more };
 }
 
 export async function fetchInstagramLikesPageRetry(
@@ -293,6 +293,21 @@ export async function fetchAllInstagramLikes(shortcode, maxPage = 20) {
     const { usernames, next_cursor, has_more } = await fetchInstagramLikesPageRetry(shortcode, cursor);
     if (!usernames.length) break;
     all.push(...usernames);
+    cursor = next_cursor;
+    page++;
+    if (!has_more || !cursor || page >= maxPage) break;
+  } while (true);
+  return all;
+}
+
+export async function fetchAllInstagramLikesItems(shortcode, maxPage = 20) {
+  const all = [];
+  let cursor = null;
+  let page = 0;
+  do {
+    const { items, next_cursor, has_more } = await fetchInstagramLikesPageRetry(shortcode, cursor);
+    if (!items.length) break;
+    all.push(...items);
     cursor = next_cursor;
     page++;
     if (!has_more || !cursor || page >= maxPage) break;

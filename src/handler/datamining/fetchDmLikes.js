@@ -1,28 +1,28 @@
 import pLimit from 'p-limit';
-import { fetchAllInstagramLikes } from '../../service/instagramApi.js';
-import { upsertIgPostLike } from '../../model/igPostLikeModel.js';
-import { getPostIdsTodayByUsername } from '../../model/instaPostExtendedModel.js';
+import { fetchAllInstagramLikesItems } from '../../service/instagramApi.js';
+import { upsertInstaLike } from '../../model/instaLikeModel.js';
+import { getShortcodesTodayByUsername } from '../../model/instaPostModel.js';
 import { sendDebug } from '../../middleware/debugHandler.js';
 
 const limit = pLimit(3);
 
 export async function handleFetchLikesInstagramDM(username) {
   try {
-    const ids = await getPostIdsTodayByUsername(username);
-    if (!ids.length) {
+    const shortcodes = await getShortcodesTodayByUsername(username);
+    if (!shortcodes.length) {
       sendDebug({ tag: 'IG DM LIKES', msg: `Tidak ada post IG hari ini untuk @${username}` });
       return;
     }
     let sukses = 0, gagal = 0;
-    for (const id of ids) {
+    for (const sc of shortcodes) {
       await limit(async () => {
         try {
-          const likes = await fetchAllInstagramLikes(id);
-          await upsertIgPostLike(id, likes);
+          const likes = await fetchAllInstagramLikesItems(sc);
+          await upsertInstaLike(sc, likes);
           sukses++;
         } catch (err) {
           gagal++;
-          sendDebug({ tag: 'IG DM LIKES ERROR', msg: `[${id}] ${err.message}` });
+          sendDebug({ tag: 'IG DM LIKES ERROR', msg: `[${sc}] ${err.message}` });
         }
       });
     }
