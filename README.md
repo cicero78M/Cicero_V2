@@ -65,7 +65,6 @@ Cicero_V2-main/
 │   │   ├── instaRoutes.js       # Endpoint Instagram
 │   │   ├── tiktokRoutes.js      # Endpoint TikTok
 │   │   ├── oauthRoutes.js       # Endpoint OAuth
-│   │   ├── poldaRoutes.js       # Endpoint Polda/Polres
 │   │   ├── dashboardRoutes.js   # Endpoint dashboard
 │   │   ├── metaRoutes.js        # Metadata API
 │   │   └── index.js             # Router utama
@@ -160,13 +159,7 @@ ditunda selama 1.5 detik untuk menghindari batasan API.
 | `/tiktok/rapid-posts` | GET | Postingan TikTok via RapidAPI |
 | `/tiktok/rapid-info`  | GET | Info akun TikTok via RapidAPI |
 
-### 5. Polres Instagram
-
-| Endpoint | Method | Deskripsi |
-|----------|--------|-----------|
-| `/polres/search` | GET | Cari akun polres melalui RapidAPI dan simpan jika ada posting 3 hari terakhir |
-
-### 6. OAuth Callback
+### 5. OAuth Callback
 
 | Endpoint          | Method | Deskripsi                                          |
 |-------------------|--------|----------------------------------------------------|
@@ -176,24 +169,16 @@ Endpoint ini menerima parameter `code` dan `state` dari penyedia OAuth.
 Saat ini fungsinya hanya mencatat parameter tersebut, tetapi dapat
 diperluas untuk menukar kode menjadi access token.
 
-### 7. Instagram Data Mining
+### 6. Instagram Data Mining
 
 Struktur data untuk otomasi pencarian akun IG menggunakan konvensi
-`polda_polres` dengan primary key `nama_polda`. Contoh data dapat dilihat
-pada `src/data/polda_polres.json`.
+`polda_polres` dengan primary key `nama_polda`. Contoh data dapat
+ditemukan pada berkas `polda_polres.json` (opsional).
 
-Endpoint terkait:
-
-| Endpoint | Method | Deskripsi |
-|----------|--------|-----------|
-| `/polda/init` | POST | Inisialisasi tabel polda & polres |
-| `/polda/search-instagram` | POST | Cari akun Instagram berdasarkan nama polres |
-| `/polda/fetch-info` | POST | Ambil detail profil dari hasil pencarian |
-
-Proses lengkap juga dapat dijalankan lewat menu WhatsApp `clientrequest`
+Proses lengkap dijalankan lewat menu WhatsApp `clientrequest`
 dengan memilih *Instagram Data Mining*.
 
-### 8. Metadata API
+### 7. Metadata API
 
 | Endpoint    | Method | Deskripsi                               |
 |-------------|--------|-----------------------------------------|
