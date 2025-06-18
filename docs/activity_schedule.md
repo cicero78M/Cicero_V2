@@ -1,4 +1,5 @@
 # System Activity Schedule
+*Last updated: 2025-06-18*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron` and are started automatically when `app.js` boots. Times are in **Asia/Jakarta** timezone.
 

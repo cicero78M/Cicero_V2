@@ -1,4 +1,5 @@
 # Cicero Business Process
+*Last updated: 2025-06-18*
 
 This document summarizes the high level business processes of the Cicero platform, which consists of two main components: the **Cicero_V2** backend and the **Cicero_Web** dashboard.
 

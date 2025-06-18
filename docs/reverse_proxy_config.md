@@ -1,4 +1,5 @@
 # Konfigurasi Nginx/Reverse Proxy
+*Last updated: 2025-06-18*
 
 Dokumen ini memberikan contoh konfigurasi dasar untuk menjalankan aplikasi **Cicero_V2** di balik `nginx` atau reverse proxy lainnya. Pengaturan ini opsional namun berguna agar port aplikasi tidak diakses langsung oleh klien.
 
