@@ -36,6 +36,20 @@ export async function getShortcodesTodayByClient(client_id) {
   return res.rows.map(r => r.shortcode);
 }
 
+export async function getShortcodesTodayByUsername(username) {
+  if (!username) return [];
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const res = await query(
+    `SELECT p.shortcode FROM insta_post p JOIN clients c ON c.client_id = p.client_id
+     WHERE c.client_insta = $1 AND DATE(p.created_at) = $2`,
+    [username, `${yyyy}-${mm}-${dd}`]
+  );
+  return res.rows.map(r => r.shortcode);
+}
+
 
 export async function getPostsTodayByClient(client_id) {
   const res = await query(

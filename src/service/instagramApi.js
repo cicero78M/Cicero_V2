@@ -5,6 +5,7 @@ export {
   fetchInstagramPostsByMonthToken,
   fetchInstagramLikesPage,
   fetchAllInstagramLikes,
+  fetchAllInstagramLikesItems,
   fetchInstagramCommentsPage,
   fetchAllInstagramComments,
   fetchInstagramHashtag,
