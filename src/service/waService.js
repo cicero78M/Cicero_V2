@@ -133,8 +133,11 @@ waClient.on("ready", () => {
 // MESSAGE HANDLER UTAMA
 // =======================
 waClient.on("message", async (msg) => {
+  if (msg.from?.endsWith("@g.us") || msg.isStatus) {
+    return;
+  }
   const chatId = msg.from;
-  const text = msg.body.trim();
+  const text = (msg.body || "").trim();
 
   // ===== Deklarasi State dan Konstanta =====
   const session = getSession(chatId);
