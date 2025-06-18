@@ -326,3 +326,57 @@ export async function searchInstagramUsers(query, limit = 10) {
     throw error;
   }
 }
+
+export async function fetchInstagramCommentsPage(shortcode, token = null) {
+  if (!shortcode) return { comments: [], next_token: null, has_more: false };
+  const params = new URLSearchParams({ code_or_id_or_url: shortcode });
+  if (token) params.append('pagination_token', token);
+  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/comments`, {
+    params,
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  const items = Array.isArray(res.data?.data?.items) ? res.data.data.items : [];
+  const next_token = res.data?.pagination_token || res.data?.data?.pagination_token || null;
+  const has_more = (res.data?.data?.has_more || false) || (next_token && next_token !== '');
+  return { comments: items, next_token, has_more };
+}
+
+export async function fetchAllInstagramComments(shortcode, maxPage = 10) {
+  const all = [];
+  let token = null;
+  let page = 0;
+  do {
+    const { comments, next_token, has_more } = await fetchInstagramCommentsPage(shortcode, token);
+    if (!comments.length) break;
+    all.push(...comments);
+    token = next_token;
+    page++;
+    if (!has_more || !token || page >= maxPage) break;
+    await new Promise(r => setTimeout(r, 1500));
+  } while (true);
+  return all;
+}
+
+export async function fetchInstagramHashtag(tag, token = null) {
+  if (!tag) return { info: null, items: [], next_token: null, has_more: false };
+  const params = new URLSearchParams({ hashtag: tag.replace(/^#/, '') });
+  if (token) params.append('pagination_token', token);
+  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/hashtag`, {
+    params,
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  const data = res.data?.data || {};
+  const info = data?.additional_data || null;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const next_token = res.data?.pagination_token || data?.pagination_token || null;
+  const has_more = (data?.has_more || false) || (next_token && next_token !== '');
+  return { info, items, next_token, has_more };
+}
