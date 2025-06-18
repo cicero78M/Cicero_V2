@@ -284,6 +284,7 @@ dengan memilih *Instagram Data Mining*.
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
     SECRET_KEY=your-secret
+    JWT_SECRET=your-jwt-secret
     AMQP_URL=amqp://localhost
     ```
 
