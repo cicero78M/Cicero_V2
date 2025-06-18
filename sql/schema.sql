@@ -113,7 +113,7 @@ CREATE TABLE instagram_user (
     biography               TEXT,
     business_contact_method VARCHAR(50),
     category                VARCHAR(100),
-    category_id             INT,
+    category_id             BIGINT,
     account_type            SMALLINT,
     contact_phone_number    VARCHAR(30),
     external_url            TEXT,
