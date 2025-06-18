@@ -15,6 +15,7 @@ export const env = cleanEnv(process.env, {
   CORS_ORIGIN: str({ default: '*' }),
   ALLOW_DUPLICATE_REQUESTS: bool({ default: false }),
   SECRET_KEY: str({ default: '' }),
+  JWT_SECRET: str(),
   RAPIDAPI_KEY: str({ default: '' }),
   ADMIN_WHATSAPP: str({ default: '' }),
   APP_SESSION_NAME: str({ default: '' }),
