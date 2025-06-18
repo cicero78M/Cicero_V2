@@ -38,6 +38,12 @@ CREATE TABLE insta_like (
   updated_at TIMESTAMP
 );
 
+CREATE TABLE insta_comment (
+  shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
+  comments JSONB,
+  updated_at TIMESTAMP
+);
+
 CREATE TABLE insta_profile (
   username VARCHAR PRIMARY KEY,
   full_name VARCHAR,
