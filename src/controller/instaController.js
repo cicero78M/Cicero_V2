@@ -58,6 +58,7 @@ export async function getRapidInstagramPosts(req, res) {
     const username = req.query.username;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+    else if (limit > 100) limit = 100;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
@@ -104,6 +105,7 @@ export async function getRapidInstagramPostsStore(req, res) {
     const username = req.query.username;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+    else if (limit > 100) limit = 100;
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }

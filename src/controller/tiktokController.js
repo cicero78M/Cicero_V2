@@ -131,6 +131,7 @@ export async function getRapidTiktokPosts(req, res) {
     let { username, secUid } = req.query;
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
+    else if (limit > 100) limit = 100;
 
     if (!username && !secUid) {
       if (!client_id) {
