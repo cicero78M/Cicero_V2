@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { fetchAndStoreInstaContent } from '../handler/fetchpost/instaFetchPost.js';
+import { fetchPostInfoForClient } from '../handler/fetchpost/instaFetchPostInfo.js';
 import { handleFetchLikesInstagram } from '../handler/fetchengagement/fetchLikesInstagram.js';
 import { handleFetchKomentarInstagram } from '../handler/fetchengagement/fetchCommentInstagram.js';
 import { fetchInstagramHashtag } from '../service/instagramApi.js';
@@ -64,9 +65,10 @@ cron.schedule(
       const keys = ['code', 'caption', 'like_count', 'taken_at', 'comment_count'];
       await fetchAndStoreInstaContent(keys);
       for (const client of clients) {
+        await fetchPostInfoForClient(client.client_id);
+        await fetchTopHashtagsForClient(client.client_id);
         await handleFetchLikesInstagram(null, null, client.client_id);
         await handleFetchKomentarInstagram(null, null, client.client_id);
-        await fetchTopHashtagsForClient(client.client_id);
       }
       sendDebug({ tag: 'IG DM', msg: 'Cron data mining IG selesai' });
     } catch (err) {
