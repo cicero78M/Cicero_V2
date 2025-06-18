@@ -209,6 +209,13 @@ dengan memilih *Instagram Data Mining*.
 }
 ```
 
+### 9. Event Notifikasi
+
+| Endpoint      | Method | Deskripsi                                                |
+|---------------|--------|----------------------------------------------------------|
+| `/auth/login` | POST   | Login client (sukses atau gagal) akan memicu notifikasi WhatsApp |
+| `/auth/open`  | GET    | Dipanggil saat dashboard dibuka untuk pemberitahuan WA   |
+
 ---
 
 ## Fitur & Flow Bisnis Utama
@@ -218,11 +225,12 @@ dengan memilih *Instagram Data Mining*.
   Jadwal cron: 06:30–21:30 tiap hari (atau sesuai konfigurasi).  
   Semua task bisa dijalankan manual via WA oleh admin.
 
-- **WhatsApp Service**  
-  Bot WhatsApp otomatis kirim rekap absensi dan status fetch ke admin/group.  
-  Hanya admin di ENV yang bisa trigger perintah manual.  
-  Koneksi via QR code (whatsapp-web.js).  
+- **WhatsApp Service**
+  Bot WhatsApp otomatis kirim rekap absensi dan status fetch ke admin/group.
+  Hanya admin di ENV yang bisa trigger perintah manual.
+  Koneksi via QR code (whatsapp-web.js).
   Semua rekap bisa dipicu manual via perintah chat WA.
+  Backend juga mengirim pesan ke admin setiap kali ada percobaan login (berhasil ataupun gagal) serta ketika halaman dashboard dibuka.
 
 - **Absensi Like & Komentar Sosial Media**  
   Absensi likes IG: bandingkan user terdaftar dengan likes posting IG hari ini.  
