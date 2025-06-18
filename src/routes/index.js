@@ -9,6 +9,7 @@ import tiktokRoutes from "./tiktokRoutes.js";
 import polresRoutes from './polresRoutes.js';
 import poldaRoutes from './poldaRoutes.js';
 import metaRoutes from './metaRoutes.js';
+import logRoutes from './logRoutes.js';
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.use('/oauth', oauthRoutes);
 router.use('/polres', polresRoutes);
 router.use('/polda', poldaRoutes);
 router.use('/metadata', metaRoutes);
+router.use('/logs', logRoutes);
 
 
 export default router;

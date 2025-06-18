@@ -216,6 +216,12 @@ dengan memilih *Instagram Data Mining*.
 | `/auth/login` | POST   | Login client (sukses atau gagal) akan memicu notifikasi WhatsApp |
 | `/auth/open`  | GET    | Dipanggil saat dashboard dibuka untuk pemberitahuan WA   |
 
+### 10. Visitor Log API
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/logs/visitors` | GET | Ambil daftar log kunjungan dashboard |
+
 ---
 
 ## Fitur & Flow Bisnis Utama
@@ -392,6 +398,14 @@ CREATE TABLE polres_insta (
   username VARCHAR PRIMARY KEY,
   last_post_at TIMESTAMP,
   checked_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Log kunjungan dashboard
+CREATE TABLE visitor_logs (
+  id SERIAL PRIMARY KEY,
+  ip VARCHAR,
+  user_agent TEXT,
+  visited_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
