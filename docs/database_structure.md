@@ -73,13 +73,6 @@ Reference tables of regional police divisions.
 - `polda` has `id` and unique `nama`
 - `polda_kota` links to `polda(id)` with an additional `nama`
 
-### `insta_user_search`
-Caching results of Instagram user lookups.
-- `id` – serial primary key
-- `username` – searched username (unique)
-- `full_name`, `instagram_id`, `is_private`, `is_verified`,
-  `profile_pic_url`, `searched_at`
-
 ### `instagram_user`
 Core profile details returned from Instagram scraping.
 - `user_id` – primary key

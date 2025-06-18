@@ -13,8 +13,6 @@ import {
 } from "../../utils/utilsHelper.js";
 import { getAdminWAIds, getAdminWANumbers } from "../../utils/waHelper.js";
 import { query } from "../../db/index.js";
-import { initPoldaPolres } from "../../service/poldaService.js";
-import { searchAllCities, fetchInfoForAllUsers } from "../../service/instaSearchService.js";
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -176,7 +174,6 @@ export const clientRequestHandlers = {
       9: "exceptionInfo_chooseClient",
       10: "hapusWAAdmin_confirm",
       11: "hapusWAUser_start",
-      12: "instagramDataMining_execute",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1320,24 +1317,6 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
-  // ================== INSTAGRAM DATA MINING ==================
-  instagramDataMining_execute: async (
-    session,
-    chatId,
-    text,
-    waClient
-  ) => {
-    await waClient.sendMessage(chatId, "⏳ Memulai Instagram data mining...");
-    try {
-      await initPoldaPolres();
-      await searchAllCities();
-      await fetchInfoForAllUsers();
-      await waClient.sendMessage(chatId, "✅ Instagram data mining selesai.");
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Error: ${err.message}`);
-    }
-    session.step = "main";
-  },
 
   // ================== LAINNYA ==================
   lainnya_menu: async (session, chatId, text, waClient) => {
