@@ -1,5 +1,5 @@
-
 # CICERO_V2
+*Last updated: 2025-06-18*
 
 ## Deskripsi
 
@@ -14,8 +14,12 @@ Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
 Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 
----
+## Prasyarat
+- Node.js 20 atau lebih baru
+- PostgreSQL dan Redis (sesuaikan `.env`)
+- Jalankan `npm install` sebelum memulai
 
+---
 ## Struktur Folder & Modul
 
 ```

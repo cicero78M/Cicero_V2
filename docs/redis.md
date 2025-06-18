@@ -1,4 +1,5 @@
 # Panduan Redis
+*Last updated: 2025-06-18*
 
 Dokumen ini menjelaskan cara konfigurasi dan penggunaan Redis di dalam proyek **Cicero_V2**. Redis digunakan untuk menyimpan token login, cache profil, serta mendeteksi duplikasi permintaan API.
 

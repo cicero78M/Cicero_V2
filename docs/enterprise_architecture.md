@@ -1,4 +1,5 @@
 # Cicero Enterprise Architecture
+*Last updated: 2025-06-18*
 
 This document provides a high level overview of the architecture behind Cicero Web, consisting of a **backend** service (`Cicero_V2`) and a **Next.js** based dashboard (`cicero-dashboard`).
 
