@@ -95,3 +95,17 @@ export async function upsertTaggedUsers(mediaId, tags=[]) {
     );
   }
 }
+
+export async function getPostIdsTodayByUsername(username) {
+  if (!username) return [];
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const res = await query(
+    `SELECT p.post_id FROM ig_ext_posts p JOIN ig_ext_users u ON u.user_id = p.user_id WHERE u.username = $1 AND DATE(p.created_at) = $2`,
+    [username, `${yyyy}-${mm}-${dd}`]
+  );
+  return res.rows.map(r => r.post_id);
+}
+
