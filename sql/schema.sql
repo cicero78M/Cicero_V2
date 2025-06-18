@@ -229,3 +229,10 @@ CREATE TABLE IF NOT EXISTS ig_ext_hashtags (
     hashtag VARCHAR(100),
     PRIMARY KEY (post_id, hashtag)
 );
+
+CREATE TABLE visitor_logs (
+    id SERIAL PRIMARY KEY,
+    ip VARCHAR,
+    user_agent TEXT,
+    visited_at TIMESTAMP DEFAULT NOW()
+);

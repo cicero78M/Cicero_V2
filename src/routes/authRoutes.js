@@ -8,6 +8,7 @@ import {
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
 import waClient, { waReady } from "../service/waService.js";
+import { insertVisitorLog } from "../model/visitorLogModel.js";
 
 function notifyAdmin(message) {
   if (!waReady) return;
@@ -107,14 +108,16 @@ router.post("/login", async (req, res) => {
   return res.json({ success: true, token, client: payload });
 });
 
-router.get('/open', (req, res) => {
+router.get('/open', async (req, res) => {
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
   const ua = req.headers['user-agent'] || '';
+  await insertVisitorLog({ ip, userAgent: ua });
   notifyAdmin(
     `\uD83D\uDD0D Web dibuka\nIP: ${ip}\nUA: ${ua}\nWaktu: ${time}`
   );
   return res.json({ success: true });
 });
+
 
 export default router;
