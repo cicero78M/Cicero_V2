@@ -7,6 +7,7 @@ export {
   fetchAllInstagramLikes,
   fetchInstagramCommentsPage,
   fetchAllInstagramComments,
-  fetchInstagramHashtag
+  fetchInstagramHashtag,
+  fetchInstagramPostInfo
 } from './instaRapidService.js';
 

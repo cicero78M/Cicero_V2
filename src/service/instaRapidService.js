@@ -380,3 +380,16 @@ export async function fetchInstagramHashtag(tag, token = null) {
   const has_more = (data?.has_more || false) || (next_token && next_token !== '');
   return { info, items, next_token, has_more };
 }
+
+export async function fetchInstagramPostInfo(code) {
+  if (!code) return null;
+  const params = new URLSearchParams({ code_or_id_or_url: code });
+  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/post_info`, {
+    params,
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST
+    }
+  });
+  return res.data?.data || null;
+}
