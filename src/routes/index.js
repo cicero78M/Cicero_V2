@@ -12,7 +12,7 @@ import logRoutes from './logRoutes.js';
 const router = express.Router();
 
 router.use('/clients', clientRoutes);
-router.use('/users', userRoutes); // Pastikan sudah ada baris ini!
+router.use('/users', userRoutes);
 router.use('/auth', authRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/insta", instaRoutes);

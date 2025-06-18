@@ -57,7 +57,7 @@ async function fetchTopHashtagsForClient(client_id) {
 }
 
 cron.schedule(
-  '0 22 * * *',
+  '0 23 * * *',
   async () => {
     sendDebug({ tag: 'IG DM', msg: 'Mulai cron data mining Instagram' });
     try {
