@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { fetchAllInstagramLikes } from '../../service/instagramApi.js';
-import { upsertInstaLike } from '../../model/instaLikeModel.js';
+import { upsertIgPostLike } from '../../model/igPostLikeModel.js';
 import { getPostIdsTodayByUsername } from '../../model/instaPostExtendedModel.js';
 import { sendDebug } from '../../middleware/debugHandler.js';
 
@@ -18,7 +18,7 @@ export async function handleFetchLikesInstagramDM(username) {
       await limit(async () => {
         try {
           const likes = await fetchAllInstagramLikes(id);
-          await upsertInstaLike(id, likes);
+          await upsertIgPostLike(id, likes);
           sukses++;
         } catch (err) {
           gagal++;

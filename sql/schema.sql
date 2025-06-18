@@ -193,6 +193,13 @@ CREATE TABLE IF NOT EXISTS ig_post_metrics (
     fb_play_count INT
 );
 
+-- Store full list of usernames who liked a post (Data Mining)
+CREATE TABLE IF NOT EXISTS ig_post_likes (
+    post_id VARCHAR(50) PRIMARY KEY REFERENCES ig_ext_posts(post_id),
+    likes JSONB,
+    updated_at TIMESTAMP
+);
+
 CREATE TABLE visitor_logs (
     id SERIAL PRIMARY KEY,
     ip VARCHAR,
