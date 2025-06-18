@@ -180,3 +180,52 @@ CREATE TABLE instagram_user_location (
     longitude               DOUBLE PRECISION,
     zip                     VARCHAR(20)
 );
+
+-- Extended tables for storing detailed Instagram data fetched from RapidAPI
+CREATE TABLE IF NOT EXISTS ig_ext_users (
+    user_id VARCHAR(50) PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    full_name VARCHAR(100),
+    is_private BOOLEAN,
+    is_verified BOOLEAN,
+    profile_pic_url TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ig_ext_posts (
+    post_id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    caption_text TEXT,
+    created_at TIMESTAMP,
+    like_count INT,
+    comment_count INT,
+    is_video BOOLEAN,
+    media_type INT,
+    is_pinned BOOLEAN
+);
+
+CREATE TABLE IF NOT EXISTS ig_ext_media_items (
+    media_id VARCHAR(50) PRIMARY KEY,
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    media_type INT,
+    is_video BOOLEAN,
+    original_width INT,
+    original_height INT,
+    image_url TEXT,
+    video_url TEXT,
+    video_duration REAL,
+    thumbnail_url TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ig_ext_tagged_users (
+    media_id VARCHAR(50) REFERENCES ig_ext_media_items(media_id),
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    x REAL,
+    y REAL,
+    PRIMARY KEY (media_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS ig_ext_hashtags (
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    hashtag VARCHAR(100),
+    PRIMARY KEY (post_id, hashtag)
+);
