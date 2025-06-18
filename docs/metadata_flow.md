@@ -31,7 +31,6 @@ Key tables defined in [`sql/schema.sql`](../sql/schema.sql):
 | `tiktok_post`               | TikTok posts associated with a client.    |
 | `tiktok_comment`            | Comments for each TikTok post.            |
 | `insta_post_cache`          | Cached raw JSON posts per username.       |
-| `insta_user_search`         | Results of Instagram account lookups.     |
 | `polda` / `polda_kota`      | Reference tables for regional police.     |
 | `polres_insta`              | Track official Instagram accounts.        |
 

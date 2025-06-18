@@ -98,17 +98,6 @@ CREATE TABLE polda_kota (
   UNIQUE(polda_id, nama)
 );
 
--- Hasil pencarian akun Instagram
-CREATE TABLE insta_user_search (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR UNIQUE NOT NULL,
-  full_name VARCHAR,
-  instagram_id VARCHAR,
-  is_private BOOLEAN,
-  is_verified BOOLEAN,
-  profile_pic_url TEXT,
-  searched_at TIMESTAMP DEFAULT NOW()
-);
 
 -- Instagram data tables
 -- Tabel utama dengan informasi profil dasar
