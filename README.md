@@ -177,10 +177,6 @@ diperluas untuk menukar kode menjadi access token.
 
 ### 6. Instagram Data Mining
 
-Struktur data untuk otomasi pencarian akun IG menggunakan konvensi
-`polda_polres` dengan primary key `nama_polda`. Contoh data dapat
-ditemukan pada berkas `polda_polres.json` (opsional).
-
 Proses lengkap dijalankan lewat menu WhatsApp `clientrequest`
 dengan memilih *Instagram Data Mining*.
 
@@ -375,21 +371,6 @@ CREATE TABLE tiktok_comment (
   video_id VARCHAR PRIMARY KEY REFERENCES tiktok_post(video_id),
   comments JSONB,
   updated_at TIMESTAMP
-);
-
--- Cache hasil fetch posting Instagram per username
-CREATE TABLE insta_post_cache (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR NOT NULL,
-  posts JSONB,
-  fetched_at TIMESTAMP DEFAULT NOW()
-);
-
--- Daftar akun Instagram Polres (validasi posting 3 hari terakhir)
-CREATE TABLE polres_insta (
-  username VARCHAR PRIMARY KEY,
-  last_post_at TIMESTAMP,
-  checked_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Log kunjungan dashboard

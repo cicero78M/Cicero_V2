@@ -69,19 +69,6 @@ CREATE TABLE tiktok_comment (
   comments JSONB,
   updated_at TIMESTAMP
 );
--- Data Polda dan Kota
-CREATE TABLE polda (
-  id SERIAL PRIMARY KEY,
-  nama VARCHAR UNIQUE NOT NULL
-);
-
-CREATE TABLE polda_kota (
-  id SERIAL PRIMARY KEY,
-  polda_id INTEGER REFERENCES polda(id),
-  nama VARCHAR NOT NULL,
-  UNIQUE(polda_id, nama)
-);
-
 
 -- Instagram data tables
 -- Tabel utama dengan informasi profil dasar

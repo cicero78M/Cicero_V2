@@ -56,23 +56,6 @@ Comments for a TikTok video.
 - `comments` – JSON array of comments
 - `updated_at`
 
-### `insta_post_cache`
-Caches Instagram posts fetched by username.
-- `id` – serial primary key
-- `username` – Instagram account
-- `posts` – JSON array of posts
-- `fetched_at` – when data was fetched
-
-### `polres_insta`
-Tracks official Instagram accounts for recency checks.
-- `username` – primary key
-- `last_post_at` – timestamp of last post
-- `checked_at` – when verified
-
-### `polda` and `polda_kota`
-Reference tables of regional police divisions.
-- `polda` has `id` and unique `nama`
-- `polda_kota` links to `polda(id)` with an additional `nama`
 
 ### `instagram_user`
 Core profile details returned from Instagram scraping.
@@ -121,12 +104,11 @@ erDiagram
     clients ||--o{ tiktok_post : "videos"
     insta_post ||--|| insta_like : "likes"
     tiktok_post ||--|| tiktok_comment : "comments"
-    polda ||--o{ polda_kota : "kota"
 ```
 
 The diagram shows how each `client` owns many `user`, `insta_post` and
 `tiktok_post` records. Instagram and TikTok posts have one-to-one tables for
-likes and comments. `polda` tables are independent of client data.
+likes and comments.
 
 ## PostgreSQL Table Management
 
