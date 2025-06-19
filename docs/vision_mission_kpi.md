@@ -1,5 +1,5 @@
 # Cicero Vision and KPI
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document outlines the vision, mission, objectives, and key performance indicators for the **Cicero** platform. The backend (this repository) works in tandem with the Next.js dashboard to deliver social media analytics and reporting.
 
@@ -44,3 +44,5 @@ To become an integrated monitoring platform that allows organizations and client
    - Positive feedback regarding dashboard usability and information completeness.
    - Ratio of daily active users to total clients.
 
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

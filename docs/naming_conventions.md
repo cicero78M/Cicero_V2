@@ -1,5 +1,5 @@
 # Konvensi Penamaan
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 Dokumen ini merangkum gaya penamaan yang digunakan pada proyek **Cicero_V2**. Panduan berikut ditujukan agar struktur kode dan database tetap konsisten.
 
@@ -23,3 +23,5 @@ Dokumen ini merangkum gaya penamaan yang digunakan pada proyek **Cicero_V2**. Pa
 - Tambahkan indeks pada kolom yang sering digunakan untuk pencarian.
 
 Panduan ini dapat diperluas sesuai kebutuhan namun menjadi acuan dasar dalam penambahan modul baru.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

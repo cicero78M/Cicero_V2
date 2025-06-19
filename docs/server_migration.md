@@ -1,5 +1,5 @@
 # Panduan Migrasi Server
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 Dokumen ini menjelaskan langkah–langkah memindahkan aplikasi **Cicero_V2** ke server baru.
 Panduan ditujukan bagi admin sistem agar proses migrasi berlangsung aman tanpa kehilangan data.
@@ -46,3 +46,5 @@ ke server lama atau ke instance baru menggunakan langkah yang sama seperti di at
 ---
 
 Lihat juga dokumen [enterprise_architecture](enterprise_architecture.md) untuk detail arsitektur sistem.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

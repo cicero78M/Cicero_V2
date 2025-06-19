@@ -1,5 +1,5 @@
 # Panduan Redis
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 Dokumen ini menjelaskan cara konfigurasi dan penggunaan Redis di dalam proyek **Cicero_V2**. Redis digunakan untuk menyimpan token login, cache profil, serta mendeteksi duplikasi permintaan API.
 
@@ -42,3 +42,5 @@ redis-cli FLUSHALL
 ```
 
 Perintah di atas akan menghapus semua data pada instance Redis yang sedang digunakan.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

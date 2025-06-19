@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron` and are started automatically when `app.js` boots. Times are in **Asia/Jakarta** timezone.
 
@@ -15,3 +15,5 @@ This document summarizes the automated jobs ("activity") that run inside Cicero_
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp, and updates the system accordingly. The cron files are imported in `app.js` so no additional setup is required.
 
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

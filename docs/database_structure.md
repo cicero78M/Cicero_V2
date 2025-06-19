@@ -1,5 +1,5 @@
 # Database Structure
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -127,3 +127,5 @@ erDiagram
 The diagram shows how each `client` owns many `user`, `insta_post` and
 `tiktok_post` records. Instagram and TikTok posts have one-to-one tables for
 likes and comments. `polda` tables are independent of client data.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

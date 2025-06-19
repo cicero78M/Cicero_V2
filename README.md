@@ -1,5 +1,5 @@
 # CICERO_V2
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 ## Deskripsi
 
@@ -14,6 +14,7 @@ Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
 Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 Panduan backup PostgreSQL otomatis tersedia pada [docs/pg_backup_gdrive.md](docs/pg_backup_gdrive.md).
+Petunjuk gaya penamaan kode berada pada [docs/naming_conventions.md](docs/naming_conventions.md).
 
 ## Prasyarat
 - Node.js 20 atau lebih baru
@@ -477,3 +478,4 @@ Silakan hubungi admin repo untuk akses, issue, atau kontributor tambahan.
 
 > Seluruh dokumentasi lanjutan dan SOP internal dapat merujuk README & hasil analisis di kanvas.  
 > **Dokumentasi ini dihasilkan otomatis berdasarkan analisis kode dan kronologi pengembangan.**
+
