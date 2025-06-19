@@ -13,6 +13,7 @@ Panduan migrasi server tersedia pada [docs/server_migration.md](docs/server_migr
 Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
 Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
+Panduan backup PostgreSQL otomatis tersedia pada [docs/pg_backup_gdrive.md](docs/pg_backup_gdrive.md).
 
 ## Prasyarat
 - Node.js 20 atau lebih baru
