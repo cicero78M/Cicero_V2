@@ -1,5 +1,5 @@
 # Otomatisasi Backup PostgreSQL ke Google Drive
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 ## Dokumentasi: Otomatisasi Backup PostgreSQL ke Google Drive dengan Cron dan Rclone
 
@@ -189,3 +189,5 @@ Dengan mengikuti langkah-langkah di atas, Anda telah:
 * Menyertakan logging dan rotasi (hapus >7 hari).
 
 Sistem backup Anda sekarang berjalan otomatis, aman, dan terarsip di cloud.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

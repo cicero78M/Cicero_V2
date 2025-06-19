@@ -1,5 +1,5 @@
 # Cicero Flow Metadata
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document outlines the flow of data and the main database tables used by the Cicero_V2 system. It provides an overview from the initial onboarding steps through to reporting and notifications.
 
@@ -55,3 +55,5 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
 
 Administrators receive automated WhatsApp reports summarizing daily engagement. The dashboard retrieves analytics via REST endpoints, giving a complete view of social media activity per client.
 
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

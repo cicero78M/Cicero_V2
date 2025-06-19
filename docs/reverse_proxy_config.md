@@ -1,5 +1,5 @@
 # Konfigurasi Nginx/Reverse Proxy
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 Dokumen ini memberikan contoh konfigurasi dasar untuk menjalankan aplikasi **Cicero_V2** di balik `nginx` atau reverse proxy lainnya. Pengaturan ini opsional namun berguna agar port aplikasi tidak diakses langsung oleh klien.
 
@@ -42,3 +42,5 @@ Jika menggunakan HTTPS, sertifikat dapat diatur via `certbot` atau penyedia lain
 ## 4. Referensi Lain
 
 Lihat [docs/server_migration.md](server_migration.md) untuk panduan lengkap menyiapkan server baru.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

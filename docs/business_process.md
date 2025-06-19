@@ -1,5 +1,5 @@
 # Cicero Business Process
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document summarizes the high level business processes of the Cicero platform, which consists of two main components: the **Cicero_V2** backend and the **Cicero_Web** dashboard.
 
@@ -46,3 +46,5 @@ flowchart TD
 ```
 
 The business process begins with client onboarding and continues with automated collection of social media metrics, attendance checks, and delivery of reports. Administrators interact mainly through the Next.js dashboard while the backend orchestrates data retrieval, persistence, and messaging tasks.
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

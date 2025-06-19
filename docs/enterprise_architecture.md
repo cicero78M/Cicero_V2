@@ -1,5 +1,5 @@
 # Cicero Enterprise Architecture
-*Last updated: 2025-06-18*
+*Last updated: 2026-03-01*
 
 This document provides a high level overview of the architecture behind Cicero Web, consisting of a **backend** service (`Cicero_V2`) and a **Next.js** based dashboard (`cicero-dashboard`).
 
@@ -83,3 +83,5 @@ Below is a conceptual diagram of the main components and their interactions:
 
 The frontend communicates only with the backend. The backend orchestrates data retrieval, persistence, caching, and messaging integrations.
 
+
+Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
