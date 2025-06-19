@@ -41,6 +41,7 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
 
 1. **Data Collection**
    - Cron jobs (`cronInstaService.js`, `cronTiktokService.js`) fetch posts and comments every hour. Results are saved to the database and cached in Redis.
+   - `cronInstaDataMining.js` runs nightly to crawl new Instagram accounts and store extended metadata.
 2. **Analytics & Attendance**
    - The backend matches likes or comments with registered users to compute attendance statistics.
    - Summaries can be retrieved via dashboard endpoints under `/dashboard`.

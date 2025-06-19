@@ -26,7 +26,7 @@ Petunjuk gaya penamaan kode berada pada [docs/naming_conventions.md](docs/naming
 ## Struktur Folder & Modul
 
 ```
-Cicero_V2-main/
+Cicero_V2/
 ├── app.js                       # Entry point aplikasi
 ├── package.json                 # Konfigurasi NPM
 ├── src/
@@ -39,46 +39,76 @@ Cicero_V2-main/
 │   │   ├── mysql.js           # Helper MySQL
 │   │   └── sqlite.js          # Helper SQLite
 │   ├── controller/
-│   │   ├── clientController.js  # CRUD data client
-│   │   └── userController.js    # CRUD data user
+│   │   ├── clientController.js      # CRUD data client
+│   │   ├── userController.js        # CRUD data user
+│   │   ├── instaController.js       # Endpoint Instagram
+│   │   ├── tiktokController.js      # Endpoint TikTok
+│   │   ├── dashboardController.js   # Statistik dashboard
+│   │   ├── oauthController.js       # OAuth callback
+│   │   ├── metaController.js        # Metadata API
+│   │   └── socialMediaController.js # Helper media sosial
 │   ├── model/
-│   │   ├── clientModel.js       # Model data client
-│   │   ├── userModel.js         # Model data user
-│   │   ├── instaLikeModel.js    # Model like IG
-│   │   ├── instaPostModel.js    # Model post IG
-│   │   ├── tiktokPostModel.js   # Model post TikTok
-│   │   ├── tiktokCommentModel.js# Model komen TikTok
+│   │   ├── clientModel.js           # Model data client
+│   │   ├── userModel.js             # Model data user
+│   │   ├── instaLikeModel.js        # Model like IG
+│   │   ├── instaPostModel.js        # Model post IG
+│   │   ├── instaPostExtendedModel.js# Ekstensi metadata IG
+│   │   ├── instaPostMetricsModel.js # Statistik IG
+│   │   ├── instaPostCacheModel.js   # Cache posting IG
+│   │   ├── instaCommentModel.js     # Komentar IG
+│   │   ├── igPostLikeUserModel.js   # Mapping like IG
+│   │   ├── igPostCommentModel.js    # Mapping komentar IG
+│   │   ├── instaProfileModel.js     # Profil IG
+│   │   ├── instagramUserModel.js    # Profil detail IG
+│   │   ├── tiktokPostModel.js       # Model post TikTok
+│   │   ├── tiktokCommentModel.js    # Model komen TikTok
+│   │   └── visitorLogModel.js       # Log kunjungan dashboard
 │   ├── cron/
-│   │   ├── cronInstaService.js   # Fetch IG tiap jam
-│   │   ├── cronTiktokService.js  # Fetch TikTok tiap jam
-│   │   ├── cronInstaLaphar.js    # Laporan harian IG
-│   │   ├── cronTiktokLaphar.js   # Laporan harian TikTok
-│   │   └── cronNotifikasiLikesDanKomentar.js # Pengingat via WA
+│   │   ├── cronInstaService.js              # Fetch IG tiap jam
+│   │   ├── cronTiktokService.js             # Fetch TikTok tiap jam
+│   │   ├── cronInstaLaphar.js               # Laporan harian IG
+│   │   ├── cronTiktokLaphar.js              # Laporan harian TikTok
+│   │   ├── cronNotifikasiLikesDanKomentar.js# Pengingat via WA
+│   │   └── cronInstaDataMining.js           # Data mining IG 23:40
 │   ├── handler/                  # Logic menu WhatsApp & fetch
 │   ├── service/
-│   │   ├── instaRapidService.js  # Akses RapidAPI Instagram
-│   │   ├── tiktokRapidService.js # Akses RapidAPI TikTok
-│   │   ├── instaPostService.js   # Simpan posting IG
-│   │   ├── tiktokPostService.js  # Simpan posting TikTok
-│   │   ├── waService.js          # Notifikasi WhatsApp
-│   │   ├── clientService.js      # Utility client
-│   │   └── checkGoogleSheetAccess.js # Cek akses Google Sheet
+│   │   ├── instaRapidService.js      # Akses RapidAPI Instagram
+│   │   ├── tiktokRapidService.js     # Akses RapidAPI TikTok
+│   │   ├── instagramApi.js           # Wrapper API IG
+│   │   ├── tiktokApi.js              # Wrapper API TikTok
+│   │   ├── instaPostService.js       # Simpan posting IG
+│   │   ├── tiktokPostService.js      # Simpan posting TikTok
+│   │   ├── instaLikeService.js       # Simpan like IG
+│   │   ├── tiktokCommentService.js   # Simpan komentar TikTok
+│   │   ├── instaProfileService.js    # Simpan profil IG
+│   │   ├── instagramUserService.js   # Simpan detail IG
+│   │   ├── instaPostCacheService.js  # Cache posting IG
+│   │   ├── profileCacheService.js    # Cache profil
+│   │   ├── importSpreadsheetService.js   # Helper import sheet
+│   │   ├── importUsersFromGoogleSheet.js # Import user dari sheet
+│   │   ├── clientService.js          # Utility client
+│   │   ├── waService.js              # Notifikasi WhatsApp
+│   │   ├── rabbitMQService.js        # Queue asynchronous
+│   │   └── userMigrationService.js   # Migrasi user
 │   ├── repository/
 │   │   └── db.js                # Helper query DB
 │   ├── utils/                   # Fungsi utilitas
 │   ├── routes/
+│   │   ├── authRoutes.js        # Login/Logout
+│   │   ├── oauthRoutes.js       # Callback OAuth
 │   │   ├── clientRoutes.js      # Endpoint client
 │   │   ├── userRoutes.js        # Endpoint user
 │   │   ├── instaRoutes.js       # Endpoint Instagram
 │   │   ├── tiktokRoutes.js      # Endpoint TikTok
-│   │   ├── oauthRoutes.js       # Endpoint OAuth
 │   │   ├── dashboardRoutes.js   # Endpoint dashboard
+│   │   ├── logRoutes.js         # Endpoint log
 │   │   ├── metaRoutes.js        # Metadata API
 │   │   └── index.js             # Router utama
 │   ├── middleware/
-│   │   └── errorHandler.js      # Handler error global
-│   └── data/
-│       └── *.json               # Backup/legacy data
+│   │   ├── authMiddleware.js        # Middleware auth
+│   │   ├── dedupRequestMiddleware.js# Cegah request duplikat
+│   │   ├── debugHandler.js         # Debug logger
+│   │   └── errorHandler.js         # Handler error global
 ```
 
 ---
@@ -253,7 +283,7 @@ dengan memilih *Instagram Data Mining*.
 1. **Clone repo & install:**
     ```bash
     git clone <repo-url>
-    cd Cicero_V2-main
+    cd Cicero_V2
     npm install
     ```
 
