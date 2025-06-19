@@ -19,7 +19,7 @@ async function getActiveClientsIG() {
 
 
 cron.schedule(
-  '40 23 * * *',
+  '30 23 * * *',
   async () => {
     sendDebug({ tag: 'IG DM', msg: 'Mulai cron data mining Instagram' });
     try {

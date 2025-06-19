@@ -49,7 +49,7 @@ function getAllNotifRecipients(client) {
 
 // Jadwalkan cron tiap jam 06:25 - 20:25 WIB
 cron.schedule(
-  "03 15,18,21 * * *",
+  "03 15,18,21,23 * * *",
   async () => {
     sendDebug({
       tag: "CRON TTK",
