@@ -128,4 +128,22 @@ The diagram shows how each `client` owns many `user`, `insta_post` and
 `tiktok_post` records. Instagram and TikTok posts have one-to-one tables for
 likes and comments. `polda` tables are independent of client data.
 
+## PostgreSQL Table Management
+
+Use the SQL scripts inside the [`sql`](../sql) directory to create the tables:
+
+```bash
+psql -U <dbuser> -d <dbname> -f sql/schema.sql
+```
+
+To remove tables no longer in use, run `DROP TABLE` via `psql` (add `IF EXISTS`
+to avoid errors):
+
+```bash
+psql -U <dbuser> -d <dbname> -c "DROP TABLE IF EXISTS old_table_name;"
+```
+
+Repeat the command for each unused table. Always ensure a recent backup exists
+before dropping tables.
+
 Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).

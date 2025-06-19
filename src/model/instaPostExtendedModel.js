@@ -17,18 +17,20 @@ export async function upsertIgUser(user) {
 
 export async function upsertIgPost(post, userId) {
   await query(
-    `INSERT INTO ig_ext_posts (post_id, user_id, caption_text, created_at, like_count, comment_count, is_video, media_type, is_pinned)
-     VALUES ($1,$2,$3,to_timestamp($4),$5,$6,$7,$8,$9)
+    `INSERT INTO ig_ext_posts (post_id, shortcode, user_id, caption_text, created_at, like_count, comment_count, is_video, media_type, is_pinned)
+     VALUES ($1,$2,$3,$4,to_timestamp($5),$6,$7,$8,$9,$10)
      ON CONFLICT (post_id) DO UPDATE SET
+       shortcode=EXCLUDED.shortcode,
        caption_text=EXCLUDED.caption_text,
        like_count=EXCLUDED.like_count,
        comment_count=EXCLUDED.comment_count,
        is_video=EXCLUDED.is_video,
        media_type=EXCLUDED.media_type,
        is_pinned=EXCLUDED.is_pinned,
-       created_at=to_timestamp($4)`,
+       created_at=to_timestamp($5)`,
     [
       post.id,
+      post.code || post.shortcode || null,
       userId,
       post.caption?.text || null,
       post.taken_at || post.taken_at_ts || null,
@@ -36,7 +38,7 @@ export async function upsertIgPost(post, userId) {
       post.comment_count || 0,
       post.is_video || false,
       post.media_type || null,
-      post.is_pinned || false,
+      post.is_pinned || false
     ]
   );
 }
