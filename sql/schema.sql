@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS ig_ext_users (
 
 CREATE TABLE IF NOT EXISTS ig_ext_posts (
     post_id VARCHAR(50) PRIMARY KEY,
+    shortcode VARCHAR(50) UNIQUE REFERENCES insta_post(shortcode),
     user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
     caption_text TEXT,
     created_at TIMESTAMP,
@@ -198,6 +199,23 @@ CREATE TABLE IF NOT EXISTS ig_post_likes (
     post_id VARCHAR(50) PRIMARY KEY REFERENCES ig_ext_posts(post_id),
     likes JSONB,
     updated_at TIMESTAMP
+);
+
+-- Relational table for individual likes
+CREATE TABLE IF NOT EXISTS ig_post_like_users (
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    username VARCHAR(100),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- Store individual comments for a post
+CREATE TABLE IF NOT EXISTS ig_post_comments (
+    comment_id VARCHAR(50) PRIMARY KEY,
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
+    text TEXT,
+    created_at TIMESTAMP
 );
 
 CREATE TABLE visitor_logs (
