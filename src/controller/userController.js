@@ -3,8 +3,7 @@ import { sendSuccess } from '../utils/response.js';
 
 export const getAllUsers = async (req, res, next) => {
   try {
-    // Ambil semua user (dari file json, legacy)
-    const users = await userModel.findAll();
+    const users = await userModel.getAllUsers();
     sendSuccess(res, users);
   } catch (err) {
     next(err);
@@ -13,7 +12,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const getUserById = async (req, res, next) => {
   try {
-    const user = await userModel.findById(req.params.id);
+    const user = await userModel.findUserById(req.params.id);
     sendSuccess(res, user);
   } catch (err) {
     next(err);
@@ -22,7 +21,7 @@ export const getUserById = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const user = await userModel.create(req.body);
+    const user = await userModel.createUser(req.body);
     sendSuccess(res, user, 201);
   } catch (err) {
     next(err);
@@ -31,7 +30,7 @@ export const createUser = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const user = await userModel.update(req.params.id, req.body);
+    const user = await userModel.updateUser(req.params.id, req.body);
     sendSuccess(res, user);
   } catch (err) {
     next(err);
@@ -40,7 +39,7 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const user = await userModel.remove(req.params.id);
+    const user = await userModel.deleteUser(req.params.id);
     sendSuccess(res, user);
   } catch (err) {
     next(err);

@@ -1,4 +1,3 @@
-export const USER_DATA_PATH = "./src/data/users.json";
 
 // Regex untuk deteksi link IG/TikTok
 export const IG_PROFILE_REGEX =
