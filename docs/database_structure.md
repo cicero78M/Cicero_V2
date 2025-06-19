@@ -5,6 +5,40 @@ This document describes the main tables inside Cicero_V2 and their relationships
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
 for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 
+## Table Overview
+
+| Table Name | Purpose |
+|------------|---------|
+| clients | master table for registered organisations |
+| user | members belonging to a client |
+| insta_post | Instagram posts fetched for each client |
+| insta_like | cached likes for an Instagram post |
+| insta_comment | cached comments for an Instagram post |
+| insta_profile | basic Instagram profile information |
+| tiktok_post | TikTok videos fetched for each client |
+| tiktok_comment | cached TikTok comments |
+| insta_post_cache | temporary cache for posts by username |
+| polres_insta | monitoring of official IG accounts |
+| polda | list of regional police divisions |
+| polda_kota | cities mapped to each polda |
+| instagram_user | extended Instagram account data |
+| instagram_user_metrics | follower/media statistics |
+| instagram_user_about | additional metadata from scraping |
+| instagram_bio_link | links found in the account bio |
+| instagram_profile_pic_version | history of profile pictures |
+| instagram_user_location | location information if available |
+| ig_ext_users | RapidAPI user reference |
+| ig_ext_posts | RapidAPI post reference |
+| ig_ext_media_items | media items within a post |
+| ig_ext_tagged_users | tagged users inside a media item |
+| ig_ext_hashtags | hashtags detected in posts |
+| ig_hashtag_info | metadata for individual hashtags |
+| ig_post_metrics | advanced engagement metrics |
+| ig_post_likes | JSON list of like usernames |
+| ig_post_like_users | relational table of likes |
+| ig_post_comments | stored comments per post |
+| visitor_logs | record of API access |
+
 ## Tables
 
 ### `clients`

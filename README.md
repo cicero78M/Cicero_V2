@@ -12,6 +12,7 @@ Dokumentasi alur metadata tersedia pada [docs/metadata_flow.md](docs/metadata_fl
 Panduan migrasi server tersedia pada [docs/server_migration.md](docs/server_migration.md).
 Panduan penggunaan RabbitMQ tersedia pada [docs/rabbitmq.md](docs/rabbitmq.md).
 Dokumentasi penggunaan Redis tersedia pada [docs/redis.md](docs/redis.md).
+Dokumentasi struktur tabel database ada di [docs/database_structure.md](docs/database_structure.md).
 Contoh konfigurasi Nginx dapat dilihat pada [docs/reverse_proxy_config.md](docs/reverse_proxy_config.md).
 Panduan backup PostgreSQL otomatis tersedia pada [docs/pg_backup_gdrive.md](docs/pg_backup_gdrive.md).
 Petunjuk gaya penamaan kode berada pada [docs/naming_conventions.md](docs/naming_conventions.md).
