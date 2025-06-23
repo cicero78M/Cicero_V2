@@ -108,6 +108,44 @@ router.post("/login", async (req, res) => {
   return res.json({ success: true, token, client: payload });
 });
 
+router.post('/user-login', async (req, res) => {
+  const { nrp, whatsapp } = req.body;
+  if (!nrp || !whatsapp) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
+  }
+  const { rows } = await query(
+    'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND whatsapp = $2',
+    [nrp, whatsapp]
+  );
+  const user = rows[0];
+  if (!user) {
+    return res
+      .status(401)
+      .json({ success: false, message: 'Login gagal: data tidak ditemukan' });
+  }
+  const payload = { user_id: user.user_id, nama: user.nama, role: 'user' };
+  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+    expiresIn: '2h'
+  });
+  try {
+    await redis.sAdd(`user_login:${user.user_id}`, token);
+    await redis.set(`login_token:${token}`, `user:${user.user_id}`, {
+      EX: 2 * 60 * 60
+    });
+  } catch (err) {
+    console.error('[AUTH] Gagal menyimpan token login user:', err.message);
+  }
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 2 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production'
+  });
+  return res.json({ success: true, token, user: payload });
+});
+
 router.get('/open', async (req, res) => {
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;

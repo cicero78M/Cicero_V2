@@ -140,6 +140,15 @@ export async function findUserByWhatsApp(wa) {
   return result.rows[0];
 }
 
+export async function findUserByIdAndWhatsApp(userId, wa) {
+  if (!userId || !wa) return null;
+  const { rows } = await query(
+    'SELECT * FROM "user" WHERE user_id = $1 AND whatsapp = $2',
+    [userId, wa]
+  );
+  return rows[0];
+}
+
 // Ambil semua pangkat/title unik (distinct)
 
 // Mendapatkan daftar pangkat unik dari tabel user (atau dari tabel/enum khusus jika ada)
