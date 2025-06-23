@@ -1,5 +1,5 @@
 # CICERO_V2
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 ## Deskripsi
 
@@ -231,12 +231,23 @@ dengan memilih *Instagram Data Mining*.
 }
 ```
 
+
+### 8. Auth API
+
+| Endpoint | Method | Deskripsi |
+|---------|-------|-----------|
+| `/auth/login` | POST | Login client via WhatsApp number |
+| `/auth/user-login` | POST | Login user dashboard dengan NRP & WhatsApp |
+
+| `/auth/open` | GET | Mencatat kunjungan dashboard |
+
 ### 9. Event Notifikasi
 
 | Endpoint      | Method | Deskripsi                                                |
 |---------------|--------|----------------------------------------------------------|
 | `/auth/login` | POST   | Login client (sukses atau gagal) akan memicu notifikasi WhatsApp |
-| `/auth/open`  | GET    | Dipanggil saat dashboard dibuka untuk pemberitahuan WA   |
+| `/auth/open` | GET | Mencatat kunjungan dashboard |
+
 
 ### 10. Visitor Log API
 
@@ -334,6 +345,12 @@ dengan memilih *Instagram Data Mining*.
     ```
 
 ---
+
+6. **Lint & Test:**
+    ```bash
+    npm run lint
+    npm test
+    ```
 
 ## Migrasi Database (Struktur Tabel Contoh)
 

@@ -1,5 +1,5 @@
 # Cicero Enterprise Architecture
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 This document provides a high level overview of the architecture behind Cicero Web, consisting of a **backend** service (`Cicero_V2`) and a **Next.js** based dashboard (`cicero-dashboard`).
 
@@ -41,7 +41,7 @@ Located in the separate `Cicero_Web/cicero-dashboard` directory. The dashboard c
 ## Integration Flow
 
 1. **Authentication**
-   - User logs in via the dashboard, which sends credentials to `/api/auth/login` on the backend.
+   - User logs in via the dashboard, which sends credentials to `/api/auth/login` or `/api/auth/user-login` on the backend.
    - Backend returns a JWT token stored in `localStorage` on the frontend.
    - Subsequent requests attach `Authorization: Bearer <token>` header.
 

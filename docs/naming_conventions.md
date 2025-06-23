@@ -1,5 +1,5 @@
 # Konvensi Penamaan
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 Dokumen ini merangkum gaya penamaan yang digunakan pada proyek **Cicero_V2**. Panduan berikut ditujukan agar struktur kode dan database tetap konsisten.
 
