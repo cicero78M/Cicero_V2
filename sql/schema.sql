@@ -228,3 +228,14 @@ CREATE TABLE visitor_logs (
     user_agent TEXT,
     visited_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS link_report (
+    shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
+    user_id INTEGER REFERENCES "user"(user_id),
+    instagram_link TEXT,
+    facebook_link TEXT,
+    twitter_link TEXT,
+    tiktok_link TEXT,
+    youtube_link TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
