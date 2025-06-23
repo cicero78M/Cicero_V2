@@ -1,5 +1,5 @@
 # Panduan RabbitMQ
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 Dokumen ini menjelaskan cara mengaktifkan dan menggunakan RabbitMQ pada **Cicero_V2**. RabbitMQ dipakai untuk memproses pekerjaan berat secara asynchronous agar dashboard tetap responsif.
 

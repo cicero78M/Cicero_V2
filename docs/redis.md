@@ -1,5 +1,5 @@
 # Panduan Redis
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 Dokumen ini menjelaskan cara konfigurasi dan penggunaan Redis di dalam proyek **Cicero_V2**. Redis digunakan untuk menyimpan token login, cache profil, serta mendeteksi duplikasi permintaan API.
 
@@ -27,7 +27,7 @@ Berkas `src/config/redis.js` akan membaca URL tersebut dan membuat klien Redis.
 
 Beberapa modul yang memanfaatkan Redis antara lain:
 
-- `authRoutes.js` – menyimpan token login pengguna dan set token per client.
+- `authRoutes.js` – menyimpan token login pengguna (dari `/auth/login` maupun `/auth/user-login`) dan set token per client.
 - `dedupRequestMiddleware.js` – mencegah permintaan ganda dengan hash yang disimpan beberapa menit di Redis.
 - `profileCacheService.js` – cache profil Instagram dan TikTok selama satu jam untuk mempercepat respons.
 

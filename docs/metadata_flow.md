@@ -1,5 +1,5 @@
 # Cicero Flow Metadata
-*Last updated: 2026-03-01*
+*Last updated: 2026-04-01*
 
 This document outlines the flow of data and the main database tables used by the Cicero_V2 system. It provides an overview from the initial onboarding steps through to reporting and notifications.
 
@@ -9,7 +9,7 @@ This document outlines the flow of data and the main database tables used by the
    - Administrators log in through the dashboard and register new clients using the `/clients` API.
    - Users for each client are created via the `/users` API or imported from Google Sheets.
 2. **Authentication**
-   - Users authenticate by calling `/api/auth/login` and receive a JWT token.
+   - Users authenticate by calling `/api/auth/login` or `/api/auth/user-login` and receive a JWT token.
    - The token is included in subsequent API calls to authorize access.
 
 ## 2. Database Overview
