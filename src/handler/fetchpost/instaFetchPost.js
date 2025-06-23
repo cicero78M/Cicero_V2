@@ -165,6 +165,14 @@ export async function fetchAndStoreInstaContent(
         comment_count:
           typeof post.comment_count === "number" ? post.comment_count : 0,
         like_count: typeof post.like_count === "number" ? post.like_count : 0,
+        thumbnail_url:
+          post.thumbnail_url ||
+          post.thumbnail_src ||
+          post.display_url ||
+          (post.image_versions?.items?.[0]?.url) || null,
+        is_video: post.is_video || false,
+        video_url: post.video_url || (post.video_versions?.[0]?.url) || null,
+        image_url: post.image_versions?.items?.[0]?.url || null,
         caption:
           post.caption && typeof post.caption === "object" && post.caption.text
             ? post.caption.text
@@ -182,20 +190,28 @@ export async function fetchAndStoreInstaContent(
         client_id: client.id
       });
       await query(
-        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, created_at)
-         VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
+        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, thumbnail_url, is_video, video_url, image_url, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,to_timestamp($10))
          ON CONFLICT (shortcode) DO UPDATE
          SET client_id = EXCLUDED.client_id,
              caption = EXCLUDED.caption,
              comment_count = EXCLUDED.comment_count,
              like_count = EXCLUDED.like_count,
-             created_at = to_timestamp($6)`,
+             thumbnail_url = EXCLUDED.thumbnail_url,
+             is_video = EXCLUDED.is_video,
+             video_url = EXCLUDED.video_url,
+             image_url = EXCLUDED.image_url,
+             created_at = to_timestamp($10)`,
         [
           toSave.client_id,
           toSave.shortcode,
           toSave.caption || null,
           toSave.comment_count,
           toSave.like_count,
+          toSave.thumbnail_url,
+          toSave.is_video,
+          toSave.video_url,
+          toSave.image_url,
           post.taken_at,
         ]
       );

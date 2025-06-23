@@ -29,6 +29,10 @@ CREATE TABLE insta_post (
   client_id VARCHAR REFERENCES clients(client_id),
   caption TEXT,
   comment_count INT,
+  thumbnail_url TEXT,
+  is_video BOOLEAN DEFAULT FALSE,
+  video_url TEXT,
+  image_url TEXT,
   created_at TIMESTAMP
 );
 
