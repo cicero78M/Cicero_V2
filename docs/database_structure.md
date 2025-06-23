@@ -64,6 +64,10 @@ Stores Instagram posts fetched for a client.
 - `client_id` – foreign key to `clients`
 - `caption` – post text
 - `comment_count` – number of comments
+- `thumbnail_url` – image preview
+- `is_video` – boolean whether post is a video
+- `video_url` – link to video file if any
+- `image_url` – link to image file
 - `created_at` – timestamp of the post
 
 ### `insta_like`

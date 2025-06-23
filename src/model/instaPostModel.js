@@ -7,19 +7,27 @@ export async function upsertInstaPost(data) {
     client_id,
     shortcode,
     caption = null,
-    comment_count = 0, // <-- PATCH BARU
+    comment_count = 0,
+    thumbnail_url = null,
+    is_video = false,
+    video_url = null,
+    image_url = null,
   } = data;
 
   // created_at bisa dihandle via taken_at di service (lihat service)
   await query(
-    `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, created_at)
-     VALUES ($1, $2, $3, $4, COALESCE($5, NOW()))
+    `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, thumbnail_url, is_video, video_url, image_url, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,COALESCE($9, NOW()))
      ON CONFLICT (shortcode) DO UPDATE
      SET client_id = EXCLUDED.client_id,
          caption = EXCLUDED.caption,
          comment_count = EXCLUDED.comment_count,
+         thumbnail_url = EXCLUDED.thumbnail_url,
+         is_video = EXCLUDED.is_video,
+         video_url = EXCLUDED.video_url,
+         image_url = EXCLUDED.image_url,
          created_at = EXCLUDED.created_at`,
-    [client_id, shortcode, caption, comment_count, data.created_at || null]
+    [client_id, shortcode, caption, comment_count, thumbnail_url, is_video, video_url, image_url, data.created_at || null]
   );
 }
 
