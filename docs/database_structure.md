@@ -38,6 +38,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | ig_post_like_users | relational table of likes |
 | ig_post_comments | stored comments per post |
 | visitor_logs | record of API access |
+| link_report | links submitted from the mobile app |
 
 ## Tables
 
@@ -149,6 +150,13 @@ Location information if available.
 - `user_id` – primary key referencing `instagram_user`
 - `address_street`, `city_id`, `city_name`
 - `instagram_location_id`, `latitude`, `longitude`, `zip`
+
+### `link_report`
+Stores social media links submitted from the mobile app.
+- `shortcode` – primary key referencing `insta_post`
+- `user_id` – foreign key to `user`
+- `instagram_link`, `facebook_link`, `twitter_link`, `tiktok_link`, `youtube_link`
+- `created_at` – timestamp when the report was submitted
 
 ## Relationships
 

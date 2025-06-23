@@ -8,6 +8,7 @@ import oauthRoutes from './oauthRoutes.js';
 import tiktokRoutes from "./tiktokRoutes.js";
 import metaRoutes from './metaRoutes.js';
 import logRoutes from './logRoutes.js';
+import linkReportRoutes from './linkReportRoutes.js';
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.use("/tiktok", tiktokRoutes);
 router.use('/oauth', oauthRoutes);
 router.use('/metadata', metaRoutes);
 router.use('/logs', logRoutes);
+router.use('/link-reports', linkReportRoutes);
 
 
 export default router;
