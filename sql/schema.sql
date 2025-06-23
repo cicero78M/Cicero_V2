@@ -14,7 +14,7 @@ CREATE TABLE clients (
 );
 
 CREATE TABLE "user" (
-  user_id SERIAL PRIMARY KEY,
+  user_id VARCHAR PRIMARY KEY,
   nama VARCHAR,
   title VARCHAR,
   divisi VARCHAR,
@@ -231,7 +231,7 @@ CREATE TABLE visitor_logs (
 
 CREATE TABLE IF NOT EXISTS link_report (
     shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
-    user_id INTEGER REFERENCES "user"(user_id),
+    user_id VARCHAR REFERENCES "user"(user_id),
     instagram_link TEXT,
     facebook_link TEXT,
     twitter_link TEXT,
