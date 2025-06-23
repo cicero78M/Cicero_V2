@@ -53,7 +53,7 @@ Represents each organisation using the system.
 
 ### `user`
 Holds users belonging to a client.
-- `user_id` – serial primary key
+- `user_id` – primary key (NRP/NIP string)
 - `nama`, `title`, `divisi` – user info fields
 - `insta`, `tiktok` – social media handles
 - `client_id` – foreign key referencing `clients(client_id)`

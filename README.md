@@ -375,7 +375,7 @@ CREATE TABLE clients (
 );
 
 CREATE TABLE "user" (
-  user_id SERIAL PRIMARY KEY,
+  user_id VARCHAR PRIMARY KEY,
   nama VARCHAR,
   title VARCHAR,
   divisi VARCHAR,
