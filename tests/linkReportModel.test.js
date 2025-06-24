@@ -1,9 +1,13 @@
 import { jest } from '@jest/globals';
 
 const mockQuery = jest.fn();
+const mockFindPost = jest.fn();
 
 jest.unstable_mockModule('../src/repository/db.js', () => ({
   query: mockQuery
+}));
+jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
+  findPostByShortcode: mockFindPost
 }));
 
 let createLinkReport;
@@ -19,17 +23,27 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockQuery.mockReset();
+  mockFindPost.mockReset();
 });
 
 test('createLinkReport inserts row', async () => {
+  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc' });
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const data = { shortcode: 'abc', user_id: '1', instagram_link: 'a' };
   const res = await createLinkReport(data);
   expect(res).toEqual({ shortcode: 'abc' });
+  expect(mockFindPost).toHaveBeenCalledWith('abc');
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('INSERT INTO link_report'),
     ['abc', '1', 'a', null, null, null, null, null]
   );
+});
+
+test('createLinkReport throws if post missing', async () => {
+  mockFindPost.mockResolvedValueOnce(null);
+  await expect(createLinkReport({ shortcode: 'xyz' })).rejects.toThrow('shortcode not found');
+  expect(mockFindPost).toHaveBeenCalledWith('xyz');
+  expect(mockQuery).not.toHaveBeenCalled();
 });
 
 test('getLinkReports joins with insta_post', async () => {
