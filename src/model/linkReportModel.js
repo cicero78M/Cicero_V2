@@ -1,6 +1,14 @@
 import { query } from '../repository/db.js';
+import { findPostByShortcode } from './instaPostModel.js';
 
 export async function createLinkReport(data) {
+  const exists = await findPostByShortcode(data.shortcode);
+  if (!exists) {
+    const err = new Error('shortcode not found');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const res = await query(
     `INSERT INTO link_report (shortcode, user_id, instagram_link, facebook_link, twitter_link, tiktok_link, youtube_link, created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7, COALESCE($8, NOW()))

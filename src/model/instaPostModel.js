@@ -31,6 +31,11 @@ export async function upsertInstaPost(data) {
   );
 }
 
+export async function findPostByShortcode(shortcode) {
+  const res = await query('SELECT * FROM insta_post WHERE shortcode = $1', [shortcode]);
+  return res.rows[0] || null;
+}
+
 export async function getShortcodesTodayByClient(client_id) {
   const today = new Date();
   const yyyy = today.getFullYear();
