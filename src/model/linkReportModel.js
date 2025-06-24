@@ -20,12 +20,23 @@ export async function createLinkReport(data) {
 }
 
 export async function getLinkReports() {
-  const res = await query('SELECT * FROM link_report ORDER BY created_at DESC');
+  const res = await query(
+    `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
+     FROM link_report r
+     LEFT JOIN insta_post p ON p.shortcode = r.shortcode
+     ORDER BY r.created_at DESC`
+  );
   return res.rows;
 }
 
 export async function findLinkReportByShortcode(shortcode) {
-  const res = await query('SELECT * FROM link_report WHERE shortcode = $1', [shortcode]);
+  const res = await query(
+    `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
+     FROM link_report r
+     LEFT JOIN insta_post p ON p.shortcode = r.shortcode
+     WHERE r.shortcode = $1`,
+    [shortcode]
+  );
   return res.rows[0] || null;
 }
 
