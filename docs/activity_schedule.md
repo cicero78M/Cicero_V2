@@ -17,4 +17,4 @@ This document summarizes the automated jobs ("activity") that run inside Cicero_
 Each job collects data from the database, interacts with RapidAPI or WhatsApp, and updates the system accordingly. The cron files are imported in `app.js` so no additional setup is required.
 
 
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

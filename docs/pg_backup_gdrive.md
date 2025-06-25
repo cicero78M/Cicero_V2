@@ -1,114 +1,80 @@
-# Otomatisasi Backup PostgreSQL ke Google Drive
+# PostgreSQL Backup Automation to Google Drive
 *Last updated: 2026-04-01*
 
-## Dokumentasi: Otomatisasi Backup PostgreSQL ke Google Drive dengan Cron dan Rclone
+This guide explains how to back up a PostgreSQL database to Google Drive using `cron` and `rclone`.
 
-Dokumen ini menjelaskan langkah demi langkah:
+## Documentation Outline
 
-1. Prasyarat
-2. Instalasi dan konfigurasi rclone
-3. Pembuatan skrip backup
-4. Pengujian manual skrip
-5. Pengaturan cron job
+1. Prerequisites
+2. Install and configure rclone
+3. Create a backup script
+4. Manual testing
+5. Schedule a cron job
 6. Troubleshooting
-7. Ringkasan
+7. Summary
 
 ---
 
-### 1. Prasyarat
+### 1. Prerequisites
 
-* Akses shell pada server Linux (Ubuntu/Debian).
-* PostgreSQL terpasang dan database `cicero_db` di-host pada `localhost:5432`.
-* Akun PostgreSQL `cicero` dengan password `pass` terdaftar dan memiliki hak `CONNECT, SELECT` pada `cicero_db`.
-* Tools:
-
-  * `pg_dump` (biasanya sudah terinstal bersama PostgreSQL client).
-  * `gzip` untuk kompresi.
-  * `rclone` untuk sinkronisasi ke Google Drive.
-  * `cron` untuk scheduler.
+* Shell access on a Linux server (Ubuntu/Debian).
+* PostgreSQL installed with database `cicero_db` hosted on `localhost:5432`.
+* A PostgreSQL account `cicero` with privileges on `cicero_db`.
+* Tools required: `pg_dump`, `gzip`, `rclone`, and `cron`.
 
 ---
 
-### 2. Instalasi dan Konfigurasi rclone
+### 2. Install and Configure rclone
 
-1. **Instalasi**:
-
+1. **Install**
    ```bash
    curl https://rclone.org/install.sh | sudo bash
    ```
-
-2. **Konfigurasi remote** (headless/server):
-
+2. **Configure the remote**
    ```bash
    rclone config
    ```
-
-   * Pilih `n` untuk New remote.
-   * Isi nama `GDrive` (pastikan case-sensitive).
-   * Pilih tipe storage `drive`.
-   * Saat ditanya `Use auto config?`, pilih `n`.
-   * Salin URL yang muncul, buka di browser lokal, login Google, beri izin, salin kode verifikasi.
-   * Kembali ke terminal, paste kode verifikasi.
-   * Selesai.
-
-3. **Verifikasi**:
-
+   - Choose `n` to create a new remote named `GDrive`.
+   - Select storage type `drive`.
+   - When asked `Use auto config?`, choose `n` and follow the verification steps from your browser.
+3. **Verify**
    ```bash
    rclone listremotes
-   # Output: GDrive:
    rclone ls GDrive:backups/postgres
-   # Jika folder belum ada, output kosong tapi tanpa error.
    ```
 
 ---
 
-### 3. Pembuatan Skrip Backup
+### 3. Create the Backup Script
 
-Buat file `/usr/local/bin/pg_backup.sh` dengan konten:
+Create `/usr/local/bin/pg_backup.sh` with the following content:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 1. Variabel konfigurasi
-dir_backup="/var/backups/postgres"
+# Configuration
+backup_dir="/var/backups/postgres"
 REMOTE="GDrive:backups/postgres"
 DB_HOST="localhost"
 DB_PORT="5432"
 DB_USER="cicero"
 DB_NAME="cicero_db"
 
-# Timestamp dan nama file
 DATE=$(date +"%Y-%m-%d_%H%M")
 FILENAME="${DB_NAME}_${DATE}.sql.gz"
-
-# Path lengkap ke binary
 PG_DUMP_BIN="/usr/bin/pg_dump"
 RCLONE_BIN="/usr/bin/rclone"
 
-# 2. Buat direktori backup jika belum ada
-mkdir -p "${dir_backup}"
+mkdir -p "${backup_dir}"
+"${PG_DUMP_BIN}" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" | gzip > "${backup_dir}/${FILENAME}"
+"${RCLONE_BIN}" copy "${backup_dir}/${FILENAME}" "$REMOTE" --quiet
+find "${backup_dir}" -type f -name "${DB_NAME}_*.sql.gz" -mtime +7 -delete
 
-# 3. Dump dan kompres database
-"${PG_DUMP_BIN}" \
-  -h "${DB_HOST}" \
-  -p "${DB_PORT}" \
-  -U "${DB_USER}" \
-  "${DB_NAME}" \
-  | gzip > "${dir_backup}/${FILENAME}"
-
-# 4. Upload ke Google Drive
-echo "Uploading ${FILENAME} to ${REMOTE}..."
-"${RCLONE_BIN}" copy "${dir_backup}/${FILENAME}" "${REMOTE}" --quiet
-
-# 5. Hapus backup lokal >7 hari
-find "${dir_backup}" -type f -name "${DB_NAME}_*.sql.gz" -mtime +7 -delete
-
-# 6. Logging
-echo "Backup ${FILENAME} selesai pada $(date)" >> "${dir_backup}/backup.log"
+echo "Backup ${FILENAME} completed at $(date)" >> "${backup_dir}/backup.log"
 ```
 
-Kemudian:
+Make it executable:
 
 ```bash
 sudo chmod 755 /usr/local/bin/pg_backup.sh
@@ -116,78 +82,63 @@ sudo chmod 755 /usr/local/bin/pg_backup.sh
 
 ---
 
-### 4. Pengujian Manual Skrip
+### 4. Manual Script Test
 
-1. Jalankan sebagai user `gonet` (agar rclone pakai config milik gonet):
+Run the script as the user that owns the rclone config:
 
-   ```bash
-   sudo -u gonet /usr/local/bin/pg_backup.sh
-   ```
-2. Cek hasil:
+```bash
+sudo -u gonet /usr/local/bin/pg_backup.sh
+```
+Verify the results:
 
-   ```bash
-   ls -lh /var/backups/postgres
-   tail -n 5 /var/backups/postgres/backup.log
-   rclone ls GDrive:backups/postgres
-   ```
-
-   * Pastikan file `.sql.gz` muncul lokal dan di Google Drive.
+```bash
+ls -lh /var/backups/postgres
+tail -n 5 /var/backups/postgres/backup.log
+rclone ls GDrive:backups/postgres
+```
 
 ---
 
-### 5. Pengaturan Cron Job
+### 5. Schedule the Cron Job
 
-1. Buka crontab user `gonet`:
+Edit the `gonet` user's crontab:
 
-   ```bash
-   crontab -u gonet -e
-   ```
-2. Tambahkan baris berikut untuk menjalankan setiap hari jam 02:30:
-
-   ```cron
-   30 2 * * * /usr/local/bin/pg_backup.sh >> /var/backups/postgres/cron.log 2>&1
-   ```
-3. Simpan dan keluar.
-4. Verifikasi entry:
-
-   ```bash
-   crontab -u gonet -l
-   ```
-5. Pastikan cron service aktif:
-
-   ```bash
-   sudo systemctl enable --now cron
-   systemctl status cron
-   ```
-
-Untuk **testing cepat**, ubah schedule menjadi `* * * * *` dan pantau log:
+```bash
+crontab -u gonet -e
+```
+Add the following line to run daily at 02:30:
 
 ```cron
-* * * * * /usr/local/bin/pg_backup.sh >> /var/backups/postgres/cron.log 2>&1
+30 2 * * * /usr/local/bin/pg_backup.sh >> /var/backups/postgres/cron.log 2>&1
 ```
+Ensure the cron service is active:
+
+```bash
+sudo systemctl enable --now cron
+systemctl status cron
+```
+
+For quick testing you can temporarily set the schedule to `* * * * *` and monitor the log.
 
 ---
 
 ### 6. Troubleshooting
 
-* **`didn't find section in config file`**: pastikan Anda memanggil rclone sebagai user yang sama dengan yang mengonfigurasi remote (GDrive).
-* **`command not found`**: cek `which pg_dump` dan `which rclone`, gunakan path absolut.
-* **Log kosong**: tambahkan redirection `>> cron.log 2>&1` agar error tercatat.
-* **Permissions**: direktori backup harus writable oleh user cron. Cek `ls -ld /var/backups/postgres`.
-* **Cron tidak trigger**: cek `/var/log/syslog` atau `grep CRON /var/log/syslog`.
+* **`didn't find section in config file`** – run the script with the same user used during rclone configuration.
+* **`command not found`** – check the paths for `pg_dump` and `rclone`.
+* **Empty logs** – append `>> cron.log 2>&1` to capture errors.
+* **Permissions** – ensure the backup directory is writable by the cron user.
+* **Cron not triggering** – check `/var/log/syslog` or `grep CRON /var/log/syslog`.
 
 ---
 
-### 7. Ringkasan
+### 7. Summary
 
-Dengan mengikuti langkah-langkah di atas, Anda telah:
+Following these steps you will:
 
-* Menginstal dan mengonfigurasi rclone untuk Google Drive.
-* Membuat skrip backup otomatis PostgreSQL dengan kompresi.
-* Meng-upload hasil backup ke Google Drive.
-* Mengatur cron job untuk menjalankan skrip harian.
-* Menyertakan logging dan rotasi (hapus >7 hari).
+* Install and configure rclone for Google Drive.
+* Create an automated PostgreSQL backup script with compression.
+* Upload the results to Google Drive and remove local backups older than seven days.
+* Schedule the script via cron with logging and rotation.
 
-Sistem backup Anda sekarang berjalan otomatis, aman, dan terarsip di cloud.
-
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Your backup system will then run automatically and safely archive your data in the cloud.

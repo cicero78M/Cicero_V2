@@ -87,4 +87,4 @@ Below is a conceptual diagram of the main components and their interactions:
 The frontend communicates only with the backend. The backend orchestrates data retrieval, persistence, caching, and messaging integrations.
 
 
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

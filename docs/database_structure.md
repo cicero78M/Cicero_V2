@@ -192,4 +192,4 @@ psql -U <dbuser> -d <dbname> -c "DROP TABLE IF EXISTS old_table_name;"
 Repeat the command for each unused table. Always ensure a recent backup exists
 before dropping tables.
 
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

@@ -1,41 +1,39 @@
-# Panduan RabbitMQ
+# RabbitMQ Guide
 *Last updated: 2026-04-01*
 
-Dokumen ini menjelaskan cara mengaktifkan dan menggunakan RabbitMQ pada **Cicero_V2**. RabbitMQ dipakai untuk memproses pekerjaan berat secara asynchronous agar dashboard tetap responsif.
+This document explains how to enable and use RabbitMQ in **Cicero_V2**. RabbitMQ processes heavy jobs asynchronously so the dashboard remains responsive.
 
-## 1. Konfigurasi
+## 1. Configuration
 
-1. Pastikan layanan RabbitMQ sudah terinstal dan berjalan.
-2. Atur URL koneksi pada variabel lingkungan `AMQP_URL` di file `.env` (contohnya `amqp://localhost`).
+1. Ensure RabbitMQ is installed and running.
+2. Set the connection URL in the `AMQP_URL` environment variable in `.env` (e.g. `amqp://localhost`).
 
-## 2. Fungsi Utama
+## 2. Core Functions
 
-File `src/service/rabbitMQService.js` menyediakan tiga fungsi utama:
+`src/service/rabbitMQService.js` provides three main functions:
 
-- `initRabbitMQ()` – membuat koneksi dan channel.
-- `publishToQueue(queue, msg)` – mengirim pesan JSON ke antrean.
-- `consumeQueue(queue, onMessage)` – mengambil pesan dari antrean dan menjalankan callback.
+- `initRabbitMQ()` – create the connection and channel.
+- `publishToQueue(queue, msg)` – send a JSON message to the queue.
+- `consumeQueue(queue, onMessage)` – consume messages from the queue and execute a callback.
 
-## 3. Contoh Worker
+## 3. Sample Worker
 
 ```javascript
 import { consumeQueue } from './src/service/rabbitMQService.js';
 
 async function handle(data) {
-  console.log('Data diterima:', data);
+  console.log('Received data:', data);
 }
 
 consumeQueue('jobs', handle);
 ```
 
-Worker di atas mengambil pesan dari queue `jobs` dan memprosesnya satu per satu.
+The worker above takes messages from the `jobs` queue and processes them one by one.
 
 ## 4. Tips
 
-- Jalankan worker di proses terpisah menggunakan PM2 atau supervisor lain.
-- Pantau antrean dan koneksi RabbitMQ secara berkala agar tidak terjadi bottleneck.
+- Run the worker in a separate process using PM2 or another supervisor.
+- Monitor the queue and RabbitMQ connection regularly to avoid bottlenecks.
 
 ---
-Lihat README pada bagian *High Volume Queue (RabbitMQ)* untuk gambaran singkat.
-
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+See the README section *High Volume Queue (RabbitMQ)* for a short overview.
