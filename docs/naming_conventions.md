@@ -1,27 +1,25 @@
-# Konvensi Penamaan
+# Naming Conventions
 *Last updated: 2026-04-01*
 
-Dokumen ini merangkum gaya penamaan yang digunakan pada proyek **Cicero_V2**. Panduan berikut ditujukan agar struktur kode dan database tetap konsisten.
+This document summarizes the naming style used throughout **Cicero_V2**. Follow these guidelines to keep the codebase and database consistent.
 
-## Folder & File
+## Folders & Files
 
-- Nama folder ditulis menggunakan huruf kecil tanpa spasi, misalnya `controller`, `service`, `middleware`.
-- Nama file mengikuti format *camelCase* dengan ekstensi sesuai bahasa pemrograman (`.js`, `.ts`, dll). Contoh: `userController.js`, `cronInstaService.js`.
-- Hindari penggunaan karakter khusus selain tanda hubung (`-`) atau garis bawah (`_`).
+- Folder names use lowercase letters with no spaces, for example `controller`, `service`, `middleware`.
+- File names follow *camelCase* with an extension appropriate to the language (`.js`, `.ts`, etc.), e.g. `userController.js`, `cronInstaService.js`.
+- Avoid special characters other than hyphens (`-`) or underscores (`_`).
 
-## Fungsi
+## Functions
 
-- Semua fungsi menggunakan gaya *camelCase*. Kata pertama huruf kecil diikuti kapital pada awal kata berikutnya, misalnya `getAllUsers`, `createClient`.
-- Fungsi bernilai boolean disarankan menggunakan awalan `is` atau `has`, contohnya `isAuthorized`, `hasPermission`.
-- Fungsi async sebaiknya diawali kata kerja yang menjelaskan aksi, contohnya `fetchInstagramPosts`, `sendReportViaWA`.
+- Functions use *camelCase*. The first word is lowercase and subsequent words start with a capital letter, e.g. `getAllUsers`, `createClient`.
+- Boolean functions are prefixed with `is` or `has`, such as `isAuthorized` or `hasPermission`.
+- Async functions should begin with a verb that describes the action, for example `fetchInstagramPosts` or `sendReportViaWA`.
 
 ## Database
 
-- Nama tabel memakai gaya `snake_case` dan huruf kecil, misalnya `insta_post`, `tiktok_comment`.
-- Nama kolom juga `snake_case`, contohnya `client_id`, `created_at`.
-- Primary key tabel diberi suffix `_id` sesuai entitas, misalnya `user_id`, `client_id`.
-- Tambahkan indeks pada kolom yang sering digunakan untuk pencarian.
+- Table names use `snake_case` in lowercase, e.g. `insta_post`, `tiktok_comment`.
+- Column names also use `snake_case`, for example `client_id`, `created_at`.
+- Primary keys use the suffix `_id` to match the entity, such as `user_id` or `client_id`.
+- Add indexes on columns that are frequently queried.
 
-Panduan ini dapat diperluas sesuai kebutuhan namun menjadi acuan dasar dalam penambahan modul baru.
-
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+These guidelines may be expanded as needed but serve as the basic reference for adding new modules.

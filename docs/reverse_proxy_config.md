@@ -1,21 +1,21 @@
-# Konfigurasi Nginx/Reverse Proxy
+# Nginx/Reverse Proxy Configuration
 *Last updated: 2026-04-01*
 
-Dokumen ini memberikan contoh konfigurasi dasar untuk menjalankan aplikasi **Cicero_V2** di balik `nginx` atau reverse proxy lainnya. Pengaturan ini opsional namun berguna agar port aplikasi tidak diakses langsung oleh klien.
+This document provides a basic configuration example for running **Cicero_V2** behind `nginx` or another reverse proxy. The setup is optional but helps prevent direct access to the application port.
 
-## 1. Prasyarat
+## 1. Prerequisites
 
-- Aplikasi telah dijalankan dengan `npm start` pada port yang ditentukan di `.env` (default `3000`).
-- Nginx terpasang di server.
+- The application is running with `npm start` on the port defined in `.env` (default `3000`).
+- Nginx is installed on the server.
 
-## 2. Contoh Konfigurasi
+## 2. Example Configuration
 
-Buat file konfigurasi baru misalnya `/etc/nginx/sites-available/cicero` kemudian isi seperti berikut:
+Create a configuration file such as `/etc/nginx/sites-available/cicero` and add:
 
 ```nginx
 server {
     listen 80;
-    server_name contoh.domain.com;
+    server_name example.domain.com;
 
     location / {
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,21 +26,19 @@ server {
 }
 ```
 
-Aktifkan konfigurasi tersebut dengan:
+Enable the configuration:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/cicero /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Konfigurasi di atas meneruskan seluruh permintaan pada port 80 ke aplikasi Node.js yang berjalan pada `localhost:3000`.
+The above forwards all requests on port 80 to the Node.js app running on `localhost:3000`.
 
-## 3. HTTPS (Opsional)
+## 3. HTTPS (Optional)
 
-Jika menggunakan HTTPS, sertifikat dapat diatur via `certbot` atau penyedia lain. Pastikan bagian `server` diperbarui dengan `listen 443 ssl;` dan `ssl_certificate` yang sesuai.
+If using HTTPS, configure a certificate via `certbot` or another provider. Update the `server` block with `listen 443 ssl;` and the appropriate `ssl_certificate` options.
 
-## 4. Referensi Lain
+## 4. Further Reference
 
-Lihat [docs/server_migration.md](server_migration.md) untuk panduan lengkap menyiapkan server baru.
-
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+See [docs/server_migration.md](server_migration.md) for a complete guide to preparing a new server.

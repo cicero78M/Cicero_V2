@@ -45,4 +45,4 @@ To become an integrated monitoring platform that allows organizations and client
    - Ratio of daily active users to total clients.
 
 
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

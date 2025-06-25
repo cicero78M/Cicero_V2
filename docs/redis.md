@@ -1,11 +1,11 @@
-# Panduan Redis
+# Redis Guide
 *Last updated: 2026-04-01*
 
-Dokumen ini menjelaskan cara konfigurasi dan penggunaan Redis di dalam proyek **Cicero_V2**. Redis digunakan untuk menyimpan token login, cache profil, serta mendeteksi duplikasi permintaan API.
+This document describes how Redis is configured and used in **Cicero_V2**. Redis stores login tokens, caches profiles, and detects duplicate API requests.
 
-## 1. Instalasi Redis
+## 1. Installing Redis
 
-Pastikan paket `redis-server` terpasang di sistem. Pada distribusi berbasis Debian dapat dijalankan:
+Install the `redis-server` package on your system. On Debian-based distributions:
 
 ```bash
 sudo apt-get install redis-server
@@ -13,34 +13,31 @@ sudo systemctl enable redis-server
 sudo systemctl start redis-server
 ```
 
-## 2. Konfigurasi Aplikasi
+## 2. Application Configuration
 
-Setel variabel lingkungan `REDIS_URL` pada file `.env` sesuai alamat server Redis, contoh:
+Set the `REDIS_URL` environment variable in `.env` to the Redis server address, for example:
 
 ```ini
 REDIS_URL=redis://localhost:6379
 ```
 
-Berkas `src/config/redis.js` akan membaca URL tersebut dan membuat klien Redis.
+The file `src/config/redis.js` reads this URL and creates the Redis client.
 
-## 3. Penggunaan dalam Cicero_V2
+## 3. Usage within Cicero_V2
 
-Beberapa modul yang memanfaatkan Redis antara lain:
+Modules that rely on Redis include:
 
-- `authRoutes.js` – menyimpan token login pengguna (dari `/auth/login` maupun `/auth/user-login`) dan set token per client.
-- `dedupRequestMiddleware.js` – mencegah permintaan ganda dengan hash yang disimpan beberapa menit di Redis.
-- `profileCacheService.js` – cache profil Instagram dan TikTok selama satu jam untuk mempercepat respons.
+- `authRoutes.js` – stores login tokens from `/auth/login` and `/auth/user-login` per client.
+- `dedupRequestMiddleware.js` – prevents duplicate requests by storing a short-lived hash in Redis.
+- `profileCacheService.js` – caches Instagram and TikTok profiles for one hour to speed up responses.
+- `requestHash.js` – helper utility that also interacts with Redis to store request hashes.
 
-Selain modul di atas, utilitas `requestHash.js` juga berinteraksi dengan Redis untuk menyimpan hash permintaan.
+## 4. Clearing Data
 
-## 4. Membersihkan Data
-
-Saat pengembangan terkadang perlu menghapus seluruh kunci Redis:
+During development you may need to remove all Redis keys:
 
 ```bash
 redis-cli FLUSHALL
 ```
 
-Perintah di atas akan menghapus semua data pada instance Redis yang sedang digunakan.
-
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+The above command deletes all data from the current Redis instance.

@@ -47,4 +47,4 @@ flowchart TD
 
 The business process begins with client onboarding and continues with automated collection of social media metrics, attendance checks, and delivery of reports. Administrators interact mainly through the Next.js dashboard while the backend orchestrates data retrieval, persistence, and messaging tasks.
 
-Petunjuk penamaan kode dapat ditemukan di [docs/naming_conventions.md](naming_conventions.md).
+Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
