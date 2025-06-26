@@ -12,7 +12,10 @@ export async function getAllLinkReports(req, res, next) {
 
 export async function getLinkReportByShortcode(req, res, next) {
   try {
-    const report = await linkReportModel.findLinkReportByShortcode(req.params.shortcode);
+    const report = await linkReportModel.findLinkReportByShortcode(
+      req.params.shortcode,
+      req.query.user_id
+    );
     sendSuccess(res, report);
   } catch (err) {
     next(err);
@@ -30,7 +33,11 @@ export async function createLinkReport(req, res, next) {
 
 export async function updateLinkReport(req, res, next) {
   try {
-    const report = await linkReportModel.updateLinkReport(req.params.shortcode, req.body);
+    const report = await linkReportModel.updateLinkReport(
+      req.params.shortcode,
+      req.body.user_id,
+      req.body
+    );
     sendSuccess(res, report);
   } catch (err) {
     next(err);
@@ -39,7 +46,10 @@ export async function updateLinkReport(req, res, next) {
 
 export async function deleteLinkReport(req, res, next) {
   try {
-    const report = await linkReportModel.deleteLinkReport(req.params.shortcode);
+    const report = await linkReportModel.deleteLinkReport(
+      req.params.shortcode,
+      req.query.user_id
+    );
     sendSuccess(res, report);
   } catch (err) {
     next(err);

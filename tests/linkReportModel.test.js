@@ -34,7 +34,7 @@ test('createLinkReport inserts row', async () => {
   expect(res).toEqual({ shortcode: 'abc' });
   expect(mockFindPost).toHaveBeenCalledWith('abc');
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('INSERT INTO link_report'),
+    expect.stringContaining('ON CONFLICT (shortcode, user_id)'),
     ['abc', '1', 'a', null, null, null, null, null]
   );
 });
@@ -57,10 +57,10 @@ test('getLinkReports joins with insta_post', async () => {
 
 test('findLinkReportByShortcode joins with insta_post', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc', caption: 'c' }] });
-  const row = await findLinkReportByShortcode('abc');
+  const row = await findLinkReportByShortcode('abc', '1');
   expect(row).toEqual({ shortcode: 'abc', caption: 'c' });
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('WHERE r.shortcode = $1'),
-    ['abc']
+    ['abc', '1']
   );
 });

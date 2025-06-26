@@ -230,12 +230,13 @@ CREATE TABLE visitor_logs (
 );
 
 CREATE TABLE IF NOT EXISTS link_report (
-    shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
+    shortcode VARCHAR REFERENCES insta_post(shortcode),
     user_id VARCHAR REFERENCES "user"(user_id),
     instagram_link TEXT,
     facebook_link TEXT,
     twitter_link TEXT,
     tiktok_link TEXT,
     youtube_link TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (shortcode, user_id)
 );
