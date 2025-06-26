@@ -151,10 +151,11 @@ Location information if available.
 - `address_street`, `city_id`, `city_name`
 - `instagram_location_id`, `latitude`, `longitude`, `zip`
 
-### `link_report`
+-### `link_report`
 Stores social media links submitted from the mobile app.
-- `shortcode` – primary key referencing `insta_post`
+- `shortcode` – foreign key to `insta_post`
 - `user_id` – foreign key to `user`
+- `shortcode` and `user_id` form the primary key
 - `instagram_link`, `facebook_link`, `twitter_link`, `tiktok_link`, `youtube_link`
 - `created_at` – timestamp when the report was submitted
 
