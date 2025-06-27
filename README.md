@@ -5,7 +5,7 @@
 
 **Cicero_V2** is an automation system for monitoring, social media attendance, and content analytics (Instagram & TikTok) aimed at organizations and institutions. The backend supports multiple clients, automatically records likes and comments, and sends reports to WhatsApp administrators.
 
-The full architecture is described in [docs/enterprise_architecture.md](docs/enterprise_architecture.md). Scheduled activities are listed in [docs/activity_schedule.md](docs/activity_schedule.md). See [docs/metadata_flow.md](docs/metadata_flow.md) for the metadata flow. Additional guides are available for [server migration](docs/server_migration.md), [RabbitMQ](docs/rabbitmq.md), [Redis](docs/redis.md), [database structure](docs/database_structure.md), [Nginx configuration](docs/reverse_proxy_config.md), [PostgreSQL backups](docs/pg_backup_gdrive.md), and [naming conventions](docs/naming_conventions.md).
+The full architecture is described in [docs/enterprise_architecture.md](docs/enterprise_architecture.md). Scheduled activities are listed in [docs/activity_schedule.md](docs/activity_schedule.md). See [docs/metadata_flow.md](docs/metadata_flow.md) for the metadata flow. Additional guides are available for [server migration](docs/server_migration.md), [RabbitMQ](docs/rabbitmq.md), [Redis](docs/redis.md), [database structure](docs/database_structure.md), [premium subscriptions](docs/premium_subscription.md), [Nginx configuration](docs/reverse_proxy_config.md), [PostgreSQL backups](docs/pg_backup_gdrive.md), and [naming conventions](docs/naming_conventions.md).
 
 ## Requirements
 - Node.js 20 or newer
