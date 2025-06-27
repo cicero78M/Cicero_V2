@@ -39,6 +39,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | ig_post_comments | stored comments per post |
 | visitor_logs | record of API access |
 | link_report | links submitted from the mobile app |
+| premium_subscription | tracks premium status per user |
 
 ## Tables
 
@@ -151,13 +152,23 @@ Location information if available.
 - `address_street`, `city_id`, `city_name`
 - `instagram_location_id`, `latitude`, `longitude`, `zip`
 
--### `link_report`
-Stores social media links submitted from the mobile app.
+### `link_report`
+  Stores social media links submitted from the mobile app.
 - `shortcode` – foreign key to `insta_post`
 - `user_id` – foreign key to `user`
 - `shortcode` and `user_id` form the primary key
 - `instagram_link`, `facebook_link`, `twitter_link`, `tiktok_link`, `youtube_link`
 - `created_at` – timestamp when the report was submitted
+
+### `premium_subscription`
+Tracks premium subscriptions for the Android app.
+- `subscription_id` – primary key
+- `user_id` – foreign key to `user`
+- `client_id` – foreign key to `clients`
+- `status` – `pending`, `active`, `expired` or `cancelled`
+- `start_date`, `end_date` – subscription validity
+- `order_id`, `snap_token` – Midtrans identifiers
+- `created_at`, `updated_at`
 
 ## Relationships
 
