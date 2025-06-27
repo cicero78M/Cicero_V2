@@ -39,7 +39,7 @@ Cicero_V2/
 
 ## API Overview
 
-The API exposes endpoints for managing clients and users, fetching Instagram and TikTok data, handling OAuth callbacks, and providing dashboard statistics. Detailed documentation for each route is available in the source code comments.
+The API exposes endpoints for managing clients and users, fetching Instagram and TikTok data, handling OAuth callbacks, and providing dashboard statistics. Endpoints are also available for premium subscription management. Detailed documentation for each route is available in the source code comments.
 
 ## Deployment & Environment
 

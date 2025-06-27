@@ -240,3 +240,12 @@ CREATE TABLE IF NOT EXISTS link_report (
     created_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (shortcode, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS premium_subscription (
+    subscription_id SERIAL PRIMARY KEY,
+    client_id VARCHAR REFERENCES clients(client_id),
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
