@@ -11,8 +11,7 @@ Create a new table called `premium_subscription`:
 ```sql
 CREATE TABLE premium_subscription (
   subscription_id SERIAL PRIMARY KEY,
-  user_id VARCHAR REFERENCES "user"(user_id),
-  client_id VARCHAR REFERENCES clients(client_id),
+  user_id VARCHAR REFERENCES instagram_user(user_id),
   status VARCHAR NOT NULL,
   start_date DATE,
   end_date DATE,
@@ -31,7 +30,7 @@ CREATE TABLE premium_subscription (
 
 1. **Initiate Checkout**
    - `POST /api/subscription/checkout`
-   - Body: `{ user_id, client_id, plan }`
+   - Body: `{ user_id, plan }`
    - Server calls Midtrans Snap API and returns a `snap_token` and `order_id`.
 2. **Midtrans Callback**
    - `POST /api/subscription/webhook`

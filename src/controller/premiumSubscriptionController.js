@@ -48,7 +48,7 @@ export async function deleteSubscription(req, res, next) {
 
 export async function getActiveSubscription(req, res, next) {
   try {
-    const row = await service.findActiveSubscriptionByClient(req.params.client_id);
+    const row = await service.findActiveSubscriptionByUser(req.params.user_id);
     sendSuccess(res, row);
   } catch (err) {
     next(err);
