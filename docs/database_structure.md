@@ -40,6 +40,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | visitor_logs | record of API access |
 | link_report | links submitted from the mobile app |
 | premium_subscription | tracks premium status per user |
+| subscription_registration | user-initiated subscription signups |
 
 ## Tables
 
@@ -168,6 +169,15 @@ Tracks premium subscriptions for the Android app.
 - `start_date`, `end_date` – subscription validity
 - `order_id`, `snap_token` – Midtrans identifiers
 - `created_at`, `updated_at`
+
+### `subscription_registration`
+Records raw signup data before payment is processed.
+- `registration_id` – primary key
+- `user_id` – foreign key to `instagram_user`
+- `nama_rekening`, `nomor_rekening` – bank account details
+- `phone` – contact phone number
+- `amount` – requested payment amount
+- `created_at` – timestamp when the user submitted the form
 
 ## Relationships
 
