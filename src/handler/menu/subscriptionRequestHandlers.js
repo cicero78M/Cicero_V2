@@ -8,11 +8,11 @@ export const subscriptionRequestHandlers = {
       session.step = null;
       return waClient.sendMessage(chatId, '❎ Permintaan dibatalkan.');
     }
-    const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, '');
-    if (!nrp) {
-      return waClient.sendMessage(chatId, 'Masukkan *NRP/NIP* yang valid:');
+    const username = text.trim().replace(/[^0-9a-zA-Z_.]/g, '');
+    if (!username) {
+      return waClient.sendMessage(chatId, 'Masukkan *Username Instagram* yang valid:');
     }
-    session.user_id = nrp;
+    session.username = username;
     session.step = 'namaRekening';
     await waClient.sendMessage(chatId, 'Masukkan *Nama Rekening*:');
   },
@@ -55,7 +55,7 @@ export const subscriptionRequestHandlers = {
     session.amount = amount;
     session.step = 'confirm';
     let msg = '*Konfirmasi Pendaftaran Premium*\n';
-    msg += `NRP/NIP : *${session.user_id}*\n`;
+    msg += `Username Instagram : *${session.username}*\n`;
     msg += `Nama Rekening : *${session.nama_rekening}*\n`;
     msg += `Nomor Rekening : *${session.nomor_rekening}*\n`;
     msg += `Telepon : *${session.phone}*\n`;
@@ -73,7 +73,7 @@ export const subscriptionRequestHandlers = {
       return waClient.sendMessage(chatId, 'Balas *ya* untuk konfirmasi atau *batal* untuk membatalkan.');
     }
     const reg = await registrationService.createRegistration({
-      user_id: session.user_id,
+      username: session.username,
       nama_rekening: session.nama_rekening,
       nomor_rekening: session.nomor_rekening,
       phone: session.phone,
@@ -83,7 +83,7 @@ export const subscriptionRequestHandlers = {
     const adminIds = getAdminWAIds();
     let notif = '*Permintaan Subscription Premium*\n';
     notif += `ID Permintaan: *${reg.registration_id}*\n`;
-    notif += `NRP/NIP : *${reg.user_id}*\n`;
+    notif += `Username Instagram : *${reg.username}*\n`;
     notif += `Nominal : *${reg.amount}*\n`;
     notif += `Balas *GRANTSUB#${reg.registration_id}* untuk memberi akses atau *DENYSUB#${reg.registration_id}* untuk menolak.`;
     for (const adminId of adminIds) {
