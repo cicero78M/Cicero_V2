@@ -26,7 +26,7 @@ test('createRegistration inserts row', async () => {
   expect(res).toEqual({ registration_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('INSERT INTO subscription_registration'),
-    ['u1', 'A', 'B', null, 10, null]
+    ['u1', 'A', 'B', null, 10, 'pending', null, null]
   );
 });
 
