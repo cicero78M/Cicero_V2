@@ -16,6 +16,7 @@ import './src/cron/cronInstaLaphar.js';
 import './src/cron/cronTiktokLaphar.js';
 import './src/cron/cronNotifikasiLikesDanKomentar.js';
 import './src/cron/cronInstaDataMining.js';
+import './src/cron/cronPremiumSubscription.js';
 
 const app = express();
 

@@ -9,6 +9,9 @@ export const findSubscriptionById = async id => model.findSubscriptionById(id);
 export const findActiveSubscriptionByUser = async username =>
   model.findActiveSubscriptionByUser(username);
 
+export const findLatestSubscriptionByUser = async username =>
+  model.findLatestSubscriptionByUser(username);
+
 export const updateSubscription = async (id, data) =>
   model.updateSubscription(id, data);
 

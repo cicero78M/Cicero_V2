@@ -36,6 +36,16 @@ export async function findRegistrationById(id) {
   return res.rows[0] || null;
 }
 
+export async function findPendingByUsername(username) {
+  const res = await query(
+    `SELECT * FROM subscription_registration
+     WHERE username=$1 AND status='pending'
+     ORDER BY created_at DESC LIMIT 1`,
+    [username],
+  );
+  return res.rows[0] || null;
+}
+
 export async function updateRegistration(id, data) {
   const old = await findRegistrationById(id);
   if (!old) return null;

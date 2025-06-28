@@ -42,6 +42,16 @@ export async function findActiveSubscriptionByUser(username) {
   return res.rows[0] || null;
 }
 
+export async function findLatestSubscriptionByUser(username) {
+  const res = await query(
+    `SELECT * FROM premium_subscription
+     WHERE username=$1
+     ORDER BY start_date DESC LIMIT 1`,
+    [username],
+  );
+  return res.rows[0] || null;
+}
+
 export async function updateSubscription(id, data) {
   const old = await findSubscriptionById(id);
   if (!old) return null;

@@ -9,12 +9,14 @@ jest.unstable_mockModule('../src/repository/db.js', () => ({
 let createSubscription;
 let getSubscriptions;
 let findActiveSubscriptionByUser;
+let findLatestSubscriptionByUser;
 
 beforeAll(async () => {
   const mod = await import('../src/model/premiumSubscriptionModel.js');
   createSubscription = mod.createSubscription;
   getSubscriptions = mod.getSubscriptions;
   findActiveSubscriptionByUser = mod.findActiveSubscriptionByUser;
+  findLatestSubscriptionByUser = mod.findLatestSubscriptionByUser;
 });
 
 beforeEach(() => {
@@ -48,5 +50,15 @@ test('findActiveSubscriptionByUser selects active record', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('WHERE username=$1 AND is_active = true'),
     ['abc']
+  );
+});
+
+test('findLatestSubscriptionByUser selects last record', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ subscription_id: 2 }] });
+  const row = await findLatestSubscriptionByUser('def');
+  expect(row).toEqual({ subscription_id: 2 });
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('WHERE username=$1'),
+    ['def']
   );
 });
