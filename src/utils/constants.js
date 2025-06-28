@@ -23,6 +23,8 @@ export const adminCommands = [
   "absensikomentar#",
   "exception#",
   "status#",
+  "grantsub#",
+  "denysub#",
 ];
 
 export const hariIndo = [

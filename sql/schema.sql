@@ -245,5 +245,7 @@ CREATE TABLE IF NOT EXISTS subscription_registration (
     nomor_rekening VARCHAR,
     phone VARCHAR,
     amount INT,
+    status VARCHAR DEFAULT 'pending',
+    reviewed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()
 );
