@@ -237,3 +237,13 @@ CREATE TABLE IF NOT EXISTS premium_subscription (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS subscription_registration (
+    registration_id SERIAL PRIMARY KEY,
+    user_id VARCHAR REFERENCES instagram_user(user_id),
+    nama_rekening VARCHAR,
+    nomor_rekening VARCHAR,
+    phone VARCHAR,
+    amount INT,
+    created_at TIMESTAMP DEFAULT NOW()
+);

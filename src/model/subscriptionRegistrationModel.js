@@ -1,0 +1,66 @@
+import { query } from '../repository/db.js';
+
+export async function createRegistration(data) {
+  const res = await query(
+    `INSERT INTO subscription_registration (
+        user_id, nama_rekening, nomor_rekening, phone, amount, created_at
+     ) VALUES ($1,$2,$3,$4,$5,COALESCE($6, NOW()))
+     RETURNING *`,
+    [
+      data.user_id,
+      data.nama_rekening || null,
+      data.nomor_rekening || null,
+      data.phone || null,
+      data.amount || null,
+      data.created_at || null,
+    ],
+  );
+  return res.rows[0];
+}
+
+export async function getRegistrations() {
+  const res = await query(
+    'SELECT * FROM subscription_registration ORDER BY created_at DESC',
+  );
+  return res.rows;
+}
+
+export async function findRegistrationById(id) {
+  const res = await query(
+    'SELECT * FROM subscription_registration WHERE registration_id=$1',
+    [id],
+  );
+  return res.rows[0] || null;
+}
+
+export async function updateRegistration(id, data) {
+  const old = await findRegistrationById(id);
+  if (!old) return null;
+  const merged = { ...old, ...data };
+  const res = await query(
+    `UPDATE subscription_registration SET
+      user_id=$2,
+      nama_rekening=$3,
+      nomor_rekening=$4,
+      phone=$5,
+      amount=$6
+     WHERE registration_id=$1 RETURNING *`,
+    [
+      id,
+      merged.user_id,
+      merged.nama_rekening || null,
+      merged.nomor_rekening || null,
+      merged.phone || null,
+      merged.amount || null,
+    ],
+  );
+  return res.rows[0];
+}
+
+export async function deleteRegistration(id) {
+  const res = await query(
+    'DELETE FROM subscription_registration WHERE registration_id=$1 RETURNING *',
+    [id],
+  );
+  return res.rows[0] || null;
+}
