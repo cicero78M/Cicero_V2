@@ -8,13 +8,13 @@ jest.unstable_mockModule('../src/repository/db.js', () => ({
 
 let createSubscription;
 let getSubscriptions;
-let findActiveSubscriptionByClient;
+let findActiveSubscriptionByUser;
 
 beforeAll(async () => {
   const mod = await import('../src/model/premiumSubscriptionModel.js');
   createSubscription = mod.createSubscription;
   getSubscriptions = mod.getSubscriptions;
-  findActiveSubscriptionByClient = mod.findActiveSubscriptionByClient;
+  findActiveSubscriptionByUser = mod.findActiveSubscriptionByUser;
 });
 
 beforeEach(() => {
@@ -23,7 +23,7 @@ beforeEach(() => {
 
 test('createSubscription inserts row', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ subscription_id: 1 }] });
-  const data = { client_id: 'abc', start_date: '2024-01-01' };
+  const data = { user_id: 'abc', start_date: '2024-01-01' };
   const res = await createSubscription(data);
   expect(res).toEqual({ subscription_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
@@ -41,12 +41,12 @@ test('getSubscriptions selects all', async () => {
   );
 });
 
-test('findActiveSubscriptionByClient selects active record', async () => {
+test('findActiveSubscriptionByUser selects active record', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ subscription_id: 1 }] });
-  const row = await findActiveSubscriptionByClient('abc');
+  const row = await findActiveSubscriptionByUser('abc');
   expect(row).toEqual({ subscription_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('WHERE client_id=$1 AND is_active = true'),
+    expect.stringContaining('WHERE user_id=$1 AND is_active = true'),
     ['abc']
   );
 });

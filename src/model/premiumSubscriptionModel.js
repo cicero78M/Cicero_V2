@@ -3,11 +3,11 @@ import { query } from '../repository/db.js';
 export async function createSubscription(data) {
   const res = await query(
     `INSERT INTO premium_subscription (
-        client_id, start_date, end_date, is_active, created_at
+        user_id, start_date, end_date, is_active, created_at
      ) VALUES ($1,$2,$3,$4,COALESCE($5, NOW()))
      RETURNING *`,
     [
-      data.client_id,
+      data.user_id,
       data.start_date,
       data.end_date || null,
       data.is_active ?? true,
@@ -32,12 +32,12 @@ export async function findSubscriptionById(id) {
   return res.rows[0] || null;
 }
 
-export async function findActiveSubscriptionByClient(client_id) {
+export async function findActiveSubscriptionByUser(user_id) {
   const res = await query(
     `SELECT * FROM premium_subscription
-     WHERE client_id=$1 AND is_active = true
+     WHERE user_id=$1 AND is_active = true
      ORDER BY start_date DESC LIMIT 1`,
-    [client_id],
+    [user_id],
   );
   return res.rows[0] || null;
 }
@@ -48,14 +48,14 @@ export async function updateSubscription(id, data) {
   const merged = { ...old, ...data };
   const res = await query(
     `UPDATE premium_subscription SET
-       client_id=$2,
-       start_date=$3,
-       end_date=$4,
-       is_active=$5
+      user_id=$2,
+      start_date=$3,
+      end_date=$4,
+      is_active=$5
      WHERE subscription_id=$1 RETURNING *`,
     [
       id,
-      merged.client_id,
+      merged.user_id,
       merged.start_date,
       merged.end_date || null,
       merged.is_active,
