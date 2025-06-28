@@ -3,12 +3,12 @@ import { query } from '../repository/db.js';
 export async function createRegistration(data) {
   const res = await query(
     `INSERT INTO subscription_registration (
-        user_id, nama_rekening, nomor_rekening, phone, amount,
+        username, nama_rekening, nomor_rekening, phone, amount,
         status, reviewed_at, created_at
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8, NOW()))
      RETURNING *`,
     [
-      data.user_id,
+      data.username,
       data.nama_rekening || null,
       data.nomor_rekening || null,
       data.phone || null,
@@ -42,7 +42,7 @@ export async function updateRegistration(id, data) {
   const merged = { ...old, ...data };
   const res = await query(
     `UPDATE subscription_registration SET
-      user_id=$2,
+      username=$2,
       nama_rekening=$3,
       nomor_rekening=$4,
       phone=$5,
@@ -52,7 +52,7 @@ export async function updateRegistration(id, data) {
      WHERE registration_id=$1 RETURNING *`,
     [
       id,
-      merged.user_id,
+      merged.username,
       merged.nama_rekening || null,
       merged.nomor_rekening || null,
       merged.phone || null,

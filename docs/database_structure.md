@@ -173,7 +173,7 @@ Tracks premium subscriptions for the Android app.
 ### `subscription_registration`
 Records raw signup data before payment is processed.
 - `registration_id` – primary key
-- `user_id` – foreign key to `instagram_user`
+- `username` – foreign key to `instagram_user`
 - `nama_rekening`, `nomor_rekening` – bank account details
 - `phone` – contact phone number
 - `amount` – requested payment amount

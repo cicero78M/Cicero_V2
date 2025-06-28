@@ -79,7 +79,7 @@ CREATE TABLE tiktok_comment (
 -- Tabel utama dengan informasi profil dasar
 CREATE TABLE instagram_user (
     user_id                 VARCHAR(30) PRIMARY KEY,
-    username                VARCHAR(100) NOT NULL,
+    username                VARCHAR(100) UNIQUE NOT NULL,
     full_name               VARCHAR(100),
     biography               TEXT,
     business_contact_method VARCHAR(50),
@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS premium_subscription (
 
 CREATE TABLE IF NOT EXISTS subscription_registration (
     registration_id SERIAL PRIMARY KEY,
-    user_id VARCHAR REFERENCES instagram_user(user_id),
+    username VARCHAR REFERENCES instagram_user(username),
     nama_rekening VARCHAR,
     nomor_rekening VARCHAR,
     phone VARCHAR,

@@ -21,7 +21,7 @@ beforeEach(() => {
 
 test('createRegistration inserts row', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ registration_id: 1 }] });
-  const data = { user_id: 'u1', nama_rekening: 'A', nomor_rekening: 'B', amount: 10 };
+  const data = { username: 'u1', nama_rekening: 'A', nomor_rekening: 'B', amount: 10 };
   const res = await createRegistration(data);
   expect(res).toEqual({ registration_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(

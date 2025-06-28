@@ -426,7 +426,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     setSession(chatId, { menu: "premiumreq", step: "main" });
     await waClient.sendMessage(
       chatId,
-      "📝 *Pendaftaran Premium*\nMasukkan NRP/NIP Anda:"
+      "📝 *Pendaftaran Premium*\nMasukkan Username Instagram Anda:"
     );
     return;
   }
