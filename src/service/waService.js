@@ -1603,11 +1603,22 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       status: 'approved',
       reviewed_at: new Date(),
     });
-    await premiumService.createSubscription({
-      username: reg.username,
-      start_date: new Date(),
-      is_active: true,
-    });
+    const existing = await premiumService.findLatestSubscriptionByUser(
+      reg.username,
+    );
+    if (existing) {
+      await premiumService.updateSubscription(existing.subscription_id, {
+        start_date: new Date(),
+        end_date: null,
+        is_active: true,
+      });
+    } else {
+      await premiumService.createSubscription({
+        username: reg.username,
+        start_date: new Date(),
+        is_active: true,
+      });
+    }
     const user = await userModel.findUserById(reg.username);
     if (user?.whatsapp) {
       await waClient.sendMessage(

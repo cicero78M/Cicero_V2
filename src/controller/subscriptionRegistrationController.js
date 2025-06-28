@@ -23,6 +23,12 @@ export async function getRegistrationById(req, res, next) {
 
 export async function createRegistration(req, res, next) {
   try {
+    const existing = await service.findPendingByUsername(req.body.username);
+    if (existing)
+      return res
+        .status(400)
+        .json({ error: 'Masih ada pendaftaran menunggu review' });
+
     const row = await service.createRegistration(req.body);
     sendSuccess(res, row, 201);
 

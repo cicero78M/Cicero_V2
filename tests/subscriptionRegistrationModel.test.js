@@ -8,11 +8,13 @@ jest.unstable_mockModule('../src/repository/db.js', () => ({
 
 let createRegistration;
 let getRegistrations;
+let findPendingByUsername;
 
 beforeAll(async () => {
   const mod = await import('../src/model/subscriptionRegistrationModel.js');
   createRegistration = mod.createRegistration;
   getRegistrations = mod.getRegistrations;
+  findPendingByUsername = mod.findPendingByUsername;
 });
 
 beforeEach(() => {
@@ -36,5 +38,15 @@ test('getRegistrations selects all', async () => {
   expect(rows).toEqual([{ registration_id: 1 }]);
   expect(mockQuery).toHaveBeenCalledWith(
     'SELECT * FROM subscription_registration ORDER BY created_at DESC'
+  );
+});
+
+test('findPendingByUsername selects pending record', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ registration_id: 2 }] });
+  const row = await findPendingByUsername('user');
+  expect(row).toEqual({ registration_id: 2 });
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('status='),
+    ['user']
   );
 });
