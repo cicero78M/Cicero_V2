@@ -99,3 +99,14 @@ export function getAdminWANumbers() {
   });
   return Array.from(new Set(numbers));
 }
+
+// Send WhatsApp message with basic error handling
+export async function safeSendMessage(waClient, chatId, message, options = {}) {
+  try {
+    if (waClient) {
+      await waClient.sendMessage(chatId, message, options);
+    }
+  } catch (err) {
+    console.error(`[WA] Failed to send message to ${chatId}:`, err.message);
+  }
+}
