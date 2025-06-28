@@ -1,5 +1,7 @@
 import * as service from '../service/subscriptionRegistrationService.js';
 import { sendSuccess } from '../utils/response.js';
+import waClient from '../service/waService.js';
+import { getAdminWAIds } from '../utils/waHelper.js';
 
 export async function getAllRegistrations(req, res, next) {
   try {
@@ -23,6 +25,21 @@ export async function createRegistration(req, res, next) {
   try {
     const row = await service.createRegistration(req.body);
     sendSuccess(res, row, 201);
+
+    try {
+      const adminIds = getAdminWAIds();
+      let msg = '*Permintaan Subscription Premium*\n';
+      msg += `ID Permintaan: *${row.registration_id}*\n`;
+      msg += `Username Instagram : *${row.username}*\n`;
+      if (row.amount) msg += `Nominal : *${row.amount}*\n`;
+      msg +=
+        `Balas *GRANTSUB#${row.registration_id}* untuk memberi akses atau *DENYSUB#${row.registration_id}* untuk menolak.`;
+      for (const admin of adminIds) {
+        waClient.sendMessage(admin, msg).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[WA] Failed to notify admin:', e.message);
+    }
   } catch (err) {
     next(err);
   }
