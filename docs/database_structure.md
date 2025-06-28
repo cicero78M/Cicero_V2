@@ -163,8 +163,8 @@ Location information if available.
 
 ### `premium_subscription`
 Tracks premium subscriptions for the Android app.
-- `subscription_id` – primary key
-- `user_id` – foreign key to `instagram_user`
+ - `subscription_id` – primary key
+ - `username` – foreign key to `instagram_user`
 - `status` – `pending`, `active`, `expired` or `cancelled`
 - `start_date`, `end_date` – subscription validity
 - `order_id`, `snap_token` – Midtrans identifiers

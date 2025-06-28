@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS link_report (
 
 CREATE TABLE IF NOT EXISTS premium_subscription (
     subscription_id SERIAL PRIMARY KEY,
-    user_id VARCHAR REFERENCES instagram_user(user_id),
+    username VARCHAR REFERENCES instagram_user(username),
     start_date DATE NOT NULL,
     end_date DATE,
     is_active BOOLEAN DEFAULT TRUE,
