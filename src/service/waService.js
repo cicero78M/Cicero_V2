@@ -1604,18 +1604,18 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       reviewed_at: new Date(),
     });
     await premiumService.createSubscription({
-      user_id: reg.user_id,
+      username: reg.username,
       start_date: new Date(),
       is_active: true,
     });
-    const user = await userModel.findUserById(reg.user_id);
+    const user = await userModel.findUserById(reg.username);
     if (user?.whatsapp) {
       await waClient.sendMessage(
         formatToWhatsAppId(user.whatsapp),
         '🎉 Permintaan premium Anda telah disetujui.'
       );
     }
-    await waClient.sendMessage(chatId, `✅ Akses premium diberikan untuk ${reg.user_id}.`);
+    await waClient.sendMessage(chatId, `✅ Akses premium diberikan untuk ${reg.username}.`);
     return;
   }
 
@@ -1634,14 +1634,14 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       status: 'rejected',
       reviewed_at: new Date(),
     });
-    const user = await userModel.findUserById(reg.user_id);
+    const user = await userModel.findUserById(reg.username);
     if (user?.whatsapp) {
       await waClient.sendMessage(
         formatToWhatsAppId(user.whatsapp),
         'Mohon maaf, permintaan premium Anda ditolak.'
       );
     }
-    await waClient.sendMessage(chatId, `❌ Permintaan ${reg.user_id} ditolak.`);
+    await waClient.sendMessage(chatId, `❌ Permintaan ${reg.username} ditolak.`);
     return;
   }
 
