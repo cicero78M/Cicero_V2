@@ -223,7 +223,7 @@ waClient.on("message", async (msg) => {
       setSession(chatId, { menu: "clientrequest", step: "main" });
       await waClient.sendMessage(
         chatId,
-        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -400,7 +400,7 @@ Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
   // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
-    await waClient.sendMessage(
+ await waClient.sendMessage(
       chatId,
 `
 ┏━━━ *MENU CLIENT CICERO* ━━━
@@ -415,6 +415,7 @@ Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
 9️⃣ Exception Info
 🔟 Hapus WA Admin
 1️⃣1️⃣ Hapus WA User
+1️⃣2️⃣ Transfer User Sheet
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
