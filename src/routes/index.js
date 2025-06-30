@@ -29,7 +29,6 @@ router.use('/link-reports', linkReportRoutes);
 router.use('/premium-subscriptions', premiumSubscriptionRoutes);
 router.use('/subscription-registrations', subscriptionRegistrationRoutes);
 
-
 export default router;
 
 
