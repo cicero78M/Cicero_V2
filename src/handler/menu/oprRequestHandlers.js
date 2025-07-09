@@ -10,6 +10,7 @@ export const oprRequestHandlers = {
 2️⃣ Ubah status user (aktif/nonaktif)
 3️⃣ Cek data user (NRP/NIP)
 4️⃣ Rekap link harian
+5️⃣ Update Tugas
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -56,6 +57,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "rekapLink";
       return oprRequestHandlers.rekapLink(session, chatId, text, waClient, pool, userModel);
     }
+    if (/^5$/i.test(text.trim())) {
+      clean();
+      session.step = "updateTugas";
+      return oprRequestHandlers.updateTugas(session, chatId, text, waClient, pool, userModel);
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -65,7 +71,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1-4* atau ketik *batal* untuk keluar."
+      "❗ Menu tidak dikenali. Pilih *1-5* atau ketik *batal* untuk keluar."
     );
   },
 
@@ -285,6 +291,30 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
     await waClient.sendMessage(chatId, msg.trim());
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  updateTugas: async (session, chatId, text, waClient, pool, userModel) => {
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+    let clientId = null;
+    try {
+      const res = await pool.query(q, [waNum]);
+      clientId = res.rows[0]?.client_id || null;
+    } catch (e) {}
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
+    try {
+      await fetchAndStoreInstaContent(null, waClient, chatId, clientId);
+      await waClient.sendMessage(chatId, `✅ Update tugas selesai untuk client *${clientId}*.`);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal update tugas IG: ${err.message}`);
+    }
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
