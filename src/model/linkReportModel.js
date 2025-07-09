@@ -91,3 +91,14 @@ export async function deleteLinkReport(shortcode, user_id) {
   const res = await query('DELETE FROM link_report WHERE shortcode=$1 AND user_id=$2 RETURNING *', [shortcode, user_id]);
   return res.rows[0] || null;
 }
+
+export async function getReportsTodayByClient(client_id) {
+  const res = await query(
+    `SELECT r.* FROM link_report r
+     JOIN "user" u ON u.user_id = r.user_id
+     WHERE u.client_id = $1 AND r.created_at::date = NOW()::date
+     ORDER BY r.created_at ASC`,
+    [client_id]
+  );
+  return res.rows;
+}

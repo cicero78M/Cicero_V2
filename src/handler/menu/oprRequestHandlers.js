@@ -9,6 +9,7 @@ export const oprRequestHandlers = {
 1️⃣ Tambah user baru
 2️⃣ Ubah status user (aktif/nonaktif)
 3️⃣ Cek data user (NRP/NIP)
+4️⃣ Rekap link harian
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -50,6 +51,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
+    if (/^4$/i.test(text.trim())) {
+      clean();
+      session.step = "rekapLink";
+      return oprRequestHandlers.rekapLink(session, chatId, text, waClient, pool, userModel);
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -59,7 +65,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1, 2,* atau *3*, atau ketik *batal* untuk keluar."
+      "❗ Menu tidak dikenali. Pilih *1-4* atau ketik *batal* untuk keluar."
     );
   },
 
@@ -224,6 +230,63 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     session.updateStatusNRP = nrp;
     session.step = "updateStatus_value";
     await waClient.sendMessage(chatId, msg);
+  },
+
+  rekapLink: async (session, chatId, text, waClient, pool, userModel) => {
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+    let clientId = null;
+    try {
+      const res = await pool.query(q, [waNum]);
+      clientId = res.rows[0]?.client_id || null;
+    } catch (e) {}
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const { getReportsTodayByClient } = await import("../../model/linkReportModel.js");
+    const { getShortcodesTodayByClient } = await import("../../model/instaPostModel.js");
+    const reports = await getReportsTodayByClient(clientId);
+    if (!reports || reports.length === 0) {
+      await waClient.sendMessage(chatId, `Tidak ada laporan link hari ini untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const shortcodes = await getShortcodesTodayByClient(clientId);
+    const list = {
+      facebook: [],
+      instagram: [],
+      twitter: [],
+      tiktok: [],
+      youtube: []
+    };
+    const users = new Set();
+    reports.forEach((r) => {
+      users.add(r.user_id);
+      if (r.facebook_link) list.facebook.push(r.facebook_link);
+      if (r.instagram_link) list.instagram.push(r.instagram_link);
+      if (r.twitter_link) list.twitter.push(r.twitter_link);
+      if (r.tiktok_link) list.tiktok.push(r.tiktok_link);
+      if (r.youtube_link) list.youtube.push(r.youtube_link);
+    });
+    const totalLinks =
+      list.facebook.length +
+      list.instagram.length +
+      list.twitter.length +
+      list.tiktok.length +
+      list.youtube.length;
+    let msg = `*Link Tugas Instagram* (${shortcodes.length} post hari ini)\n`;
+    msg += `Jumlah user melaksanakan: *${users.size}*\n`;
+    msg += `Jumlah link total: *${totalLinks}*\n\n`;
+    msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
+    msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
+    msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
+    msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
+    msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   updateStatus_value: async (session, chatId, text, waClient, pool, userModel) => {

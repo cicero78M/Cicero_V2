@@ -13,12 +13,14 @@ jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
 let createLinkReport;
 let getLinkReports;
 let findLinkReportByShortcode;
+let getReportsTodayByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportModel.js');
   createLinkReport = mod.createLinkReport;
   getLinkReports = mod.getLinkReports;
   findLinkReportByShortcode = mod.findLinkReportByShortcode;
+  getReportsTodayByClient = mod.getReportsTodayByClient;
 });
 
 beforeEach(() => {
@@ -62,5 +64,15 @@ test('findLinkReportByShortcode joins with insta_post', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('WHERE r.shortcode = $1'),
     ['abc', '1']
+  );
+});
+
+test('getReportsTodayByClient filters by client', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'x' }] });
+  const rows = await getReportsTodayByClient('POLRES');
+  expect(rows).toEqual([{ shortcode: 'x' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('JOIN "user" u ON u.user_id = r.user_id'),
+    ['POLRES']
   );
 });

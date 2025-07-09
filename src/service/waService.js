@@ -187,7 +187,7 @@ waClient.on("message", async (msg) => {
       await oprRequestHandlers.main(
         getSession(chatId),
         chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Rekap link harian\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
         waClient,
         pool,
         userModel
@@ -234,7 +234,7 @@ waClient.on("message", async (msg) => {
       await oprRequestHandlers.main(
         getSession(chatId),
         chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Rekap link harian\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
         waClient,
         pool,
         userModel
@@ -286,10 +286,11 @@ waClient.on("message", async (msg) => {
       chatId,
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
-  
+
 1️⃣ Tambah user baru
 2️⃣ Ubah status user (aktif/nonaktif)
 3️⃣ Cek data user (NRP/NIP)
+4️⃣ Rekap link harian
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
