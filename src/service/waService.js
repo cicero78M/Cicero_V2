@@ -170,13 +170,10 @@ waClient.on("message", async (msg) => {
   if (
     userMenuContext[chatId] &&
     userMenuContext[chatId].step === "main" &&
-    !["1", "2", "3", "4"].includes(text.trim()) &&
+    !["1", "2"].includes(text.trim()) &&
     text.trim().toLowerCase() !== "menu"
   ) {
-    await waClient.sendMessage(
-      chatId,
-      "Pilihan tidak valid. Balas dengan 1, 2, 3, atau 4."
-    );
+    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas dengan 1 atau 2.");
     return;
   }
 
