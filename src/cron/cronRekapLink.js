@@ -47,7 +47,7 @@ function getRecipients(client) {
 }
 
 cron.schedule(
-  "10 22 * * *",
+  "2 15,20 * * *",
   async () => {
     sendDebug({ tag: "CRON LINK", msg: "Mulai rekap link harian" });
     try {
