@@ -4,16 +4,17 @@ import { hariIndo } from "../../utils/constants.js";
 import { getGreeting } from "../../utils/utilsHelper.js";
 
 export const oprRequestHandlers = {
-  main: async (session, chatId, text, waClient, pool, userModel) => {
+ main: async (session, chatId, text, waClient, pool, userModel) => {
     let msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
-  
+
 1️⃣ Tambah user baru
 2️⃣ Ubah status user (aktif/nonaktif)
 3️⃣ Cek data user (NRP/NIP)
 4️⃣ Rekap link harian
 5️⃣ Update Tugas
+6️⃣ Rekap link per post
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -98,6 +99,21 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "updateTugas";
       return oprRequestHandlers.updateTugas(session, chatId, text, waClient, pool, userModel);
     }
+    if (/^6$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "rekapLinkPerPost_chooseClient";
+        return oprRequestHandlers.rekapLinkPerPost_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "rekapLinkPerPost";
+      return oprRequestHandlers.rekapLinkPerPost(session, chatId, text, waClient, pool, userModel);
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -107,7 +123,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1-5* atau ketik *batal* untuk keluar."
+      "❗ Menu tidak dikenali. Pilih *1-6* atau ketik *batal* untuk keluar."
     );
   },
 
@@ -375,6 +391,124 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
+  rekapLinkPerPost: async (session, chatId, text, waClient, pool, userModel) => {
+    let clientId = session.selected_client_id || null;
+    if (!clientId) {
+      const waNum = chatId.replace(/[^0-9]/g, "");
+      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+      try {
+        const res = await pool.query(q, [waNum]);
+        clientId = res.rows[0]?.client_id || null;
+      } catch (e) {}
+      if (isAdminWhatsApp(chatId) && !clientId) {
+        session.step = "rekapLinkPerPost_chooseClient";
+        return oprRequestHandlers.rekapLinkPerPost_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      if (!clientId) {
+        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+    }
+    const { getShortcodesTodayByClient } = await import("../../model/instaPostModel.js");
+    const shortcodes = await getShortcodesTodayByClient(clientId);
+    if (!shortcodes.length) {
+      await waClient.sendMessage(chatId, `Tidak ada tugas link post hari ini untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    session.rekapShortcodes = shortcodes;
+    session.selected_client_id = clientId;
+    let msg = `*Rekap Post List*\nBalas angka untuk pilih post:\n`;
+    shortcodes.forEach((sc, i) => {
+      msg += `${i + 1}. https://www.instagram.com/p/${sc}\n`;
+    });
+    session.step = "rekapLinkPerPost_action";
+    await waClient.sendMessage(chatId, msg.trim());
+  },
+
+  rekapLinkPerPost_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const shortcodes = session.rekapShortcodes || [];
+    if (isNaN(idx) || !shortcodes[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    const sc = shortcodes[idx];
+    const clientId = session.selected_client_id;
+    const { getReportsTodayByShortcode } = await import("../../model/linkReportModel.js");
+    const reports = await getReportsTodayByShortcode(clientId, sc);
+    if (!reports || reports.length === 0) {
+      await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
+      session.step = "main";
+      delete session.rekapShortcodes;
+      delete session.selected_client_id;
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const list = {
+      facebook: [],
+      instagram: [],
+      twitter: [],
+      tiktok: [],
+      youtube: []
+    };
+    const users = new Set();
+    reports.forEach(r => {
+      users.add(r.user_id);
+      if (r.facebook_link) list.facebook.push(r.facebook_link);
+      if (r.instagram_link) list.instagram.push(r.instagram_link);
+      if (r.twitter_link) list.twitter.push(r.twitter_link);
+      if (r.tiktok_link) list.tiktok.push(r.tiktok_link);
+      if (r.youtube_link) list.youtube.push(r.youtube_link);
+    });
+    const totalLinks =
+      list.facebook.length +
+      list.instagram.length +
+      list.twitter.length +
+      list.tiktok.length +
+      list.youtube.length;
+
+    const now = new Date();
+    const hari = hariIndo[now.getDay()];
+    const tanggal = now.toLocaleDateString("id-ID");
+    const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+    const salam = getGreeting();
+
+    let msg = `${salam}\n\n`;
+    msg += `Rekap Tugas Link Post Hari Ini (client_id: ${clientId})\n`;
+    msg += `Hari : ${hari}\n`;
+    msg += `Tanggal : ${tanggal}\n`;
+    msg += `Pukul : ${jam}\n\n`;
+    msg += `Link Post: https://www.instagram.com/p/${sc}\n\n`;
+    msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+    msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+
+    msg += `Link Sebagai Berikut :\n`;
+    msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
+    msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
+    msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
+    msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
+    msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
+    await waClient.sendMessage(chatId, msg.trim());
+    delete session.rekapShortcodes;
+    delete session.selected_client_id;
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
   updateTugas: async (session, chatId, text, waClient, pool, userModel) => {
     let clientId = session.selected_client_id || null;
     if (!clientId) {
@@ -473,6 +607,44 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     session.selected_client_id = clients[idx].client_id;
     session.step = "rekapLink";
     return oprRequestHandlers.rekapLink(session, chatId, "", waClient, pool, userModel);
+  },
+
+  rekapLinkPerPost_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "rekapLinkPerPost_chooseClient_action";
+  },
+
+  rekapLinkPerPost_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "rekapLinkPerPost";
+    return oprRequestHandlers.rekapLinkPerPost(session, chatId, "", waClient, pool, userModel);
   },
 
   updateTugas_chooseClient: async (session, chatId, text, waClient, pool) => {
