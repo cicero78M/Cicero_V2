@@ -100,7 +100,7 @@ cron.schedule(
 
         let msg = `${salam}\n\n`;
         const clientName = client.nama || client.client_id;
-        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client : ${clientName}) pada hari :\n`;
+        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
         msg += `Hari : ${hari}\n`;
         msg += `Tanggal : ${tanggal}\n`;
         msg += `Pukul : ${jam}\n\n`;
