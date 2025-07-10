@@ -5,10 +5,7 @@ dotenv.config();
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-import { getReportsTodayByClient } from "../model/linkReportModel.js";
-import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
-import { hariIndo } from "../utils/constants.js";
-import { getGreeting } from "../utils/utilsHelper.js";
+import { absensiLink } from "../handler/fetchabsensi/link/absensiLinkAmplifikasi.js";
 
 async function getActiveClients() {
   const { query } = await import("../db/index.js");
@@ -55,81 +52,22 @@ cron.schedule(
     try {
       const clients = await getActiveClients();
       for (const client of clients) {
-        const reports = await getReportsTodayByClient(client.client_id);
-        if (!reports || reports.length === 0) {
+        try {
+          const msg = await absensiLink(client.client_id);
+          const targets = getRecipients(client);
+          for (const wa of targets) {
+            await waClient.sendMessage(wa, msg).catch(() => {});
+          }
           sendDebug({
             tag: "CRON LINK",
-            msg: `[${client.client_id}] Tidak ada laporan link hari ini.`,
+            msg: `[${client.client_id}] Rekap absensi link dikirim ke ${targets.length} penerima`,
           });
-          continue;
+        } catch (err) {
+          sendDebug({
+            tag: "CRON LINK",
+            msg: `[${client.client_id}] ERROR absensi link: ${err.message}`,
+          });
         }
-
-        const shortcodes = await getShortcodesTodayByClient(client.client_id);
-        const list = {
-          facebook: [],
-          instagram: [],
-          twitter: [],
-          tiktok: [],
-          youtube: [],
-        };
-        const users = new Set();
-        reports.forEach(r => {
-          users.add(r.user_id);
-          if (r.facebook_link) list.facebook.push(r.facebook_link);
-          if (r.instagram_link) list.instagram.push(r.instagram_link);
-          if (r.twitter_link) list.twitter.push(r.twitter_link);
-          if (r.tiktok_link) list.tiktok.push(r.tiktok_link);
-          if (r.youtube_link) list.youtube.push(r.youtube_link);
-        });
-        const totalLinks =
-          list.facebook.length +
-          list.instagram.length +
-          list.twitter.length +
-          list.tiktok.length +
-          list.youtube.length;
-
-        const now = new Date();
-        const hari = hariIndo[now.getDay()];
-        const tanggal = now.toLocaleDateString("id-ID");
-        const jam = now.toLocaleTimeString("id-ID", { hour12: false });
-        const salam = getGreeting();
-
-        const kontenLinks = shortcodes.map(
-          sc => `https://www.instagram.com/p/${sc}`
-        );
-
-        let msg = `${salam}\n\n`;
-        const clientName = client.nama || client.client_id;
-        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
-        msg += `Hari : ${hari}\n`;
-        msg += `Tanggal : ${tanggal}\n`;
-        msg += `Pukul : ${jam}\n\n`;
-
-        msg += `Jumlah Konten Resmi Hari ini : ${shortcodes.length}\n`;
-        if (kontenLinks.length > 0) {
-          msg += `${kontenLinks.join("\n")}\n\n`;
-        } else {
-          msg += "-\n\n";
-        }
-
-        msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
-        msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
-
-        msg += `Link Sebagai Berikut :\n`;
-        msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
-        msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
-        msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
-        msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
-        msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-
-        const targets = getRecipients(client);
-        for (const wa of targets) {
-          await waClient.sendMessage(wa, msg.trim()).catch(() => {});
-        }
-        sendDebug({
-          tag: "CRON LINK",
-          msg: `[${client.client_id}] Rekap link dikirim ke ${targets.length} penerima`,
-        });
       }
     } catch (err) {
       sendDebug({ tag: "CRON LINK", msg: `[ERROR GLOBAL] ${err.message || err}` });
