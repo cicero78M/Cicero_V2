@@ -13,7 +13,7 @@ import { getGreeting } from "../utils/utilsHelper.js";
 async function getActiveClients() {
   const { query } = await import("../db/index.js");
   const rows = await query(
-    `SELECT client_id, client_operator, client_super, client_group
+    `SELECT client_id, nama, client_operator, client_super, client_group
      FROM clients
      WHERE client_status=true AND client_insta_status=true
      ORDER BY client_id`
@@ -99,7 +99,8 @@ cron.schedule(
         );
 
         let msg = `${salam}\n\n`;
-        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client_id : ${client.client_id}) pada hari :\n`;
+        const clientName = client.nama || client.client_id;
+        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client : ${clientName}) pada hari :\n`;
         msg += `Hari : ${hari}\n`;
         msg += `Tanggal : ${tanggal}\n`;
         msg += `Pukul : ${jam}\n\n`;
