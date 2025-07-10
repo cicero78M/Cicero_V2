@@ -114,3 +114,67 @@ export async function getReportsTodayByShortcode(client_id, shortcode) {
   );
   return res.rows;
 }
+export async function getRekapLinkByClient(client_id, periode = 'harian') {
+  let dateFilterPost = 'p.created_at::date = NOW()::date';
+  let dateFilterReport = 'r.created_at::date = NOW()::date';
+  if (periode === 'mingguan') {
+    dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+    dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', NOW())";
+  } else if (periode === 'bulanan') {
+    dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+    dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', NOW())";
+  }
+
+  const { rows: postRows } = await query(
+    `SELECT COUNT(*) AS jumlah_post FROM insta_post p WHERE p.client_id = $1 AND ${dateFilterPost}`,
+    [client_id]
+  );
+  const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
+
+  const { rows } = await query(
+    `WITH link_sum AS (
+       SELECT r.user_id,
+         SUM(
+           (CASE WHEN r.instagram_link IS NOT NULL AND r.instagram_link <> '' THEN 1 ELSE 0 END) +
+           (CASE WHEN r.facebook_link IS NOT NULL AND r.facebook_link <> '' THEN 1 ELSE 0 END) +
+           (CASE WHEN r.twitter_link IS NOT NULL AND r.twitter_link <> '' THEN 1 ELSE 0 END) +
+           (CASE WHEN r.tiktok_link IS NOT NULL AND r.tiktok_link <> '' THEN 1 ELSE 0 END) +
+           (CASE WHEN r.youtube_link IS NOT NULL AND r.youtube_link <> '' THEN 1 ELSE 0 END)
+         ) AS jumlah_link
+       FROM link_report r
+       JOIN insta_post p ON p.shortcode = r.shortcode
+       WHERE p.client_id = $1 AND ${dateFilterReport}
+       GROUP BY r.user_id
+     )
+     SELECT
+       u.user_id,
+       u.title,
+       u.nama,
+       u.insta AS username,
+       u.divisi,
+       u.exception,
+       COALESCE(ls.jumlah_link, 0) AS jumlah_link
+     FROM "user" u
+     LEFT JOIN link_sum ls ON ls.user_id = u.user_id
+     WHERE u.client_id = $1 AND u.status = true
+     GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
+     ORDER BY jumlah_link DESC, u.nama ASC`,
+    [client_id]
+  );
+
+  for (const user of rows) {
+    if (
+      user.exception === true ||
+      user.exception === 'true' ||
+      user.exception == 1 ||
+      user.exception === '1'
+    ) {
+      user.jumlah_link = maxLink;
+    } else {
+      user.jumlah_link = parseInt(user.jumlah_link, 10) || 0;
+    }
+    user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
+  }
+
+  return rows;
+}
