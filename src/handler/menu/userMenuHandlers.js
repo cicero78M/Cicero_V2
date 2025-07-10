@@ -194,7 +194,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     try {
       const user = await userModel.findUserById(user_id);
       if (!user) {
-        await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan.`);
+        await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP ${user_id} tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
       } else {
         session.step = "confirmBindUser";
         session.bindUserId = user_id;
@@ -249,7 +249,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     }
     const user = await userModel.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
       session.step = "main";
       await waClient.sendMessage(chatId, menuUtama());
       return;

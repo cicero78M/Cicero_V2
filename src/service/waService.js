@@ -568,7 +568,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     if (!user) {
       await waClient.sendMessage(
         chatId,
-        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau balas *batal* untuk membatalkan.`
+        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Silakan hubungi Opr Humas Polres Anda.`
       );
       return;
     }
@@ -1780,7 +1780,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         }
         const user = await userModel.findUserById(nrp);
         if (!user) {
-          await waClient.sendMessage(chatId, `NRP/NIP *${nrp}* tidak ditemukan. Coba lagi atau ketik *batal*.`);
+          await waClient.sendMessage(chatId, `NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
           return;
         }
         session.step = "confirm";

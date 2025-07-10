@@ -243,7 +243,7 @@ Status: 🟢 AKTIF, Exception: False
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     const user = await userModel.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
@@ -544,7 +544,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
 
     const user = await userModel.findUserByIdAndClient(nrp, clientId);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
     } else {
       let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
       let msg = `
