@@ -11,6 +11,7 @@ const pool = { query };
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
+import { findByOperator } from "../model/clientModel.js";
 import * as registrationService from "./subscriptionRegistrationService.js";
 import * as premiumService from "./premiumSubscriptionService.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
@@ -230,6 +231,18 @@ waClient.on("message", async (msg) => {
     }
     if (/^2$/.test(text.trim())) {
       delete adminOptionSessions[chatId];
+      const operator = await findByOperator(
+        userWaNum.startsWith("62")
+          ? userWaNum
+          : "62" + userWaNum.replace(/^0/, "")
+      );
+      if (!operator) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Nomor Anda bukan operator yang terdaftar pada client manapun."
+        );
+        return;
+      }
       setSession(chatId, { menu: "oprrequest", step: "main" });
       await oprRequestHandlers.main(
         getSession(chatId),
@@ -280,6 +293,16 @@ waClient.on("message", async (msg) => {
 
   // ===== MULAI Menu Operator dari command manual =====
   if (text.toLowerCase() === "oprrequest") {
+    const operator = await findByOperator(
+      userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "")
+    );
+    if (!operator) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Menu ini hanya dapat diakses oleh operator yang terdaftar pada client."
+      );
+      return;
+    }
     setSession(chatId, { menu: "oprrequest", step: "main" });
     await oprRequestHandlers.main(
       getSession(chatId),
