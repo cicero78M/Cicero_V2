@@ -450,6 +450,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       value = "@" + ttMatch[2];
     }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
+    if (["nama", "title", "divisi", "jabatan"].includes(field)) value = value.toUpperCase();
 
     await userModel.updateUserField(user_id, field, value);
     await waClient.sendMessage(
