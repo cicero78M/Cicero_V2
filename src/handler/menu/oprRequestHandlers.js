@@ -16,6 +16,7 @@ export const oprRequestHandlers = {
 5️⃣ Rekap link harian
 6️⃣ Rekap link per post
 7️⃣ Absensi Amplifikasi User
+8️⃣ Absensi Registrasi User
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -131,6 +132,22 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_client_id = null;
       return oprRequestHandlers.absensiLink_submenu(session, chatId, text, waClient, pool, userModel);
     }
+    if (/^8$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "absensiReg_chooseClient";
+        return oprRequestHandlers.absensiReg_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "absensiReg_submenu";
+      session.absensi_reg_client_id = null;
+      return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -140,7 +157,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1-7* atau ketik *batal* untuk keluar."
+      "❗ Menu tidak dikenali. Pilih *1-8* atau ketik *batal* untuk keluar."
     );
   },
 
@@ -809,6 +826,103 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         return;
       }
       const msg = await absensiLink(clientId, { mode });
+      await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  absensiReg_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "absensiReg_chooseClient_action";
+  },
+
+  absensiReg_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.absensi_reg_client_id = clients[idx].client_id;
+    session.step = "absensiReg_submenu";
+    return oprRequestHandlers.absensiReg_submenu(session, chatId, "", waClient, pool, userModel);
+  },
+
+  absensiReg_submenu: async (session, chatId, text, waClient, pool, userModel) => {
+    let clientId = session.absensi_reg_client_id || null;
+    if (!clientId) {
+      const waNum = chatId.replace(/[^0-9]/g, "");
+      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+      try {
+        const res = await pool.query(q, [waNum]);
+        clientId = res.rows[0]?.client_id || null;
+      } catch (e) {}
+      if (isAdminWhatsApp(chatId) && !clientId) {
+        session.step = "absensiReg_chooseClient";
+        return oprRequestHandlers.absensiReg_chooseClient(session, chatId, text, waClient, pool);
+      }
+      if (!clientId) {
+        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+    }
+    session.absensi_reg_client_id = clientId;
+    let msg = `Pilih tipe laporan absensi registrasi:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
+    await waClient.sendMessage(chatId, msg);
+    session.step = "absensiReg_menu";
+  },
+
+  absensiReg_menu: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const pilihan = parseInt(text.trim());
+    const clientId = session.absensi_reg_client_id;
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "Client belum dipilih.");
+      session.step = "main";
+      return;
+    }
+    try {
+      const { absensiRegistrasiWa } = await import("../fetchabsensi/wa/absensiRegistrasiWa.js");
+      let mode = null;
+      if (pilihan === 1) mode = "all";
+      else if (pilihan === 2) mode = "sudah";
+      else if (pilihan === 3) mode = "belum";
+      else {
+        await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1-3.");
+        return;
+      }
+      const msg = await absensiRegistrasiWa(clientId, { mode });
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
