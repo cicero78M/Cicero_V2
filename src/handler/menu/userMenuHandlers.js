@@ -66,6 +66,17 @@ export const userMenuHandlers = {
 
       if (userByWA) {
         const salam = getGreeting();
+        if (
+          session.identityConfirmed &&
+          session.user_id === userByWA.user_id
+        ) {
+          const msgText = `${salam}, Bapak/Ibu\n${formatUserReport(
+            userByWA
+          )}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk kembali ke menu utama.`;
+          session.step = "tanyaUpdateMyData";
+          await waClient.sendMessage(chatId, msgText.trim());
+          return;
+        }
         let msgText = `
 ${salam}, Bapak/Ibu
 ${formatUserReport(userByWA)}
@@ -94,6 +105,15 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
       if (userByWA) {
         const salam = getGreeting();
+        if (
+          session.identityConfirmed &&
+          session.user_id === userByWA.user_id
+        ) {
+          session.updateUserId = userByWA.user_id;
+          session.step = "updateAskField";
+          await waClient.sendMessage(chatId, formatFieldList());
+          return;
+        }
         let msgText = `
 ${salam}, Bapak/Ibu
 ${formatUserReport(userByWA)}
@@ -122,6 +142,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   // --- Konfirmasi identitas (lihat data)
   confirmUserByWaIdentity: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
+      session.identityConfirmed = true;
       session.step = "tanyaUpdateMyData";
       await waClient.sendMessage(
         chatId,
@@ -144,6 +165,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   // --- Konfirmasi identitas untuk update data
   confirmUserByWaUpdate: async (session, chatId, text, waClient, pool, userModel) => {
     if (text.trim().toLowerCase() === "ya") {
+      session.identityConfirmed = true;
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
       await waClient.sendMessage(chatId, formatFieldList());
@@ -203,6 +225,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         `✅ Nomor WhatsApp telah dihubungkan ke NRP/NIP *${user_id}*. Berikut datanya:\n` +
           formatUserReport(user)
       );
+      session.identityConfirmed = true;
+      session.user_id = user_id;
       session.step = "main";
       await waClient.sendMessage(chatId, menuUtama());
       return;
@@ -247,6 +271,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       const nrp = session.updateUserId;
       await userModel.updateUserField(nrp, "whatsapp", waNum);
       await waClient.sendMessage(chatId, `✅ Nomor berhasil dihubungkan ke NRP/NIP *${nrp}*.`);
+      session.identityConfirmed = true;
+      session.user_id = nrp;
       session.step = "updateAskField";
       await waClient.sendMessage(chatId, formatFieldList());
       return;
