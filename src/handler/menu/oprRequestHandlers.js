@@ -206,6 +206,12 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       const res = await pool.query(q, [waNum]);
       clientId = res.rows[0]?.client_id || null;
     } catch (e) {}
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    session.addUser.client_id = clientId;
     const satfung = await userModel.getAvailableSatfung(clientId);
     const sorted = sortDivisionKeys(satfung);
     let msg = "*Pilih Satfung* (ketik nomor atau nama sesuai daftar):\n";
