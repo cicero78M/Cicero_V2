@@ -14,6 +14,7 @@ let createLinkReport;
 let getLinkReports;
 let findLinkReportByShortcode;
 let getReportsTodayByClient;
+let getReportsTodayByShortcode;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportModel.js');
@@ -21,6 +22,7 @@ beforeAll(async () => {
   getLinkReports = mod.getLinkReports;
   findLinkReportByShortcode = mod.findLinkReportByShortcode;
   getReportsTodayByClient = mod.getReportsTodayByClient;
+  getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
 });
 
 beforeEach(() => {
@@ -74,5 +76,15 @@ test('getReportsTodayByClient filters by client', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('JOIN "user" u ON u.user_id = r.user_id'),
     ['POLRES']
+  );
+});
+
+test('getReportsTodayByShortcode filters by client and shortcode', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
+  const rows = await getReportsTodayByShortcode('POLRES', 'abc');
+  expect(rows).toEqual([{ shortcode: 'abc' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('r.shortcode = $2'),
+    ['POLRES', 'abc']
   );
 });

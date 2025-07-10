@@ -102,3 +102,15 @@ export async function getReportsTodayByClient(client_id) {
   );
   return res.rows;
 }
+
+export async function getReportsTodayByShortcode(client_id, shortcode) {
+  const res = await query(
+    `SELECT r.* FROM link_report r
+     JOIN "user" u ON u.user_id = r.user_id
+     WHERE u.client_id = $1 AND r.shortcode = $2
+       AND r.created_at::date = NOW()::date
+     ORDER BY r.created_at ASC`,
+    [client_id, shortcode]
+  );
+  return res.rows;
+}
