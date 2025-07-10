@@ -12,10 +12,10 @@ export const oprRequestHandlers = {
 1️⃣ Tambah user baru
 2️⃣ Ubah status user (aktif/nonaktif)
 3️⃣ Cek data user (NRP/NIP)
-4️⃣ Rekap link harian
-5️⃣ Update Tugas
+4️⃣ Update Tugas
+5️⃣ Rekap link harian
 6️⃣ Rekap link per post
-7️⃣ Absensi link amplifikasi
+7️⃣ Absensi Amplifikasi User
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -71,22 +71,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     if (/^4$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
-        session.step = "rekapLink_chooseClient";
-        return oprRequestHandlers.rekapLink_chooseClient(
-          session,
-          chatId,
-          text,
-          waClient,
-          pool,
-          userModel
-        );
-      }
-      session.step = "rekapLink";
-      return oprRequestHandlers.rekapLink(session, chatId, text, waClient, pool, userModel);
-    }
-    if (/^5$/i.test(text.trim())) {
-      clean();
-      if (isAdminWhatsApp(chatId)) {
         session.step = "updateTugas_chooseClient";
         return oprRequestHandlers.updateTugas_chooseClient(
           session,
@@ -99,6 +83,22 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       }
       session.step = "updateTugas";
       return oprRequestHandlers.updateTugas(session, chatId, text, waClient, pool, userModel);
+    }
+    if (/^5$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "rekapLink_chooseClient";
+        return oprRequestHandlers.rekapLink_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool,
+          userModel
+        );
+      }
+      session.step = "rekapLink";
+      return oprRequestHandlers.rekapLink(session, chatId, text, waClient, pool, userModel);
     }
     if (/^6$/i.test(text.trim())) {
       clean();
@@ -140,7 +140,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1-6* atau ketik *batal* untuk keluar."
+      "❗ Menu tidak dikenali. Pilih *1-7* atau ketik *batal* untuk keluar."
     );
   },
 
@@ -387,7 +387,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     );
 
     let msg = `${salam}\n\n`;
-    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client : ${clientName}) pada hari :\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
     msg += `Hari : ${hari}\n`;
     msg += `Tanggal : ${tanggal}\n`;
     msg += `Pukul : ${jam}\n\n`;
@@ -517,7 +517,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const clientName = nameRows[0]?.nama || clientId;
 
     let msg = `${salam}\n\n`;
-    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client : ${clientName}) pada hari :\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
     msg += `Hari : ${hari}\n`;
     msg += `Tanggal : ${tanggal}\n`;
     msg += `Pukul : ${jam}\n\n`;
