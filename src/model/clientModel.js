@@ -28,6 +28,20 @@ export const findByOperator = async (waNumber) => {
   return rows[0] || null;
 };
 
+// Ambil client berdasarkan nomor WhatsApp super admin
+export const findBySuperAdmin = async (waNumber) => {
+  if (!waNumber) return null;
+  const normalized = String(waNumber).replace(/\D/g, "");
+  const waId = normalized.startsWith("62")
+    ? normalized
+    : "62" + normalized.replace(/^0/, "");
+  const { rows } = await query(
+    "SELECT * FROM clients WHERE client_super = $1 LIMIT 1",
+    [waId]
+  );
+  return rows[0] || null;
+};
+
 // Buat client baru
 export const create = async (client) => {
   const q = `

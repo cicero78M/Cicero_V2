@@ -11,7 +11,7 @@ const pool = { query };
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
-import { findByOperator } from "../model/clientModel.js";
+import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as registrationService from "./subscriptionRegistrationService.js";
 import * as premiumService from "./premiumSubscriptionService.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
@@ -231,15 +231,15 @@ waClient.on("message", async (msg) => {
     }
     if (/^2$/.test(text.trim())) {
       delete adminOptionSessions[chatId];
-      const operator = await findByOperator(
-        userWaNum.startsWith("62")
-          ? userWaNum
-          : "62" + userWaNum.replace(/^0/, "")
-      );
-      if (!operator) {
+      const waId = userWaNum.startsWith("62")
+        ? userWaNum
+        : "62" + userWaNum.replace(/^0/, "");
+      const operator = await findByOperator(waId);
+      const superAdmin = await findBySuperAdmin(waId);
+      if (!operator && !superAdmin && !isAdmin) {
         await waClient.sendMessage(
           chatId,
-          "❌ Nomor Anda bukan operator yang terdaftar pada client manapun."
+          "❌ Nomor Anda bukan operator atau super admin yang terdaftar."
         );
         return;
       }
@@ -293,13 +293,14 @@ waClient.on("message", async (msg) => {
 
   // ===== MULAI Menu Operator dari command manual =====
   if (text.toLowerCase() === "oprrequest") {
-    const operator = await findByOperator(
-      userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "")
-    );
-    if (!operator) {
+    const waId =
+      userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
+    const operator = await findByOperator(waId);
+    const superAdmin = await findBySuperAdmin(waId);
+    if (!operator && !superAdmin && !isAdmin) {
       await waClient.sendMessage(
         chatId,
-        "❌ Menu ini hanya dapat diakses oleh operator yang terdaftar pada client."
+        "❌ Menu ini hanya dapat diakses oleh operator atau super admin yang terdaftar."
       );
       return;
     }
