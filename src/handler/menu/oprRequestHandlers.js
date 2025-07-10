@@ -343,12 +343,18 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const jam = now.toLocaleTimeString("id-ID", { hour12: false });
     const salam = getGreeting();
 
+    const { rows: nameRows } = await pool.query(
+      "SELECT nama FROM clients WHERE client_id=$1 LIMIT 1",
+      [clientId]
+    );
+    const clientName = nameRows[0]?.nama || clientId;
+
     const kontenLinks = shortcodes.map(
       sc => `https://www.instagram.com/p/${sc}`
     );
 
     let msg = `${salam}\n\n`;
-    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client_id : ${clientId}) pada hari :\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client : ${clientName}) pada hari :\n`;
     msg += `Hari : ${hari}\n`;
     msg += `Tanggal : ${tanggal}\n`;
     msg += `Pukul : ${jam}\n\n`;
