@@ -7,6 +7,8 @@ import { sendDebug } from "../middleware/debugHandler.js";
 
 import { getReportsTodayByClient } from "../model/linkReportModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
+import { hariIndo } from "../utils/constants.js";
+import { getGreeting } from "../utils/utilsHelper.js";
 
 async function getActiveClients() {
   const { query } = await import("../db/index.js");
@@ -85,9 +87,34 @@ cron.schedule(
           list.twitter.length +
           list.tiktok.length +
           list.youtube.length;
-        let msg = `*Link Tugas Instagram* (${shortcodes.length} post hari ini)\n`;
-        msg += `Jumlah user melaksanakan: *${users.size}*\n`;
-        msg += `Jumlah link total: *${totalLinks}*\n\n`;
+
+        const now = new Date();
+        const hari = hariIndo[now.getDay()];
+        const tanggal = now.toLocaleDateString("id-ID");
+        const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+        const salam = getGreeting();
+
+        const kontenLinks = shortcodes.map(
+          sc => `https://www.instagram.com/p/${sc}`
+        );
+
+        let msg = `${salam}\n\n`;
+        msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client_id : ${client.client_id}) pada hari :\n`;
+        msg += `Hari : ${hari}\n`;
+        msg += `Tanggal : ${tanggal}\n`;
+        msg += `Pukul : ${jam}\n\n`;
+
+        msg += `Jumlah Konten Resmi Hari ini : ${shortcodes.length}\n`;
+        if (kontenLinks.length > 0) {
+          msg += `${kontenLinks.join("\n")}\n\n`;
+        } else {
+          msg += "-\n\n";
+        }
+
+        msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+        msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+
+        msg += `Link Sebagai Berikut :\n`;
         msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
         msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
         msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;

@@ -1,5 +1,7 @@
 // src/handler/menu/oprRequestHandlers.js
 import { isAdminWhatsApp } from "../../utils/waHelper.js";
+import { hariIndo } from "../../utils/constants.js";
+import { getGreeting } from "../../utils/utilsHelper.js";
 
 export const oprRequestHandlers = {
   main: async (session, chatId, text, waClient, pool, userModel) => {
@@ -334,9 +336,34 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       list.twitter.length +
       list.tiktok.length +
       list.youtube.length;
-    let msg = `*Link Tugas Instagram* (${shortcodes.length} post hari ini)\n`;
-    msg += `Jumlah user melaksanakan: *${users.size}*\n`;
-    msg += `Jumlah link total: *${totalLinks}*\n\n`;
+
+    const now = new Date();
+    const hari = hariIndo[now.getDay()];
+    const tanggal = now.toLocaleDateString("id-ID");
+    const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+    const salam = getGreeting();
+
+    const kontenLinks = shortcodes.map(
+      sc => `https://www.instagram.com/p/${sc}`
+    );
+
+    let msg = `${salam}\n\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi (nama client_id : ${clientId}) pada hari :\n`;
+    msg += `Hari : ${hari}\n`;
+    msg += `Tanggal : ${tanggal}\n`;
+    msg += `Pukul : ${jam}\n\n`;
+
+    msg += `Jumlah Konten Resmi Hari ini : ${shortcodes.length}\n`;
+    if (kontenLinks.length > 0) {
+      msg += `${kontenLinks.join("\n")}\n\n`;
+    } else {
+      msg += "-\n\n";
+    }
+
+    msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+    msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+
+    msg += `Link Sebagai Berikut :\n`;
     msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
     msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
