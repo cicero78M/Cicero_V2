@@ -163,10 +163,17 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     session.addUser.title = pangkat;
     session.step = "addUser_satfung";
-    // List satfung
-    const satfung = await userModel.getAvailableSatfung();
+    // List satfung khusus client ini
+    let clientId = null;
+    try {
+      const waNum = chatId.replace(/[^0-9]/g, "");
+      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+      const res = await pool.query(q, [waNum]);
+      clientId = res.rows[0]?.client_id || null;
+    } catch (e) {}
+    const satfung = await userModel.getAvailableSatfung(clientId);
     const sorted = sortDivisionKeys(satfung);
-    let msg = "*Pilih Satfung* (ketik nama persis sesuai daftar):\n";
+    let msg = "*Pilih Satfung* (ketik nomor atau nama sesuai daftar):\n";
     msg += sorted.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
     session.availableSatfung = sorted;
     await waClient.sendMessage(chatId, msg);
@@ -180,13 +187,18 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     const satfungList = session.availableSatfung || [];
     let satfung = text.trim().toUpperCase();
+    const upperList = satfungList.map((s) => s.toUpperCase());
     if (/^\d+$/.test(satfung)) {
-      let msg = "❌ Satfung harus diisi sesuai daftar, gunakan nama pada daftar:\n";
-      msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
-      await waClient.sendMessage(chatId, msg);
-      return;
-    }
-    if (!satfungList.map((s) => s.toUpperCase()).includes(satfung)) {
+      const idx = parseInt(satfung, 10) - 1;
+      if (idx >= 0 && idx < satfungList.length) {
+        satfung = satfungList[idx];
+      } else {
+        let msg = "❌ Satfung tidak valid! Pilih sesuai daftar:\n";
+        msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
+        await waClient.sendMessage(chatId, msg);
+        return;
+      }
+    } else if (!upperList.includes(satfung)) {
       let msg = "❌ Satfung tidak valid! Pilih sesuai daftar:\n";
       msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
       await waClient.sendMessage(chatId, msg);

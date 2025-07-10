@@ -184,11 +184,19 @@ export async function getAvailableTitles() {
 }
 
 // Ambil daftar Satfung unik dari database
-export async function getAvailableSatfung() {
+export async function getAvailableSatfung(clientId = null) {
   // Gunakan "user" (pakai kutip dua) karena user adalah reserved word di Postgres
-  const res = await query(
-    'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL ORDER BY divisi'
-  );
+  let res;
+  if (clientId) {
+    res = await query(
+      'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL AND client_id = $1 ORDER BY divisi',
+      [clientId]
+    );
+  } else {
+    res = await query(
+      'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL ORDER BY divisi'
+    );
+  }
   return res.rows.map((r) => r.divisi).filter(Boolean);
 }
 
