@@ -358,7 +358,21 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    const user = await userModel.findUserById(nrp);
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+    let clientId = null;
+    try {
+      const res = await pool.query(q, [waNum]);
+      clientId = res.rows[0]?.client_id || null;
+    } catch (e) {}
+
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+
+    const user = await userModel.findUserByIdAndClient(nrp, clientId);
     if (!user) {
       await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
     } else {

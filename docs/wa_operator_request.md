@@ -22,9 +22,9 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
   1. Masukkan NRP/NIP yang ingin diubah.
   2. Pilih status baru: 1 untuk aktif, 2 untuk nonaktif.
   3. Bot mengonfirmasi perubahan status.
-- **Cek Data User**
-  1. Masukkan NRP/NIP user.
-  2. Bot menampilkan detail user beserta statusnya.
+ - **Cek Data User**
+  1. Masukkan NRP/NIP user milik client Anda.
+  2. Bot menampilkan detail user beserta statusnya jika ditemukan pada client yang sama.
 - **Rekap Link Harian**
   1. Bot menampilkan rangkuman link konten yang dikumpulkan hari ini dari semua pengguna di client.
 - **Update Tugas Instagram**

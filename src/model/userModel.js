@@ -100,6 +100,15 @@ export async function findUserById(user_id) {
   return rows[0];
 }
 
+// Ambil user berdasarkan user_id dan client_id
+export async function findUserByIdAndClient(user_id, client_id) {
+  const { rows } = await query(
+    'SELECT * FROM "user" WHERE user_id=$1 AND client_id=$2',
+    [user_id, client_id]
+  );
+  return rows[0];
+}
+
 /**
  * Update field user (termasuk insta/tiktok/whatsapp/exception/status/nama/title/divisi/jabatan)
  */
