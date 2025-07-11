@@ -138,3 +138,9 @@ export function formatUserData(user) {
   ].join("\n");
 }
 
+
+export function extractFirstUrl(text) {
+  if (!text) return null;
+  const match = String(text).match(/https?:\/\/\S+/);
+  return match ? match[0] : null;
+}
