@@ -844,7 +844,17 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       }
       value = "@" + ttMatch[2];
     }
-    if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
+    if (field === "whatsapp") {
+      value = value.replace(/[^0-9]/g, "");
+      const operatorWa = chatId.replace(/[^0-9]/g, "");
+      if (value === operatorWa) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Nomor WhatsApp operator tidak boleh disimpan pada data user. Masukkan nomor lain."
+        );
+        return;
+      }
+    }
     if (["nama", "title", "divisi", "jabatan"].includes(field)) value = value.toUpperCase();
 
     try {
