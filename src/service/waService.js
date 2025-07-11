@@ -205,8 +205,10 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.`;
+        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
         await waClient.sendMessage(chatId, msg.trim());
+        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
+        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -264,8 +266,10 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.`;
+        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
         await waClient.sendMessage(chatId, msg.trim());
+        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
+        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -548,7 +552,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       updateUsernameSession[chatId].field = field;
       await waClient.sendMessage(
         chatId,
-        "Nomor WhatsApp Anda belum terhubung ke data user manapun.\nSilakan ketik NRP/NIP Anda untuk binding akun:"
+        "Nomor WhatsApp Anda belum terhubung ke data user mana pun.\nSilakan masukkan NRP Anda untuk melakukan binding akun atau balas *batal* untuk keluar:"
       );
       return;
     }
@@ -563,7 +567,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     if (!nrp) {
       await waClient.sendMessage(
         chatId,
-        "NRP/NIP tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
+        "NRP yang Anda masukkan tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
       );
       return;
     }
@@ -571,7 +575,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     if (!user) {
       await waClient.sendMessage(
         chatId,
-        `User dengan NRP/NIP *${nrp}* tidak ditemukan. Silakan hubungi Opr Humas Polres Anda.`
+        `User dengan NRP *${nrp}* tidak ditemukan. Silakan hubungi Opr Humas Polres Anda.`
       );
       return;
     }
@@ -1755,8 +1759,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.\nSilakan ketik NRP/NIP Anda untuk melihat data, atau ketik *userrequest* untuk panduan.` + clientInfoText;
+        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.` + clientInfoText;
         await safeSendMessage(waClient, chatId, msg.trim());
+        await safeSendMessage(waClient, chatId, "Silakan masukkan NRP Anda untuk melihat data.");
+        await safeSendMessage(waClient, chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
     return;
   }
@@ -1771,19 +1777,19 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       if (session.step === "ask_nrp") {
         if (text.trim().toLowerCase() === "batal") {
           delete waBindSessions[chatId];
-          await waClient.sendMessage(chatId, "Proses dibatalkan. Silakan masukkan NRP/NIP Anda untuk memulai.");
+          await waClient.sendMessage(chatId, "Proses dibatalkan. Silakan masukkan NRP Anda untuk memulai.");
           waBindSessions[chatId] = { step: "ask_nrp" };
           setBindTimeout(chatId);
           return;
         }
         const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
         if (!nrp) {
-          await waClient.sendMessage(chatId, "NRP/NIP tidak valid. Coba lagi atau ketik *batal*.");
+          await waClient.sendMessage(chatId, "NRP yang Anda masukkan tidak valid. Silakan coba lagi atau ketik *batal*.");
           return;
         }
         const user = await userModel.findUserById(nrp);
         if (!user) {
-          await waClient.sendMessage(chatId, `NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
+          await waClient.sendMessage(chatId, `NRP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
           return;
         }
         session.step = "confirm";
@@ -1791,7 +1797,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         setBindTimeout(chatId);
         await waClient.sendMessage(
           chatId,
-          `Apakah Anda ingin menghubungkan nomor WhatsApp ini dengan NRP/NIP *${nrp}*?\n` +
+          `Apakah Anda ingin menghubungkan nomor WhatsApp ini dengan NRP *${nrp}*?\n` +
             "Satu username hanya bisa menggunakan satu akun WhatsApp.\n" +
             "Balas *ya* untuk menyetujui atau *tidak* untuk membatalkan."
         );
@@ -1804,7 +1810,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
           const user = await userModel.findUserById(nrp);
           await waClient.sendMessage(
             chatId,
-            `✅ Nomor WhatsApp berhasil dihubungkan ke NRP/NIP *${nrp}*.\n` +
+            `✅ Nomor WhatsApp berhasil dihubungkan ke NRP *${nrp}*.\n` +
               `${formatUserSummary(user)}`
           );
           delete waBindSessions[chatId];
@@ -1812,7 +1818,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         }
         if (text.trim().toLowerCase() === "tidak") {
           delete waBindSessions[chatId];
-          await waClient.sendMessage(chatId, "Baik, proses dibatalkan. Silakan masukkan NRP/NIP Anda untuk melanjutkan.");
+          await waClient.sendMessage(chatId, "Baik, proses dibatalkan. Silakan masukkan NRP Anda untuk melanjutkan.");
           waBindSessions[chatId] = { step: "ask_nrp" };
           setBindTimeout(chatId);
           return;
@@ -1825,7 +1831,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       setBindTimeout(chatId);
       await waClient.sendMessage(
         chatId,
-        "🤖 Maaf, perintah yang Anda kirim belum dikenali. Masukkan NRP/NIP Anda untuk melanjutkan proses binding akun:"
+        "🤖 Maaf, perintah yang Anda kirim belum dikenali. Silakan masukkan NRP Anda untuk melanjutkan proses binding akun atau balas *batal* untuk keluar:"
       );
       return;
     }

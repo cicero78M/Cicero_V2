@@ -157,7 +157,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "❗ Menu tidak dikenali. Pilih *1-8* atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-8 atau ketik *batal* untuk keluar."
     );
   },
 
@@ -170,7 +170,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
     if (!nrp) {
-      await waClient.sendMessage(chatId, "❌ NRP/NIP tidak valid. Masukkan ulang atau ketik *batal*.");
+      await waClient.sendMessage(chatId, "❌ NRP yang Anda masukkan tidak valid. Silakan masukkan ulang atau ketik *batal*.");
       return;
     }
     const existing = await userModel.findUserById(nrp);
