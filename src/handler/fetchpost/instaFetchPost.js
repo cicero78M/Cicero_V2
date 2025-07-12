@@ -280,15 +280,22 @@ export async function fetchAndStoreInstaContent(
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-    const kontenHariIniRes = await query(
-      `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`,
-      [`${yyyy}-${mm}-${dd}`]
-    );
+
+  let sumSql =
+    `SELECT shortcode, created_at FROM insta_post WHERE DATE(created_at) = $1`;
+  const sumParams = [`${yyyy}-${mm}-${dd}`];
+  if (targetClientId) {
+    sumSql += ` AND client_id = $2`;
+    sumParams.push(targetClientId);
+  }
+  const kontenHariIniRes = await query(sumSql, sumParams);
   const kontenLinksToday = kontenHariIniRes.rows.map(
     (r) => `https://www.instagram.com/p/${r.shortcode}`
   );
 
-  let msg = `✅ Fetch selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
+  let msg = `✅ Fetch selesai!`;
+  if (targetClientId) msg += `\nClient: *${targetClientId}*`;
+  msg += `\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
   let maxPerMsg = 30;
   const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
 
