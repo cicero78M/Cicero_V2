@@ -180,15 +180,25 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
   // --- Input User ID manual
   inputUserId: async (session, chatId, text, waClient, pool, userModel) => {
-    const user_id = text.replace(/[^0-9a-zA-Z]/g, "");
-    if (!user_id) {
-      await waClient.sendMessage(chatId, "NRP yang Anda masukkan tidak valid. Silakan coba lagi atau ketik *batal*.");
+    const lower = text.trim().toLowerCase();
+    if (lower === "batal") {
+      session.step = "main";
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    if (lower === "userrequest") {
+      await waClient.sendMessage(chatId, menuUtama());
+      return;
+    }
+    const user_id = text.trim();
+    if (!/^\d+$/.test(user_id)) {
+      await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
       return;
     }
     try {
       const user = await userModel.findUserById(user_id);
       if (!user) {
-        await waClient.sendMessage(chatId, `❌ User dengan NRP ${user_id} tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
+        await waClient.sendMessage(chatId, `❌ NRP *${user_id}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
       } else {
         session.step = "confirmBindUser";
         session.bindUserId = user_id;
@@ -236,14 +246,14 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
   // --- Update User ID manual
   updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
-    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-    if (!nrp) {
-      await waClient.sendMessage(chatId, "NRP yang Anda masukkan tidak valid. Silakan coba lagi atau ketik *batal*.");
+    const nrp = text.trim();
+    if (!/^\d+$/.test(nrp)) {
+      await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
       return;
     }
     const user = await userModel.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ User dengan NRP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
+      await waClient.sendMessage(chatId, `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
       session.step = "main";
       await waClient.sendMessage(chatId, menuUtama());
       return;
