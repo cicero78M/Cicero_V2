@@ -205,10 +205,11 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
+        const msg =
+          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+          "\nKetik NRP Anda (hanya angka) untuk melihat data atau balas *batal*." +
+          "\nKetik *userrequest* untuk panduan.";
         await waClient.sendMessage(chatId, msg.trim());
-        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
-        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -266,10 +267,11 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
+        const msg =
+          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+          "\nKetik NRP Anda (hanya angka) untuk melihat data atau balas *batal*." +
+          "\nKetik *userrequest* untuk panduan.";
         await waClient.sendMessage(chatId, msg.trim());
-        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
-        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -552,7 +554,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       updateUsernameSession[chatId].field = field;
       await waClient.sendMessage(
         chatId,
-        "Nomor WhatsApp Anda belum terhubung ke data user mana pun.\nSilakan masukkan NRP Anda untuk melakukan binding akun atau balas *batal* untuk keluar:"
+        "Nomor WhatsApp Anda belum terhubung ke data user mana pun.\n" +
+          "Ketik NRP Anda (hanya angka) untuk melakukan binding, atau balas *batal* untuk keluar.\n" +
+          "Ketik *userrequest* untuk panduan."
       );
       return;
     }
@@ -563,11 +567,24 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     updateUsernameSession[chatId] &&
     updateUsernameSession[chatId].step === "ask_nrp"
   ) {
-    const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-    if (!nrp) {
+    const lower = text.trim().toLowerCase();
+    if (lower === "batal") {
+      delete updateUsernameSession[chatId];
+      await waClient.sendMessage(chatId, "Proses dibatalkan.");
+      return;
+    }
+    if (lower === "userrequest") {
       await waClient.sendMessage(
         chatId,
-        "NRP yang Anda masukkan tidak valid. Coba lagi atau balas *batal* untuk membatalkan."
+        "Panduan:\n1. Ketik NRP Anda (angka saja) untuk menghubungkan akun.\n2. Balas *batal* untuk membatalkan."
+      );
+      return;
+    }
+    const nrp = text.trim();
+    if (!/^\d+$/.test(nrp)) {
+      await waClient.sendMessage(
+        chatId,
+        "NRP harus berupa angka. Coba lagi atau balas *batal*."
       );
       return;
     }
@@ -1779,7 +1796,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       if (session.step === "ask_nrp") {
         if (text.trim().toLowerCase() === "batal") {
           delete waBindSessions[chatId];
-          await waClient.sendMessage(chatId, "Proses dibatalkan. Silakan masukkan NRP Anda untuk memulai.");
+          await waClient.sendMessage(
+            chatId,
+            "Proses dibatalkan. Ketik NRP Anda (angka saja) untuk memulai kembali."
+          );
           waBindSessions[chatId] = { step: "ask_nrp" };
           setBindTimeout(chatId);
           return;
@@ -1829,7 +1849,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         }
         if (text.trim().toLowerCase() === "tidak") {
           delete waBindSessions[chatId];
-          await waClient.sendMessage(chatId, "Baik, proses dibatalkan. Silakan masukkan NRP Anda untuk melanjutkan.");
+          await waClient.sendMessage(
+            chatId,
+            "Baik, proses dibatalkan. Ketik NRP Anda (angka saja) untuk melanjutkan."
+          );
           waBindSessions[chatId] = { step: "ask_nrp" };
           setBindTimeout(chatId);
           return;
@@ -1842,7 +1865,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       setBindTimeout(chatId);
       await waClient.sendMessage(
         chatId,
-        "🤖 Maaf, perintah yang Anda kirim belum dikenali. Silakan masukkan NRP Anda untuk melanjutkan proses binding akun atau balas *batal* untuk keluar:"
+        "🤖 Maaf, perintah belum dikenali. Ketik NRP Anda (angka saja) untuk melanjutkan proses binding atau balas *batal* untuk keluar."
       );
       return;
     }

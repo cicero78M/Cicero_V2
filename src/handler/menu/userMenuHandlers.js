@@ -90,7 +90,11 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         return;
       } else {
         session.step = "inputUserId";
-        await waClient.sendMessage(chatId, "Ketik NRP Anda untuk melihat data. (contoh: 75070206)");
+        await waClient.sendMessage(
+          chatId,
+          "Ketik NRP Anda (angka saja) untuk melihat data atau balas *batal*." +
+            "\nKetik *userrequest* untuk panduan."
+        );
         return;
       }
     }
@@ -124,7 +128,11 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         return;
       } else {
         session.step = "updateAskUserId";
-        await waClient.sendMessage(chatId, "Ketik NRP Anda yang ingin diupdate:");
+        await waClient.sendMessage(
+          chatId,
+          "Ketik NRP yang ingin diupdate (angka saja) atau balas *batal*." +
+            "\nKetik *userrequest* untuk panduan."
+        );
         return;
       }
     }
