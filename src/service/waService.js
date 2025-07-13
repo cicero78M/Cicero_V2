@@ -575,7 +575,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     if (!user) {
       await waClient.sendMessage(
         chatId,
-        `User dengan NRP *${nrp}* tidak ditemukan. Silakan hubungi Opr Humas Polres Anda.`
+        `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
       );
       return;
     }
@@ -1759,10 +1759,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.` + clientInfoText;
+        const msg =
+          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+          clientInfoText +
+          "\nKetik NRP Anda (hanya angka) untuk melihat data atau balas *batal*." +
+          "\nKetik *userrequest* untuk panduan.";
         await safeSendMessage(waClient, chatId, msg.trim());
-        await safeSendMessage(waClient, chatId, "Silakan masukkan NRP Anda untuk melihat data.");
-        await safeSendMessage(waClient, chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
     return;
   }
@@ -1782,14 +1784,23 @@ Ketik *angka* menu, atau *batal* untuk keluar.
           setBindTimeout(chatId);
           return;
         }
-        const nrp = text.replace(/[^0-9a-zA-Z]/g, "");
-        if (!nrp) {
-          await waClient.sendMessage(chatId, "NRP yang Anda masukkan tidak valid. Silakan coba lagi atau ketik *batal*.");
+        const lower = text.trim().toLowerCase();
+        if (lower === "userrequest") {
+          await waClient.sendMessage(
+            chatId,
+            "Panduan:\n1. Ketik NRP Anda (angka saja) untuk mendaftar." +
+              "\n2. Balas *batal* untuk membatalkan proses."
+          );
+          return;
+        }
+        const nrp = text.trim();
+        if (!/^\d+$/.test(nrp)) {
+          await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
           return;
         }
         const user = await userModel.findUserById(nrp);
         if (!user) {
-          await waClient.sendMessage(chatId, `NRP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
+          await waClient.sendMessage(chatId, `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
           return;
         }
         session.step = "confirm";
