@@ -111,3 +111,19 @@ export async function getPostIdsTodayByUsername(username) {
   return res.rows.map(r => r.post_id);
 }
 
+export async function savePostWithMedia(post) {
+  if (!post) return;
+  await upsertIgUser(post.user);
+  await upsertIgPost(post, post.user?.id);
+  if (Array.isArray(post.hashtags)) {
+    await insertHashtags(post.id, post.hashtags);
+  }
+  const medias = post.carousel_media || [post];
+  for (const m of medias) {
+    await upsertIgMedia(m, post.id);
+    if (Array.isArray(m.tagged_users)) {
+      await upsertTaggedUsers(m.id, m.tagged_users);
+    }
+  }
+}
+
