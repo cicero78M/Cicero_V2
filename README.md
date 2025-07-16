@@ -49,7 +49,7 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     cd Cicero_V2
     npm install
     ```
-2. **Create `.env`** with your configuration:
+2. **Copy `.env.example` to `.env`** and update the values:
     ```ini
     PORT=3000
     DB_USER=cicero
