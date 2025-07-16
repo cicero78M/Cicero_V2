@@ -45,10 +45,10 @@ export const findBySuperAdmin = async (waNumber) => {
 // Buat client baru
 export const create = async (client) => {
   const q = `
-    INSERT INTO clients 
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_operator, client_group, tiktok_secuid, client_super)
+    INSERT INTO clients
+      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_amplify_status, client_operator, client_group, tiktok_secuid, client_super)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     RETURNING *
   `;
   const values = [
@@ -60,6 +60,7 @@ export const create = async (client) => {
     client.client_insta_status ?? true,
     client.client_tiktok || '',
     client.client_tiktok_status ?? true,
+    client.client_amplify_status ?? true,
     client.client_operator || '',
     client.client_group || '',
     client.tiktok_secuid || '',
@@ -84,10 +85,11 @@ export const update = async (client_id, clientData) => {
       client_insta_status = $6,
       client_tiktok = $7,
       client_tiktok_status = $8,
-      client_operator = $9,
-      client_group = $10,
-      tiktok_secuid = $11,
-      client_super = $12
+      client_amplify_status = $9,
+      client_operator = $10,
+      client_group = $11,
+      tiktok_secuid = $12,
+      client_super = $13
     WHERE client_id = $1
     RETURNING *
   `;
@@ -100,6 +102,7 @@ export const update = async (client_id, clientData) => {
     merged.client_insta_status,
     merged.client_tiktok || '',
     merged.client_tiktok_status,
+    merged.client_amplify_status,
     merged.client_operator,
     merged.client_group,
     merged.tiktok_secuid || '',
@@ -118,7 +121,7 @@ export const remove = async (client_id) => {
 // Ambil semua client aktif IG
 export async function findAllActiveWithInstagram() {
   const res = await query(
-    `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true`
+    `SELECT * FROM clients WHERE client_status = true AND client_insta_status = true AND client_amplify_status = true`
   );
   return res.rows;
 }
@@ -126,7 +129,7 @@ export async function findAllActiveWithInstagram() {
 // Ambil semua client aktif TikTok
 export async function findAllActiveWithTiktok() {
   const res = await query(
-    `SELECT * FROM clients WHERE client_status = true AND client_tiktok_status = true`
+    `SELECT * FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_amplify_status = true`
   );
   return res.rows;
 }

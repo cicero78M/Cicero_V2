@@ -7,6 +7,7 @@ CREATE TABLE clients (
   client_insta_status BOOLEAN DEFAULT TRUE,
   client_tiktok VARCHAR,
   client_tiktok_status BOOLEAN DEFAULT TRUE,
+  client_amplify_status BOOLEAN DEFAULT TRUE,
   client_operator VARCHAR,
   client_group VARCHAR,
   tiktok_secuid VARCHAR,

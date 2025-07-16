@@ -12,7 +12,7 @@ import { absensiKomentar } from "../handler/fetchabsensi/tiktok/absensiKomentarT
 async function getActiveClientsTiktok() {
   const { query } = await import("../db/index.js");
   const rows = await query(
-    "SELECT client_id, nama FROM clients WHERE client_status = true AND client_tiktok_status = true ORDER BY client_id"
+    "SELECT client_id, nama FROM clients WHERE client_status = true AND client_tiktok_status = true AND client_amplify_status = true ORDER BY client_id"
   );
   return rows.rows;
 }
