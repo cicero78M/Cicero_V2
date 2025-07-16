@@ -329,6 +329,10 @@ export const clientRequestHandlers = {
           key: "client_tiktok_status",
           label: "Status TikTok Aktif (true/false)",
         },
+        {
+          key: "client_amplify_status",
+          label: "Status Amplifikasi (true/false)",
+        },
         { key: "client_type", label: "Tipe Client" },
       ];
       session.updateFieldList = fields;

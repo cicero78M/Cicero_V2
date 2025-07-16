@@ -13,7 +13,7 @@ async function getActiveClientsIG() {
   const rows = await query(
     `SELECT client_id, nama, client_operator, client_super, client_group
      FROM clients
-     WHERE client_status = true AND client_insta_status = true
+     WHERE client_status = true AND client_insta_status = true AND client_amplify_status = true
      ORDER BY client_id`
   );
   return rows.rows;

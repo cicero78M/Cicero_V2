@@ -55,6 +55,7 @@ export function formatClientData(obj, title = "") {
     "client_insta_status",
     "client_tiktok",
     "client_tiktok_status",
+    "client_amplify_status",
     "client_operator",
     "client_super",
     "client_group",
