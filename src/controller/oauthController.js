@@ -1,6 +1,3 @@
-import { env } from '../config/env.js';
-
-
 /**
  * Handle OAuth provider callback.
  * Example usage: GET /oauth/callback?code=AUTH_CODE&state=STATE

@@ -7,6 +7,8 @@ import {
   sortTitleKeys,
 } from "../../utils/utilsHelper.js";
 
+function ignore(..._args) {}
+
 function formatUpdateFieldList() {
   return `
 ✏️ *Pilih field yang ingin diupdate:*
@@ -251,7 +253,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
       const res = await pool.query(q, [waNum]);
       clientId = res.rows[0]?.client_id || null;
-    } catch (e) {}
+    } catch (e) { console.error(e); }
     if (!clientId) {
       await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
       session.step = "main";
@@ -379,7 +381,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "rekapLink_chooseClient";
         return oprRequestHandlers.rekapLink_chooseClient(session, chatId, text, waClient, pool);
@@ -474,7 +476,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "rekapLinkPerPost_chooseClient";
         return oprRequestHandlers.rekapLinkPerPost_chooseClient(
@@ -598,7 +600,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "updateTugas_chooseClient";
         return oprRequestHandlers.updateTugas_chooseClient(session, chatId, text, waClient, pool);
@@ -727,7 +729,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       const satfung = await userModel.getAvailableSatfung(clientId);
       if (satfung && satfung.length) {
         const sorted = sortDivisionKeys(satfung);
@@ -804,7 +806,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       const satfungList = session.availableSatfung || (await userModel.getAvailableSatfung(clientId));
       const normalizedSatfung = satfungList.map((s) => s.toUpperCase());
       if (/^\d+$/.test(value)) {
@@ -1033,7 +1035,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "absensiLink_chooseClient";
         return oprRequestHandlers.absensiLink_chooseClient(session, chatId, text, waClient, pool);
@@ -1130,7 +1132,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "absensiReg_chooseClient";
         return oprRequestHandlers.absensiReg_chooseClient(session, chatId, text, waClient, pool);
@@ -1237,7 +1239,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       try {
         const res = await pool.query(q, [waNum]);
         clientId = res.rows[0]?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       if (isAdminWhatsApp(chatId) && !clientId) {
         session.step = "cekUser_chooseClient";
         return oprRequestHandlers.cekUser_chooseClient(session, chatId, text, waClient, pool);
