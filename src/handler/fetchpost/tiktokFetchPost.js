@@ -1,7 +1,7 @@
 // src/handler/fetchpost/tiktokFetchPost.js
 
 import { query } from "../../db/index.js";
-import { findById, update } from "../../model/clientModel.js";
+import { update } from "../../model/clientModel.js";
 import { upsertTiktokPosts } from "../../model/tiktokPostModel.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import {

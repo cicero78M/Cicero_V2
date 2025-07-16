@@ -1,11 +1,8 @@
 // src/handler/fetchengagement/fetchLikesInstagram.js
 
-import pLimit from "p-limit";
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllInstagramLikes } from "../../service/instagramApi.js";
-
-const limit = pLimit(3); // Rate limit parallel request
 
 // Ambil likes lama (existing) dari database dan kembalikan sebagai array string
 async function getExistingLikes(shortcode) {

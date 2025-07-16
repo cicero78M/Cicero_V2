@@ -11,8 +11,10 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
-import { getAdminWAIds, getAdminWANumbers } from "../../utils/waHelper.js";
+import { getAdminWANumbers } from "../../utils/waHelper.js";
 import { query } from "../../db/index.js";
+
+function ignore(..._args) {}
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];

@@ -34,6 +34,7 @@ export async function dedupRequest(req, res, next) {
     }
     await storeRequestHash(hash, TTL_SEC);
   } catch (e) {
+    console.error(e);
     // If hashing fails or redis error, ignore dedup check
   }
   next();

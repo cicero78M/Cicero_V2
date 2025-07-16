@@ -6,6 +6,8 @@ import {
   getGreeting,
 } from "../../utils/utilsHelper.js";
 
+function ignore(..._args) {}
+
 // --- Helper Format Pesan ---
 function formatUserReport(user) {
   return `
@@ -339,7 +341,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       try {
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       const satfung = await userModel.getAvailableSatfung(clientId);
       if (satfung && satfung.length) {
         const sorted = sortDivisionKeys(satfung);
@@ -421,7 +423,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       try {
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
-      } catch (e) {}
+      } catch (e) { console.error(e); }
       const satfungList =
         session.availableSatfung || (await userModel.getAvailableSatfung(clientId));
       const normalizedSatfung = satfungList.map((s) => s.toUpperCase());
