@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
+import bcrypt from 'bcrypt';
 
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
@@ -104,5 +105,57 @@ describe('POST /penmas-register', () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
     expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /penmas-login', () => {
+  test('logs in existing user with correct password', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          username: 'user',
+          password_hash: await bcrypt.hash('pass', 10),
+          role: 'penulis'
+        }
+      ]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/penmas-login')
+      .send({ username: 'user', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.token).toBe('string');
+    expect(res.body.user).toEqual({ user_id: 'u1', role: 'penulis' });
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('penmas_login:u1', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'penmas:u1',
+      { EX: 2 * 60 * 60 }
+    );
+  });
+
+  test('returns 401 when password wrong', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          username: 'user',
+          password_hash: await bcrypt.hash('pass', 10),
+          role: 'penulis'
+        }
+      ]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/penmas-login')
+      .send({ username: 'user', password: 'wrong' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(mockRedis.sAdd).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
   });
 });
