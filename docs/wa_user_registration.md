@@ -1,5 +1,5 @@
 # Panduan Registrasi User lewat Bot WhatsApp
-*Last updated: 2026-04-01*
+*Last updated: 2025-07-10*
 
 Panduan ini menjelaskan langkah–langkah bagi pengguna untuk
 menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.

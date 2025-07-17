@@ -1,5 +1,5 @@
 # Cicero Flow Metadata
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document outlines the flow of data and the main database tables used by the Cicero_V2 system. It provides an overview from the initial onboarding steps through to reporting and notifications.
 

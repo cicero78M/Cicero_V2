@@ -1,5 +1,5 @@
 # Redis Guide
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document describes how Redis is configured and used in **Cicero_V2**. Redis stores login tokens, caches profiles, and detects duplicate API requests.
 

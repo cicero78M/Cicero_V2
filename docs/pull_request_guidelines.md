@@ -1,5 +1,5 @@
 # Pull Request Guidelines
-*Last updated: 2026-04-01*
+*Last updated: 2025-07-10*
 
 This document summarizes how to properly format a pull request for the **Cicero_V2** repository.
 

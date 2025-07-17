@@ -1,5 +1,5 @@
 # Cicero Repository Suite Overview
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document summarizes the three main repositories that make up the **Cicero** platform. Each repository has a specific role, but all work together to provide social media monitoring and reporting.
 

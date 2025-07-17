@@ -1,5 +1,5 @@
 # Login API Guide
-*Last updated: 2026-04-01*
+*Last updated: 2025-07-16*
 
 This document explains how clients and users authenticate with the backend. Two endpoints are provided: `/api/auth/login` for client operators and `/api/auth/user-login` for regular users. Both return a JSON Web Token (JWT) that must be included in subsequent requests.
 

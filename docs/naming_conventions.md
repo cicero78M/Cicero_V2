@@ -1,5 +1,5 @@
 # Naming Conventions
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document summarizes the naming style used throughout **Cicero_V2**. Follow these guidelines to keep the codebase and database consistent.
 

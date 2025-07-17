@@ -1,5 +1,5 @@
 # RabbitMQ Guide
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document explains how to enable and use RabbitMQ in **Cicero_V2**. RabbitMQ processes heavy jobs asynchronously so the dashboard remains responsive.
 

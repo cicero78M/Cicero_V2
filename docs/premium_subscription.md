@@ -1,5 +1,5 @@
 # Premium Subscription Workflow
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-28*
 
 This document outlines how the Android app can restrict the Instagram page to paying customers.
 It covers the suggested API endpoints, database structure and how Midtrans is used for payments.
