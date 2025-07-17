@@ -8,7 +8,7 @@ export async function createRegistration(data) {
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8, NOW()))
      RETURNING *`,
     [
-      data.username,
+      data.user_id || data.username,
       data.nama_rekening || null,
       data.nomor_rekening || null,
       data.phone || null,
@@ -36,12 +36,12 @@ export async function findRegistrationById(id) {
   return res.rows[0] || null;
 }
 
-export async function findPendingByUsername(username) {
+export async function findPendingByUsername(userId) {
   const res = await query(
     `SELECT * FROM subscription_registration
      WHERE username=$1 AND status='pending'
      ORDER BY created_at DESC LIMIT 1`,
-    [username],
+    [userId],
   );
   return res.rows[0] || null;
 }
@@ -62,7 +62,7 @@ export async function updateRegistration(id, data) {
      WHERE registration_id=$1 RETURNING *`,
     [
       id,
-      merged.username,
+      merged.user_id || merged.username,
       merged.nama_rekening || null,
       merged.nomor_rekening || null,
       merged.phone || null,

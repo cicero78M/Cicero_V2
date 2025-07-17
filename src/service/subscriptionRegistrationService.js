@@ -6,8 +6,8 @@ export const getRegistrations = async () => model.getRegistrations();
 
 export const findRegistrationById = async id => model.findRegistrationById(id);
 
-export const findPendingByUsername = async username =>
-  model.findPendingByUsername(username);
+export const findPendingByUsername = async userId =>
+  model.findPendingByUsername(userId);
 
 export const updateRegistration = async (id, data) =>
   model.updateRegistration(id, data);
