@@ -34,7 +34,7 @@ beforeEach(() => {
 test('sends WhatsApp notification when registration created', async () => {
   mockFindPending.mockResolvedValueOnce(null);
   mockCreateRegistration.mockResolvedValueOnce({ registration_id: 1, username: 'user', amount: 50 });
-  const req = { body: { user_id: 'user', amount: 50 } };
+  const req = { body: { username: 'user', amount: 50 } };
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
   const next = jest.fn();
 
@@ -49,7 +49,7 @@ test('sends WhatsApp notification when registration created', async () => {
 
 test('returns 400 when pending registration exists', async () => {
   mockFindPending.mockResolvedValueOnce({ registration_id: 2 });
-  const req = { body: { user_id: 'user' } };
+  const req = { body: { username: 'user' } };
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
   const next = jest.fn();
 

@@ -23,7 +23,7 @@ export async function getRegistrationById(req, res, next) {
 
 export async function createRegistration(req, res, next) {
   try {
-    const existing = await service.findPendingByUsername(req.body.user_id);
+    const existing = await service.findPendingByUsername(req.body.username);
     if (existing)
       return res
         .status(400)

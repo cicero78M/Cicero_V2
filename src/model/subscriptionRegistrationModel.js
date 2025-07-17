@@ -8,7 +8,7 @@ export async function createRegistration(data) {
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8, NOW()))
      RETURNING *`,
     [
-      data.user_id || data.username,
+      data.username,
       data.nama_rekening || null,
       data.nomor_rekening || null,
       data.phone || null,
@@ -62,7 +62,7 @@ export async function updateRegistration(id, data) {
      WHERE registration_id=$1 RETURNING *`,
     [
       id,
-      merged.user_id || merged.username,
+      merged.username,
       merged.nama_rekening || null,
       merged.nomor_rekening || null,
       merged.phone || null,

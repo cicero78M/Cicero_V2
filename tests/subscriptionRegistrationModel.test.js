@@ -32,6 +32,17 @@ test('createRegistration inserts row', async () => {
   );
 });
 
+test('createRegistration ignores user_id field', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ registration_id: 2 }] });
+  const data = { username: 'u2', user_id: 'ignored', amount: 5 };
+  const res = await createRegistration(data);
+  expect(res).toEqual({ registration_id: 2 });
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('INSERT INTO subscription_registration'),
+    ['u2', null, null, null, 5, 'pending', null, null]
+  );
+});
+
 test('getRegistrations selects all', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ registration_id: 1 }] });
   const rows = await getRegistrations();
