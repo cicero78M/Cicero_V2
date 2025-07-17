@@ -68,3 +68,41 @@ describe('POST /login', () => {
     expect(mockRedis.set).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /penmas-register', () => {
+  test('creates new user when username free', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }] });
+
+    const res = await request(app)
+      .post('/api/auth/penmas-register')
+      .send({ username: 'user', password: 'pass' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.user_id).toBe('string');
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      1,
+      'SELECT * FROM penmas_user WHERE username = $1',
+      ['user']
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO penmas_user'),
+      [expect.any(String), 'user', expect.any(String), 'penulis']
+    );
+  });
+
+  test('returns 400 when username exists', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'x' }] });
+
+    const res = await request(app)
+      .post('/api/auth/penmas-register')
+      .send({ username: 'user', password: 'pass' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
