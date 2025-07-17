@@ -1,5 +1,5 @@
 # Server Migration Guide
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This document explains how to move the **Cicero_V2** application to a new server. It is intended for system administrators so the migration is safe and no data is lost.
 

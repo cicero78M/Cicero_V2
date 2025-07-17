@@ -1,5 +1,5 @@
 # Panduan Lengkap Penggunaan Cicero_V2
-*Last updated: 2026-04-01*
+*Last updated: 2025-07-10*
 
 Dokumen ini menjelaskan alur fungsi utama dan langkah penggunaan aplikasi **Cicero_V2**. Backend ini berjalan bersama dashboard Next.js (lihat repository `Cicero_Web`).
 

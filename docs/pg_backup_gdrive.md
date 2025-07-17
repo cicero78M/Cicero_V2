@@ -1,5 +1,5 @@
 # PostgreSQL Backup Automation to Google Drive
-*Last updated: 2026-04-01*
+*Last updated: 2025-06-25*
 
 This guide explains how to back up a PostgreSQL database to Google Drive using `cron` and `rclone`.
 
