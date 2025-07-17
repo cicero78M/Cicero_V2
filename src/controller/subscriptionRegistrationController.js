@@ -23,7 +23,7 @@ export async function getRegistrationById(req, res, next) {
 
 export async function createRegistration(req, res, next) {
   try {
-    const existing = await service.findPendingByUsername(req.body.username);
+    const existing = await service.findPendingByUsername(req.body.user_id);
     if (existing)
       return res
         .status(400)
@@ -36,7 +36,7 @@ export async function createRegistration(req, res, next) {
       const adminIds = getAdminWAIds();
       let msg = '*Permintaan Subscription Premium*\n';
       msg += `ID Permintaan: *${row.registration_id}*\n`;
-      msg += `Username Instagram : *${row.username}*\n`;
+      msg += `User ID : *${row.username}*\n`;
       if (row.amount) msg += `Nominal : *${row.amount}*\n`;
       msg +=
         `Balas *GRANTSUB#${row.registration_id}* untuk memberi akses atau *DENYSUB#${row.registration_id}* untuk menolak.`;

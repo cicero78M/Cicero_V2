@@ -12,6 +12,7 @@ import logRoutes from './logRoutes.js';
 import linkReportRoutes from './linkReportRoutes.js';
 import premiumSubscriptionRoutes from './premiumSubscriptionRoutes.js';
 import subscriptionRegistrationRoutes from './subscriptionRegistrationRoutes.js';
+import subscriptionConfirmationRoutes from './subscriptionConfirmationRoutes.js';
 import amplifyRoutes from './amplifyRoutes.js';
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.use('/logs', logRoutes);
 router.use('/link-reports', linkReportRoutes);
 router.use('/premium-subscriptions', premiumSubscriptionRoutes);
 router.use('/subscription-registrations', subscriptionRegistrationRoutes);
+router.use('/subscription-confirmations', subscriptionConfirmationRoutes);
 router.use('/amplify', amplifyRoutes);
 
 export default router;
