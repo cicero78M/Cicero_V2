@@ -11,11 +11,11 @@ cron.schedule(
   async () => {
     await query(
       `UPDATE premium_subscription
-       SET is_active=false, end_date=NOW()
-       WHERE is_active=true AND start_date <= NOW() - INTERVAL '30 days'`,
+       SET status='expired', end_date=NOW(), updated_at=NOW()
+       WHERE status='active' AND start_date <= NOW() - INTERVAL '30 days'`
     );
   },
-  { timezone: 'Asia/Jakarta' },
+  { timezone: 'Asia/Jakarta' }
 );
 
 cron.schedule(
@@ -24,13 +24,13 @@ cron.schedule(
     await query(
       `UPDATE subscription_registration
        SET status='expired', reviewed_at=NOW()
-       WHERE status='pending' AND created_at <= NOW() - INTERVAL '24 hours'`,
+       WHERE status='pending' AND created_at <= NOW() - INTERVAL '24 hours'`
     );
     const pending = await query(
       `SELECT registration_id, username, amount
        FROM subscription_registration
        WHERE status='pending'
-       ORDER BY created_at`,
+       ORDER BY created_at`
     );
     if (pending.rows.length === 0) return;
     let msg = '*Reminder Pendaftaran Premium*\n';
@@ -45,5 +45,5 @@ cron.schedule(
       waClient.sendMessage(admin, msg).catch(() => {});
     }
   },
-  { timezone: 'Asia/Jakarta' },
+  { timezone: 'Asia/Jakarta' }
 );

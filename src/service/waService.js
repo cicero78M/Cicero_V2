@@ -1647,13 +1647,13 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       await premiumService.updateSubscription(existing.subscription_id, {
         start_date: new Date(),
         end_date: null,
-        is_active: true,
+        status: 'active',
       });
     } else {
       await premiumService.createSubscription({
         username: reg.username,
         start_date: new Date(),
-        is_active: true,
+        status: 'active',
       });
     }
     const user = await userModel.findUserById(reg.username);

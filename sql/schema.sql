@@ -242,10 +242,13 @@ CREATE TABLE IF NOT EXISTS link_report (
 CREATE TABLE IF NOT EXISTS premium_subscription (
     subscription_id SERIAL PRIMARY KEY,
     username VARCHAR REFERENCES instagram_user(username),
-    start_date DATE NOT NULL,
+    status VARCHAR DEFAULT 'active',
+    start_date DATE,
     end_date DATE,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
+    order_id VARCHAR,
+    snap_token VARCHAR,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS subscription_registration (

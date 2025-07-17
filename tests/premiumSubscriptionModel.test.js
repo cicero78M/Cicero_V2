@@ -30,7 +30,7 @@ test('createSubscription inserts row', async () => {
   expect(res).toEqual({ subscription_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('INSERT INTO premium_subscription'),
-    ['abc', '2024-01-01', null, false, null]
+    ['abc', 'active', '2024-01-01', null, null, null, null, null]
   );
 });
 
@@ -48,7 +48,7 @@ test('findActiveSubscriptionByUser selects active record', async () => {
   const row = await findActiveSubscriptionByUser('abc');
   expect(row).toEqual({ subscription_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('WHERE username=$1 AND is_active = true'),
+    expect.stringContaining("status='active'"),
     ['abc']
   );
 });
