@@ -14,6 +14,8 @@ import premiumSubscriptionRoutes from './premiumSubscriptionRoutes.js';
 import subscriptionRegistrationRoutes from './subscriptionRegistrationRoutes.js';
 import subscriptionConfirmationRoutes from './subscriptionConfirmationRoutes.js';
 import amplifyRoutes from './amplifyRoutes.js';
+import editorialEventRoutes from './editorialEventRoutes.js';
+import approvalRequestRoutes from './approvalRequestRoutes.js';
 
 const router = express.Router();
 
@@ -28,6 +30,8 @@ router.use('/oauth', oauthRoutes);
 router.use('/metadata', metaRoutes);
 router.use('/logs', logRoutes);
 router.use('/link-reports', linkReportRoutes);
+router.use('/events', editorialEventRoutes);
+router.use('/approvals', approvalRequestRoutes);
 router.use('/premium-subscriptions', premiumSubscriptionRoutes);
 router.use('/subscription-registrations', subscriptionRegistrationRoutes);
 router.use('/subscription-confirmations', subscriptionConfirmationRoutes);

@@ -262,3 +262,34 @@ CREATE TABLE IF NOT EXISTS subscription_registration (
     reviewed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS editorial_event (
+  event_id SERIAL PRIMARY KEY,
+  event_date DATE NOT NULL,
+  topic TEXT NOT NULL,
+  assignee VARCHAR(50),
+  status VARCHAR(20) DEFAULT 'draft',
+  content TEXT,
+  summary TEXT,
+  image_path TEXT,
+  created_by TEXT REFERENCES penmas_user(user_id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS approval_request (
+  request_id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES editorial_event(event_id),
+  requested_by TEXT REFERENCES penmas_user(user_id),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS change_log (
+  log_id SERIAL PRIMARY KEY,
+  event_id INTEGER REFERENCES editorial_event(event_id),
+  user_id TEXT REFERENCES penmas_user(user_id),
+  status VARCHAR(20),
+  changes TEXT,
+  logged_at TIMESTAMP DEFAULT NOW()
+);
