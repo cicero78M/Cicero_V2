@@ -145,3 +145,16 @@ export function extractFirstUrl(text) {
   const match = String(text).match(/https?:\/\/\S+/);
   return match ? match[0] : null;
 }
+
+export function formatIsoDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const str = String(value).trim();
+  let match = str.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+  match = str.match(/^(\d{4})[-/](\d{2})[-/](\d{2})$/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  const d = new Date(str);
+  if (!Number.isNaN(d)) return d.toISOString().slice(0, 10);
+  return null;
+}

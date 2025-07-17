@@ -1,4 +1,5 @@
 import { query } from '../repository/db.js';
+import { formatIsoDate } from '../utils/utilsHelper.js';
 
 export async function getEvents(userId) {
   const res = await query(
@@ -14,13 +15,14 @@ export async function findEventById(id) {
 }
 
 export async function createEvent(data) {
+  const eventDate = formatIsoDate(data.event_date);
   const res = await query(
     `INSERT INTO editorial_event (
       event_date, topic, assignee, status, content, summary, image_path, created_by, created_at
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9, NOW()))
      RETURNING *`,
     [
-      data.event_date,
+      eventDate,
       data.topic,
       data.assignee || null,
       data.status || 'draft',
@@ -38,6 +40,7 @@ export async function updateEvent(id, data) {
   const old = await findEventById(id);
   if (!old) return null;
   const merged = { ...old, ...data };
+  merged.event_date = formatIsoDate(merged.event_date);
   const res = await query(
     `UPDATE editorial_event SET
       event_date=$2,
