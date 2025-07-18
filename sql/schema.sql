@@ -284,6 +284,7 @@ CREATE TABLE IF NOT EXISTS editorial_event (
   summary TEXT,
   image_path TEXT,
   created_by TEXT REFERENCES penmas_user(user_id),
+  updated_by TEXT REFERENCES penmas_user(user_id),
   username TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   last_update TIMESTAMP DEFAULT NOW()

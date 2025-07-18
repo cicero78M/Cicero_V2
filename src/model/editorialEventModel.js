@@ -8,6 +8,7 @@ export async function getEvents(userId) {
   );
   return res.rows.map((row) => ({
     ...row,
+    last_updated: row.last_update,
     event_date: formatDdMmYyyy(row.event_date),
   }));
 }
@@ -22,8 +23,8 @@ export async function createEvent(data) {
   const res = await query(
     `INSERT INTO editorial_event (
       event_date, topic, assignee, status, content, summary, image_path,
-      created_by, username, created_at, last_update
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE($10, NOW()), COALESCE($11, NOW()))
+      created_by, updated_by, username, created_at, last_update
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, COALESCE($11, NOW()), COALESCE($12, NOW()))
      RETURNING *`,
     [
       eventDate,
@@ -34,6 +35,7 @@ export async function createEvent(data) {
       data.summary || null,
       data.image_path || null,
       data.created_by,
+      data.updated_by || data.created_by,
       data.username || null,
       data.created_at || null,
       data.last_update || null
@@ -57,7 +59,8 @@ export async function updateEvent(id, data) {
       summary=$7,
       image_path=$8,
       username=$9,
-      last_update=COALESCE($10, NOW())
+      updated_by=$10,
+      last_update=COALESCE($11, NOW())
      WHERE event_id=$1 RETURNING *`,
     [
       id,
@@ -69,6 +72,7 @@ export async function updateEvent(id, data) {
       merged.summary || null,
       merged.image_path || null,
       merged.username || null,
+      data.updated_by || merged.updated_by || null,
       merged.last_update || null
     ]
   );
