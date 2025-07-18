@@ -39,6 +39,7 @@ CREATE TABLE dashboard_user (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL,
+  status BOOLEAN DEFAULT TRUE,
   client_id VARCHAR REFERENCES clients(client_id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()

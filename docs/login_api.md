@@ -1,4 +1,5 @@
 # Login API Guide
+
 *Last updated: 2025-07-18*
 
 This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
@@ -48,6 +49,8 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 ```
 
 To register a dashboard user send a similar payload to `/api/auth/dashboard-register` with optional `role` and `client_id`.
+When registering an account with role `admin`, the status is set to `false` and an approval request is sent to the WhatsApp administrators. They can approve using `approvedash#<id>`.
+
 
 ## 2. Example `curl`
 
@@ -73,4 +76,5 @@ The token is also delivered as an HTTP-only cookie named `token`.
 2. The backend verifies the data and generates a JWT valid for two hours.
 3. The token is stored in Redis and returned in the response as well as the cookie.
 4. For later API calls, include the token in the `Authorization: Bearer` header or let the cookie be sent automatically.
-5. When the token expires or is removed from Redis, a new login is required.
+5. Every successful login event is reported to the WhatsApp administrators.
+6. When the token expires or is removed from Redis, a new login is required.

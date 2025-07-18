@@ -1,4 +1,5 @@
 # Database Structure
+
 *Last updated: 2025-07-18*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
@@ -68,6 +69,7 @@ Credentials for the web dashboard login.
 - `username` – unique login name
 - `password_hash` – bcrypt hashed password
 - `role` – permission level such as `admin` or `operator`
+- `status` – boolean indicating whether the account is active
 - `client_id` – optional link to `clients`
 - `created_at`, `updated_at` – timestamps
 

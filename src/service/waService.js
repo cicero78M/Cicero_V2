@@ -11,6 +11,7 @@ const pool = { query };
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
+import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as registrationService from "./subscriptionRegistrationService.js";
 import * as premiumService from "./premiumSubscriptionService.js";
@@ -1690,6 +1691,41 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
     }
     await waClient.sendMessage(chatId, `❌ Permintaan ${reg.username} ditolak.`);
+    return;
+  }
+
+  // =========================
+  // === APPROVE / DENY DASHBOARD ADMIN
+  // =========================
+  if (text.toLowerCase().startsWith("approvedash#")) {
+    const [, id] = text.split("#");
+    if (!id) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: approvedash#id");
+      return;
+    }
+    const usr = await dashboardUserModel.findById(id);
+    if (!usr) {
+      await waClient.sendMessage(chatId, `❌ ID ${id} tidak ditemukan.`);
+      return;
+    }
+    await dashboardUserModel.updateStatus(id, true);
+    await waClient.sendMessage(chatId, `✅ Admin ${usr.username} disetujui.`);
+    return;
+  }
+
+  if (text.toLowerCase().startsWith("denydash#")) {
+    const [, id] = text.split("#");
+    if (!id) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: denydash#id");
+      return;
+    }
+    const usr = await dashboardUserModel.findById(id);
+    if (!usr) {
+      await waClient.sendMessage(chatId, `❌ ID ${id} tidak ditemukan.`);
+      return;
+    }
+    await dashboardUserModel.updateStatus(id, false);
+    await waClient.sendMessage(chatId, `❌ Admin ${usr.username} ditolak.`);
     return;
   }
 

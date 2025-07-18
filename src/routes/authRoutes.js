@@ -85,6 +85,93 @@ router.post('/penmas-login', async (req, res) => {
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production',
   });
+  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  notifyAdmin(
+    `\uD83D\uDD11 Login Penmas: ${user.username} (${user.role})\nWaktu: ${time}`
+  );
+  return res.json({ success: true, token, user: payload });
+});
+
+router.post('/dashboard-register', async (req, res) => {
+  const { username, password, role = 'operator', client_id = null } = req.body;
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'username dan password wajib diisi' });
+  }
+  const existing = await dashboardUserModel.findByUsername(username);
+  if (existing) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'username sudah terpakai' });
+  }
+  const user_id = uuidv4();
+  const password_hash = await bcrypt.hash(password, 10);
+  const status = role === 'admin' ? false : true;
+  const user = await dashboardUserModel.createUser({
+    user_id,
+    username,
+    password_hash,
+    role,
+    status,
+    client_id,
+  });
+  if (role === 'admin') {
+    notifyAdmin(
+      `\uD83D\uDCCB Permintaan admin dashboard baru\nUsername: ${username}\nID: ${user_id}\nBalas approvedash#${user_id} untuk menyetujui atau denydash#${user_id} untuk menolak.`
+    );
+  }
+  return res
+    .status(201)
+    .json({ success: true, user_id: user.user_id, status: user.status });
+});
+
+router.post('/dashboard-login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'username dan password wajib diisi' });
+  }
+  const user = await dashboardUserModel.findByUsername(username);
+  if (!user) {
+    return res
+      .status(401)
+      .json({ success: false, message: 'Login gagal: data tidak ditemukan' });
+  }
+  const match = await bcrypt.compare(password, user.password_hash);
+  if (!match) {
+    return res
+      .status(401)
+      .json({ success: false, message: 'Login gagal: password salah' });
+  }
+  if (!user.status) {
+    return res
+      .status(403)
+      .json({ success: false, message: 'Akun belum disetujui' });
+  }
+  const payload = { user_id: user.user_id, role: user.role };
+  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+    expiresIn: '2h',
+  });
+  try {
+    await redis.sAdd(`dashboard_login:${user.user_id}`, token);
+    await redis.set(`login_token:${token}`, `dashboard:${user.user_id}`, {
+      EX: 2 * 60 * 60,
+    });
+  } catch (err) {
+    console.error('[AUTH] Gagal menyimpan token login dashboard:', err.message);
+  }
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 2 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production',
+  });
+  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  notifyAdmin(
+    `\uD83D\uDD11 Login dashboard: ${user.username} (${user.role})\nWaktu: ${time}`
+  );
   return res.json({ success: true, token, user: payload });
 });
 
@@ -302,6 +389,10 @@ router.post('/user-login', async (req, res) => {
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production'
   });
+  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  notifyAdmin(
+    `\uD83D\uDD11 Login user: ${user.user_id} - ${user.nama}\nWaktu: ${time}`
+  );
   return res.json({ success: true, token, user: payload });
 });
 
