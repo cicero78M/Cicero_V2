@@ -1,5 +1,6 @@
 # Database Structure
-*Last updated: 2025-07-19*
+
+*Last updated: 2025-07-18*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed

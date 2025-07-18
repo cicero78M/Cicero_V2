@@ -146,6 +146,37 @@ export function extractFirstUrl(text) {
   return match ? match[0] : null;
 }
 
+export function formatDdMmYyyy(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d)) return null;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+export function formatIsoTimestamp(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  const str = String(value).trim();
+  // dd/mm/yyyy or dd-mm-yyyy optionally with time HH:MM
+  let match = str.match(/^(\d{2})[-/](\d{2})[-/](\d{4})(?:[ T](\d{2}):(\d{2}))?$/);
+  if (match) {
+    const [, d, m, y, hh = '00', mm = '00'] = match;
+    return `${y}-${m}-${d}T${hh}:${mm}:00Z`;
+  }
+  // yyyy-mm-dd or yyyy/mm/dd optionally with time
+  match = str.match(/^(\d{4})[-/](\d{2})[-/](\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
+  if (match) {
+    const [, y, m, d, hh = '00', mm = '00'] = match;
+    return `${y}-${m}-${d}T${hh}:${mm}:00Z`;
+  }
+  const d = new Date(str);
+  if (!Number.isNaN(d)) return d.toISOString();
+  return null;
+}
+
 export function formatIsoDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);

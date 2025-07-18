@@ -1,5 +1,6 @@
 # Frontend Login Scaling Scenario
-*Last updated: 2025-07-19*
+
+*Last updated: 2025-07-18*
 
 This guide describes a secure approach for handling login and registration on the web dashboard. It introduces a dedicated table `dashboard_user` so credentials are separated from the existing `user` table. The workflow aligns with the current JWT authentication model used across Cicero_V2.
 
@@ -12,6 +13,7 @@ CREATE TABLE dashboard_user (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL,
   status BOOLEAN DEFAULT TRUE,
+
   client_id VARCHAR REFERENCES clients(client_id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -22,6 +24,7 @@ CREATE TABLE dashboard_user (
 - `password_hash` stores a bcrypt hash of the plaintext password.
 - `role` can be `admin`, `operator` or other roles required by the dashboard.
 - `status` is `true` when the account is active. Admin registrations start as `false` and must be approved via WhatsApp.
+
 - `client_id` links an account to a specific organisation if needed.
 
 ## 2. Registration Endpoint
@@ -33,6 +36,7 @@ Expose `/api/auth/dashboard-register`:
 3. Hash the password with `bcrypt.hash` and insert the new row.
 4. If the role is `admin`, insert with `status=false` and send a WhatsApp notification to administrators. They can approve using `approvedash#<id>`.
 5. Return `201 Created` with the new `user_id`.
+
 
 ## 3. Login Endpoint
 

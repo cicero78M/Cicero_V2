@@ -34,6 +34,7 @@ export async function updateStatus(id, status) {
   const res = await query(
     'UPDATE dashboard_user SET status=$2, updated_at=NOW() WHERE user_id=$1 RETURNING *',
     [id, status]
+
   );
   return res.rows[0];
 }
