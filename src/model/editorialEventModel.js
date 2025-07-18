@@ -1,12 +1,15 @@
 import { query } from '../repository/db.js';
-import { formatIsoDate } from '../utils/utilsHelper.js';
+import { formatIsoTimestamp, formatDdMmYyyy } from '../utils/utilsHelper.js';
 
 export async function getEvents(userId) {
   const res = await query(
     'SELECT * FROM editorial_event WHERE created_by = $1 ORDER BY event_date ASC',
     [userId]
   );
-  return res.rows;
+  return res.rows.map((row) => ({
+    ...row,
+    event_date: formatDdMmYyyy(row.event_date),
+  }));
 }
 
 export async function findEventById(id) {
@@ -15,7 +18,7 @@ export async function findEventById(id) {
 }
 
 export async function createEvent(data) {
-  const eventDate = formatIsoDate(data.event_date);
+  const eventDate = formatIsoTimestamp(data.event_date);
   const res = await query(
     `INSERT INTO editorial_event (
       event_date, topic, assignee, status, content, summary, image_path, created_by, created_at
@@ -40,7 +43,7 @@ export async function updateEvent(id, data) {
   const old = await findEventById(id);
   if (!old) return null;
   const merged = { ...old, ...data };
-  merged.event_date = formatIsoDate(merged.event_date);
+  merged.event_date = formatIsoTimestamp(merged.event_date);
   const res = await query(
     `UPDATE editorial_event SET
       event_date=$2,
