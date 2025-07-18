@@ -2,7 +2,11 @@ import { query } from '../repository/db.js';
 
 export async function getLogsByEvent(eventId) {
   const res = await query(
-    'SELECT * FROM change_log WHERE event_id=$1 ORDER BY logged_at ASC',
+    `SELECT l.*, u.username
+     FROM change_log l
+     LEFT JOIN penmas_user u ON u.user_id = l.user_id
+     WHERE l.event_id=$1
+     ORDER BY l.logged_at ASC`,
     [eventId]
   );
   return res.rows;
