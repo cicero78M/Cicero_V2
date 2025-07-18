@@ -99,9 +99,8 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  const { username, password, client_id = null } = req.body;
-  const role = 'operator';
-  const status = true;
+  const { username, password, role = 'operator', client_id = null } = req.body;
+  const status = false;
   if (!username || !password) {
     return res
       .status(400)
@@ -123,6 +122,9 @@ router.post('/dashboard-register', async (req, res) => {
     status,
     client_id,
   });
+  notifyAdmin(
+    `\uD83D\uDCCB Permintaan user dashboard baru\nUsername: ${username}\nRole: ${role}\nID: ${user_id}\nBalas approvedash#${user_id} untuk menyetujui atau denydash#${user_id} untuk menolak.`
+  );
   return res
     .status(201)
     .json({ success: true, user_id: user.user_id, status: user.status });
@@ -182,30 +184,6 @@ router.post('/dashboard-login', async (req, res) => {
   return res.json({ success: true, token, user: payload });
 });
 
-router.post('/dashboard-register', async (req, res) => {
-  const { username, password, role = 'operator', client_id = null } = req.body;
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: 'username dan password wajib diisi' });
-  }
-  const existing = await dashboardUserModel.findByUsername(username);
-  if (existing) {
-    return res
-      .status(400)
-      .json({ success: false, message: 'username sudah terpakai' });
-  }
-  const user_id = uuidv4();
-  const password_hash = await bcrypt.hash(password, 10);
-  const user = await dashboardUserModel.createUser({
-    user_id,
-    username,
-    password_hash,
-    role,
-    client_id,
-  });
-  return res.status(201).json({ success: true, user_id: user.user_id });
-});
 
 router.post('/dashboard-login', async (req, res) => {
   const { username, password } = req.body;

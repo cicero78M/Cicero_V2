@@ -33,9 +33,9 @@ Expose `/api/auth/dashboard-register`:
 
 1. Validate `username`, `password` and optional `role` and `client_id`.
 2. Ensure the username is unique in `dashboard_user`.
-3. Hash the password with `bcrypt.hash` and insert the new row.
-4. If the role is `admin`, insert with `status=false` and send a WhatsApp notification to administrators. They can approve using `approvedash#<id>`.
-5. Return `201 Created` with the new `user_id`.
+3. Hash the password with `bcrypt.hash` and insert the new row with `status=false`.
+4. Send a WhatsApp notification to administrators. They can approve using `approvedash#<id>` or reject with `denydash#<id>`.
+5. Return `201 Created` with the new `user_id` and current status.
 
 
 ## 3. Login Endpoint
