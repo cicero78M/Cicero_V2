@@ -24,7 +24,7 @@ Events from the editorial calendar.
 ```sql
 CREATE TABLE editorial_event (
   event_id SERIAL PRIMARY KEY,
-  event_date DATE NOT NULL,
+  event_date TIMESTAMP NOT NULL,
   topic TEXT NOT NULL,
   assignee VARCHAR(50),
   status VARCHAR(20) DEFAULT 'draft',
@@ -35,6 +35,9 @@ CREATE TABLE editorial_event (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+The `event_date` column uses a timestamp so the schedule can include time of day.
+In list views, the API returns `event_date` formatted as `dd/mm/yyyy`.
 
 ### `approval_request`
 Records waiting for editor approval.

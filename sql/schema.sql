@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS subscription_registration (
 
 CREATE TABLE IF NOT EXISTS editorial_event (
   event_id SERIAL PRIMARY KEY,
-  event_date DATE NOT NULL,
+  event_date TIMESTAMP NOT NULL,
   topic TEXT NOT NULL,
   assignee VARCHAR(50),
   status VARCHAR(20) DEFAULT 'draft',
