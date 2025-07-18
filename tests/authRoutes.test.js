@@ -241,7 +241,7 @@ describe('POST /dashboard-register', () => {
   test('creates new dashboard user when username free', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ user_id: 'd1' }] });
+      .mockResolvedValueOnce({ rows: [{ user_id: 'd1', status: false }] });
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
@@ -249,6 +249,7 @@ describe('POST /dashboard-register', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    expect(res.body.status).toBe(false);
     expect(mockQuery).toHaveBeenNthCalledWith(
       1,
       'SELECT * FROM dashboard_user WHERE username = $1',
@@ -257,7 +258,7 @@ describe('POST /dashboard-register', () => {
     expect(mockQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO dashboard_user'),
-      [expect.any(String), 'dash', expect.any(String), 'operator', true, null]
+      [expect.any(String), 'dash', expect.any(String), 'operator', false, null]
     );
   });
 

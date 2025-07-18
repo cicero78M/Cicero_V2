@@ -1709,7 +1709,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     await dashboardUserModel.updateStatus(id, true);
-    await waClient.sendMessage(chatId, `✅ Admin ${usr.username} disetujui.`);
+    await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.`);
     return;
   }
 
@@ -1725,7 +1725,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
     await dashboardUserModel.updateStatus(id, false);
-    await waClient.sendMessage(chatId, `❌ Admin ${usr.username} ditolak.`);
+    await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
     return;
   }
 

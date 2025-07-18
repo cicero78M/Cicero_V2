@@ -49,7 +49,7 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 ```
 
 To register a dashboard user send a similar payload to `/api/auth/dashboard-register` with optional `role` and `client_id`.
-When registering an account with role `admin`, the status is set to `false` and an approval request is sent to the WhatsApp administrators. They can approve using `approvedash#<id>`.
+Every new dashboard account is created with `status` set to `false` and an approval request is sent to the WhatsApp administrators. They can approve using `approvedash#<id>`.
 
 
 ## 2. Example `curl`
