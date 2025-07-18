@@ -17,3 +17,11 @@ export async function createUser(data) {
   );
   return res.rows[0];
 }
+
+export async function findById(userId) {
+  const res = await query(
+    'SELECT * FROM penmas_user WHERE user_id = $1',
+    [userId]
+  );
+  return res.rows[0] || null;
+}

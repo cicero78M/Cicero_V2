@@ -1,4 +1,5 @@
 import * as eventModel from '../model/editorialEventModel.js';
+import * as penmasUserModel from '../model/penmasUserModel.js';
 import { sendSuccess } from '../utils/response.js';
 
 export async function getEvents(req, res, next) {
@@ -12,7 +13,12 @@ export async function getEvents(req, res, next) {
 
 export async function createEvent(req, res, next) {
   try {
-    const data = { ...req.body, created_by: req.penmasUser.user_id };
+    const user = await penmasUserModel.findById(req.penmasUser.user_id);
+    const data = {
+      ...req.body,
+      created_by: req.penmasUser.user_id,
+      username: user?.username || null,
+    };
     const ev = await eventModel.createEvent(data);
     sendSuccess(res, ev, 201);
   } catch (err) {
@@ -22,7 +28,9 @@ export async function createEvent(req, res, next) {
 
 export async function updateEvent(req, res, next) {
   try {
-    const ev = await eventModel.updateEvent(Number(req.params.id), req.body);
+    const user = await penmasUserModel.findById(req.penmasUser.user_id);
+    const body = { ...req.body, username: user?.username || null };
+    const ev = await eventModel.updateEvent(Number(req.params.id), body);
     sendSuccess(res, ev);
   } catch (err) {
     next(err);
