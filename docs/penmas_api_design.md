@@ -33,7 +33,8 @@ CREATE TABLE editorial_event (
   image_path TEXT,
   created_by INTEGER REFERENCES users(user_id),
   username TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
