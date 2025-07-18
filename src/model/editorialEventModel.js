@@ -3,7 +3,11 @@ import { formatIsoTimestamp, formatDdMmYyyy } from '../utils/utilsHelper.js';
 
 export async function getEvents(userId) {
   const res = await query(
-    'SELECT * FROM editorial_event WHERE created_by = $1 ORDER BY event_date ASC',
+    `SELECT e.*, u.username AS updated_by_username
+     FROM editorial_event e
+     LEFT JOIN penmas_user u ON u.user_id = e.updated_by
+     WHERE e.created_by = $1
+     ORDER BY e.event_date ASC`,
     [userId]
   );
   return res.rows.map((row) => ({
