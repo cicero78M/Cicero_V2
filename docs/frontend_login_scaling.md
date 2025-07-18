@@ -1,5 +1,5 @@
 # Frontend Login Scaling Scenario
-*Last updated: 2025-07-16*
+*Last updated: 2025-07-18*
 
 This guide describes a secure approach for handling login and registration on the web dashboard. It introduces a dedicated table `dashboard_user` so credentials are separated from the existing `user` table. The workflow aligns with the current JWT authentication model used across Cicero_V2.
 

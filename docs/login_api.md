@@ -1,7 +1,11 @@
 # Login API Guide
-*Last updated: 2025-07-16*
+*Last updated: 2025-07-18*
 
-This document explains how clients and users authenticate with the backend. Two endpoints are provided: `/api/auth/login` for client operators and `/api/auth/user-login` for regular users. Both return a JSON Web Token (JWT) that must be included in subsequent requests.
+This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
+`/api/auth/login` for client operators,
+`/api/auth/user-login` and `/api/auth/user-register` for regular users,
+`/api/auth/dashboard-register` and `/api/auth/dashboard-login` for the web dashboard.
+All return a JSON Web Token (JWT) that must be included in subsequent requests.
 
 ## 1. Payload Format
 
@@ -22,6 +26,28 @@ This document explains how clients and users authenticate with the backend. Two 
   "whatsapp": "628123456789"
 }
 ```
+
+### User Registration
+`POST /api/auth/user-register`
+```json
+{
+  "nrp": "123456",
+  "nama": "Budi",
+  "client_id": "demo_client",
+  "whatsapp": "628123456789"
+}
+```
+
+### Dashboard Login
+`POST /api/auth/dashboard-login`
+```json
+{
+  "username": "admin",
+  "password": "secret"
+}
+```
+
+To register a dashboard user send a similar payload to `/api/auth/dashboard-register` with optional `role` and `client_id`.
 
 ## 2. Example `curl`
 
