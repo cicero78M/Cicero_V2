@@ -17,6 +17,7 @@ export async function createEvent(req, res, next) {
     const data = {
       ...req.body,
       created_by: req.penmasUser.user_id,
+      updated_by: req.penmasUser.user_id,
       username: user?.username || null,
     };
     const ev = await eventModel.createEvent(data);
@@ -29,7 +30,11 @@ export async function createEvent(req, res, next) {
 export async function updateEvent(req, res, next) {
   try {
     const user = await penmasUserModel.findById(req.penmasUser.user_id);
-    const body = { ...req.body, username: user?.username || null };
+    const body = {
+      ...req.body,
+      username: user?.username || null,
+      updated_by: req.penmasUser.user_id,
+    };
     const ev = await eventModel.updateEvent(Number(req.params.id), body);
     sendSuccess(res, ev);
   } catch (err) {
