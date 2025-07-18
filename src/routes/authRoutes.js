@@ -14,6 +14,7 @@ import {
 import redis from "../config/redis.js";
 import waClient, { waReady } from "../service/waService.js";
 import { insertVisitorLog } from "../model/visitorLogModel.js";
+import { insertLoginLog } from "../model/loginLogModel.js";
 
 function notifyAdmin(message) {
   if (!waReady) return;
@@ -84,6 +85,11 @@ router.post('/penmas-login', async (req, res) => {
     sameSite: 'lax',
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production',
+  });
+  await insertLoginLog({
+    actorId: user.user_id,
+    loginType: 'operator',
+    loginSource: 'web'
   });
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   notifyAdmin(
@@ -163,6 +169,11 @@ router.post('/dashboard-login', async (req, res) => {
     sameSite: 'lax',
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production',
+  });
+  await insertLoginLog({
+    actorId: user.user_id,
+    loginType: 'operator',
+    loginSource: 'web'
   });
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   notifyAdmin(
@@ -317,6 +328,11 @@ router.post("/login", async (req, res) => {
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production'
   });
+  await insertLoginLog({
+    actorId: client.client_id,
+    loginType: 'operator',
+    loginSource: 'mobile'
+  });
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   notifyAdmin(
     `\uD83D\uDD11 Login: ${client.nama} (${client.client_id})\nOperator: ${client_operator}\nWaktu: ${time}`
@@ -384,6 +400,11 @@ router.post('/user-login', async (req, res) => {
     sameSite: 'lax',
     maxAge: 2 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production'
+  });
+  await insertLoginLog({
+    actorId: user.user_id,
+    loginType: 'user',
+    loginSource: 'mobile'
   });
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   notifyAdmin(

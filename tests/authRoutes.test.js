@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
+const mockInsertLoginLog = jest.fn();
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
   query: mockQuery
@@ -12,6 +13,11 @@ jest.unstable_mockModule('../src/db/index.js', () => ({
 
 jest.unstable_mockModule('../src/config/redis.js', () => ({
   default: mockRedis
+}));
+
+jest.unstable_mockModule('../src/model/loginLogModel.js', () => ({
+  insertLoginLog: mockInsertLoginLog,
+  getLoginLogs: jest.fn()
 }));
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({
@@ -35,6 +41,7 @@ beforeEach(() => {
   mockQuery.mockReset();
   mockRedis.sAdd.mockReset();
   mockRedis.set.mockReset();
+  mockInsertLoginLog.mockReset();
 });
 
 describe('POST /login', () => {
@@ -54,6 +61,11 @@ describe('POST /login', () => {
     expect(typeof token).toBe('string');
     expect(mockRedis.sAdd).toHaveBeenCalledWith(`login:1`, token);
     expect(mockRedis.set).toHaveBeenCalledWith(`login_token:${token}`, '1', { EX: 2 * 60 * 60 });
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: '1',
+      loginType: 'operator',
+      loginSource: 'mobile'
+    });
   });
 
   test('returns 401 when client not found', async () => {
@@ -135,6 +147,11 @@ describe('POST /penmas-login', () => {
       'penmas:u1',
       { EX: 2 * 60 * 60 }
     );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'u1',
+      loginType: 'operator',
+      loginSource: 'web'
+    });
   });
 
   test('returns 401 when password wrong', async () => {
@@ -286,6 +303,11 @@ describe('POST /dashboard-login', () => {
       'dashboard:d1',
       { EX: 2 * 60 * 60 }
     );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'd1',
+      loginType: 'operator',
+      loginSource: 'web'
+    });
   });
 
   test('returns 401 when password wrong', async () => {
@@ -313,3 +335,29 @@ describe('POST /dashboard-login', () => {
   });
 });
 
+
+describe('POST /user-login', () => {
+  test('logs in user with correct whatsapp', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ user_id: 'u1', nama: 'User' }]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/user-login')
+      .send({ nrp: 'u1', whatsapp: '0808' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('user_login:u1', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'user:u1',
+      { EX: 2 * 60 * 60 }
+    );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'u1',
+      loginType: 'user',
+      loginSource: 'mobile'
+    });
+  });
+});

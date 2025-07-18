@@ -304,3 +304,10 @@ CREATE TABLE IF NOT EXISTS change_log (
   changes TEXT,
   logged_at TIMESTAMP DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS login_log (
+  log_id SERIAL PRIMARY KEY,
+  actor_id TEXT,
+  login_type VARCHAR(20),
+  login_source VARCHAR(20),
+  logged_at TIMESTAMP DEFAULT NOW()
+);
