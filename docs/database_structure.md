@@ -40,6 +40,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | ig_post_like_users | relational table of likes |
 | ig_post_comments | stored comments per post |
 | visitor_logs | record of API access |
+| login_log | history of login events |
 | link_report | links submitted from the mobile app |
 | premium_subscription | tracks premium status per user |
 | subscription_registration | user-initiated subscription signups |
@@ -190,6 +191,14 @@ Records raw signup data before payment is processed.
 - `phone` – contact phone number
 - `amount` – requested payment amount
 - `created_at` – timestamp when the user submitted the form
+
+### `login_log`
+Stores login events for auditing.
+- `log_id` – primary key
+- `actor_id` – identifier of the user or client
+- `login_type` – `operator` or `user`
+- `login_source` – `web` or `mobile`
+- `logged_at` – timestamp when the login occurred
 
 ## Relationships
 
