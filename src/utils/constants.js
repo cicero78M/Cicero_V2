@@ -25,6 +25,8 @@ export const adminCommands = [
   "status#",
   "grantsub#",
   "denysub#",
+  "approvedash#",
+  "denydash#",
 ];
 
 export const hariIndo = [
