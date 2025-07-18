@@ -1,5 +1,5 @@
 # Database Structure
-*Last updated: 2025-06-28*
+*Last updated: 2025-07-18*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -11,6 +11,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 |------------|---------|
 | clients | master table for registered organisations |
 | user | members belonging to a client |
+| dashboard_user | login credentials for dashboard access |
 | insta_post | Instagram posts fetched for each client |
 | insta_like | cached likes for an Instagram post |
 | insta_comment | cached comments for an Instagram post |
@@ -60,6 +61,15 @@ Holds users belonging to a client.
 - `insta`, `tiktok` – social media handles
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
+
+### `dashboard_user`
+Credentials for the web dashboard login.
+- `user_id` – primary key generated with `uuid.v4()`
+- `username` – unique login name
+- `password_hash` – bcrypt hashed password
+- `role` – permission level such as `admin` or `operator`
+- `client_id` – optional link to `clients`
+- `created_at`, `updated_at` – timestamps
 
 ### `insta_post`
 Stores Instagram posts fetched for a client.

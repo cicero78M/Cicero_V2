@@ -34,6 +34,16 @@ CREATE TABLE penmas_user (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE dashboard_user (
+  user_id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL,
+  client_id VARCHAR REFERENCES clients(client_id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE insta_post (
   shortcode VARCHAR PRIMARY KEY,
   client_id VARCHAR REFERENCES clients(client_id),

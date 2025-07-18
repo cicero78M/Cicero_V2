@@ -159,3 +159,90 @@ describe('POST /penmas-login', () => {
     expect(mockRedis.set).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /dashboard-register', () => {
+  test('creates new dashboard user when username free', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ user_id: 'd1' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      1,
+      'SELECT * FROM dashboard_user WHERE username = $1',
+      ['dash']
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO dashboard_user'),
+      [expect.any(String), 'dash', expect.any(String), 'operator', null]
+    );
+  });
+
+  test('returns 400 when username exists', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'x' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /dashboard-login', () => {
+  test('logs in dashboard user with correct password', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'd1',
+          username: 'dash',
+          password_hash: await bcrypt.hash('pass', 10),
+          role: 'admin'
+        }
+      ]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'dashboard:d1',
+      { EX: 2 * 60 * 60 }
+    );
+  });
+
+  test('returns 401 when password wrong', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'd1',
+          username: 'dash',
+          password_hash: await bcrypt.hash('pass', 10),
+          role: 'admin'
+        }
+      ]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'wrong' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(mockRedis.sAdd).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
+  });
+});
