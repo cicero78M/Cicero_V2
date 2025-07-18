@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import * as penmasUserModel from "../model/penmasUserModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
+import * as userModel from "../model/userModel.js";
 import {
   isAdminWhatsApp,
   formatToWhatsAppId,
@@ -239,6 +240,31 @@ router.post("/login", async (req, res) => {
   );
   // Kembalikan token dan data client
   return res.json({ success: true, token, client: payload });
+});
+
+router.post('/user-register', async (req, res) => {
+  const { nrp, nama, client_id, whatsapp = '', divisi = '', jabatan = '', title = '' } = req.body;
+  if (!nrp || !nama || !client_id) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'nrp, nama, dan client_id wajib diisi' });
+  }
+  const existing = await query('SELECT * FROM "user" WHERE user_id = $1', [nrp]);
+  if (existing.rows.length) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'nrp sudah terdaftar' });
+  }
+  const user = await userModel.createUser({
+    user_id: nrp,
+    nama,
+    client_id,
+    whatsapp,
+    divisi,
+    jabatan,
+    title
+  });
+  return res.status(201).json({ success: true, user_id: user.user_id });
 });
 
 router.post('/user-login', async (req, res) => {

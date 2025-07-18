@@ -160,6 +160,43 @@ describe('POST /penmas-login', () => {
   });
 });
 
+describe('POST /user-register', () => {
+  test('creates new user when nrp free', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ user_id: '1' }] });
+
+    const res = await request(app)
+      .post('/api/auth/user-register')
+      .send({ nrp: '1', nama: 'User', client_id: 'c1' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      1,
+      'SELECT * FROM "user" WHERE user_id = $1',
+      ['1']
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO "user"'),
+      expect.any(Array)
+    );
+  });
+
+  test('returns 400 when nrp exists', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1' }] });
+
+    const res = await request(app)
+      .post('/api/auth/user-register')
+      .send({ nrp: '1', nama: 'User', client_id: 'c1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('POST /dashboard-register', () => {
   test('creates new dashboard user when username free', async () => {
     mockQuery
