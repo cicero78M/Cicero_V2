@@ -22,8 +22,8 @@ export async function createEvent(data) {
   const res = await query(
     `INSERT INTO editorial_event (
       event_date, topic, assignee, status, content, summary, image_path,
-      created_by, username, created_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE($10, NOW()))
+      created_by, username, created_at, last_update
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, COALESCE($10, NOW()), COALESCE($11, NOW()))
      RETURNING *`,
     [
       eventDate,
@@ -35,7 +35,8 @@ export async function createEvent(data) {
       data.image_path || null,
       data.created_by,
       data.username || null,
-      data.created_at || null
+      data.created_at || null,
+      data.last_update || null
     ]
   );
   return res.rows[0];
@@ -55,7 +56,8 @@ export async function updateEvent(id, data) {
       content=$6,
       summary=$7,
       image_path=$8,
-      username=$9
+      username=$9,
+      last_update=COALESCE($10, NOW())
      WHERE event_id=$1 RETURNING *`,
     [
       id,
@@ -66,7 +68,8 @@ export async function updateEvent(id, data) {
       merged.content || null,
       merged.summary || null,
       merged.image_path || null,
-      merged.username || null
+      merged.username || null,
+      merged.last_update || null
     ]
   );
   return res.rows[0];
