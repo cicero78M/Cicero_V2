@@ -93,7 +93,9 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  const { username, password, role = 'operator', client_id = null } = req.body;
+  const { username, password, client_id = null } = req.body;
+  const role = 'operator';
+  const status = true;
   if (!username || !password) {
     return res
       .status(400)
@@ -107,7 +109,6 @@ router.post('/dashboard-register', async (req, res) => {
   }
   const user_id = uuidv4();
   const password_hash = await bcrypt.hash(password, 10);
-  const status = role === 'admin' ? false : true;
   const user = await dashboardUserModel.createUser({
     user_id,
     username,
@@ -116,11 +117,6 @@ router.post('/dashboard-register', async (req, res) => {
     status,
     client_id,
   });
-  if (role === 'admin') {
-    notifyAdmin(
-      `\uD83D\uDCCB Permintaan admin dashboard baru\nUsername: ${username}\nID: ${user_id}\nBalas approvedash#${user_id} untuk menyetujui atau denydash#${user_id} untuk menolak.`
-    );
-  }
   return res
     .status(201)
     .json({ success: true, user_id: user.user_id, status: user.status });
@@ -150,7 +146,7 @@ router.post('/dashboard-login', async (req, res) => {
       .status(403)
       .json({ success: false, message: 'Akun belum disetujui' });
   }
-  const payload = { user_id: user.user_id, role: user.role };
+  const payload = { user_id: user.user_id, role: user.role, client_id: user.client_id };
   const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
     expiresIn: '2h',
   });
