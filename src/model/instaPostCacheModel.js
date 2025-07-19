@@ -7,9 +7,3 @@ export async function insertCache(username, posts) {
   await redis.set(key, value);
 }
 
-export async function getLatestCache(username) {
-  const key = `insta:posts:${username}`;
-  const val = await redis.get(key);
-  if (!val) return null;
-  return JSON.parse(val);
-}
