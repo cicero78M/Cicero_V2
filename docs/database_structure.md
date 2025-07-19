@@ -19,16 +19,8 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | insta_profile | basic Instagram profile information |
 | tiktok_post | TikTok videos fetched for each client |
 | tiktok_comment | cached TikTok comments |
-| insta_post_cache | temporary cache for posts by username |
-| polres_insta | monitoring of official IG accounts |
-| polda | list of regional police divisions |
-| polda_kota | cities mapped to each polda |
 | instagram_user | extended Instagram account data |
 | instagram_user_metrics | follower/media statistics |
-| instagram_user_about | additional metadata from scraping |
-| instagram_bio_link | links found in the account bio |
-| instagram_profile_pic_version | history of profile pictures |
-| instagram_user_location | location information if available |
 | ig_ext_users | RapidAPI user reference |
 | ig_ext_posts | RapidAPI post reference |
 | ig_ext_media_items | media items within a post |
@@ -109,25 +101,6 @@ Comments for a TikTok video.
 - `video_id` – primary key and foreign key to `tiktok_post(video_id)`
 - `comments` – JSON array of comments
 - `updated_at`
-
-### `insta_post_cache`
-Caches Instagram posts fetched by username.
-- `id` – serial primary key
-- `username` – Instagram account
-- `posts` – JSON array of posts
-- `fetched_at` – when data was fetched
-
-### `polres_insta`
-Tracks official Instagram accounts for recency checks.
-- `username` – primary key
-- `last_post_at` – timestamp of last post
-- `checked_at` – when verified
-
-### `polda` and `polda_kota`
-Reference tables of regional police divisions.
-- `polda` has `id` and unique `nama`
-- `polda_kota` links to `polda(id)` with an additional `nama`
-
 ### `instagram_user`
 Core profile details returned from Instagram scraping.
 - `user_id` – primary key
@@ -138,33 +111,13 @@ Core profile details returned from Instagram scraping.
 - `public_email`, `public_phone_country_code`, `public_phone_number`
 - `profile_pic_url`, `profile_pic_url_hd`
 
-### `instagram_user_about`
-Additional account metadata.
-- `user_id` – foreign key to `instagram_user`
-- `country`, `date_joined`, `date_joined_timestamp`, `former_usernames`
-
-### `instagram_bio_link`
-Links found in the account bio.
-- `user_id` – foreign key to `instagram_user`
-- `link_id` – primary key per user
-- `link_type`, `lynx_url`, `open_in_app`, `title`, `url`, `is_pinned`
-
-### `instagram_profile_pic_version`
-Historical profile picture versions.
-- `user_id` – foreign key to `instagram_user`
-- `height`, `width`, `url`
-
 ### `instagram_user_metrics`
 Follower and media statistics.
 - `user_id` – primary key referencing `instagram_user`
 - `follower_count`, `following_count`, `media_count`
 - `total_igtv_videos`, `latest_reel_media`
 
-### `instagram_user_location`
-Location information if available.
-- `user_id` – primary key referencing `instagram_user`
-- `address_street`, `city_id`, `city_name`
-- `instagram_location_id`, `latitude`, `longitude`, `zip`
+
 
 ### `link_report`
   Stores social media links submitted from the mobile app.
@@ -209,12 +162,11 @@ erDiagram
     clients ||--o{ tiktok_post : "videos"
     insta_post ||--|| insta_like : "likes"
     tiktok_post ||--|| tiktok_comment : "comments"
-    polda ||--o{ polda_kota : "kota"
 ```
 
 The diagram shows how each `client` owns many `user`, `insta_post` and
 `tiktok_post` records. Instagram and TikTok posts have one-to-one tables for
-likes and comments. `polda` tables are independent of client data.
+likes and comments.
 
 ## PostgreSQL Table Management
 
