@@ -6,7 +6,6 @@ export {
   fetchInstagramLikesPage,
   fetchAllInstagramLikes,
   fetchAllInstagramLikesItems,
-  fetchInstagramCommentsPage,
   fetchAllInstagramComments,
   fetchInstagramHashtag,
   fetchInstagramPostInfo

@@ -316,7 +316,7 @@ export async function fetchAllInstagramLikesItems(shortcode, maxPage = 20) {
 }
 
 
-export async function searchInstagramUsers(query, limit = 10) {
+async function searchInstagramUsers(query, limit = 10) {
   if (!query) return [];
   try {
     sendConsoleDebug('searchInstagramUsers request', query);
@@ -342,7 +342,7 @@ export async function searchInstagramUsers(query, limit = 10) {
   }
 }
 
-export async function fetchInstagramCommentsPage(shortcode, token = null) {
+async function fetchInstagramCommentsPage(shortcode, token = null) {
   if (!shortcode) return { comments: [], next_token: null, has_more: false };
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (token) params.append('pagination_token', token);
