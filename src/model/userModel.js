@@ -104,30 +104,6 @@ export async function getTiktokEmptyUsersByClient(clientId) {
   return result.rows;
 }
 
-// Ambil user yang SUDAH mengisi WhatsApp (status true)
-export async function getWaFilledUsersByClient(clientId) {
-  const result = await query(
-    `SELECT divisi, nama, user_id, title, whatsapp
-     FROM "user"
-     WHERE client_id = $1 AND whatsapp IS NOT NULL AND whatsapp <> '' AND status = true
-     ORDER BY divisi, nama`,
-    [clientId]
-  );
-  return result.rows;
-}
-
-// Ambil user yang BELUM mengisi WhatsApp (status true)
-export async function getWaEmptyUsersByClient(clientId) {
-  const result = await query(
-    `SELECT divisi, nama, user_id, title
-     FROM "user"
-     WHERE client_id = $1 AND (whatsapp IS NULL OR whatsapp = '') AND status = true
-     ORDER BY divisi, nama`,
-    [clientId]
-  );
-  return result.rows;
-}
-
 // Ambil semua user aktif (status=true) beserta whatsapp
 export async function getUsersWithWaByClient(clientId) {
   const result = await query(
