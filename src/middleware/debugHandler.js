@@ -63,16 +63,6 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
   console.log(fullMsg);
 }
 
-// Shorthand untuk kebutuhan umum
-export const sendCronDebug = (client_id, msg) =>
-  sendDebug({ tag: "CRON", msg, client_id });
-
-export const sendAdminDebug = (msg) =>
-  sendDebug({ tag: "CICERO", msg });
-
-export const sendTiktokDebug = (msg) =>
-  sendDebug({ tag: "REGULAR", msg });
-
 // Debug khusus yang hanya dicetak di console tanpa mengirim pesan WhatsApp
 export function sendConsoleDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
   const safeMsg = typeof msg === "string" ? msg : safeStringify(msg);
