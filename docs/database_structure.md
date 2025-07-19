@@ -36,7 +36,6 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | ig_ext_hashtags | hashtags detected in posts |
 | ig_hashtag_info | metadata for individual hashtags |
 | ig_post_metrics | advanced engagement metrics |
-| ig_post_likes | JSON list of like usernames |
 | ig_post_like_users | relational table of likes |
 | ig_post_comments | stored comments per post |
 | visitor_logs | record of API access |
