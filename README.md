@@ -132,7 +132,7 @@ psql -U <dbuser> -h <host> -d <dbname> < cicero_backup.sql
 
 - Use RabbitMQ to process large jobs asynchronously.
 - Configure the connection URL in `AMQP_URL`.
-- The queue service is found in `src/service/rabbitMQService.js` with `publishToQueue` and `consumeQueue` functions.
+- Implement helper functions (e.g. `publishToQueue` and `consumeQueue`) as needed for your project.
 
 ---
 
