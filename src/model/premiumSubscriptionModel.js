@@ -8,7 +8,7 @@ export async function createSubscription(data) {
      ) VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7, NOW()),COALESCE($8, NOW()))
      RETURNING *`,
     [
-      data.userId || data.username,
+      data.username,
       data.status || 'active',
       data.start_date || new Date(),
       data.end_date || null,
@@ -36,22 +36,22 @@ export async function findSubscriptionById(id) {
   return res.rows[0] || null;
 }
 
-export async function findActiveSubscriptionByUser(userId) {
+export async function findActiveSubscriptionByUser(username) {
   const res = await query(
     `SELECT * FROM premium_subscription
      WHERE username=$1 AND status='active'
      ORDER BY start_date DESC LIMIT 1`,
-    [userId]
+    [username]
   );
   return res.rows[0] || null;
 }
 
-export async function findLatestSubscriptionByUser(userId) {
+export async function findLatestSubscriptionByUser(username) {
   const res = await query(
     `SELECT * FROM premium_subscription
      WHERE username=$1
      ORDER BY start_date DESC LIMIT 1`,
-    [userId]
+    [username]
   );
   return res.rows[0] || null;
 }
@@ -72,7 +72,7 @@ export async function updateSubscription(id, data) {
      WHERE subscription_id=$1 RETURNING *`,
     [
       id,
-      merged.userId || merged.username,
+      merged.username,
       merged.status,
       merged.start_date,
       merged.end_date || null,

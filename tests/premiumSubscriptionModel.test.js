@@ -25,7 +25,7 @@ beforeEach(() => {
 
 test('createSubscription inserts row', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ subscription_id: 1 }] });
-  const data = { userId: 'abc', start_date: '2024-01-01' };
+  const data = { username: 'abc', start_date: '2024-01-01' };
   const res = await createSubscription(data);
   expect(res).toEqual({ subscription_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
