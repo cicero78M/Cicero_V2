@@ -26,14 +26,15 @@ export async function createEvent(data) {
   const eventDate = formatIsoTimestamp(data.event_date);
   const res = await query(
     `INSERT INTO editorial_event (
-      event_date, topic, assignee, status, content, summary, image_path,
+      event_date, topic, judul_berita, assignee, status, content, summary, image_path,
       tag, kategori,
       created_by, updated_by, created_at, last_update
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12, NOW()), COALESCE($13, NOW()))
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, COALESCE($13, NOW()), COALESCE($14, NOW()))
      RETURNING *`,
     [
       eventDate,
       data.topic,
+      data.judul_berita || null,
       data.assignee || null,
       data.status || 'draft',
       data.content || null,
@@ -59,20 +60,22 @@ export async function updateEvent(id, data) {
     `UPDATE editorial_event SET
       event_date=$2,
       topic=$3,
-      assignee=$4,
-      status=$5,
-      content=$6,
-      summary=$7,
-      image_path=$8,
-      tag=$9,
-      kategori=$10,
-      updated_by=$11,
-      last_update=COALESCE($12, NOW())
+      judul_berita=$4,
+      assignee=$5,
+      status=$6,
+      content=$7,
+      summary=$8,
+      image_path=$9,
+      tag=$10,
+      kategori=$11,
+      updated_by=$12,
+      last_update=COALESCE($13, NOW())
      WHERE event_id=$1 RETURNING *`,
     [
       id,
       merged.event_date,
       merged.topic,
+      merged.judul_berita || null,
       merged.assignee || null,
       merged.status,
       merged.content || null,

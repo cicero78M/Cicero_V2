@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS editorial_event (
   event_id SERIAL PRIMARY KEY,
   event_date TIMESTAMP NOT NULL,
   topic TEXT NOT NULL,
+  judul_berita TEXT,
   assignee VARCHAR(50),
   status VARCHAR(20) DEFAULT 'draft',
   content TEXT,
