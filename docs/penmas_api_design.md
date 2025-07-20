@@ -31,6 +31,8 @@ CREATE TABLE editorial_event (
   content TEXT,
   summary TEXT,
   image_path TEXT,
+  tag TEXT,
+  kategori TEXT,
   created_by INTEGER REFERENCES users(user_id),
   updated_by INTEGER REFERENCES users(user_id),
   username TEXT,
@@ -38,6 +40,9 @@ CREATE TABLE editorial_event (
   last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+The `tag` and `kategori` columns store optional keywords and category labels
+submitted by the Android client.
 
 The `event_date` column uses a timestamp so the schedule can include time of day.
 In list views, the API returns `event_date` formatted as `dd/mm/yyyy`.
