@@ -35,7 +35,6 @@ CREATE TABLE editorial_event (
   kategori TEXT,
   created_by INTEGER REFERENCES users(user_id),
   updated_by INTEGER REFERENCES users(user_id),
-  username TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
