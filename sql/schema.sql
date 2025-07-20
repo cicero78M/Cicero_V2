@@ -284,6 +284,20 @@ CREATE TABLE IF NOT EXISTS editorial_event (
   last_update TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS press_release_detail (
+  event_id INTEGER PRIMARY KEY REFERENCES editorial_event(event_id),
+  judul TEXT,
+  dasar TEXT,
+  tersangka TEXT,
+  tkp TEXT,
+  kronologi TEXT,
+  modus TEXT,
+  barang_bukti TEXT,
+  pasal TEXT,
+  ancaman TEXT,
+  catatan TEXT
+);
+
 CREATE TABLE IF NOT EXISTS approval_request (
   request_id SERIAL PRIMARY KEY,
   event_id INTEGER REFERENCES editorial_event(event_id),

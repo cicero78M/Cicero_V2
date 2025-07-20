@@ -16,6 +16,7 @@ import subscriptionConfirmationRoutes from './subscriptionConfirmationRoutes.js'
 import amplifyRoutes from './amplifyRoutes.js';
 import editorialEventRoutes from './editorialEventRoutes.js';
 import approvalRequestRoutes from './approvalRequestRoutes.js';
+import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ router.use('/logs', logRoutes);
 router.use('/link-reports', linkReportRoutes);
 router.use('/events', editorialEventRoutes);
 router.use('/approvals', approvalRequestRoutes);
+router.use('/press-release-details', pressReleaseDetailRoutes);
 router.use('/premium-subscriptions', premiumSubscriptionRoutes);
 router.use('/subscription-registrations', subscriptionRegistrationRoutes);
 router.use('/subscription-confirmations', subscriptionConfirmationRoutes);
