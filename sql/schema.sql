@@ -276,6 +276,8 @@ CREATE TABLE IF NOT EXISTS editorial_event (
   content TEXT,
   summary TEXT,
   image_path TEXT,
+  tag TEXT,
+  kategori TEXT,
   created_by TEXT REFERENCES penmas_user(user_id),
   updated_by TEXT REFERENCES penmas_user(user_id),
   username TEXT,
