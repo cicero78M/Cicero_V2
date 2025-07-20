@@ -28,8 +28,8 @@ export async function createEvent(data) {
     `INSERT INTO editorial_event (
       event_date, topic, assignee, status, content, summary, image_path,
       tag, kategori,
-      created_by, updated_by, username, created_at, last_update
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, COALESCE($13, NOW()), COALESCE($14, NOW()))
+      created_by, updated_by, created_at, last_update
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12, NOW()), COALESCE($13, NOW()))
      RETURNING *`,
     [
       eventDate,
@@ -43,7 +43,6 @@ export async function createEvent(data) {
       data.kategori || null,
       data.created_by,
       data.updated_by || data.created_by,
-      data.username || null,
       data.created_at || null,
       data.last_update || null
     ]
@@ -67,9 +66,8 @@ export async function updateEvent(id, data) {
       image_path=$8,
       tag=$9,
       kategori=$10,
-      username=$11,
-      updated_by=$12,
-      last_update=COALESCE($13, NOW())
+      updated_by=$11,
+      last_update=COALESCE($12, NOW())
      WHERE event_id=$1 RETURNING *`,
     [
       id,
@@ -82,7 +80,6 @@ export async function updateEvent(id, data) {
       merged.image_path || null,
       merged.tag || null,
       merged.kategori || null,
-      merged.username || null,
       data.updated_by || merged.updated_by || null,
       merged.last_update || null
     ]
