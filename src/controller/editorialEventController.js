@@ -1,4 +1,5 @@
 import * as eventModel from '../model/editorialEventModel.js';
+import * as penmasUserModel from '../model/penmasUserModel.js';
 import { sendSuccess } from '../utils/response.js';
 
 export async function getEvents(req, res, next) {
@@ -12,6 +13,10 @@ export async function getEvents(req, res, next) {
 
 export async function createEvent(req, res, next) {
   try {
+    const currentUser = await penmasUserModel.findById(req.penmasUser.user_id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+    }
     const data = {
       ...req.body,
       created_by: req.penmasUser.user_id,
@@ -26,6 +31,10 @@ export async function createEvent(req, res, next) {
 
 export async function updateEvent(req, res, next) {
   try {
+    const currentUser = await penmasUserModel.findById(req.penmasUser.user_id);
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+    }
     const body = {
       ...req.body,
       updated_by: req.penmasUser.user_id,
