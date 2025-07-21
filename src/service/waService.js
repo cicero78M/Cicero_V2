@@ -182,15 +182,21 @@ waClient.on("message", async (msg) => {
   if (operatorOptionSessions[chatId]) {
     if (/^1$/.test(text.trim())) {
       delete operatorOptionSessions[chatId];
-      setSession(chatId, { menu: "oprrequest", step: "main" });
-      await oprRequestHandlers.main(
-        getSession(chatId),
-        chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n🔟 Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
-        waClient,
-        pool,
-        userModel
-      );
+      const step = isAdmin ? "chooseClientStart" : "main";
+      setSession(chatId, { menu: "oprrequest", step });
+      const sess = getSession(chatId);
+      if (isAdmin) {
+        await oprRequestHandlers.chooseClientStart(sess, chatId, "", waClient, pool, userModel);
+      } else {
+        await oprRequestHandlers.main(
+          sess,
+          chatId,
+          `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n🔟 Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          waClient,
+          pool,
+          userModel
+        );
+      }
       return;
     }
     if (/^2$/.test(text.trim())) {
@@ -306,11 +312,16 @@ waClient.on("message", async (msg) => {
       );
       return;
     }
-    setSession(chatId, { menu: "oprrequest", step: "main" });
-    await oprRequestHandlers.main(
-      getSession(chatId),
-      chatId,
-      `┏━━━ *MENU OPERATOR CICERO* ━━━┓
+    const step = isAdmin ? "chooseClientStart" : "main";
+    setSession(chatId, { menu: "oprrequest", step });
+    const sess = getSession(chatId);
+    if (isAdmin) {
+      await oprRequestHandlers.chooseClientStart(sess, chatId, "", waClient, pool, userModel);
+    } else {
+      await oprRequestHandlers.main(
+        sess,
+        chatId,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
 
 1️⃣ Tambah user baru
@@ -328,10 +339,11 @@ waClient.on("message", async (msg) => {
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
-      waClient,
-      pool,
-      userModel
-    );
+        waClient,
+        pool,
+        userModel
+      );
+    }
     return;
   }
 
