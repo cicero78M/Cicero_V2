@@ -22,7 +22,9 @@ CREATE TABLE "user" (
   insta VARCHAR,
   tiktok VARCHAR,
   client_id VARCHAR REFERENCES clients(client_id),
-  status BOOLEAN DEFAULT TRUE
+  status BOOLEAN DEFAULT TRUE,
+  ditbinmas BOOLEAN DEFAULT FALSE,
+  ditlantas BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE penmas_user (

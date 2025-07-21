@@ -54,6 +54,7 @@ Holds users belonging to a client.
 - `insta`, `tiktok` – social media handles
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
+- `ditbinmas`, `ditlantas` – boolean flags for directorate assignment
 
 ### `dashboard_user`
 Credentials for the web dashboard login.
