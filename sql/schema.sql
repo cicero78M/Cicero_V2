@@ -54,6 +54,8 @@ CREATE TABLE insta_post (
   is_video BOOLEAN DEFAULT FALSE,
   video_url TEXT,
   image_url TEXT,
+  images_url JSONB,
+  is_carousel BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP
 );
 
