@@ -1212,7 +1212,6 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLink_chooseClient: async (session, chatId, text, waClient, pool) => {
-  rekapLink_chooseClient: async (session, chatId, text, waClient, pool) => {
     const rows = await pool.query(
       "SELECT client_id, nama FROM clients ORDER BY client_id"
     );
