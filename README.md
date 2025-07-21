@@ -75,8 +75,14 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     sudo systemctl enable redis-server
     sudo systemctl start redis-server
     ```
-4. **Initialize the database** using scripts in `sql/schema.sql`.
-5. **Start the application**
+4. **Set up RabbitMQ**
+   ```bash
+   sudo apt-get install rabbitmq-server
+   sudo systemctl enable rabbitmq-server
+   sudo systemctl start rabbitmq-server
+   ```
+5. **Initialize the database** using scripts in `sql/schema.sql`.
+6. **Start the application**
     ```bash
     npm start
     ```
@@ -84,7 +90,7 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     ```bash
     pm2 start app.js --name cicero_v2
     ```
-6. **Lint & Test**
+7. **Lint & Test**
     ```bash
     npm run lint
     npm test
