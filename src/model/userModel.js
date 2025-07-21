@@ -145,6 +145,8 @@ export async function updateUserField(user_id, field, value) {
     "title",
     "divisi",
     "jabatan",
+    "ditbinmas",
+    "ditlantas",
   ];
   if (!allowed.includes(field)) throw new Error("Field tidak diizinkan!");
   if (["nama", "title", "divisi", "jabatan"].includes(field) && typeof value === 'string') {
@@ -163,6 +165,19 @@ export async function getExceptionUsersByClient(client_id) {
     'SELECT * FROM "user" WHERE exception = true AND client_id = $1',
     [client_id]
   );
+  return rows;
+}
+
+// Ambil user dengan flag direktorat binmas atau lantas
+export async function getDirektoratUsers(clientId = null) {
+  let sql =
+    'SELECT * FROM "user" WHERE ditbinmas = true OR ditlantas = true';
+  const params = [];
+  if (clientId) {
+    sql += ' AND client_id = $1';
+    params.push(clientId);
+  }
+  const { rows } = await query(sql, params);
   return rows;
 }
 
@@ -217,8 +232,8 @@ export async function createUser(userData) {
   // Sesuaikan dengan struktur dan database-mu!
   normalizeUserFields(userData);
   const q = `
-    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     RETURNING *;
   `;
   const params = [
@@ -232,7 +247,9 @@ export async function createUser(userData) {
     userData.insta || "",
     userData.tiktok || "",
     userData.client_id || null,
-    userData.exception ?? false
+    userData.exception ?? false,
+    userData.ditbinmas ?? false,
+    userData.ditlantas ?? false
   ];
   const res = await query(q, params);
   return res.rows[0];
