@@ -40,6 +40,9 @@ export const oprRequestHandlers = {
 8️⃣ Absensi Amplifikasi User
 9️⃣ Absensi Registrasi User
 🔟 Tugas Khusus
+1️⃣1️⃣ Rekap link tugas khusus
+1️⃣2️⃣ Rekap per post khusus
+1️⃣3️⃣ Absensi Amplifikasi Khusus
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -186,6 +189,73 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, "Kirim link Instagram tugas khusus:");
       return;
     }
+    if (/^11$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "rekapLinkKhusus_chooseClient";
+        return oprRequestHandlers.rekapLinkKhusus_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "rekapLinkKhusus";
+      return oprRequestHandlers.rekapLinkKhusus(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^12$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "rekapLinkKhususPerPost_chooseClient";
+        return oprRequestHandlers.rekapLinkKhususPerPost_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "rekapLinkKhususPerPost";
+      return oprRequestHandlers.rekapLinkKhususPerPost(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^13$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "absensiLinkKhusus_chooseClient";
+        return oprRequestHandlers.absensiLinkKhusus_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "absensiLinkKhusus_submenu";
+      session.absensi_client_id = null;
+      return oprRequestHandlers.absensiLinkKhusus_submenu(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -195,7 +265,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-9 atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-13 atau ketik *batal* untuk keluar."
     );
   },
 
@@ -668,6 +738,124 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
+  rekapLinkKhususPerPost: async (session, chatId, text, waClient, pool, userModel) => {
+    let clientId = session.selected_client_id || null;
+    if (!clientId) {
+      const waNum = chatId.replace(/[^0-9]/g, "");
+      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+      try {
+        const res = await pool.query(q, [waNum]);
+        clientId = res.rows[0]?.client_id || null;
+      } catch (e) { console.error(e); }
+      if (isAdminWhatsApp(chatId) && !clientId) {
+        session.step = "rekapLinkKhususPerPost_chooseClient";
+        return oprRequestHandlers.rekapLinkKhususPerPost_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      if (!clientId) {
+        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+    }
+    const { getShortcodesTodayByClient } = await import("../../model/instaPostKhususModel.js");
+    const shortcodes = await getShortcodesTodayByClient(clientId);
+    if (!shortcodes.length) {
+      await waClient.sendMessage(chatId, `Tidak ada tugas link post khusus hari ini untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    session.rekapShortcodes = shortcodes;
+    session.selected_client_id = clientId;
+    let msg = `*Rekap Post Khusus*\nBalas angka untuk pilih post:\n`;
+    shortcodes.forEach((sc, i) => {
+      msg += `${i + 1}. https://www.instagram.com/p/${sc}\n`;
+    });
+    session.step = "rekapLinkKhususPerPost_action";
+    await waClient.sendMessage(chatId, msg.trim());
+  },
+
+  rekapLinkKhususPerPost_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const shortcodes = session.rekapShortcodes || [];
+    if (isNaN(idx) || !shortcodes[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    const sc = shortcodes[idx];
+    const clientId = session.selected_client_id;
+    const { getReportsTodayByShortcode } = await import("../../model/linkReportKhususModel.js");
+    const reports = await getReportsTodayByShortcode(clientId, sc);
+    if (!reports || reports.length === 0) {
+      await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
+      session.step = "main";
+      delete session.rekapShortcodes;
+      delete session.selected_client_id;
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
+    const users = new Set();
+    reports.forEach(r => {
+      users.add(r.user_id);
+      if (r.facebook_link) list.facebook.push(r.facebook_link);
+      if (r.instagram_link) list.instagram.push(r.instagram_link);
+      if (r.twitter_link) list.twitter.push(r.twitter_link);
+      if (r.tiktok_link) list.tiktok.push(r.tiktok_link);
+      if (r.youtube_link) list.youtube.push(r.youtube_link);
+    });
+    const totalLinks =
+      list.facebook.length +
+      list.instagram.length +
+      list.twitter.length +
+      list.tiktok.length +
+      list.youtube.length;
+
+    const now = new Date();
+    const hari = hariIndo[now.getDay()];
+    const tanggal = now.toLocaleDateString("id-ID");
+    const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+    const salam = getGreeting();
+
+    const { rows: nameRows } = await pool.query(
+      "SELECT nama FROM clients WHERE client_id=$1 LIMIT 1",
+      [clientId]
+    );
+    const clientName = nameRows[0]?.nama || clientId;
+
+    let msg = `${salam}\n\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
+    msg += `Hari : ${hari}\n`;
+    msg += `Tanggal : ${tanggal}\n`;
+    msg += `Pukul : ${jam}\n\n`;
+    msg += `Link Post: https://www.instagram.com/p/${sc}\n\n`;
+    msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+    msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+
+    msg += `Link Sebagai Berikut :\n`;
+    msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
+    msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
+    msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
+    msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
+    msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
+    await waClient.sendMessage(chatId, msg.trim());
+    delete session.rekapShortcodes;
+    delete session.selected_client_id;
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
   updateTugas: async (session, chatId, text, waClient, pool, userModel) => {
     let clientId = session.selected_client_id || null;
     if (!clientId) {
@@ -1027,6 +1215,82 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     return oprRequestHandlers.rekapLinkPerPost(session, chatId, "", waClient, pool, userModel);
   },
 
+  rekapLinkKhusus_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "rekapLinkKhusus_chooseClient_action";
+  },
+
+  rekapLinkKhusus_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "rekapLinkKhusus";
+    return oprRequestHandlers.rekapLinkKhusus(session, chatId, "", waClient, pool, userModel);
+  },
+
+  rekapLinkKhususPerPost_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "rekapLinkKhususPerPost_chooseClient_action";
+  },
+
+  rekapLinkKhususPerPost_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "rekapLinkKhususPerPost";
+    return oprRequestHandlers.rekapLinkKhususPerPost(session, chatId, "", waClient, pool, userModel);
+  },
+
   updateTugas_chooseClient: async (session, chatId, text, waClient, pool) => {
     const rows = await pool.query(
       "SELECT client_id, nama FROM clients ORDER BY client_id"
@@ -1101,6 +1365,44 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     session.absensi_client_id = clients[idx].client_id;
     session.step = "absensiLink_submenu";
     return oprRequestHandlers.absensiLink_submenu(session, chatId, "", waClient, pool, userModel);
+  },
+
+  absensiLinkKhusus_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "absensiLinkKhusus_chooseClient_action";
+  },
+
+  absensiLinkKhusus_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.absensi_client_id = clients[idx].client_id;
+    session.step = "absensiLinkKhusus_submenu";
+    return oprRequestHandlers.absensiLinkKhusus_submenu(session, chatId, "", waClient, pool, userModel);
   },
 
   absensiLink_submenu: async (session, chatId, text, waClient, pool, userModel) => {
