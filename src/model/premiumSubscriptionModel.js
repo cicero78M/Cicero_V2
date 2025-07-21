@@ -1,6 +1,13 @@
 import { query } from '../repository/db.js';
+import { findByUsername } from './instagramUserModel.js';
 
 export async function createSubscription(data) {
+  const exists = await findByUsername(data.username);
+  if (!exists) {
+    const err = new Error('username not found');
+    err.statusCode = 400;
+    throw err;
+  }
   const res = await query(
     `INSERT INTO premium_subscription (
         username, status, start_date, end_date,
@@ -60,6 +67,12 @@ export async function updateSubscription(id, data) {
   const old = await findSubscriptionById(id);
   if (!old) return null;
   const merged = { ...old, ...data };
+  const exists = await findByUsername(merged.username);
+  if (!exists) {
+    const err = new Error('username not found');
+    err.statusCode = 400;
+    throw err;
+  }
   const res = await query(
     `UPDATE premium_subscription SET
       username=$2,

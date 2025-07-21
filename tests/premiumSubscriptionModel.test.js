@@ -1,9 +1,13 @@
 import { jest } from '@jest/globals';
 
 const mockQuery = jest.fn();
+const mockFindUser = jest.fn();
 
 jest.unstable_mockModule('../src/repository/db.js', () => ({
   query: mockQuery,
+}));
+jest.unstable_mockModule('../src/model/instagramUserModel.js', () => ({
+  findByUsername: mockFindUser,
 }));
 
 let createSubscription;
@@ -21,9 +25,11 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockQuery.mockReset();
+  mockFindUser.mockReset();
 });
 
 test('createSubscription inserts row', async () => {
+  mockFindUser.mockResolvedValueOnce({ username: 'abc' });
   mockQuery.mockResolvedValueOnce({ rows: [{ subscription_id: 1 }] });
   const data = { username: 'abc', start_date: '2024-01-01' };
   const res = await createSubscription(data);
@@ -61,4 +67,13 @@ test('findLatestSubscriptionByUser selects last record', async () => {
     expect.stringContaining('WHERE username=$1'),
     ['def']
   );
+});
+
+test('createSubscription throws if username missing', async () => {
+  mockFindUser.mockResolvedValueOnce(null);
+  await expect(createSubscription({ username: 'x' })).rejects.toThrow(
+    'username not found'
+  );
+  expect(mockFindUser).toHaveBeenCalledWith('x');
+  expect(mockQuery).not.toHaveBeenCalled();
 });
