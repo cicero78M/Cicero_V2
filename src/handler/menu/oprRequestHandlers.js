@@ -25,7 +25,45 @@ Balas angka field di atas atau *batal* untuk keluar.`.trim();
 }
 
 export const oprRequestHandlers = {
- main: async (session, chatId, text, waClient, pool, userModel) => {
+  chooseClientStart: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, text, waClient, pool, userModel);
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "chooseClientStart_action";
+  },
+
+  chooseClientStart_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.admin_client_id = clients[idx].client_id;
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  main: async (session, chatId, text, waClient, pool, userModel) => {
     let msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
@@ -55,6 +93,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.addUser;
       delete session.availableSatfung;
       delete session.updateStatusNRP;
+      delete session.admin_client_id;
       session.step = "main";
     };
     if (/^1$/i.test(text.trim())) {
@@ -451,7 +490,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLink: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -540,13 +579,13 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
     await waClient.sendMessage(chatId, msg.trim());
-    delete session.selected_client_id;
+    if (!session.admin_client_id) delete session.selected_client_id;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   rekapLinkKhusus: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -609,13 +648,13 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
     await waClient.sendMessage(chatId, msg.trim());
-    delete session.selected_client_id;
+    if (!session.admin_client_id) delete session.selected_client_id;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   rekapLinkPerPost: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -678,7 +717,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
       session.step = "main";
       delete session.rekapShortcodes;
-      delete session.selected_client_id;
+      if (!session.admin_client_id) delete session.selected_client_id;
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const list = {
@@ -733,13 +772,13 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
     await waClient.sendMessage(chatId, msg.trim());
     delete session.rekapShortcodes;
-    delete session.selected_client_id;
+    if (!session.admin_client_id) delete session.selected_client_id;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   rekapLinkKhususPerPost: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -802,7 +841,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
       session.step = "main";
       delete session.rekapShortcodes;
-      delete session.selected_client_id;
+      if (!session.admin_client_id) delete session.selected_client_id;
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
@@ -851,13 +890,13 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
     await waClient.sendMessage(chatId, msg.trim());
     delete session.rekapShortcodes;
-    delete session.selected_client_id;
+    if (!session.admin_client_id) delete session.selected_client_id;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   updateTugas: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -1696,7 +1735,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    let clientId = session.selected_client_id || null;
+    let clientId = session.selected_client_id || session.admin_client_id || null;
     if (!clientId) {
       const waNum = chatId.replace(/[^0-9]/g, "");
       const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
@@ -1734,7 +1773,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
 `.trim();
       await waClient.sendMessage(chatId, msg);
     }
-    delete session.selected_client_id;
+    if (!session.admin_client_id) delete session.selected_client_id;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
