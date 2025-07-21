@@ -3,8 +3,9 @@
 import pLimit from "p-limit";
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
-import { fetchInstagramPosts } from "../../service/instagramApi.js";
+import { fetchInstagramPosts, fetchInstagramPostInfo } from "../../service/instagramApi.js";
 import { savePostWithMedia } from "../../model/instaPostExtendedModel.js";
+import { upsertInstaPost as upsertInstaPostKhusus } from "../../model/instaPostKhususModel.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -326,4 +327,38 @@ export async function fetchAndStoreInstaContent(
     }
   }
   return summary;
+}
+
+export async function fetchSinglePostKhusus(linkOrCode, clientId) {
+  const re = /(?:instagram\.com\/p\/)?([A-Za-z0-9_-]+)/i;
+  const m = String(linkOrCode).match(re);
+  if (!m) throw new Error('invalid link');
+  const code = m[1];
+  const info = await fetchInstagramPostInfo(code);
+  if (!info) throw new Error('post not found');
+  const data = {
+    client_id: clientId,
+    shortcode: code,
+    caption: info.caption?.text || info.caption || null,
+    comment_count: info.comment_count || 0,
+    thumbnail_url:
+      info.thumbnail_url ||
+      info.display_url ||
+      info.image_versions?.items?.[0]?.url || null,
+    is_video: info.is_video || false,
+    video_url: info.video_url || null,
+    image_url: info.image_versions?.items?.[0]?.url || null,
+    images_url: Array.isArray(info.carousel_media)
+      ? info.carousel_media.map(i => i.image_versions?.items?.[0]?.url).filter(Boolean)
+      : null,
+    is_carousel: Array.isArray(info.carousel_media) && info.carousel_media.length > 1,
+    created_at: info.taken_at ? new Date(info.taken_at * 1000).toISOString() : null
+  };
+  await upsertInstaPostKhusus(data);
+  try {
+    await savePostWithMedia(info);
+  } catch (e) {
+    sendDebug({ tag: 'IG FETCH', msg: `ext save error ${e.message}` });
+  }
+  return data.shortcode;
 }
