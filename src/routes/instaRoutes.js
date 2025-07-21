@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   getInstaRekapLikes,
   getInstaPosts,
+  getInstaPostsKhusus,
   getRapidInstagramPosts,
   getRapidInstagramProfile,
   getRapidInstagramInfo,
@@ -17,6 +18,7 @@ const router = Router();
 
 router.get("/rekap-likes", authRequired, getInstaRekapLikes);
 router.get("/posts", authRequired, getInstaPosts);
+router.get("/posts-khusus", authRequired, getInstaPostsKhusus);
 router.get("/rapid-posts", authRequired, getRapidInstagramPosts);
 router.get("/rapid-posts-month", authRequired, getRapidInstagramPostsByMonth);
 router.get("/rapid-posts-store", authRequired, getRapidInstagramPostsStore);
