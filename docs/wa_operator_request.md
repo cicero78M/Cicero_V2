@@ -1,11 +1,13 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-11-23*
+*Last updated: 2025-11-24*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
-2. Bot menampilkan pilihan berikut:
+2. Jika perintah dikirim dari nomor WhatsApp admin, bot terlebih dahulu
+   menampilkan daftar client untuk dipilih.
+3. Bot menampilkan pilihan berikut:
    - 1️⃣ Tambah user baru
    - 2️⃣ Update data user
    - 3️⃣ Ubah status user (aktif/nonaktif)
