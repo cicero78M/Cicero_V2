@@ -420,7 +420,7 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(
         chatId,
         updated
-          ? `✅ Update berhasil:\n${JSON.stringify(updated, null, 2)}`
+          ? `✅ Update berhasil.\n${formatClientInfo(updated)}`
           : "❌ Client tidak ditemukan atau update gagal."
       );
     } catch (e) {
