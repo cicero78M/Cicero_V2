@@ -1,6 +1,7 @@
 // src/controller/instaController.js
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import * as instaPostService from "../service/instaPostService.js";
+import * as instaPostKhususService from "../service/instaPostKhususService.js";
 import {
   fetchInstagramPosts,
   fetchInstagramProfile,
@@ -319,6 +320,31 @@ export async function getInstagramUser(req, res) {
     sendSuccess(res, profile);
   } catch (err) {
     sendConsoleDebug({ tag: 'INSTA', msg: `Error getInstagramUser: ${err.message}` });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
+
+export async function getInstaPostsKhusus(req, res) {
+  try {
+    const client_id =
+      req.query.client_id ||
+      req.user?.client_id ||
+      req.headers["x-client-id"];
+    if (!client_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "client_id wajib diisi" });
+    }
+
+    sendConsoleDebug({ tag: "INSTA", msg: `getInstaPostsKhusus ${client_id}` });
+    const posts = await instaPostKhususService.findByClientId(client_id);
+    sendSuccess(res, posts);
+  } catch (err) {
+    sendConsoleDebug({
+      tag: "INSTA",
+      msg: `Error getInstaPostsKhusus: ${err.message}`
+    });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
