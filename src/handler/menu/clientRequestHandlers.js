@@ -200,6 +200,11 @@ export const clientRequestHandlers = {
 
   // ================== TAMBAH CLIENT ==================
   addClient_id: async (session, chatId, text, waClient) => {
+    if (!text.trim()) {
+      session.step = "addClient_id";
+      await waClient.sendMessage(chatId, "Masukkan *ID* client:");
+      return;
+    }
     session.addClient_id = text.trim().toUpperCase();
     session.step = "addClient_nama";
     await waClient.sendMessage(chatId, "Masukkan *nama* client:");
