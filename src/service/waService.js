@@ -186,7 +186,7 @@ waClient.on("message", async (msg) => {
       await oprRequestHandlers.main(
         getSession(chatId),
         chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n🔟 Tugas Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n🔟 Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
         waClient,
         pool,
         userModel
@@ -247,7 +247,7 @@ waClient.on("message", async (msg) => {
       await oprRequestHandlers.main(
         getSession(chatId),
         chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link per post\n7️⃣ Absensi Amplifikasi User\n8️⃣ Absensi Registrasi User\n🔟 Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
         waClient,
         pool,
         userModel
@@ -322,6 +322,9 @@ waClient.on("message", async (msg) => {
 7️⃣ Absensi Amplifikasi User
 8️⃣ Absensi Registrasi User
 🔟 Tugas Khusus
+1️⃣1️⃣ Rekap link tugas khusus
+1️⃣2️⃣ Rekap per post khusus
+1️⃣3️⃣ Absensi Amplifikasi Khusus
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,

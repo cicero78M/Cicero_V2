@@ -1,5 +1,5 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-07-10*
+*Last updated: 2025-11-23*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
 
@@ -7,10 +7,18 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
 2. Bot menampilkan pilihan berikut:
    - 1️⃣ Tambah user baru
-   - 2️⃣ Ubah status user (aktif/nonaktif)
-   - 3️⃣ Cek data user berdasarkan NRP/NIP
-   - 4️⃣ Rekap link harian
+   - 2️⃣ Update data user
+   - 3️⃣ Ubah status user (aktif/nonaktif)
+   - 4️⃣ Cek data user berdasarkan NRP/NIP
    - 5️⃣ Update tugas Instagram
+   - 6️⃣ Rekap link harian
+   - 7️⃣ Rekap link per post
+   - 8️⃣ Absensi Amplifikasi User
+   - 9️⃣ Absensi Registrasi User
+   - 🔟 Tugas Khusus
+   - 1️⃣1️⃣ Rekap link tugas khusus
+   - 1️⃣2️⃣ Rekap per post khusus
+   - 1️⃣3️⃣ Absensi Amplifikasi Khusus
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
 
 ## Alur Singkat Setiap Menu
