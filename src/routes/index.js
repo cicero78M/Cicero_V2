@@ -10,10 +10,12 @@ import tiktokRoutes from "./tiktokRoutes.js";
 import metaRoutes from './metaRoutes.js';
 import logRoutes from './logRoutes.js';
 import linkReportRoutes from './linkReportRoutes.js';
+import linkReportKhususRoutes from './linkReportKhususRoutes.js';
 import premiumSubscriptionRoutes from './premiumSubscriptionRoutes.js';
 import subscriptionRegistrationRoutes from './subscriptionRegistrationRoutes.js';
 import subscriptionConfirmationRoutes from './subscriptionConfirmationRoutes.js';
 import amplifyRoutes from './amplifyRoutes.js';
+import amplifyKhususRoutes from './amplifyKhususRoutes.js';
 import editorialEventRoutes from './editorialEventRoutes.js';
 import approvalRequestRoutes from './approvalRequestRoutes.js';
 import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
@@ -31,6 +33,7 @@ router.use('/oauth', oauthRoutes);
 router.use('/metadata', metaRoutes);
 router.use('/logs', logRoutes);
 router.use('/link-reports', linkReportRoutes);
+router.use('/link-reports-khusus', linkReportKhususRoutes);
 router.use('/events', editorialEventRoutes);
 router.use('/approvals', approvalRequestRoutes);
 router.use('/press-release-details', pressReleaseDetailRoutes);
@@ -38,6 +41,7 @@ router.use('/premium-subscriptions', premiumSubscriptionRoutes);
 router.use('/subscription-registrations', subscriptionRegistrationRoutes);
 router.use('/subscription-confirmations', subscriptionConfirmationRoutes);
 router.use('/amplify', amplifyRoutes);
+router.use('/amplify-khusus', amplifyKhususRoutes);
 
 export default router;
 
