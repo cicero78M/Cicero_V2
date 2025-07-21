@@ -73,6 +73,20 @@ CREATE TABLE insta_comment (
   updated_at TIMESTAMP
 );
 
+CREATE TABLE insta_post_khusus (
+  shortcode VARCHAR PRIMARY KEY,
+  client_id VARCHAR REFERENCES clients(client_id),
+  caption TEXT,
+  comment_count INT,
+  thumbnail_url TEXT,
+  is_video BOOLEAN DEFAULT FALSE,
+  video_url TEXT,
+  image_url TEXT,
+  images_url JSONB,
+  is_carousel BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP
+);
+
 CREATE TABLE insta_profile (
   username VARCHAR PRIMARY KEY,
   full_name VARCHAR,
@@ -237,6 +251,18 @@ CREATE TABLE visitor_logs (
 
 CREATE TABLE IF NOT EXISTS link_report (
     shortcode VARCHAR REFERENCES insta_post(shortcode),
+    user_id VARCHAR REFERENCES "user"(user_id),
+    instagram_link TEXT,
+    facebook_link TEXT,
+    twitter_link TEXT,
+    tiktok_link TEXT,
+    youtube_link TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (shortcode, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS link_report_khusus (
+    shortcode VARCHAR REFERENCES insta_post_khusus(shortcode),
     user_id VARCHAR REFERENCES "user"(user_id),
     instagram_link TEXT,
     facebook_link TEXT,
