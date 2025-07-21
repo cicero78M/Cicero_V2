@@ -5,15 +5,18 @@ dotenv.config();
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import { absensiLikes } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
+import { absensiLink } from "../handler/fetchabsensi/link/absensiLinkAmplifikasi.js";
 import waClient from "../service/waService.js";
 
 // Helper: ambil client IG aktif lengkap data
 async function getActiveClientsIG() {
   const { query } = await import("../db/index.js");
   const rows = await query(
-    `SELECT client_id, nama, client_operator, client_super, client_group
+    `SELECT client_id, nama, client_operator, client_super, client_group,
+            client_insta_status, client_amplify_status
      FROM clients
-     WHERE client_status = true AND client_insta_status = true AND client_amplify_status = true
+     WHERE client_status = true
+       AND (client_insta_status = true OR client_amplify_status = true)
      ORDER BY client_id`
   );
   return rows.rows;
@@ -73,33 +76,58 @@ cron.schedule(
         await waClient.sendMessage(admin, debugMsg).catch(() => {});
       }
 
-      // Step 2: FETCH LIKES IG + ABSENSI LIKES ("belum" saja, broadcast ke semua target)
+      // Step 2: FETCH LIKES IG dan ABSENSI LIKES (belum) serta rekap amplifikasi
       for (const client of clients) {
-        // === FETCH LIKES IG ===
-        try {
-          await handleFetchLikesInstagram(null, null, client.client_id);
-        } catch (e) {
-          for (const admin of getAdminWAIds()) {
-            await waClient.sendMessage(admin, `[CRON IG][${client.client_id}] ERROR fetch likes IG: ${e.message}`).catch(() => {});
+        if (client.client_insta_status) {
+          // === FETCH LIKES IG ===
+          try {
+            await handleFetchLikesInstagram(null, null, client.client_id);
+          } catch (e) {
+            for (const admin of getAdminWAIds()) {
+              await waClient
+                .sendMessage(admin, `[CRON IG][${client.client_id}] ERROR fetch likes IG: ${e.message}`)
+                .catch(() => {});
+            }
+          }
+
+          // === ABSENSI LIKES IG (BELUM) ===
+          try {
+            const msg = await absensiLikes(client.client_id, { mode: "belum" });
+            if (msg && msg.length > 0 && !/Belum melaksanakan: \*0\*/.test(msg)) {
+              for (const wa of getAllNotifRecipients(client)) {
+                await waClient.sendMessage(wa, msg).catch(() => {});
+              }
+            } else {
+              for (const admin of getAdminWAIds()) {
+                await waClient
+                  .sendMessage(admin, `[CRON IG][${client.client_id}] Semua user sudah like, tidak ada laporan belum.`)
+                  .catch(() => {});
+              }
+            }
+          } catch (e) {
+            for (const admin of getAdminWAIds()) {
+              await waClient
+                .sendMessage(admin, `[CRON IG][${client.client_id}] ERROR absensi IG: ${e.message}`)
+                .catch(() => {});
+            }
           }
         }
 
-        // === ABSENSI LIKES IG (BELUM) ===
-        try {
-          const msg = await absensiLikes(client.client_id, { mode: "belum" });
-          if (msg && msg.length > 0 && !/Belum melaksanakan: \*0\*/.test(msg)) {
-            // Kirim ke semua penerima: admin, operator, super, group (unik)
-            for (const wa of getAllNotifRecipients(client)) {
-              await waClient.sendMessage(wa, msg).catch(() => {});
+        if (client.client_amplify_status) {
+          // === ABSENSI AMPLIFIKASI ===
+          try {
+            const msgLink = await absensiLink(client.client_id, { mode: "belum" });
+            if (msgLink && msgLink.length > 0 && !/Belum melaksanakan: \*0\*/.test(msgLink)) {
+              for (const wa of getAllNotifRecipients(client)) {
+                await waClient.sendMessage(wa, msgLink).catch(() => {});
+              }
             }
-          } else {
+          } catch (e) {
             for (const admin of getAdminWAIds()) {
-              await waClient.sendMessage(admin, `[CRON IG][${client.client_id}] Semua user sudah like, tidak ada laporan belum.`).catch(() => {});
+              await waClient
+                .sendMessage(admin, `[CRON IG][${client.client_id}] ERROR absensi amplifikasi: ${e.message}`)
+                .catch(() => {});
             }
-          }
-        } catch (e) {
-          for (const admin of getAdminWAIds()) {
-            await waClient.sendMessage(admin, `[CRON IG][${client.client_id}] ERROR absensi IG: ${e.message}`).catch(() => {});
           }
         }
       }

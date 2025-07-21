@@ -11,7 +11,7 @@ import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js
 import { sendDebug } from "../middleware/debugHandler.js";
 
 cron.schedule(
-  "32 6-20 * * *",
+  "30 6-21 * * *",
   async () => {
     sendDebug({
       tag: "CRON IG",
@@ -46,6 +46,7 @@ cron.schedule(
       });
 
       for (const client of clients) {
+        if (!client.client_insta_status) continue;
         // --- FETCH LIKES IG ---
         try {
           sendDebug({
