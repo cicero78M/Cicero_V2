@@ -6,7 +6,8 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
 2. Jika perintah dikirim dari nomor WhatsApp admin, bot terlebih dahulu
-   menampilkan daftar client untuk dipilih.
+   menampilkan daftar client untuk dipilih. Setelah memilih, nomor admin
+   dianggap terdaftar pada client tersebut selama sesi menu berlangsung.
 3. Bot menampilkan pilihan berikut:
    - 1️⃣ Tambah user baru
    - 2️⃣ Update data user
