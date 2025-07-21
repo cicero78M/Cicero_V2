@@ -189,3 +189,14 @@ export function formatIsoDate(value) {
   if (!Number.isNaN(d)) return d.toISOString().slice(0, 10);
   return null;
 }
+
+export function extractInstagramShortcode(text) {
+  if (!text) return null;
+  const str = String(text).trim();
+  const urlMatch = str.match(
+    /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel)\/([^/?#]+)/i
+  );
+  let code = urlMatch ? urlMatch[1] : str.replace(/[/?#].*$/, '');
+  if (/^[A-Za-z0-9_-]+$/.test(code)) return code;
+  return null;
+}

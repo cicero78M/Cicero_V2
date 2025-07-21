@@ -6,6 +6,7 @@ import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchInstagramPosts, fetchInstagramPostInfo } from "../../service/instagramApi.js";
 import { savePostWithMedia } from "../../model/instaPostExtendedModel.js";
 import { upsertInstaPost as upsertInstaPostKhusus } from "../../model/instaPostKhususModel.js";
+import { extractInstagramShortcode } from "../../utils/utilsHelper.js";
 
 const ADMIN_WHATSAPP = (process.env.ADMIN_WHATSAPP || "")
   .split(",")
@@ -330,10 +331,8 @@ export async function fetchAndStoreInstaContent(
 }
 
 export async function fetchSinglePostKhusus(linkOrCode, clientId) {
-  const re = /(?:instagram\.com\/p\/)?([A-Za-z0-9_-]+)/i;
-  const m = String(linkOrCode).match(re);
-  if (!m) throw new Error('invalid link');
-  const code = m[1];
+  const code = extractInstagramShortcode(linkOrCode);
+  if (!code) throw new Error('invalid link');
   const info = await fetchInstagramPostInfo(code);
   if (!info) throw new Error('post not found');
   const data = {
