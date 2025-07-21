@@ -75,6 +75,8 @@ Stores Instagram posts fetched for a client.
 - `is_video` – boolean whether post is a video
 - `video_url` – link to video file if any
 - `image_url` – link to image file
+- `images_url` – JSON array of all image URLs when the post is a carousel
+- `is_carousel` – boolean indicating whether the post contains multiple images
 - `created_at` – timestamp of the post
 
 ### `insta_like`

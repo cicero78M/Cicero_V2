@@ -167,6 +167,17 @@ export async function fetchAndStoreInstaContent(
         is_video: post.is_video || false,
         video_url: post.video_url || (post.video_versions?.[0]?.url) || null,
         image_url: post.image_versions?.items?.[0]?.url || null,
+        images_url: (() => {
+          const arr = (post.carousel_media || [])
+            .map((m) => m.image_versions?.items?.[0]?.url)
+            .filter(Boolean);
+          if (!arr.length && post.image_versions?.items?.[0]?.url) {
+            arr.push(post.image_versions.items[0].url);
+          }
+          return arr.length ? arr : null;
+        })(),
+        is_carousel:
+          Array.isArray(post.carousel_media) && post.carousel_media.length > 1,
         caption:
           post.caption && typeof post.caption === "object" && post.caption.text
             ? post.caption.text
@@ -184,18 +195,20 @@ export async function fetchAndStoreInstaContent(
         client_id: client.id
       });
       await query(
-        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, thumbnail_url, is_video, video_url, image_url, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,to_timestamp($10))
+        `INSERT INTO insta_post (client_id, shortcode, caption, comment_count, like_count, thumbnail_url, is_video, video_url, image_url, images_url, is_carousel, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,to_timestamp($12))
          ON CONFLICT (shortcode) DO UPDATE
-         SET client_id = EXCLUDED.client_id,
-             caption = EXCLUDED.caption,
-             comment_count = EXCLUDED.comment_count,
-             like_count = EXCLUDED.like_count,
-             thumbnail_url = EXCLUDED.thumbnail_url,
-             is_video = EXCLUDED.is_video,
-             video_url = EXCLUDED.video_url,
-             image_url = EXCLUDED.image_url,
-             created_at = to_timestamp($10)`,
+          SET client_id = EXCLUDED.client_id,
+              caption = EXCLUDED.caption,
+              comment_count = EXCLUDED.comment_count,
+              like_count = EXCLUDED.like_count,
+              thumbnail_url = EXCLUDED.thumbnail_url,
+              is_video = EXCLUDED.is_video,
+              video_url = EXCLUDED.video_url,
+              image_url = EXCLUDED.image_url,
+              images_url = EXCLUDED.images_url,
+              is_carousel = EXCLUDED.is_carousel,
+             created_at = to_timestamp($12)`,
         [
           toSave.client_id,
           toSave.shortcode,
@@ -206,6 +219,8 @@ export async function fetchAndStoreInstaContent(
           toSave.is_video,
           toSave.video_url,
           toSave.image_url,
+          JSON.stringify(toSave.images_url),
+          toSave.is_carousel,
           post.taken_at,
         ]
       );
