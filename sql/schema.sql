@@ -24,7 +24,9 @@ CREATE TABLE "user" (
   client_id VARCHAR REFERENCES clients(client_id),
   status BOOLEAN DEFAULT TRUE,
   ditbinmas BOOLEAN DEFAULT FALSE,
-  ditlantas BOOLEAN DEFAULT FALSE
+  ditlantas BOOLEAN DEFAULT FALSE,
+  premium_status BOOLEAN DEFAULT FALSE,
+  premium_end_date DATE
 );
 
 CREATE TABLE penmas_user (
@@ -135,9 +137,7 @@ CREATE TABLE instagram_user (
     public_phone_country_code VARCHAR(10),
     public_phone_number     VARCHAR(30),
     profile_pic_url         TEXT,
-    profile_pic_url_hd      TEXT,
-    premium_status          BOOLEAN DEFAULT FALSE,
-    premium_end_date        DATE
+    profile_pic_url_hd      TEXT
 );
 
 -- Statistik/metric akun

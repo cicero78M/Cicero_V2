@@ -8,7 +8,7 @@ cron.schedule(
   '0 0 * * *',
   async () => {
     await query(
-      `UPDATE instagram_user
+      `UPDATE "user"
        SET premium_status=false
        WHERE premium_status=true AND premium_end_date <= NOW()`
     );

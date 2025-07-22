@@ -131,6 +131,14 @@ export async function findUserByIdAndClient(user_id, client_id) {
   return rows[0];
 }
 
+export async function updatePremiumStatus(userId, status, endDate) {
+  const { rows } = await query(
+    'UPDATE "user" SET premium_status=$2, premium_end_date=$3 WHERE user_id=$1 RETURNING *',
+    [userId, status, endDate]
+  );
+  return rows[0] || null;
+}
+
 /**
  * Update field user (termasuk insta/tiktok/whatsapp/exception/status/nama/title/divisi/jabatan)
  */
@@ -147,6 +155,8 @@ export async function updateUserField(user_id, field, value) {
     "jabatan",
     "ditbinmas",
     "ditlantas",
+    "premium_status",
+    "premium_end_date",
   ];
   if (!allowed.includes(field)) throw new Error("Field tidak diizinkan!");
   if (["nama", "title", "divisi", "jabatan"].includes(field) && typeof value === 'string') {
