@@ -13,8 +13,7 @@ import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
-import * as registrationService from "./subscriptionRegistrationService.js";
-import * as premiumService from "./premiumSubscriptionService.js";
+import * as premiumService from "./premiumService.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
@@ -44,7 +43,6 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
-import { subscriptionRequestHandlers } from "../handler/menu/subscriptionRequestHandlers.js";
 
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 
@@ -375,28 +373,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     return;
   }
 
-  // -- Routing sesi permintaan premium
-  if (session && session.menu === "premiumreq") {
-    if (!isAdmin) {
-      clearSession(chatId);
-      await waClient.sendMessage(chatId, "❌ Akses hanya untuk admin.");
-      return;
-    }
-    if (text.toLowerCase() === "batal") {
-      clearSession(chatId);
-      await waClient.sendMessage(chatId, "✅ Pendaftaran dibatalkan.");
-      return;
-    }
-    const handler = subscriptionRequestHandlers[session.step || "main"];
-    if (typeof handler === "function") {
-      await handler(session, chatId, text, waClient);
-      if (!session.step) clearSession(chatId);
-    } else {
-      clearSession(chatId);
-      await waClient.sendMessage(chatId, "⚠️ Sesi premium tidak dikenal. Ketik *premiumrequest* ulang.");
-    }
-    return;
-  }
 
   // ===== Handler Menu User Interaktif Step Lanjut =====
   if (userMenuContext[chatId]) {
@@ -459,19 +435,6 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     return;
   }
 
-  // ===== Mulai Permintaan Premium =====
-  if (text.toLowerCase() === "premiumrequest") {
-    if (!isAdmin) {
-      await waClient.sendMessage(chatId, "❌ Akses hanya untuk admin.");
-      return;
-    }
-    setSession(chatId, { menu: "premiumreq", step: "main" });
-    await waClient.sendMessage(
-      chatId,
-      "📝 *Pendaftaran Premium*\nMasukkan Username Instagram Anda:"
-    );
-    return;
-  }
 
   // ========== VALIDASI ADMIN COMMAND ==========
   if (isAdminCommand && !isAdmin) {
@@ -1627,76 +1590,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     return;
   }
 
-  // =========================
-  // === GRANT / DENY SUBSCRIPTION (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("grantsub#")) {
-    const [, regId] = text.split("#");
-    if (!regId) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: grantsub#id");
-      return;
-    }
-    const reg = await registrationService.findRegistrationById(regId);
-    if (!reg) {
-      await waClient.sendMessage(chatId, `❌ ID ${regId} tidak ditemukan.`);
-      return;
-    }
-    await registrationService.updateRegistration(regId, {
-      status: 'approved',
-      reviewed_at: new Date(),
-    });
-    const existing = await premiumService.findLatestSubscriptionByUser(
-      reg.username,
-    );
-    if (existing) {
-      await premiumService.updateSubscription(existing.subscription_id, {
-        start_date: new Date(),
-        end_date: null,
-        status: 'active',
-      });
-    } else {
-      await premiumService.createSubscription({
-        username: reg.username,
-        start_date: new Date(),
-        status: 'active',
-      });
-    }
-    const user = await userModel.findUserById(reg.username);
-    if (user?.whatsapp) {
-      await waClient.sendMessage(
-        formatToWhatsAppId(user.whatsapp),
-        '🎉 Permintaan premium Anda telah disetujui.'
-      );
-    }
-    await waClient.sendMessage(chatId, `✅ Akses premium diberikan untuk ${reg.username}.`);
-    return;
-  }
 
-  if (text.toLowerCase().startsWith("denysub#")) {
-    const [, regId] = text.split("#");
-    if (!regId) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: denysub#id");
-      return;
-    }
-    const reg = await registrationService.findRegistrationById(regId);
-    if (!reg) {
-      await waClient.sendMessage(chatId, `❌ ID ${regId} tidak ditemukan.`);
-      return;
-    }
-    await registrationService.updateRegistration(regId, {
-      status: 'rejected',
-      reviewed_at: new Date(),
-    });
-    const user = await userModel.findUserById(reg.username);
-    if (user?.whatsapp) {
-      await waClient.sendMessage(
-        formatToWhatsAppId(user.whatsapp),
-        'Mohon maaf, permintaan premium Anda ditolak.'
-      );
-    }
-    await waClient.sendMessage(chatId, `❌ Permintaan ${reg.username} ditolak.`);
-    return;
-  }
 
   // =========================
   // === APPROVE / DENY DASHBOARD ADMIN

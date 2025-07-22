@@ -119,3 +119,11 @@ export async function findByUsername(username) {
   const res = await query('SELECT * FROM instagram_user WHERE username = $1', [username]);
   return res.rows[0] || null;
 }
+
+export async function updatePremiumStatus(userId, status, endDate) {
+  const res = await query(
+    'UPDATE instagram_user SET premium_status=$2, premium_end_date=$3 WHERE user_id=$1 RETURNING *',
+    [userId, status, endDate]
+  );
+  return res.rows[0] || null;
+}
