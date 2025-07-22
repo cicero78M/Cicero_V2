@@ -53,6 +53,8 @@ Holds users belonging to a client.
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
 - `ditbinmas`, `ditlantas` – boolean flags for directorate assignment
+- `premium_status` – boolean flag indicating active subscription
+- `premium_end_date` – date the premium access expires
 
 ### `dashboard_user`
 Credentials for the web dashboard login.
@@ -110,9 +112,6 @@ Core profile details returned from Instagram scraping.
 - `is_business`, `is_private`, `is_verified`
 - `public_email`, `public_phone_country_code`, `public_phone_number`
 - `profile_pic_url`, `profile_pic_url_hd`
-- `premium_status` – boolean flag indicating active subscription
-- `premium_end_date` – date the premium access expires
-
 ### `instagram_user_metrics`
 Follower and media statistics.
 - `user_id` – primary key referencing `instagram_user`

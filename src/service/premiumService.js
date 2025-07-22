@@ -1,4 +1,4 @@
-import { findByUserId, updatePremiumStatus } from '../model/instagramUserModel.js';
+import { findUserById as findByUserId, updatePremiumStatus } from '../model/userModel.js';
 
 export async function getPremiumInfo(userId) {
   return findByUserId(userId);
