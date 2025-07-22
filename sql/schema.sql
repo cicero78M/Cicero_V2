@@ -320,6 +320,9 @@ CREATE TABLE IF NOT EXISTS approval_request (
 CREATE TABLE IF NOT EXISTS premium_request (
   request_id SERIAL PRIMARY KEY,
   user_id TEXT REFERENCES "user"(user_id),
+  sender_name TEXT,
+  account_number TEXT,
+  bank_name TEXT,
   screenshot_url TEXT,
   status VARCHAR(20) DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT NOW(),

@@ -141,6 +141,9 @@ Stores login events for auditing.
 Records premium subscription requests sent from the mobile app.
 - `request_id` – primary key
 - `user_id` – foreign key to `user`
+- `sender_name` – name of the account owner used for payment
+- `account_number` – bank account number used to transfer
+- `bank_name` – originating bank for the transfer
 - `screenshot_url` – optional path to proof of payment
 - `status` – `pending`, `approved`, `rejected` or `expired`
 - `created_at`, `updated_at` – timestamps

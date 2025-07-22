@@ -9,10 +9,6 @@ export async function createPremiumRequest(req, res, next) {
       return res.status(400).json({ success: false, message: 'user_id wajib diisi' });
     }
     const row = await premiumReqModel.createRequest(body);
-    if (waReady) {
-      const msg = `\uD83D\uDD14 Permintaan subscription\nUser: ${body.user_id}\nID: ${row.request_id}\nBalas grantsub#${row.request_id} untuk menyetujui atau denysub#${row.request_id} untuk menolak.`;
-      await sendWAReport(waClient, msg);
-    }
     res.status(201).json({ success: true, request: row });
   } catch (err) {
     next(err);
@@ -23,6 +19,10 @@ export async function updatePremiumRequest(req, res, next) {
   try {
     const row = await premiumReqModel.updateRequest(Number(req.params.id), req.body);
     if (!row) return res.status(404).json({ success: false, message: 'not found' });
+    if (req.body.screenshot_url && waReady) {
+      const msg = `\uD83D\uDD14 Permintaan subscription\nUser: ${row.user_id}\nNama: ${row.sender_name}\nRek: ${row.account_number}\nBank: ${row.bank_name}\nID: ${row.request_id}\nBalas grantsub#${row.request_id} untuk menyetujui atau denysub#${row.request_id} untuk menolak.`;
+      await sendWAReport(waClient, msg);
+    }
     res.json({ success: true, request: row });
   } catch (err) {
     next(err);
