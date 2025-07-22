@@ -359,5 +359,5 @@ export async function fetchSinglePostKhusus(linkOrCode, clientId) {
   } catch (e) {
     sendDebug({ tag: 'IG FETCH', msg: `ext save error ${e.message}` });
   }
-  return data.shortcode;
+  return data;
 }
