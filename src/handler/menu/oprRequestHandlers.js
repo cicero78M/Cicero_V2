@@ -1708,8 +1708,12 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     }
     try {
       const { fetchSinglePostKhusus } = await import("../fetchpost/instaFetchPost.js");
-      await fetchSinglePostKhusus(text.trim(), clientId);
-      await waClient.sendMessage(chatId, "✅ Data post tugas khusus tersimpan.");
+      const post = await fetchSinglePostKhusus(text.trim(), clientId);
+      const link = `https://www.instagram.com/p/${post.shortcode}`;
+      await waClient.sendMessage(
+        chatId,
+        `✅ Fetch post tugas khusus selesai:\n${link}`
+      );
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Gagal fetch: ${e.message}`);
     }
