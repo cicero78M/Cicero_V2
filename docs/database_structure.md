@@ -33,8 +33,6 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | visitor_logs | record of API access |
 | login_log | history of login events |
 | link_report | links submitted from the mobile app |
-| premium_subscription | tracks premium status per user |
-| subscription_registration | user-initiated subscription signups |
 
 ## Tables
 
@@ -112,6 +110,8 @@ Core profile details returned from Instagram scraping.
 - `is_business`, `is_private`, `is_verified`
 - `public_email`, `public_phone_country_code`, `public_phone_number`
 - `profile_pic_url`, `profile_pic_url_hd`
+- `premium_status` – boolean flag indicating active subscription
+- `premium_end_date` – date the premium access expires
 
 ### `instagram_user_metrics`
 Follower and media statistics.
@@ -128,24 +128,6 @@ Follower and media statistics.
 - `shortcode` and `user_id` form the primary key
 - `instagram_link`, `facebook_link`, `twitter_link`, `tiktok_link`, `youtube_link`
 - `created_at` – timestamp when the report was submitted
-
-### `premium_subscription`
-Tracks premium subscriptions for the Android app.
- - `subscription_id` – primary key
- - `username` – foreign key to `instagram_user`
-- `status` – `pending`, `active`, `expired` or `cancelled`
-- `start_date`, `end_date` – subscription validity
-- `order_id`, `snap_token` – Midtrans identifiers
-- `created_at`, `updated_at`
-
-### `subscription_registration`
-Records raw signup data before payment is processed.
-- `registration_id` – primary key
-- `username` – foreign key to `instagram_user`
-- `nama_rekening`, `nomor_rekening` – bank account details
-- `phone` – contact phone number
-- `amount` – requested payment amount
-- `created_at` – timestamp when the user submitted the form
 
 ### `login_log`
 Stores login events for auditing.

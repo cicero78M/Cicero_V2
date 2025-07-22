@@ -135,7 +135,9 @@ CREATE TABLE instagram_user (
     public_phone_country_code VARCHAR(10),
     public_phone_number     VARCHAR(30),
     profile_pic_url         TEXT,
-    profile_pic_url_hd      TEXT
+    profile_pic_url_hd      TEXT,
+    premium_status          BOOLEAN DEFAULT FALSE,
+    premium_end_date        DATE
 );
 
 -- Statistik/metric akun
@@ -273,29 +275,6 @@ CREATE TABLE IF NOT EXISTS link_report_khusus (
     PRIMARY KEY (shortcode, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS premium_subscription (
-    subscription_id SERIAL PRIMARY KEY,
-    username VARCHAR REFERENCES instagram_user(username),
-    status VARCHAR DEFAULT 'active',
-    start_date DATE,
-    end_date DATE,
-    order_id VARCHAR,
-    snap_token VARCHAR,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS subscription_registration (
-    registration_id SERIAL PRIMARY KEY,
-    username VARCHAR REFERENCES instagram_user(username),
-    nama_rekening VARCHAR,
-    nomor_rekening VARCHAR,
-    phone VARCHAR,
-    amount INT,
-    status VARCHAR DEFAULT 'pending',
-    reviewed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW()
-);
 
 CREATE TABLE IF NOT EXISTS editorial_event (
   event_id SERIAL PRIMARY KEY,
