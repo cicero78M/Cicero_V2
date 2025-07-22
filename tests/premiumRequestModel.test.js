@@ -23,23 +23,39 @@ beforeEach(() => {
 
 test('createRequest inserts row', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ request_id: 1 }] });
-  const row = await createRequest({ user_id: '1', screenshot_url: 'x.png' });
+  const row = await createRequest({
+    user_id: '1',
+    sender_name: 'A',
+    account_number: '123',
+    bank_name: 'BCA',
+    screenshot_url: 'x.png',
+  });
   expect(row).toEqual({ request_id: 1 });
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('INSERT INTO premium_request'),
-    ['1', 'x.png', 'pending', null, null]
+    ['1', 'A', '123', 'BCA', 'x.png', 'pending', null, null]
   );
 });
 
 test('updateRequest updates row', async () => {
   mockQuery
-    .mockResolvedValueOnce({ rows: [{ request_id: 1, status: 'pending', user_id: '1', screenshot_url: 'x' }] })
+    .mockResolvedValueOnce({
+      rows: [{
+        request_id: 1,
+        status: 'pending',
+        user_id: '1',
+        sender_name: 'A',
+        account_number: '123',
+        bank_name: 'BCA',
+        screenshot_url: 'x',
+      }],
+    })
     .mockResolvedValueOnce({ rows: [{ request_id: 1, status: 'approved' }] });
   const row = await updateRequest(1, { status: 'approved' });
   expect(row).toEqual({ request_id: 1, status: 'approved' });
   expect(mockQuery).toHaveBeenLastCalledWith(
     expect.stringContaining('UPDATE premium_request'),
-    [1, '1', 'x', 'approved', null]
+    [1, '1', 'A', '123', 'BCA', 'x', 'approved', null]
   );
 });
 
