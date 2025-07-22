@@ -14,6 +14,7 @@ import * as userModel from "../model/userModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as premiumService from "./premiumService.js";
+import * as premiumReqModel from "../model/premiumRequestModel.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
@@ -1624,6 +1625,58 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     }
     await dashboardUserModel.updateStatus(id, false);
     await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
+    return;
+  }
+
+  // =========================
+  // === APPROVE / DENY SUBSCRIPTION
+  // =========================
+  if (text.toLowerCase().startsWith("grantsub#")) {
+    const [, id] = text.split("#");
+    if (!id) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: grantsub#id");
+      return;
+    }
+    const reqRow = await premiumReqModel.findRequestById(Number(id));
+    if (!reqRow || reqRow.status !== "pending") {
+      await waClient.sendMessage(chatId, `❌ Request ${id} tidak valid.`);
+      return;
+    }
+    await premiumReqModel.updateRequest(Number(id), { status: "approved" });
+    await userModel.updatePremiumStatus(reqRow.user_id, true, null);
+    await waClient.sendMessage(chatId, `✅ Request ${id} disetujui.`);
+    const user = await userModel.findUserById(reqRow.user_id);
+    if (user?.whatsapp) {
+      await safeSendMessage(
+        waClient,
+        formatToWhatsAppId(user.whatsapp),
+        "✅ Langganan premium Anda aktif."
+      );
+    }
+    return;
+  }
+
+  if (text.toLowerCase().startsWith("denysub#")) {
+    const [, id] = text.split("#");
+    if (!id) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: denysub#id");
+      return;
+    }
+    const reqRow = await premiumReqModel.findRequestById(Number(id));
+    if (!reqRow || reqRow.status !== "pending") {
+      await waClient.sendMessage(chatId, `❌ Request ${id} tidak valid.`);
+      return;
+    }
+    await premiumReqModel.updateRequest(Number(id), { status: "rejected" });
+    await waClient.sendMessage(chatId, `❌ Request ${id} ditolak.`);
+    const user = await userModel.findUserById(reqRow.user_id);
+    if (user?.whatsapp) {
+      await safeSendMessage(
+        waClient,
+        formatToWhatsAppId(user.whatsapp),
+        "❌ Permintaan langganan Anda ditolak."
+      );
+    }
     return;
   }
 
