@@ -625,7 +625,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `Hari : ${hari}\n`;
     msg += `Tanggal : ${tanggal}\n`;
     msg += `Pukul : ${jam}\n\n`;
-    msg += `Jumlah Konten Resmi Hari ini : ${shortcodes.length}\n`;
+    msg += `Jumlah Konten Tugas Khusus : ${shortcodes.length}\n`;
     msg += kontenLinks.length ? `${kontenLinks.join("\n")}\n\n` : "-\n\n";
     msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
     msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
