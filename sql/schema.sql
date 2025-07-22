@@ -317,6 +317,15 @@ CREATE TABLE IF NOT EXISTS approval_request (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS premium_request (
+  request_id SERIAL PRIMARY KEY,
+  user_id TEXT REFERENCES "user"(user_id),
+  screenshot_url TEXT,
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS change_log (
   log_id SERIAL PRIMARY KEY,
   event_id INTEGER REFERENCES editorial_event(event_id),

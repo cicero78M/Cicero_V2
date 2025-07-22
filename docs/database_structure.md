@@ -33,6 +33,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | visitor_logs | record of API access |
 | login_log | history of login events |
 | link_report | links submitted from the mobile app |
+| premium_request | premium subscription requests |
 
 ## Tables
 
@@ -135,6 +136,14 @@ Stores login events for auditing.
 - `login_type` – `operator` or `user`
 - `login_source` – `web` or `mobile`
 - `logged_at` – timestamp when the login occurred
+
+### `premium_request`
+Records premium subscription requests sent from the mobile app.
+- `request_id` – primary key
+- `user_id` – foreign key to `user`
+- `screenshot_url` – optional path to proof of payment
+- `status` – `pending`, `approved`, `rejected` or `expired`
+- `created_at`, `updated_at` – timestamps
 
 ## Relationships
 
