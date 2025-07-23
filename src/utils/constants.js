@@ -13,6 +13,7 @@ export const adminCommands = [
   "clientrequest",
   "advancedclientrequest",
   "transferuser#",
+  "sheettransfer#",
   "thisgroup#",
   "requestinsta#",
   "requesttiktok#",
