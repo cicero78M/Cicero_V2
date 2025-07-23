@@ -1170,45 +1170,6 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     return;
   }
 
-  // =========================
-  // === MIGRASI DARI GOOGLE SHEET (ADMIN)
-  // =========================
-  if (text.toLowerCase().startsWith("sheettransfer#")) {
-    const [, client_id, ...linkParts] = text.split("#");
-    const sheetUrl = linkParts.join("#").trim();
-    if (!client_id || !sheetUrl) {
-      await waClient.sendMessage(
-        chatId,
-        "Format: sheettransfer#clientid#link_google_sheet"
-      );
-      return;
-    }
-    const check = await checkGoogleSheetCsvStatus(sheetUrl);
-    if (!check.ok) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Sheet tidak bisa diakses:\n${check.reason}`
-      );
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      `⏳ Mengambil & migrasi data dari Google Sheet...`
-    );
-    try {
-      const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
-      let report = `*Hasil import user ke client ${client_id}:*\n`;
-      result.forEach((r) => {
-        report += `- ${r.user_id}: ${r.status}${
-          r.error ? " (" + r.error + ")" : ""
-        }\n`;
-      });
-      await waClient.sendMessage(chatId, report);
-    } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
-    }
-    return;
-  }
 
   // =========================
   // === UPDATE client_group dari WhatsApp GROUP (ADMIN)
