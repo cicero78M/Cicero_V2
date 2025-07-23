@@ -17,3 +17,38 @@ export async function getAmplifyRekap(req, res) {
     res.status(code).json({ success: false, message: err.message });
   }
 }
+
+import { exportRowsToGoogleSheet, generateExcelBuffer } from '../service/amplifyExportService.js';
+
+export async function exportAmplifyToSheet(req, res) {
+  const { rows, fileName } = req.body;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ success: false, message: 'rows wajib array' });
+  }
+  try {
+    const sheetId = await exportRowsToGoogleSheet(rows, fileName);
+    res.json({ success: true, sheetId });
+  } catch (err) {
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
+
+export async function downloadAmplifyExcel(req, res) {
+  const { rows, fileName } = req.body;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ success: false, message: 'rows wajib array' });
+  }
+  try {
+    const buffer = generateExcelBuffer(rows);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName || 'rekap'}.xlsx"`);
+    res.send(buffer);
+  } catch (err) {
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
