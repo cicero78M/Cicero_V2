@@ -1,7 +1,7 @@
 import * as linkReportModel from '../model/linkReportModel.js';
 import { sendSuccess } from '../utils/response.js';
 import { extractFirstUrl } from '../utils/utilsHelper.js';
-import { generateExcelBuffer } from '../service/amplifyExportService.js';
+import { generateLinkReportExcelBuffer } from '../service/amplifyExportService.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
@@ -87,7 +87,7 @@ export async function downloadMonthlyLinkReportExcel(req, res, next) {
         .json({ success: false, message: 'client_id wajib diisi' });
     }
     const rows = await linkReportModel.getReportsThisMonthByClient(clientId);
-    const buffer = generateExcelBuffer(rows);
+    const buffer = generateLinkReportExcelBuffer(rows);
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
