@@ -338,7 +338,7 @@ export async function getInstaPostsKhusus(req, res) {
     }
 
     sendConsoleDebug({ tag: "INSTA", msg: `getInstaPostsKhusus ${client_id}` });
-    const posts = await instaPostKhususService.findByClientId(client_id);
+    const posts = await instaPostKhususService.findTodayByClientId(client_id);
     sendSuccess(res, posts);
   } catch (err) {
     sendConsoleDebug({
