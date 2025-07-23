@@ -69,12 +69,28 @@ export const getUsersByClientFull = async (req, res, next) => {
 // --- API: Ambil daftar user untuk User Directory, hanya dari client tertentu ---
 export const getUserList = async (req, res, next) => {
   try {
-    const client_id = req.query.client_id;
-    if (!client_id) {
-      return res.status(400).json({ success: false, message: "client_id wajib diisi" });
+    const role = req.user?.role;
+    const tokenClientId = req.user?.client_id;
+    let users;
+
+    if (role === 'operator') {
+      if (!tokenClientId) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'client_id wajib diisi' });
+      }
+      users = await userModel.getUsersByClient(tokenClientId);
+    } else if (role === 'ditbinmas' || role === 'ditlantas') {
+      users = await userModel.getUsersByDirektorat(role);
+    } else {
+      const clientId = req.query.client_id;
+      if (!clientId) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'client_id wajib diisi' });
+      }
+      users = await userModel.getUsersByClient(clientId);
     }
-    // Hanya ambil user milik client_id, status aktif
-    const users = await userModel.getUsersByClient(client_id);
     sendSuccess(res, users);
   } catch (err) {
     next(err);

@@ -191,6 +191,21 @@ export async function getDirektoratUsers(clientId = null) {
   return rows;
 }
 
+// Ambil user berdasarkan flag direktorat tertentu (ditbinmas/ditlantas)
+export async function getUsersByDirektorat(flag, clientId = null) {
+  if (!['ditbinmas', 'ditlantas'].includes(flag)) {
+    throw new Error('Direktorat flag tidak valid');
+  }
+  let sql = `SELECT * FROM "user" WHERE ${flag} = true`;
+  const params = [];
+  if (clientId) {
+    sql += ' AND client_id = $1';
+    params.push(clientId);
+  }
+  const { rows } = await query(sql, params);
+  return rows;
+}
+
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const result = await query('SELECT * FROM "user" WHERE whatsapp = $1', [
