@@ -43,6 +43,8 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
 
 Key routes used by the dashboard include:
 
+- `POST /api/download-amplify` – generate an Excel file from a list of rows for download.
+
 ## Deployment & Environment
 
 1. **Clone and install dependencies**

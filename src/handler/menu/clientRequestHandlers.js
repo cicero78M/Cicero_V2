@@ -133,6 +133,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -152,11 +154,12 @@ export const clientRequestHandlers = {
 9️⃣ Exception Info
 🔟 Hapus WA Admin
 1️⃣1️⃣ Hapus WA User
+1️⃣2️⃣ Transfer User Sheet
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
 
-    if (!/^([1-9]|10|11)$/.test(text.trim())) {
+    if (!/^([1-9]|10|11|12)$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -173,6 +176,7 @@ export const clientRequestHandlers = {
       9: "exceptionInfo_chooseClient",
       10: "hapusWAAdmin_confirm",
       11: "hapusWAUser_start",
+      12: "transferUserSheet_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -184,6 +188,8 @@ export const clientRequestHandlers = {
       userModel,
       clientService,
       migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
       fetchAndStoreInstaContent,
       fetchAndStoreTiktokContent,
       formatClientData,
@@ -601,6 +607,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -637,6 +645,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -668,6 +678,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -719,6 +731,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -756,6 +770,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -788,6 +804,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -995,6 +1013,8 @@ export const clientRequestHandlers = {
     userModel,
     clientService,
     migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
     fetchAndStoreInstaContent,
     fetchAndStoreTiktokContent,
     formatClientData,
@@ -1158,6 +1178,100 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
+  // ================== TRANSFER USER VIA SHEET ==================
+  transferUserSheet_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "transferUserSheet_link";
+  },
+  transferUserSheet_link: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    session.transferSheetClientId = client_id;
+    await waClient.sendMessage(
+      chatId,
+      `Kirim link Google Sheet untuk transfer user ke *${client_id}*:`
+    );
+    session.step = "transferUserSheet_action";
+  },
+  transferUserSheet_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet
+  ) => {
+    const sheetUrl = text.trim();
+    const client_id = session.transferSheetClientId;
+    const check = await checkGoogleSheetCsvStatus(sheetUrl);
+    if (!check.ok) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Sheet tidak bisa diakses:\n${check.reason}`
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      `⏳ Mengambil & migrasi data dari Google Sheet...`
+    );
+    try {
+      const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
+      let report = `*Hasil import user ke client ${client_id}:*\n`;
+      result.forEach((r) => {
+        report += `- ${r.user_id}: ${r.status}${
+          r.error ? " (" + r.error + ")" : ""}\n`;
+      });
+      if (result.length > 0 && result.every((r) => r.status === "✅ Sukses")) {
+        report += "\n🎉 Semua user berhasil ditransfer!";
+      }
+      if (result.length === 0) {
+        report += "\n(Tidak ada data user pada sheet)";
+      }
+      await waClient.sendMessage(chatId, report);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
+    }
+    session.step = "main";
+  },
 
   // ================== EXCEPTION INFO ==================
   exceptionInfo_chooseClient: async (
