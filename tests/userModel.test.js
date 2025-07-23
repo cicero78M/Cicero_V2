@@ -11,6 +11,7 @@ let findUserByIdAndClient;
 let createUser;
 let updateUserField;
 let updatePremiumStatus;
+let getUsersByDirektorat;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -19,6 +20,7 @@ beforeAll(async () => {
   createUser = mod.createUser;
   updateUserField = mod.updateUserField;
   updatePremiumStatus = mod.updatePremiumStatus;
+  getUsersByDirektorat = mod.getUsersByDirektorat;
 });
 
 test('findUserByIdAndWhatsApp returns user', async () => {
@@ -83,5 +85,15 @@ test('updatePremiumStatus updates fields', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     'UPDATE "user" SET premium_status=$2, premium_end_date=$3 WHERE user_id=$1 RETURNING *',
     ['1', true, '2025-08-01']
+  );
+});
+
+test('getUsersByDirektorat queries by flag', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '2' }] });
+  const users = await getUsersByDirektorat('ditbinmas');
+  expect(users).toEqual([{ user_id: '2' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    'SELECT * FROM "user" WHERE ditbinmas = true',
+    []
   );
 });
