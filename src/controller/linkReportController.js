@@ -1,6 +1,7 @@
 import * as linkReportModel from '../model/linkReportModel.js';
 import { sendSuccess } from '../utils/response.js';
 import { extractFirstUrl } from '../utils/utilsHelper.js';
+import { generateExcelBuffer } from '../service/amplifyExportService.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
@@ -72,6 +73,30 @@ export async function deleteLinkReport(req, res, next) {
       req.query.user_id
     );
     sendSuccess(res, report);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function downloadMonthlyLinkReportExcel(req, res, next) {
+  try {
+    const clientId = req.query.client_id;
+    if (!clientId) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'client_id wajib diisi' });
+    }
+    const rows = await linkReportModel.getReportsThisMonthByClient(clientId);
+    const buffer = generateExcelBuffer(rows);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="link_report.xlsx"'
+    );
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

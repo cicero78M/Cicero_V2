@@ -178,3 +178,26 @@ export async function getRekapLinkByClient(client_id, periode = 'harian') {
 
   return rows;
 }
+
+export async function getReportsThisMonthByClient(client_id) {
+  const { rows } = await query(
+    `SELECT
+       r.created_at::date AS date,
+       TRIM(CONCAT(u.title, ' ', u.nama)) AS pangkat_nama,
+       u.user_id AS nrp,
+       u.divisi AS satfung,
+       r.instagram_link AS instagram,
+       r.facebook_link AS facebook,
+       r.twitter_link AS twitter,
+       r.tiktok_link AS tiktok,
+       r.youtube_link AS youtube
+     FROM link_report r
+     JOIN insta_post p ON p.shortcode = r.shortcode
+     JOIN "user" u ON u.user_id = r.user_id
+     WHERE p.client_id = $1
+       AND date_trunc('month', r.created_at) = date_trunc('month', NOW())
+     ORDER BY r.created_at ASC`,
+    [client_id]
+  );
+  return rows;
+}
