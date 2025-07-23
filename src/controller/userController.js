@@ -21,7 +21,34 @@ export const getUserById = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const user = await userModel.createUser(req.body);
+    const role = req.user?.role?.toLowerCase();
+    const adminClientId = req.user?.client_id;
+    const data = { ...req.body };
+
+    if (role === 'ditbinmas' || role === 'ditlantas') {
+      if (adminClientId) data.client_id = adminClientId;
+      if (role === 'ditbinmas') data.ditbinmas = true;
+      if (role === 'ditlantas') data.ditlantas = true;
+
+      const existing = await userModel.findUserById(data.user_id);
+      if (existing) {
+        const field = role === 'ditbinmas' ? 'ditbinmas' : 'ditlantas';
+        const updated = await userModel.updateUserField(existing.user_id, field, true);
+        sendSuccess(res, updated);
+        return;
+      }
+
+      const user = await userModel.createUser(data);
+      sendSuccess(res, user, 201);
+      return;
+    }
+
+    if (role === 'operator') {
+      if (data.ditbinmas === undefined) data.ditbinmas = false;
+      if (data.ditlantas === undefined) data.ditlantas = false;
+    }
+
+    const user = await userModel.createUser(data);
     sendSuccess(res, user, 201);
   } catch (err) {
     next(err);
