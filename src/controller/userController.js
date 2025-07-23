@@ -32,8 +32,11 @@ export const createUser = async (req, res, next) => {
 
       const existing = await userModel.findUserById(data.user_id);
       if (existing) {
-        const field = role === 'ditbinmas' ? 'ditbinmas' : 'ditlantas';
-        const updated = await userModel.updateUserField(existing.user_id, field, true);
+        delete data.user_id;
+        Object.keys(data).forEach((k) => {
+          if (data[k] === undefined) delete data[k];
+        });
+        const updated = await userModel.updateUser(existing.user_id, data);
         sendSuccess(res, updated);
         return;
       }

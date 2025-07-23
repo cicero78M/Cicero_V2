@@ -3,11 +3,13 @@ import { jest } from '@jest/globals';
 const mockCreateUser = jest.fn();
 const mockFindUserById = jest.fn();
 const mockUpdateUserField = jest.fn();
+const mockUpdateUser = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   createUser: mockCreateUser,
   findUserById: mockFindUserById,
-  updateUserField: mockUpdateUserField
+  updateUserField: mockUpdateUserField,
+  updateUser: mockUpdateUser
 }));
 
 let createUser;
@@ -21,6 +23,7 @@ beforeEach(() => {
   mockCreateUser.mockReset();
   mockFindUserById.mockReset();
   mockUpdateUserField.mockReset();
+  mockUpdateUser.mockReset();
 });
 
 test('operator adds user with defaults', async () => {
@@ -39,17 +42,21 @@ test('operator adds user with defaults', async () => {
 
 test('ditbinmas updates existing user', async () => {
   mockFindUserById.mockResolvedValue({ user_id: '1', status: false });
-  mockUpdateUserField.mockResolvedValue({ user_id: '1', ditbinmas: true });
-  const req = { body: { user_id: '1' }, user: { role: 'ditbinmas', client_id: 'c2' } };
+  mockUpdateUser.mockResolvedValue({ user_id: '1', ditbinmas: true, nama: 'B' });
+  const req = { body: { user_id: '1', nama: 'B' }, user: { role: 'ditbinmas', client_id: 'c2' } };
   const json = jest.fn();
   const status = jest.fn().mockReturnThis();
   const res = { status, json };
 
   await createUser(req, res, () => {});
 
-  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'ditbinmas', true);
+  expect(mockUpdateUser).toHaveBeenCalledWith('1', {
+    nama: 'B',
+    client_id: 'c2',
+    ditbinmas: true
+  });
   expect(status).toHaveBeenCalledWith(200);
-  expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', ditbinmas: true } });
+  expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', ditbinmas: true, nama: 'B' } });
 });
 
 test('ditlantas creates new user with flag', async () => {
