@@ -10,6 +10,7 @@ jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {}, wa
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({ sendConsoleDebug: jest.fn(), sendDebug: jest.fn() }));
 jest.unstable_mockModule('../src/service/amplifyExportService.js', () => ({
   generateExcelBuffer: mockGenerateExcelBuffer,
+  generateLinkReportExcelBuffer: jest.fn(),
   exportRowsToGoogleSheet: jest.fn()
 }));
 jest.unstable_mockModule('../src/middleware/authMiddleware.js', () => ({
