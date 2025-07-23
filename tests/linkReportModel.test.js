@@ -15,6 +15,7 @@ let getLinkReports;
 let findLinkReportByShortcode;
 let getReportsTodayByClient;
 let getReportsTodayByShortcode;
+let getReportsThisMonthByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportModel.js');
@@ -23,6 +24,7 @@ beforeAll(async () => {
   findLinkReportByShortcode = mod.findLinkReportByShortcode;
   getReportsTodayByClient = mod.getReportsTodayByClient;
   getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
+  getReportsThisMonthByClient = mod.getReportsThisMonthByClient;
 });
 
 beforeEach(() => {
@@ -86,5 +88,15 @@ test('getReportsTodayByShortcode filters by client and shortcode', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('r.shortcode = $2'),
     ['POLRES', 'abc']
+  );
+});
+
+test('getReportsThisMonthByClient selects monthly rows', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ date: '2024-01-01' }] });
+  const rows = await getReportsThisMonthByClient('POLRES');
+  expect(rows).toEqual([{ date: '2024-01-01' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining("date_trunc('month', r.created_at)"),
+    ['POLRES']
   );
 });
