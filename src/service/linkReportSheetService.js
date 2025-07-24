@@ -19,10 +19,15 @@ export async function createLinkReportSheet(rows, title, clientId, monthName) {
   const drive = google.drive({ version: 'v3', auth: client });
 
   console.log('[GOOGLE] Creating new spreadsheet');
-  const createRes = await sheets.spreadsheets.create({
-    requestBody: { properties: { title } }
+  const createRes = await drive.files.create({
+    requestBody: {
+      name: title,
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+      parents: [process.env.GOOGLE_SHEET_FOLDER_ID || 'Sheet_Cicero']
+    },
+    fields: 'id'
   });
-  const spreadsheetId = createRes.data.spreadsheetId;
+  const spreadsheetId = createRes.data.id;
   console.log(`[GOOGLE] Spreadsheet created with ID: ${spreadsheetId}`);
 
   const newName = `${clientId}_${monthName} Rekap`;
