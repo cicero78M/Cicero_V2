@@ -18,6 +18,7 @@ import './src/cron/cronNotifikasiLikesDanKomentar.js';
 import './src/cron/cronInstaDataMining.js';
 import './src/cron/cronPremiumSubscription.js';
 import './src/cron/cronRekapLink.js';
+import './src/cron/cronAmplifyLinkMonthly.js';
 import './src/cron/cronPremiumRequest.js';
 
 const app = express();
