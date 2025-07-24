@@ -32,7 +32,6 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
     requestBody: {
       name: fileName,
       mimeType: 'application/vnd.google-apps.spreadsheet',
-      parents: [process.env.GOOGLE_SHEET_FOLDER_ID || 'Sheet_Cicero']
     },
     fields: 'id'
   });
