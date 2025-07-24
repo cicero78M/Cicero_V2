@@ -1,4 +1,3 @@
-import { google } from 'googleapis';
 import * as XLSX from 'xlsx';
 
 export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan Tahun') {
