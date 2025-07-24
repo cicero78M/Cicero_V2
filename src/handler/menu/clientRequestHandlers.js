@@ -1333,6 +1333,7 @@ export const clientRequestHandlers = {
       await sendWAReport(waClient, msg, getAdminWAIds());
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal membuat sheet: ${err.message}`);
+      console.error(err.response?.data || err);
     }
   },
 
