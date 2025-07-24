@@ -26,12 +26,18 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
   });
 
   const sheets = google.sheets({ version: 'v4', auth });
+  const drive = google.drive({ version: 'v3', auth });
 
   console.log('[GOOGLE] Creating new spreadsheet');
-  const createRes = await sheets.spreadsheets.create({
-    requestBody: { properties: { title: fileName } }
+  const createRes = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+      parents: [process.env.GOOGLE_SHEET_FOLDER_ID || 'Sheet_Cicero']
+    },
+    fields: 'id'
   });
-  const sheetId = createRes.data.spreadsheetId;
+  const sheetId = createRes.data.id;
   console.log(`[GOOGLE] Spreadsheet created with ID: ${sheetId}`);
 
   const header = [
