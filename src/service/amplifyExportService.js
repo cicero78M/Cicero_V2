@@ -59,14 +59,6 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
   return sheetId;
 }
 
-export function generateExcelBuffer(rows) {
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-  return buffer;
-}
-
 export function generateLinkReportExcelBuffer(rows) {
   const header = [
     'Date',
