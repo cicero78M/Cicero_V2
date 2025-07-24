@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-export async function createLinkReportSheet(rows, title) {
+export async function createLinkReportSheet(rows, title, clientId, monthName) {
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -13,11 +13,25 @@ export async function createLinkReportSheet(rows, title) {
   });
   const client = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: client });
+  const drive = google.drive({ version: 'v3', auth: client });
 
   const createRes = await sheets.spreadsheets.create({
     requestBody: { properties: { title } }
   });
   const spreadsheetId = createRes.data.spreadsheetId;
+
+  const newName = `${clientId}_${monthName} Rekap`;
+  await drive.files.update({
+    fileId: spreadsheetId,
+    requestBody: { name: newName }
+  });
+  await drive.permissions.create({
+    fileId: spreadsheetId,
+    requestBody: {
+      type: 'anyone',
+      role: 'reader'
+    }
+  });
 
   const header = [
     'Date',

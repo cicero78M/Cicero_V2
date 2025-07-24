@@ -1327,7 +1327,7 @@ export const clientRequestHandlers = {
         timeZone: "Asia/Jakarta"
       });
       const title = `Data amplifikasi Bulan ${monthName}`;
-      const url = await createLinkReportSheet(rows, title);
+      const url = await createLinkReportSheet(rows, title, client_id, monthName);
       await waClient.sendMessage(chatId, `✅ Sheet berhasil dibuat:\n${url}`);
       const msg = `Sheet amplifikasi ${client_id} bulan ${monthName}:\n${url}`;
       await sendWAReport(waClient, msg, getAdminWAIds());
