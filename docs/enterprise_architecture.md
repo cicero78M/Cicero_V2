@@ -21,7 +21,7 @@ The backend exposes REST endpoints to manage clients, users, and social media an
 
 - `app.js` – Express entry point registering middleware, routes, and scheduled cron jobs.
 - `src/controller` – Controller layer for clients, users, OAuth callbacks, dashboard metrics, and social media endpoints.
-- `src/service` – Cron jobs, API wrappers, WhatsApp helpers, RabbitMQ queues, and utilities for Google Sheets.
+- `src/service` – Cron jobs, API wrappers, WhatsApp helpers, RabbitMQ queues, and various utility functions.
 - `src/handler` – WhatsApp menu logic and fetch helpers for automation.
 - `src/routes` – API routes for auth, clients, users, Instagram, TikTok, logs, metadata, and dashboards.
 - `src/middleware` – Authentication, request deduplication, debugging, and global error handling.
