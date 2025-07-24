@@ -16,8 +16,7 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/drive.metadata.readonly',
-    'https://www.googleapis.com/auth/spreadsheets.readonly'
+      'https://www.googleapis.com/auth/spreadsheets.readonly'
 
     ]
   });
