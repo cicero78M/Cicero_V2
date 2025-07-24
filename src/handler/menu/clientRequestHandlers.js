@@ -11,9 +11,11 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
-import { getAdminWANumbers, getAdminWAIds, sendWAReport } from "../../utils/waHelper.js";
+import { getAdminWANumbers, getAdminWAIds, sendWAFile } from "../../utils/waHelper.js";
 import * as linkReportModel from "../../model/linkReportModel.js";
-import { createLinkReportSheet } from "../../service/linkReportSheetService.js";
+import { saveLinkReportExcel } from "../../service/linkReportExcelService.js";
+import fs from "fs/promises";
+import path from "path";
 import { query } from "../../db/index.js";
 
 function ignore(..._args) {}
@@ -1319,21 +1321,21 @@ export const clientRequestHandlers = {
     }
     const client_id = clients[idx].client_id;
     session.step = "main";
-    await waClient.sendMessage(chatId, "⏳ Menyiapkan data sheet...");
+    await waClient.sendMessage(chatId, "⏳ Menyiapkan file Excel...");
     try {
       const rows = await linkReportModel.getReportsThisMonthByClient(client_id);
       const monthName = new Date().toLocaleString("id-ID", {
         month: "long",
         timeZone: "Asia/Jakarta"
       });
-      const title = `Data amplifikasi Bulan ${monthName}`;
-      const url = await createLinkReportSheet(rows, title, client_id, monthName);
-      await waClient.sendMessage(chatId, `✅ Sheet berhasil dibuat:\n${url}`);
-      const msg = `Sheet amplifikasi ${client_id} bulan ${monthName}:\n${url}`;
-      await sendWAReport(waClient, msg, getAdminWAIds());
+      const filePath = await saveLinkReportExcel(rows, client_id, monthName);
+      const buffer = await fs.readFile(filePath);
+      await sendWAFile(waClient, buffer, path.basename(filePath), getAdminWAIds());
+      await waClient.sendMessage(chatId, "✅ File Excel dikirim ke admin.");
+      await fs.unlink(filePath);
     } catch (err) {
-      await waClient.sendMessage(chatId, `❌ Gagal membuat sheet: ${err.message}`);
-      console.error(err.response?.data || err);
+      await waClient.sendMessage(chatId, `❌ Gagal membuat Excel: ${err.message}`);
+      console.error(err);
     }
   },
 
