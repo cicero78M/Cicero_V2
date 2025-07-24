@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { google } from 'googleapis';
 
 export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan Tahun') {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -8,6 +9,8 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
     err.statusCode = 500;
     throw err;
   }
+
+  console.log(`[GOOGLE] Using service account: ${email}`);
 
   const auth = new google.auth.JWT({
     email,
@@ -24,11 +27,12 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
 
   const sheets = google.sheets({ version: 'v4', auth });
 
+  console.log('[GOOGLE] Creating new spreadsheet');
   const createRes = await sheets.spreadsheets.create({
     requestBody: { properties: { title: fileName } }
   });
-
   const sheetId = createRes.data.spreadsheetId;
+  console.log(`[GOOGLE] Spreadsheet created with ID: ${sheetId}`);
 
   const header = [
     'Date',
@@ -52,6 +56,7 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
     r.youtube || ''
   ]);
 
+  console.log(`[GOOGLE] Appending ${values.length} data rows`);
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
     range: 'Sheet1',

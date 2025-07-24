@@ -18,16 +18,20 @@ export async function createLinkReportSheet(rows, title, clientId, monthName) {
   const sheets = google.sheets({ version: 'v4', auth: client });
   const drive = google.drive({ version: 'v3', auth: client });
 
+  console.log('[GOOGLE] Creating new spreadsheet');
   const createRes = await sheets.spreadsheets.create({
     requestBody: { properties: { title } }
   });
   const spreadsheetId = createRes.data.spreadsheetId;
+  console.log(`[GOOGLE] Spreadsheet created with ID: ${spreadsheetId}`);
 
   const newName = `${clientId}_${monthName} Rekap`;
+  console.log(`[GOOGLE] Renaming spreadsheet to: ${newName}`);
   await drive.files.update({
     fileId: spreadsheetId,
     requestBody: { name: newName }
   });
+  console.log('[GOOGLE] Setting spreadsheet permissions to public read');
   await drive.permissions.create({
     fileId: spreadsheetId,
     requestBody: {
@@ -60,6 +64,7 @@ export async function createLinkReportSheet(rows, title, clientId, monthName) {
     ])
   ];
 
+  console.log(`[GOOGLE] Writing ${values.length - 1} data rows to spreadsheet`);
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: 'Sheet1!A1',
