@@ -1,5 +1,7 @@
 // src/utils/waHelper.js
 import dotenv from 'dotenv';
+import pkg from 'whatsapp-web.js';
+const { MessageMedia } = pkg;
 dotenv.config();
 
 export function getAdminWhatsAppList() {
@@ -23,6 +25,35 @@ export async function sendWAReport(waClient, message, chatIds = null) {
       console.log(`[WA CRON] Sent WA to ${target}: ${message.substring(0, 64)}...`);
     } catch (err) {
       console.error(`[WA CRON] ERROR send WA to ${target}:`, err.message);
+    }
+  }
+}
+
+export async function sendWAFile(
+  waClient,
+  buffer,
+  filename,
+  chatIds = null
+) {
+  const targets = chatIds
+    ? Array.isArray(chatIds)
+      ? chatIds
+      : [chatIds]
+    : getAdminWhatsAppList();
+  const mimeType =
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const base64 = buffer.toString('base64');
+  const media = new MessageMedia(mimeType, base64, filename);
+  for (const target of targets) {
+    if (!target || !target.endsWith('@c.us')) {
+      console.warn(`[SKIP WA] Invalid wid: ${target}`);
+      continue;
+    }
+    try {
+      await waClient.sendMessage(target, media, { sendMediaAsDocument: true });
+      console.log(`[WA CRON] Sent file to ${target}: ${filename}`);
+    } catch (err) {
+      console.error(`[WA CRON] ERROR send file to ${target}:`, err.message);
     }
   }
 }
