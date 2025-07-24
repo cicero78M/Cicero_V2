@@ -20,5 +20,7 @@ export const env = cleanEnv(process.env, {
   ADMIN_WHATSAPP: str({ default: '' }),
   APP_SESSION_NAME: str({ default: '' }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
-  AMQP_URL: str({ default: 'amqp://localhost' })
+  AMQP_URL: str({ default: 'amqp://localhost' }),
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: str({ default: '' }),
+  GOOGLE_PRIVATE_KEY: str({ default: '' })
 });
