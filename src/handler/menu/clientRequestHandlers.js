@@ -11,7 +11,9 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
-import { getAdminWANumbers } from "../../utils/waHelper.js";
+import { getAdminWANumbers, getAdminWAIds, sendWAReport } from "../../utils/waHelper.js";
+import * as linkReportModel from "../../model/linkReportModel.js";
+import { createLinkReportSheet } from "../../service/linkReportSheetService.js";
 import { query } from "../../db/index.js";
 
 function ignore(..._args) {}
@@ -155,11 +157,12 @@ export const clientRequestHandlers = {
 🔟 Hapus WA Admin
 1️⃣1️⃣ Hapus WA User
 1️⃣2️⃣ Transfer User Sheet
+1️⃣3️⃣ Download Sheet Amplifikasi
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
 
-    if (!/^([1-9]|10|11|12)$/.test(text.trim())) {
+    if (!/^([1-9]|10|11|12|13)$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -177,6 +180,7 @@ export const clientRequestHandlers = {
       10: "hapusWAAdmin_confirm",
       11: "hapusWAUser_start",
       12: "transferUserSheet_choose",
+      13: "downloadSheet_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1271,6 +1275,65 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(chatId, `❌ Gagal import: ${err.message}`);
     }
     session.step = "main";
+  },
+
+  // ================== DOWNLOAD SHEET AMPLIFIKASI ==================
+  downloadSheet_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "downloadSheet_action";
+  },
+  downloadSheet_action: async (
+    session,
+    chatId,
+    text,
+    waClient
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    session.step = "main";
+    await waClient.sendMessage(chatId, "⏳ Menyiapkan data sheet...");
+    try {
+      const rows = await linkReportModel.getReportsThisMonthByClient(client_id);
+      const monthName = new Date().toLocaleString("id-ID", {
+        month: "long",
+        timeZone: "Asia/Jakarta"
+      });
+      const title = `Data amplifikasi Bulan ${monthName}`;
+      const url = await createLinkReportSheet(rows, title);
+      await waClient.sendMessage(chatId, `✅ Sheet berhasil dibuat:\n${url}`);
+      const msg = `Sheet amplifikasi ${client_id} bulan ${monthName}:\n${url}`;
+      await sendWAReport(waClient, msg, getAdminWAIds());
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal membuat sheet: ${err.message}`);
+    }
   },
 
   // ================== EXCEPTION INFO ==================
