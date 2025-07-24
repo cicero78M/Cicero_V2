@@ -3,6 +3,7 @@ import { getAllClients } from "../model/clientModel.js";
 import { getAllUsers } from "../model/userModel.js";
 import { getPostsTodayByClient as getInstaPostsTodayByClient } from "../model/instaPostModel.js";
 import { getPostsTodayByClient as getTiktokPostsTodayByClient } from "../model/tiktokPostModel.js";
+import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 
 export async function getDashboardStats(req, res) {
@@ -31,6 +32,7 @@ export async function getDashboardStats(req, res) {
       },
     });
   } catch (err) {
+    sendConsoleDebug({ tag: 'DASHBOARD', msg: `Error getDashboardStats: ${err.message}` });
     res.status(500).json({ success: false, message: err.message });
   }
 }
