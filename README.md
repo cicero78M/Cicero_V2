@@ -41,10 +41,6 @@ Cicero_V2/
 
 The API exposes endpoints for managing clients and users, fetching Instagram and TikTok data, handling OAuth callbacks, and providing dashboard statistics. Endpoints are also available for premium subscription management. Detailed documentation for each route is available in the source code comments.
 
-Key routes used by the dashboard include:
-
-- `POST /api/download-amplify` – generate an Excel file from a list of rows for download.
-
 ## Deployment & Environment
 
 1. **Clone and install dependencies**

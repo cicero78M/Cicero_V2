@@ -17,10 +17,7 @@ import editorialEventRoutes from './editorialEventRoutes.js';
 import approvalRequestRoutes from './approvalRequestRoutes.js';
 import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 import premiumRequestRoutes from './premiumRequestRoutes.js';
-import {
-  exportAmplifyToSheet,
-  downloadAmplifyExcel
-} from '../controller/amplifyController.js';
+import { exportAmplifyToSheet } from '../controller/amplifyController.js';
 
 const router = express.Router();
 
@@ -43,8 +40,6 @@ router.use('/amplify', amplifyRoutes);
 router.use('/amplify-khusus', amplifyKhususRoutes);
 router.use('/premium-requests', premiumRequestRoutes);
 router.post('/export-amplify', exportAmplifyToSheet);
-router.post('/download-amplify', downloadAmplifyExcel);
-
 export default router;
 
 
