@@ -15,7 +15,11 @@ export async function exportRowsToGoogleSheet(rows, fileName = 'Data Rekap Bulan
     key: key.replace(/\\n/g, '\n'),
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive'
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.metadata.readonly',
+    'https://www.googleapis.com/auth/spreadsheets.readonly'
+
     ]
   });
 
