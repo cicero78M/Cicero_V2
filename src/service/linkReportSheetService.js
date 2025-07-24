@@ -1,9 +1,11 @@
 import { google } from 'googleapis';
 
 export async function createLinkReportSheet(rows, title, clientId, monthName) {
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  console.log(`[GOOGLE] Using service account: ${serviceAccountEmail}`);
   const auth = new google.auth.GoogleAuth({
     credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      client_email: serviceAccountEmail,
       private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
     },
     scopes: [
@@ -12,6 +14,7 @@ export async function createLinkReportSheet(rows, title, clientId, monthName) {
     ]
   });
   const client = await auth.getClient();
+  console.log('[GOOGLE] Service account authenticated');
   const sheets = google.sheets({ version: 'v4', auth: client });
   const drive = google.drive({ version: 'v3', auth: client });
 
