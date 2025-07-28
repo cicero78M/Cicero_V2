@@ -10,14 +10,28 @@ if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() === 'sqlite') {
 }
 
 export const query = async (text, params) => {
-  console.log('[DB QUERY]', text, params);
+  const shouldLog = process.env.NODE_ENV !== 'production';
+  const paramSummary = Array.isArray(params)
+    ? `[${params.length} params]`
+    : params && typeof params === 'object'
+    ? `object with ${Object.keys(params).length} keys`
+    : params !== undefined
+    ? 'scalar param'
+    : 'none';
+  if (shouldLog) {
+    console.log('[DB QUERY]', text, paramSummary);
+  }
   try {
     const res = await adapter.query(text, params);
     const count = res?.rowCount ?? res?.rows?.length ?? 0;
     console.log('[DB RESULT]', count);
     return res;
   } catch (err) {
-    console.error('[DB ERROR]', err.message, { text, params });
+    if (shouldLog) {
+      console.error('[DB ERROR]', err.message, { text, paramSummary });
+    } else {
+      console.error('[DB ERROR]', err.message);
+    }
     throw err;
   }
 };
