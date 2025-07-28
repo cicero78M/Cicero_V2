@@ -69,7 +69,7 @@ router.post('/penmas-login', async (req, res) => {
       .json({ success: false, message: 'Login gagal: password salah' });
   }
   const payload = { user_id: user.user_id, role: user.role };
-  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });
   try {
@@ -155,7 +155,7 @@ router.post('/dashboard-login', async (req, res) => {
       .json({ success: false, message: 'Akun belum disetujui' });
   }
   const payload = { user_id: user.user_id, role: user.role, client_id: user.client_id };
-  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });
   try {
@@ -205,7 +205,7 @@ router.post('/dashboard-login', async (req, res) => {
       .json({ success: false, message: 'Login gagal: password salah' });
   }
   const payload = { user_id: user.user_id, role: user.role };
-  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });
   try {
@@ -290,7 +290,7 @@ router.post("/login", async (req, res) => {
     nama: client.nama,
     role: "client",
   };
-  const token = jwt.sign(payload, process.env.JWT_SECRET || "secretkey", {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "2h",
   });
   try {
@@ -362,7 +362,7 @@ router.post('/user-login', async (req, res) => {
       .json({ success: false, message: 'Login gagal: data tidak ditemukan' });
   }
   const payload = { user_id: user.user_id, nama: user.nama, role: 'user' };
-  const token = jwt.sign(payload, process.env.JWT_SECRET || 'secretkey', {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h'
   });
   try {
