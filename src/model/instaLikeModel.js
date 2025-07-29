@@ -80,9 +80,9 @@ export async function getLikesByShortcode(shortcode) {
  */
 
 export async function getRekapLikesByClient(client_id, periode = "harian") {
-  let tanggalFilter = "created_at::date = NOW()::date";
+  let tanggalFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (periode === "bulanan") {
-    tanggalFilter = "date_trunc('month', created_at) = date_trunc('month', NOW())";
+    tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
   }
 
   // Ambil jumlah post IG untuk periode

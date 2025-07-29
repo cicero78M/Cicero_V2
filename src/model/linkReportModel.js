@@ -96,7 +96,7 @@ export async function getReportsTodayByClient(client_id) {
   const res = await query(
     `SELECT r.* FROM link_report r
      JOIN "user" u ON u.user_id = r.user_id
-     WHERE u.client_id = $1 AND r.created_at::date = NOW()::date
+     WHERE u.client_id = $1 AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
      ORDER BY r.created_at ASC`,
     [client_id]
   );
@@ -108,7 +108,7 @@ export async function getReportsTodayByShortcode(client_id, shortcode) {
     `SELECT r.* FROM link_report r
      JOIN "user" u ON u.user_id = r.user_id
      WHERE u.client_id = $1 AND r.shortcode = $2
-       AND r.created_at::date = NOW()::date
+       AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
      ORDER BY r.created_at ASC`,
     [client_id, shortcode]
   );
@@ -119,8 +119,8 @@ export async function getRekapLinkByClient(
   periode = 'harian',
   tanggal
 ) {
-  let dateFilterPost = 'p.created_at::date = NOW()::date';
-  let dateFilterReport = 'r.created_at::date = NOW()::date';
+  let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (periode === 'semua') {
     dateFilterPost = '1=1';
@@ -138,11 +138,11 @@ export async function getRekapLinkByClient(
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
-      dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', $2::date)";
-      dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', $2::date)";
+      dateFilterPost = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      dateFilterReport = "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
     } else {
-      dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
-      dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', NOW())";
+      dateFilterPost = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      dateFilterReport = "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
     params.push(tanggal);
@@ -220,7 +220,7 @@ export async function getReportsThisMonthByClient(client_id) {
      JOIN insta_post p ON p.shortcode = r.shortcode
      JOIN "user" u ON u.user_id = r.user_id
      WHERE p.client_id = $1
-       AND date_trunc('month', r.created_at) = date_trunc('month', NOW())
+       AND date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')
      ORDER BY r.created_at ASC`,
     [client_id]
   );

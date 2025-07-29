@@ -98,7 +98,7 @@ test('getReportsThisMonthByClient selects monthly rows', async () => {
   const rows = await getReportsThisMonthByClient('POLRES');
   expect(rows).toEqual([{ date: '2024-01-01' }]);
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining("date_trunc('month', r.created_at)"),
+    expect.stringContaining("date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta')"),
     ['POLRES']
   );
 });
