@@ -114,20 +114,45 @@ export async function getReportsTodayByShortcode(client_id, shortcode) {
   );
   return res.rows;
 }
-export async function getRekapLinkByClient(client_id, periode = 'harian') {
+export async function getRekapLinkByClient(
+  client_id,
+  periode = 'harian',
+  tanggal
+) {
   let dateFilterPost = 'p.created_at::date = NOW()::date';
   let dateFilterReport = 'r.created_at::date = NOW()::date';
-  if (periode === 'mingguan') {
-    dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
-    dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', NOW())";
+  const params = [client_id];
+  if (periode === 'semua') {
+    dateFilterPost = '1=1';
+    dateFilterReport = '1=1';
+  } else if (periode === 'mingguan') {
+    if (tanggal) {
+      params.push(tanggal);
+      dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+      dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', $2::date)";
+    } else {
+      dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+      dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', NOW())";
+    }
   } else if (periode === 'bulanan') {
-    dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
-    dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', NOW())";
+    if (tanggal) {
+      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+      params.push(monthDate);
+      dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', $2::date)";
+      dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', $2::date)";
+    } else {
+      dateFilterPost = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+      dateFilterReport = "date_trunc('month', r.created_at) = date_trunc('month', NOW())";
+    }
+  } else if (tanggal) {
+    params.push(tanggal);
+    dateFilterPost = 'p.created_at::date = $2::date';
+    dateFilterReport = 'r.created_at::date = $2::date';
   }
 
   const { rows: postRows } = await query(
     `SELECT COUNT(*) AS jumlah_post FROM insta_post p WHERE p.client_id = $1 AND ${dateFilterPost}`,
-    [client_id]
+    params
   );
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
@@ -159,7 +184,7 @@ export async function getRekapLinkByClient(client_id, periode = 'harian') {
      WHERE u.client_id = $1 AND u.status = true
      GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
      ORDER BY jumlah_link DESC, u.nama ASC`,
-    [client_id]
+    params
   );
 
   for (const user of rows) {

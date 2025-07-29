@@ -16,6 +16,7 @@ let findLinkReportByShortcode;
 let getReportsTodayByClient;
 let getReportsTodayByShortcode;
 let getReportsThisMonthByClient;
+let getRekapLinkByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportModel.js');
@@ -25,6 +26,7 @@ beforeAll(async () => {
   getReportsTodayByClient = mod.getReportsTodayByClient;
   getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
   getReportsThisMonthByClient = mod.getReportsThisMonthByClient;
+  getRekapLinkByClient = mod.getRekapLinkByClient;
 });
 
 beforeEach(() => {
@@ -98,5 +100,22 @@ test('getReportsThisMonthByClient selects monthly rows', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining("date_trunc('month', r.created_at)"),
     ['POLRES']
+  );
+});
+
+test('getRekapLinkByClient uses provided date', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapLinkByClient('POLRES', 'harian', '2024-01-02');
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('FROM insta_post p'),
+    ['POLRES', '2024-01-02']
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
+    expect.stringContaining('WITH link_sum AS'),
+    ['POLRES', '2024-01-02']
   );
 });
