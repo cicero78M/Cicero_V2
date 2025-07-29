@@ -63,9 +63,9 @@ export const findByVideoId = getCommentsByVideoId;
 
 
 export async function getRekapKomentarByClient(client_id, periode = "harian") {
-  let tanggalFilter = "p.created_at::date = NOW()::date";
+  let tanggalFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (periode === "bulanan") {
-    tanggalFilter = "date_trunc('month', p.created_at) = date_trunc('month', NOW())";
+    tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
   }
 
   const { rows: postRows } = await query(
