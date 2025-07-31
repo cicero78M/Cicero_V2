@@ -75,3 +75,35 @@ export async function getPostsByClientId(client_id) {
 }
 
 export const findByClientId = getPostsByClientId;
+
+export async function countPostsByClient(client_id, periode = 'harian', tanggal) {
+  let dateFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  const params = [client_id];
+  if (periode === 'semua') {
+    dateFilter = '1=1';
+  } else if (periode === 'mingguan') {
+    if (tanggal) {
+      params.push(tanggal);
+      dateFilter = "date_trunc('week', created_at) = date_trunc('week', $2::date)";
+    } else {
+      dateFilter = "date_trunc('week', created_at) = date_trunc('week', NOW())";
+    }
+  } else if (periode === 'bulanan') {
+    if (tanggal) {
+      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+      params.push(monthDate);
+      dateFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+    } else {
+      dateFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+    }
+  } else if (tanggal) {
+    params.push(tanggal);
+    dateFilter = 'created_at::date = $2::date';
+  }
+
+  const { rows } = await query(
+    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post WHERE client_id = $1 AND ${dateFilter}`,
+    params
+  );
+  return parseInt(rows[0]?.jumlah_post || '0', 10);
+}
