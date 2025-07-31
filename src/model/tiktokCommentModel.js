@@ -62,15 +62,42 @@ export async function getCommentsByVideoId(video_id) {
 export const findByVideoId = getCommentsByVideoId;
 
 
-export async function getRekapKomentarByClient(client_id, periode = "harian") {
-  let tanggalFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  if (periode === "bulanan") {
-    tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+export async function getRekapKomentarByClient(
+  client_id,
+  periode = "harian",
+  tanggal
+) {
+  let tanggalFilter =
+    "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  const params = [client_id];
+  if (periode === "semua") {
+    tanggalFilter = "1=1";
+  } else if (periode === "mingguan") {
+    if (tanggal) {
+      params.push(tanggal);
+      tanggalFilter =
+        "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+    } else {
+      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+    }
+  } else if (periode === "bulanan") {
+    if (tanggal) {
+      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+      params.push(monthDate);
+      tanggalFilter =
+        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+    } else {
+      tanggalFilter =
+        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+    }
+  } else if (tanggal) {
+    params.push(tanggal);
+    tanggalFilter = "p.created_at::date = $2::date";
   }
 
   const { rows: postRows } = await query(
     `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p WHERE p.client_id = $1 AND ${tanggalFilter}`,
-    [client_id]
+    params
   );
   const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
@@ -101,7 +128,7 @@ export async function getRekapKomentarByClient(client_id, periode = "harian") {
       AND u.tiktok IS NOT NULL
     GROUP BY u.user_id, u.title, u.nama, u.tiktok, u.divisi, u.exception
     ORDER BY jumlah_komentar DESC, u.nama ASC
-  `, [client_id]);
+  `, params);
 
   for (const user of rows) {
     if (
