@@ -115,6 +115,21 @@ export async function getUsersWithWaByClient(clientId) {
   return result.rows;
 }
 
+// Ambil user aktif yang belum melengkapi data (insta/tiktok/whatsapp)
+export async function getUsersMissingDataByClient(clientId) {
+  const res = await query(
+    `SELECT user_id, nama, insta, tiktok, whatsapp
+     FROM "user"
+     WHERE client_id = $1 AND status = true
+       AND (insta IS NULL OR insta='' OR
+            tiktok IS NULL OR tiktok='' OR
+            whatsapp IS NULL OR whatsapp='')
+     ORDER BY nama`,
+    [clientId]
+  );
+  return res.rows;
+}
+
 export async function findUserById(user_id) {
   const { rows } = await query('SELECT * FROM "user" WHERE user_id=$1', [
     user_id,
