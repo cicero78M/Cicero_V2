@@ -31,13 +31,17 @@ export async function runCron() {
         if (user.whatsapp) {
           const chatId = formatToWhatsAppId(user.whatsapp);
           await safeSendMessage(waClient, chatId, msg);
-        } else {
-          rekap.push(`- ${client.nama} - ${user.nama}: ${missing.join(', ')}`);
         }
+
+        const reasons = [];
+        if (!user.whatsapp) reasons.push('Belum Registrasi Whatsapp');
+        if (!user.insta) reasons.push('Instagram Kosong');
+        if (!user.tiktok) reasons.push('Tiktok Kosong');
+        rekap.push(`- ${client.nama} - ${user.nama}: ${reasons.join(', ')}`);
       }
     }
     if (rekap.length > 0) {
-      const report = `User tanpa WhatsApp:\n${rekap.join('\n')}`;
+      const report = `Assalamualaikum,\nBerikut rekap data absensi user yang belum lengkap:\n${rekap.join('\n')}`;
       await sendWAReport(waClient, report, getAdminWAIds());
     }
   } catch (err) {
