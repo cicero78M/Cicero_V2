@@ -31,6 +31,7 @@ export async function runCron() {
         if (user.whatsapp) {
           const chatId = formatToWhatsAppId(user.whatsapp);
           await safeSendMessage(waClient, chatId, msg);
+          await new Promise((resolve) => setTimeout(resolve, 10000)); // Delay 10 detik
         }
 
         const reasons = [];
