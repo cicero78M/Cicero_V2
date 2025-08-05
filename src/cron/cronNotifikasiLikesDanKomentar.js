@@ -122,7 +122,7 @@ export async function cronNotifikasiAbsenLikesKomentar() {
       try {
         await waClient.sendMessage(formatToWhatsAppId(user.whatsapp), pesan);
         console.log(`[WA] Notifikasi dikirim ke ${user.nama} (${user.whatsapp})`);
-        await new Promise(r => setTimeout(r, 1000)); // JEDA 1 DETIK
+        await new Promise((resolve) => setTimeout(resolve, 10000)); // JEDA 10 DETIK
       } catch (err) {
         console.error(`[WA] Gagal kirim notifikasi ke ${user.nama} (${user.whatsapp}): ${err.message}`);
       }
