@@ -344,3 +344,9 @@ CREATE TABLE IF NOT EXISTS login_log (
   login_source VARCHAR(20),
   logged_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS saved_contact (
+  phone_number VARCHAR PRIMARY KEY,
+  resource_name VARCHAR,
+  created_at TIMESTAMP DEFAULT NOW()
+);

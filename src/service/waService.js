@@ -24,6 +24,7 @@ import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
 } from "../handler/fetchpost/tiktokFetchPost.js";
+import { saveContactIfNew } from "./googleContactsService.js";
 
 import {
   absensiLikes,
@@ -146,6 +147,7 @@ waClient.on("message", async (msg) => {
     return;
   }
   const chatId = msg.from;
+  await saveContactIfNew(chatId);
   const text = (msg.body || "").trim();
 
   // ===== Deklarasi State dan Konstanta =====
