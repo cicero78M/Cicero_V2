@@ -53,10 +53,7 @@ async function getShortcodesToday(clientId = null) {
 
 async function deleteShortcodes(shortcodesToDelete, clientId = null) {
   if (!shortcodesToDelete.length) return;
-  await query(
-    `DELETE FROM ig_ext_posts WHERE shortcode = ANY($1)`,
-    [shortcodesToDelete]
-  );
+  // ig_ext_posts rows cascade when insta_post entries are deleted
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
