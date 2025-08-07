@@ -68,7 +68,11 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     SECRET_KEY=your-secret
     JWT_SECRET=your-jwt-secret
     AMQP_URL=amqp://localhost
+    GOOGLE_CONTACT_SCOPE=https://www.googleapis.com/auth/contacts
+    GOOGLE_SERVICE_ACCOUNT=/path/to/service-account.json
     ```
+   `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON.
+
 3. **Set up Redis**
     ```bash
     sudo apt-get install redis-server
