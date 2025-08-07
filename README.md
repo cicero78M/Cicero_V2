@@ -70,8 +70,9 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     AMQP_URL=amqp://localhost
     GOOGLE_CONTACT_SCOPE=https://www.googleapis.com/auth/contacts
     GOOGLE_SERVICE_ACCOUNT=/path/to/service-account.json
+    GOOGLE_IMPERSONATE_EMAIL=admin@example.com
     ```
-   `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON.
+   `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
 
 3. **Set up Redis**
     ```bash
@@ -99,6 +100,22 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
     npm run lint
     npm test
     ```
+
+---
+
+## Google Contacts Integration
+
+The application can synchronize Google Workspace contacts using the People API. Configure the integration as follows:
+
+1. **Enable the People API** in your Google Cloud project.
+2. **Create a service account** and enable **Domain-wide delegation**.
+3. **Grant domain-wide delegation** in the Google Admin console:
+   - Note the service account's client ID.
+   - Under **Security → API controls → Domain-wide delegation**, add a new client with that client ID and the scope defined in `GOOGLE_CONTACT_SCOPE`.
+4. **Set environment variables**:
+   - `GOOGLE_SERVICE_ACCOUNT` – JSON key or file path for the service account.
+   - `GOOGLE_CONTACT_SCOPE` – OAuth scope for contacts, e.g. `https://www.googleapis.com/auth/contacts`.
+   - `GOOGLE_IMPERSONATE_EMAIL` – Workspace user email to impersonate when accessing contacts.
 
 ---
 
