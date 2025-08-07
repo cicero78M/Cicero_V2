@@ -128,6 +128,7 @@ Follower and media statistics.
 - `shortcode` and `user_id` form the primary key
 - `instagram_link`, `facebook_link`, `twitter_link`, `tiktok_link`, `youtube_link`
 - `created_at` – timestamp when the report was submitted
+- Rows cascade when the related `insta_post` is removed
 
 ### `login_log`
 Stores login events for auditing.
