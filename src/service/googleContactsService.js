@@ -23,6 +23,11 @@ export async function saveContactIfNew(chatId) {
       return;
     }
 
+    if (!env.GOOGLE_IMPERSONATE_EMAIL) {
+      console.warn('[GOOGLE] Impersonation email not configured');
+      return;
+    }
+
     let credentials;
     const isPath =
       env.GOOGLE_SERVICE_ACCOUNT.startsWith('/') ||
@@ -43,9 +48,11 @@ export async function saveContactIfNew(chatId) {
       return;
     }
 
-    const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: [env.GOOGLE_CONTACT_SCOPE]
+    const auth = new google.auth.JWT({
+      email: credentials.client_email,
+      key: credentials.private_key,
+      scopes: [env.GOOGLE_CONTACT_SCOPE],
+      subject: env.GOOGLE_IMPERSONATE_EMAIL
     });
 
     const service = google.people({ version: 'v1', auth });
@@ -62,6 +69,11 @@ export async function saveContactIfNew(chatId) {
       [phone, resourceName]
     );
   } catch (err) {
-    console.error('[GOOGLE CONTACT] Failed to save contact:', err.message);
+    const status = err?.response?.status || err.code;
+    console.error(
+      '[GOOGLE CONTACT] Failed to save contact:',
+      err.message,
+      status ? `(status ${status})` : ''
+    );
   }
 }
