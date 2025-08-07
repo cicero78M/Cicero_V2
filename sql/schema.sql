@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS ig_ext_media_items (
 );
 
 CREATE TABLE IF NOT EXISTS ig_ext_tagged_users (
-    media_id VARCHAR(50) REFERENCES ig_ext_media_items(media_id),
+    media_id VARCHAR(50) REFERENCES ig_ext_media_items(media_id) ON DELETE CASCADE,
     user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
     x REAL,
     y REAL,

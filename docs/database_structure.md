@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-07-18*
+*Last updated: 2025-08-07*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -24,7 +24,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | ig_ext_users | RapidAPI user reference |
 | ig_ext_posts | RapidAPI post reference |
 | ig_ext_media_items | media items within a post |
-| ig_ext_tagged_users | tagged users inside a media item |
+| ig_ext_tagged_users | tagged users inside a media item; `media_id` cascades with `ig_ext_media_items` |
 | ig_ext_hashtags | hashtags detected in posts |
 | ig_hashtag_info | metadata for individual hashtags |
 | ig_post_metrics | advanced engagement metrics |
