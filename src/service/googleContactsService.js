@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { google } from 'googleapis';
 import { query } from '../db/index.js';
 import { env } from '../config/env.js';
@@ -22,8 +23,28 @@ export async function saveContactIfNew(chatId) {
       return;
     }
 
+    let credentials;
+    const isPath =
+      env.GOOGLE_SERVICE_ACCOUNT.startsWith('/') ||
+      env.GOOGLE_SERVICE_ACCOUNT.endsWith('.json');
+    try {
+      if (isPath) {
+        const file = fs.readFileSync(env.GOOGLE_SERVICE_ACCOUNT, 'utf8');
+        credentials = JSON.parse(file);
+      } else {
+        credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT);
+      }
+    } catch (err) {
+      const expected = isPath ? 'path to JSON file' : 'JSON string';
+      console.error(
+        `[GOOGLE CONTACT] Failed to parse service account ${expected}:`,
+        err.message
+      );
+      return;
+    }
+
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT),
+      credentials,
       scopes: [env.GOOGLE_CONTACT_SCOPE]
     });
 
