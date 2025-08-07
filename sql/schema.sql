@@ -252,7 +252,7 @@ CREATE TABLE visitor_logs (
 );
 
 CREATE TABLE IF NOT EXISTS link_report (
-    shortcode VARCHAR REFERENCES insta_post(shortcode),
+    shortcode VARCHAR REFERENCES insta_post(shortcode) ON DELETE CASCADE,
     user_id VARCHAR REFERENCES "user"(user_id),
     instagram_link TEXT,
     facebook_link TEXT,
