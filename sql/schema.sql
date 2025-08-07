@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS ig_ext_users (
 
 CREATE TABLE IF NOT EXISTS ig_ext_posts (
     post_id VARCHAR(50) PRIMARY KEY,
-    shortcode VARCHAR(50) UNIQUE REFERENCES insta_post(shortcode),
+    shortcode VARCHAR(50) UNIQUE REFERENCES insta_post(shortcode) ON DELETE CASCADE,
     user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
     caption_text TEXT,
     created_at TIMESTAMP,
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS ig_ext_posts (
 
 CREATE TABLE IF NOT EXISTS ig_ext_media_items (
     media_id VARCHAR(50) PRIMARY KEY,
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id) ON DELETE CASCADE,
     media_type INT,
     is_video BOOLEAN,
     original_width INT,
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS ig_ext_tagged_users (
 );
 
 CREATE TABLE IF NOT EXISTS ig_ext_hashtags (
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id) ON DELETE CASCADE,
     hashtag VARCHAR(100),
     PRIMARY KEY (post_id, hashtag)
 );
@@ -218,7 +218,7 @@ CREATE TABLE IF NOT EXISTS ig_hashtag_info (
 
 -- Statistik lanjutan untuk setiap post
 CREATE TABLE IF NOT EXISTS ig_post_metrics (
-    post_id VARCHAR(50) PRIMARY KEY REFERENCES ig_ext_posts(post_id),
+    post_id VARCHAR(50) PRIMARY KEY REFERENCES ig_ext_posts(post_id) ON DELETE CASCADE,
     play_count INT,
     save_count INT,
     share_count INT,
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS ig_post_metrics (
 
 -- Relational table for individual likes
 CREATE TABLE IF NOT EXISTS ig_post_like_users (
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id) ON DELETE CASCADE,
     user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
     username VARCHAR(100),
     PRIMARY KEY (post_id, user_id)
@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS ig_post_like_users (
 -- Store individual comments for a post
 CREATE TABLE IF NOT EXISTS ig_post_comments (
     comment_id VARCHAR(50) PRIMARY KEY,
-    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id),
+    post_id VARCHAR(50) REFERENCES ig_ext_posts(post_id) ON DELETE CASCADE,
     user_id VARCHAR(50) REFERENCES ig_ext_users(user_id),
     text TEXT,
     created_at TIMESTAMP
