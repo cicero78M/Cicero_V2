@@ -79,16 +79,35 @@ export async function getLikesByShortcode(shortcode) {
  * @returns {Promise<Array>}
  */
 
-export async function getRekapLikesByClient(client_id, periode = "harian") {
+export async function getRekapLikesByClient(client_id, periode = "harian", tanggal) {
   let tanggalFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  if (periode === "bulanan") {
-    tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+  const params = [client_id];
+  if (periode === 'semua') {
+    tanggalFilter = '1=1';
+  } else if (periode === 'mingguan') {
+    if (tanggal) {
+      params.push(tanggal);
+      tanggalFilter = "date_trunc('week', created_at) = date_trunc('week', $2::date)";
+    } else {
+      tanggalFilter = "date_trunc('week', created_at) = date_trunc('week', NOW())";
+    }
+  } else if (periode === 'bulanan') {
+    if (tanggal) {
+      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+      params.push(monthDate);
+      tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+    } else {
+      tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+    }
+  } else if (tanggal) {
+    params.push(tanggal);
+    tanggalFilter = 'created_at::date = $2::date';
   }
 
   // Ambil jumlah post IG untuk periode
   const { rows: postRows } = await query(
     `SELECT COUNT(*) AS jumlah_post FROM insta_post WHERE client_id = $1 AND ${tanggalFilter}`,
-    [client_id]
+    params
   );
   const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
@@ -121,7 +140,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian") {
       AND u.insta IS NOT NULL
     GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception
     ORDER BY jumlah_like DESC, u.nama ASC
-  `, [client_id]);
+  `, params);
 
   // Untuk exception, set jumlah_like = max_like
   for (const user of rows) {
