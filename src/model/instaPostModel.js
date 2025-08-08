@@ -88,10 +88,13 @@ export async function findByClientId(client_id) {
   return getPostsByClientId(client_id);
 }
 
-export async function countPostsByClient(client_id, periode = 'harian', tanggal) {
+export async function countPostsByClient(client_id, periode = 'harian', tanggal, start_date, end_date) {
   let dateFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
-  if (periode === 'semua') {
+  if (start_date && end_date) {
+    params.push(start_date, end_date);
+    dateFilter = 'created_at::date BETWEEN $2::date AND $3::date';
+  } else if (periode === 'semua') {
     dateFilter = '1=1';
   } else if (periode === 'mingguan') {
     if (tanggal) {
