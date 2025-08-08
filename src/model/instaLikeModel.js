@@ -134,7 +134,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
       COALESCE(COUNT(DISTINCT vl.shortcode), 0) AS jumlah_like
     FROM "user" u
     LEFT JOIN valid_likes vl
-      ON vl.likes @> to_jsonb(u.insta)
+      ON vl.likes::jsonb @> to_jsonb(ARRAY[u.insta])
     WHERE u.client_id = $1
       AND u.status = true
       AND u.insta IS NOT NULL
