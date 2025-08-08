@@ -13,12 +13,14 @@ export async function getDashboardStats(req, res) {
 
     const periode = req.query.periode || 'harian';
     const tanggal = req.query.tanggal;
+    const start_date = req.query.start_date;
+    const end_date = req.query.end_date;
 
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
       getAllUsers(client_id), // <- ini
-      countInstaPostsByClient(client_id, periode, tanggal),
-      countTiktokPostsByClient(client_id, periode, tanggal),
+      countInstaPostsByClient(client_id, periode, tanggal, start_date, end_date),
+      countTiktokPostsByClient(client_id, periode, tanggal, start_date, end_date),
     ]);
 
     // === FILTER HANYA USER AKTIF

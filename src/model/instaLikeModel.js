@@ -79,10 +79,13 @@ export async function getLikesByShortcode(shortcode) {
  * @returns {Promise<Array>}
  */
 
-export async function getRekapLikesByClient(client_id, periode = "harian", tanggal) {
+export async function getRekapLikesByClient(client_id, periode = "harian", tanggal, start_date, end_date) {
   let tanggalFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
-  if (periode === 'semua') {
+  if (start_date && end_date) {
+    params.push(start_date, end_date);
+    tanggalFilter = 'created_at::date BETWEEN $2::date AND $3::date';
+  } else if (periode === 'semua') {
     tanggalFilter = '1=1';
   } else if (periode === 'mingguan') {
     if (tanggal) {

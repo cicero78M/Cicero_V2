@@ -19,12 +19,14 @@ export async function getInstaRekapLikes(req, res) {
   const client_id = req.query.client_id;
   const periode = req.query.periode || "harian";
   const tanggal = req.query.tanggal;
+  const start_date = req.query.start_date;
+  const end_date = req.query.end_date;
   if (!client_id) {
     return res.status(400).json({ success: false, message: "client_id wajib diisi" });
   }
   try {
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''}` });
-    const data = await getRekapLikesByClient(client_id, periode, tanggal);
+    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${start_date || ''} ${end_date || ''}` });
+    const data = await getRekapLikesByClient(client_id, periode, tanggal, start_date, end_date);
     res.json({ success: true, data });
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });

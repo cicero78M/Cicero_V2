@@ -57,3 +57,20 @@ test('semua uses no date filter', async () => {
   expect(mockQuery).toHaveBeenNthCalledWith(1, expect.stringContaining('1=1'), ['1']);
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('1=1'), ['1']);
 });
+
+test('date range uses between filter', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('1', 'harian', undefined, '2023-10-01', '2023-10-07');
+  const expected = 'created_at::date BETWEEN $2::date AND $3::date';
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining(expected),
+    ['1', '2023-10-01', '2023-10-07']
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
+    expect.stringContaining(expected),
+    ['1', '2023-10-01', '2023-10-07']
+  );
+});

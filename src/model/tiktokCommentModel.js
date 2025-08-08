@@ -65,12 +65,17 @@ export const findByVideoId = getCommentsByVideoId;
 export async function getRekapKomentarByClient(
   client_id,
   periode = "harian",
-  tanggal
+  tanggal,
+  start_date,
+  end_date
 ) {
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
-  if (periode === "semua") {
+  if (start_date && end_date) {
+    params.push(start_date, end_date);
+    tanggalFilter = "p.created_at::date BETWEEN $2::date AND $3::date";
+  } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
