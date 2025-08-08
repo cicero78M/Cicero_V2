@@ -1,5 +1,5 @@
 export function sortDivisionKeys(keys) {
-  const order = ["BAG", "SAT", "SI", "POLSEK"];
+  const order = ["BAG", "SAT", "SI", "SPKT", "POLSEK"];
   return keys.sort((a, b) => {
     const ia = order.findIndex((prefix) => a.toUpperCase().startsWith(prefix));
     const ib = order.findIndex((prefix) => b.toUpperCase().startsWith(prefix));
