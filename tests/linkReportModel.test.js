@@ -119,3 +119,20 @@ test('getRekapLinkByClient uses provided date', async () => {
     ['POLRES', '2024-01-02']
   );
 });
+
+test('getRekapLinkByClient uses BETWEEN for date range', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '2' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapLinkByClient('POLRES', 'harian', null, '2024-01-01', '2024-01-31');
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('BETWEEN $2::date AND $3::date'),
+    ['POLRES', '2024-01-01', '2024-01-31']
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
+    expect.stringContaining('BETWEEN $2::date AND $3::date'),
+    ['POLRES', '2024-01-01', '2024-01-31']
+  );
+});
