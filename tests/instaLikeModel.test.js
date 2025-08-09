@@ -62,7 +62,7 @@ test('date range uses between filter', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] });
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapLikesByClient('1', 'harian', undefined, '2023-10-01', '2023-10-07');
-  const expected = 'created_at::date BETWEEN $2::date AND $3::date';
+  const expected = "(created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   expect(mockQuery).toHaveBeenNthCalledWith(
     1,
     expect.stringContaining(expected),
