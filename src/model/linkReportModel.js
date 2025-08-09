@@ -117,12 +117,18 @@ export async function getReportsTodayByShortcode(client_id, shortcode) {
 export async function getRekapLinkByClient(
   client_id,
   periode = 'harian',
-  tanggal
+  tanggal,
+  start_date,
+  end_date
 ) {
   let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
-  if (periode === 'semua') {
+  if (start_date && end_date) {
+    params.push(start_date, end_date);
+    dateFilterPost = 'p.created_at::date BETWEEN $2::date AND $3::date';
+    dateFilterReport = 'r.created_at::date BETWEEN $2::date AND $3::date';
+  } else if (periode === 'semua') {
     dateFilterPost = '1=1';
     dateFilterReport = '1=1';
   } else if (periode === 'mingguan') {
