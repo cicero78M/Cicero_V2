@@ -74,3 +74,14 @@ test('date range uses between filter', async () => {
     ['1', '2023-10-01', '2023-10-07']
   );
 });
+
+test('query normalizes instagram usernames', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('1');
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
+    expect.stringContaining('jsonb_array_elements_text'),
+    ['1']
+  );
+});

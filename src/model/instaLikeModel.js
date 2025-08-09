@@ -121,11 +121,17 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
         l.shortcode,
         p.client_id,
         p.created_at,
-        l.likes
+        lower(replace(trim(lk), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
+      JOIN LATERAL jsonb_array_elements_text(l.likes) lk ON TRUE
       WHERE p.client_id = $1
         AND ${tanggalFilter}
+    ),
+    like_counts AS (
+      SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
+      FROM valid_likes
+      GROUP BY username
     )
     SELECT
       u.user_id,
@@ -134,14 +140,13 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
       u.insta AS username,
       u.divisi,
       u.exception,
-      COALESCE(COUNT(DISTINCT vl.shortcode), 0) AS jumlah_like
+      COALESCE(lc.jumlah_like, 0) AS jumlah_like
     FROM "user" u
-    LEFT JOIN valid_likes vl
-      ON vl.likes::jsonb @> to_jsonb(ARRAY[u.insta])
+    LEFT JOIN like_counts lc
+      ON lower(replace(trim(u.insta), '@', '')) = lc.username
     WHERE u.client_id = $1
       AND u.status = true
       AND u.insta IS NOT NULL
-    GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception
     ORDER BY jumlah_like DESC, u.nama ASC
   `, params);
 
