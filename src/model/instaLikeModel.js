@@ -84,7 +84,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    tanggalFilter = 'created_at::date BETWEEN $2::date AND $3::date';
+    tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === 'semua') {
     tanggalFilter = '1=1';
   } else if (periode === 'mingguan') {

@@ -126,8 +126,8 @@ export async function getRekapLinkByClient(
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    dateFilterPost = 'p.created_at::date BETWEEN $2::date AND $3::date';
-    dateFilterReport = 'r.created_at::date BETWEEN $2::date AND $3::date';
+    dateFilterPost = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    dateFilterReport = "(r.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === 'semua') {
     dateFilterPost = '1=1';
     dateFilterReport = '1=1';
