@@ -5,8 +5,9 @@ export async function getAmplifyRekap(req, res) {
   const client_id = req.query.client_id;
   const periode = req.query.periode || 'harian';
   const tanggal = req.query.tanggal;
-  const startDate = req.query.start_date;
-  const endDate = req.query.end_date;
+  const startDate =
+    req.query.start_date || req.query.tanggal_mulai;
+  const endDate = req.query.end_date || req.query.tanggal_selesai;
   if (!client_id) {
     return res.status(400).json({ success: false, message: 'client_id wajib diisi' });
   }

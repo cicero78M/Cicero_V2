@@ -13,8 +13,9 @@ export async function getDashboardStats(req, res) {
 
     const periode = req.query.periode || 'harian';
     const tanggal = req.query.tanggal;
-    const start_date = req.query.start_date;
-    const end_date = req.query.end_date;
+    const start_date =
+      req.query.start_date || req.query.tanggal_mulai;
+    const end_date = req.query.end_date || req.query.tanggal_selesai;
 
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
