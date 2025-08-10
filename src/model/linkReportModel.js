@@ -205,6 +205,7 @@ export async function getRekapLinkByClient(
       user.jumlah_link = parseInt(user.jumlah_link, 10) || 0;
     }
     user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
+    user.sudahMelaksanakan = user.jumlah_link > 0;
   }
 
   return rows;

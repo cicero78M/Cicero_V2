@@ -78,7 +78,10 @@ export async function getPostsTodayByClient(client_id) {
 
 export async function getPostsByClientId(client_id) {
   const res = await query(
-    `SELECT * FROM insta_post WHERE client_id = $1 ORDER BY created_at DESC`,
+    `SELECT DISTINCT ON (shortcode) *
+     FROM insta_post
+     WHERE client_id = $1
+     ORDER BY shortcode, created_at DESC`,
     [client_id]
   );
   return res.rows;
