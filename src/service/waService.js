@@ -797,7 +797,8 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       (sc) => `https://www.instagram.com/p/${sc}`
     );
     const totalKonten = shortcodes.length;
-    const threshold = Math.ceil(totalKonten * 0.2);
+    // Require at least 50% of content liked to mark as complete
+    const threshold = Math.ceil(totalKonten * 0.5);
 
     // Rekap likes untuk setiap user: hitung berapa konten yang di-like
     const userStats = {};

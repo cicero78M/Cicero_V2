@@ -48,7 +48,8 @@ export async function absensiLikes(client_id, opts = {}) {
   }
 
   const totalKonten = shortcodes.length;
-  const threshold = Math.ceil(totalKonten * 0.2);
+  // User must like at least 50% of content to be considered complete
+  const threshold = Math.ceil(totalKonten * 0.5);
   let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {

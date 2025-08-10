@@ -86,7 +86,7 @@ test('query normalizes instagram usernames', async () => {
   );
 });
 
-test('marks sudahMelaksanakan when reaching 20% threshold', async () => {
+test('marks sudahMelaksanakan when reaching 50% threshold', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '5' }] })
     .mockResolvedValueOnce({
@@ -98,7 +98,7 @@ test('marks sudahMelaksanakan when reaching 20% threshold', async () => {
           username: 'budi',
           divisi: 'BAG',
           exception: false,
-          jumlah_like: 1,
+          jumlah_like: 3,
         },
       ],
     });
@@ -106,7 +106,7 @@ test('marks sudahMelaksanakan when reaching 20% threshold', async () => {
   expect(rows[0].sudahMelaksanakan).toBe(true);
 });
 
-test('marks belum when below 20% threshold', async () => {
+test('marks belum when below 50% threshold', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '10' }] })
     .mockResolvedValueOnce({
@@ -118,7 +118,7 @@ test('marks belum when below 20% threshold', async () => {
           username: 'budi',
           divisi: 'BAG',
           exception: false,
-          jumlah_like: 1,
+          jumlah_like: 4,
         },
       ],
     });
