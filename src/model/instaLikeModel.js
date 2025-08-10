@@ -166,7 +166,13 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     }
     // Tambahkan field display_nama (opsional, untuk frontend)
     user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
-    user.sudahMelaksanakan = user.jumlah_like >= threshold;
+    if (periode === 'bulanan') {
+      // Once a user is marked as completed in a month, never revert to false.
+      user.sudahMelaksanakan =
+        user.jumlah_like > 0 || user.jumlah_like >= threshold;
+    } else {
+      user.sudahMelaksanakan = user.jumlah_like >= threshold;
+    }
   }
 
   return rows;
