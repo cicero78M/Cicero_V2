@@ -797,6 +797,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       (sc) => `https://www.instagram.com/p/${sc}`
     );
     const totalKonten = shortcodes.length;
+    const threshold = Math.ceil(totalKonten * 0.2);
 
     // Rekap likes untuk setiap user: hitung berapa konten yang di-like
     const userStats = {};
@@ -824,7 +825,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       } else if (
         u.insta &&
         u.insta.trim() !== "" &&
-        u.count >= Math.ceil(totalKonten / 2)
+        u.count >= threshold
       ) {
         sudah.push(u);
       } else {
@@ -868,7 +869,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
             (u) =>
               `- ${formatNama(u)} : ${
                 u.insta ? u.insta : "belum mengisi data insta"
-              } (0 konten)${!u.insta ? " (belum mengisi data insta)" : ""}`
+              } (${u.count} konten)${
+                !u.insta ? " (belum mengisi data insta)" : ""
+              }`
           )
           .join("\n") + "\n\n";
     });

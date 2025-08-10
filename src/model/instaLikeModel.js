@@ -113,6 +113,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     params
   );
   const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
+  const threshold = Math.ceil(max_like * 0.2);
 
   // CTE
   const { rows } = await query(`
@@ -159,6 +160,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     }
     // Tambahkan field display_nama (opsional, untuk frontend)
     user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
+    user.sudahMelaksanakan = user.jumlah_like >= threshold;
   }
 
   return rows;
