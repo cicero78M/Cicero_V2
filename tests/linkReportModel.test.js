@@ -137,3 +137,23 @@ test('getRekapLinkByClient handles start_date and end_date', async () => {
     ['POLRES', '2024-01-01', '2024-01-31']
   );
 });
+
+test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          title: 'Aiptu',
+          nama: 'Budi',
+          username: 'budi',
+          divisi: 'Humas',
+          exception: false,
+          jumlah_link: 1
+        }
+      ]
+    });
+  const rows = await getRekapLinkByClient('POLRES');
+  expect(rows[0].sudahMelaksanakan).toBe(true);
+});
