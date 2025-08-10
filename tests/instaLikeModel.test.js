@@ -79,6 +79,14 @@ test('query normalizes instagram usernames', async () => {
   );
 });
 
+test('counts posts even when no likes recorded', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '10' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('POLRES');
+  const firstQuery = mockQuery.mock.calls[0][0];
+  expect(firstQuery).not.toMatch(/JOIN insta_like/i);
+});
+
 test('marks sudahMelaksanakan when reaching 50% threshold', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '5' }] })
