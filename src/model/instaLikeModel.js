@@ -122,10 +122,10 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
         l.shortcode,
         p.client_id,
         p.created_at,
-        lower(replace(trim(lk), '@', '')) AS username
+        lower(replace(trim(lk.like_obj->>'username'), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
-      JOIN LATERAL jsonb_array_elements_text(l.likes) lk ON TRUE
+      JOIN LATERAL jsonb_array_elements(l.likes) AS lk(like_obj) ON TRUE
       WHERE p.client_id = $1
         AND ${tanggalFilter}
     ),
