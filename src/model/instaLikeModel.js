@@ -24,17 +24,28 @@ export async function upsertInstaLike(shortcode, likes) {
 export async function getLikeUsernamesByShortcode(shortcode) {
   const res = await query('SELECT likes FROM insta_like WHERE shortcode = $1', [shortcode]);
   if (res.rows.length === 0) return [];
-  const likesVal = res.rows[0].likes;
-  if (!likesVal) return [];
-  if (Array.isArray(likesVal)) return likesVal;
-  if (typeof likesVal === 'string') {
+  const rawLikes = res.rows[0].likes;
+  if (!rawLikes) return [];
+
+  // pastikan selalu array terlebih dahulu
+  let likesArr = rawLikes;
+  if (typeof rawLikes === 'string') {
     try {
-      return JSON.parse(likesVal) || [];
+      likesArr = JSON.parse(rawLikes);
     } catch {
       return [];
     }
   }
-  return [];
+  if (!Array.isArray(likesArr)) return [];
+
+  // dukung format lama (array string) dan baru (array objek)
+  return likesArr
+    .map(l => {
+      if (typeof l === 'string') return l;
+      if (l && typeof l === 'object') return l.username || null;
+      return null;
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -57,19 +68,8 @@ export async function getAllShortcodesToday() {
 
 
 export async function getLikesByShortcode(shortcode) {
-  const res = await query(
-    `SELECT likes FROM insta_like WHERE shortcode = $1`,
-    [shortcode]
-  );
-  if (res.rows.length === 0) return [];
-  // likes harus array of string (username)
-  try {
-    return Array.isArray(res.rows[0].likes)
-      ? res.rows[0].likes
-      : JSON.parse(res.rows[0].likes);
-  } catch {
-    return [];
-  }
+  // alias untuk backward compatibility
+  return getLikeUsernamesByShortcode(shortcode);
 }
 
 /**
@@ -125,7 +125,10 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
-      JOIN LATERAL jsonb_array_elements_text(l.likes) AS lk(username) ON TRUE
+      JOIN LATERAL (
+        SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
+        FROM jsonb_array_elements(l.likes) AS elem
+      ) AS lk ON TRUE
       WHERE p.client_id = $1
         AND ${tanggalFilter}
     ),
