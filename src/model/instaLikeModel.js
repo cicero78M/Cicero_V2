@@ -107,11 +107,10 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date";
   }
 
-  // Ambil jumlah post IG (yang memiliki data like) untuk periode
+  // Ambil jumlah post IG untuk periode (termasuk yang belum memiliki data like)
   const { rows: postRows } = await query(
     `SELECT COUNT(DISTINCT p.shortcode) AS jumlah_post
      FROM insta_post p
-     JOIN insta_like l ON l.shortcode = p.shortcode
      WHERE p.client_id = $1 AND ${tanggalFilter}`,
     params
   );
