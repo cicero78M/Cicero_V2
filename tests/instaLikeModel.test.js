@@ -81,7 +81,7 @@ test('query normalizes instagram usernames', async () => {
   await getRekapLikesByClient('1');
   expect(mockQuery).toHaveBeenNthCalledWith(
     2,
-    expect.stringContaining('jsonb_array_elements(l.likes)'),
+    expect.stringContaining('jsonb_array_elements_text(l.likes)'),
     ['1']
   );
 });
