@@ -127,6 +127,26 @@ test('marks belum when below 50% threshold', async () => {
   expect(rows[0].sudahMelaksanakan).toBe(false);
 });
 
+test('bulanan does not revert sudahMelaksanakan to false when posts grow', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '4' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          title: 'Aiptu',
+          nama: 'Budi',
+          username: 'budi',
+          divisi: 'BAG',
+          exception: false,
+          jumlah_like: 1,
+        },
+      ],
+    });
+  const rows = await getRekapLikesByClient('POLRES', 'bulanan');
+  expect(rows[0].sudahMelaksanakan).toBe(true);
+});
+
 test('deduplicates posts and likes so completed users are not penalized', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
