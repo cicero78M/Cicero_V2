@@ -112,8 +112,9 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     `SELECT COUNT(*) AS jumlah_post FROM insta_post WHERE client_id = $1 AND ${tanggalFilter}`,
     params
   );
+  // A user is considered complete when they like at least 50% of posts
   const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
-  const threshold = Math.ceil(max_like * 0.2);
+  const threshold = Math.ceil(max_like * 0.5);
 
   // CTE
   const { rows } = await query(`
