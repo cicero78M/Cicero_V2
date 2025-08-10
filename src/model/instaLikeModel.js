@@ -113,12 +113,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     params
   );
   const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
-  const threshold = max_like > 0 ? 1 : 0;
-  console.log(
-    `[getRekapLikesByClient] client_id=${client_id} periode=${periode} ` +
-      `tanggal=${tanggal} start_date=${start_date} end_date=${end_date} ` +
-      `max_like=${max_like} threshold=${threshold}`
-  );
+  const threshold = Math.ceil(max_like * 0.2);
 
   // CTE
   const { rows } = await query(`
@@ -166,10 +161,6 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     // Tambahkan field display_nama (opsional, untuk frontend)
     user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
     user.sudahMelaksanakan = user.jumlah_like >= threshold;
-    console.log(
-      `[getRekapLikesByClient] username=${user.username} jumlah_like=${user.jumlah_like} ` +
-        `sudahMelaksanakan=${user.sudahMelaksanakan}`
-    );
   }
 
   return rows;
