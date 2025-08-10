@@ -20,7 +20,8 @@ export async function handleFetchLikesInstagramDM(username) {
       await limit(async () => {
         try {
           const likes = await fetchAllInstagramLikesItems(p.post_id);
-          await upsertInstaLike(p.shortcode, likes);
+          const usernames = likes.map(l => l?.username).filter(Boolean);
+          await upsertInstaLike(p.shortcode, usernames);
           for (const u of likes) {
             await upsertIgUser(u);
           }
