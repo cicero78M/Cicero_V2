@@ -85,3 +85,43 @@ test('query normalizes instagram usernames', async () => {
     ['1']
   );
 });
+
+test('marks sudahMelaksanakan when reaching 20% threshold', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '5' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          title: 'Aiptu',
+          nama: 'Budi',
+          username: 'budi',
+          divisi: 'BAG',
+          exception: false,
+          jumlah_like: 1,
+        },
+      ],
+    });
+  const rows = await getRekapLikesByClient('POLRES');
+  expect(rows[0].sudahMelaksanakan).toBe(true);
+});
+
+test('marks belum when below 20% threshold', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '10' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          title: 'Aiptu',
+          nama: 'Budi',
+          username: 'budi',
+          divisi: 'BAG',
+          exception: false,
+          jumlah_like: 1,
+        },
+      ],
+    });
+  const rows = await getRekapLikesByClient('POLRES');
+  expect(rows[0].sudahMelaksanakan).toBe(false);
+});

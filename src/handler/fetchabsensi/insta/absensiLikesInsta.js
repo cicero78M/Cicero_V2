@@ -48,6 +48,7 @@ export async function absensiLikes(client_id, opts = {}) {
   }
 
   const totalKonten = shortcodes.length;
+  const threshold = Math.ceil(totalKonten * 0.2);
   let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {
@@ -56,7 +57,7 @@ export async function absensiLikes(client_id, opts = {}) {
     } else if (
       u.insta &&
       u.insta.trim() !== "" &&
-      u.count >= Math.ceil(totalKonten / 2)
+      u.count >= threshold
     ) {
       sudah.push(u);
     } else {
@@ -122,7 +123,7 @@ export async function absensiLikes(client_id, opts = {}) {
             let ket = "";
             if (!u.count || u.count === 0) {
               ket = `(0/${totalKonten} konten)`;
-            } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
+            } else if (u.count > 0 && u.count < threshold) {
               ket = `(${u.count}/${totalKonten} konten)`;
             }
             return (
