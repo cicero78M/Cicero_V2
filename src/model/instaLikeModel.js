@@ -50,7 +50,7 @@ export async function deleteInstaLikeByShortcode(shortcode) {
  */
 export async function getAllShortcodesToday() {
   const res = await query(
-    `SELECT shortcode FROM insta_like WHERE DATE(updated_at) = CURRENT_DATE`
+    `SELECT shortcode FROM insta_like WHERE (updated_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date`
   );
   return res.rows.map(r => r.shortcode);
 }
@@ -80,7 +80,7 @@ export async function getLikesByShortcode(shortcode) {
  */
 
 export async function getRekapLikesByClient(client_id, periode = "harian", tanggal, start_date, end_date) {
-  let tanggalFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  let tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
@@ -90,9 +90,9 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
   } else if (periode === 'mingguan') {
     if (tanggal) {
       params.push(tanggal);
-      tanggalFilter = "date_trunc('week', created_at) = date_trunc('week', $2::date)";
+      tanggalFilter = "date_trunc('week', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', $2::date)";
     } else {
-      tanggalFilter = "date_trunc('week', created_at) = date_trunc('week', NOW())";
+      tanggalFilter = "date_trunc('week', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (periode === 'bulanan') {
     if (tanggal) {
@@ -104,7 +104,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     }
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = 'created_at::date = $2::date';
+    tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date";
   }
 
   // Ambil jumlah post IG untuk periode
