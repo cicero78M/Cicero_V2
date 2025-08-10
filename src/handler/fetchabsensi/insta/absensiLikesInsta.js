@@ -6,6 +6,14 @@ import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision, sortDivisionKeys } from "../../../utils/utilsHelper.js";
 import { findClientById } from "../../../service/clientService.js";
 
+function normalizeUsername(username) {
+  return (username || "")
+    .toString()
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+}
+
 async function getClientNama(client_id) {
   const res = await query(
     "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
@@ -35,12 +43,12 @@ export async function absensiLikes(client_id, opts = {}) {
 
   for (const shortcode of shortcodes) {
     const likes = await getLikesByShortcode(shortcode);
-    const likesSet = new Set((likes || []).map((x) => (x || "").toLowerCase()));
+    const likesSet = new Set((likes || []).map(normalizeUsername));
     users.forEach((u) => {
       if (
         u.insta &&
         u.insta.trim() !== "" &&
-        likesSet.has(u.insta.toLowerCase())
+        likesSet.has(normalizeUsername(u.insta))
       ) {
         userStats[u.user_id].count += 1;
       }
@@ -166,13 +174,13 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
   for (const sc of shortcodes) {
     const likes = await getLikesByShortcode(sc);
-    const likesSet = new Set((likes || []).map((x) => (x || "").toLowerCase()));
+    const likesSet = new Set((likes || []).map(normalizeUsername));
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
       if (u.exception === true) {
         userSudah.push(u); // Selalu ke sudah!
-      } else if (u.insta && u.insta.trim() !== "" && likesSet.has(u.insta.toLowerCase())) {
+      } else if (u.insta && u.insta.trim() !== "" && likesSet.has(normalizeUsername(u.insta))) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
