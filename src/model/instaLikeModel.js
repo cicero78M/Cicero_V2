@@ -80,36 +80,39 @@ export async function getLikesByShortcode(shortcode) {
  */
 
 export async function getRekapLikesByClient(client_id, periode = "harian", tanggal, start_date, end_date) {
-  let tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  let tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === 'semua') {
     tanggalFilter = '1=1';
   } else if (periode === 'mingguan') {
     if (tanggal) {
       params.push(tanggal);
-      tanggalFilter = "date_trunc('week', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', $2::date)";
+      tanggalFilter = "date_trunc('week', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', $2::date)";
     } else {
-      tanggalFilter = "date_trunc('week', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      tanggalFilter = "date_trunc('week', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
-      tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
     } else {
-      tanggalFilter = "date_trunc('month', created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = "(created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date";
+    tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date";
   }
 
-  // Ambil jumlah post IG untuk periode
+  // Ambil jumlah post IG (yang memiliki data like) untuk periode
   const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM insta_post WHERE client_id = $1 AND ${tanggalFilter}`,
+    `SELECT COUNT(DISTINCT p.shortcode) AS jumlah_post
+     FROM insta_post p
+     JOIN insta_like l ON l.shortcode = p.shortcode
+     WHERE p.client_id = $1 AND ${tanggalFilter}`,
     params
   );
   // A user is considered complete when they like at least 50% of posts
