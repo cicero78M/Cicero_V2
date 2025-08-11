@@ -110,12 +110,12 @@ test('getRekapLinkByClient uses provided date', async () => {
   await getRekapLinkByClient('POLRES', 'harian', '2024-01-02');
   expect(mockQuery).toHaveBeenNthCalledWith(
     1,
-    expect.stringContaining('FROM insta_post p'),
+    expect.stringContaining('p.created_at::date = $2::date'),
     ['POLRES', '2024-01-02']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
     2,
-    expect.stringContaining('WITH link_sum AS'),
+    expect.stringContaining('r.created_at::date = $2::date'),
     ['POLRES', '2024-01-02']
   );
 });
@@ -128,12 +128,12 @@ test('getRekapLinkByClient handles start_date and end_date', async () => {
   expect(mockQuery).toHaveBeenCalledTimes(2);
   expect(mockQuery).toHaveBeenNthCalledWith(
     1,
-    expect.stringContaining('BETWEEN $2::date AND $3::date'),
+    expect.stringContaining("(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date"),
     ['POLRES', '2024-01-01', '2024-01-31']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
     2,
-    expect.stringContaining('BETWEEN $2::date AND $3::date'),
+    expect.stringContaining("(r.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date"),
     ['POLRES', '2024-01-01', '2024-01-31']
   );
 });
