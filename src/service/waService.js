@@ -1604,33 +1604,35 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   // === APPROVE / DENY DASHBOARD ADMIN
   // =========================
   if (text.toLowerCase().startsWith("approvedash#")) {
-    const [, id] = text.split("#");
-    if (!id) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: approvedash#id");
+    const [, usernameRaw] = text.split("#");
+    const username = usernameRaw?.trim();
+    if (!username) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: approvedash#username");
       return;
     }
-    const usr = await dashboardUserModel.findById(id);
+    const usr = await dashboardUserModel.findByUsername(username);
     if (!usr) {
-      await waClient.sendMessage(chatId, `❌ ID ${id} tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ Username ${username} tidak ditemukan.`);
       return;
     }
-    await dashboardUserModel.updateStatus(id, true);
+    await dashboardUserModel.updateStatus(usr.user_id, true);
     await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.`);
     return;
   }
 
   if (text.toLowerCase().startsWith("denydash#")) {
-    const [, id] = text.split("#");
-    if (!id) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: denydash#id");
+    const [, usernameRaw] = text.split("#");
+    const username = usernameRaw?.trim();
+    if (!username) {
+      await waClient.sendMessage(chatId, "Format salah! Gunakan: denydash#username");
       return;
     }
-    const usr = await dashboardUserModel.findById(id);
+    const usr = await dashboardUserModel.findByUsername(username);
     if (!usr) {
-      await waClient.sendMessage(chatId, `❌ ID ${id} tidak ditemukan.`);
+      await waClient.sendMessage(chatId, `❌ Username ${username} tidak ditemukan.`);
       return;
     }
-    await dashboardUserModel.updateStatus(id, false);
+    await dashboardUserModel.updateStatus(usr.user_id, false);
     await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
     return;
   }

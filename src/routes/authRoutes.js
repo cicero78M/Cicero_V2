@@ -123,7 +123,9 @@ router.post('/dashboard-register', async (req, res) => {
     client_id,
   });
   notifyAdmin(
-    `\uD83D\uDCCB Permintaan user dashboard baru\nUsername: ${username}\nRole: ${role}\nID: ${user_id}\nBalas approvedash#${user_id} untuk menyetujui atau denydash#${user_id} untuk menolak.`
+    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${user_id}\nRole: ${role}\nClient ID: ${
+      client_id ?? '-'
+    }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
   return res
     .status(201)
