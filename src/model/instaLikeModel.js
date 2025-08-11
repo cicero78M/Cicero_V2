@@ -80,7 +80,7 @@ export async function getLikesByShortcode(shortcode) {
  */
 
 export async function getRekapLikesByClient(client_id, periode = "harian", tanggal, start_date, end_date) {
-  let tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+  let tanggalFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
@@ -90,9 +90,9 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
   } else if (periode === 'mingguan') {
     if (tanggal) {
       params.push(tanggal);
-      tanggalFilter = "date_trunc('week', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', $2::date)";
+      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
     } else {
-      tanggalFilter = "date_trunc('week', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('week', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
     }
   } else if (periode === 'bulanan') {
     if (tanggal) {
@@ -104,21 +104,9 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     }
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date";
+    tanggalFilter = "p.created_at::date = $2::date";
   }
 
-  // Ambil jumlah post IG untuk periode (termasuk yang belum memiliki data like)
-  const { rows: postRows } = await query(
-    `SELECT COUNT(DISTINCT p.shortcode) AS jumlah_post
-     FROM insta_post p
-     WHERE p.client_id = $1 AND ${tanggalFilter}`,
-    params
-  );
-  // A user is considered complete when they like at least 50% of posts
-  const max_like = parseInt(postRows[0]?.jumlah_post || "0", 10);
-  const threshold = Math.ceil(max_like * 0.5);
-
-  // CTE
   const { rows } = await query(`
     WITH valid_likes AS (
       SELECT
@@ -157,22 +145,8 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     ORDER BY jumlah_like DESC, u.nama ASC
   `, params);
 
-  // Untuk exception, set jumlah_like = max_like
   for (const user of rows) {
-    if (user.exception === true || user.exception === "true" || user.exception === 1 || user.exception === "1") {
-      user.jumlah_like = max_like;
-    } else {
-      user.jumlah_like = parseInt(user.jumlah_like, 10);
-    }
-    // Tambahkan field display_nama (opsional, untuk frontend)
-    user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
-    if (periode === 'bulanan') {
-      // Once a user is marked as completed in a month, never revert to false.
-      user.sudahMelaksanakan =
-        user.jumlah_like > 0 || user.jumlah_like >= threshold;
-    } else {
-      user.sudahMelaksanakan = user.jumlah_like >= threshold;
-    }
+    user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
   return rows;
