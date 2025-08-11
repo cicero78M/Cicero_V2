@@ -70,75 +70,79 @@ export async function getRekapKomentarByClient(
   end_date
 ) {
   let tanggalFilter =
-    "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    "c.updated_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    tanggalFilter =
+      "(c.updated_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
       params.push(tanggal);
       tanggalFilter =
-        "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+        "date_trunc('week', c.updated_at) = date_trunc('week', $2::date)";
     } else {
-      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+      tanggalFilter =
+        "date_trunc('week', c.updated_at) = date_trunc('week', NOW())";
     }
   } else if (periode === "bulanan") {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
       tanggalFilter =
-        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
     } else {
       tanggalFilter =
-        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = "p.created_at::date = $2::date";
+    tanggalFilter = "c.updated_at::date = $2::date";
   }
 
   const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p WHERE p.client_id = $1 AND ${tanggalFilter}`,
+    `SELECT COUNT(DISTINCT c.video_id) AS jumlah_post
+     FROM tiktok_comment c
+     JOIN tiktok_post p ON p.video_id = c.video_id
+     WHERE p.client_id = $1 AND ${tanggalFilter}`,
     params
   );
   const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
-
-const { rows } = await query(`
-    WITH valid_comments AS (
-      SELECT c.video_id,
-             p.created_at,
-             lower(replace(trim(cmt), '@', '')) AS username
-      FROM tiktok_comment c
-      JOIN tiktok_post p ON p.video_id = c.video_id
-      JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
-      WHERE p.client_id = $1
-        AND ${tanggalFilter}
-    ),
-    comment_counts AS (
-      SELECT username, COUNT(DISTINCT video_id) AS jumlah_komentar
-      FROM valid_comments
-      GROUP BY username
-    )
-    SELECT
-      u.user_id,
-      u.title,
-      u.nama,
-      u.tiktok AS username,
-      u.divisi,
-      u.exception,
-      COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar
-    FROM "user" u
-    LEFT JOIN comment_counts cc
-      ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
-    WHERE u.client_id = $1
-      AND u.status = true
-      AND u.tiktok IS NOT NULL
-    ORDER BY jumlah_komentar DESC, u.nama ASC
-  `, params);
+  const { rows } = await query(
+    `WITH valid_comments AS (
+       SELECT c.video_id,
+              lower(replace(trim(cmt), '@', '')) AS username
+       FROM tiktok_comment c
+       JOIN tiktok_post p ON p.video_id = c.video_id
+       JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
+       WHERE p.client_id = $1
+         AND ${tanggalFilter}
+     ),
+     comment_counts AS (
+       SELECT username, COUNT(DISTINCT video_id) AS jumlah_komentar
+       FROM valid_comments
+       GROUP BY username
+     )
+     SELECT
+       u.user_id,
+       u.title,
+       u.nama,
+       u.tiktok AS username,
+       u.divisi,
+       u.exception,
+       COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar
+     FROM "user" u
+     LEFT JOIN comment_counts cc
+       ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
+     WHERE u.client_id = $1
+       AND u.status = true
+       AND u.tiktok IS NOT NULL
+     ORDER BY jumlah_komentar DESC, u.nama ASC`,
+    params
+  );
   for (const user of rows) {
     if (
       user.exception === true ||
