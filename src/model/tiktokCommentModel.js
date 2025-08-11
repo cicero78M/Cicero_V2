@@ -40,10 +40,10 @@ export async function upsertTiktokComments(video_id, commentsArr) {
 
   // Upsert ke DB (hanya username array!)
   const qUpsert = `
-    INSERT INTO tiktok_comment (video_id, comments, updated_at)
+    INSERT INTO tiktok_comment (video_id, comments, created_at)
     VALUES ($1, $2, NOW())
     ON CONFLICT (video_id)
-    DO UPDATE SET comments = $2, updated_at = NOW()
+    DO UPDATE SET comments = $2, created_at = NOW()
   `;
   await query(qUpsert, [video_id, JSON.stringify(finalUsernames)]);
 }
@@ -70,36 +70,36 @@ export async function getRekapKomentarByClient(
   end_date
 ) {
   let tanggalFilter =
-    "c.updated_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    "c.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
   if (start_date && end_date) {
     params.push(start_date, end_date);
     tanggalFilter =
-      "(c.updated_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+      "(c.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
       params.push(tanggal);
       tanggalFilter =
-        "date_trunc('week', c.updated_at) = date_trunc('week', $2::date)";
+        "date_trunc('week', c.created_at) = date_trunc('week', $2::date)";
     } else {
       tanggalFilter =
-        "date_trunc('week', c.updated_at) = date_trunc('week', NOW())";
+        "date_trunc('week', c.created_at) = date_trunc('week', NOW())";
     }
   } else if (periode === "bulanan") {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
       tanggalFilter =
-        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+        "date_trunc('month', c.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
     } else {
       tanggalFilter =
-        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+        "date_trunc('month', c.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = "c.updated_at::date = $2::date";
+    tanggalFilter = "c.created_at::date = $2::date";
   }
 
   const { rows: postRows } = await query(
