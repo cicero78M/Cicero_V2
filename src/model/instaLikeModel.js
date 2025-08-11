@@ -177,4 +177,3 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
 
   return rows;
 }
-
