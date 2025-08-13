@@ -101,6 +101,7 @@ function formatUserSummary(user) {
     `*NRP/NIP*  : ${user.user_id || "-"}\n` +
     `*Satfung*  : ${user.divisi || "-"}\n` +
     `*Jabatan*  : ${user.jabatan || "-"}\n` +
+    (user.ditbinmas ? `*Desa Binaan* : ${user.desa || "-"}\n` : "") +
     `*Instagram*: ${user.insta ? "@" + user.insta.replace(/^@/, "") : "-"}\n` +
     `*TikTok*   : ${user.tiktok || "-"}\n` +
     `*Status*   : ${

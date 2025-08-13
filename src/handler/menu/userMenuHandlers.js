@@ -12,18 +12,19 @@ function ignore(..._args) {}
 
 // --- Helper Format Pesan ---
 function formatUserReport(user) {
-  return `
-👤 *Identitas Anda*
-
-*Nama*     : ${user.nama || "-"}
-*Pangkat*  : ${user.title || "-"}
-*NRP/NIP*  : ${user.user_id || "-"}
-*Satfung*  : ${user.divisi || "-"}
-*Jabatan*  : ${user.jabatan || "-"}
-*Instagram*: ${user.insta ? "@" + user.insta.replace(/^@/, "") : "-"}
-*TikTok*   : ${user.tiktok || "-"}
-*Status*   : ${(user.status === true || user.status === "true") ? "🟢 AKTIF" : "🔴 NONAKTIF"}
-`.trim();
+  return [
+    "👤 *Identitas Anda*",
+    "",
+    `*Nama*     : ${user.nama || "-"}`,
+    `*Pangkat*  : ${user.title || "-"}`,
+    `*NRP/NIP*  : ${user.user_id || "-"}`,
+    `*Satfung*  : ${user.divisi || "-"}`,
+    `*Jabatan*  : ${user.jabatan || "-"}`,
+    ...(user.ditbinmas ? [`*Desa Binaan* : ${user.desa || "-"}`] : []),
+    `*Instagram*: ${user.insta ? "@" + user.insta.replace(/^@/, "") : "-"}`,
+    `*TikTok*   : ${user.tiktok || "-"}`,
+    `*Status*   : ${(user.status === true || user.status === "true") ? "🟢 AKTIF" : "🔴 NONAKTIF"}`,
+  ].join("\n").trim();
 }
 
 function menuUtama() {
@@ -37,7 +38,7 @@ Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
 `.trim();
 }
 
-function formatFieldList() {
+function formatFieldList(showDesa = false) {
   return `
 ✏️ *Pilih field yang ingin diupdate:*
 1. Nama
@@ -46,7 +47,7 @@ function formatFieldList() {
 4. Jabatan
 5. Instagram
 6. TikTok
-7. Hapus WhatsApp
+7. Hapus WhatsApp${showDesa ? "\n8. Desa Binaan" : ""}
 
 Balas angka field di atas atau *batal* untuk keluar.
 `.trim();
@@ -69,6 +70,7 @@ export const userMenuHandlers = {
       const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
       if (userByWA) {
+        session.isDitbinmas = !!userByWA.ditbinmas;
         const salam = getGreeting();
         if (
           session.identityConfirmed &&
@@ -105,6 +107,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
       if (userByWA) {
+        session.isDitbinmas = !!userByWA.ditbinmas;
         const salam = getGreeting();
         if (
           session.identityConfirmed &&
@@ -112,7 +115,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         ) {
           session.updateUserId = userByWA.user_id;
           session.step = "updateAskField";
-          await waClient.sendMessage(chatId, formatFieldList());
+          await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
           return;
         }
         let msgText = `
@@ -166,7 +169,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       session.identityConfirmed = true;
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
-      await waClient.sendMessage(chatId, formatFieldList());
+      await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     } else if (text.trim().toLowerCase() === "tidak") {
       session.step = "main";
@@ -229,6 +232,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       await userModel.updateUserField(user_id, "whatsapp", waNum);
       await saveContactIfNew(formatToWhatsAppId(waNum));
       const user = await userModel.findUserById(user_id);
+      session.isDitbinmas = !!user.ditbinmas;
       await waClient.sendMessage(
         chatId,
         `✅ Nomor WhatsApp telah dihubungkan ke NRP *${user_id}*. Berikut datanya:\n` +
@@ -264,6 +268,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       return;
     }
     session.updateUserId = nrp;
+    session.isDitbinmas = !!user.ditbinmas;
     session.step = "confirmBindUpdate";
     await waClient.sendMessage(
       chatId,
@@ -284,7 +289,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       session.identityConfirmed = true;
       session.user_id = nrp;
       session.step = "updateAskField";
-      await waClient.sendMessage(chatId, formatFieldList());
+      await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     }
     if (ans === "tidak") {
@@ -307,9 +312,13 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       { key: "tiktok", label: "TikTok" },
       { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
     ];
+    if (session.isDitbinmas) {
+      allowedFields.push({ key: "desa", label: "Desa Binaan" });
+    }
 
-    if (!/^[1-7]$/.test(text.trim())) {
-      await waClient.sendMessage(chatId, formatFieldList());
+    const maxOption = allowedFields.length;
+    if (!new RegExp(`^[1-${maxOption}]$`).test(text.trim())) {
+      await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     }
 
@@ -475,7 +484,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       value = "@" + ttMatch[2];
     }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
-    if (["nama", "title", "divisi", "jabatan"].includes(field)) value = value.toUpperCase();
+    if (["nama", "title", "divisi", "jabatan", "desa"].includes(field)) value = value.toUpperCase();
 
     await userModel.updateUserField(user_id, field, value);
     if (field === "whatsapp" && value) {
@@ -483,7 +492,15 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     }
     await waClient.sendMessage(
       chatId,
-      `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP ${user_id} berhasil diupdate menjadi *${value}*.`
+      `✅ Data *${
+        field === "title"
+          ? "pangkat"
+          : field === "divisi"
+          ? "satfung"
+          : field === "desa"
+          ? "desa binaan"
+          : field
+      }* untuk NRP ${user_id} berhasil diupdate menjadi *${value}*.`
     );
     delete session.availableTitles;
     delete session.availableSatfung;
