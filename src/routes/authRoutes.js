@@ -99,13 +99,20 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  const { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
+  let { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
   const status = false;
   if (!username || !password || !whatsapp) {
     return res
       .status(400)
       .json({ success: false, message: 'username, password, dan whatsapp wajib diisi' });
   }
+  const normalizedWhatsapp = String(whatsapp).replace(/\D/g, '');
+  if (normalizedWhatsapp.length < 8) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'whatsapp tidak valid' });
+  }
+  whatsapp = normalizedWhatsapp;
   const existing = await dashboardUserModel.findByUsername(username);
   if (existing) {
     return res

@@ -51,6 +51,8 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 }
 ```
 
+The `whatsapp` field should contain digits only; any non-numeric characters will be removed before storage.
+
 ### Dashboard Login
 `POST /api/auth/dashboard-login`
 ```json
