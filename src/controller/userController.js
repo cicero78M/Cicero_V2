@@ -118,7 +118,7 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      if (tokenClientId === role) {
+      if (tokenClientId.toUpperCase() === role.toUpperCase()) {
         users = await userModel.getUsersByDirektorat(role);
       } else {
         users = await userModel.getUsersByDirektorat(role, tokenClientId);
