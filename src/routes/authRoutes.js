@@ -99,12 +99,12 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  const { username, password, role = 'operator', client_id = null } = req.body;
+  const { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
   const status = false;
-  if (!username || !password) {
+  if (!username || !password || !whatsapp) {
     return res
       .status(400)
-      .json({ success: false, message: 'username dan password wajib diisi' });
+      .json({ success: false, message: 'username, password, dan whatsapp wajib diisi' });
   }
   const existing = await dashboardUserModel.findByUsername(username);
   if (existing) {
@@ -121,9 +121,10 @@ router.post('/dashboard-register', async (req, res) => {
     role,
     status,
     client_id,
+    whatsapp,
   });
   notifyAdmin(
-    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${user_id}\nRole: ${role}\nClient ID: ${
+    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${user_id}\nRole: ${role}\nWhatsApp: ${whatsapp}\nClient ID: ${
       client_id ?? '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );

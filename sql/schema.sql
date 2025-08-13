@@ -45,6 +45,7 @@ CREATE TABLE dashboard_user (
   role TEXT NOT NULL,
   status BOOLEAN DEFAULT TRUE,
   client_id VARCHAR REFERENCES clients(client_id),
+  whatsapp VARCHAR,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

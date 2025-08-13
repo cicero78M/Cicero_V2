@@ -65,6 +65,7 @@ Credentials for the web dashboard login.
 - `role` – permission level such as `admin` or `operator`
 - `status` – boolean indicating whether the account is active
 - `client_id` – optional link to `clients`
+- `whatsapp` – contact number used for notifications
 - `created_at`, `updated_at` – timestamps
 
 ### `insta_post`

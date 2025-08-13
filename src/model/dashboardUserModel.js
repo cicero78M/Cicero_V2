@@ -10,8 +10,8 @@ export async function findByUsername(username) {
 
 export async function createUser(data) {
   const res = await query(
-    `INSERT INTO dashboard_user (user_id, username, password_hash, role, status, client_id)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO dashboard_user (user_id, username, password_hash, role, status, client_id, whatsapp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       data.user_id,
@@ -20,6 +20,7 @@ export async function createUser(data) {
       data.role,
       data.status,
       data.client_id,
+      data.whatsapp,
     ]
   );
   return res.rows[0];
