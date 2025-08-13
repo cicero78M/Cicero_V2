@@ -117,6 +117,8 @@ The application can synchronize Google Workspace contacts using the People API. 
    - `GOOGLE_CONTACT_SCOPE` – OAuth scope for contacts, e.g. `https://www.googleapis.com/auth/contacts`.
    - `GOOGLE_IMPERSONATE_EMAIL` – Workspace user email to impersonate when accessing contacts.
 
+For detailed setup and usage examples, see [`docs/google_contacts_integration.md`](docs/google_contacts_integration.md).
+
 ---
 
 ## Database Backup
