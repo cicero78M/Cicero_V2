@@ -13,7 +13,10 @@ export async function authorize() {
     const content = await fs.readFile(CREDENTIALS_PATH, 'utf8');
     credentials = JSON.parse(content);
   } catch {
-    throw new Error('Missing credentials.json');
+    console.warn(
+      '[GOOGLE CONTACT] credentials.json not found, skipping contact save.'
+    );
+    return null;
   }
   const { client_secret, client_id, redirect_uris } =
     credentials.installed || credentials.web;
@@ -31,7 +34,8 @@ export async function authorize() {
       scope: SCOPES,
     });
     console.log('Authorize this app by visiting this url:', authUrl);
-    throw new Error('Missing token.json');
+    console.warn('[GOOGLE CONTACT] token.json not found, skipping contact save.');
+    return null;
   }
   return oAuth2Client;
 }
@@ -77,6 +81,7 @@ export async function saveContactIfNew(chatId) {
     );
     if (check.rowCount > 0) return;
     const auth = await authorize();
+    if (!auth) return;
     const exists = await searchByNumbers(auth, [phone]);
     if (exists.includes(phone)) {
       await query(

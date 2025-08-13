@@ -48,6 +48,25 @@ beforeEach(() => {
 });
 
 describe('saveContactIfNew', () => {
+  test('skips when credentials.json missing', async () => {
+    await fs.unlink('credentials.json');
+    mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await saveContactIfNew('11111@c.us');
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockPeople).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[GOOGLE CONTACT] credentials.json not found, skipping contact save.'
+    );
+
+    warnSpy.mockRestore();
+    await fs.writeFile(
+      'credentials.json',
+      JSON.stringify({ installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['uri'] } })
+    );
+  });
   test('skips existing contact', async () => {
     mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [{ phone_number: '123' }] });
     await saveContactIfNew('12345@c.us');
