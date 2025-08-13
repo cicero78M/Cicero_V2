@@ -99,8 +99,9 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  let { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
-  const status = false;
+  try {
+    let { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
+    const status = false;
   if (!username || !password || !whatsapp) {
     return res
       .status(400)
@@ -138,6 +139,10 @@ router.post('/dashboard-register', async (req, res) => {
   return res
     .status(201)
     .json({ success: true, user_id: user.user_id, status: user.status });
+  } catch (err) {
+    console.error('[AUTH] dashboard-register error:', err.message);
+    return res.status(500).json({ success: false, message: 'internal server error' });
+  }
 });
 
 router.post('/dashboard-login', async (req, res) => {
