@@ -245,7 +245,7 @@ describe('POST /dashboard-register', () => {
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812' });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -258,7 +258,7 @@ describe('POST /dashboard-register', () => {
     expect(mockQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO dashboard_user'),
-      [expect.any(String), 'dash', expect.any(String), 'operator', false, null]
+      [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '0812']
     );
   });
 
@@ -268,7 +268,7 @@ describe('POST /dashboard-register', () => {
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812' });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);

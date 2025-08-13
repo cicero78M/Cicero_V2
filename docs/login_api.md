@@ -39,6 +39,18 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 }
 ```
 
+### Dashboard Registration
+`POST /api/auth/dashboard-register`
+```json
+{
+  "username": "admin",
+  "password": "secret",
+  "whatsapp": "628123456789",
+  "client_id": "demo_client",
+  "role": "operator"
+}
+```
+
 ### Dashboard Login
 `POST /api/auth/dashboard-login`
 ```json
@@ -48,8 +60,7 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 }
 ```
 
-To register a dashboard user send a similar payload to `/api/auth/dashboard-register` with optional `role` and `client_id`.
-Every new dashboard account is created with `status` set to `false` and an approval request containing the username, ID, role, and client ID is sent to the WhatsApp administrators. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
+Every new dashboard account is created with `status` set to `false` and an approval request containing the username, ID, role, WhatsApp number, and client ID is sent to the WhatsApp administrators. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
 
 
 ## 2. Example `curl`

@@ -15,6 +15,7 @@ CREATE TABLE dashboard_user (
   status BOOLEAN DEFAULT TRUE,
 
   client_id VARCHAR REFERENCES clients(client_id),
+  whatsapp TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -26,15 +27,16 @@ CREATE TABLE dashboard_user (
 - `status` is `true` when the account is active. Admin registrations start as `false` and must be approved via WhatsApp.
 
 - `client_id` links an account to a specific organisation if needed.
+- `whatsapp` stores the contact number for operator verification.
 
 ## 2. Registration Endpoint
 
 Expose `/api/auth/dashboard-register`:
 
-1. Validate `username`, `password` and optional `role` and `client_id`.
+1. Validate `username`, `password`, `whatsapp` and optional `role` and `client_id`.
 2. Ensure the username is unique in `dashboard_user`.
 3. Hash the password with `bcrypt.hash` and insert the new row with `status=false`.
-4. Send a WhatsApp notification to administrators containing the username, ID, role, and client ID. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
+4. Send a WhatsApp notification to administrators containing the username, ID, role, WhatsApp number, and client ID. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
 5. Return `201 Created` with the new `user_id` and current status.
 
 
