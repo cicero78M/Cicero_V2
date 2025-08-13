@@ -26,11 +26,8 @@ test('harian with specific date uses date filter', async () => {
 test('mingguan with date truncs week', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapLikesByClient('1', 'mingguan', '2023-10-05');
-  const expected = 'p.created_at::date = $2::date';
-  expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining(expected),
-    ['1', '2023-10-05']
-  );
+  const expected = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+  expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining(expected), ['1', '2023-10-05']);
 });
 
 test('bulanan converts month string', async () => {
@@ -40,14 +37,10 @@ test('bulanan converts month string', async () => {
   expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining(expected), ['1', '2023-10-01']);
 });
 
-test('semua defaults to today filter', async () => {
+test('semua uses no date filter', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapLikesByClient('1', 'semua');
-  const expected = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining(expected),
-    ['1']
-  );
+  expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('1=1'), ['1']);
 });
 
 test('date range uses between filter', async () => {
