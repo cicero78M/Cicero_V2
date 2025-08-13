@@ -56,6 +56,7 @@ test('createUser inserts with directorate flags', async () => {
       undefined,
       undefined,
       undefined,
+      undefined,
       true,
       '',
       '',
@@ -76,6 +77,16 @@ test('updateUserField updates ditbinmas field', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     'UPDATE "user" SET ditbinmas=$1 WHERE user_id=$2 RETURNING *',
     [true, '1']
+  );
+});
+
+test('updateUserField updates desa field', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC' }] });
+  const row = await updateUserField('1', 'desa', 'ABC');
+  expect(row).toEqual({ user_id: '1', desa: 'ABC' });
+  expect(mockQuery).toHaveBeenCalledWith(
+    'UPDATE "user" SET desa=$1 WHERE user_id=$2 RETURNING *',
+    ['ABC', '1']
   );
 });
 

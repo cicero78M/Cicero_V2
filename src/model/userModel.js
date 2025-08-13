@@ -5,7 +5,7 @@ import { query } from '../repository/db.js';
 // Helper to normalize text fields to uppercase
 function normalizeUserFields(data) {
   if (!data) return;
-  const fields = ['nama', 'title', 'divisi', 'jabatan'];
+  const fields = ['nama', 'title', 'divisi', 'jabatan', 'desa'];
   for (const key of fields) {
     if (data[key] && typeof data[key] === 'string') {
       data[key] = data[key].toUpperCase();
@@ -178,6 +178,7 @@ export async function updateUserField(user_id, field, value) {
     "title",
     "divisi",
     "jabatan",
+    "desa",
     "ditbinmas",
     "ditlantas",
     "bidhumas",
@@ -185,7 +186,7 @@ export async function updateUserField(user_id, field, value) {
     "premium_end_date",
   ];
   if (!allowed.includes(field)) throw new Error("Field tidak diizinkan!");
-  if (["nama", "title", "divisi", "jabatan"].includes(field) && typeof value === 'string') {
+  if (["nama", "title", "divisi", "jabatan", "desa"].includes(field) && typeof value === 'string') {
     value = value.toUpperCase();
   }
   const { rows } = await query(
@@ -283,8 +284,8 @@ export async function createUser(userData) {
   // Sesuaikan dengan struktur dan database-mu!
   normalizeUserFields(userData);
   const q = `
-    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas, bidhumas)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas, bidhumas)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
     RETURNING *;
   `;
   const params = [
@@ -293,6 +294,7 @@ export async function createUser(userData) {
     userData.title,
     userData.divisi,
     userData.jabatan,
+    userData.desa,
     userData.status ?? true, // default true
     userData.whatsapp || "",
     userData.insta || "",

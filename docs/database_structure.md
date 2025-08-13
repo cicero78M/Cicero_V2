@@ -51,6 +51,7 @@ Holds users belonging to a client.
 - `user_id` – primary key (NRP/NIP string)
 - `nama`, `title`, `divisi` – user info fields
 - `insta`, `tiktok` – social media handles
+- `desa` – desa binaan for Ditbinmas users
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
 - `ditbinmas`, `ditlantas`, `bidhumas` – boolean flags for directorate assignment
