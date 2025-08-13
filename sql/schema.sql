@@ -25,6 +25,7 @@ CREATE TABLE "user" (
   status BOOLEAN DEFAULT TRUE,
   ditbinmas BOOLEAN DEFAULT FALSE,
   ditlantas BOOLEAN DEFAULT FALSE,
+  bidhumas BOOLEAN DEFAULT FALSE,
   premium_status BOOLEAN DEFAULT FALSE,
   premium_end_date DATE
 );

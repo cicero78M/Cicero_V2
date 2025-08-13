@@ -53,7 +53,7 @@ Holds users belonging to a client.
 - `insta`, `tiktok` – social media handles
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
-- `ditbinmas`, `ditlantas` – boolean flags for directorate assignment
+- `ditbinmas`, `ditlantas`, `bidhumas` – boolean flags for directorate assignment
 - `premium_status` – boolean flag indicating active subscription
 - `premium_end_date` – date the premium access expires
 

@@ -93,6 +93,15 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     } else {
       tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
+  } else if (periode === 'mingguan') {
+    if (tanggal) {
+      params.push(tanggal);
+      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+    } else {
+      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+    }
+  } else if (periode === 'semua') {
+    tanggalFilter = '1=1';
   } else if (tanggal) {
     params.push(tanggal);
     tanggalFilter = "p.created_at::date = $2::date";
