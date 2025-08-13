@@ -25,10 +25,11 @@ export const createUser = async (req, res, next) => {
     const adminClientId = req.user?.client_id;
     const data = { ...req.body };
 
-    if (role === 'ditbinmas' || role === 'ditlantas') {
+    if (role === 'ditbinmas' || role === 'ditlantas' || role === 'bidhumas') {
       if (adminClientId) data.client_id = adminClientId;
       if (role === 'ditbinmas') data.ditbinmas = true;
       if (role === 'ditlantas') data.ditlantas = true;
+      if (role === 'bidhumas') data.bidhumas = true;
 
       const existing = await userModel.findUserById(data.user_id);
       if (existing) {
@@ -49,6 +50,7 @@ export const createUser = async (req, res, next) => {
     if (role === 'operator') {
       if (data.ditbinmas === undefined) data.ditbinmas = false;
       if (data.ditlantas === undefined) data.ditlantas = false;
+      if (data.bidhumas === undefined) data.bidhumas = false;
     }
 
     const user = await userModel.createUser(data);
@@ -110,8 +112,17 @@ export const getUserList = async (req, res, next) => {
           .json({ success: false, message: 'client_id wajib diisi' });
       }
       users = await userModel.getUsersByClient(tokenClientId);
-    } else if (role === 'ditbinmas' || role === 'ditlantas') {
-      users = await userModel.getUsersByDirektorat(role);
+    } else if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role)) {
+      if (!tokenClientId) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'client_id wajib diisi' });
+      }
+      if (tokenClientId === role) {
+        users = await userModel.getUsersByDirektorat(role);
+      } else {
+        users = await userModel.getUsersByDirektorat(role, tokenClientId);
+      }
     } else {
       const clientId = req.query.client_id;
       if (!clientId) {

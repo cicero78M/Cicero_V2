@@ -180,6 +180,7 @@ export async function updateUserField(user_id, field, value) {
     "jabatan",
     "ditbinmas",
     "ditlantas",
+    "bidhumas",
     "premium_status",
     "premium_end_date",
   ];
@@ -206,7 +207,7 @@ export async function getExceptionUsersByClient(client_id) {
 // Ambil user dengan flag direktorat binmas atau lantas
 export async function getDirektoratUsers(clientId = null) {
   let sql =
-    'SELECT * FROM "user" WHERE ditbinmas = true OR ditlantas = true';
+    'SELECT * FROM "user" WHERE (ditbinmas = true OR ditlantas = true OR bidhumas = true)';
   const params = [];
   if (clientId) {
     sql += ' AND client_id = $1';
@@ -218,7 +219,7 @@ export async function getDirektoratUsers(clientId = null) {
 
 // Ambil user berdasarkan flag direktorat tertentu (ditbinmas/ditlantas)
 export async function getUsersByDirektorat(flag, clientId = null) {
-  if (!['ditbinmas', 'ditlantas'].includes(flag)) {
+  if (!['ditbinmas', 'ditlantas', 'bidhumas'].includes(flag)) {
     throw new Error('Direktorat flag tidak valid');
   }
   let sql = `SELECT * FROM "user" WHERE ${flag} = true`;
@@ -282,8 +283,8 @@ export async function createUser(userData) {
   // Sesuaikan dengan struktur dan database-mu!
   normalizeUserFields(userData);
   const q = `
-    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas, bidhumas)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
     RETURNING *;
   `;
   const params = [
@@ -299,7 +300,8 @@ export async function createUser(userData) {
     userData.client_id || null,
     userData.exception ?? false,
     userData.ditbinmas ?? false,
-    userData.ditlantas ?? false
+    userData.ditlantas ?? false,
+    userData.bidhumas ?? false
   ];
   const res = await query(q, params);
   return res.rows[0];

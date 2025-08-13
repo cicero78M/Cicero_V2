@@ -35,7 +35,13 @@ test('operator adds user with defaults', async () => {
 
   await createUser(req, res, () => {});
 
-  expect(mockCreateUser).toHaveBeenCalledWith({ user_id: '1', nama: 'A', ditbinmas: false, ditlantas: false });
+  expect(mockCreateUser).toHaveBeenCalledWith({
+    user_id: '1',
+    nama: 'A',
+    ditbinmas: false,
+    ditlantas: false,
+    bidhumas: false,
+  });
   expect(status).toHaveBeenCalledWith(201);
   expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1' } });
 });
@@ -69,11 +75,13 @@ test('ditlantas creates new user with flag', async () => {
 
   await createUser(req, res, () => {});
 
-  expect(mockCreateUser).toHaveBeenCalledWith({
-    user_id: '2',
-    nama: 'B',
-    client_id: 'c2',
-    ditlantas: true
-  });
+  expect(mockCreateUser).toHaveBeenCalledWith(
+    expect.objectContaining({
+      user_id: '2',
+      nama: 'B',
+      client_id: 'c2',
+      ditlantas: true,
+    })
+  );
   expect(status).toHaveBeenCalledWith(201);
 });

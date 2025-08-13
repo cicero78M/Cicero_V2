@@ -64,6 +64,7 @@ test('createUser inserts with directorate flags', async () => {
       false,
       true,
       false,
+      false,
     ]
   );
 });
@@ -95,5 +96,15 @@ test('getUsersByDirektorat queries by flag', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     'SELECT * FROM "user" WHERE ditbinmas = true',
     []
+  );
+});
+
+test('getUsersByDirektorat filters by client and flag', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '3' }] });
+  const users = await getUsersByDirektorat('bidhumas', 'c1');
+  expect(users).toEqual([{ user_id: '3' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    'SELECT * FROM "user" WHERE bidhumas = true AND client_id = $1',
+    ['c1']
   );
 });
