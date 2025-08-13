@@ -194,47 +194,6 @@ router.post('/dashboard-login', async (req, res) => {
   return res.json({ success: true, token, user: payload });
 });
 
-
-router.post('/dashboard-login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: 'username dan password wajib diisi' });
-  }
-  const user = await dashboardUserModel.findByUsername(username);
-  if (!user) {
-    return res
-      .status(401)
-      .json({ success: false, message: 'Login gagal: data tidak ditemukan' });
-  }
-  const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) {
-    return res
-      .status(401)
-      .json({ success: false, message: 'Login gagal: password salah' });
-  }
-  const payload = { user_id: user.user_id, role: user.role };
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: '2h',
-  });
-  try {
-    await redis.sAdd(`dashboard_login:${user.user_id}`, token);
-    await redis.set(`login_token:${token}`, `dashboard:${user.user_id}`, {
-      EX: 2 * 60 * 60,
-    });
-  } catch (err) {
-    console.error('[AUTH] Gagal menyimpan token login dashboard:', err.message);
-  }
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 2 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === 'production',
-  });
-  return res.json({ success: true, token, user: payload });
-});
-
 router.post("/login", async (req, res) => {
   const { client_id, client_operator } = req.body;
   // Validasi input
