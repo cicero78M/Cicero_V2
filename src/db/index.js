@@ -9,6 +9,14 @@ if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() === 'sqlite') {
   adapter = await import('./mysql.js');
 }
 
+// Ensure newer columns exist for backwards compatibility
+// Particularly, older deployments may lack the `whatsapp` field on
+// `dashboard_user`, causing inserts to fail. The following migration
+// runs once at startup and safely adds the column if missing.
+await adapter.query(
+  'ALTER TABLE IF EXISTS dashboard_user ADD COLUMN IF NOT EXISTS whatsapp VARCHAR'
+);
+
 export const query = async (text, params) => {
   const shouldLog = process.env.NODE_ENV !== 'production';
   const paramSummary = Array.isArray(params)
