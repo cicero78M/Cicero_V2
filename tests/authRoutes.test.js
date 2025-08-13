@@ -245,7 +245,7 @@ describe('POST /dashboard-register', () => {
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass', whatsapp: '0812' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x' });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -258,17 +258,27 @@ describe('POST /dashboard-register', () => {
     expect(mockQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO dashboard_user'),
-      [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '0812']
+      [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '08121234']
     );
   });
 
+  test('returns 400 when whatsapp invalid', async () => {
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass', whatsapp: '123' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/whatsapp tidak valid/i);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
 
   test('returns 400 when username exists', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ user_id: 'x' }] });
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass', whatsapp: '0812' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234' });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
