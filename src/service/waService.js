@@ -24,7 +24,12 @@ import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
 } from "../handler/fetchpost/tiktokFetchPost.js";
-import { saveContactIfNew } from "./googleContactsService.js";
+import {
+  saveContactIfNew,
+  authorize,
+  searchByNumbers,
+  saveGoogleContact,
+} from "./googleContactsService.js";
 
 import {
   absensiLikes,
@@ -446,6 +451,31 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       chatId,
       "❌ Anda tidak memiliki akses ke sistem ini."
     );
+    return;
+  }
+
+  if (text.toLowerCase() === "savecontact") {
+    try {
+      const auth = await authorize();
+      const users = await userModel.getActiveUsersWithWhatsapp();
+      let saved = 0;
+      for (const u of users) {
+        const exists = await searchByNumbers(auth, [u.whatsapp]);
+        if (exists.length === 0) {
+          await saveGoogleContact(auth, { name: u.nama, phone: u.whatsapp });
+          saved++;
+        }
+      }
+      await waClient.sendMessage(
+        chatId,
+        `✅ Kontak tersimpan ke Google: ${saved}`
+      );
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menyimpan kontak: ${err.message}`
+      );
+    }
     return;
   }
 

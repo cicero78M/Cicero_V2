@@ -5,6 +5,8 @@ import {
   sortDivisionKeys,
   getGreeting,
 } from "../../utils/utilsHelper.js";
+import { saveContactIfNew } from "../../service/googleContactsService.js";
+import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
 function ignore(..._args) {}
 
@@ -225,6 +227,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (answer === "ya") {
       const user_id = session.bindUserId;
       await userModel.updateUserField(user_id, "whatsapp", waNum);
+      await saveContactIfNew(formatToWhatsAppId(waNum));
       const user = await userModel.findUserById(user_id);
       await waClient.sendMessage(
         chatId,
@@ -276,6 +279,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (ans === "ya") {
       const nrp = session.updateUserId;
       await userModel.updateUserField(nrp, "whatsapp", waNum);
+      await saveContactIfNew(formatToWhatsAppId(waNum));
       await waClient.sendMessage(chatId, `✅ Nomor berhasil dihubungkan ke NRP *${nrp}*.`);
       session.identityConfirmed = true;
       session.user_id = nrp;
@@ -474,6 +478,9 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (["nama", "title", "divisi", "jabatan"].includes(field)) value = value.toUpperCase();
 
     await userModel.updateUserField(user_id, field, value);
+    if (field === "whatsapp" && value) {
+      await saveContactIfNew(formatToWhatsAppId(value));
+    }
     await waClient.sendMessage(
       chatId,
       `✅ Data *${field === "title" ? "pangkat" : field === "divisi" ? "satfung" : field}* untuk NRP ${user_id} berhasil diupdate menjadi *${value}*.`

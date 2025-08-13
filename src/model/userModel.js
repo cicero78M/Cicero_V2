@@ -115,6 +115,16 @@ export async function getUsersWithWaByClient(clientId) {
   return result.rows;
 }
 
+// Ambil seluruh user aktif dengan nomor WhatsApp
+export async function getActiveUsersWithWhatsapp() {
+  const { rows } = await query(
+    `SELECT nama, whatsapp
+     FROM "user"
+     WHERE status = true AND whatsapp IS NOT NULL AND whatsapp <> ''`
+  );
+  return rows;
+}
+
 // Ambil user aktif yang belum melengkapi data (insta/tiktok/whatsapp)
 export async function getUsersMissingDataByClient(clientId) {
   const res = await query(
