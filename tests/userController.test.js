@@ -4,19 +4,25 @@ const mockCreateUser = jest.fn();
 const mockFindUserById = jest.fn();
 const mockUpdateUserField = jest.fn();
 const mockUpdateUser = jest.fn();
+const mockGetUsersByClient = jest.fn();
+const mockGetUsersByDirektorat = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   createUser: mockCreateUser,
   findUserById: mockFindUserById,
   updateUserField: mockUpdateUserField,
-  updateUser: mockUpdateUser
+  updateUser: mockUpdateUser,
+  getUsersByClient: mockGetUsersByClient,
+  getUsersByDirektorat: mockGetUsersByDirektorat
 }));
 
 let createUser;
+let getUserList;
 
 beforeAll(async () => {
   const mod = await import('../src/controller/userController.js');
   createUser = mod.createUser;
+  getUserList = mod.getUserList;
 });
 
 beforeEach(() => {
@@ -24,6 +30,8 @@ beforeEach(() => {
   mockFindUserById.mockReset();
   mockUpdateUserField.mockReset();
   mockUpdateUser.mockReset();
+  mockGetUsersByClient.mockReset();
+  mockGetUsersByDirektorat.mockReset();
 });
 
 test('operator adds user with defaults', async () => {
@@ -84,4 +92,32 @@ test('ditlantas creates new user with flag', async () => {
     })
   );
   expect(status).toHaveBeenCalledWith(201);
+});
+
+test('ditbinmas role with matching client_id shows all users', async () => {
+  mockGetUsersByDirektorat.mockResolvedValue([{ user_id: '1', ditbinmas: true }]);
+  const req = { user: { role: 'ditbinmas', client_id: 'DITBINMAS' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await getUserList(req, res, () => {});
+
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '1', ditbinmas: true }] });
+});
+
+test('ditbinmas role with different client_id filters users by client', async () => {
+  mockGetUsersByDirektorat.mockResolvedValue([{ user_id: '2', ditbinmas: true }]);
+  const req = { user: { role: 'ditbinmas', client_id: 'c1' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await getUserList(req, res, () => {});
+
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'c1');
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '2', ditbinmas: true }] });
 });
