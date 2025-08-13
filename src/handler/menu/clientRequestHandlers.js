@@ -17,6 +17,8 @@ import { saveLinkReportExcel } from "../../service/linkReportExcelService.js";
 import fs from "fs/promises";
 import path from "path";
 import { query } from "../../db/index.js";
+import { saveContactIfNew } from "../../service/googleContactsService.js";
+import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
 function ignore(..._args) {}
 
@@ -537,11 +539,15 @@ export const clientRequestHandlers = {
     userModel
   ) => {
     try {
+      const value = text.trim();
       await userModel.updateUserField(
         session.target_user_id,
         session.updateField,
-        text.trim()
+        value
       );
+      if (session.updateField === "whatsapp" && value) {
+        await saveContactIfNew(formatToWhatsAppId(value));
+      }
       await waClient.sendMessage(
         chatId,
         `✅ Data *${session.updateField}* untuk user *${session.target_user_id}* berhasil diupdate.`
