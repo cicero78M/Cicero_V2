@@ -115,7 +115,7 @@ test('getRekapLinkByClient uses provided date', async () => {
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
     2,
-    expect.stringContaining('WITH link_sum AS'),
+    expect.stringContaining('link_sum AS'),
     ['POLRES', '2024-01-02']
   );
 });
@@ -156,4 +156,14 @@ test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async (
     });
   const rows = await getRekapLinkByClient('POLRES');
   expect(rows[0].sudahMelaksanakan).toBe(true);
+});
+
+test('getRekapLinkByClient includes directorate role filter for ditbinmas', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapLinkByClient('ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('clients WHERE client_id = $1');
+  expect(sql).toContain('u.ditbinmas = true');
 });
