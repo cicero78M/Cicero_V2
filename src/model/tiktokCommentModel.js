@@ -107,8 +107,11 @@ export async function getRekapKomentarByClient(
   const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
 
-const { rows } = await query(`
-    WITH valid_comments AS (
+  const { rows } = await query(`
+    WITH cli AS (
+      SELECT client_type FROM clients WHERE client_id = $1
+    ),
+    valid_comments AS (
       SELECT c.video_id,
              c.updated_at,
              lower(replace(trim(cmt), '@', '')) AS username
@@ -134,9 +137,16 @@ const { rows } = await query(`
     FROM "user" u
     LEFT JOIN comment_counts cc
       ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
-    WHERE u.client_id = $1
-      AND u.status = true
+    WHERE u.status = true
       AND u.tiktok IS NOT NULL
+      AND (
+        (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
+        OR (SELECT client_type FROM cli) = 'direktorat' AND (
+          ($1 = 'ditbinmas' AND u.ditbinmas = true) OR
+          ($1 = 'ditlantas' AND u.ditlantas = true) OR
+          ($1 = 'bidhumas' AND u.bidhumas = true)
+        )
+      )
     ORDER BY jumlah_komentar DESC, u.nama ASC
   `, params);
   for (const user of rows) {

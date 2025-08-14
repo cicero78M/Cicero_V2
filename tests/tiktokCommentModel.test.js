@@ -29,3 +29,13 @@ test('getRekapKomentarByClient uses updated_at BETWEEN for date range', async ()
   expect(mockQuery.mock.calls[1][0]).toContain('BETWEEN $2::date AND $3::date');
   expect(mockQuery.mock.calls[1][1]).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
 });
+
+test('getRekapKomentarByClient includes directorate role filter for ditbinmas', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapKomentarByClient('ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('clients WHERE client_id = $1');
+  expect(sql).toContain('u.ditbinmas = true');
+});

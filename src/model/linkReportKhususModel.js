@@ -157,7 +157,10 @@ export async function getRekapLinkByClient(
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
   const { rows } = await query(
-    `WITH link_sum AS (
+    `WITH cli AS (
+       SELECT client_type FROM clients WHERE client_id = $1
+     ),
+     link_sum AS (
        SELECT r.user_id,
          SUM(
            (CASE WHEN r.instagram_link IS NOT NULL AND r.instagram_link <> '' THEN 1 ELSE 0 END) +
@@ -181,7 +184,15 @@ export async function getRekapLinkByClient(
        COALESCE(ls.jumlah_link, 0) AS jumlah_link
      FROM "user" u
      LEFT JOIN link_sum ls ON ls.user_id = u.user_id
-     WHERE u.client_id = $1 AND u.status = true
+     WHERE u.status = true
+       AND (
+         (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
+         OR (SELECT client_type FROM cli) = 'direktorat' AND (
+           ($1 = 'ditbinmas' AND u.ditbinmas = true) OR
+           ($1 = 'ditlantas' AND u.ditlantas = true) OR
+           ($1 = 'bidhumas' AND u.bidhumas = true)
+         )
+       )
      GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
      ORDER BY jumlah_link DESC, u.nama ASC`,
     params
