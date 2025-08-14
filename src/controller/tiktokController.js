@@ -78,7 +78,9 @@ export async function getTiktokRekapKomentar(req, res) {
       startDate,
       endDate
     );
-    res.json({ success: true, data });
+    const length = Array.isArray(data) ? data.length : 0;
+    const chartHeight = Math.max(length * 30, 300);
+    res.json({ success: true, data, chartHeight });
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });

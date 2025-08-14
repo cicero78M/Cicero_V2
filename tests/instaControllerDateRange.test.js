@@ -44,5 +44,6 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   const res = { json };
   await getInstaRekapLikes(req, res);
   expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, '2024-01-01', '2024-01-31');
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 300 }));
 });
 

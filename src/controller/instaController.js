@@ -34,7 +34,9 @@ export async function getInstaRekapLikes(req, res) {
       startDate,
       endDate
     );
-    res.json({ success: true, data });
+    const length = Array.isArray(data) ? data.length : 0;
+    const chartHeight = Math.max(length * 30, 300);
+    res.json({ success: true, data, chartHeight });
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
