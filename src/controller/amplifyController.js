@@ -17,7 +17,9 @@ export async function getAmplifyRekap(req, res) {
       msg: `getAmplifyRekap ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}`
     });
     const data = await getRekapLinkByClient(client_id, periode, tanggal, startDate, endDate);
-    res.json({ success: true, data });
+    const length = Array.isArray(data) ? data.length : 0;
+    const chartHeight = Math.max(length * 30, 300);
+    res.json({ success: true, data, chartHeight });
   } catch (err) {
     sendConsoleDebug({ tag: 'AMPLIFY', msg: `Error getAmplifyRekap: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
