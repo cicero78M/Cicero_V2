@@ -1648,6 +1648,13 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     }
     await dashboardUserModel.updateStatus(usr.user_id, true);
     await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.`);
+    if (usr.whatsapp) {
+      await safeSendMessage(
+        waClient,
+        formatToWhatsAppId(usr.whatsapp),
+        `✅ Registrasi dashboard Anda telah disetujui.\nUsername: ${usr.username}`
+      );
+    }
     return;
   }
 
@@ -1665,6 +1672,13 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     }
     await dashboardUserModel.updateStatus(usr.user_id, false);
     await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
+    if (usr.whatsapp) {
+      await safeSendMessage(
+        waClient,
+        formatToWhatsAppId(usr.whatsapp),
+        `❌ Registrasi dashboard Anda ditolak.\nUsername: ${usr.username}`
+      );
+    }
     return;
   }
 
