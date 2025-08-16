@@ -24,14 +24,18 @@ async function getClientNama(client_id) {
 
 // === AKUMULASI ===
 export async function absensiLikes(client_id, opts = {}) {
+  const { clientFilter } = opts;
+  const roleFlag = opts.roleFlag;
+  void roleFlag;
+  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
-  const users = await getUsersByClient(client_id);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+  const clientNama = await getClientNama(targetClient);
+  const users = await getUsersByClient(targetClient);
+  const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;

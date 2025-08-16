@@ -37,27 +37,31 @@ function extractUsernamesFromComments(comments) {
 
 // === AKUMULASI (min 50%) ===
 export async function absensiKomentar(client_id, opts = {}) {
+  const { clientFilter } = opts;
+  const roleFlag = opts.roleFlag;
+  void roleFlag;
+  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientInfo = await getClientInfo(client_id);
+  const clientInfo = await getClientInfo(targetClient);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
-  const users = await getUsersByClient(client_id);
-  const posts = await getPostsTodayByClient(client_id);
+  const users = await getUsersByClient(targetClient);
+  const posts = await getPostsTodayByClient(targetClient);
 
   sendDebug({
     tag: "ABSEN TTK",
     msg: `Start per-konten absensi. Posts=${posts.length} users=${users.length}`,
-    client_id,
+    client_id: targetClient,
   });
 
   sendDebug({
     tag: "ABSEN TTK",
     msg: `Start absensi komentar. Posts=${posts.length} users=${users.length}`,
-    client_id,
+    client_id: targetClient,
   });
 
   if (!posts.length)
