@@ -1,5 +1,5 @@
 # Panduan Registrasi User lewat Bot WhatsApp
-*Last updated: 2025-07-10*
+*Last updated: 2025-08-17*
 
 Panduan ini menjelaskan langkah–langkah bagi pengguna untuk
 menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.
@@ -15,10 +15,10 @@ menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.
    - Balas `tidak` atau `batal` untuk membatalkan proses.
 5. Setelah konfirmasi `ya`, bot memperbarui kolom `whatsapp`
    pada tabel `user` dan menampilkan pemberitahuan berhasil.
-6. Ketik `userrequest` kapan saja untuk melihat daftar perintah
-   dan bantuan penggunaan bot.
+6. Ketik `userrequest` kapan saja untuk menampilkan data Anda
+   atau memulai proses registrasi kembali.
 
 Proses di atas memastikan setiap pengguna terhubung dengan satu nomor
 WhatsApp yang valid. Jika ingin mengganti atau menghapus nomor,
-akses menu `Update Data Saya` pada bot dan ikuti instruksi yang
+jalankan perintah `userrequest` kembali dan ikuti instruksi yang
 muncul.
