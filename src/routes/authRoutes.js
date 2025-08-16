@@ -10,6 +10,7 @@ import {
   isAdminWhatsApp,
   formatToWhatsAppId,
   getAdminWAIds,
+  normalizeWhatsappNumber,
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
 import waClient, { waReady } from "../service/waService.js";
@@ -106,7 +107,7 @@ router.post('/dashboard-register', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'username, password, dan whatsapp wajib diisi' });
   }
-  const normalizedWhatsapp = String(whatsapp).replace(/\D/g, '');
+  const normalizedWhatsapp = normalizeWhatsappNumber(whatsapp);
   if (normalizedWhatsapp.length < 8) {
     return res
       .status(400)

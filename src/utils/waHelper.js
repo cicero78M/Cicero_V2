@@ -75,6 +75,13 @@ export function formatToWhatsAppId(nohp) {
   return `${number}@c.us`;
 }
 
+// Normalisasi nomor WhatsApp ke awalan 62 tanpa suffix @c.us
+export function normalizeWhatsappNumber(nohp) {
+  let number = String(nohp).replace(/\D/g, "");
+  if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
+  return number;
+}
+
 // Format output data client (untuk WA)
 export function formatClientData(obj, title = "") {
   let keysOrder = [
