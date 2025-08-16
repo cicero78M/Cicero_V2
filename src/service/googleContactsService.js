@@ -18,8 +18,14 @@ export async function authorize() {
     );
     return null;
   }
-  const { client_secret, client_id, redirect_uris } =
-    credentials.installed || credentials.web;
+  const credsData = credentials.installed || credentials.web;
+  const { client_secret, client_id, redirect_uris = [] } = credsData || {};
+  if (!redirect_uris.length) {
+    console.warn(
+      '[GOOGLE CONTACT] redirect_uris missing in credentials.json, skipping contact save.'
+    );
+    return null;
+  }
   const oAuth2Client = new google.auth.OAuth2(
     client_id,
     client_secret,

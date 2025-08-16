@@ -67,6 +67,27 @@ describe('saveContactIfNew', () => {
       JSON.stringify({ installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['uri'] } })
     );
   });
+  test('skips when redirect_uris missing', async () => {
+    await fs.writeFile(
+      'credentials.json',
+      JSON.stringify({ installed: { client_id: 'id', client_secret: 'secret' } })
+    );
+    mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await saveContactIfNew('22222@c.us');
+
+    expect(mockPeople).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[GOOGLE CONTACT] redirect_uris missing in credentials.json, skipping contact save.'
+    );
+
+    warnSpy.mockRestore();
+    await fs.writeFile(
+      'credentials.json',
+      JSON.stringify({ installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['uri'] } })
+    );
+  });
   test('skips existing contact', async () => {
     mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [{ phone_number: '123' }] });
     await saveContactIfNew('12345@c.us');

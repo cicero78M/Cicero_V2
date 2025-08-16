@@ -13,7 +13,7 @@ This guide explains how to configure and use the Google Contacts integration in 
    - Set `GOOGLE_SERVICE_ACCOUNT` to the JSON key content or path.
    - Set `GOOGLE_IMPERSONATE_EMAIL` to the Workspace user to impersonate.
    - Optionally override `GOOGLE_CONTACT_SCOPE` if a different scope is required.
-   - Alternatively, place `credentials.json` and `token.json` in the project root for OAuth authentication.
+   - Alternatively, place `credentials.json` and `token.json` in the project root for OAuth authentication. The `credentials.json` file must include a `redirect_uris` array.
 
 ## Usage
 The service in `src/service/googleContactsService.js` exposes helpers for searching and saving contacts.
