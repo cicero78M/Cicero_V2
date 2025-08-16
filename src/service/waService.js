@@ -175,15 +175,6 @@ waClient.on("message", async (msg) => {
     await waClient.sendMessage(chatId, "✅ Menu Admin Client ditutup.");
     return;
   }
-  if (
-    userMenuContext[chatId] &&
-    userMenuContext[chatId].step === "main" &&
-    !["1", "2"].includes(text.trim()) &&
-    text.trim().toLowerCase() !== "menu"
-  ) {
-    await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas dengan 1 atau 2.");
-    return;
-  }
 
   // ===== Pilihan awal untuk nomor operator =====
   if (operatorOptionSessions[chatId]) {
@@ -390,6 +381,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     const handler = userMenuHandlers[session.step];
     if (handler) {
       await handler(session, chatId, text, waClient, pool, userModel);
+      if (session.exit) {
+        delete userMenuContext[chatId];
+      }
     } else {
       await waClient.sendMessage(
         chatId,
@@ -402,18 +396,15 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 
   // ========== Mulai Menu Interaktif User ==========
   if (text.toLowerCase() === "userrequest") {
-    userMenuContext[chatId] = { step: "main" };
+    userMenuContext[chatId] = {};
     setMenuTimeout(chatId);
-    await waClient.sendMessage(
+    await userMenuHandlers.main(
+      userMenuContext[chatId],
       chatId,
-      `
-┏━━━━━━━ *MENU UTAMA USER* ━━━━━━━┓
-  1️⃣  Lihat Data Saya
-  2️⃣  Update Data Saya
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
-`.trim()
+      "",
+      waClient,
+      pool,
+      userModel
     );
     return;
   }

@@ -27,17 +27,6 @@ function formatUserReport(user) {
   ].join("\n").trim();
 }
 
-function menuUtama() {
-  return `
-┏━━━━━━━ *MENU UTAMA USER* ━━━━━━━┓
-  1️⃣  Lihat Data Saya
-  2️⃣  Update Data Saya
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-Silakan balas angka *1-2* atau ketik *batal* untuk keluar.
-`.trim();
-}
-
 function formatFieldList(showDesa = false) {
   return `
 ✏️ *Pilih field yang ingin diupdate:*
@@ -57,87 +46,39 @@ Balas angka field di atas atau *batal* untuk keluar.
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
-  main: async (session, chatId, text, waClient, pool, userModel) => {
-    // --- Menu utama / Default
-    if (!text || text.toLowerCase() === "menu") {
-      await waClient.sendMessage(chatId, menuUtama());
-      return;
-    }
+  main: async (session, chatId, _text, waClient, _pool, userModel) => {
+    const pengirim = chatId.replace(/[^0-9]/g, "");
+    const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
-    // === CASE 1: Lihat Data Saya ===
-    if (text === "1" || text.toLowerCase().includes("data")) {
-      const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = await userModel.findUserByWhatsApp(pengirim);
-
-      if (userByWA) {
-        session.isDitbinmas = !!userByWA.ditbinmas;
-        const salam = getGreeting();
-        if (
-          session.identityConfirmed &&
-          session.user_id === userByWA.user_id
-        ) {
-          const msgText = `${salam}, Bapak/Ibu\n${formatUserReport(
-            userByWA
-          )}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk kembali ke menu utama.`;
-          session.step = "tanyaUpdateMyData";
-          await waClient.sendMessage(chatId, msgText.trim());
-          return;
-        }
-        let msgText = `
+    if (userByWA) {
+      session.isDitbinmas = !!userByWA.ditbinmas;
+      const salam = getGreeting();
+      if (session.identityConfirmed && session.user_id === userByWA.user_id) {
+        const msgText = `${salam}, Bapak/Ibu\n${formatUserReport(
+          userByWA
+        )}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk keluar.`;
+        session.step = "tanyaUpdateMyData";
+        await waClient.sendMessage(chatId, msgText.trim());
+        return;
+      }
+      const msgText = `
 ${salam}, Bapak/Ibu
 ${formatUserReport(userByWA)}
 
 Apakah data di atas benar milik Anda?
 Balas *ya* jika benar, atau *tidak* jika bukan.
 `.trim();
-        session.step = "confirmUserByWaIdentity";
-        session.user_id = userByWA.user_id;
-        await waClient.sendMessage(chatId, msgText);
-        return;
-      } else {
-        session.step = "inputUserId";
-        await waClient.sendMessage(chatId, "Ketik NRP Anda untuk melihat data. (contoh: 75070206)");
-        return;
-      }
+      session.step = "confirmUserByWaIdentity";
+      session.user_id = userByWA.user_id;
+      await waClient.sendMessage(chatId, msgText);
+      return;
     }
 
-    // === CASE 2: Update Data Saya ===
-    if (text === "2" || text.toLowerCase().includes("update")) {
-      const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = await userModel.findUserByWhatsApp(pengirim);
-
-      if (userByWA) {
-        session.isDitbinmas = !!userByWA.ditbinmas;
-        const salam = getGreeting();
-        if (
-          session.identityConfirmed &&
-          session.user_id === userByWA.user_id
-        ) {
-          session.updateUserId = userByWA.user_id;
-          session.step = "updateAskField";
-          await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
-          return;
-        }
-        let msgText = `
-${salam}, Bapak/Ibu
-${formatUserReport(userByWA)}
-
-Apakah data di atas benar milik Anda dan ingin melakukan perubahan?
-Balas *ya* jika benar, atau *tidak* jika bukan.
-`.trim();
-        session.step = "confirmUserByWaUpdate";
-        session.user_id = userByWA.user_id;
-        await waClient.sendMessage(chatId, msgText);
-        return;
-      } else {
-        session.step = "updateAskUserId";
-        await waClient.sendMessage(chatId, "Ketik NRP Anda yang ingin diupdate:");
-        return;
-      }
-    }
-
-
-    await waClient.sendMessage(chatId, menuUtama());
+    session.step = "inputUserId";
+    await waClient.sendMessage(
+      chatId,
+      "Ketik NRP Anda untuk melihat data. (contoh: 75070206)"
+    );
   },
 
   // --- Konfirmasi identitas (lihat data)
@@ -147,13 +88,13 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       session.step = "tanyaUpdateMyData";
       await waClient.sendMessage(
         chatId,
-        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk kembali ke menu utama."
+        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk keluar."
       );
     } else if (text.trim().toLowerCase() === "tidak") {
-      session.step = "main";
+      session.exit = true;
       await waClient.sendMessage(
         chatId,
-        "Anda kembali ke Menu Utama. Ketik *menu* untuk melihat opsi."
+        "Baik, terima kasih. Ketik *userrequest* untuk memulai lagi."
       );
     } else {
       await waClient.sendMessage(
@@ -172,10 +113,10 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     } else if (text.trim().toLowerCase() === "tidak") {
-      session.step = "main";
+      session.exit = true;
       await waClient.sendMessage(
         chatId,
-        "Anda kembali ke Menu Utama. Ketik *menu* untuk melihat opsi."
+        "Baik, terima kasih. Ketik *userrequest* untuk memulai lagi."
       );
       return;
     }
@@ -189,12 +130,12 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   inputUserId: async (session, chatId, text, waClient, pool, userModel) => {
     const lower = text.trim().toLowerCase();
     if (lower === "batal") {
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      session.exit = true;
+      await waClient.sendMessage(chatId, "✅ Menu ditutup. Terima kasih.");
       return;
     }
     if (lower === "userrequest") {
-      await waClient.sendMessage(chatId, menuUtama());
+      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
       return;
     }
     const user_id = text.trim();
@@ -220,8 +161,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
     }
-    session.step = "main";
-    await waClient.sendMessage(chatId, menuUtama());
+    session.exit = true;
+    await waClient.sendMessage(chatId, "Ketik *userrequest* untuk memulai lagi.");
   },
 
   confirmBindUser: async (session, chatId, text, waClient, pool, userModel) => {
@@ -240,14 +181,12 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       );
       session.identityConfirmed = true;
       session.user_id = user_id;
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
       return;
     }
     if (answer === "tidak") {
       await waClient.sendMessage(chatId, "Baik, nomor tidak dihubungkan.");
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      session.exit = true;
       return;
     }
     await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
@@ -263,8 +202,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     const user = await userModel.findUserById(nrp);
     if (!user) {
       await waClient.sendMessage(chatId, `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      session.exit = true;
+      await waClient.sendMessage(chatId, "Ketik *userrequest* untuk memulai lagi.");
       return;
     }
     session.updateUserId = nrp;
@@ -294,8 +233,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     }
     if (ans === "tidak") {
       await waClient.sendMessage(chatId, "Proses update dibatalkan.");
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      session.exit = true;
       return;
     }
     await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
@@ -387,14 +325,12 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         chatId,
         `✅ Nomor WhatsApp untuk NRP ${user_id} berhasil dihapus dari database.`
       );
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
       return;
     }
     if (text.trim().toLowerCase() === "tidak") {
       await waClient.sendMessage(chatId, "Dibatalkan. Nomor WhatsApp tidak dihapus.");
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
       return;
     }
     await waClient.sendMessage(
@@ -504,8 +440,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     );
     delete session.availableTitles;
     delete session.availableSatfung;
-    session.step = "main";
-    await waClient.sendMessage(chatId, menuUtama());
+    await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   tanyaUpdateMyData: async (session, chatId, text, waClient, pool, userModel) => {
@@ -521,8 +456,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       );
       return;
     } else if (text.trim().toLowerCase() === "tidak") {
-      session.step = "main";
-      await waClient.sendMessage(chatId, menuUtama());
+      session.exit = true;
+      await waClient.sendMessage(chatId, "Terima kasih. Ketik *userrequest* bila membutuhkan lagi.");
       return;
     }
     await waClient.sendMessage(
