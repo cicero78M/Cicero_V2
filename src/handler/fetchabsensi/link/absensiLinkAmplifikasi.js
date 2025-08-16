@@ -19,18 +19,22 @@ async function getClientNama(client_id) {
 }
 
 export async function absensiLink(client_id, opts = {}) {
+  const { clientFilter } = opts;
+  const roleFlag = opts.roleFlag;
+  void roleFlag;
+  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
-  const users = await getUsersByClient(client_id);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+  const clientNama = await getClientNama(targetClient);
+  const users = await getUsersByClient(targetClient);
+  const shortcodes = await getShortcodesTodayByClient(targetClient);
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
-  const reports = await getReportsTodayByClient(client_id);
+  const reports = await getReportsTodayByClient(targetClient);
   const userStats = {};
   users.forEach((u) => {
     userStats[u.user_id] = { ...u, count: 0 };

@@ -50,6 +50,7 @@ import { getUsersByClient } from "../model/userModel.js";
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
+import { dashRequestHandlers } from "../handler/menu/dashRequestHandlers.js";
 
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 
@@ -291,6 +292,16 @@ waClient.on("message", async (msg) => {
     return;
   }
 
+  if (session && session.menu === "dashrequest") {
+    await dashRequestHandlers[session.step || "main"](
+      session,
+      chatId,
+      text,
+      waClient
+    );
+    return;
+  }
+
   // ===== MULAI Menu Operator dari command manual =====
   if (text.toLowerCase() === "oprrequest") {
     const waId =
@@ -330,6 +341,27 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       pool,
       userModel
     );
+    return;
+  }
+
+  if (text.toLowerCase() === "dashrequest") {
+    const waId =
+      userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
+    const dashUser = await dashboardUserModel.findByWhatsApp(waId);
+    if (!dashUser || dashUser.status !== true) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Nomor Anda tidak terdaftar atau belum disetujui sebagai dashboard user."
+      );
+      return;
+    }
+    setSession(chatId, {
+      menu: "dashrequest",
+      step: "main",
+      role: dashUser.role,
+      client_id: dashUser.client_id,
+    });
+    await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
     return;
   }
 

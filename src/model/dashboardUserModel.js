@@ -8,6 +8,14 @@ export async function findByUsername(username) {
   return res.rows[0] || null;
 }
 
+export async function findByWhatsApp(wa) {
+  const res = await query(
+    'SELECT * FROM dashboard_user WHERE whatsapp = $1',
+    [wa]
+  );
+  return res.rows[0] || null;
+}
+
 export async function createUser(data) {
   const res = await query(
     `INSERT INTO dashboard_user (user_id, username, password_hash, role, status, client_id, whatsapp)
