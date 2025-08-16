@@ -258,7 +258,7 @@ describe('POST /dashboard-register', () => {
     expect(mockQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO dashboard_user'),
-      [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '08121234']
+      [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '628121234']
     );
   });
 
