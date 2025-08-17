@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE clients (
   client_id VARCHAR PRIMARY KEY,
   nama VARCHAR NOT NULL,
@@ -49,12 +51,13 @@ CREATE TABLE penmas_user (
 );
 
 CREATE TABLE dashboard_user (
-  user_id TEXT PRIMARY KEY,
+  dashboard_user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL,
   status BOOLEAN DEFAULT TRUE,
   client_id VARCHAR REFERENCES clients(client_id),
+  user_id VARCHAR REFERENCES "user"(user_id),
   whatsapp VARCHAR,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()

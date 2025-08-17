@@ -120,25 +120,26 @@ router.post('/dashboard-register', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'username sudah terpakai' });
   }
-  const user_id = uuidv4();
+  const dashboard_user_id = uuidv4();
   const password_hash = await bcrypt.hash(password, 10);
   const user = await dashboardUserModel.createUser({
-    user_id,
+    dashboard_user_id,
     username,
     password_hash,
     role,
     status,
     client_id,
+    user_id: null,
     whatsapp,
   });
   notifyAdmin(
-    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${user_id}\nRole: ${role}\nWhatsApp: ${whatsapp}\nClient ID: ${
+    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${role}\nWhatsApp: ${whatsapp}\nClient ID: ${
       client_id ?? '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
   return res
     .status(201)
-    .json({ success: true, user_id: user.user_id, status: user.status });
+    .json({ success: true, dashboard_user_id: user.dashboard_user_id, status: user.status });
 });
 
 router.post('/dashboard-login', async (req, res) => {
@@ -165,13 +166,13 @@ router.post('/dashboard-login', async (req, res) => {
       .status(403)
       .json({ success: false, message: 'Akun belum disetujui' });
   }
-  const payload = { user_id: user.user_id, role: user.role, client_id: user.client_id };
+  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, client_id: user.client_id };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });
   try {
-    await redis.sAdd(`dashboard_login:${user.user_id}`, token);
-    await redis.set(`login_token:${token}`, `dashboard:${user.user_id}`, {
+    await redis.sAdd(`dashboard_login:${user.dashboard_user_id}`, token);
+    await redis.set(`login_token:${token}`, `dashboard:${user.dashboard_user_id}`, {
       EX: 2 * 60 * 60,
     });
   } catch (err) {
@@ -184,7 +185,7 @@ router.post('/dashboard-login', async (req, res) => {
     secure: process.env.NODE_ENV === 'production',
   });
   await insertLoginLog({
-    actorId: user.user_id,
+    actorId: user.dashboard_user_id,
     loginType: 'operator',
     loginSource: 'web'
   });
