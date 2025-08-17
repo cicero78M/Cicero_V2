@@ -22,14 +22,19 @@ export async function getInstaRekapLikes(req, res) {
   const startDate =
     req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
-  if (!client_id) {
-    return res.status(400).json({ success: false, message: "client_id wajib diisi" });
-  }
-  if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
-    return res
-      .status(403)
-      .json({ success: false, message: "client_id tidak diizinkan" });
-  }
+    if (!client_id) {
+      return res.status(400).json({ success: false, message: "client_id wajib diisi" });
+    }
+    if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "client_id tidak diizinkan" });
+    }
+    if (req.user?.client_id && req.user.client_id !== client_id) {
+      return res
+        .status(403)
+        .json({ success: false, message: "client_id tidak diizinkan" });
+    }
   try {
     sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}` });
     const data = await getRekapLikesByClient(
@@ -49,22 +54,31 @@ export async function getInstaRekapLikes(req, res) {
   }
 }
 
-export async function getInstaPosts(req, res) {
-  try {
-    const client_id =
-      req.query.client_id ||
-      req.user?.client_id ||
-      req.headers["x-client-id"];
-    if (!client_id) {
-      return res
-        .status(400)
-        .json({ success: false, message: "client_id wajib diisi" });
-    }
-
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaPosts ${client_id}` });
-    const posts = await instaPostService.findByClientId(client_id);
-    sendSuccess(res, posts);
-  } catch (err) {
+  export async function getInstaPosts(req, res) {
+    try {
+      const client_id =
+        req.query.client_id ||
+        req.user?.client_id ||
+        req.headers["x-client-id"];
+      if (!client_id) {
+        return res
+          .status(400)
+          .json({ success: false, message: "client_id wajib diisi" });
+      }
+      if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+      if (req.user?.client_id && req.user.client_id !== client_id) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+      sendConsoleDebug({ tag: "INSTA", msg: `getInstaPosts ${client_id}` });
+      const posts = await instaPostService.findByClientId(client_id);
+      sendSuccess(res, posts);
+    } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaPosts: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
@@ -342,22 +356,31 @@ export async function getInstagramUser(req, res) {
   }
 }
 
-export async function getInstaPostsKhusus(req, res) {
-  try {
-    const client_id =
-      req.query.client_id ||
-      req.user?.client_id ||
-      req.headers["x-client-id"];
-    if (!client_id) {
-      return res
-        .status(400)
-        .json({ success: false, message: "client_id wajib diisi" });
-    }
-
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaPostsKhusus ${client_id}` });
-    const posts = await instaPostKhususService.findTodayByClientId(client_id);
-    sendSuccess(res, posts);
-  } catch (err) {
+  export async function getInstaPostsKhusus(req, res) {
+    try {
+      const client_id =
+        req.query.client_id ||
+        req.user?.client_id ||
+        req.headers["x-client-id"];
+      if (!client_id) {
+        return res
+          .status(400)
+          .json({ success: false, message: "client_id wajib diisi" });
+      }
+      if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+      if (req.user?.client_id && req.user.client_id !== client_id) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+      sendConsoleDebug({ tag: "INSTA", msg: `getInstaPostsKhusus ${client_id}` });
+      const posts = await instaPostKhususService.findTodayByClientId(client_id);
+      sendSuccess(res, posts);
+    } catch (err) {
     sendConsoleDebug({
       tag: "INSTA",
       msg: `Error getInstaPostsKhusus: ${err.message}`
