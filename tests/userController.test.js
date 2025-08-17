@@ -77,7 +77,7 @@ test('operator assigns ditbinmas role when specified', async () => {
   expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '3' } });
 });
 
-test('ditbinmas updates existing user', async () => {
+test('reactivates existing user and attaches ditbinmas role', async () => {
   mockFindUserById
     .mockResolvedValueOnce({ user_id: '1', status: false })
     .mockResolvedValueOnce({ user_id: '1', status: true, ditbinmas: true, nama: 'B' });
@@ -90,6 +90,8 @@ test('ditbinmas updates existing user', async () => {
 
   expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'status', true);
   expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'ditbinmas', true);
+  expect(mockUpdateUserField).toHaveBeenCalledTimes(2);
+  expect(mockCreateUser).not.toHaveBeenCalled();
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({
     success: true,
