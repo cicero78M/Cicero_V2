@@ -101,8 +101,9 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  let { username, password, role_id, client_ids = [], whatsapp } = req.body;
+  let { username, password, role_id, client_ids, client_id, whatsapp } = req.body;
   const status = false;
+  const clientIds = client_ids || (client_id ? [client_id] : []);
   if (!username || !password || !whatsapp) {
     return res
       .status(400)
@@ -147,7 +148,7 @@ router.post('/dashboard-register', async (req, res) => {
     role_id = roleRow.role_id;
   }
 
-  if (roleRow.role_name === 'operator' && (!client_ids || client_ids.length === 0)) {
+  if (roleRow.role_name === 'operator' && clientIds.length === 0) {
     return res
       .status(400)
       .json({ success: false, message: 'minimal satu client harus dipilih' });
@@ -162,12 +163,12 @@ router.post('/dashboard-register', async (req, res) => {
     user_id: null,
     whatsapp,
   });
-  if (client_ids && client_ids.length > 0) {
-    await dashboardUserModel.addClients(dashboard_user_id, client_ids);
+  if (clientIds.length > 0) {
+    await dashboardUserModel.addClients(dashboard_user_id, clientIds);
   }
   notifyAdmin(
     `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${roleRow?.role_name || '-'}\nWhatsApp: ${whatsapp}\nClient ID: ${
-      client_ids.length ? client_ids.join(', ') : '-'
+      clientIds.length ? clientIds.join(', ') : '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
   if (waReady && whatsapp) {
