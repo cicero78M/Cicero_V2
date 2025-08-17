@@ -58,7 +58,17 @@ Create `verifyDashboardToken` to protect private routes:
 2. Verify the JWT using `process.env.JWT_SECRET` and confirm the token exists in Redis.
 3. Attach `req.dashboardUser` to the request object on success.
 
-## 5. Scaling Notes
+## 5. Client-Specific Requests
+
+Operators who manage multiple clients can pass a `client_id` query parameter when calling endpoints that operate on a specific client's data, for example:
+
+```
+GET /api/analytics?client_id=demo_client
+```
+
+This parameter lets the dashboard switch contexts without requiring separate logins.
+
+## 6. Scaling Notes
 
 - Use HTTPS in production and enforce rate limiting on the login routes.
 - Store active tokens in Redis so the backend can invalidate sessions at any time.
