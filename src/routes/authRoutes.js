@@ -137,7 +137,11 @@ router.post('/dashboard-register', async (req, res) => {
     );
     roleRow = rows[0];
     if (!roleRow) {
-      return res.status(400).json({ success: false, message: 'role default tidak ditemukan' });
+      const inserted = await query(
+        'INSERT INTO roles (role_name) VALUES ($1) ON CONFLICT (role_name) DO UPDATE SET role_name=EXCLUDED.role_name RETURNING role_id, role_name',
+        ['operator']
+      );
+      roleRow = inserted.rows[0];
     }
     role_id = roleRow.role_id;
   }

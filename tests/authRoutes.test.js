@@ -262,6 +262,31 @@ describe('POST /dashboard-register', () => {
       );
   });
 
+  test('creates default role when missing', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ role_id: 2, role_name: 'operator' }] })
+      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('FROM roles'),
+      ['operator']
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('INSERT INTO roles'),
+      ['operator']
+    );
+  });
+
   test('returns 400 when whatsapp invalid', async () => {
     const res = await request(app)
       .post('/api/auth/dashboard-register')
