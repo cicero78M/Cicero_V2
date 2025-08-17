@@ -100,7 +100,7 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  let { username, password, role = 'operator', client_ids = [], whatsapp } = req.body;
+  let { username, password, role_id, client_ids = [], whatsapp } = req.body;
   const status = false;
   if (!username || !password || !whatsapp) {
     return res
@@ -122,18 +122,32 @@ router.post('/dashboard-register', async (req, res) => {
   }
   const dashboard_user_id = uuidv4();
   const password_hash = await bcrypt.hash(password, 10);
+
+  let roleRow;
+  if (role_id) {
+    const { rows } = await query('SELECT role_id, role_name FROM roles WHERE role_id = $1', [role_id]);
+    roleRow = rows[0];
+    if (!roleRow) {
+      return res.status(400).json({ success: false, message: 'role_id tidak valid' });
+    }
+  } else {
+    const { rows } = await query('SELECT role_id, role_name FROM roles WHERE role_name = $1', ['operator']);
+    roleRow = rows[0];
+    role_id = roleRow?.role_id;
+  }
+
   const user = await dashboardUserModel.createUser({
     dashboard_user_id,
     username,
     password_hash,
-    role,
+    role_id,
     status,
     user_id: null,
     whatsapp,
   });
   await dashboardUserModel.addClients(dashboard_user_id, client_ids);
   notifyAdmin(
-    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${role}\nWhatsApp: ${whatsapp}\nClient ID: ${
+    `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${roleRow?.role_name || '-'}\nWhatsApp: ${whatsapp}\nClient ID: ${
       client_ids.length ? client_ids.join(', ') : '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
@@ -166,7 +180,7 @@ router.post('/dashboard-login', async (req, res) => {
       .status(403)
       .json({ success: false, message: 'Akun belum disetujui' });
   }
-  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, client_ids: user.client_ids };
+  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, role_id: user.role_id, client_ids: user.client_ids };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });

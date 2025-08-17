@@ -71,12 +71,12 @@ Pivot table linking users to roles.
 
 ### `dashboard_user`
 Credentials for the web dashboard login.
-- `user_id` – primary key generated with `uuid.v4()`
+- `dashboard_user_id` – primary key generated with `uuid.v4()`
 - `username` – unique login name
 - `password_hash` – bcrypt hashed password
-- `role` – permission level such as `admin` or `operator`
+- `role_id` – foreign key referencing `roles(role_id)`
 - `status` – boolean indicating whether the account is active
-- `client_id` – optional link to `clients`
+- `user_id` – optional link to `user(user_id)`
 - `whatsapp` – contact number used for notifications
 - `created_at`, `updated_at` – timestamps
 

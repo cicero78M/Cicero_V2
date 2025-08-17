@@ -238,6 +238,7 @@ describe('POST /dashboard-register', () => {
   test('creates new dashboard user when username free', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ role_id: 1, role_name: 'operator' }] })
       .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] });
 
     const res = await request(app)
@@ -253,11 +254,12 @@ describe('POST /dashboard-register', () => {
         expect.stringContaining('FROM dashboard_user'),
         ['dash']
       );
-        expect(mockQuery).toHaveBeenNthCalledWith(
-          2,
-          expect.stringContaining('INSERT INTO dashboard_user'),
-          [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '628121234']
-        );
+      expect(mockQuery.mock.calls[1][0]).toContain('FROM roles');
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('INSERT INTO dashboard_user'),
+        [expect.any(String), 'dash', expect.any(String), 1, false, null, '628121234']
+      );
   });
 
   test('returns 400 when whatsapp invalid', async () => {
@@ -293,6 +295,7 @@ describe('POST /dashboard-login', () => {
               username: 'dash',
               password_hash: await bcrypt.hash('pass', 10),
               role: 'admin',
+              role_id: 2,
               status: true,
               client_ids: ['c1'],
               user_id: null
@@ -306,7 +309,7 @@ describe('POST /dashboard-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', client_ids: ['c1'] });
+      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', role_id: 2, client_ids: ['c1'] });
       expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
       expect(mockRedis.set).toHaveBeenCalledWith(
         `login_token:${res.body.token}`,
@@ -328,6 +331,7 @@ describe('POST /dashboard-login', () => {
               username: 'dash',
               password_hash: await bcrypt.hash('pass', 10),
               role: 'admin',
+              role_id: 2,
               status: true,
               client_ids: ['c1'],
               user_id: null
