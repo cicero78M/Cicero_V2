@@ -11,6 +11,9 @@ export async function getAmplifyRekap(req, res) {
   if (!client_id) {
     return res.status(400).json({ success: false, message: 'client_id wajib diisi' });
   }
+  if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
+    return res.status(403).json({ success: false, message: 'client_id tidak diizinkan' });
+  }
   try {
     sendConsoleDebug({
       tag: 'AMPLIFY',
