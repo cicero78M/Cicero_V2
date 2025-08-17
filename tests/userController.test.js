@@ -78,8 +78,9 @@ test('operator assigns ditbinmas role when specified', async () => {
 });
 
 test('ditbinmas updates existing user', async () => {
-  mockFindUserById.mockResolvedValue({ user_id: '1', status: false });
-  mockUpdateUser.mockResolvedValue({ user_id: '1', ditbinmas: true, nama: 'B' });
+  mockFindUserById
+    .mockResolvedValueOnce({ user_id: '1', status: false })
+    .mockResolvedValueOnce({ user_id: '1', status: true, ditbinmas: true, nama: 'B' });
   const req = { body: { user_id: '1', nama: 'B' }, user: { role: 'ditbinmas', client_id: 'c2' } };
   const json = jest.fn();
   const status = jest.fn().mockReturnThis();
@@ -87,13 +88,13 @@ test('ditbinmas updates existing user', async () => {
 
   await createUser(req, res, () => {});
 
-  expect(mockUpdateUser).toHaveBeenCalledWith('1', {
-    nama: 'B',
-    client_id: 'c2',
-    ditbinmas: true
-  });
+  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'status', true);
+  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'ditbinmas', true);
   expect(status).toHaveBeenCalledWith(200);
-  expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', ditbinmas: true, nama: 'B' } });
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    data: { user_id: '1', status: true, ditbinmas: true, nama: 'B' }
+  });
 });
 
 test('ditlantas creates new user with flag', async () => {
