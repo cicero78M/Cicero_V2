@@ -47,7 +47,7 @@ test('findUserByIdAndClient returns user', async () => {
   expect(mockQuery.mock.calls[0][1]).toEqual(['1', 'C1']);
 });
 
-test('createUser inserts with directorate flags', async () => {
+test('createUser inserts with directorate flags only', async () => {
   mockQuery
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
@@ -57,6 +57,30 @@ test('createUser inserts with directorate flags', async () => {
   const row = await createUser(data);
   expect(row).toEqual({ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false });
   expect(mockQuery.mock.calls[0][0]).toContain('INSERT INTO "user"');
+  expect(mockQuery.mock.calls[1][1]).toEqual(['ditbinmas']);
+  expect(mockQuery.mock.calls[2][1][1]).toBe('ditbinmas');
+  expect(mockQuery.mock.calls.length).toBe(4);
+});
+
+test('createUser assigns operator role when specified', async () => {
+  mockQuery
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ rows: [{ user_id: '10', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+  const data = { user_id: '10', nama: 'Y', operator: true };
+  await createUser(data);
+  expect(mockQuery.mock.calls[1][1]).toEqual(['operator']);
+  expect(mockQuery.mock.calls[2][1][1]).toBe('operator');
+});
+
+test('createUser without role does not assign any', async () => {
+  mockQuery
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ rows: [{ user_id: '11', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+  const data = { user_id: '11', nama: 'Z' };
+  await createUser(data);
+  expect(mockQuery.mock.calls.length).toBe(2);
 });
 
 test('updateUserField updates ditbinmas field', async () => {

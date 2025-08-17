@@ -219,6 +219,7 @@ describe('POST /user-register', () => {
       ['1']
     );
     expect(mockQuery.mock.calls[1][0]).toContain('INSERT INTO "user"');
+    expect(mockQuery.mock.calls.length).toBe(3);
   });
 
   test('returns 400 when nrp exists', async () => {

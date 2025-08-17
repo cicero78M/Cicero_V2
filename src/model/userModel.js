@@ -198,7 +198,7 @@ export async function updateUserField(user_id, field, value) {
     "premium_status",
     "premium_end_date",
   ];
-  const roleFields = ["ditbinmas", "ditlantas", "bidhumas"];
+  const roleFields = ["ditbinmas", "ditlantas", "bidhumas", "operator"];
   if (!allowed.includes(field) && !roleFields.includes(field)) throw new Error("Field tidak diizinkan!");
   if (["nama", "title", "divisi", "jabatan", "desa"].includes(field) && typeof value === 'string') {
     value = value.toUpperCase();
@@ -304,7 +304,9 @@ export async function createUser(userData) {
   // Contoh userData: {user_id, nama, title, divisi, jabatan, ...}
   // Sesuaikan dengan struktur dan database-mu!
   normalizeUserFields(userData);
-  const roles = ['ditbinmas', 'ditlantas', 'bidhumas'].filter((r) => userData[r]);
+  const roles = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'].filter(
+    (r) => userData[r]
+  );
   const q = `
     INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
@@ -332,7 +334,7 @@ export async function createUser(userData) {
 
 export async function updateUser(userId, userData) {
   normalizeUserFields(userData);
-  const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas'];
+  const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'];
   const roles = {};
   for (const rf of roleFields) {
     if (rf in userData) {

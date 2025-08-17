@@ -51,6 +51,7 @@ export const createUser = async (req, res, next) => {
       if (data.ditbinmas === undefined) data.ditbinmas = false;
       if (data.ditlantas === undefined) data.ditlantas = false;
       if (data.bidhumas === undefined) data.bidhumas = false;
+      data.operator = true;
     }
 
     const user = await userModel.createUser(data);

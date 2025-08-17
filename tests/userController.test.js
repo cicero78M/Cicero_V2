@@ -49,6 +49,7 @@ test('operator adds user with defaults', async () => {
     ditbinmas: false,
     ditlantas: false,
     bidhumas: false,
+    operator: true,
   });
   expect(status).toHaveBeenCalledWith(201);
   expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1' } });
