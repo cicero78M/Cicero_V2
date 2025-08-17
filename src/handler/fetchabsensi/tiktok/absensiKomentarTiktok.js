@@ -1,5 +1,5 @@
 import { query } from "../../../db/index.js";
-import { getUsersByClient } from "../../../model/userModel.js";
+import { getUsersByClient, getUsersByDirektorat } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
@@ -39,7 +39,6 @@ function extractUsernamesFromComments(comments) {
 export async function absensiKomentar(client_id, opts = {}) {
   const { clientFilter } = opts;
   const roleFlag = opts.roleFlag;
-  void roleFlag;
   const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -49,7 +48,18 @@ export async function absensiKomentar(client_id, opts = {}) {
   const clientInfo = await getClientInfo(targetClient);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
-  const users = await getUsersByClient(targetClient);
+  let users;
+  if (
+    roleFlag &&
+    typeof roleFlag === "string" &&
+    roleFlag.toUpperCase() === targetClient.toUpperCase()
+  ) {
+    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
+      (u) => u.status === true
+    );
+  } else {
+    users = await getUsersByClient(targetClient);
+  }
   const posts = await getPostsTodayByClient(targetClient);
 
   sendDebug({
