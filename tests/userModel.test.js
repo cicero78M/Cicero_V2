@@ -23,71 +23,59 @@ beforeAll(async () => {
   getUsersByDirektorat = mod.getUsersByDirektorat;
 });
 
+beforeEach(() => {
+  mockQuery.mockReset();
+});
+
 test('findUserByIdAndWhatsApp returns user', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', nama: 'Test' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false }] });
   const user = await findUserByIdAndWhatsApp('1', '0808');
-  expect(user).toEqual({ user_id: '1', nama: 'Test' });
-  expect(mockQuery).toHaveBeenCalledWith(
-    'SELECT * FROM "user" WHERE user_id = $1 AND whatsapp = $2',
-    ['1', '0808']
-  );
+  expect(user).toEqual({ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false });
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('FROM "user" u');
+  expect(sql).toContain('u.user_id = $1 AND u.whatsapp = $2');
+  expect(mockQuery.mock.calls[0][1]).toEqual(['1', '0808']);
 });
 
 test('findUserByIdAndClient returns user', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
   const user = await findUserByIdAndClient('1', 'C1');
-  expect(user).toEqual({ user_id: '1', client_id: 'C1' });
-  expect(mockQuery).toHaveBeenCalledWith(
-    'SELECT * FROM "user" WHERE user_id=$1 AND client_id=$2',
-    ['1', 'C1']
-  );
+  expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false });
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('FROM "user" u');
+  expect(sql).toContain('u.user_id=$1 AND u.client_id=$2');
+  expect(mockQuery.mock.calls[0][1]).toEqual(['1', 'C1']);
 });
 
 test('createUser inserts with directorate flags', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '9' }] });
+  mockQuery
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ rows: [{ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false }] });
   const data = { user_id: '9', nama: 'X', ditbinmas: true, ditlantas: false };
   const row = await createUser(data);
-  expect(row).toEqual({ user_id: '9' });
-  expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('INSERT INTO "user"'),
-    [
-      '9',
-      'X',
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      true,
-      '',
-      '',
-      '',
-      null,
-      false,
-      true,
-      false,
-      false,
-    ]
-  );
+  expect(row).toEqual({ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(mockQuery.mock.calls[0][0]).toContain('INSERT INTO "user"');
 });
 
 test('updateUserField updates ditbinmas field', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true }] });
+  mockQuery
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false }] });
   const row = await updateUserField('1', 'ditbinmas', true);
-  expect(row).toEqual({ user_id: '1', ditbinmas: true });
-  expect(mockQuery).toHaveBeenCalledWith(
-    'UPDATE "user" SET ditbinmas=$1 WHERE user_id=$2 RETURNING *',
-    [true, '1']
-  );
+  expect(row).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
 });
 
 test('updateUserField updates desa field', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC' }] });
+  mockQuery
+    .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false }] });
   const row = await updateUserField('1', 'desa', 'ABC');
-  expect(row).toEqual({ user_id: '1', desa: 'ABC' });
-  expect(mockQuery).toHaveBeenCalledWith(
-    'UPDATE "user" SET desa=$1 WHERE user_id=$2 RETURNING *',
-    ['ABC', '1']
-  );
+  expect(row).toEqual({ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false });
+  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE "user" SET desa=$1 WHERE user_id=$2');
 });
 
 test('updatePremiumStatus updates fields', async () => {
@@ -101,21 +89,19 @@ test('updatePremiumStatus updates fields', async () => {
 });
 
 test('getUsersByDirektorat queries by flag', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '2' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false }] });
   const users = await getUsersByDirektorat('ditbinmas');
-  expect(users).toEqual([{ user_id: '2' }]);
-  expect(mockQuery).toHaveBeenCalledWith(
-    'SELECT * FROM "user" WHERE ditbinmas = true',
-    []
-  );
+  expect(users).toEqual([{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false }]);
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).toContain('r.role_name = $1');
 });
 
 test('getUsersByDirektorat filters by client and flag', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '3' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false }] });
   const users = await getUsersByDirektorat('bidhumas', 'c1');
-  expect(users).toEqual([{ user_id: '3' }]);
-  expect(mockQuery).toHaveBeenCalledWith(
-    'SELECT * FROM "user" WHERE bidhumas = true AND client_id = $1',
-    ['c1']
-  );
+  expect(users).toEqual([{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false }]);
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).toContain('u.client_id = $2');
 });

@@ -74,6 +74,6 @@ test('includes directorate role filter when client_id is ditbinmas', async () =>
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapLikesByClient('ditbinmas');
   const sql = mockQuery.mock.calls[0][0];
-  expect(sql).toContain("clients WHERE client_id = $1");
-  expect(sql).toContain('u.ditbinmas = true');
+  expect(sql).toContain('clients WHERE client_id = $1');
+  expect(sql).toContain('user_roles');
 });

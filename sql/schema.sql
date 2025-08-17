@@ -24,11 +24,19 @@ CREATE TABLE "user" (
   desa VARCHAR,
   client_id VARCHAR REFERENCES clients(client_id),
   status BOOLEAN DEFAULT TRUE,
-  ditbinmas BOOLEAN DEFAULT FALSE,
-  ditlantas BOOLEAN DEFAULT FALSE,
-  bidhumas BOOLEAN DEFAULT FALSE,
   premium_status BOOLEAN DEFAULT FALSE,
   premium_end_date DATE
+);
+
+CREATE TABLE roles (
+  role_id SERIAL PRIMARY KEY,
+  role_name VARCHAR UNIQUE
+);
+
+CREATE TABLE user_roles (
+  user_id VARCHAR REFERENCES "user"(user_id),
+  role_id INTEGER REFERENCES roles(role_id),
+  PRIMARY KEY (user_id, role_id)
 );
 
 CREATE TABLE penmas_user (

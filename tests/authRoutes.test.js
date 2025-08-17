@@ -204,7 +204,8 @@ describe('POST /user-register', () => {
   test('creates new user when nrp free', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ user_id: '1' }] });
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
 
     const res = await request(app)
       .post('/api/auth/user-register')
@@ -217,11 +218,7 @@ describe('POST /user-register', () => {
       'SELECT * FROM "user" WHERE user_id = $1',
       ['1']
     );
-    expect(mockQuery).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('INSERT INTO "user"'),
-      expect.any(Array)
-    );
+    expect(mockQuery.mock.calls[1][0]).toContain('INSERT INTO "user"');
   });
 
   test('returns 400 when nrp exists', async () => {

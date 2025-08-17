@@ -165,5 +165,5 @@ test('getRekapLinkByClient includes directorate role filter for ditbinmas', asyn
   await getRekapLinkByClient('ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('clients WHERE client_id = $1');
-  expect(sql).toContain('u.ditbinmas = true');
+  expect(sql).toContain('user_roles');
 });
