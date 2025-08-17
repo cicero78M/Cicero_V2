@@ -1,5 +1,5 @@
 import { query } from "../../../db/index.js";
-import { getUsersByClient } from "../../../model/userModel.js";
+import { getUsersByClient, getUsersByDirektorat } from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
@@ -26,7 +26,6 @@ async function getClientNama(client_id) {
 export async function absensiLikes(client_id, opts = {}) {
   const { clientFilter } = opts;
   const roleFlag = opts.roleFlag;
-  void roleFlag;
   const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -34,7 +33,18 @@ export async function absensiLikes(client_id, opts = {}) {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const clientNama = await getClientNama(targetClient);
-  const users = await getUsersByClient(targetClient);
+  let users;
+  if (
+    roleFlag &&
+    typeof roleFlag === "string" &&
+    roleFlag.toUpperCase() === targetClient.toUpperCase()
+  ) {
+    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
+      (u) => u.status === true
+    );
+  } else {
+    users = await getUsersByClient(targetClient);
+  }
   const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)
