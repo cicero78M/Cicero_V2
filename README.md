@@ -43,6 +43,14 @@ Cicero_V2/
 
 The API exposes endpoints for managing clients and users, fetching Instagram and TikTok data, handling OAuth callbacks, and providing dashboard statistics. Endpoints are also available for premium subscription management. Detailed documentation for each route is available in the source code comments.
 
+When a request requires data for a particular client, include the client's identifier as a query parameter:
+
+```
+GET /api/analytics?client_id=demo_client
+```
+
+This allows operators to scope responses to the correct client.
+
 ## Deployment & Environment
 
 1. **Clone and install dependencies**
