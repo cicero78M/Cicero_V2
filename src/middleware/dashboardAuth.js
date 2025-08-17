@@ -9,8 +9,11 @@ export async function verifyDashboardToken(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const exists = await redis.get(`login_token:${token}`);
-    if (!exists || !String(exists).startsWith('dashboard:')) {
+    if (!exists) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+    if (!String(exists).startsWith('dashboard:')) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     req.dashboardUser = payload;
     next();
