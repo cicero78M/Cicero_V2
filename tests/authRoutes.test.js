@@ -249,11 +249,12 @@ describe('POST /dashboard-register', () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ role_id: 1, role_name: 'operator' }] })
-      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] });
+      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x', client_ids: ['c1'] });
 
     expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
@@ -269,6 +270,11 @@ describe('POST /dashboard-register', () => {
         3,
         expect.stringContaining('INSERT INTO dashboard_user'),
         [expect.any(String), 'dash', expect.any(String), 1, false, null, '628121234']
+      );
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        4,
+        expect.stringContaining('INSERT INTO dashboard_user_clients'),
+        [expect.any(String), 'c1']
       );
       expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
       expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
@@ -288,11 +294,12 @@ describe('POST /dashboard-register', () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ role_id: 2, role_name: 'operator' }] })
-      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] });
+      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] })
+      .mockResolvedValueOnce({ rows: [] });
 
     const res = await request(app)
       .post('/api/auth/dashboard-register')
-      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x' });
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x', client_ids: ['c1'] });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -306,6 +313,26 @@ describe('POST /dashboard-register', () => {
       expect.stringContaining('INSERT INTO roles'),
       ['operator']
     );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      5,
+      expect.stringContaining('INSERT INTO dashboard_user_clients'),
+      [expect.any(String), 'c1']
+    );
+  });
+
+  test('returns 400 when client_ids missing for operator', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ role_id: 1, role_name: 'operator' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/minimal satu client harus dipilih/);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
   });
 
   test('returns 400 when whatsapp invalid', async () => {

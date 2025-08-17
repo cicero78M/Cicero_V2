@@ -147,6 +147,12 @@ router.post('/dashboard-register', async (req, res) => {
     role_id = roleRow.role_id;
   }
 
+  if (roleRow.role_name === 'operator' && (!client_ids || client_ids.length === 0)) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'minimal satu client harus dipilih' });
+  }
+
   const user = await dashboardUserModel.createUser({
     dashboard_user_id,
     username,
@@ -156,7 +162,9 @@ router.post('/dashboard-register', async (req, res) => {
     user_id: null,
     whatsapp,
   });
-  await dashboardUserModel.addClients(dashboard_user_id, client_ids);
+  if (client_ids && client_ids.length > 0) {
+    await dashboardUserModel.addClients(dashboard_user_id, client_ids);
+  }
   notifyAdmin(
     `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${roleRow?.role_name || '-'}\nWhatsApp: ${whatsapp}\nClient ID: ${
       client_ids.length ? client_ids.join(', ') : '-'
