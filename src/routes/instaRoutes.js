@@ -12,11 +12,8 @@ import {
   getRapidInstagramPostsStore,
   getRapidInstagramPostsByMonth,
 } from "../controller/instaController.js";
-import { verifyDashboardToken } from "../middleware/dashboardAuth.js";
 
 const router = Router();
-
-router.use(verifyDashboardToken);
 router.get("/rekap-likes", getInstaRekapLikes);
 router.get("/posts", getInstaPosts);
 router.get("/posts-khusus", getInstaPostsKhusus);
