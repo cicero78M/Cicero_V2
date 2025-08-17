@@ -309,6 +309,24 @@ describe('POST /dashboard-register', () => {
     );
   });
 
+  test('creates dashboard user with specified role name', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ role_id: 5, role_name: 'ditbinmas' }] })
+      .mockResolvedValueOnce({ rows: [{ dashboard_user_id: 'd1', status: false }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-register')
+      .send({ username: 'dash', password: 'pass', whatsapp: '0812-1234x', role: 'ditbinmas' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery.mock.calls[1][0]).toContain('FROM roles');
+    expect(mockQuery.mock.calls[1][1]).toEqual(['ditbinmas']);
+    expect(mockQuery.mock.calls[2][1][3]).toBe(5);
+    expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
+  });
+
   test('creates default role when missing', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })

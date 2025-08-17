@@ -101,7 +101,7 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  let { username, password, role_id, client_ids, client_id, whatsapp } = req.body;
+  let { username, password, role_id, role, client_ids, client_id, whatsapp } = req.body;
   const status = false;
   const clientIds = client_ids || (client_id ? [client_id] : []);
   if (!username || !password || !whatsapp) {
@@ -132,6 +132,16 @@ router.post('/dashboard-register', async (req, res) => {
     if (!roleRow) {
       return res.status(400).json({ success: false, message: 'role_id tidak valid' });
     }
+  } else if (role) {
+    const { rows } = await query(
+      'SELECT role_id, role_name FROM roles WHERE LOWER(role_name) = LOWER($1)',
+      [role]
+    );
+    roleRow = rows[0];
+    if (!roleRow) {
+      return res.status(400).json({ success: false, message: 'role tidak valid' });
+    }
+    role_id = roleRow.role_id;
   } else {
     const { rows } = await query(
       'SELECT role_id, role_name FROM roles WHERE LOWER(role_name) = LOWER($1)',
