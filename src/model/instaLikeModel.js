@@ -107,11 +107,18 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     tanggalFilter = "p.created_at::date = $2::date";
   }
 
+  const clientTypeRes = await query('SELECT client_type FROM clients WHERE client_id = $1', [client_id]);
+  const clientType = clientTypeRes.rows[0]?.client_type;
+
+  let userJoin = '';
+  let userWhere = 'u.client_id = $1';
+  if (clientType === 'direktorat') {
+    userJoin = 'JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id';
+    userWhere = 'r.role_name = $1';
+  }
+
   const { rows } = await query(`
-    WITH cli AS (
-      SELECT client_type FROM clients WHERE client_id = $1
-    ),
-    valid_likes AS (
+    WITH valid_likes AS (
       SELECT
         l.shortcode,
         p.client_id,
@@ -140,18 +147,12 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
       u.exception,
       COALESCE(lc.jumlah_like, 0) AS jumlah_like
     FROM "user" u
+    ${userJoin}
     LEFT JOIN like_counts lc
       ON lower(replace(trim(u.insta), '@', '')) = lc.username
     WHERE u.status = true
       AND u.insta IS NOT NULL
-      AND (
-        (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-        OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
-          SELECT 1 FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.role_id
-          WHERE ur.user_id = u.user_id AND r.role_name = $1
-        )
-      )
+      AND ${userWhere}
     ORDER BY jumlah_like DESC, u.nama ASC
   `, params);
 
