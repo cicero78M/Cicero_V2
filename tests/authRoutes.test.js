@@ -6,6 +6,8 @@ import bcrypt from 'bcrypt';
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
 const mockInsertLoginLog = jest.fn();
+const mockWAClient = { sendMessage: jest.fn() };
+const actualWaHelper = await import('../src/utils/waHelper.js');
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
   query: mockQuery
@@ -20,9 +22,15 @@ jest.unstable_mockModule('../src/model/loginLogModel.js', () => ({
   getLoginLogs: jest.fn()
 }));
 
+jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
+  ...actualWaHelper,
+  getAdminWAIds: () => ['admin@c.us'],
+  formatToWhatsAppId: (nohp) => `${nohp}@c.us`
+}));
+
 jest.unstable_mockModule('../src/service/waService.js', () => ({
-  default: { sendMessage: jest.fn() },
-  waReady: false
+  default: mockWAClient,
+  waReady: true
 }));
 
 let app;
@@ -42,6 +50,7 @@ beforeEach(() => {
   mockRedis.sAdd.mockReset();
   mockRedis.set.mockReset();
   mockInsertLoginLog.mockReset();
+  mockWAClient.sendMessage.mockReset();
 });
 
 describe('POST /login', () => {
@@ -260,6 +269,17 @@ describe('POST /dashboard-register', () => {
         3,
         expect.stringContaining('INSERT INTO dashboard_user'),
         [expect.any(String), 'dash', expect.any(String), 1, false, null, '628121234']
+      );
+      expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
+      expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
+        'admin@c.us',
+        expect.stringContaining('Permintaan User Approval'),
+        {}
+      );
+      expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
+        '628121234@c.us',
+        expect.stringContaining('Permintaan registrasi dashboard Anda telah diterima'),
+        {}
       );
   });
 
