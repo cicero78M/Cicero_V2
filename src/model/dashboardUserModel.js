@@ -2,11 +2,12 @@ import { query } from '../repository/db.js';
 
 async function findOneBy(field, value) {
   const res = await query(
-    `SELECT du.*, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
+    `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
      FROM dashboard_user du
+     LEFT JOIN roles r ON du.role_id = r.role_id
      LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
      WHERE du.${field} = $1
-     GROUP BY du.dashboard_user_id`,
+     GROUP BY du.dashboard_user_id, r.role_name`,
     [value]
   );
   return res.rows[0] || null;
@@ -22,14 +23,14 @@ export async function findByWhatsApp(wa) {
 
 export async function createUser(data) {
   const res = await query(
-    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role, status, user_id, whatsapp)
+    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role_id, status, user_id, whatsapp)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       data.dashboard_user_id,
       data.username,
       data.password_hash,
-      data.role,
+      data.role_id,
       data.status,
       data.user_id ?? null,
       data.whatsapp,

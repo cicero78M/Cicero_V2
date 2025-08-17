@@ -54,7 +54,7 @@ CREATE TABLE dashboard_user (
   dashboard_user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  role TEXT NOT NULL,
+  role_id INT NOT NULL REFERENCES roles(role_id),
   status BOOLEAN DEFAULT TRUE,
   user_id VARCHAR REFERENCES "user"(user_id),
   whatsapp VARCHAR,
