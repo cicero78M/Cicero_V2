@@ -48,10 +48,18 @@ export const createUser = async (req, res, next) => {
     }
 
     if (role === 'operator') {
-      if (data.ditbinmas === undefined) data.ditbinmas = false;
-      if (data.ditlantas === undefined) data.ditlantas = false;
-      if (data.bidhumas === undefined) data.bidhumas = false;
-      data.operator = true;
+      const requestedRole = data.role ? data.role.toLowerCase() : undefined;
+      delete data.role;
+
+      if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
+        data[requestedRole] = true;
+        data.operator = false;
+      } else {
+        if (data.ditbinmas === undefined) data.ditbinmas = false;
+        if (data.ditlantas === undefined) data.ditlantas = false;
+        if (data.bidhumas === undefined) data.bidhumas = false;
+        data.operator = true;
+      }
     }
 
     const user = await userModel.createUser(data);

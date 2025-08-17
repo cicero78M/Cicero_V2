@@ -55,6 +55,28 @@ test('operator adds user with defaults', async () => {
   expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '1' } });
 });
 
+test('operator assigns ditbinmas role when specified', async () => {
+  mockCreateUser.mockResolvedValue({ user_id: '3' });
+  const req = {
+    body: { user_id: '3', nama: 'C', role: 'ditbinmas' },
+    user: { role: 'operator', client_id: 'c1' }
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await createUser(req, res, () => {});
+
+  expect(mockCreateUser).toHaveBeenCalledWith({
+    user_id: '3',
+    nama: 'C',
+    ditbinmas: true,
+    operator: false,
+  });
+  expect(status).toHaveBeenCalledWith(201);
+  expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '3' } });
+});
+
 test('ditbinmas updates existing user', async () => {
   mockFindUserById.mockResolvedValue({ user_id: '1', status: false });
   mockUpdateUser.mockResolvedValue({ user_id: '1', ditbinmas: true, nama: 'B' });
