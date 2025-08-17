@@ -58,7 +58,7 @@ test('operator adds user with defaults', async () => {
 test('operator assigns ditbinmas role when specified', async () => {
   mockCreateUser.mockResolvedValue({ user_id: '3' });
   const req = {
-    body: { user_id: '3', nama: 'C', role: 'ditbinmas' },
+    body: { user_id: '3', nama: 'C', roles: ['ditbinmas'] },
     user: { role: 'operator', client_id: 'c1' }
   };
   const json = jest.fn();
@@ -71,10 +71,33 @@ test('operator assigns ditbinmas role when specified', async () => {
     user_id: '3',
     nama: 'C',
     ditbinmas: true,
-    operator: false,
   });
+  expect(mockCreateUser.mock.calls[0][0].operator).toBeUndefined();
   expect(status).toHaveBeenCalledWith(201);
   expect(json).toHaveBeenCalledWith({ success: true, data: { user_id: '3' } });
+});
+
+test('operator assigns multiple roles simultaneously', async () => {
+  mockCreateUser.mockResolvedValue({ user_id: '4' });
+  const req = {
+    body: { user_id: '4', nama: 'D', roles: ['operator', 'ditbinmas'] },
+    user: { role: 'operator', client_id: 'c1' }
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await createUser(req, res, () => {});
+
+  expect(mockCreateUser).toHaveBeenCalledWith({
+    user_id: '4',
+    nama: 'D',
+    operator: true,
+    ditbinmas: true,
+    ditlantas: false,
+    bidhumas: false,
+  });
+  expect(status).toHaveBeenCalledWith(201);
 });
 
 test('operator reactivates existing user and attaches operator role', async () => {
@@ -97,6 +120,45 @@ test('operator reactivates existing user and attaches operator role', async () =
   expect(json).toHaveBeenCalledWith({
     success: true,
     data: { user_id: '1', status: true, operator: true, nama: 'A' }
+  });
+});
+
+test('operator reactivates existing user with multiple roles', async () => {
+  mockFindUserById
+    .mockResolvedValueOnce({ user_id: '5', status: false })
+    .mockResolvedValueOnce({
+      user_id: '5',
+      status: true,
+      operator: true,
+      ditbinmas: true,
+      nama: 'E'
+    });
+  const req = {
+    body: { user_id: '5', nama: 'E', roles: ['operator', 'ditbinmas'] },
+    user: { role: 'operator', client_id: 'c1' }
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await createUser(req, res, () => {});
+
+  expect(mockFindUserById).toHaveBeenCalledWith('5');
+  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'status', true);
+  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'operator', true);
+  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'ditbinmas', true);
+  expect(mockUpdateUserField).toHaveBeenCalledTimes(3);
+  expect(mockCreateUser).not.toHaveBeenCalled();
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    data: {
+      user_id: '5',
+      status: true,
+      operator: true,
+      ditbinmas: true,
+      nama: 'E'
+    }
   });
 });
 

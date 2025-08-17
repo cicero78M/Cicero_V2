@@ -24,7 +24,7 @@ export const createUser = async (req, res, next) => {
     const role = req.user?.role?.toLowerCase();
     const adminClientId = req.user?.client_id;
     const data = { ...req.body };
-    let requestedRole;
+    let roles = [];
 
     if (role === 'ditbinmas' || role === 'ditlantas' || role === 'bidhumas') {
       if (adminClientId) data.client_id = adminClientId;
@@ -34,30 +34,30 @@ export const createUser = async (req, res, next) => {
     }
 
     if (role === 'operator') {
-      requestedRole = data.role ? data.role.toLowerCase() : undefined;
-      delete data.role;
+      roles = Array.isArray(data.roles)
+        ? data.roles.map((r) => r.toLowerCase())
+        : [];
+      delete data.roles;
 
-      if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
-        data[requestedRole] = true;
-        data.operator = false;
-      } else {
-        if (data.ditbinmas === undefined) data.ditbinmas = false;
-        if (data.ditlantas === undefined) data.ditlantas = false;
-        if (data.bidhumas === undefined) data.bidhumas = false;
-        data.operator = true;
+      if (roles.length === 0) roles.push('operator');
+
+      for (const r of roles) {
+        data[r] = true;
+      }
+
+      if (roles.includes('operator')) {
+        if (!roles.includes('ditbinmas') && data.ditbinmas === undefined)
+          data.ditbinmas = false;
+        if (!roles.includes('ditlantas') && data.ditlantas === undefined)
+          data.ditlantas = false;
+        if (!roles.includes('bidhumas') && data.bidhumas === undefined)
+          data.bidhumas = false;
       }
 
       const existing = await userModel.findUserById(data.user_id);
       if (existing) {
         if (existing.status === false) {
           await userModel.updateUserField(existing.user_id, 'status', true);
-        }
-
-        const roles = [];
-        if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
-          roles.push(requestedRole);
-        } else {
-          roles.push('operator');
         }
 
         for (const r of roles) {
@@ -80,16 +80,16 @@ export const createUser = async (req, res, next) => {
         await userModel.updateUserField(existing.user_id, 'status', true);
       }
 
-      const roles = [];
+      const rolesToAdd = [];
       if (
         role === 'ditbinmas' ||
         role === 'ditlantas' ||
         role === 'bidhumas'
       ) {
-        roles.push(role);
+        rolesToAdd.push(role);
       }
 
-      for (const r of roles) {
+      for (const r of rolesToAdd) {
         await userModel.updateUserField(existing.user_id, r, true);
       }
 
