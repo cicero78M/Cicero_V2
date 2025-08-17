@@ -213,7 +213,16 @@ router.post('/dashboard-login', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'Operator belum memiliki klien yang diizinkan' });
   }
-  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, role_id: user.role_id, client_ids: user.client_ids };
+  const payload = {
+    dashboard_user_id: user.dashboard_user_id,
+    user_id: user.user_id,
+    role: user.role,
+    role_id: user.role_id,
+    client_ids: user.client_ids
+  };
+  if (user.client_ids.length === 1) {
+    payload.client_id = user.client_ids[0];
+  }
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });

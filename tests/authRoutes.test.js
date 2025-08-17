@@ -402,7 +402,7 @@ describe('POST /dashboard-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', role_id: 2, client_ids: ['c1'] });
+      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', role_id: 2, client_ids: ['c1'], client_id: 'c1' });
       expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
       expect(mockRedis.set).toHaveBeenCalledWith(
         `login_token:${res.body.token}`,
