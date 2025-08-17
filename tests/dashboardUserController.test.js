@@ -33,8 +33,8 @@ beforeEach(() => {
 });
 
 test('approveDashboardUser sends approval message', async () => {
-  mockFindById.mockResolvedValue({ user_id: '1', username: 'user', whatsapp: '0812' });
-  mockUpdateStatus.mockResolvedValue({ user_id: '1', status: true });
+  mockFindById.mockResolvedValue({ dashboard_user_id: '1', username: 'user', whatsapp: '0812' });
+  mockUpdateStatus.mockResolvedValue({ dashboard_user_id: '1', status: true });
 
   const req = { dashboardUser: { role: 'admin' }, params: { id: '1' } };
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -49,12 +49,12 @@ test('approveDashboardUser sends approval message', async () => {
     expect.stringContaining('disetujui')
   );
   expect(res.status).toHaveBeenCalledWith(200);
-  expect(res.json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', status: true } });
+  expect(res.json).toHaveBeenCalledWith({ success: true, data: { dashboard_user_id: '1', status: true } });
 });
 
 test('rejectDashboardUser sends rejection message', async () => {
-  mockFindById.mockResolvedValue({ user_id: '1', username: 'user', whatsapp: '0812' });
-  mockUpdateStatus.mockResolvedValue({ user_id: '1', status: false });
+  mockFindById.mockResolvedValue({ dashboard_user_id: '1', username: 'user', whatsapp: '0812' });
+  mockUpdateStatus.mockResolvedValue({ dashboard_user_id: '1', status: false });
 
   const req = { dashboardUser: { role: 'admin' }, params: { id: '1' } };
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -69,5 +69,5 @@ test('rejectDashboardUser sends rejection message', async () => {
     expect.stringContaining('ditolak')
   );
   expect(res.status).toHaveBeenCalledWith(200);
-  expect(res.json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', status: false } });
+  expect(res.json).toHaveBeenCalledWith({ success: true, data: { dashboard_user_id: '1', status: false } });
 });

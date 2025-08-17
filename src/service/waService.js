@@ -1669,7 +1669,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, `❌ Username ${username} tidak ditemukan.`);
       return;
     }
-    await dashboardUserModel.updateStatus(usr.user_id, true);
+    await dashboardUserModel.updateStatus(usr.dashboard_user_id, true);
     await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.`);
     if (usr.whatsapp) {
       await safeSendMessage(
@@ -1693,7 +1693,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, `❌ Username ${username} tidak ditemukan.`);
       return;
     }
-    await dashboardUserModel.updateStatus(usr.user_id, false);
+    await dashboardUserModel.updateStatus(usr.dashboard_user_id, false);
     await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
     if (usr.whatsapp) {
       await safeSendMessage(
