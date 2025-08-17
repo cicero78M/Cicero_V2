@@ -369,6 +369,33 @@ describe('POST /dashboard-login', () => {
       });
   });
 
+  test('returns 400 when operator has no allowed clients', async () => {
+      mockQuery.mockResolvedValueOnce({
+        rows: [
+            {
+              dashboard_user_id: 'd1',
+              username: 'dash',
+              password_hash: await bcrypt.hash('pass', 10),
+              role: 'admin',
+              role_id: 2,
+              status: true,
+              client_ids: [],
+              user_id: null
+            }
+        ]
+      });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toBe('Operator belum memiliki klien yang diizinkan');
+    expect(mockRedis.sAdd).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
+  });
+
   test('returns 401 when password wrong', async () => {
       mockQuery.mockResolvedValueOnce({
         rows: [

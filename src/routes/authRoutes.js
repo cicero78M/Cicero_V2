@@ -199,6 +199,11 @@ router.post('/dashboard-login', async (req, res) => {
       .status(403)
       .json({ success: false, message: 'Akun belum disetujui' });
   }
+  if (!user.client_ids || user.client_ids.length === 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'Operator belum memiliki klien yang diizinkan' });
+  }
   const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, role_id: user.role_id, client_ids: user.client_ids };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
