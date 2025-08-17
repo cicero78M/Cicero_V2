@@ -46,6 +46,32 @@ export const createUser = async (req, res, next) => {
         if (data.bidhumas === undefined) data.bidhumas = false;
         data.operator = true;
       }
+
+      const existing = await userModel.findUserById(data.user_id);
+      if (existing) {
+        if (existing.status === false) {
+          await userModel.updateUserField(existing.user_id, 'status', true);
+        }
+
+        const roles = [];
+        if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
+          roles.push(requestedRole);
+        } else {
+          roles.push('operator');
+        }
+
+        for (const r of roles) {
+          await userModel.updateUserField(existing.user_id, r, true);
+        }
+
+        const refreshed = await userModel.findUserById(existing.user_id);
+        sendSuccess(res, refreshed);
+        return;
+      }
+
+      const user = await userModel.createUser(data);
+      sendSuccess(res, user, 201);
+      return;
     }
 
     const existing = await userModel.findUserById(data.user_id);
@@ -55,13 +81,7 @@ export const createUser = async (req, res, next) => {
       }
 
       const roles = [];
-      if (role === 'operator') {
-        if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
-          roles.push(requestedRole);
-        } else {
-          roles.push('operator');
-        }
-      } else if (
+      if (
         role === 'ditbinmas' ||
         role === 'ditlantas' ||
         role === 'bidhumas'
