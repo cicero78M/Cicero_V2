@@ -1,25 +1,29 @@
 import { query } from '../repository/db.js';
 
-export async function findByUsername(username) {
+async function findOneBy(field, value) {
   const res = await query(
-    'SELECT * FROM dashboard_user WHERE username = $1',
-    [username]
+    `SELECT du.*, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
+     FROM dashboard_user du
+     LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+     WHERE du.${field} = $1
+     GROUP BY du.dashboard_user_id`,
+    [value]
   );
   return res.rows[0] || null;
 }
 
+export async function findByUsername(username) {
+  return findOneBy('username', username);
+}
+
 export async function findByWhatsApp(wa) {
-  const res = await query(
-    'SELECT * FROM dashboard_user WHERE whatsapp = $1',
-    [wa]
-  );
-  return res.rows[0] || null;
+  return findOneBy('whatsapp', wa);
 }
 
 export async function createUser(data) {
   const res = await query(
-    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role, status, client_id, user_id, whatsapp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role, status, user_id, whatsapp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       data.dashboard_user_id,
@@ -27,7 +31,6 @@ export async function createUser(data) {
       data.password_hash,
       data.role,
       data.status,
-      data.client_id,
       data.user_id ?? null,
       data.whatsapp,
     ]
@@ -35,9 +38,17 @@ export async function createUser(data) {
   return res.rows[0];
 }
 
+export async function addClients(dashboardUserId, clientIds = []) {
+  if (!clientIds || clientIds.length === 0) return;
+  const placeholders = clientIds.map((_, i) => `($1, $${i + 2})`).join(', ');
+  await query(
+    `INSERT INTO dashboard_user_clients (dashboard_user_id, client_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
+    [dashboardUserId, ...clientIds]
+  );
+}
+
 export async function findById(id) {
-  const res = await query('SELECT * FROM dashboard_user WHERE dashboard_user_id=$1', [id]);
-  return res.rows[0] || null;
+  return findOneBy('dashboard_user_id', id);
 }
 
 export async function updateStatus(id, status) {

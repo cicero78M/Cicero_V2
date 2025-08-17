@@ -92,7 +92,12 @@ export const dashRequestHandlers = {
       await waClient.sendMessage(chatId, "Masukkan Client ID target:");
       return;
     }
-    await performAction(choice, session.client_id, session.role, waClient, chatId);
+    const clientId = session.client_ids?.[0];
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "Tidak ada client terkait.");
+      return;
+    }
+    await performAction(choice, clientId, session.role, waClient, chatId);
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
   },

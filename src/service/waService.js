@@ -355,12 +355,12 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
-    setSession(chatId, {
-      menu: "dashrequest",
-      step: "main",
-      role: dashUser.role,
-      client_id: dashUser.client_id,
-    });
+      setSession(chatId, {
+        menu: "dashrequest",
+        step: "main",
+        role: dashUser.role,
+        client_ids: dashUser.client_ids,
+      });
     await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
     return;
   }
