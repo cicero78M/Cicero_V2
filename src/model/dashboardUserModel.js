@@ -40,7 +40,9 @@ export async function createUser(data) {
 }
 
 export async function addClients(dashboardUserId, clientIds = []) {
-  if (!clientIds || clientIds.length === 0) return;
+  if (!clientIds || clientIds.length === 0) {
+    throw new Error('client_ids cannot be empty');
+  }
   const placeholders = clientIds.map((_, i) => `($1, $${i + 2})`).join(', ');
   await query(
     `INSERT INTO dashboard_user_clients (dashboard_user_id, client_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
