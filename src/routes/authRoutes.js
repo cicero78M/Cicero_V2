@@ -131,9 +131,15 @@ router.post('/dashboard-register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'role_id tidak valid' });
     }
   } else {
-    const { rows } = await query('SELECT role_id, role_name FROM roles WHERE role_name = $1', ['operator']);
+    const { rows } = await query(
+      'SELECT role_id, role_name FROM roles WHERE LOWER(role_name) = LOWER($1)',
+      ['operator']
+    );
     roleRow = rows[0];
-    role_id = roleRow?.role_id;
+    if (!roleRow) {
+      return res.status(400).json({ success: false, message: 'role default tidak ditemukan' });
+    }
+    role_id = roleRow.role_id;
   }
 
   const user = await dashboardUserModel.createUser({
