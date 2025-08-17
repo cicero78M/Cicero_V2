@@ -248,16 +248,16 @@ describe('POST /dashboard-register', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.status).toBe(false);
       expect(res.body.dashboard_user_id).toBeDefined();
-    expect(mockQuery).toHaveBeenNthCalledWith(
-      1,
-      'SELECT * FROM dashboard_user WHERE username = $1',
-      ['dash']
-    );
       expect(mockQuery).toHaveBeenNthCalledWith(
-        2,
-        expect.stringContaining('INSERT INTO dashboard_user'),
-        [expect.any(String), 'dash', expect.any(String), 'operator', false, null, null, '628121234']
+        1,
+        expect.stringContaining('FROM dashboard_user'),
+        ['dash']
       );
+        expect(mockQuery).toHaveBeenNthCalledWith(
+          2,
+          expect.stringContaining('INSERT INTO dashboard_user'),
+          [expect.any(String), 'dash', expect.any(String), 'operator', false, null, '628121234']
+        );
   });
 
   test('returns 400 when whatsapp invalid', async () => {
@@ -288,15 +288,15 @@ describe('POST /dashboard-login', () => {
   test('logs in dashboard user with correct password', async () => {
       mockQuery.mockResolvedValueOnce({
         rows: [
-          {
-            dashboard_user_id: 'd1',
-            username: 'dash',
-            password_hash: await bcrypt.hash('pass', 10),
-            role: 'admin',
-            status: true,
-            client_id: 'c1',
-            user_id: null
-          }
+            {
+              dashboard_user_id: 'd1',
+              username: 'dash',
+              password_hash: await bcrypt.hash('pass', 10),
+              role: 'admin',
+              status: true,
+              client_ids: ['c1'],
+              user_id: null
+            }
         ]
       });
 
@@ -306,7 +306,7 @@ describe('POST /dashboard-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', client_id: 'c1' });
+      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', client_ids: ['c1'] });
       expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
       expect(mockRedis.set).toHaveBeenCalledWith(
         `login_token:${res.body.token}`,
@@ -323,15 +323,15 @@ describe('POST /dashboard-login', () => {
   test('returns 401 when password wrong', async () => {
       mockQuery.mockResolvedValueOnce({
         rows: [
-          {
-            dashboard_user_id: 'd1',
-            username: 'dash',
-            password_hash: await bcrypt.hash('pass', 10),
-            role: 'admin',
-            status: true,
-            client_id: 'c1',
-            user_id: null
-          }
+            {
+              dashboard_user_id: 'd1',
+              username: 'dash',
+              password_hash: await bcrypt.hash('pass', 10),
+              role: 'admin',
+              status: true,
+              client_ids: ['c1'],
+              user_id: null
+            }
         ]
       });
 

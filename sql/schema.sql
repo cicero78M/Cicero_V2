@@ -56,11 +56,16 @@ CREATE TABLE dashboard_user (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL,
   status BOOLEAN DEFAULT TRUE,
-  client_id VARCHAR REFERENCES clients(client_id),
   user_id VARCHAR REFERENCES "user"(user_id),
   whatsapp VARCHAR,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE dashboard_user_clients (
+  dashboard_user_id UUID REFERENCES dashboard_user(dashboard_user_id),
+  client_id VARCHAR REFERENCES clients(client_id),
+  PRIMARY KEY (dashboard_user_id, client_id)
 );
 
 CREATE TABLE insta_post (

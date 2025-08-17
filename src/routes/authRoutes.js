@@ -100,7 +100,7 @@ router.post('/penmas-login', async (req, res) => {
 });
 
 router.post('/dashboard-register', async (req, res) => {
-  let { username, password, role = 'operator', client_id = null, whatsapp } = req.body;
+  let { username, password, role = 'operator', client_ids = [], whatsapp } = req.body;
   const status = false;
   if (!username || !password || !whatsapp) {
     return res
@@ -128,13 +128,13 @@ router.post('/dashboard-register', async (req, res) => {
     password_hash,
     role,
     status,
-    client_id,
     user_id: null,
     whatsapp,
   });
+  await dashboardUserModel.addClients(dashboard_user_id, client_ids);
   notifyAdmin(
     `\uD83D\uDCCB Permintaan User Approval dengan data sebagai berikut :\nUsername: ${username}\nID: ${dashboard_user_id}\nRole: ${role}\nWhatsApp: ${whatsapp}\nClient ID: ${
-      client_id ?? '-'
+      client_ids.length ? client_ids.join(', ') : '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
   return res
@@ -166,7 +166,7 @@ router.post('/dashboard-login', async (req, res) => {
       .status(403)
       .json({ success: false, message: 'Akun belum disetujui' });
   }
-  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, client_id: user.client_id };
+  const payload = { dashboard_user_id: user.dashboard_user_id, user_id: user.user_id, role: user.role, client_ids: user.client_ids };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: '2h',
   });
