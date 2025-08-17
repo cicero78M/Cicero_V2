@@ -2,6 +2,21 @@
 
 import { query } from '../repository/db.js';
 
+async function addRole(userId, roleName) {
+  await query('INSERT INTO roles (role_name) VALUES ($1) ON CONFLICT (role_name) DO NOTHING', [roleName]);
+  await query(
+    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, (SELECT role_id FROM roles WHERE role_name=$2)) ON CONFLICT DO NOTHING',
+    [userId, roleName]
+  );
+}
+
+async function removeRole(userId, roleName) {
+  await query(
+    'DELETE FROM user_roles WHERE user_id=$1 AND role_id=(SELECT role_id FROM roles WHERE role_name=$2)',
+    [userId, roleName]
+  );
+}
+
 // Helper to normalize text fields to uppercase
 function normalizeUserFields(data) {
   if (!data) return;
@@ -141,16 +156,17 @@ export async function getUsersMissingDataByClient(clientId) {
 }
 
 export async function findUserById(user_id) {
-  const { rows } = await query('SELECT * FROM "user" WHERE user_id=$1', [
-    user_id,
-  ]);
+  const { rows } = await query(
+    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1\n     GROUP BY u.user_id`,
+    [user_id]
+  );
   return rows[0];
 }
 
 // Ambil user berdasarkan user_id dan client_id
 export async function findUserByIdAndClient(user_id, client_id) {
   const { rows } = await query(
-    'SELECT * FROM "user" WHERE user_id=$1 AND client_id=$2',
+    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND u.client_id=$2\n     GROUP BY u.user_id`,
     [user_id, client_id]
   );
   return rows[0];
@@ -179,21 +195,24 @@ export async function updateUserField(user_id, field, value) {
     "divisi",
     "jabatan",
     "desa",
-    "ditbinmas",
-    "ditlantas",
-    "bidhumas",
     "premium_status",
     "premium_end_date",
   ];
-  if (!allowed.includes(field)) throw new Error("Field tidak diizinkan!");
+  const roleFields = ["ditbinmas", "ditlantas", "bidhumas"];
+  if (!allowed.includes(field) && !roleFields.includes(field)) throw new Error("Field tidak diizinkan!");
   if (["nama", "title", "divisi", "jabatan", "desa"].includes(field) && typeof value === 'string') {
     value = value.toUpperCase();
   }
-  const { rows } = await query(
-    `UPDATE "user" SET ${field}=$1 WHERE user_id=$2 RETURNING *`,
+  if (roleFields.includes(field)) {
+    if (value) await addRole(user_id, field);
+    else await removeRole(user_id, field);
+    return findUserById(user_id);
+  }
+  await query(
+    `UPDATE "user" SET ${field}=$1 WHERE user_id=$2`,
     [value, user_id]
   );
-  return rows[0];
+  return findUserById(user_id);
 }
 
 // Ambil user dengan exception per client
@@ -207,13 +226,13 @@ export async function getExceptionUsersByClient(client_id) {
 
 // Ambil user dengan flag direktorat binmas atau lantas
 export async function getDirektoratUsers(clientId = null) {
-  let sql =
-    'SELECT * FROM "user" WHERE (ditbinmas = true OR ditlantas = true OR bidhumas = true)';
+  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name IN ('ditbinmas','ditlantas','bidhumas')`;
   const params = [];
   if (clientId) {
-    sql += ' AND client_id = $1';
+    sql += ' AND u.client_id = $1';
     params.push(clientId);
   }
+  sql += ' GROUP BY u.user_id';
   const { rows } = await query(sql, params);
   return rows;
 }
@@ -223,28 +242,30 @@ export async function getUsersByDirektorat(flag, clientId = null) {
   if (!['ditbinmas', 'ditlantas', 'bidhumas'].includes(flag)) {
     throw new Error('Direktorat flag tidak valid');
   }
-  let sql = `SELECT * FROM "user" WHERE ${flag} = true`;
-  const params = [];
+  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name = $1`;
+  const params = [flag];
   if (clientId) {
-    sql += ' AND client_id = $1';
+    sql += ' AND u.client_id = $2';
     params.push(clientId);
   }
+  sql += ' GROUP BY u.user_id';
   const { rows } = await query(sql, params);
   return rows;
 }
 
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
-  const result = await query('SELECT * FROM "user" WHERE whatsapp = $1', [
-    wa,
-  ]);
-  return result.rows[0];
+  const { rows } = await query(
+    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.whatsapp = $1\n     GROUP BY u.user_id`,
+    [wa]
+  );
+  return rows[0];
 }
 
 export async function findUserByIdAndWhatsApp(userId, wa) {
   if (!userId || !wa) return null;
   const { rows } = await query(
-    'SELECT * FROM "user" WHERE user_id = $1 AND whatsapp = $2',
+    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id`,
     [userId, wa]
   );
   return rows[0];
@@ -283,10 +304,10 @@ export async function createUser(userData) {
   // Contoh userData: {user_id, nama, title, divisi, jabatan, ...}
   // Sesuaikan dengan struktur dan database-mu!
   normalizeUserFields(userData);
+  const roles = ['ditbinmas', 'ditlantas', 'bidhumas'].filter((r) => userData[r]);
   const q = `
-    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception, ditbinmas, ditlantas, bidhumas)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-    RETURNING *;
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
   `;
   const params = [
     userData.user_id,
@@ -300,27 +321,40 @@ export async function createUser(userData) {
     userData.insta || "",
     userData.tiktok || "",
     userData.client_id || null,
-    userData.exception ?? false,
-    userData.ditbinmas ?? false,
-    userData.ditlantas ?? false,
-    userData.bidhumas ?? false
+    userData.exception ?? false
   ];
-  const res = await query(q, params);
-  return res.rows[0];
+  await query(q, params);
+  for (const r of roles) {
+    await addRole(userData.user_id, r);
+  }
+  return findUserById(userData.user_id);
 }
 
 export async function updateUser(userId, userData) {
   normalizeUserFields(userData);
+  const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas'];
+  const roles = {};
+  for (const rf of roleFields) {
+    if (rf in userData) {
+      roles[rf] = userData[rf];
+      delete userData[rf];
+    }
+  }
   const columns = Object.keys(userData);
-  if (columns.length === 0) return null;
-  const setClause = columns.map((c, i) => `${c}=$${i + 1}`).join(', ');
-  const params = columns.map((c) => userData[c]);
-  params.push(userId);
-  const { rows } = await query(
-    `UPDATE "user" SET ${setClause} WHERE user_id=$${columns.length + 1} RETURNING *`,
-    params
-  );
-  return rows[0];
+  if (columns.length > 0) {
+    const setClause = columns.map((c, i) => `${c}=$${i + 1}`).join(', ');
+    const params = columns.map((c) => userData[c]);
+    params.push(userId);
+    await query(
+      `UPDATE "user" SET ${setClause} WHERE user_id=$${columns.length + 1}`,
+      params
+    );
+  }
+  for (const [r, val] of Object.entries(roles)) {
+    if (val) await addRole(userId, r);
+    else await removeRole(userId, r);
+  }
+  return findUserById(userId);
 }
 
 export async function deleteUser(userId) {

@@ -141,10 +141,10 @@ export async function getRekapKomentarByClient(
       AND u.tiktok IS NOT NULL
       AND (
         (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-        OR (SELECT client_type FROM cli) = 'direktorat' AND (
-          ($1 = 'ditbinmas' AND u.ditbinmas = true) OR
-          ($1 = 'ditlantas' AND u.ditlantas = true) OR
-          ($1 = 'bidhumas' AND u.bidhumas = true)
+        OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
+          SELECT 1 FROM user_roles ur
+          JOIN roles r ON ur.role_id = r.role_id
+          WHERE ur.user_id = u.user_id AND r.role_name = $1
         )
       )
     ORDER BY jumlah_komentar DESC, u.nama ASC

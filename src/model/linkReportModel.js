@@ -193,10 +193,10 @@ export async function getRekapLinkByClient(
      WHERE u.status = true
        AND (
          (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-         OR (SELECT client_type FROM cli) = 'direktorat' AND (
-           ($1 = 'ditbinmas' AND u.ditbinmas = true) OR
-           ($1 = 'ditlantas' AND u.ditlantas = true) OR
-           ($1 = 'bidhumas' AND u.bidhumas = true)
+         OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
+           SELECT 1 FROM user_roles ur
+           JOIN roles r ON ur.role_id = r.role_id
+           WHERE ur.user_id = u.user_id AND r.role_name = $1
          )
        )
      GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link

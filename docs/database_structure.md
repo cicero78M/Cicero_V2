@@ -54,9 +54,20 @@ Holds users belonging to a client.
 - `desa` – desa binaan for Ditbinmas users
 - `client_id` – foreign key referencing `clients(client_id)`
 - `status` – boolean flag
-- `ditbinmas`, `ditlantas`, `bidhumas` – boolean flags for directorate assignment
 - `premium_status` – boolean flag indicating active subscription
 - `premium_end_date` – date the premium access expires
+- roles are assigned through the `user_roles` pivot table
+
+### `roles`
+Stores available role names.
+- `role_id` – serial primary key
+- `role_name` – unique role identifier
+
+### `user_roles`
+Pivot table linking users to roles.
+- `user_id` – references `user(user_id)`
+- `role_id` – references `roles(role_id)`
+- composite primary key `(user_id, role_id)`
 
 ### `dashboard_user`
 Credentials for the web dashboard login.
