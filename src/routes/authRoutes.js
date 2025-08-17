@@ -11,6 +11,7 @@ import {
   formatToWhatsAppId,
   getAdminWAIds,
   normalizeWhatsappNumber,
+  safeSendMessage,
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
 import waClient, { waReady } from "../service/waService.js";
@@ -20,7 +21,7 @@ import { insertLoginLog } from "../model/loginLogModel.js";
 function notifyAdmin(message) {
   if (!waReady) return;
   for (const wa of getAdminWAIds()) {
-    waClient.sendMessage(wa, message).catch(() => {});
+    safeSendMessage(waClient, wa, message);
   }
 }
 
@@ -161,6 +162,14 @@ router.post('/dashboard-register', async (req, res) => {
       client_ids.length ? client_ids.join(', ') : '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
+  if (waReady && whatsapp) {
+    const wid = formatToWhatsAppId(whatsapp);
+    safeSendMessage(
+      waClient,
+      wid,
+      "\uD83D\uDCCB Permintaan registrasi dashboard Anda telah diterima dan menunggu persetujuan admin."
+    );
+  }
   return res
     .status(201)
     .json({ success: true, dashboard_user_id: user.dashboard_user_id, status: user.status });
