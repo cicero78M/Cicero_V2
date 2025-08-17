@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { getAmplifyRekap } from '../controller/amplifyController.js';
-import { authRequired } from '../middleware/authMiddleware.js';
+import { verifyDashboardToken } from '../middleware/dashboardAuth.js';
 
 const router = Router();
 
-router.get('/rekap', authRequired, getAmplifyRekap);
+router.get('/rekap', verifyDashboardToken, getAmplifyRekap);
 export default router;

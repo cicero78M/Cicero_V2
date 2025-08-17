@@ -7,15 +7,16 @@ import {
   getRapidTiktokPosts,
   getRapidTiktokInfo
 } from '../controller/tiktokController.js';
-import { authRequired } from '../middleware/authMiddleware.js';
+import { verifyDashboardToken } from '../middleware/dashboardAuth.js';
 
 const router = Router();
 
-router.get('/comments', authRequired, getTiktokComments);
-router.get('/rekap-komentar', authRequired, getTiktokRekapKomentar);
-router.get('/posts', authRequired, getTiktokPosts);
-router.get('/rapid-profile', authRequired, getRapidTiktokProfile);
-router.get('/rapid-posts', authRequired, getRapidTiktokPosts);
-router.get('/rapid-info', authRequired, getRapidTiktokInfo);
+router.use(verifyDashboardToken);
+router.get('/comments', getTiktokComments);
+router.get('/rekap-komentar', getTiktokRekapKomentar);
+router.get('/posts', getTiktokPosts);
+router.get('/rapid-profile', getRapidTiktokProfile);
+router.get('/rapid-posts', getRapidTiktokPosts);
+router.get('/rapid-info', getRapidTiktokInfo);
 
 export default router;
