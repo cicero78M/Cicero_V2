@@ -24,31 +24,17 @@ export const createUser = async (req, res, next) => {
     const role = req.user?.role?.toLowerCase();
     const adminClientId = req.user?.client_id;
     const data = { ...req.body };
+    let requestedRole;
 
     if (role === 'ditbinmas' || role === 'ditlantas' || role === 'bidhumas') {
       if (adminClientId) data.client_id = adminClientId;
       if (role === 'ditbinmas') data.ditbinmas = true;
       if (role === 'ditlantas') data.ditlantas = true;
       if (role === 'bidhumas') data.bidhumas = true;
-
-      const existing = await userModel.findUserById(data.user_id);
-      if (existing) {
-        delete data.user_id;
-        Object.keys(data).forEach((k) => {
-          if (data[k] === undefined) delete data[k];
-        });
-        const updated = await userModel.updateUser(existing.user_id, data);
-        sendSuccess(res, updated);
-        return;
-      }
-
-      const user = await userModel.createUser(data);
-      sendSuccess(res, user, 201);
-      return;
     }
 
     if (role === 'operator') {
-      const requestedRole = data.role ? data.role.toLowerCase() : undefined;
+      requestedRole = data.role ? data.role.toLowerCase() : undefined;
       delete data.role;
 
       if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
@@ -60,6 +46,36 @@ export const createUser = async (req, res, next) => {
         if (data.bidhumas === undefined) data.bidhumas = false;
         data.operator = true;
       }
+    }
+
+    const existing = await userModel.findUserById(data.user_id);
+    if (existing) {
+      if (existing.status === false) {
+        await userModel.updateUserField(existing.user_id, 'status', true);
+      }
+
+      const roles = [];
+      if (role === 'operator') {
+        if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(requestedRole)) {
+          roles.push(requestedRole);
+        } else {
+          roles.push('operator');
+        }
+      } else if (
+        role === 'ditbinmas' ||
+        role === 'ditlantas' ||
+        role === 'bidhumas'
+      ) {
+        roles.push(role);
+      }
+
+      for (const r of roles) {
+        await userModel.updateUserField(existing.user_id, r, true);
+      }
+
+      const refreshed = await userModel.findUserById(existing.user_id);
+      sendSuccess(res, refreshed);
+      return;
     }
 
     const user = await userModel.createUser(data);
