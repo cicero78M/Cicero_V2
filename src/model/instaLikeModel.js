@@ -131,6 +131,15 @@ export async function getRekapLikesByClient(
 
   let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
+  let likeCountsSelect = `
+    SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
+    FROM valid_likes
+    GROUP BY username, client_id
+  `;
+  let likeJoin = `
+    lower(replace(trim(u.insta), '@', '')) = lc.username
+    AND LOWER(u.client_id) = LOWER(lc.client_id)
+  `;
   if (clientType === 'direktorat') {
     postClientFilter = '1=1';
     const roleIdx = params.push(roleLower || client_id);
@@ -139,6 +148,12 @@ export async function getRekapLikesByClient(
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
+    likeCountsSelect = `
+      SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
+      FROM valid_likes
+      GROUP BY username
+    `;
+    likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
     if (clientId) {
       const clientIdx = params.push(clientId);
       postClientFilter = `LOWER(p.client_id) = LOWER($${clientIdx})`;
@@ -170,9 +185,7 @@ export async function getRekapLikesByClient(
         AND ${tanggalFilter}
     ),
     like_counts AS (
-      SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
-      FROM valid_likes
-      GROUP BY username, client_id
+      ${likeCountsSelect}
     )
     SELECT
       u.user_id,
@@ -187,8 +200,7 @@ export async function getRekapLikesByClient(
     FROM "user" u
     JOIN clients c ON c.client_id = u.client_id
     LEFT JOIN like_counts lc
-      ON lower(replace(trim(u.insta), '@', '')) = lc.username
-     AND LOWER(u.client_id) = LOWER(lc.client_id)
+      ON ${likeJoin}
     WHERE u.status = true
       AND u.insta IS NOT NULL
       AND ${userWhere}
