@@ -35,7 +35,8 @@ beforeEach(() => {
 });
 
 test('createLinkReport inserts row', async () => {
-  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc' });
+  const today = new Date().toISOString();
+  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc', created_at: today });
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const data = { shortcode: 'abc', user_id: '1', instagram_link: 'a' };
   const res = await createLinkReport(data);
@@ -43,7 +44,7 @@ test('createLinkReport inserts row', async () => {
   expect(mockFindPost).toHaveBeenCalledWith('abc');
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('ON CONFLICT (shortcode, user_id)'),
-    ['abc', '1', 'a', null, null, null, null, null]
+    ['abc', '1', 'a', null, null, null, null, today]
   );
 });
 
@@ -51,6 +52,15 @@ test('createLinkReport throws if post missing', async () => {
   mockFindPost.mockResolvedValueOnce(null);
   await expect(createLinkReport({ shortcode: 'xyz' })).rejects.toThrow('shortcode not found');
   expect(mockFindPost).toHaveBeenCalledWith('xyz');
+  expect(mockQuery).not.toHaveBeenCalled();
+});
+
+test('createLinkReport rejects if post not from today', async () => {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc', created_at: yesterday });
+  await expect(
+    createLinkReport({ shortcode: 'abc', user_id: '1', instagram_link: 'a' })
+  ).rejects.toThrow("reports can only be created for today's posts");
   expect(mockQuery).not.toHaveBeenCalled();
 });
 
