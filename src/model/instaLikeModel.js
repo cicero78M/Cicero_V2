@@ -79,24 +79,42 @@ export async function getLikesByShortcode(shortcode) {
  * @returns {Promise<Array>}
  */
 
-export async function getRekapLikesByClient(client_id, periode = "harian", tanggal, start_date, end_date) {
-  let tanggalFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+export async function getRekapLikesByClient(
+  client_id,
+  periode = "harian",
+  tanggal,
+  start_date,
+  end_date,
+  role
+) {
+  const clientTypeRes = await query(
+    'SELECT client_type FROM clients WHERE client_id = $1',
+    [client_id]
+  );
+  const clientType = clientTypeRes.rows[0]?.client_type;
+
   const params = [client_id];
+  if (clientType === 'direktorat') params.push(role);
+
+  const nextParam = params.length + 1;
+  let tanggalFilter =
+    "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    tanggalFilter = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    tanggalFilter = `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${nextParam}::date AND $${nextParam + 1}::date`;
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
-      tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      tanggalFilter = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${nextParam}::date)`;
     } else {
-      tanggalFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      tanggalFilter =
+        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (periode === 'mingguan') {
     if (tanggal) {
       params.push(tanggal);
-      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+      tanggalFilter = `date_trunc('week', p.created_at) = date_trunc('week', $${nextParam}::date)`;
     } else {
       tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
     }
@@ -104,17 +122,18 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
     tanggalFilter = '1=1';
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = "p.created_at::date = $2::date";
+    tanggalFilter = `p.created_at::date = $${nextParam}::date`;
   }
 
-  const clientTypeRes = await query('SELECT client_type FROM clients WHERE client_id = $1', [client_id]);
-  const clientType = clientTypeRes.rows[0]?.client_type;
-
   let userJoin = '';
-  let userWhere = 'u.client_id = $1';
+  let userWhere = 'LOWER(u.client_id) = LOWER($1)';
+  let likeWhere = 'LOWER(p.client_id) = LOWER($1)';
   if (clientType === 'direktorat') {
-    userJoin = 'JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id';
-    userWhere = 'r.role_name = $1';
+    userJoin =
+      'JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id';
+    userWhere = 'LOWER(r.role_name) = LOWER($2)';
+    likeWhere =
+      "LOWER(p.client_id) IN (SELECT LOWER(u.client_id) FROM \"user\" u JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id WHERE LOWER(r.role_name) = LOWER($2))";
   }
 
   const { rows } = await query(`
@@ -130,7 +149,7 @@ export async function getRekapLikesByClient(client_id, periode = "harian", tangg
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
       ) AS lk ON TRUE
-      WHERE p.client_id = $1
+      WHERE ${likeWhere}
         AND ${tanggalFilter}
     ),
     like_counts AS (
