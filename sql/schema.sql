@@ -82,6 +82,12 @@ CREATE TABLE insta_post (
   created_at TIMESTAMP
 );
 
+CREATE TABLE insta_post_roles (
+  shortcode VARCHAR REFERENCES insta_post(shortcode) ON DELETE CASCADE,
+  role_name VARCHAR NOT NULL,
+  PRIMARY KEY (shortcode, role_name)
+);
+
 CREATE TABLE insta_like (
   shortcode VARCHAR PRIMARY KEY REFERENCES insta_post(shortcode),
   likes JSONB,
