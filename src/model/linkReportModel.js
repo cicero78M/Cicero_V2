@@ -196,15 +196,15 @@ export async function getRekapLinkByClient(
            (CASE WHEN r.twitter_link IS NOT NULL AND r.twitter_link <> '' THEN 1 ELSE 0 END) +
            (CASE WHEN r.tiktok_link IS NOT NULL AND r.tiktok_link <> '' THEN 1 ELSE 0 END) +
            (CASE WHEN r.youtube_link IS NOT NULL AND r.youtube_link <> '' THEN 1 ELSE 0 END)
-         ) AS jumlah_link
-       FROM link_report r
-       JOIN insta_post p ON p.shortcode = r.shortcode
-       WHERE p.client_id = $1 AND ${dateFilterReport}
-       GROUP BY r.user_id
-     )
-     SELECT
-       u.user_id,
-       u.title,
+       ) AS jumlah_link
+      FROM link_report r
+      JOIN insta_post p ON p.shortcode = r.shortcode
+      WHERE p.client_id = $1 AND ${dateFilterPost} AND ${dateFilterReport}
+      GROUP BY r.user_id
+    )
+    SELECT
+      u.user_id,
+      u.title,
        u.nama,
        u.insta AS username,
        u.divisi,
