@@ -1357,7 +1357,13 @@ export const clientRequestHandlers = {
       });
       const filePath = await saveLinkReportExcel(rows, client_id, monthName);
       const buffer = await fs.readFile(filePath);
-      await sendWAFile(waClient, buffer, path.basename(filePath), getAdminWAIds());
+      await sendWAFile(
+        waClient,
+        buffer,
+        path.basename(filePath),
+        getAdminWAIds(),
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
       await waClient.sendMessage(chatId, "✅ File Excel dikirim ke admin.");
       await fs.unlink(filePath);
     } catch (err) {
