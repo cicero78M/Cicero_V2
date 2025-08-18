@@ -70,7 +70,7 @@ async function deleteShortcodes(shortcodesToDelete, clientId = null) {
 
 async function getEligibleClients() {
   const res = await query(
-    `SELECT client_ID as id, client_insta FROM clients
+    `SELECT client_id as id, client_insta FROM clients
       WHERE client_status=true
         AND (client_insta_status=true OR client_amplify_status=true)
         AND client_insta IS NOT NULL`

@@ -77,6 +77,26 @@ describe('POST /login', () => {
     });
   });
 
+  test('sets role to client_id for direktorat client', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          client_id: 'DIT1',
+          nama: 'Dit',
+          client_operator: '0812',
+          client_type: 'direktorat'
+        }
+      ]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ client_id: 'DIT1', client_operator: '0812' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.client).toEqual({ client_id: 'DIT1', nama: 'Dit', role: 'dit1' });
+  });
+
   test('returns 401 when client not found', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
@@ -399,20 +419,22 @@ describe('POST /dashboard-register', () => {
 
 describe('POST /dashboard-login', () => {
   test('logs in dashboard user with correct password', async () => {
-      mockQuery.mockResolvedValueOnce({
+    mockQuery
+      .mockResolvedValueOnce({
         rows: [
-            {
-              dashboard_user_id: 'd1',
-              username: 'dash',
-              password_hash: await bcrypt.hash('pass', 10),
-              role: 'admin',
-              role_id: 2,
-              status: true,
-              client_ids: ['c1'],
-              user_id: null
-            }
+          {
+            dashboard_user_id: 'd1',
+            username: 'dash',
+            password_hash: await bcrypt.hash('pass', 10),
+            role: 'admin',
+            role_id: 2,
+            status: true,
+            client_ids: ['c1'],
+            user_id: null
+          }
         ]
-      });
+      })
+      .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] });
 
     const res = await request(app)
       .post('/api/auth/dashboard-login')
@@ -420,18 +442,58 @@ describe('POST /dashboard-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-      expect(res.body.user).toEqual({ dashboard_user_id: 'd1', user_id: null, role: 'admin', role_id: 2, client_ids: ['c1'], client_id: 'c1' });
-      expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
-      expect(mockRedis.set).toHaveBeenCalledWith(
-        `login_token:${res.body.token}`,
-        'dashboard:d1',
-        { EX: 2 * 60 * 60 }
-      );
-      expect(mockInsertLoginLog).toHaveBeenCalledWith({
-        actorId: 'd1',
-        loginType: 'operator',
-        loginSource: 'web'
-      });
+    expect(res.body.user).toEqual({
+      dashboard_user_id: 'd1',
+      user_id: null,
+      role: 'admin',
+      role_id: 2,
+      client_ids: ['c1'],
+      client_id: 'c1'
+    });
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'dashboard:d1',
+      { EX: 2 * 60 * 60 }
+    );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'd1',
+      loginType: 'operator',
+      loginSource: 'web'
+    });
+  });
+
+  test('sets role to client_id for direktorat client', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'd1',
+            username: 'dash',
+            password_hash: await bcrypt.hash('pass', 10),
+            role: 'admin',
+            role_id: 2,
+            status: true,
+            client_ids: ['DIT1'],
+            user_id: null
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toEqual({
+      dashboard_user_id: 'd1',
+      user_id: null,
+      role: 'dit1',
+      role_id: 2,
+      client_ids: ['DIT1'],
+      client_id: 'DIT1'
+    });
   });
 
   test('returns 400 when operator has no allowed clients', async () => {
