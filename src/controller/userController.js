@@ -1,4 +1,5 @@
 import * as userModel from '../model/userModel.js';
+import * as clientService from '../service/clientService.js';
 import { sendSuccess } from '../utils/response.js';
 
 export const getAllUsers = async (req, res, next) => {
@@ -169,17 +170,6 @@ export const getUserList = async (req, res, next) => {
           .json({ success: false, message: 'client_id wajib diisi' });
       }
       users = await userModel.getUsersByClient(tokenClientId, role);
-    } else if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role)) {
-      if (!tokenClientId) {
-        return res
-          .status(400)
-          .json({ success: false, message: 'client_id wajib diisi' });
-      }
-      if (tokenClientId.toUpperCase() === role.toUpperCase()) {
-        users = await userModel.getUsersByDirektorat(role);
-      } else {
-        users = await userModel.getUsersByDirektorat(role, tokenClientId);
-      }
     } else {
       const clientId = req.query.client_id;
       if (!clientId) {
@@ -187,7 +177,29 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      users = await userModel.getUsersByClient(clientId, role);
+
+      const client = await clientService.findClientById(clientId);
+      const clientType = client?.client_type?.toLowerCase();
+
+      if (clientType === 'direktorat') {
+        const filterClientId =
+          tokenClientId &&
+          tokenClientId.toLowerCase() !== clientId.toLowerCase()
+            ? tokenClientId
+            : null;
+        if (filterClientId) {
+          users = await userModel.getUsersByDirektorat(
+            clientId.toLowerCase(),
+            filterClientId
+          );
+        } else {
+          users = await userModel.getUsersByDirektorat(clientId.toLowerCase());
+        }
+      } else if (clientType === 'org' && role !== 'operator') {
+        users = await userModel.getUsersByClient(clientId, role);
+      } else {
+        users = await userModel.getUsersByClient(clientId, role);
+      }
     }
     sendSuccess(res, users);
   } catch (err) {
