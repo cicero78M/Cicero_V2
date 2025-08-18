@@ -4,6 +4,9 @@ import pkg from 'whatsapp-web.js';
 const { MessageMedia } = pkg;
 dotenv.config();
 
+const DEFAULT =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 export function getAdminWhatsAppList() {
   return (process.env.ADMIN_WHATSAPP || '')
     .split(',')
@@ -34,7 +37,7 @@ export async function sendWAFile(
   buffer,
   filename,
   chatIds = null,
-  mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  mimeType = DEFAULT
 ) {
   const targets = chatIds
     ? Array.isArray(chatIds)
