@@ -32,9 +32,9 @@ Server Express akan aktif di port yang ditentukan dan memuat semua route API ser
 
 Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
 - `oprrequest` → mengelola data user dan rekap link harian. Detail pada `docs/wa_operator_request.md`.
-- `userrequest` → registrasi atau melihat bantuan bot. Lihat `docs/wa_user_registration.md`.
+- `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
 
-Pengguna cukup menyimpan nomor bot, mengirim perintah sesuai menu, lalu mengikuti instruksi balasan.
+Pengguna cukup menyimpan nomor bot, mengirim perintah `userrequest`, lalu mengikuti instruksi balasan.
 
 ## 5. Akses Dashboard
 
