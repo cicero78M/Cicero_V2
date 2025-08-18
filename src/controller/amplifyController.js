@@ -22,7 +22,15 @@ export async function getAmplifyRekap(req, res) {
       tag: 'AMPLIFY',
       msg: `getAmplifyRekap ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}`
     });
-    const data = await getRekapLinkByClient(client_id, periode, tanggal, startDate, endDate);
+    const role = req.user?.role;
+    const data = await getRekapLinkByClient(
+      client_id,
+      periode,
+      tanggal,
+      startDate,
+      endDate,
+      role
+    );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
     res.json({ success: true, data, chartHeight });

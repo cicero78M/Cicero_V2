@@ -76,12 +76,14 @@ export async function getTiktokRekapKomentar(req, res) {
       .json({ success: false, message: 'client_id tidak diizinkan' });
   }
   try {
+    const role = req.user?.role;
     const data = await getRekapKomentarByClient(
       client_id,
       periode,
       tanggal,
       startDate,
-      endDate
+      endDate,
+      role
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);

@@ -30,7 +30,14 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyRekap(req, res);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, '2024-01-01', '2024-01-31');
+  expect(mockGetRekap).toHaveBeenCalledWith(
+    'c1',
+    'harian',
+    undefined,
+    '2024-01-01',
+    '2024-01-31',
+    undefined
+  );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 300 }));
 });
 
@@ -57,7 +64,14 @@ test('allows authorized client_id', async () => {
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyRekap(req, res);
   expect(res.status).not.toHaveBeenCalledWith(403);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, undefined, undefined);
+  expect(mockGetRekap).toHaveBeenCalledWith(
+    'c1',
+    'harian',
+    undefined,
+    undefined,
+    undefined,
+    undefined
+  );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
