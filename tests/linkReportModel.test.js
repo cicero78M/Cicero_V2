@@ -74,23 +74,61 @@ test('findLinkReportByShortcode joins with insta_post', async () => {
 });
 
 test('getReportsTodayByClient filters by client', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'x' }] });
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ shortcode: 'x' }] });
   const rows = await getReportsTodayByClient('POLRES');
   expect(rows).toEqual([{ shortcode: 'x' }]);
-  expect(mockQuery).toHaveBeenCalledWith(
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('SELECT client_type FROM clients'),
+    ['POLRES']
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
     expect.stringContaining('JOIN "user" u ON u.user_id = r.user_id'),
     ['POLRES']
   );
 });
 
 test('getReportsTodayByShortcode filters by client and shortcode', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const rows = await getReportsTodayByShortcode('POLRES', 'abc');
   expect(rows).toEqual([{ shortcode: 'abc' }]);
-  expect(mockQuery).toHaveBeenCalledWith(
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('SELECT client_type FROM clients'),
+    ['POLRES']
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
     expect.stringContaining('r.shortcode = $2'),
     ['POLRES', 'abc']
   );
+});
+
+test('getReportsTodayByClient uses role filter for directorate', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getReportsTodayByClient('ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).toContain('roles');
+  expect(sql).toContain('role_name = $1');
+});
+
+test('getReportsTodayByShortcode uses role filter for directorate', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getReportsTodayByShortcode('ditbinmas', 'abc');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).toContain('roles');
+  expect(sql).toContain('role_name = $1');
 });
 
 test('getReportsThisMonthByClient selects monthly rows', async () => {

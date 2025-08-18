@@ -1,8 +1,6 @@
 import { query } from "../../../db/index.js";
 import { getUsersByClient, getUsersByDirektorat } from "../../../model/userModel.js";
-import {
-  getShortcodesTodayByClient,
-} from "../../../model/instaPostModel.js";
+import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import {
   getReportsTodayByClient,
   getReportsTodayByShortcode,
@@ -10,33 +8,31 @@ import {
 import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision, sortDivisionKeys, getGreeting } from "../../../utils/utilsHelper.js";
 
-async function getClientNama(client_id) {
+async function getClientInfo(client_id) {
   const res = await query(
-    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_type FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
-  return res.rows[0]?.nama || client_id;
+  return {
+    nama: res.rows[0]?.nama || client_id,
+    clientType: res.rows[0]?.client_type || null,
+  };
 }
 
 export async function absensiLink(client_id, opts = {}) {
   const { clientFilter } = opts;
-  const roleFlag = opts.roleFlag;
   const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(targetClient);
+  const { nama: clientNama, clientType } = await getClientInfo(targetClient);
   let users;
-  if (
-    roleFlag &&
-    typeof roleFlag === "string" &&
-    roleFlag.toUpperCase() === targetClient.toUpperCase()
-  ) {
-    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
-      (u) => u.status === true
-    );
+  if (clientType === "direktorat") {
+    users = (
+      await getUsersByDirektorat(targetClient.toLowerCase(), targetClient)
+    ).filter((u) => u.status === true);
   } else {
     users = await getUsersByClient(targetClient);
   }
@@ -123,8 +119,13 @@ export async function absensiLinkPerPost(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
-  const users = await getUsersByClient(client_id);
+  const { nama: clientNama, clientType } = await getClientInfo(client_id);
+  const users =
+    clientType === "direktorat"
+      ? (
+          await getUsersByDirektorat(client_id.toLowerCase(), client_id)
+        ).filter((u) => u.status === true)
+      : await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
