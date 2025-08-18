@@ -155,6 +155,7 @@ export async function getRekapKomentarByClient(
       GROUP BY username
     )
     SELECT
+      u.client_id,
       u.user_id,
       u.title,
       u.nama,
