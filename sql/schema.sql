@@ -140,6 +140,12 @@ CREATE TABLE tiktok_comment (
   updated_at TIMESTAMP
 );
 
+CREATE TABLE tiktok_post_roles (
+  video_id VARCHAR REFERENCES tiktok_post(video_id) ON DELETE CASCADE,
+  role_name VARCHAR NOT NULL,
+  PRIMARY KEY (video_id, role_name)
+);
+
 
 -- Instagram data tables
 -- Tabel utama dengan informasi profil dasar
