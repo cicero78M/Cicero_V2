@@ -42,10 +42,11 @@ export async function absensiLikes(client_id, opts = {}) {
   const { nama: clientNama, clientType } = await getClientInfo(targetClient);
 
   if (clientType === "direktorat") {
-    const polresIds = (await getClientsByRole("ditbinmas")).map((c) =>
+    const roleName = (roleFlag || targetClient).toLowerCase();
+    const polresIds = (await getClientsByRole(roleName)).map((c) =>
       c.toUpperCase()
     );
-    const shortcodes = await getShortcodesTodayByClient("ditbinmas");
+    const shortcodes = await getShortcodesTodayByClient(roleName);
     if (!shortcodes.length)
       return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
@@ -59,7 +60,7 @@ export async function absensiLikes(client_id, opts = {}) {
     }
 
     const allUsers = (
-      await getUsersByDirektorat("ditbinmas")
+      await getUsersByDirektorat(roleName)
     ).filter((u) => u.status === true);
     const usersByClient = {};
     allUsers.forEach((u) => {

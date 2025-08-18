@@ -93,11 +93,12 @@ test('filters users by client_id for non-directorate clients', async () => {
 test('filters users by role for directorate clients', async () => {
   mockClientType('direktorat');
   mockQuery.mockResolvedValueOnce({ rows: [] });
-  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'kabid');
+  await getRekapLikesByClient('ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
-  expect(sql).toContain('JOIN user_roles');
-  expect(sql).toContain('JOIN roles');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
-  expect(sql).toContain('LOWER(p.client_id) IN (SELECT LOWER(u.client_id)');
-  expect(sql).not.toContain('u.client_id = $1');
+  expect(sql).toContain('user_roles ur');
+  expect(sql).toContain('roles r');
+  expect(sql).toContain('EXISTS');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
 });
