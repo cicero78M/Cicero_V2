@@ -22,6 +22,7 @@ export async function getInstaRekapLikes(req, res) {
   const startDate =
     req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
+  const role = req.query.role;
     if (!client_id) {
       return res.status(400).json({ success: false, message: "client_id wajib diisi" });
     }
@@ -42,7 +43,8 @@ export async function getInstaRekapLikes(req, res) {
       periode,
       tanggal,
       startDate,
-      endDate
+      endDate,
+      role
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
