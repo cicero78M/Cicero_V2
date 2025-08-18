@@ -93,14 +93,16 @@ test('filters users by client_id for non-directorate clients', async () => {
 test('filters users by role for directorate clients', async () => {
   mockClientType('direktorat');
   mockQuery.mockResolvedValueOnce({ rows: [] });
-  await getRekapLikesByClient('ditbinmas');
+  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
   expect(sql).toContain('EXISTS');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(params).toEqual(['c1', 'ditbinmas']);
 });
 
 test('filters users by role flag for non-directorate clients', async () => {
@@ -112,4 +114,43 @@ test('filters users by role flag for non-directorate clients', async () => {
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(params).toEqual(['c1', 'ditbinmas']);
+});
+
+test('aggregates likes across multiple client IDs for directorate role', async () => {
+  mockClientType('direktorat');
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        user_id: 'u1',
+        title: 'Aipda',
+        nama: 'Andi',
+        username: 'andi',
+        divisi: 'BAG',
+        exception: false,
+        client_id: 'c1',
+        client_name: 'Client 1',
+        jumlah_like: '2',
+      },
+      {
+        user_id: 'u2',
+        title: 'Aipda',
+        nama: 'Budi',
+        username: 'budi',
+        divisi: 'BAG',
+        exception: false,
+        client_id: 'c2',
+        client_name: 'Client 2',
+        jumlah_like: '3',
+      },
+    ],
+  });
+  const rows = await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(params).toEqual(['c1', 'ditbinmas']);
+  expect(rows).toHaveLength(2);
+  expect(rows.map(r => r.client_id)).toEqual(['c1', 'c2']);
 });
