@@ -126,7 +126,13 @@ export const deleteUser = async (req, res, next) => {
 // --- Query DB: User by client_id (aktif)
 export const getUsersByClient = async (req, res, next) => {
   try {
-    const users = await userModel.getUsersByClient(req.params.client_id);
+    const role = req.user?.role?.toLowerCase();
+    const tokenClientId = req.user?.client_id;
+    let clientId = req.params.client_id;
+    if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role) && tokenClientId) {
+      clientId = tokenClientId;
+    }
+    const users = await userModel.getUsersByClient(clientId, role);
     sendSuccess(res, users);
   } catch (err) {
     next(err);
@@ -136,7 +142,13 @@ export const getUsersByClient = async (req, res, next) => {
 // --- Query DB: User by client_id (full, semua status)
 export const getUsersByClientFull = async (req, res, next) => {
   try {
-    const users = await userModel.getUsersByClientFull(req.params.client_id);
+    const role = req.user?.role?.toLowerCase();
+    const tokenClientId = req.user?.client_id;
+    let clientId = req.params.client_id;
+    if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role) && tokenClientId) {
+      clientId = tokenClientId;
+    }
+    const users = await userModel.getUsersByClientFull(clientId, role);
     sendSuccess(res, users);
   } catch (err) {
     next(err);
@@ -146,7 +158,7 @@ export const getUsersByClientFull = async (req, res, next) => {
 // --- API: Ambil daftar user untuk User Directory, hanya dari client tertentu ---
 export const getUserList = async (req, res, next) => {
   try {
-    const role = req.user?.role;
+    const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
     let users;
 
@@ -156,7 +168,7 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      users = await userModel.getUsersByClient(tokenClientId);
+      users = await userModel.getUsersByClient(tokenClientId, role);
     } else if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role)) {
       if (!tokenClientId) {
         return res
@@ -175,7 +187,7 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      users = await userModel.getUsersByClient(clientId);
+      users = await userModel.getUsersByClient(clientId, role);
     }
     sendSuccess(res, users);
   } catch (err) {
