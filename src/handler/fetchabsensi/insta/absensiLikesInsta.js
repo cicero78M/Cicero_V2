@@ -60,7 +60,7 @@ export async function absensiLikes(client_id, opts = {}) {
     }
 
     const allUsers = (
-      await getUsersByDirektorat(roleName)
+      await getUsersByDirektorat(roleName, polresIds)
     ).filter((u) => u.status === true);
     const usersByClient = {};
     allUsers.forEach((u) => {
