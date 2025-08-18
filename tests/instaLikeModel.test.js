@@ -100,6 +100,8 @@ test('filters users by role for directorate clients', async () => {
   expect(sql).toContain('roles r');
   expect(sql).toContain('EXISTS');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('insta_post_roles pr');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
   expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas']);
@@ -112,7 +114,9 @@ test('filters users by role for non-directorate clients', async () => {
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(sql).toContain('insta_post_roles pr');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
   expect(params).toEqual(['c1', 'ditbinmas']);
 });
 
@@ -123,6 +127,7 @@ test('skips role filter for operator role on non-directorate clients', async () 
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).not.toContain('user_roles');
+  expect(sql).not.toContain('insta_post_roles');
 });
 
 test('aggregates likes across multiple client IDs for directorate role', async () => {
@@ -157,6 +162,8 @@ test('aggregates likes across multiple client IDs for directorate role', async (
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('insta_post_roles pr');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
   expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas']);

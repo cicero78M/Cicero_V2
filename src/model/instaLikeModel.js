@@ -139,9 +139,13 @@ export async function getRekapLikesByClient(
     lower(replace(trim(u.insta), '@', '')) = lc.username
     AND LOWER(u.client_id) = LOWER(lc.client_id)
   `;
+  let postRoleJoin = '';
+  let postRoleFilter = '';
   if (clientType === 'direktorat') {
     postClientFilter = '1=1';
     const roleIdx = params.push(roleLower || client_id);
+    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -155,6 +159,8 @@ export async function getRekapLikesByClient(
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
   } else if (roleLower && roleLower !== 'operator') {
     const roleIndex = params.push(roleLower);
+    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIndex})`;
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -171,11 +177,13 @@ export async function getRekapLikesByClient(
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
+      ${postRoleJoin}
       JOIN LATERAL (
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
       ) AS lk ON TRUE
       WHERE ${postClientFilter}
+        ${postRoleFilter}
         AND ${tanggalFilter}
     ),
     like_counts AS (
