@@ -93,7 +93,7 @@ test('filters users by client_id for non-directorate clients', async () => {
 test('filters users by role for directorate clients', async () => {
   mockClientType('direktorat');
   mockQuery.mockResolvedValueOnce({ rows: [] });
-  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  await getRekapLikesByClient('ditbinmas', 'harian');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('user_roles ur');
@@ -102,7 +102,7 @@ test('filters users by role for directorate clients', async () => {
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['c1', 'ditbinmas']);
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
 test('filters users by role flag for non-directorate clients', async () => {
@@ -144,13 +144,13 @@ test('aggregates likes across multiple client IDs for directorate role', async (
       },
     ],
   });
-  const rows = await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const rows = await getRekapLikesByClient('ditbinmas', 'harian');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['c1', 'ditbinmas']);
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
   expect(rows).toHaveLength(2);
   expect(rows.map(r => r.client_id)).toEqual(['c1', 'c2']);
 });

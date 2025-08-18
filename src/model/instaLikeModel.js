@@ -132,7 +132,7 @@ export async function getRekapLikesByClient(
 
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
   if (clientType === 'direktorat') {
-    params.push(role);
+    params.push(client_id);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
