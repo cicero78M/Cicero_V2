@@ -28,6 +28,30 @@ function normalizeUserFields(data) {
   }
 }
 
+// Bangun klausa filter client dengan mempertimbangkan tipe client
+async function buildClientFilter(clientId, alias = 'u', index = 1) {
+  const { rows } = await query(
+    'SELECT client_type FROM clients WHERE client_id = $1',
+    [clientId]
+  );
+  const clientType = rows[0]?.client_type;
+  const placeholder = `$${index}`;
+  if (clientType === 'direktorat') {
+    return {
+      clause: `EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = ${alias}.user_id AND r.role_name = ${placeholder}
+      )`,
+      params: [clientId]
+    };
+  }
+  return {
+    clause: `${alias}.client_id = ${placeholder}`,
+    params: [clientId]
+  };
+}
+
 // ========== QUERY DATABASE ==========
 
 // Ambil daftar client_id berdasarkan role_name
@@ -41,22 +65,24 @@ export async function getClientsByRole(roleName) {
 
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
+  const { clause, params } = await buildClientFilter(client_id);
   const res = await query(
     `SELECT user_id, nama, tiktok, insta, divisi, title, status, exception
-     FROM "user"
-     WHERE client_id = $1 AND status = true`,
-    [client_id]
+     FROM "user" u
+     WHERE ${clause} AND status = true`,
+    params
   );
   return res.rows;
 }
 
 // Ambil semua user aktif (status = true/NULL), khusus absensi TikTok
 export async function getUsersByClientFull(client_id) {
+  const { clause, params } = await buildClientFilter(client_id);
   const res = await query(
     `SELECT user_id, nama, tiktok, divisi, title, exception
-     FROM "user"
-     WHERE client_id = $1 AND (status IS TRUE OR status IS NULL)`,
-    [client_id]
+     FROM "user" u
+     WHERE ${clause} AND (status IS TRUE OR status IS NULL)`,
+    params
   );
   // DEBUG: log hasilnya
   console.log('[DEBUG][getUsersByClientFull] TikTok, client_id:', client_id, '| user:', res.rows.length);
@@ -68,9 +94,10 @@ export async function getUsersByClientFull(client_id) {
 // Ambil seluruh user dari semua client
 export async function getAllUsers(client_id) {
   if (client_id) {
+    const { clause, params } = await buildClientFilter(client_id);
     const res = await query(
-      'SELECT * FROM "user" WHERE client_id = $1',
-      [client_id]
+      `SELECT * FROM "user" u WHERE ${clause}`,
+      params
     );
     return res.rows;
   } else {
@@ -82,59 +109,64 @@ export async function getAllUsers(client_id) {
 
 // Ambil user yang SUDAH mengisi Instagram (status true)
 export async function getInstaFilledUsersByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const result = await query(
     `SELECT divisi, nama, user_id, title, insta
-     FROM "user"
-     WHERE client_id = $1 AND insta IS NOT NULL AND insta <> '' AND status = true
+     FROM "user" u
+     WHERE ${clause} AND insta IS NOT NULL AND insta <> '' AND status = true
      ORDER BY divisi, nama`,
-    [clientId]
+    params
   );
   return result.rows;
 }
 
 // Ambil user yang BELUM mengisi Instagram (status true)
 export async function getInstaEmptyUsersByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const result = await query(
     `SELECT divisi, nama, user_id, title
-     FROM "user"
-     WHERE client_id = $1 AND (insta IS NULL OR insta = '') AND status = true
+     FROM "user" u
+     WHERE ${clause} AND (insta IS NULL OR insta = '') AND status = true
      ORDER BY divisi, nama`,
-    [clientId]
+    params
   );
   return result.rows;
 }
 
 // Ambil user yang SUDAH mengisi TikTok (status true)
 export async function getTiktokFilledUsersByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const result = await query(
     `SELECT divisi, nama, user_id, title, tiktok
-     FROM "user"
-     WHERE client_id = $1 AND tiktok IS NOT NULL AND tiktok <> '' AND status = true
+     FROM "user" u
+     WHERE ${clause} AND tiktok IS NOT NULL AND tiktok <> '' AND status = true
      ORDER BY divisi, nama`,
-    [clientId]
+    params
   );
   return result.rows;
 }
 
 // Ambil user yang BELUM mengisi TikTok (status true)
 export async function getTiktokEmptyUsersByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const result = await query(
     `SELECT divisi, nama, user_id, title
-     FROM "user"
-     WHERE client_id = $1 AND (tiktok IS NULL OR tiktok = '') AND status = true
+     FROM "user" u
+     WHERE ${clause} AND (tiktok IS NULL OR tiktok = '') AND status = true
      ORDER BY divisi, nama`,
-    [clientId]
+    params
   );
   return result.rows;
 }
 
 // Ambil semua user aktif (status=true) beserta whatsapp
 export async function getUsersWithWaByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const result = await query(
     `SELECT divisi, nama, user_id, title, whatsapp
-     FROM "user" WHERE client_id = $1 AND status = true
+     FROM "user" u WHERE ${clause} AND status = true
      ORDER BY divisi, nama`,
-    [clientId]
+    params
   );
   return result.rows;
 }
@@ -151,15 +183,16 @@ export async function getActiveUsersWithWhatsapp() {
 
 // Ambil user aktif yang belum melengkapi data (insta/tiktok/whatsapp)
 export async function getUsersMissingDataByClient(clientId) {
+  const { clause, params } = await buildClientFilter(clientId);
   const res = await query(
     `SELECT user_id, nama, insta, tiktok, whatsapp
-     FROM "user"
-     WHERE client_id = $1 AND status = true
+     FROM "user" u
+     WHERE ${clause} AND status = true
        AND (insta IS NULL OR insta='' OR
             tiktok IS NULL OR tiktok='' OR
             whatsapp IS NULL OR whatsapp='')
      ORDER BY nama`,
-    [clientId]
+    params
   );
   return res.rows;
 }
@@ -174,9 +207,10 @@ export async function findUserById(user_id) {
 
 // Ambil user berdasarkan user_id dan client_id
 export async function findUserByIdAndClient(user_id, client_id) {
+  const { clause, params: clientParams } = await buildClientFilter(client_id, 'u', 2);
   const { rows } = await query(
-    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND u.client_id=$2\n     GROUP BY u.user_id`,
-    [user_id, client_id]
+    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND ${clause}\n     GROUP BY u.user_id`,
+    [user_id, ...clientParams]
   );
   return rows[0];
 }
@@ -226,9 +260,10 @@ export async function updateUserField(user_id, field, value) {
 
 // Ambil user dengan exception per client
 export async function getExceptionUsersByClient(client_id) {
+  const { clause, params } = await buildClientFilter(client_id);
   const { rows } = await query(
-    'SELECT * FROM "user" WHERE exception = true AND client_id = $1',
-    [client_id]
+    `SELECT * FROM "user" u WHERE exception = true AND ${clause}`,
+    params
   );
   return rows;
 }
@@ -306,9 +341,10 @@ export async function getAvailableSatfung(clientId = null) {
   // Gunakan "user" (pakai kutip dua) karena user adalah reserved word di Postgres
   let res;
   if (clientId) {
+    const { clause, params } = await buildClientFilter(clientId, '"user"');
     res = await query(
-      'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL AND client_id = $1 ORDER BY divisi',
-      [clientId]
+      `SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL AND ${clause} ORDER BY divisi`,
+      params
     );
   } else {
     res = await query(

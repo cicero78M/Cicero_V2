@@ -13,6 +13,7 @@ let updateUserField;
 let updatePremiumStatus;
 let getUsersByDirektorat;
 let getClientsByRole;
+let getUsersByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -23,6 +24,7 @@ beforeAll(async () => {
   updatePremiumStatus = mod.updatePremiumStatus;
   getUsersByDirektorat = mod.getUsersByDirektorat;
   getClientsByRole = mod.getClientsByRole;
+  getUsersByClient = mod.getUsersByClient;
 });
 
 beforeEach(() => {
@@ -39,14 +41,51 @@ test('findUserByIdAndWhatsApp returns user', async () => {
   expect(mockQuery.mock.calls[0][1]).toEqual(['1', '0808']);
 });
 
-test('findUserByIdAndClient returns user', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+test('findUserByIdAndClient returns user for non-direktorat client', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
   const user = await findUserByIdAndClient('1', 'C1');
   expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false });
-  const sql = mockQuery.mock.calls[0][0];
+  const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('FROM "user" u');
-  expect(sql).toContain('u.user_id=$1 AND u.client_id=$2');
-  expect(mockQuery.mock.calls[0][1]).toEqual(['1', 'C1']);
+  expect(sql).toContain('u.user_id=$1');
+  expect(sql).toContain('u.client_id = $2');
+  expect(mockQuery.mock.calls[1][1]).toEqual(['1', 'C1']);
+});
+
+test('findUserByIdAndClient ignores client_id for direktorat', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+  const user = await findUserByIdAndClient('1', 'ditbinmas');
+  expect(user).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false });
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('EXISTS');
+  expect(sql).not.toContain('u.client_id =');
+  expect(mockQuery.mock.calls[1][1]).toEqual(['1', 'ditbinmas']);
+});
+
+test('getUsersByClient filters by client for non-direktorat', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '1' }] });
+  const users = await getUsersByClient('C1');
+  expect(users).toEqual([{ user_id: '1' }]);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('client_id = $1');
+  expect(mockQuery.mock.calls[1][1]).toEqual(['C1']);
+});
+
+test('getUsersByClient uses user_roles for direktorat', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '2' }] });
+  const users = await getUsersByClient('ditlantas');
+  expect(users).toEqual([{ user_id: '2' }]);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).not.toContain('client_id = $1');
 });
 
 test('createUser inserts with directorate flags only', async () => {
