@@ -5,11 +5,13 @@ const mockGetUsersByClient = jest.fn();
 const mockGetUsersByDirektorat = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetLikesByShortcode = jest.fn();
+const mockGetClientsByRole = jest.fn();
 
 jest.unstable_mockModule('../src/db/index.js', () => ({ query: mockQuery }));
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersByClient: mockGetUsersByClient,
   getUsersByDirektorat: mockGetUsersByDirektorat,
+  getClientsByRole: mockGetClientsByRole,
 }));
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({ getShortcodesTodayByClient: mockGetShortcodesTodayByClient }));
 jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({ getLikesByShortcode: mockGetLikesByShortcode }));
@@ -26,10 +28,11 @@ beforeEach(() => {
   mockGetUsersByDirektorat.mockReset();
   mockGetShortcodesTodayByClient.mockReset();
   mockGetLikesByShortcode.mockReset();
+  mockGetClientsByRole.mockReset();
 });
 
 test('marks user with @username as already liking', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
   mockGetUsersByClient.mockResolvedValueOnce([
     {
       user_id: 'u1',
@@ -50,7 +53,7 @@ test('marks user with @username as already liking', async () => {
 });
 
 test('uses role-based users when roleFlag matches client', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
   mockGetUsersByDirektorat.mockResolvedValueOnce([
     {
       user_id: 'u1',
@@ -73,5 +76,51 @@ test('uses role-based users when roleFlag matches client', async () => {
   expect(mockGetUsersByDirektorat).toHaveBeenCalled();
   expect(mockGetUsersByClient).not.toHaveBeenCalled();
   expect(msg).toMatch(/Sudah melaksanakan\* : \*1 user\*/);
+});
+
+test('directorate summarizes across clients', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ nama: 'Ditbinmas', client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [{ nama: 'POLRES A' }] })
+    .mockResolvedValueOnce({ rows: [{ nama: 'POLRES B' }] });
+  mockGetClientsByRole.mockResolvedValueOnce(['polresa', 'polresb']);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1', 'sc2']);
+  mockGetLikesByShortcode
+    .mockResolvedValueOnce(['user1'])
+    .mockResolvedValueOnce([]);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([
+    {
+      user_id: 'u1',
+      nama: 'User1',
+      insta: '@user1',
+      client_id: 'POLRESA',
+      exception: false,
+      status: true,
+    },
+    {
+      user_id: 'u2',
+      nama: 'User2',
+      insta: '',
+      client_id: 'POLRESA',
+      exception: false,
+      status: true,
+    },
+    {
+      user_id: 'u3',
+      nama: 'User3',
+      insta: '@user3',
+      client_id: 'POLRESB',
+      exception: false,
+      status: true,
+    },
+  ]);
+
+  const msg = await absensiLikes('DITBINMAS');
+
+  expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
+  expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('ditbinmas');
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
+  expect(msg).toMatch(/Polres\*: \*POLRES A\*[\s\S]*Sudah melaksanakan\* : \*1 user\*[\s\S]*Belum melaksanakan\* : \*0 user\*[\s\S]*Belum input username\* : \*1 user/);
+  expect(msg).toMatch(/Polres\*: \*POLRES B\*[\s\S]*Sudah melaksanakan\* : \*0 user\*[\s\S]*Belum melaksanakan\* : \*1 user\*[\s\S]*Belum input username\* : \*0 user/);
 });
 
