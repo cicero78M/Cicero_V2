@@ -85,8 +85,7 @@ export async function getRekapLikesByClient(
   tanggal,
   start_date,
   end_date,
-  role,
-  clientId
+  role
 ) {
   const clientTypeRes = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',
@@ -154,11 +153,6 @@ export async function getRekapLikesByClient(
       GROUP BY username
     `;
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
-    if (clientId) {
-      const clientIdx = params.push(clientId);
-      postClientFilter = `LOWER(p.client_id) = LOWER($${clientIdx})`;
-      userWhere += ` AND LOWER(u.client_id) = LOWER($${clientIdx})`;
-    }
   } else if (roleLower && roleLower !== 'operator') {
     const roleIndex = params.push(roleLower);
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (

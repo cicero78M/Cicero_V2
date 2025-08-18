@@ -163,15 +163,3 @@ test('aggregates likes across multiple client IDs for directorate role', async (
   expect(rows).toHaveLength(2);
   expect(rows.map(r => r.client_id)).toEqual(['c1', 'c2']);
 });
-
-test('applies explicit clientId filter for directorate clients', async () => {
-  mockClientType('direktorat');
-  mockQuery.mockResolvedValueOnce({ rows: [] });
-  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, undefined, 'c1');
-  const sql = mockQuery.mock.calls[1][0];
-  const params = mockQuery.mock.calls[1][1];
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).toContain('LOWER(p.client_id) = LOWER($2)');
-  expect(sql).toContain('LOWER(u.client_id) = LOWER($2)');
-  expect(params).toEqual(['ditbinmas', 'c1']);
-});
