@@ -84,13 +84,19 @@ export async function getRekapLikesByClient(
   periode = "harian",
   tanggal,
   start_date,
-  end_date
+  end_date,
+  role
 ) {
   const clientTypeRes = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',
     [client_id]
   );
   const clientType = clientTypeRes.rows[0]?.client_type;
+
+  const roleFlag =
+    role && ['ditbinmas', 'ditlantas', 'bidhumas'].includes(role.toLowerCase())
+      ? role.toLowerCase()
+      : null;
 
   const params = [client_id];
   let tanggalFilter =
@@ -131,6 +137,14 @@ export async function getRekapLikesByClient(
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($1)
     )`;
+  } else if (roleFlag) {
+    const roleIndex = params.length + 1;
+    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIndex})
+    )`;
+    params.push(roleFlag);
   }
 
   const { rows } = await query(`
