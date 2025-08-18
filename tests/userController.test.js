@@ -18,11 +18,13 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 
 let createUser;
 let getUserList;
+let getUsersByClientCtrl;
 
 beforeAll(async () => {
   const mod = await import('../src/controller/userController.js');
   createUser = mod.createUser;
   getUserList = mod.getUserList;
+  getUsersByClientCtrl = mod.getUsersByClient;
 });
 
 beforeEach(() => {
@@ -231,4 +233,18 @@ test('ditbinmas role with different client_id filters users by client', async ()
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'c1');
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '2', ditbinmas: true }] });
+});
+
+test('getUsersByClient uses token client and role for ditbinmas', async () => {
+  mockGetUsersByClient.mockResolvedValue([{ user_id: '1' }]);
+  const req = { params: { client_id: 'other' }, user: { role: 'ditbinmas', client_id: 'C1' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await getUsersByClientCtrl(req, res, () => {});
+
+  expect(mockGetUsersByClient).toHaveBeenCalledWith('C1', 'ditbinmas');
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '1' }] });
 });
