@@ -17,6 +17,7 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 export async function getInstaRekapLikes(req, res) {
   const client_id = req.query.client_id;
+  const clientId = req.query.clientId;
   const periode = req.query.periode || "harian";
   const tanggal = req.query.tanggal;
   const startDate =
@@ -26,25 +27,49 @@ export async function getInstaRekapLikes(req, res) {
     if (!client_id) {
       return res.status(400).json({ success: false, message: "client_id wajib diisi" });
     }
-    if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
-      return res
-        .status(403)
-        .json({ success: false, message: "client_id tidak diizinkan" });
+    if (req.user?.client_ids) {
+      const idsLower = req.user.client_ids.map((c) => c.toLowerCase());
+      if (clientId) {
+        if (!idsLower.includes(clientId.toLowerCase())) {
+          return res
+            .status(403)
+            .json({ success: false, message: "client_id tidak diizinkan" });
+        }
+      } else if (
+        !idsLower.includes(client_id.toLowerCase()) &&
+        req.user.role?.toLowerCase() !== client_id.toLowerCase()
+      ) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
     }
-    if (req.user?.client_id && req.user.client_id !== client_id) {
-      return res
-        .status(403)
-        .json({ success: false, message: "client_id tidak diizinkan" });
+    if (req.user?.client_id) {
+      if (clientId) {
+        if (req.user.client_id !== clientId) {
+          return res
+            .status(403)
+            .json({ success: false, message: "client_id tidak diizinkan" });
+        }
+      } else if (
+        req.user.client_id !== client_id &&
+        req.user.role?.toLowerCase() !== client_id.toLowerCase()
+      ) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
     }
   try {
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}` });
+    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''} ${clientId || ''}` });
     const data = await getRekapLikesByClient(
       client_id,
       periode,
       tanggal,
       startDate,
       endDate,
-      role
+      role,
+      clientId
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);

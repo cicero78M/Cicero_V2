@@ -85,7 +85,8 @@ export async function getRekapLikesByClient(
   tanggal,
   start_date,
   end_date,
-  role
+  role,
+  clientId
 ) {
   const clientTypeRes = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',
@@ -130,14 +131,21 @@ export async function getRekapLikesByClient(
     tanggalFilter = `p.created_at::date = $2::date`;
   }
 
+  let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
   if (clientType === 'direktorat') {
-    params.push(client_id);
+    postClientFilter = '1=1';
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${params.length})
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($1)
     )`;
+    if (clientId) {
+      params.push(clientId);
+      const idx = params.length;
+      postClientFilter = `LOWER(p.client_id) = LOWER($${idx})`;
+      userWhere += ` AND LOWER(u.client_id) = LOWER($${idx})`;
+    }
   } else if (roleFlag) {
     const roleIndex = params.length + 1;
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
@@ -153,6 +161,7 @@ export async function getRekapLikesByClient(
       SELECT
         l.shortcode,
         p.created_at,
+        p.client_id,
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
@@ -160,13 +169,13 @@ export async function getRekapLikesByClient(
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
       ) AS lk ON TRUE
-      WHERE LOWER(p.client_id) = LOWER($1)
+      WHERE ${postClientFilter}
         AND ${tanggalFilter}
     ),
     like_counts AS (
-      SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
+      SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
       FROM valid_likes
-      GROUP BY username
+      GROUP BY username, client_id
     )
     SELECT
       u.user_id,
@@ -182,6 +191,7 @@ export async function getRekapLikesByClient(
     JOIN clients c ON c.client_id = u.client_id
     LEFT JOIN like_counts lc
       ON lower(replace(trim(u.insta), '@', '')) = lc.username
+     AND LOWER(u.client_id) = LOWER(lc.client_id)
     WHERE u.status = true
       AND u.insta IS NOT NULL
       AND ${userWhere}
