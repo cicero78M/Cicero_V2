@@ -1,5 +1,9 @@
 import { query } from "../../../db/index.js";
-import { getUsersByClient, getUsersByDirektorat } from "../../../model/userModel.js";
+import {
+  getUsersByClient,
+  getUsersByDirektorat,
+  getClientsByRole,
+} from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
@@ -14,12 +18,15 @@ function normalizeUsername(username) {
     .toLowerCase();
 }
 
-async function getClientNama(client_id) {
+async function getClientInfo(client_id) {
   const res = await query(
-    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_type FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
-  return res.rows[0]?.nama || client_id;
+  return {
+    nama: res.rows[0]?.nama || client_id,
+    clientType: res.rows[0]?.client_type || null,
+  };
 }
 
 // === AKUMULASI ===
@@ -32,7 +39,80 @@ export async function absensiLikes(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(targetClient);
+  const { nama: clientNama, clientType } = await getClientInfo(targetClient);
+
+  if (clientType === "direktorat") {
+    const polresIds = (await getClientsByRole("ditbinmas")).map((c) =>
+      c.toUpperCase()
+    );
+    const shortcodes = await getShortcodesTodayByClient("ditbinmas");
+    if (!shortcodes.length)
+      return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
+
+    const kontenLinks = shortcodes.map(
+      (sc) => `https://www.instagram.com/p/${sc}`
+    );
+    const likesSets = [];
+    for (const sc of shortcodes) {
+      const likes = await getLikesByShortcode(sc);
+      likesSets.push(new Set((likes || []).map(normalizeUsername)));
+    }
+
+    const allUsers = (
+      await getUsersByDirektorat("ditbinmas")
+    ).filter((u) => u.status === true);
+    const usersByClient = {};
+    allUsers.forEach((u) => {
+      const cid = u.client_id?.toUpperCase() || "";
+      if (!usersByClient[cid]) usersByClient[cid] = [];
+      usersByClient[cid].push(u);
+    });
+
+    const totalKonten = shortcodes.length;
+    const threshold = Math.ceil(totalKonten * 0.5);
+    const reports = [];
+    for (const cid of polresIds) {
+      const users = usersByClient[cid] || [];
+      const { nama: polresNama } = await getClientInfo(cid);
+      const sudah = [];
+      const belum = [];
+      const noUsername = [];
+      users.forEach((u) => {
+        if (u.exception === true) {
+          sudah.push(u);
+          return;
+        }
+        if (!u.insta || u.insta.trim() === "") {
+          noUsername.push(u);
+          return;
+        }
+        const uname = normalizeUsername(u.insta);
+        let count = 0;
+        likesSets.forEach((set) => {
+          if (set.has(uname)) count += 1;
+        });
+        if (count >= threshold) sudah.push(u);
+        else belum.push(u);
+      });
+      reports.push(
+        `*Polres*: *${polresNama}*\n` +
+          `*Jumlah user:* ${users.length}\n` +
+          `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
+          `❌ *Belum melaksanakan* : *${belum.length} user*\n` +
+          `⚠️ *Belum input username* : *${noUsername.length} user*`
+      );
+    }
+
+    let msg =
+      `Mohon ijin Komandan,\n\n` +
+      `📋 *Rekap Akumulasi Likes Instagram*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+      `*Jumlah Konten:* ${totalKonten}\n` +
+      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+      reports.join("\n\n") +
+      "\n\nTerimakasih.";
+    return msg.trim();
+  }
+
   let users;
   if (
     roleFlag &&
@@ -89,7 +169,7 @@ export async function absensiLikes(client_id, opts = {}) {
   });
 
   // Hapus user exception dari list belum!
-  belum = belum.filter(u => !u.exception);
+  belum = belum.filter((u) => !u.exception);
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -173,7 +253,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
+  const { nama: clientNama } = await getClientInfo(client_id);
   const users = await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
 
