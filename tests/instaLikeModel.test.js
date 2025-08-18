@@ -102,3 +102,14 @@ test('filters users by role for directorate clients', async () => {
   expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
 });
+
+test('filters users by role flag for non-directorate clients', async () => {
+  mockClientType('regular');
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(params).toEqual(['c1', 'ditbinmas']);
+});
