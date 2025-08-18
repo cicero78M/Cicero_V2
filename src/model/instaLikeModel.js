@@ -175,7 +175,6 @@ export async function getRekapLikesByClient(
 
   for (const user of rows) {
     user.jumlah_like = parseInt(user.jumlah_like, 10);
-    user.hadir = user.jumlah_like > 0;
   }
 
   return rows;
