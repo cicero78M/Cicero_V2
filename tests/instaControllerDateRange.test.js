@@ -74,3 +74,27 @@ test('allows authorized client_id', async () => {
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
+test('returns user like summaries', async () => {
+  const rows = [
+    { username: 'alice', jumlah_like: 3 },
+    { username: 'bob', jumlah_like: 0 },
+    { username: 'charlie', jumlah_like: 1 }
+  ];
+  mockGetRekap.mockResolvedValue(rows);
+  const req = {
+    query: { client_id: 'c1' },
+    user: { client_ids: ['c1'] }
+  };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getInstaRekapLikes(req, res);
+  expect(json).toHaveBeenCalledWith(
+    expect.objectContaining({
+      usersWithLikes: ['alice', 'charlie'],
+      usersWithoutLikes: ['bob'],
+      usersWithLikesCount: 2,
+      usersWithoutLikesCount: 1
+    })
+  );
+});
+

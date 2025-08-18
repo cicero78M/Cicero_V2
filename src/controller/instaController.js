@@ -48,7 +48,21 @@ export async function getInstaRekapLikes(req, res) {
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
-    res.json({ success: true, data, chartHeight });
+
+    const usersWithLikes = data.filter((u) => u.jumlah_like > 0).map((u) => u.username);
+    const usersWithoutLikes = data
+      .filter((u) => u.jumlah_like === 0)
+      .map((u) => u.username);
+
+    res.json({
+      success: true,
+      data,
+      chartHeight,
+      usersWithLikes,
+      usersWithoutLikes,
+      usersWithLikesCount: usersWithLikes.length,
+      usersWithoutLikesCount: usersWithoutLikes.length,
+    });
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });
     const code = err.statusCode || err.response?.status || 500;
