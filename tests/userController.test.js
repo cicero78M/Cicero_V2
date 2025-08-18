@@ -226,7 +226,7 @@ test('ditbinmas role with matching client_id shows all users', async () => {
 
   await getUserList(req, res, () => {});
 
-  expect(mockFindClientById).toHaveBeenCalledWith('ditbinmas');
+  expect(mockFindClientById).not.toHaveBeenCalled();
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '1', ditbinmas: true }] });
@@ -245,7 +245,7 @@ test('ditbinmas role with different client_id filters users by client', async ()
 
   await getUserList(req, res, () => {});
 
-  expect(mockFindClientById).toHaveBeenCalledWith('ditbinmas');
+  expect(mockFindClientById).not.toHaveBeenCalled();
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'c1');
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '2', ditbinmas: true }] });
