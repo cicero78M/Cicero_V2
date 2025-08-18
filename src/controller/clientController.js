@@ -157,6 +157,23 @@ export const getClientProfile = async (req, res, next) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
+    const role = req.user?.role?.toLowerCase();
+    if (
+      role &&
+      role !== "operator" &&
+      role !== "client" &&
+      client.client_type?.toLowerCase() === "org"
+    ) {
+      const roleClient = await clientService.findClientById(role.toUpperCase());
+      if (roleClient) {
+        client.client_insta = roleClient.client_insta;
+        client.client_insta_status = roleClient.client_insta_status;
+        client.client_tiktok = roleClient.client_tiktok;
+        client.client_tiktok_status = roleClient.client_tiktok_status;
+        client.client_amplify_status = roleClient.client_amplify_status;
+      }
+    }
+
     // Sesuaikan key hasil jika ingin (client/profile)
     res.json({ success: true, client });
   } catch (err) {
