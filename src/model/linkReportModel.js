@@ -9,6 +9,20 @@ export async function createLinkReport(data) {
     throw err;
   }
 
+  const postDate = new Date(exists.created_at).toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+  if (postDate !== today) {
+    const err = new Error('reports can only be created for today\'s posts');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  data.created_at = exists.created_at;
+
   const res = await query(
     `INSERT INTO link_report (
         shortcode, user_id, instagram_link, facebook_link,
