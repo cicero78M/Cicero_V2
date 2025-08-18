@@ -295,8 +295,10 @@ export async function getDirektoratUsers(clientId = null) {
 // Jika clientId berupa array, filter berdasarkan list tersebut.
 // Selalu memastikan user memiliki role yang sama dengan client_id-nya.
 export async function getUsersByDirektorat(flag, clientId = null) {
+  console.log(`[USER MODEL] getUsersByDirektorat called with flag=${flag}, clientId=${JSON.stringify(clientId)}`);
   const validFlags = ['ditbinmas', 'ditlantas', 'bidhumas'];
   if (!validFlags.includes(flag)) {
+    console.log(`[USER MODEL] Invalid flag passed to getUsersByDirektorat: ${flag}`);
     throw new Error('Direktorat flag tidak valid');
   }
 
@@ -304,7 +306,27 @@ export async function getUsersByDirektorat(flag, clientId = null) {
   let p = 2;
 
   let sql = `SELECT
-      u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n    FROM "user" u\n    LEFT JOIN user_roles ur ON ur.user_id = u.user_id\n    LEFT JOIN roles r ON r.role_id = ur.role_id\n    WHERE EXISTS (\n      SELECT 1\n      FROM user_roles ur1\n      JOIN roles r1 ON r1.role_id = ur1.role_id\n      WHERE ur1.user_id = u.user_id\n        AND r1.role_name = $1\n    )\n      AND EXISTS (\n        SELECT 1\n        FROM user_roles ur2\n        JOIN roles r2 ON r2.role_id = ur2.role_id\n        WHERE ur2.user_id = u.user_id\n          AND LOWER(r2.role_name) = LOWER(u.client_id)\n      )`;
+      u.*,
+      bool_or(r.role_name='ditbinmas') AS ditbinmas,
+      bool_or(r.role_name='ditlantas') AS ditlantas,
+      bool_or(r.role_name='bidhumas') AS bidhumas
+    FROM "user" u
+    LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+    LEFT JOIN roles r ON r.role_id = ur.role_id
+    WHERE EXISTS (
+      SELECT 1
+      FROM user_roles ur1
+      JOIN roles r1 ON r1.role_id = ur1.role_id
+      WHERE ur1.user_id = u.user_id
+        AND r1.role_name = $1
+    )
+      AND EXISTS (
+        SELECT 1
+        FROM user_roles ur2
+        JOIN roles r2 ON r2.role_id = ur2.role_id
+        WHERE ur2.user_id = u.user_id
+        AND LOWER(r2.role_name) = LOWER(u.client_id)
+      )`;
 
   if (clientId) {
     if (Array.isArray(clientId) && clientId.length > 0) {
@@ -319,9 +341,13 @@ export async function getUsersByDirektorat(flag, clientId = null) {
   }
 
   sql += ' GROUP BY u.user_id';
+  console.log('[USER MODEL] getUsersByDirektorat SQL:', sql);
+  console.log('[USER MODEL] getUsersByDirektorat Params:', params);
   const { rows } = await query(sql, params);
+  console.log(`[USER MODEL] getUsersByDirektorat returning ${rows.length} users`);
   return rows;
 }
+
 
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
