@@ -205,10 +205,11 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
+        const msg =
+          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+          "\n\nBalas pesan ini dengan memasukan NRP Anda," +
+          "\n\n*Contoh Pesan Balasan : 87020990*";
         await waClient.sendMessage(chatId, msg.trim());
-        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
-        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -266,10 +267,11 @@ waClient.on("message", async (msg) => {
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
         setMenuTimeout(chatId);
-        const msg = `${salam}! Nomor WhatsApp Anda belum terdaftar.`;
+        const msg =
+          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+          "\n\nBalas pesan ini dengan memasukan NRP Anda," +
+          "\n\n*Contoh Pesan Balasan : 87020990*";
         await waClient.sendMessage(chatId, msg.trim());
-        await waClient.sendMessage(chatId, "Silakan masukkan NRP Anda untuk melihat data.");
-        await waClient.sendMessage(chatId, "Ketik *userrequest* jika membutuhkan panduan.");
       }
       return;
     }
@@ -1827,8 +1829,8 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         const msg =
           `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
           clientInfoText +
-          "\nKetik NRP Anda (hanya angka) untuk melihat data atau balas *batal*." +
-          "\nKetik *userrequest* untuk panduan.";
+          "\n\nBalas pesan ini dengan memasukan NRP Anda," +
+          "\n\n*Contoh Pesan Balasan : 87020990*";
         await safeSendMessage(waClient, chatId, msg.trim());
       }
     return;
