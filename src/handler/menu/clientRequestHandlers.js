@@ -16,11 +16,31 @@ import * as linkReportModel from "../../model/linkReportModel.js";
 import { saveLinkReportExcel } from "../../service/linkReportExcelService.js";
 import fs from "fs/promises";
 import path from "path";
+import os from "os";
+import { mdToPdf } from "md-to-pdf";
 import { query } from "../../db/index.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
 function ignore(..._args) {}
+
+function buildDocsMessage(files, page, pageSize) {
+  const start = page * pageSize;
+  const end = Math.min(start + pageSize, files.length);
+  let msg = `*Daftar Dokumen* (${files.length})\nBalas angka untuk memilih`;
+  if (files.length > pageSize) {
+    msg += ", ketik *next* atau *prev* untuk navigasi";
+  }
+  msg += `:\n`;
+  for (let i = start; i < end; i++) {
+    const rel = path.relative(process.cwd(), files[i]);
+    msg += `${i + 1}. ${rel}\n`;
+  }
+  const maxPage = Math.floor((files.length - 1) / pageSize);
+  if (page < maxPage) msg += "\nKetik *next* untuk lanjut.";
+  if (page > 0) msg += "\nKetik *prev* untuk kembali.";
+  return msg.trim();
+}
 
 async function absensiUsernameInsta(client_id, userModel, mode = "all") {
   let sudah = [], belum = [];
@@ -1343,6 +1363,102 @@ export const clientRequestHandlers = {
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal membuat Excel: ${err.message}`);
       console.error(err);
+    }
+  },
+
+  // ================== DOWNLOAD DOCS ==================
+  downloadDocs_choose: async (session, chatId, text, waClient) => {
+    try {
+      const rootDir = process.cwd();
+      const files = [];
+      async function walk(dir) {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+            continue;
+          }
+          const res = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await walk(res);
+          } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+            files.push(res);
+          }
+        }
+      }
+      await walk(rootDir);
+      if (!files.length) {
+        await waClient.sendMessage(chatId, "Tidak ada file Markdown ditemukan.");
+        session.step = "main";
+        return;
+      }
+      files.sort();
+      session.docsList = files;
+      session.docsPage = 0;
+      const pageSize = 10;
+      await waClient.sendMessage(
+        chatId,
+        buildDocsMessage(files, session.docsPage, pageSize)
+      );
+      session.step = "downloadDocs_send";
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mencari dokumen: ${err.message}`
+      );
+      session.step = "main";
+    }
+  },
+  downloadDocs_send: async (session, chatId, text, waClient) => {
+    const files = session.docsList || [];
+    const pageSize = 10;
+    const cmd = text.trim().toLowerCase();
+    if (cmd === "next" || cmd === "prev") {
+      let page = session.docsPage || 0;
+      const maxPage = Math.floor((files.length - 1) / pageSize);
+      page += cmd === "next" ? 1 : -1;
+      if (page < 0) page = 0;
+      if (page > maxPage) page = maxPage;
+      session.docsPage = page;
+      await waClient.sendMessage(
+        chatId,
+        buildDocsMessage(files, session.docsPage, pageSize)
+      );
+      return;
+    }
+    const idx = parseInt(cmd, 10) - 1;
+    if (isNaN(idx) || !files[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka atau ketik next/prev."
+      );
+      return;
+    }
+    const filePath = files[idx];
+    const filename = path.basename(filePath).replace(/\.md$/i, ".pdf");
+    session.step = "main";
+    await waClient.sendMessage(chatId, "⏳ Mengonversi dokumen...");
+    let tmpDir = "";
+    let pdfPath = "";
+    try {
+      const pdf = await mdToPdf({ path: filePath });
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "doc-"));
+      pdfPath = path.join(tmpDir, filename);
+      await fs.writeFile(pdfPath, pdf.content);
+      const buffer = await fs.readFile(pdfPath);
+      await sendWAFile(waClient, buffer, filename, chatId, "application/pdf");
+      await waClient.sendMessage(chatId, "✅ Dokumen dikirim.");
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mengirim dokumen: ${err.message}`
+      );
+    } finally {
+      try {
+        if (pdfPath) await fs.unlink(pdfPath);
+        if (tmpDir) await fs.rmdir(tmpDir);
+      } catch (e) {
+        ignore(e);
+      }
     }
   },
 

@@ -33,15 +33,14 @@ export async function sendWAFile(
   waClient,
   buffer,
   filename,
-  chatIds = null
+  chatIds = null,
+  mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 ) {
   const targets = chatIds
     ? Array.isArray(chatIds)
       ? chatIds
       : [chatIds]
     : getAdminWhatsAppList();
-  const mimeType =
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const base64 = buffer.toString('base64');
   const media = new MessageMedia(mimeType, base64, filename);
   for (const target of targets) {
