@@ -246,17 +246,27 @@ export async function getDirektoratUsers(clientId = null) {
   return rows;
 }
 
-// Ambil user berdasarkan flag direktorat tertentu (ditbinmas/ditlantas)
+// Ambil user berdasarkan flag direktorat tertentu (ditbinmas/ditlantas/bidhumas)
+// Jika clientId berupa array, filter berdasarkan list tersebut.
+// Selalu memastikan user memiliki role yang sama dengan client_id-nya.
 export async function getUsersByDirektorat(flag, clientId = null) {
   if (!['ditbinmas', 'ditlantas', 'bidhumas'].includes(flag)) {
     throw new Error('Direktorat flag tidak valid');
   }
-  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name = $1`;
+
+  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name = $1\n    AND EXISTS (\n      SELECT 1 FROM user_roles ur2\n      JOIN roles r2 ON ur2.role_id = r2.role_id\n      WHERE ur2.user_id = u.user_id AND LOWER(r2.role_name) = LOWER(u.client_id)\n    )`;
   const params = [flag];
+
   if (clientId) {
-    sql += ' AND u.client_id = $2';
-    params.push(clientId);
+    if (Array.isArray(clientId)) {
+      sql += ' AND LOWER(u.client_id) = ANY($2)';
+      params.push(clientId.map((c) => c.toLowerCase()));
+    } else {
+      sql += ' AND LOWER(u.client_id) = LOWER($2)';
+      params.push(clientId);
+    }
   }
+
   sql += ' GROUP BY u.user_id';
   const { rows } = await query(sql, params);
   return rows;
