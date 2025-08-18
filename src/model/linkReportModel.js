@@ -253,6 +253,7 @@ export async function getRekapLinkByClient(
       GROUP BY r.user_id
     )
     SELECT
+      u.client_id,
       u.user_id,
       u.title,
       u.nama,
@@ -264,7 +265,7 @@ export async function getRekapLinkByClient(
      LEFT JOIN link_sum ls ON ls.user_id = u.user_id
      WHERE u.status = true
        AND ${userWhere}
-     GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
+     GROUP BY u.client_id,  u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
      ORDER BY jumlah_link DESC, u.nama ASC`,
     params
   );
@@ -292,6 +293,7 @@ export async function getReportsThisMonthByClient(client_id) {
     `SELECT
        r.created_at::date AS date,
        TRIM(CONCAT(u.title, ' ', u.nama)) AS pangkat_nama,
+       u.client_id as kesatuan,
        u.user_id AS nrp,
        u.divisi AS satfung,
        r.instagram_link AS instagram,
