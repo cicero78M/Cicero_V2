@@ -176,6 +176,28 @@ test('getRekapLinkByClient handles start_date and end_date', async () => {
   );
 });
 
+test('getRekapLinkByClient applies post date filter in link_sum', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        {
+          user_id: 'u1',
+          title: 'Aiptu',
+          nama: 'Budi',
+          username: 'budi',
+          divisi: 'Humas',
+          exception: false,
+          jumlah_link: 1
+        }
+      ]
+    });
+  await getRekapLinkByClient('POLRES');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('p.created_at');
+  expect(sql).toContain('r.created_at');
+});
+
 test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
