@@ -162,11 +162,11 @@ export const clientRequestHandlers = {
 1️⃣1️⃣ Hapus WA User
 1️⃣2️⃣ Transfer User Sheet
 1️⃣3️⃣ Download Sheet Amplifikasi
+1️⃣4️⃣ Download Docs
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-
-    if (!/^([1-9]|10|11|12|13)$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-4])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -185,6 +185,7 @@ export const clientRequestHandlers = {
       11: "hapusWAUser_start",
       12: "transferUserSheet_choose",
       13: "downloadSheet_choose",
+      14: "downloadDocs_choose",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](

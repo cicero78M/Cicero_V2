@@ -461,6 +461,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 1️⃣1️⃣ Hapus WA User
 1️⃣2️⃣ Transfer User Sheet
 1️⃣3️⃣ Download Sheet Amplifikasi
+1️⃣4️⃣ Download Docs
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
