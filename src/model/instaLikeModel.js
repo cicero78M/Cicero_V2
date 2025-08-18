@@ -84,8 +84,7 @@ export async function getRekapLikesByClient(
   periode = "harian",
   tanggal,
   start_date,
-  end_date,
-  role
+  end_date
 ) {
   const clientTypeRes = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',
@@ -94,19 +93,18 @@ export async function getRekapLikesByClient(
   const clientType = clientTypeRes.rows[0]?.client_type;
 
   const params = [client_id];
-  if (clientType === 'direktorat') params.push(role);
-
-  const nextParam = params.length + 1;
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
     params.push(start_date, end_date);
-    tanggalFilter = `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${nextParam}::date AND $${nextParam + 1}::date`;
+    tanggalFilter =
+      "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       params.push(monthDate);
-      tanggalFilter = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${nextParam}::date)`;
+      tanggalFilter =
+        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
     } else {
       tanggalFilter =
         "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
@@ -114,7 +112,8 @@ export async function getRekapLikesByClient(
   } else if (periode === 'mingguan') {
     if (tanggal) {
       params.push(tanggal);
-      tanggalFilter = `date_trunc('week', p.created_at) = date_trunc('week', $${nextParam}::date)`;
+      tanggalFilter =
+        "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
     } else {
       tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
     }
@@ -122,25 +121,22 @@ export async function getRekapLikesByClient(
     tanggalFilter = '1=1';
   } else if (tanggal) {
     params.push(tanggal);
-    tanggalFilter = `p.created_at::date = $${nextParam}::date`;
+    tanggalFilter = `p.created_at::date = $2::date`;
   }
 
-  let userJoin = '';
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
-  let likeWhere = 'LOWER(p.client_id) = LOWER($1)';
   if (clientType === 'direktorat') {
-    userJoin =
-      'JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id';
-    userWhere = 'LOWER(r.role_name) = LOWER($2)';
-    likeWhere =
-      "LOWER(p.client_id) IN (SELECT LOWER(u.client_id) FROM \"user\" u JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles r ON ur.role_id = r.role_id WHERE LOWER(r.role_name) = LOWER($2))";
+    userWhere = `EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($1)
+    )`;
   }
 
   const { rows } = await query(`
     WITH valid_likes AS (
       SELECT
         l.shortcode,
-        p.client_id,
         p.created_at,
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
@@ -149,7 +145,7 @@ export async function getRekapLikesByClient(
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
       ) AS lk ON TRUE
-      WHERE ${likeWhere}
+      WHERE LOWER(p.client_id) = LOWER($1)
         AND ${tanggalFilter}
     ),
     like_counts AS (
@@ -164,9 +160,11 @@ export async function getRekapLikesByClient(
       u.insta AS username,
       u.divisi,
       u.exception,
+      u.client_id,
+      c.nama AS client_name,
       COALESCE(lc.jumlah_like, 0) AS jumlah_like
     FROM "user" u
-    ${userJoin}
+    JOIN clients c ON c.client_id = u.client_id
     LEFT JOIN like_counts lc
       ON lower(replace(trim(u.insta), '@', '')) = lc.username
     WHERE u.status = true
