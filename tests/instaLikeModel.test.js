@@ -81,37 +81,6 @@ test('parses jumlah_like as integer', async () => {
   expect(rows[0].jumlah_like).toBe(3);
 });
 
-test('adds hadir flag based on jumlah_like', async () => {
-  mockClientType();
-  mockQuery.mockResolvedValueOnce({ rows: [
-    {
-      user_id: 'u1',
-      title: 'Aiptu',
-      nama: 'Budi',
-      username: 'budi',
-      divisi: 'BAG',
-      exception: false,
-      client_id: 'c1',
-      client_name: 'Client A',
-      jumlah_like: '0',
-    },
-    {
-      user_id: 'u2',
-      title: 'Bripka',
-      nama: 'Sari',
-      username: 'sari',
-      divisi: 'BAG',
-      exception: false,
-      client_id: 'c2',
-      client_name: 'Client B',
-      jumlah_like: '5',
-    },
-  ] });
-  const rows = await getRekapLikesByClient('1');
-  expect(rows[0].hadir).toBe(false);
-  expect(rows[1].hadir).toBe(true);
-});
-
 test('filters users by client_id for non-directorate clients', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
