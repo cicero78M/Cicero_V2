@@ -29,3 +29,9 @@ across **all** client IDs that have a user role matching the directorate name.
 For example, requesting rekap likes for `ditbinmas` will include users from every
 client who has the role `ditbinmas`. Passing `clientId=c1` will limit the
 results to users from client `c1` only.
+
+### Organization Clients with Non-Operator Roles
+
+When requesting data for a regular organization and the authenticated user role is
+not `operator`, only users having the same role as the requester are included in
+the response.
