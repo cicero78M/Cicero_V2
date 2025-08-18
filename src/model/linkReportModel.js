@@ -157,23 +157,32 @@ export async function getRekapLinkByClient(
   periode = 'harian',
   tanggal,
   start_date,
-  end_date
+  end_date,
+  role
 ) {
+  const clientTypeRes = await query(
+    'SELECT client_type FROM clients WHERE client_id = $1',
+    [client_id]
+  );
+  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
+  const roleLower = role ? role.toLowerCase() : null;
+
+  const params = clientType === 'direktorat' ? [] : [client_id];
   let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  const params = [client_id];
   if (start_date && end_date) {
-    params.push(start_date, end_date);
-    dateFilterPost = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
-    dateFilterReport = "(r.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    const startIdx = params.push(start_date);
+    const endIdx = params.push(end_date);
+    dateFilterPost = `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
+    dateFilterReport = `(r.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === 'semua') {
     dateFilterPost = '1=1';
     dateFilterReport = '1=1';
   } else if (periode === 'mingguan') {
     if (tanggal) {
-      params.push(tanggal);
-      dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
-      dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', $2::date)";
+      const idx = params.push(tanggal);
+      dateFilterPost = `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
+      dateFilterReport = `date_trunc('week', r.created_at) = date_trunc('week', $${idx}::date)`;
     } else {
       dateFilterPost = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
       dateFilterReport = "date_trunc('week', r.created_at) = date_trunc('week', NOW())";
@@ -181,30 +190,54 @@ export async function getRekapLinkByClient(
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      params.push(monthDate);
-      dateFilterPost = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
-      dateFilterReport = "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      const idx = params.push(monthDate);
+      dateFilterPost = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
+      dateFilterReport = `date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
     } else {
-      dateFilterPost = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
-      dateFilterReport = "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      dateFilterPost =
+        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      dateFilterReport =
+        "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
-    params.push(tanggal);
-    dateFilterPost = 'p.created_at::date = $2::date';
-    dateFilterReport = 'r.created_at::date = $2::date';
+    const idx = params.push(tanggal);
+    dateFilterPost = `p.created_at::date = $${idx}::date`;
+    dateFilterReport = `r.created_at::date = $${idx}::date`;
+  }
+
+  let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
+  let userWhere = 'LOWER(u.client_id) = LOWER($1)';
+  let postRoleJoin = '';
+  let postRoleFilter = '';
+  if (clientType === 'direktorat') {
+    postClientFilter = '1=1';
+    const roleIdx = params.push(roleLower || client_id);
+    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    userWhere = `EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    )`;
+  } else if (roleLower && roleLower !== 'operator') {
+    const roleIdx = params.push(roleLower);
+    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    )`;
   }
 
   const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM insta_post p WHERE p.client_id = $1 AND ${dateFilterPost}`,
+    `SELECT COUNT(*) AS jumlah_post FROM insta_post p ${postRoleJoin} WHERE ${postClientFilter} ${postRoleFilter} AND ${dateFilterPost}`,
     params
   );
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
   const { rows } = await query(
-    `WITH cli AS (
-       SELECT client_type FROM clients WHERE client_id = $1
-     ),
-     link_sum AS (
+    `WITH link_sum AS (
        SELECT r.user_id,
          SUM(
            (CASE WHEN r.instagram_link IS NOT NULL AND r.instagram_link <> '' THEN 1 ELSE 0 END) +
@@ -215,28 +248,22 @@ export async function getRekapLinkByClient(
        ) AS jumlah_link
       FROM link_report r
       JOIN insta_post p ON p.shortcode = r.shortcode
-      WHERE p.client_id = $1 AND ${dateFilterPost} AND ${dateFilterReport}
+      ${postRoleJoin}
+      WHERE ${postClientFilter} ${postRoleFilter} AND ${dateFilterPost} AND ${dateFilterReport}
       GROUP BY r.user_id
     )
     SELECT
       u.user_id,
       u.title,
-       u.nama,
-       u.insta AS username,
-       u.divisi,
-       u.exception,
-       COALESCE(ls.jumlah_link, 0) AS jumlah_link
+      u.nama,
+      u.insta AS username,
+      u.divisi,
+      u.exception,
+      COALESCE(ls.jumlah_link, 0) AS jumlah_link
      FROM "user" u
      LEFT JOIN link_sum ls ON ls.user_id = u.user_id
      WHERE u.status = true
-       AND (
-         (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-         OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
-           SELECT 1 FROM user_roles ur
-           JOIN roles r ON ur.role_id = r.role_id
-           WHERE ur.user_id = u.user_id AND r.role_name = $1
-         )
-       )
+       AND ${userWhere}
      GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
      ORDER BY jumlah_link DESC, u.nama ASC`,
     params

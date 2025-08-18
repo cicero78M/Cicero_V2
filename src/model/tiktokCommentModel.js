@@ -67,59 +67,87 @@ export async function getRekapKomentarByClient(
   periode = "harian",
   tanggal,
   start_date,
-  end_date
+  end_date,
+  role
 ) {
+  const clientTypeRes = await query(
+    "SELECT client_type FROM clients WHERE client_id = $1",
+    [client_id]
+  );
+  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
+  const roleLower = role ? role.toLowerCase() : null;
+
+  const params = clientType === "direktorat" ? [] : [client_id];
   let tanggalFilter =
     "c.updated_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  const params = [client_id];
   if (start_date && end_date) {
-    params.push(start_date, end_date);
-    tanggalFilter = "(c.updated_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+    const startIdx = params.push(start_date);
+    const endIdx = params.push(end_date);
+    tanggalFilter = `(c.updated_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
-      params.push(tanggal);
-      tanggalFilter =
-        "date_trunc('week', c.updated_at) = date_trunc('week', $2::date)";
+      const idx = params.push(tanggal);
+      tanggalFilter = `date_trunc('week', c.updated_at) = date_trunc('week', $${idx}::date)`;
     } else {
       tanggalFilter = "date_trunc('week', c.updated_at) = date_trunc('week', NOW())";
     }
   } else if (periode === "bulanan") {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      params.push(monthDate);
-      tanggalFilter =
-        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      const idx = params.push(monthDate);
+      tanggalFilter = `date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
     } else {
       tanggalFilter =
         "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
-    params.push(tanggal);
-    tanggalFilter = "c.updated_at::date = $2::date";
+    const idx = params.push(tanggal);
+    tanggalFilter = `c.updated_at::date = $${idx}::date`;
+  }
+
+  let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
+  let userWhere = "LOWER(u.client_id) = LOWER($1)";
+  let postRoleJoin = "";
+  let postRoleFilter = "";
+  if (clientType === "direktorat") {
+    postClientFilter = "1=1";
+    const roleIdx = params.push(roleLower || client_id);
+    postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = c.video_id";
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    userWhere = `EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    )`;
+  } else if (roleLower && roleLower !== "operator") {
+    const roleIdx = params.push(roleLower);
+    postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = c.video_id";
+    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    )`;
   }
 
   const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p JOIN tiktok_comment c ON c.video_id = p.video_id WHERE p.client_id = $1 AND ${tanggalFilter}`,
+    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p JOIN tiktok_comment c ON c.video_id = p.video_id ${postRoleJoin} WHERE ${postClientFilter} ${postRoleFilter} AND ${tanggalFilter}`,
     params
   );
   const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
 
-
-  const { rows } = await query(`
-    WITH cli AS (
-      SELECT client_type FROM clients WHERE client_id = $1
-    ),
-    valid_comments AS (
+  const { rows } = await query(
+    `WITH valid_comments AS (
       SELECT c.video_id,
              c.updated_at,
              lower(replace(trim(cmt), '@', '')) AS username
       FROM tiktok_comment c
       JOIN tiktok_post p ON p.video_id = c.video_id
+      ${postRoleJoin}
       JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
-      WHERE p.client_id = $1
-        AND ${tanggalFilter}
+      WHERE ${postClientFilter} ${postRoleFilter} AND ${tanggalFilter}
     ),
     comment_counts AS (
       SELECT username, COUNT(DISTINCT video_id) AS jumlah_komentar
@@ -139,16 +167,10 @@ export async function getRekapKomentarByClient(
       ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
     WHERE u.status = true
       AND u.tiktok IS NOT NULL
-      AND (
-        (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-        OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
-          SELECT 1 FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.role_id
-          WHERE ur.user_id = u.user_id AND r.role_name = $1
-        )
-      )
-    ORDER BY jumlah_komentar DESC, u.nama ASC
-  `, params);
+      AND ${userWhere}
+    ORDER BY jumlah_komentar DESC, u.nama ASC`,
+    params
+  );
   for (const user of rows) {
     if (
       user.exception === true ||

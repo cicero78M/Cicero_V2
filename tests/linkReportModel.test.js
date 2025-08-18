@@ -34,6 +34,10 @@ beforeEach(() => {
   mockFindPost.mockReset();
 });
 
+function mockClientType(type = 'instansi') {
+  mockQuery.mockResolvedValueOnce({ rows: [{ client_type: type }] });
+}
+
 test('createLinkReport inserts row', async () => {
   const today = new Date().toISOString();
   mockFindPost.mockResolvedValueOnce({ shortcode: 'abc', created_at: today });
@@ -152,41 +156,44 @@ test('getReportsThisMonthByClient selects monthly rows', async () => {
 });
 
 test('getRekapLinkByClient uses provided date', async () => {
+  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('POLRES', 'harian', '2024-01-02');
   expect(mockQuery).toHaveBeenNthCalledWith(
-    1,
+    2,
     expect.stringContaining('FROM insta_post p'),
     ['POLRES', '2024-01-02']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
+    3,
     expect.stringContaining('link_sum AS'),
     ['POLRES', '2024-01-02']
   );
 });
 
 test('getRekapLinkByClient handles start_date and end_date', async () => {
+  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '2' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('POLRES', 'harian', null, '2024-01-01', '2024-01-31');
-  expect(mockQuery).toHaveBeenCalledTimes(2);
+  expect(mockQuery).toHaveBeenCalledTimes(3);
   expect(mockQuery).toHaveBeenNthCalledWith(
-    1,
+    2,
     expect.stringContaining('BETWEEN $2::date AND $3::date'),
     ['POLRES', '2024-01-01', '2024-01-31']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
+    3,
     expect.stringContaining('BETWEEN $2::date AND $3::date'),
     ['POLRES', '2024-01-01', '2024-01-31']
   );
 });
 
 test('getRekapLinkByClient applies post date filter in link_sum', async () => {
+  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
     .mockResolvedValueOnce({
@@ -203,12 +210,13 @@ test('getRekapLinkByClient applies post date filter in link_sum', async () => {
       ]
     });
   await getRekapLinkByClient('POLRES');
-  const sql = mockQuery.mock.calls[1][0];
+  const sql = mockQuery.mock.calls[2][0];
   expect(sql).toContain('p.created_at');
   expect(sql).toContain('r.created_at');
 });
 
 test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async () => {
+  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
     .mockResolvedValueOnce({
@@ -229,11 +237,13 @@ test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async (
 });
 
 test('getRekapLinkByClient includes directorate role filter for ditbinmas', async () => {
+  mockClientType('direktorat');
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
     .mockResolvedValueOnce({ rows: [] });
-  await getRekapLinkByClient('ditbinmas');
-  const sql = mockQuery.mock.calls[1][0];
-  expect(sql).toContain('clients WHERE client_id = $1');
+  await getRekapLinkByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
+  const sql = mockQuery.mock.calls[2][0];
+  expect(sql).toContain('insta_post_roles');
   expect(sql).toContain('user_roles');
 });
