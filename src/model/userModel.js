@@ -295,20 +295,26 @@ export async function getDirektoratUsers(clientId = null) {
 // Jika clientId berupa array, filter berdasarkan list tersebut.
 // Selalu memastikan user memiliki role yang sama dengan client_id-nya.
 export async function getUsersByDirektorat(flag, clientId = null) {
-  if (!['ditbinmas', 'ditlantas', 'bidhumas'].includes(flag)) {
+  const validFlags = ['ditbinmas', 'ditlantas', 'bidhumas'];
+  if (!validFlags.includes(flag)) {
     throw new Error('Direktorat flag tidak valid');
   }
 
-  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE LOWER(r.role_name) = LOWER($1)\n    AND EXISTS (\n      SELECT 1 FROM user_roles ur2\n      JOIN roles r2 ON ur2.role_id = r2.role_id\n      WHERE ur2.user_id = u.user_id AND LOWER(r2.role_name) = LOWER(u.client_id)\n    )`;
   const params = [flag];
+  let p = 2;
+
+  let sql = `SELECT
+      u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n    FROM "user" u\n    LEFT JOIN user_roles ur ON ur.user_id = u.user_id\n    LEFT JOIN roles r ON r.role_id = ur.role_id\n    WHERE EXISTS (\n      SELECT 1\n      FROM user_roles ur1\n      JOIN roles r1 ON r1.role_id = ur1.role_id\n      WHERE ur1.user_id = u.user_id\n        AND r1.role_name = $1\n    )\n      AND EXISTS (\n        SELECT 1\n        FROM user_roles ur2\n        JOIN roles r2 ON r2.role_id = ur2.role_id\n        WHERE ur2.user_id = u.user_id\n          AND LOWER(r2.role_name) = LOWER(u.client_id)\n      )`;
 
   if (clientId) {
-    if (Array.isArray(clientId)) {
-      sql += ' AND LOWER(u.client_id) = ANY($2)';
-      params.push(clientId.map((c) => c.toLowerCase()));
-    } else {
-      sql += ' AND LOWER(u.client_id) = LOWER($2)';
-      params.push(clientId);
+    if (Array.isArray(clientId) && clientId.length > 0) {
+      sql += ` AND LOWER(u.client_id) = ANY($${p})`;
+      params.push(clientId.map((c) => String(c).toLowerCase()));
+      p += 1;
+    } else if (typeof clientId === 'string' && clientId.trim() !== '') {
+      sql += ` AND LOWER(u.client_id) = LOWER($${p})`;
+      params.push(clientId.trim());
+      p += 1;
     }
   }
 

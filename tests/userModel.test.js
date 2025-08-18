@@ -185,7 +185,7 @@ test('getUsersByDirektorat queries by flag', async () => {
   expect(users).toEqual([{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false }]);
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('user_roles');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('r1.role_name = $1');
   expect(sql).toContain('EXISTS');
   expect(sql).toContain('LOWER(r2.role_name) = LOWER(u.client_id)');
 });
