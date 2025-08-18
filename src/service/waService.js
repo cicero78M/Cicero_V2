@@ -1860,7 +1860,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         }
         const nrp = text.trim();
         if (!/^\d+$/.test(nrp)) {
-          await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
+          await waClient.sendMessage(
+            chatId,
+            "Balas pesan ini dengan NRP Anda, \n*Contoh Pesan Balasan : 87020990*"
+          );
           return;
         }
         const user = await userModel.findUserById(nrp);

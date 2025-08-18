@@ -140,7 +140,10 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     }
     const user_id = text.trim();
     if (!/^\d+$/.test(user_id)) {
-      await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
+      await waClient.sendMessage(
+        chatId,
+        "Balas pesan ini dengan NRP Anda, \n*Contoh Pesan Balasan : 87020990*"
+      );
       return;
     }
     try {
@@ -196,7 +199,10 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
     const nrp = text.trim();
     if (!/^\d+$/.test(nrp)) {
-      await waClient.sendMessage(chatId, "NRP harus berupa angka. Silakan coba lagi atau ketik *batal*.");
+      await waClient.sendMessage(
+        chatId,
+        "Balas pesan ini dengan NRP Anda, \n*Contoh Pesan Balasan : 87020990*"
+      );
       return;
     }
     const user = await userModel.findUserById(nrp);
