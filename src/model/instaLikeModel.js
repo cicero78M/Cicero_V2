@@ -96,61 +96,61 @@ export async function getRekapLikesByClient(
 
   const roleLower = role ? role.toLowerCase() : null;
 
-  const params = [client_id];
+  const params = clientType === 'direktorat' ? [] : [client_id];
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
-    params.push(start_date, end_date);
+    const startIdx = params.push(start_date);
+    const endIdx = params.push(end_date);
     tanggalFilter =
-      "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
+      `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      params.push(monthDate);
-      tanggalFilter =
-        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
+      const idx = params.push(monthDate);
+        tanggalFilter =
+          `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
     } else {
       tanggalFilter =
         "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (periode === 'mingguan') {
     if (tanggal) {
-      params.push(tanggal);
+      const idx = params.push(tanggal);
       tanggalFilter =
-        "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
+        `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
     } else {
       tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
     }
   } else if (periode === 'semua') {
     tanggalFilter = '1=1';
   } else if (tanggal) {
-    params.push(tanggal);
-    tanggalFilter = `p.created_at::date = $2::date`;
+    const idx = params.push(tanggal);
+    tanggalFilter = `p.created_at::date = $${idx}::date`;
   }
 
   let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
   if (clientType === 'direktorat') {
     postClientFilter = '1=1';
+    const roleIdx = params.push(roleLower || client_id);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($1)
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
     if (clientId) {
-      params.push(clientId);
-      const idx = params.length;
-      postClientFilter = `LOWER(p.client_id) = LOWER($${idx})`;
-      userWhere += ` AND LOWER(u.client_id) = LOWER($${idx})`;
+      const clientIdx = params.push(clientId);
+      postClientFilter = `LOWER(p.client_id) = LOWER($${clientIdx})`;
+      userWhere += ` AND LOWER(u.client_id) = LOWER($${clientIdx})`;
     }
   } else if (roleLower && roleLower !== 'operator') {
-    const roleIndex = params.length + 1;
+    const roleIndex = params.push(roleLower);
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIndex})
     )`;
-    params.push(roleLower);
   }
 
   const { rows } = await query(`
