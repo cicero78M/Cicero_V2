@@ -12,6 +12,7 @@ let createUser;
 let updateUserField;
 let updatePremiumStatus;
 let getUsersByDirektorat;
+let getClientsByRole;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -21,6 +22,7 @@ beforeAll(async () => {
   updateUserField = mod.updateUserField;
   updatePremiumStatus = mod.updatePremiumStatus;
   getUsersByDirektorat = mod.getUsersByDirektorat;
+  getClientsByRole = mod.getClientsByRole;
 });
 
 beforeEach(() => {
@@ -128,4 +130,14 @@ test('getUsersByDirektorat filters by client and flag', async () => {
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('user_roles');
   expect(sql).toContain('u.client_id = $2');
+});
+
+test('getClientsByRole returns lowercase client ids', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ client_id: 'c1' }, { client_id: 'c2' }] });
+  const clients = await getClientsByRole('operator');
+  expect(clients).toEqual(['c1', 'c2']);
+  expect(mockQuery).toHaveBeenCalledWith(
+    'SELECT DISTINCT LOWER(client_id) AS client_id FROM users WHERE LOWER(role_name) = LOWER($1)',
+    ['operator']
+  );
 });
