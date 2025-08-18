@@ -91,7 +91,7 @@ export async function getRekapLikesByClient(
     'SELECT client_type FROM clients WHERE client_id = $1',
     [client_id]
   );
-  const clientType = clientTypeRes.rows[0]?.client_type;
+  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
 
   const roleLower = role ? role.toLowerCase() : null;
 
