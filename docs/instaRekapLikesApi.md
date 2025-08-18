@@ -1,6 +1,8 @@
 # Insta Rekap Likes API
 
 The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
+An optional `clientId` query parameter can further restrict results to a
+specific client when requesting data for a directorate role.
 
 ## Response
 
@@ -25,4 +27,5 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 When `client_id` refers to a directorate client, the endpoint aggregates user data
 across **all** client IDs that have a user role matching the directorate name.
 For example, requesting rekap likes for `ditbinmas` will include users from every
-client who has the role `ditbinmas`.
+client who has the role `ditbinmas`. Passing `clientId=c1` will limit the
+results to users from client `c1` only.

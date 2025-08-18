@@ -99,10 +99,10 @@ test('filters users by role for directorate clients', async () => {
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
   expect(sql).toContain('EXISTS');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
-  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
+  expect(params).toEqual(['ditbinmas']);
 });
 
 test('filters users by role flag for non-directorate clients', async () => {
@@ -147,10 +147,22 @@ test('aggregates likes across multiple client IDs for directorate role', async (
   const rows = await getRekapLikesByClient('ditbinmas', 'harian');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
-  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
+  expect(params).toEqual(['ditbinmas']);
   expect(rows).toHaveLength(2);
   expect(rows.map(r => r.client_id)).toEqual(['c1', 'c2']);
+});
+
+test('applies explicit clientId filter for directorate clients', async () => {
+  mockClientType('direktorat');
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, undefined, 'c1');
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($2)');
+  expect(sql).toContain('LOWER(u.client_id) = LOWER($2)');
+  expect(params).toEqual(['ditbinmas', 'c1']);
 });
