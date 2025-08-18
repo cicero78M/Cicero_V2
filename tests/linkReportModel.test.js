@@ -73,7 +73,7 @@ test('findLinkReportByShortcode joins with insta_post', async () => {
   );
 });
 
-test('getReportsTodayByClient filters by client', async () => {
+test('getReportsTodayByClient joins insta_post and filters by date', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
     .mockResolvedValueOnce({ rows: [{ shortcode: 'x' }] });
@@ -84,11 +84,11 @@ test('getReportsTodayByClient filters by client', async () => {
     expect.stringContaining('SELECT client_type FROM clients'),
     ['POLRES']
   );
-  expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
-    expect.stringContaining('JOIN "user" u ON u.user_id = r.user_id'),
-    ['POLRES']
-  );
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('JOIN insta_post p ON p.shortcode = r.shortcode');
+  expect(sql).toContain('JOIN "user" u ON u.user_id = r.user_id');
+  expect(sql).toContain("p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date");
+  expect(sql).toContain("r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date");
 });
 
 test('getReportsTodayByShortcode filters by client and shortcode', async () => {
