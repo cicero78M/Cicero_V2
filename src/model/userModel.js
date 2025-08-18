@@ -30,6 +30,15 @@ function normalizeUserFields(data) {
 
 // ========== QUERY DATABASE ==========
 
+// Ambil daftar client_id berdasarkan role_name
+export async function getClientsByRole(roleName) {
+  const { rows } = await query(
+    'SELECT DISTINCT LOWER(client_id) AS client_id FROM users WHERE LOWER(role_name) = LOWER($1)',
+    [roleName]
+  );
+  return rows.map((r) => r.client_id);
+}
+
 // Ambil semua user aktif (status = true), tanpa filter insta
 export async function getUsersByClient(client_id) {
   const res = await query(
