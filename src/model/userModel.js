@@ -35,18 +35,28 @@ async function buildClientFilter(clientId, alias = 'u', index = 1, roleFilter = 
     [clientId]
   );
   const clientType = rows[0]?.client_type?.toLowerCase();
-  const placeholder = `$${index}`;
-  const params = [clientId];
+
   let clause;
+  const params = [];
 
   if (clientType === 'direktorat') {
-    clause = `EXISTS (
+    const roleName = roleFilter || clientId;
+    if (roleName) {
+      const rolePlaceholder = `$${index}`;
+      clause = `EXISTS (
         SELECT 1 FROM user_roles ur
         JOIN roles r ON ur.role_id = r.role_id
-        WHERE ur.user_id = ${alias}.user_id AND r.role_name = ${placeholder}
+        WHERE ur.user_id = ${alias}.user_id AND r.role_name = ${rolePlaceholder}
       )`;
+      params.push(roleName);
+    } else {
+      clause = '1=1';
+    }
   } else {
-    clause = `${alias}.client_id = ${placeholder}`;
+    const clientPlaceholder = `$${index}`;
+    clause = `${alias}.client_id = ${clientPlaceholder}`;
+    params.push(clientId);
+
     const allowedRoles = ['ditbinmas', 'ditlantas', 'bidhumas'];
     if (roleFilter && allowedRoles.includes(roleFilter.toLowerCase())) {
       const rolePlaceholder = `$${index + 1}`;
