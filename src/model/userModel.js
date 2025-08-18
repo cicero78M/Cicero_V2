@@ -329,8 +329,13 @@ export async function getUsersByDirektorat(flag, clientId = null) {
       JOIN roles r1 ON r1.role_id = ur1.role_id
       WHERE ur1.user_id = u.user_id
         AND r1.role_name = $1
-    )
-      AND EXISTS (
+    )`;
+
+  const hasClientId =
+    Array.isArray(clientId) ? clientId.length > 0 : typeof clientId === 'string' && clientId.trim() !== '';
+
+  if (hasClientId) {
+    sql += ` AND EXISTS (
         SELECT 1
         FROM user_roles ur2
         JOIN roles r2 ON r2.role_id = ur2.role_id
@@ -338,12 +343,11 @@ export async function getUsersByDirektorat(flag, clientId = null) {
         AND LOWER(r2.role_name) = LOWER(u.client_id)
       )`;
 
-  if (clientId) {
-    if (Array.isArray(clientId) && clientId.length > 0) {
+    if (Array.isArray(clientId)) {
       sql += ` AND LOWER(u.client_id) = ANY($${p})`;
       params.push(clientId.map((c) => String(c).toLowerCase()));
       p += 1;
-    } else if (typeof clientId === 'string' && clientId.trim() !== '') {
+    } else {
       sql += ` AND LOWER(u.client_id) = LOWER($${p})`;
       params.push(clientId.trim());
       p += 1;
