@@ -177,28 +177,42 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
+      const loweredClientId = clientId.toLowerCase();
+      const direktorateRoles = ['ditbinmas', 'ditlantas', 'bidhumas'];
 
-      const client = await clientService.findClientById(clientId);
-      const clientType = client?.client_type?.toLowerCase();
-
-      if (clientType === 'direktorat') {
+      if (direktorateRoles.includes(loweredClientId)) {
         const filterClientId =
-          tokenClientId &&
-          tokenClientId.toLowerCase() !== clientId.toLowerCase()
+          tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
             ? tokenClientId
             : null;
         if (filterClientId) {
           users = await userModel.getUsersByDirektorat(
-            clientId.toLowerCase(),
+            loweredClientId,
             filterClientId
           );
         } else {
-          users = await userModel.getUsersByDirektorat(clientId.toLowerCase());
+          users = await userModel.getUsersByDirektorat(loweredClientId);
         }
-      } else if (clientType === 'org' && role !== 'operator') {
-        users = await userModel.getUsersByClient(clientId, role);
       } else {
-        users = await userModel.getUsersByClient(clientId, role);
+        const client = await clientService.findClientById(clientId);
+        const clientType = client?.client_type?.toLowerCase();
+
+        if (clientType === 'direktorat') {
+          const filterClientId =
+            tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
+              ? tokenClientId
+              : null;
+          if (filterClientId) {
+            users = await userModel.getUsersByDirektorat(
+              loweredClientId,
+              filterClientId
+            );
+          } else {
+            users = await userModel.getUsersByDirektorat(loweredClientId);
+          }
+        } else {
+          users = await userModel.getUsersByClient(clientId, role);
+        }
       }
     }
     sendSuccess(res, users);
