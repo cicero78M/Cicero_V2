@@ -223,10 +223,17 @@ router.post('/dashboard-login', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'Operator belum memiliki klien yang diizinkan' });
   }
+  let roleName = user.role;
+  if (user.client_ids.length === 1) {
+    const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [user.client_ids[0]]);
+    if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
+      roleName = user.client_ids[0].toLowerCase();
+    }
+  }
   const payload = {
     dashboard_user_id: user.dashboard_user_id,
     user_id: user.user_id,
-    role: user.role,
+    role: roleName,
     role_id: user.role_id,
     client_ids: user.client_ids
   };
@@ -322,10 +329,14 @@ router.post("/login", async (req, res) => {
   }
 
   // Generate JWT token
+  const role =
+    client.client_type?.toLowerCase() === "direktorat"
+      ? client.client_id.toLowerCase()
+      : "client";
   const payload = {
     client_id: client.client_id,
     nama: client.nama,
-    role: "client",
+    role,
   };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "2h",
