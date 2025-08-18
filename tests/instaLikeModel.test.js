@@ -107,6 +107,19 @@ test('filters users by role for directorate clients', async () => {
   expect(params).toEqual(['ditbinmas']);
 });
 
+test('handles mixed-case client_type for directorate', async () => {
+  mockClientType('Direktorat');
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(sql).toContain('user_roles ur');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(params).toEqual(['ditbinmas']);
+});
+
 test('filters users by role for non-directorate clients', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
