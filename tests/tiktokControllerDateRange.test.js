@@ -83,3 +83,25 @@ test('allows authorized client_id', async () => {
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
+test('returns user comment summaries with counts', async () => {
+  const rows = [
+    { username: 'alice', jumlah_komentar: 2 },
+    { username: 'bob', jumlah_komentar: 0 },
+    { username: 'charlie', jumlah_komentar: 1 }
+  ];
+  mockGetRekap.mockResolvedValue(rows);
+  const req = { query: { client_id: 'c1' } };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getTiktokRekapKomentar(req, res);
+  expect(json).toHaveBeenCalledWith(
+    expect.objectContaining({
+      usersWithComments: ['alice', 'charlie'],
+      usersWithoutComments: ['bob'],
+      usersWithCommentsCount: 2,
+      usersWithoutCommentsCount: 1,
+      usersCount: 3
+    })
+  );
+});
+

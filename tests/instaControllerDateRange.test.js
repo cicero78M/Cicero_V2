@@ -93,7 +93,8 @@ test('returns user like summaries', async () => {
       usersWithLikes: ['alice', 'charlie'],
       usersWithoutLikes: ['bob'],
       usersWithLikesCount: 2,
-      usersWithoutLikesCount: 1
+      usersWithoutLikesCount: 1,
+      usersCount: 3
     })
   );
 });
