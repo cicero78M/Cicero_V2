@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-07-25*
+*Last updated: 2025-08-19*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron` and are started automatically when `app.js` boots. Times are in **Asia/Jakarta** timezone.
 
@@ -13,6 +13,10 @@ This document summarizes the automated jobs ("activity") that run inside Cicero_
 | `cronTiktokLaphar.js` | `03 15,18,21 * * *` | Daily at 15:03, 18:03 and 21:03. Fetches TikTok posts and comments then sends attendance reports to recipients. |
 | `cronInstaDataMining.js` | `40 23 * * *` | Daily at 23:40. Crawls Instagram accounts for new posts and stores extended metadata. |
 | `cronNotifikasiLikesDanKomentar.js` | `10 12,16,19 * * *` | Daily at 12:10, 16:10 and 19:10. Sends WhatsApp reminders to users who have not liked/commented on today's posts. |
+| `cronRekapLink.js` | `2 15,18,21 * * *` | Daily at 15:02, 18:02 and 21:02. Sends attendance link recaps to operators and admins. |
+| `cronPremiumSubscription.js` | `0 0 * * *` | Daily at 00:00. Revokes `premium_status` for users whose `premium_end_date` has passed. |
+| `cronPremiumRequest.js` | `*/30 * * * *` | Every 30 minutes. Expires premium subscription requests older than three hours. |
+| `cronAbsensiUserData.js` | `0 13 * * *` | Daily at 13:00. Notifies users and operators about incomplete registration data. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | At 23:00 on the last day of each month. Generates monthly amplification link reports and sends an Excel file to each operator. |
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp, and updates the system accordingly. The cron files are imported in `app.js` so no additional setup is required.

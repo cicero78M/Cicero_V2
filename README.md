@@ -1,5 +1,5 @@
 # CICERO_V2
-*Last updated: 2025-07-16*
+*Last updated: 2025-08-19*
 
 ## Description
 
@@ -75,6 +75,7 @@ This allows operators to scope responses to the correct client.
     NEXT_PUBLIC_CLIENT_OPERATOR=628123456789
     RAPIDAPI_KEY=xxxx
     REDIS_URL=redis://localhost:6379
+    ALLOW_DUPLICATE_REQUESTS=false
     SECRET_KEY=your-secret
     JWT_SECRET=your-jwt-secret
     AMQP_URL=amqp://localhost
@@ -157,6 +158,10 @@ psql -U <dbuser> -h <host> -d <dbname> < cicero_backup.sql
 - All POST/PUT endpoints perform strict validation.
 - Only admins from the environment variables can trigger manual WhatsApp commands.
 - Back up the database regularly and test recovery procedures.
+
+## Request Deduplication
+
+The middleware in [`src/middleware/dedupRequestMiddleware.js`](src/middleware/dedupRequestMiddleware.js) hashes non-GET requests and caches them in Redis for five minutes. Identical requests sent again within that window receive an HTTP 429 response. Set `ALLOW_DUPLICATE_REQUESTS=true` to bypass this protection during development.
 
 ---
 
