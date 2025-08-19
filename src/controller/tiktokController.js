@@ -87,7 +87,22 @@ export async function getTiktokRekapKomentar(req, res) {
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
-    res.json({ success: true, data, chartHeight });
+    const usersWithComments = data
+      .filter((u) => u.jumlah_komentar > 0)
+      .map((u) => u.username);
+    const usersWithoutComments = data
+      .filter((u) => u.jumlah_komentar === 0)
+      .map((u) => u.username);
+    res.json({
+      success: true,
+      data,
+      chartHeight,
+      usersWithComments,
+      usersWithoutComments,
+      usersWithCommentsCount: usersWithComments.length,
+      usersWithoutCommentsCount: usersWithoutComments.length,
+      usersCount: length,
+    });
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });

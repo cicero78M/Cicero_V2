@@ -72,6 +72,7 @@ export async function getInstaRekapLikes(req, res) {
       usersWithoutLikes,
       usersWithLikesCount: usersWithLikes.length,
       usersWithoutLikesCount: usersWithoutLikes.length,
+      usersCount: length,
     });
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });

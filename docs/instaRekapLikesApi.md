@@ -12,13 +12,15 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
   "usersWithLikes": ["alice", "charlie"],
   "usersWithoutLikes": ["bob"],
   "usersWithLikesCount": 2,
-  "usersWithoutLikesCount": 1
+  "usersWithoutLikesCount": 1,
+  "usersCount": 3
 }
 ```
 
 - **usersWithLikes** – usernames with `jumlah_like > 0`.
 - **usersWithoutLikes** – usernames with `jumlah_like = 0`.
 - Count fields provide totals for each category.
+- **usersCount** – total number of users returned in `data`.
 
 ### Directorate Clients
 
