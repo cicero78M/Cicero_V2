@@ -67,6 +67,38 @@ async function performAction(action, clientId, role, waClient, chatId) {
 }
 
 export const dashRequestHandlers = {
+  async choose_dash_user(session, chatId, text, waClient) {
+    const dashUsers = session.dash_users || [];
+    if (!text) {
+      const list = await Promise.all(
+        dashUsers.map(async (u, i) => {
+          const cid = u.client_ids[0];
+          const c = await findClientById(cid);
+          const name = c?.nama || cid;
+          return `${i + 1}. ${name} (${cid})`;
+        })
+      );
+      await waClient.sendMessage(
+        chatId,
+        `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    const idx = parseInt(text.trim(), 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= dashUsers.length) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan client tidak valid. Balas angka yang tersedia."
+      );
+      return;
+    }
+    const chosen = dashUsers[idx];
+    session.role = chosen.role;
+    session.client_ids = chosen.client_ids;
+    delete session.dash_users;
+    session.step = "main";
+    await dashRequestHandlers.main(session, chatId, "", waClient);
+  },
   async main(session, chatId, _text, waClient) {
     if (session.role === "admin") {
       const menu =

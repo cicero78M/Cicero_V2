@@ -21,6 +21,19 @@ export async function findByWhatsApp(wa) {
   return findOneBy('whatsapp', wa);
 }
 
+export async function findAllByWhatsApp(wa) {
+  const res = await query(
+    `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
+     FROM dashboard_user du
+     LEFT JOIN roles r ON du.role_id = r.role_id
+     LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+     WHERE du.whatsapp = $1
+     GROUP BY du.dashboard_user_id, r.role_name`,
+    [wa]
+  );
+  return res.rows;
+}
+
 export async function createUser(data) {
   const res = await query(
     `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role_id, status, user_id, whatsapp)

@@ -349,21 +349,39 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   if (text.toLowerCase() === "dashrequest") {
     const waId =
       userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
-    const dashUser = await dashboardUserModel.findByWhatsApp(waId);
-    if (!dashUser || dashUser.status !== true) {
+    const dashUsers = await dashboardUserModel.findAllByWhatsApp(waId);
+    const validUsers = dashUsers.filter(
+      (u) => u.status === true && u.role !== "operator"
+    );
+    if (validUsers.length === 0) {
       await waClient.sendMessage(
         chatId,
         "❌ Nomor Anda tidak terdaftar atau belum disetujui sebagai dashboard user."
       );
       return;
     }
+    if (validUsers.length === 1) {
+      const du = validUsers[0];
       setSession(chatId, {
         menu: "dashrequest",
         step: "main",
-        role: dashUser.role,
-        client_ids: dashUser.client_ids,
+        role: du.role,
+        client_ids: du.client_ids,
       });
-    await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
+      await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
+      return;
+    }
+    setSession(chatId, {
+      menu: "dashrequest",
+      step: "choose_dash_user",
+      dash_users: validUsers,
+    });
+    await dashRequestHandlers.choose_dash_user(
+      getSession(chatId),
+      chatId,
+      "",
+      waClient
+    );
     return;
   }
 
