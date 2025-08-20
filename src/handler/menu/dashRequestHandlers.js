@@ -14,7 +14,7 @@ async function formatRekapUserData(clientId) {
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
   const tanggal = now.toLocaleDateString("id-ID", {
     day: "2-digit",
-    month: "2-digit",
+    month: "long",
     year: "numeric",
   });
   const jam = now.toLocaleTimeString("id-ID", {
@@ -44,10 +44,10 @@ async function formatRekapUserData(clientId) {
       })
     );
     return (
-      `${salam}\n\n` +
+      `${salam},\n\n` +
       `Mohon ijin Komandan, Melaporkan absensi update data personil ${
         client?.nama || clientId
-      }, pada Hari(${hari}), Tanggal (${tanggal}), jam (${jam}) Wib, sebagai berikut :\n\n` +
+      }, pada Hari ${hari}, Tanggal ${tanggal}, jam ${jam} Wib, sebagai berikut :\n\n` +
       lines.join("\n").trim()
     );
   }
@@ -89,10 +89,10 @@ async function formatRekapUserData(clientId) {
     .join("\n");
 
   return (
-    `${salam}\n\n` +
+    `${salam},\n\n` +
     `Mohon ijin Komandan, Melaporkan absensi update data personil ${
       client?.nama || clientId
-    }, pada Hari(${hari}), Tanggal (${tanggal}), jam (${jam}) Wib, sebagai berikut :\n\n` +
+    }, pada Hari ${hari}, Tanggal ${tanggal}, jam ${jam} Wib, sebagai berikut :\n\n` +
     body
   ).trim();
 }

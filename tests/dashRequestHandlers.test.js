@@ -1,5 +1,7 @@
 import { jest } from '@jest/globals';
 
+process.env.TZ = 'Asia/Jakarta';
+
 const mockGetUsersSocialByClient = jest.fn();
 const mockAbsensiLink = jest.fn();
 const mockAbsensiLikes = jest.fn();
@@ -141,5 +143,36 @@ test('choose_dash_user lists and selects dashboard user', async () => {
   expect(session.client_ids).toEqual(['C2']);
   expect(mainSpy).toHaveBeenCalled();
   mainSpy.mockRestore();
+});
+
+test('choose_menu formats directorate report header', async () => {
+  mockGetUsersSocialByClient.mockReset();
+  mockFindClientById.mockReset();
+
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-20T14:28:00Z'));
+
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  mockFindClientById.mockResolvedValue({
+    nama: 'DIREKTORAT BINMAS',
+    client_type: 'direktorat',
+  });
+
+  const session = {
+    role: 'user',
+    selectedClientId: 'BINMAS',
+    clientName: 'DIREKTORAT BINMAS',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+
+  await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
+
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toBe(
+    'Selamat siang,\n\nMohon ijin Komandan, Melaporkan absensi update data personil DIREKTORAT BINMAS, pada Hari Rabu, Tanggal 20 Agustus 2025, jam 14.28 Wib, sebagai berikut :'
+  );
+
+  jest.useRealTimers();
 });
 
