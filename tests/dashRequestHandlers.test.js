@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 
-const mockGetUsersMissingDataByClient = jest.fn();
+const mockGetUsersSocialByClient = jest.fn();
 const mockAbsensiLink = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiKomentarInstagram = jest.fn();
@@ -8,7 +8,7 @@ const mockAbsensiKomentar = jest.fn();
 const mockFindClientById = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
-  getUsersMissingDataByClient: mockGetUsersMissingDataByClient,
+  getUsersSocialByClient: mockGetUsersSocialByClient,
 }));
 
 jest.unstable_mockModule(
@@ -97,7 +97,8 @@ test('choose_client selects client and shows menu', async () => {
 });
 
 test('choose_menu uses selected client id', async () => {
-  mockGetUsersMissingDataByClient.mockResolvedValue([]);
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  mockFindClientById.mockResolvedValue({});
   const session = {
     role: 'user',
     selectedClientId: 'C1',
@@ -108,7 +109,7 @@ test('choose_menu uses selected client id', async () => {
 
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
-  expect(mockGetUsersMissingDataByClient).toHaveBeenCalledWith('C1');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1');
 });
 
 test('choose_dash_user lists and selects dashboard user', async () => {

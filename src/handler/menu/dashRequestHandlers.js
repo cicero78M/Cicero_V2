@@ -1,35 +1,107 @@
-import { getUsersMissingDataByClient } from "../../model/userModel.js";
+import { getUsersSocialByClient } from "../../model/userModel.js";
 import { absensiLink } from "../fetchabsensi/link/absensiLinkAmplifikasi.js";
 import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentarInstagram } from "../fetchabsensi/insta/absensiKomentarInstagram.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
+import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 
-function formatMissingData(users, clientId) {
-  let msg = `*Rekap User Belum Lengkap*\\nClient: *${clientId}*\\n`;
-  if (users.length === 0) {
-    msg += "Semua user telah melengkapi data.";
-    return msg.trim();
+async function formatRekapUserData(clientId) {
+  const client = await findClientById(clientId);
+  const users = await getUsersSocialByClient(clientId);
+  const salam = getGreeting();
+  const now = new Date();
+  const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
+  const tanggal = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const jam = now.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (client?.client_type?.toLowerCase() === "direktorat") {
+    const groups = {};
+    users.forEach((u) => {
+      const cid = u.client_id;
+      if (!groups[cid]) groups[cid] = { total: 0, miss: 0 };
+      groups[cid].total++;
+      if (!u.insta || !u.tiktok) groups[cid].miss++;
+    });
+    const lines = await Promise.all(
+      Object.entries(groups).map(async ([cid, stat]) => {
+        const c = await findClientById(cid);
+        const name = c?.nama || cid;
+        const updated = stat.total - stat.miss;
+        return (
+          `Nama Client ${name} :\n` +
+          `- Jumlah User : ${stat.total}\n` +
+          `- Jumlah User Belum Update Username : ${stat.miss}\n` +
+          `- Jumlah User Data Updated : ${updated}\n`
+        );
+      })
+    );
+    return (
+      `${salam}\n\n` +
+      `Mohon ijin Komandan, Melaporkan absensi update data personil ${
+        client?.nama || clientId
+      }, pada Hari(${hari}), Tanggal (${tanggal}), jam (${jam}) Wib, sebagai berikut :\n\n` +
+      lines.join("\n").trim()
+    );
   }
-  msg += `Jumlah: ${users.length} user\\n`;
-  msg += users
-    .map((u) => {
+
+  const complete = {};
+  const incomplete = {};
+  users.forEach((u) => {
+    const div = u.divisi || "-";
+    const nama = formatNama(u);
+    if (u.insta && u.tiktok) {
+      if (!complete[div]) complete[div] = [];
+      complete[div].push(nama);
+    } else {
       const missing = [];
-      if (!u.insta) missing.push("IG");
-      if (!u.tiktok) missing.push("TT");
-      if (!u.whatsapp) missing.push("WA");
-      return `- ${u.nama} (${u.user_id}) kurang: ${missing.join(", ")}`;
-    })
-    .join("\\n");
-  return msg.trim();
+      if (!u.insta) missing.push("instagram kosong");
+      if (!u.tiktok) missing.push("tiktok kosong");
+      if (!incomplete[div]) incomplete[div] = [];
+      incomplete[div].push(`${nama}, ${missing.join(", ")}`);
+    }
+  });
+
+  const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
+    const list = complete[d].map((n) => `- ${n}`).join("\n");
+    return `Satfung ${d}, Sudah lengkap : (${complete[d].length})\n${list}`;
+  });
+  const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
+    const list = incomplete[d].map((n) => `- ${n}`).join("\n");
+    return `Satfung ${d}, Belum lengkap : (${incomplete[d].length})\n${list}`;
+  });
+
+  const body = [
+    "Personil Sudah melengkapi data:",
+    "",
+    ...completeLines,
+    "",
+    ...incompleteLines,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    `${salam}\n\n` +
+    `Mohon ijin Komandan, Melaporkan absensi update data personil ${
+      client?.nama || clientId
+    }, pada Hari(${hari}), Tanggal (${tanggal}), jam (${jam}) Wib, sebagai berikut :\n\n` +
+    body
+  ).trim();
 }
 
 async function performAction(action, clientId, role, waClient, chatId) {
   let msg = "";
   switch (action) {
     case "1": {
-      const users = await getUsersMissingDataByClient(clientId);
-      msg = formatMissingData(users, clientId);
+      msg = await formatRekapUserData(clientId);
       break;
     }
     case "2":
