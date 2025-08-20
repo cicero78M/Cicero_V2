@@ -111,3 +111,34 @@ test('choose_menu uses selected client id', async () => {
   expect(mockGetUsersMissingDataByClient).toHaveBeenCalledWith('C1');
 });
 
+test('choose_dash_user lists and selects dashboard user', async () => {
+  mockFindClientById
+    .mockResolvedValueOnce({ nama: 'Client One' })
+    .mockResolvedValueOnce({ nama: 'Client Two' })
+    .mockResolvedValueOnce({ nama: 'Client Two' });
+  const session = {
+    dash_users: [
+      { role: 'user', client_ids: ['C1'] },
+      { role: 'user', client_ids: ['C2'] },
+    ],
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+
+  await dashRequestHandlers.choose_dash_user(session, chatId, '', waClient);
+  expect(waClient.sendMessage).toHaveBeenCalled();
+  const listMsg = waClient.sendMessage.mock.calls[0][1];
+  expect(listMsg).toContain('1. Client One');
+  expect(listMsg).toContain('2. Client Two');
+
+  waClient.sendMessage.mockClear();
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+  await dashRequestHandlers.choose_dash_user(session, chatId, '2', waClient);
+  expect(session.role).toBe('user');
+  expect(session.client_ids).toEqual(['C2']);
+  expect(mainSpy).toHaveBeenCalled();
+  mainSpy.mockRestore();
+});
+
