@@ -362,11 +362,16 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     if (validUsers.length === 1) {
       const du = validUsers[0];
+      const dir = await clientService.findClientById(du.role);
+      const clientIds =
+        dir?.client_type?.toLowerCase() === "direktorat"
+          ? [du.role]
+          : du.client_ids;
       setSession(chatId, {
         menu: "dashrequest",
         step: "main",
         role: du.role,
-        client_ids: du.client_ids,
+        client_ids: clientIds,
       });
       await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
