@@ -176,3 +176,56 @@ test('choose_menu formats directorate report header', async () => {
   jest.useRealTimers();
 });
 
+test('choose_dash_user uses role as client when directorate', async () => {
+  mockFindClientById.mockResolvedValueOnce({ client_type: 'direktorat' });
+  const session = {
+    dash_users: [
+      { role: 'DITA', client_ids: ['C1', 'C2'] },
+    ],
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+  await dashRequestHandlers.choose_dash_user(session, chatId, '1', waClient);
+  expect(session.client_ids).toEqual(['DITA']);
+  mainSpy.mockRestore();
+});
+
+test('choose_menu aggregates directorate data by client', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-20T14:28:00Z'));
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'C1', insta: 'a', tiktok: 'b' },
+    { client_id: 'C1', insta: null, tiktok: 'b' },
+    { client_id: 'C2', insta: 'x', tiktok: 'y' },
+    { client_id: 'C2', insta: null, tiktok: null },
+  ]);
+  mockFindClientById
+    .mockResolvedValueOnce({
+      nama: 'DIREKTORAT BINMAS',
+      client_type: 'direktorat',
+    })
+    .mockResolvedValueOnce({ nama: 'Client One' })
+    .mockResolvedValueOnce({ nama: 'Client Two' });
+
+  const session = {
+    role: 'BINMAS',
+    selectedClientId: 'BINMAS',
+    clientName: 'DIREKTORAT BINMAS',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+
+  await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
+
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toContain('Nama Client Client One');
+  expect(msg).toContain('- Jumlah User : 2');
+  expect(msg).toContain('- Jumlah User Sudah Update : 1');
+  expect(msg).toContain('- Jumlah User Belum Update : 1');
+  expect(msg).toContain('Nama Client Client Two');
+  jest.useRealTimers();
+});
+

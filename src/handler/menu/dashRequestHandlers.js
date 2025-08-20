@@ -38,8 +38,8 @@ async function formatRekapUserData(clientId) {
         return (
           `Nama Client ${name} :\n` +
           `- Jumlah User : ${stat.total}\n` +
-          `- Jumlah User Belum Update Username : ${stat.miss}\n` +
-          `- Jumlah User Data Updated : ${updated}\n`
+          `- Jumlah User Sudah Update : ${updated}\n` +
+          `- Jumlah User Belum Update : ${stat.miss}\n`
         );
       })
     );
@@ -144,8 +144,12 @@ export const dashRequestHandlers = {
     if (!text) {
       const list = await Promise.all(
         dashUsers.map(async (u, i) => {
-          const cid = u.client_ids[0];
-          const c = await findClientById(cid);
+          let cid = u.client_ids[0];
+          let c = cid ? await findClientById(cid) : null;
+          if (!cid || c?.client_type?.toLowerCase() === "direktorat") {
+            cid = u.role;
+            c = await findClientById(cid);
+          }
           const name = c?.nama || cid;
           return `${i + 1}. ${name} (${cid})`;
         })
@@ -166,7 +170,12 @@ export const dashRequestHandlers = {
     }
     const chosen = dashUsers[idx];
     session.role = chosen.role;
-    session.client_ids = chosen.client_ids;
+    const dir = await findClientById(chosen.role);
+    if (dir?.client_type?.toLowerCase() === "direktorat") {
+      session.client_ids = [chosen.role];
+    } else {
+      session.client_ids = chosen.client_ids;
+    }
     delete session.dash_users;
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
