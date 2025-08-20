@@ -3,6 +3,7 @@ import { absensiLink } from "../fetchabsensi/link/absensiLinkAmplifikasi.js";
 import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentarInstagram } from "../fetchabsensi/insta/absensiKomentarInstagram.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import { findClientById } from "../../service/clientService.js";
 
 function formatMissingData(users, clientId) {
   let msg = `*Rekap User Belum Lengkap*\\nClient: *${clientId}*\\n`;
@@ -67,7 +68,50 @@ async function performAction(action, clientId, role, waClient, chatId) {
 
 export const dashRequestHandlers = {
   async main(session, chatId, _text, waClient) {
+    if (session.role === "admin") {
+      const menu =
+        "┏━━━ *MENU DASHBOARD* ━━━\n" +
+        "1️⃣ Rekap user belum lengkapi data\n" +
+        "2️⃣ Rekap link Instagram\n" +
+        "3️⃣ Rekap likes Instagram\n" +
+        "4️⃣ Rekap komentar Instagram\n" +
+        "5️⃣ Rekap komentar TikTok\n" +
+        "┗━━━━━━━━━━━━━━━━━┛\n" +
+        "Ketik *angka* menu atau *batal* untuk keluar.";
+      await waClient.sendMessage(chatId, menu);
+      session.step = "choose_menu";
+      return;
+    }
+
+    const ids = session.client_ids || [];
+    if (!session.selectedClientId) {
+      if (ids.length === 1) {
+        session.selectedClientId = ids[0];
+        const client = await findClientById(ids[0]);
+        session.clientName = client?.nama || ids[0];
+      } else if (ids.length > 1) {
+        const list = await Promise.all(
+          ids.map(async (id, i) => {
+            const c = await findClientById(id);
+            const name = c?.nama || id;
+            return `${i + 1}. ${name} (${id})`;
+          })
+        );
+        await waClient.sendMessage(
+          chatId,
+          `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        );
+        session.step = "choose_client";
+        return;
+      } else {
+        await waClient.sendMessage(chatId, "Tidak ada client terkait.");
+        return;
+      }
+    }
+
+    const clientName = session.clientName;
     const menu =
+      `Client: *${clientName}*\n` +
       "┏━━━ *MENU DASHBOARD* ━━━\n" +
       "1️⃣ Rekap user belum lengkapi data\n" +
       "2️⃣ Rekap link Instagram\n" +
@@ -78,6 +122,22 @@ export const dashRequestHandlers = {
       "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
     session.step = "choose_menu";
+  },
+
+  async choose_client(session, chatId, text, waClient) {
+    const idx = parseInt(text.trim(), 10) - 1;
+    const ids = session.client_ids || [];
+    if (isNaN(idx) || idx < 0 || idx >= ids.length) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan client tidak valid. Balas angka yang tersedia."
+      );
+      return;
+    }
+    session.selectedClientId = ids[idx];
+    const client = await findClientById(session.selectedClientId);
+    session.clientName = client?.nama || session.selectedClientId;
+    await dashRequestHandlers.main(session, chatId, "", waClient);
   },
 
   async choose_menu(session, chatId, text, waClient) {
@@ -92,9 +152,11 @@ export const dashRequestHandlers = {
       await waClient.sendMessage(chatId, "Masukkan Client ID target:");
       return;
     }
-    const clientId = session.client_ids?.[0];
+    const clientId = session.selectedClientId;
     if (!clientId) {
-      await waClient.sendMessage(chatId, "Tidak ada client terkait.");
+      await waClient.sendMessage(chatId, "Client belum dipilih.");
+      session.step = "main";
+      await dashRequestHandlers.main(session, chatId, "", waClient);
       return;
     }
     await performAction(choice, clientId, session.role, waClient, chatId);
