@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 process.env.TZ = 'Asia/Jakarta';
 
 const mockGetUsersSocialByClient = jest.fn();
-const mockAbsensiLink = jest.fn();
+const mockRekapLink = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiKomentarInstagram = jest.fn();
 const mockAbsensiKomentar = jest.fn();
@@ -14,8 +14,8 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 }));
 
 jest.unstable_mockModule(
-  '../src/handler/fetchabsensi/link/absensiLinkAmplifikasi.js',
-  () => ({ absensiLink: mockAbsensiLink })
+  '../src/handler/fetchabsensi/link/rekapLink.js',
+  () => ({ rekapLink: mockRekapLink })
 );
 
 jest.unstable_mockModule(
@@ -115,7 +115,6 @@ test('choose_menu uses selected client id', async () => {
 });
 
 test.each([
-  ['2', mockAbsensiLink],
   ['3', mockAbsensiLikes],
   ['4', mockAbsensiKomentarInstagram],
   ['5', mockAbsensiKomentar],
@@ -143,8 +142,28 @@ test.each([
   mainSpy.mockRestore();
 });
 
-test('ask_client forwards session role to rekap functions', async () => {
-  mockAbsensiLink.mockResolvedValue('ok');
+test('choose_menu calls rekapLink with clientId only', async () => {
+  mockRekapLink.mockResolvedValue('ok');
+  const session = {
+    role: 'DITBINMAS',
+    selectedClientId: 'C1',
+    clientName: 'Client One',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.choose_menu(session, chatId, '2', waClient);
+
+  expect(mockRekapLink).toHaveBeenCalledWith('C1');
+
+  mainSpy.mockRestore();
+});
+
+test('ask_client calls rekapLink with clientId only', async () => {
+  mockRekapLink.mockResolvedValue('ok');
   const session = {
     role: 'DITBINMAS',
     pendingAction: '2',
@@ -157,20 +176,16 @@ test('ask_client forwards session role to rekap functions', async () => {
 
   await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
 
-  expect(mockAbsensiLink).toHaveBeenCalledWith('C1', {
-    clientFilter: 'C1',
-    mode: 'all',
-    roleFlag: 'DITBINMAS',
-  });
+  expect(mockRekapLink).toHaveBeenCalledWith('C1');
 
   mainSpy.mockRestore();
 });
 
-test('ask_client uses nested user role when session.role missing', async () => {
-  mockAbsensiLink.mockResolvedValue('ok');
+test('ask_client forwards session role to handlers needing role', async () => {
+  mockAbsensiLikes.mockResolvedValue('ok');
   const session = {
-    user: { role: 'DITBINMAS' },
-    pendingAction: '2',
+    role: 'DITBINMAS',
+    pendingAction: '3',
   };
   const waClient = { sendMessage: jest.fn() };
   const chatId = '123';
@@ -180,7 +195,30 @@ test('ask_client uses nested user role when session.role missing', async () => {
 
   await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
 
-  expect(mockAbsensiLink).toHaveBeenCalledWith('C1', {
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
+    mode: 'all',
+    roleFlag: 'DITBINMAS',
+  });
+
+  mainSpy.mockRestore();
+});
+
+test('ask_client uses nested user role when session.role missing', async () => {
+  mockAbsensiLikes.mockResolvedValue('ok');
+  const session = {
+    user: { role: 'DITBINMAS' },
+    pendingAction: '3',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
+
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('C1', {
     clientFilter: 'C1',
     mode: 'all',
     roleFlag: 'DITBINMAS',

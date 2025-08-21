@@ -1,5 +1,5 @@
 import { getUsersSocialByClient } from "../../model/userModel.js";
-import { absensiLink } from "../fetchabsensi/link/absensiLinkAmplifikasi.js";
+import { rekapLink } from "../fetchabsensi/link/rekapLink.js";
 import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentarInstagram } from "../fetchabsensi/insta/absensiKomentarInstagram.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
@@ -131,11 +131,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag) {
       break;
     }
     case "2":
-      msg = await absensiLink(clientId, {
-        clientFilter: clientId,
-        mode: "all",
-        roleFlag,
-      });
+      msg = await rekapLink(clientId);
       break;
     case "3":
       msg = await absensiLikes(clientId, {
