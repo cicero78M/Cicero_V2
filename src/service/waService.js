@@ -370,11 +370,20 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     if (validUsers.length === 1) {
       const du = validUsers[0];
+      let clientIds = du.client_ids;
+      try {
+        const roleClient = await clientService.findClientById(du.role);
+        if (roleClient?.client_type?.toLowerCase() === "direktorat") {
+          clientIds = [du.role];
+        }
+      } catch (e) {
+        // ignore lookup errors and fallback to dashboard user client_ids
+      }
       setSession(chatId, {
         menu: "dashrequest",
         step: "main",
         role: du.role,
-        client_ids: du.client_ids,
+        client_ids: clientIds,
       });
       await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
