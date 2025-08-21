@@ -1,14 +1,26 @@
 import { jest } from '@jest/globals';
 import fs from 'fs/promises';
+import { EventEmitter } from 'events';
 
 const mockQuery = jest.fn();
 const mockSearchContacts = jest.fn();
 const mockCreateContact = jest.fn();
 
-class MockOAuth2 {
+class MockOAuth2 extends EventEmitter {
   constructor() {
+    super();
     this.setCredentials = jest.fn();
     this.generateAuthUrl = jest.fn();
+    this.getAccessToken = jest
+      .fn()
+      .mockImplementation(async () => {
+        this.credentials = {
+          access_token: 'refreshed-token',
+          refresh_token: 'refresh',
+          expiry_date: Date.now() + 3600000,
+        };
+        return 'refreshed-token';
+      });
   }
 }
 
@@ -23,16 +35,28 @@ jest.unstable_mockModule('../src/db/index.js', () => ({
 jest.unstable_mockModule('googleapis', () => ({
   google: {
     auth: { OAuth2: MockOAuth2 },
-    people: mockPeople
-  }
+    people: mockPeople,
+  },
 }));
 
-let saveContactIfNew;
+let saveContactIfNew, authorize;
 
 beforeAll(async () => {
-  await fs.writeFile('credentials.json', JSON.stringify({ installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['uri'] } }));
-  await fs.writeFile('token.json', JSON.stringify({ access_token: 'token' }));
-  ({ saveContactIfNew } = await import('../src/service/googleContactsService.js'));
+  await fs.writeFile(
+    'credentials.json',
+    JSON.stringify({
+      installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['uri'] },
+    })
+  );
+  await fs.writeFile(
+    'token.json',
+    JSON.stringify({
+      access_token: 'token',
+      refresh_token: 'refresh',
+      expiry_date: Date.now() + 3600000,
+    })
+  );
+  ({ saveContactIfNew, authorize } = await import('../src/service/googleContactsService.js'));
 });
 
 afterAll(async () => {
@@ -113,6 +137,24 @@ describe('saveContactIfNew', () => {
     );
 
     errorSpy.mockRestore();
+  });
+});
+
+describe('authorize', () => {
+  test('refreshes token when expired', async () => {
+    await fs.writeFile(
+      'token.json',
+      JSON.stringify({
+        access_token: 'old',
+        refresh_token: 'refresh',
+        expiry_date: Date.now() - 1000,
+      })
+    );
+    const authClient = await authorize();
+    expect(authClient.getAccessToken).toHaveBeenCalledTimes(1);
+    const updated = JSON.parse(await fs.readFile('token.json', 'utf8'));
+    expect(updated.access_token).toBe('refreshed-token');
+    expect(updated.expiry_date).toBeGreaterThan(Date.now());
   });
 });
 
