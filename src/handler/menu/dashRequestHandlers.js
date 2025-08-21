@@ -6,9 +6,9 @@ import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 
-async function formatRekapUserData(clientId) {
+async function formatRekapUserData(clientId, role) {
   const client = await findClientById(clientId);
-  const users = await getUsersSocialByClient(clientId);
+  const users = await getUsersSocialByClient(clientId, role);
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -101,7 +101,7 @@ async function performAction(action, clientId, role, waClient, chatId) {
   let msg = "";
   switch (action) {
     case "1": {
-      msg = await formatRekapUserData(clientId);
+      msg = await formatRekapUserData(clientId, role);
       break;
     }
     case "2":
