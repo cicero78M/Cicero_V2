@@ -20,7 +20,7 @@ async function getClientInfo(client_id) {
 }
 
 export async function absensiLink(client_id, opts = {}) {
-  const { clientFilter } = opts;
+  const { clientFilter, roleFlag } = opts;
   const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -30,11 +30,15 @@ export async function absensiLink(client_id, opts = {}) {
   const { nama: clientNama, clientType } = await getClientInfo(targetClient);
   let users;
   if (clientType === "direktorat") {
+    const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+    const flag = allowedRoles.includes((roleFlag || "").toLowerCase())
+      ? roleFlag.toLowerCase()
+      : targetClient.toLowerCase();
     users = (
-      await getUsersByDirektorat(targetClient.toLowerCase(), targetClient)
+      await getUsersByDirektorat(flag, targetClient)
     ).filter((u) => u.status === true);
   } else {
-    users = await getUsersByClient(targetClient);
+    users = await getUsersByClient(targetClient, roleFlag);
   }
   const shortcodes = await getShortcodesTodayByClient(targetClient);
   if (!shortcodes.length)

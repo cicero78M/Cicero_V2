@@ -48,17 +48,18 @@ export async function absensiKomentar(client_id, opts = {}) {
   const clientInfo = await getClientInfo(targetClient);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
+  const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
   if (
     roleFlag &&
-    typeof roleFlag === "string" &&
+    allowedRoles.includes(roleFlag.toLowerCase()) &&
     roleFlag.toUpperCase() === targetClient.toUpperCase()
   ) {
     users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
       (u) => u.status === true
     );
   } else {
-    users = await getUsersByClient(targetClient);
+    users = await getUsersByClient(targetClient, roleFlag);
   }
   const posts = await getPostsTodayByClient(targetClient);
 

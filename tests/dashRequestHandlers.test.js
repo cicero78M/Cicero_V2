@@ -295,7 +295,7 @@ test('choose_menu formats org report with separate sections', async () => {
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).toContain('Sudah Lengkap :');
   expect(msg).toContain('Belum Lengkap:');
-  expect(msg).toContain('SAT BINMAS (1)');
+  expect(msg).toContain('BINMAS (1)');
   expect(msg).toContain('BRIPKA RIZQA FP');
   expect(msg).toContain('BRIPKA RIZQI ALFA, Instagram kosong, TikTok kosong');
 
