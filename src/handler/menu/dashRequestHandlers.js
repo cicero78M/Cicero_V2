@@ -123,7 +123,7 @@ async function formatRekapUserData(clientId) {
   ).trim();
 }
 
-async function performAction(action, clientId, waClient, chatId, role) {
+async function performAction(action, clientId, waClient, chatId, roleFlag) {
   let msg = "";
   switch (action) {
     case "1": {
@@ -134,28 +134,28 @@ async function performAction(action, clientId, waClient, chatId, role) {
       msg = await absensiLink(clientId, {
         clientFilter: clientId,
         mode: "all",
-        roleFlag: role,
+        roleFlag,
       });
       break;
     case "3":
       msg = await absensiLikes(clientId, {
         clientFilter: clientId,
         mode: "all",
-        roleFlag: role,
+        roleFlag,
       });
       break;
     case "4":
       msg = await absensiKomentarInstagram(clientId, {
         clientFilter: clientId,
         mode: "all",
-        roleFlag: role,
+        roleFlag,
       });
       break;
     case "5":
       msg = await absensiKomentar(clientId, {
         clientFilter: clientId,
         mode: "all",
-        roleFlag: role,
+        roleFlag,
       });
       break;
     default:
@@ -298,7 +298,13 @@ export const dashRequestHandlers = {
       await dashRequestHandlers.main(session, chatId, "", waClient);
       return;
     }
-    await performAction(choice, clientId, waClient, chatId, session.role);
+    await performAction(
+      choice,
+      clientId,
+      waClient,
+      chatId,
+      session.role || session.user?.role
+    );
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
   },
@@ -306,7 +312,13 @@ export const dashRequestHandlers = {
   async ask_client(session, chatId, text, waClient) {
     const clientId = text.trim().toUpperCase();
     const action = session.pendingAction;
-    await performAction(action, clientId, waClient, chatId, session.role);
+    await performAction(
+      action,
+      clientId,
+      waClient,
+      chatId,
+      session.role || session.user?.role
+    );
     delete session.pendingAction;
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);

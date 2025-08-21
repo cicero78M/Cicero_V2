@@ -143,6 +143,52 @@ test.each([
   mainSpy.mockRestore();
 });
 
+test('ask_client forwards session role to rekap functions', async () => {
+  mockAbsensiLink.mockResolvedValue('ok');
+  const session = {
+    role: 'DITBINMAS',
+    pendingAction: '2',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
+
+  expect(mockAbsensiLink).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
+    mode: 'all',
+    roleFlag: 'DITBINMAS',
+  });
+
+  mainSpy.mockRestore();
+});
+
+test('ask_client uses nested user role when session.role missing', async () => {
+  mockAbsensiLink.mockResolvedValue('ok');
+  const session = {
+    user: { role: 'DITBINMAS' },
+    pendingAction: '2',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
+
+  expect(mockAbsensiLink).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
+    mode: 'all',
+    roleFlag: 'DITBINMAS',
+  });
+
+  mainSpy.mockRestore();
+});
+
 test('choose_dash_user lists and selects dashboard user', async () => {
   mockFindClientById
     .mockResolvedValueOnce({ nama: 'Client One' })
