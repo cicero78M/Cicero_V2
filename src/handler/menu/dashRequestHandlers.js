@@ -124,7 +124,6 @@ async function formatRekapUserData(clientId) {
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag) {
-  const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let msg = "";
   switch (action) {
     case "1": {
@@ -134,39 +133,27 @@ async function performAction(action, clientId, waClient, chatId, roleFlag) {
     case "2":
       msg = await rekapLink(clientId);
       break;
-    case "3": {
-      const targetId = directorateRoles.includes((roleFlag || "").toLowerCase())
-        ? roleFlag
-        : clientId;
-      msg = await absensiLikes(targetId, {
-        clientFilter: targetId,
+    case "3":
+      msg = await absensiLikes(clientId, {
+        clientFilter: clientId,
         mode: "all",
         roleFlag,
       });
       break;
-    }
-    case "4": {
-      const targetId = directorateRoles.includes((roleFlag || "").toLowerCase())
-        ? roleFlag
-        : clientId;
-      msg = await absensiKomentarInstagram(targetId, {
-        clientFilter: targetId,
+    case "4":
+      msg = await absensiKomentarInstagram(clientId, {
+        clientFilter: clientId,
         mode: "all",
         roleFlag,
       });
       break;
-    }
-    case "5": {
-      const targetId = directorateRoles.includes((roleFlag || "").toLowerCase())
-        ? roleFlag
-        : clientId;
-      msg = await absensiKomentar(targetId, {
-        clientFilter: targetId,
+    case "5":
+      msg = await absensiKomentar(clientId, {
+        clientFilter: clientId,
         mode: "all",
         roleFlag,
       });
       break;
-    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -179,15 +166,9 @@ export const dashRequestHandlers = {
     if (!text) {
       const list = await Promise.all(
         dashUsers.map(async (u, idx) => {
-          const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
           let cid = u.client_ids[0];
           let c = cid ? await findClientById(cid) : null;
-          if (
-            !cid ||
-            !c ||
-            c?.client_type?.toLowerCase() === "direktorat" ||
-            directorateRoles.includes(u.role.toLowerCase())
-          ) {
+          if (!cid || c?.client_type?.toLowerCase() === "direktorat") {
             cid = u.role;
             c = await findClientById(cid);
           }
@@ -211,12 +192,8 @@ export const dashRequestHandlers = {
     }
     const chosen = dashUsers[idx];
     session.role = chosen.role;
-    const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
-    const dir = await findClientById(chosen.role.toUpperCase());
-    if (
-      dir?.client_type?.toLowerCase() === "direktorat" ||
-      directorateRoles.includes(chosen.role.toLowerCase())
-    ) {
+    const dir = await findClientById(chosen.role);
+    if (dir?.client_type?.toLowerCase() === "direktorat") {
       session.client_ids = [chosen.role];
     } else {
       session.client_ids = chosen.client_ids;
