@@ -120,8 +120,12 @@ describe('saveContactIfNew', () => {
   });
 
   test('logs error when Google API returns 403', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] });
-    mockSearchContacts.mockResolvedValueOnce({ results: [] });
+    mockQuery
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    mockSearchContacts
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } });
     mockCreateContact.mockRejectedValueOnce({ message: 'Forbidden', response: { status: 403 } });
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -129,7 +133,7 @@ describe('saveContactIfNew', () => {
 
     expect(mockSearchContacts).toHaveBeenCalledTimes(2);
     expect(mockCreateContact).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
     expect(errorSpy).toHaveBeenCalledWith(
       '[GOOGLE CONTACT] Failed to save contact:',
       'Forbidden',
@@ -137,6 +141,29 @@ describe('saveContactIfNew', () => {
     );
 
     errorSpy.mockRestore();
+  });
+
+  test('uses Admin client name when number belongs to dashboard or operator', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rows: [{ client_name: 'Demo' }] })
+      .mockResolvedValueOnce({});
+    mockSearchContacts
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } });
+    mockCreateContact.mockResolvedValueOnce({});
+
+    await saveContactIfNew('88888@c.us');
+
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestBody: expect.objectContaining({
+          names: [{ givenName: 'Admin Demo' }],
+          phoneNumbers: [{ value: '+88888' }],
+        }),
+      })
+    );
+    expect(mockQuery).toHaveBeenCalledTimes(3);
   });
 });
 
