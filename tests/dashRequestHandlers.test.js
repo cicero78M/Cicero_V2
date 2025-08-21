@@ -111,7 +111,7 @@ test('choose_menu uses selected client id', async () => {
 
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
-  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1', 'user');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1');
 });
 
 test('choose_dash_user lists and selects dashboard user', async () => {
@@ -169,7 +169,7 @@ test('choose_menu formats directorate report header', async () => {
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS', 'user');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS');
   expect(msg).toBe(
     'Selamat siang,\n\nMohon ijin Komandan, melaporkan absensi update data personil DIREKTORAT BINMAS pada hari Rabu, 20 Agustus 2025, pukul 14.28 WIB, sebagai berikut:'
   );
