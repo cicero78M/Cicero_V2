@@ -6,9 +6,9 @@ import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 
-async function formatRekapUserData(clientId, role) {
+async function formatRekapUserData(clientId) {
   const client = await findClientById(clientId);
-  const users = await getUsersSocialByClient(clientId, role);
+  const users = await getUsersSocialByClient(clientId);
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -123,37 +123,33 @@ async function formatRekapUserData(clientId, role) {
   ).trim();
 }
 
-async function performAction(action, clientId, role, waClient, chatId) {
+async function performAction(action, clientId, waClient, chatId) {
   let msg = "";
   switch (action) {
     case "1": {
-      msg = await formatRekapUserData(clientId, role);
+      msg = await formatRekapUserData(clientId);
       break;
     }
     case "2":
       msg = await absensiLink(clientId, {
-        roleFlag: role,
         clientFilter: clientId,
         mode: "all",
       });
       break;
     case "3":
       msg = await absensiLikes(clientId, {
-        roleFlag: role,
         clientFilter: clientId,
         mode: "all",
       });
       break;
     case "4":
       msg = await absensiKomentarInstagram(clientId, {
-        roleFlag: role,
         clientFilter: clientId,
         mode: "all",
       });
       break;
     case "5":
       msg = await absensiKomentar(clientId, {
-        roleFlag: role,
         clientFilter: clientId,
         mode: "all",
       });
@@ -298,7 +294,7 @@ export const dashRequestHandlers = {
       await dashRequestHandlers.main(session, chatId, "", waClient);
       return;
     }
-    await performAction(choice, clientId, session.role, waClient, chatId);
+    await performAction(choice, clientId, waClient, chatId);
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
   },
@@ -306,7 +302,7 @@ export const dashRequestHandlers = {
   async ask_client(session, chatId, text, waClient) {
     const clientId = text.trim().toUpperCase();
     const action = session.pendingAction;
-    await performAction(action, clientId, session.role, waClient, chatId);
+    await performAction(action, clientId, waClient, chatId);
     delete session.pendingAction;
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
