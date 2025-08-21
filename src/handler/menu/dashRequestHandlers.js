@@ -22,7 +22,8 @@ async function formatRekapUserData(clientId, role) {
     minute: "2-digit",
   });
 
-  if (client?.client_type?.toLowerCase() === "direktorat") {
+  const clientType = client?.client_type?.toLowerCase();
+  if (clientType === "direktorat") {
     const groups = {};
     users.forEach((u) => {
       const cid = u.client_id;
@@ -79,6 +80,28 @@ async function formatRekapUserData(clientId, role) {
       incomplete[div].push(`${nama}, ${missing.join(", ")}`);
     }
   });
+
+  if (clientType === "org") {
+    const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
+      const list = complete[d].join("\n\n");
+      return `SAT ${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
+    });
+    const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
+      const list = incomplete[d].join("\n\n");
+      return `SAT ${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
+    });
+    const sections = [];
+    if (completeLines.length) sections.push(`Sudah Lengkap :\n\n${completeLines.join("\n\n")}`);
+    if (incompleteLines.length) sections.push(`Belum Lengkap:\n\n${incompleteLines.join("\n\n")}`);
+    const body = sections.join("\n\n");
+    return (
+      `${salam},\n\n` +
+      `Mohon ijin Komandan, melaporkan absensi update data personil ${
+        (client?.nama || clientId).toUpperCase()
+      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+      body
+    ).trim();
+  }
 
   const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
     const list = complete[d].join("\n\n");

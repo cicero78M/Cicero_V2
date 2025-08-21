@@ -269,3 +269,36 @@ test('directorate report orders directorate first with numbering', async () => {
   jest.useRealTimers();
 });
 
+test('choose_menu formats org report with separate sections', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-21T05:38:00Z'));
+
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { divisi: 'BINMAS', title: 'BRIPKA', nama: 'RIZQA FP', insta: 'a', tiktok: 'b' },
+    { divisi: 'BINMAS', title: 'BRIPKA', nama: 'RIZQI ALFA', insta: null, tiktok: null },
+  ]);
+  mockFindClientById.mockResolvedValue({
+    nama: 'POLRES BOJONEGORO',
+    client_type: 'org',
+  });
+
+  const session = {
+    role: 'user',
+    selectedClientId: 'POLRES',
+    clientName: 'POLRES BOJONEGORO',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+
+  await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
+
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toContain('Sudah Lengkap :');
+  expect(msg).toContain('Belum Lengkap:');
+  expect(msg).toContain('SAT BINMAS (1)');
+  expect(msg).toContain('BRIPKA RIZQA FP');
+  expect(msg).toContain('BRIPKA RIZQI ALFA, Instagram kosong, TikTok kosong');
+
+  jest.useRealTimers();
+});
+
