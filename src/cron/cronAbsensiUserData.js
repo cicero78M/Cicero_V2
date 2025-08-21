@@ -11,15 +11,26 @@ import {
 
 async function getActiveClients() {
   const res = await query(
-    'SELECT client_id, nama, client_operator FROM clients WHERE client_status = true'
+    'SELECT client_id, nama, client_operator, client_type FROM clients WHERE client_status = true'
   );
   return res.rows;
 }
 
+function sortClients(clients) {
+  const typeOrder = { direktorat: 0, org: 1 };
+  return clients.sort((a, b) => {
+    const typeA = typeOrder[a.client_type?.toLowerCase()] ?? 2;
+    const typeB = typeOrder[b.client_type?.toLowerCase()] ?? 2;
+    if (typeA !== typeB) return typeA - typeB;
+    return a.nama.localeCompare(b.nama);
+  });
+}
+
 export async function runCron() {
   try {
-    const clients = await getActiveClients();
+    const clients = sortClients(await getActiveClients());
     const adminRekap = [];
+    let idx = 1;
     for (const client of clients) {
       const users = await getUsersMissingDataByClient(client.client_id);
       const clientRekap = [];
@@ -39,14 +50,18 @@ export async function runCron() {
         if (!user.whatsapp) reasons.push('Belum Registrasi Whatsapp');
         if (!user.insta) reasons.push('Instagram Kosong');
         if (!user.tiktok) reasons.push('Tiktok Kosong');
-        const line = `- ${user.nama}: ${reasons.join(', ')}`;
+        const line = `- ${user.nama} (${user.user_id}): ${reasons.join(', ')}`;
         clientRekap.push(line);
-        adminRekap.push(`- ${client.nama} ${line}`);
       }
-      if (clientRekap.length > 0 && client.client_operator) {
-        const report = `Assalamualaikum,\nBerikut rekap data absensi user yang belum lengkap:\n${clientRekap.join('\n')}`;
-        const operatorId = formatToWhatsAppId(client.client_operator);
-        await sendWAReport(waClient, report, operatorId);
+      if (clientRekap.length > 0) {
+        if (client.client_operator) {
+          const report = `Assalamualaikum,\nBerikut rekap data absensi user yang belum lengkap:\n${clientRekap.join('\n')}`;
+          const operatorId = formatToWhatsAppId(client.client_operator);
+          await sendWAReport(waClient, report, operatorId);
+        }
+        adminRekap.push(`${idx}. ${client.nama}`);
+        adminRekap.push(...clientRekap);
+        idx += 1;
       }
     }
     if (adminRekap.length > 0) {
