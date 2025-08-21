@@ -14,6 +14,7 @@ let updatePremiumStatus;
 let getUsersByDirektorat;
 let getClientsByRole;
 let getUsersByClient;
+let getUsersSocialByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -25,6 +26,7 @@ beforeAll(async () => {
   getUsersByDirektorat = mod.getUsersByDirektorat;
   getClientsByRole = mod.getClientsByRole;
   getUsersByClient = mod.getUsersByClient;
+  getUsersSocialByClient = mod.getUsersSocialByClient;
 });
 
 beforeEach(() => {
@@ -99,6 +101,20 @@ test('getUsersByClient adds role filter for instansi when role provided', async 
   expect(sql).toContain('user_roles');
   expect(sql).toContain('r.role_name = $2');
   expect(mockQuery.mock.calls[1][1]).toEqual(['C2', 'ditbinmas']);
+});
+
+test('getUsersSocialByClient uses HAVING for directorate', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }] });
+  const users = await getUsersSocialByClient('ditlantas');
+  expect(users).toEqual([{ user_id: 'u1' }]);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('GROUP BY');
+  expect(sql).toContain('HAVING');
+  expect(sql).toContain('BOOL_OR');
+  expect(sql).toContain("NOT BOOL_OR(LOWER(r.role_name) = 'operator')");
+  expect(mockQuery.mock.calls[1][1]).toEqual(['ditlantas']);
 });
 
 test('findUserByIdAndClient filters by role for instansi', async () => {

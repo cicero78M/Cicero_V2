@@ -219,6 +219,29 @@ export async function getUsersMissingDataByClient(clientId, roleFilter = null) {
 
 // Ambil seluruh user aktif non-operator beserta data sosial
 export async function getUsersSocialByClient(clientId, roleFilter = null) {
+  const { rows } = await query(
+    'SELECT client_type FROM clients WHERE client_id = $1',
+    [clientId]
+  );
+  const clientType = rows[0]?.client_type?.toLowerCase();
+
+  if (clientType === 'direktorat') {
+    const res = await query(
+      `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
+       FROM "user" u
+       JOIN user_roles ur ON ur.user_id = u.user_id
+       JOIN roles r ON r.role_id = ur.role_id
+       WHERE u.status = true
+       GROUP BY u.user_id
+       HAVING
+         BOOL_OR(LOWER(r.role_name) = LOWER($1))
+         AND NOT BOOL_OR(LOWER(r.role_name) = 'operator')
+       ORDER BY u.client_id, u.divisi, u.nama`,
+      [clientId]
+    );
+    return res.rows;
+  }
+
   const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
   const res = await query(
     `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
