@@ -29,12 +29,21 @@ function normalizeUserFields(data) {
 }
 
 // Bangun klausa filter client dengan mempertimbangkan tipe client
-async function buildClientFilter(clientId, alias = 'u', index = 1, roleFilter = null) {
-  const { rows } = await query(
-    'SELECT client_type FROM clients WHERE client_id = $1',
-    [clientId]
-  );
-  const clientType = rows[0]?.client_type?.toLowerCase();
+async function buildClientFilter(
+  clientId,
+  alias = 'u',
+  index = 1,
+  roleFilter = null,
+  clientTypeParam = null
+) {
+  let clientType = clientTypeParam;
+  if (!clientType) {
+    const { rows } = await query(
+      'SELECT client_type FROM clients WHERE client_id = $1',
+      [clientId]
+    );
+    clientType = rows[0]?.client_type?.toLowerCase();
+  }
 
   let clause;
   const params = [];
@@ -54,7 +63,11 @@ async function buildClientFilter(clientId, alias = 'u', index = 1, roleFilter = 
     }
   } else {
     const clientPlaceholder = `$${index}`;
-    clause = `${alias}.client_id = ${clientPlaceholder}`;
+    clause = `(${alias}.client_id = ${clientPlaceholder} OR EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = ${alias}.user_id AND r.role_name = ${clientPlaceholder}
+      ))`;
     params.push(clientId);
 
     const allowedRoles = ['ditbinmas', 'ditlantas', 'bidhumas'];
