@@ -30,26 +30,37 @@ async function formatRekapUserData(clientId, role) {
       groups[cid].total++;
       if (!u.insta || !u.tiktok) groups[cid].miss++;
     });
-    const lines = await Promise.all(
+
+    const entries = await Promise.all(
       Object.entries(groups).map(async ([cid, stat]) => {
         const c = await findClientById(cid);
         const name = (c?.nama || cid).toUpperCase();
         const updated = stat.total - stat.miss;
-        return (
-          `${name}\n\n` +
-          `Jumlah User: ${stat.total}\n\n` +
-          `Jumlah User Sudah Update: ${updated}\n\n` +
-          `Jumlah User Belum Update: ${stat.miss}\n`
-        );
+        return { cid, name, stat, updated };
       })
     );
-    return (
+
+    entries.sort((a, b) => {
+      if (a.cid === clientId) return -1;
+      if (b.cid === clientId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    const lines = entries.map(
+      (e, idx) =>
+        `${idx + 1}. ${e.name}\n\n` +
+        `Jumlah User: ${e.stat.total}\n` +
+        `Jumlah User Sudah Update: ${e.updated}\n` +
+        `Jumlah User Belum Update: ${e.stat.miss}`
+    );
+
+    const header =
       `${salam},\n\n` +
       `Mohon ijin Komandan, melaporkan absensi update data personil ${
         (client?.nama || clientId).toUpperCase()
-      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
-      lines.join("\n").trim()
-    );
+      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
+    const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
+    return `${header}${body}`.trim();
   }
 
   const complete = {};
