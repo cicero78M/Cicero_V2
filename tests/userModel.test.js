@@ -76,6 +76,8 @@ test('getUsersByClient filters by client for non-direktorat', async () => {
   expect(users).toEqual([{ user_id: '1' }]);
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('client_id = $1');
+  expect(sql).toContain('OR EXISTS');
+  expect(sql).toContain('user_roles');
   expect(mockQuery.mock.calls[1][1]).toEqual(['C1']);
 });
 
@@ -98,6 +100,7 @@ test('getUsersByClient adds role filter for instansi when role provided', async 
   expect(users).toEqual([{ user_id: '3' }]);
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('client_id = $1');
+  expect(sql).toContain('OR EXISTS');
   expect(sql).toContain('user_roles');
   expect(sql).toContain('r.role_name = $2');
   expect(mockQuery.mock.calls[1][1]).toEqual(['C2', 'ditbinmas']);
@@ -115,6 +118,20 @@ test('getUsersSocialByClient uses HAVING for directorate', async () => {
   expect(sql).toContain('BOOL_OR');
   expect(sql).toContain("NOT BOOL_OR(LOWER(r.role_name) = 'operator')");
   expect(mockQuery.mock.calls[1][1]).toEqual(['ditlantas']);
+});
+
+test('getUsersSocialByClient filters by client or role for non-direktorat', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }] });
+  const users = await getUsersSocialByClient('C1');
+  expect(users).toEqual([{ user_id: 'u1' }]);
+  const sql = mockQuery.mock.calls[2][0];
+  expect(sql).toContain('client_id = $1');
+  expect(sql).toContain('OR EXISTS');
+  expect(sql).toContain('user_roles');
+  expect(mockQuery.mock.calls[2][1]).toEqual(['C1']);
 });
 
 test('findUserByIdAndClient filters by role for instansi', async () => {
