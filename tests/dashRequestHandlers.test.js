@@ -74,8 +74,8 @@ test('main lists clients when multiple', async () => {
 
   expect(session.step).toBe('choose_client');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toContain('1. Client One');
-  expect(msg).toContain('2. Client Two');
+  expect(msg).toContain('CLIENT ONE (C1)');
+  expect(msg).toContain('CLIENT TWO (C2)');
 });
 
 test('choose_client selects client and shows menu', async () => {
@@ -131,8 +131,8 @@ test('choose_dash_user lists and selects dashboard user', async () => {
   await dashRequestHandlers.choose_dash_user(session, chatId, '', waClient);
   expect(waClient.sendMessage).toHaveBeenCalled();
   const listMsg = waClient.sendMessage.mock.calls[0][1];
-  expect(listMsg).toContain('1. Client One');
-  expect(listMsg).toContain('2. Client Two');
+  expect(listMsg).toContain('CLIENT ONE (C1)');
+  expect(listMsg).toContain('CLIENT TWO (C2)');
 
   waClient.sendMessage.mockClear();
   const mainSpy = jest
@@ -171,7 +171,7 @@ test('choose_menu formats directorate report header', async () => {
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS', 'user');
   expect(msg).toBe(
-    'Selamat siang,\n\nMohon ijin Komandan, Melaporkan absensi update data personil DIREKTORAT BINMAS, pada Hari Rabu, Tanggal 20 Agustus 2025, jam 14.28 Wib, sebagai berikut :'
+    'Selamat siang,\n\nMohon ijin Komandan, melaporkan absensi update data personil DIREKTORAT BINMAS pada hari Rabu, 20 Agustus 2025, pukul 14.28 WIB, sebagai berikut:'
   );
 
   jest.useRealTimers();
@@ -222,11 +222,11 @@ test('choose_menu aggregates directorate data by client', async () => {
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toContain('Nama Client Client One');
-  expect(msg).toContain('- Jumlah User : 2');
-  expect(msg).toContain('- Jumlah User Sudah Update : 1');
-  expect(msg).toContain('- Jumlah User Belum Update : 1');
-  expect(msg).toContain('Nama Client Client Two');
+  expect(msg).toContain('CLIENT ONE');
+  expect(msg).toContain('Jumlah User: 2');
+  expect(msg).toContain('Jumlah User Sudah Update: 1');
+  expect(msg).toContain('Jumlah User Belum Update: 1');
+  expect(msg).toContain('CLIENT TWO');
   jest.useRealTimers();
 });
 

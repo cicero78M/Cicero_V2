@@ -33,21 +33,21 @@ async function formatRekapUserData(clientId, role) {
     const lines = await Promise.all(
       Object.entries(groups).map(async ([cid, stat]) => {
         const c = await findClientById(cid);
-        const name = c?.nama || cid;
+        const name = (c?.nama || cid).toUpperCase();
         const updated = stat.total - stat.miss;
         return (
-          `Nama Client ${name} :\n` +
-          `- Jumlah User : ${stat.total}\n` +
-          `- Jumlah User Sudah Update : ${updated}\n` +
-          `- Jumlah User Belum Update : ${stat.miss}\n`
+          `${name}\n\n` +
+          `Jumlah User: ${stat.total}\n\n` +
+          `Jumlah User Sudah Update: ${updated}\n\n` +
+          `Jumlah User Belum Update: ${stat.miss}\n`
         );
       })
     );
     return (
       `${salam},\n\n` +
-      `Mohon ijin Komandan, Melaporkan absensi update data personil ${
-        client?.nama || clientId
-      }, pada Hari ${hari}, Tanggal ${tanggal}, jam ${jam} Wib, sebagai berikut :\n\n` +
+      `Mohon ijin Komandan, melaporkan absensi update data personil ${
+        (client?.nama || clientId).toUpperCase()
+      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
       lines.join("\n").trim()
     );
   }
@@ -62,37 +62,29 @@ async function formatRekapUserData(clientId, role) {
       complete[div].push(nama);
     } else {
       const missing = [];
-      if (!u.insta) missing.push("instagram kosong");
-      if (!u.tiktok) missing.push("tiktok kosong");
+      if (!u.insta) missing.push("Instagram kosong");
+      if (!u.tiktok) missing.push("TikTok kosong");
       if (!incomplete[div]) incomplete[div] = [];
       incomplete[div].push(`${nama}, ${missing.join(", ")}`);
     }
   });
 
   const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
-    const list = complete[d].map((n) => `- ${n}`).join("\n");
-    return `Satfung ${d}, Sudah lengkap : (${complete[d].length})\n${list}`;
+    const list = complete[d].join("\n\n");
+    return `Satfung ${d}, Sudah lengkap: (${complete[d].length})\n\n${list}`;
   });
   const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
-    const list = incomplete[d].map((n) => `- ${n}`).join("\n");
-    return `Satfung ${d}, Belum lengkap : (${incomplete[d].length})\n${list}`;
+    const list = incomplete[d].join("\n\n");
+    return `Satfung ${d}, Belum lengkap: (${incomplete[d].length})\n\n${list}`;
   });
 
-  const body = [
-    "Personil Sudah melengkapi data:",
-    "",
-    ...completeLines,
-    "",
-    ...incompleteLines,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const body = [...completeLines, ...incompleteLines].filter(Boolean).join("\n\n");
 
   return (
     `${salam},\n\n` +
-    `Mohon ijin Komandan, Melaporkan absensi update data personil ${
-      client?.nama || clientId
-    }, pada Hari ${hari}, Tanggal ${tanggal}, jam ${jam} Wib, sebagai berikut :\n\n` +
+    `Mohon ijin Komandan, melaporkan absensi update data personil ${
+      (client?.nama || clientId).toUpperCase()
+    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
     body
   ).trim();
 }
@@ -143,20 +135,20 @@ export const dashRequestHandlers = {
     const dashUsers = session.dash_users || [];
     if (!text) {
       const list = await Promise.all(
-        dashUsers.map(async (u, i) => {
+        dashUsers.map(async (u) => {
           let cid = u.client_ids[0];
           let c = cid ? await findClientById(cid) : null;
           if (!cid || c?.client_type?.toLowerCase() === "direktorat") {
             cid = u.role;
             c = await findClientById(cid);
           }
-          const name = c?.nama || cid;
-          return `${i + 1}. ${name} (${cid})`;
+          const name = (c?.nama || cid).toUpperCase();
+          return `${name} (${cid.toUpperCase()})`;
         })
       );
       await waClient.sendMessage(
         chatId,
-        `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        `Pilih Client:\n\n${list.join("\n\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
       );
       return;
     }
@@ -204,15 +196,15 @@ export const dashRequestHandlers = {
         session.clientName = client?.nama || ids[0];
       } else if (ids.length > 1) {
         const list = await Promise.all(
-          ids.map(async (id, i) => {
+          ids.map(async (id) => {
             const c = await findClientById(id);
-            const name = c?.nama || id;
-            return `${i + 1}. ${name} (${id})`;
+            const name = (c?.nama || id).toUpperCase();
+            return `${name} (${id.toUpperCase()})`;
           })
         );
         await waClient.sendMessage(
           chatId,
-          `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+          `Pilih Client:\n\n${list.join("\n\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
         );
         session.step = "choose_client";
         return;
