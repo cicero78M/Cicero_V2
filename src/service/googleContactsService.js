@@ -32,8 +32,33 @@ export async function authorize() {
     redirect_uris[0]
   );
   try {
-    const token = await fs.readFile(TOKEN_PATH, 'utf8');
-    oAuth2Client.setCredentials(JSON.parse(token));
+    const token = JSON.parse(await fs.readFile(TOKEN_PATH, 'utf8'));
+    oAuth2Client.setCredentials(token);
+    // Refresh if token expired or will expire within 5 minutes
+    const buffer = 5 * 60 * 1000;
+    if (!token.expiry_date || token.expiry_date <= Date.now() + buffer) {
+      try {
+        await oAuth2Client.getAccessToken();
+        await fs.writeFile(
+          TOKEN_PATH,
+          JSON.stringify(oAuth2Client.credentials)
+        );
+      } catch (err) {
+        console.error('[GOOGLE CONTACT] token refresh failed:', err.message);
+        return null;
+      }
+    }
+    // Persist refreshed tokens whenever they are updated
+    oAuth2Client.on('tokens', async () => {
+      try {
+        await fs.writeFile(
+          TOKEN_PATH,
+          JSON.stringify(oAuth2Client.credentials)
+        );
+      } catch (err) {
+        console.error('[GOOGLE CONTACT] failed to persist token:', err.message);
+      }
+    });
   } catch {
     const authUrl = oAuth2Client.generateAuthUrl({
       access_type: 'offline',
