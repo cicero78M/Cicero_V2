@@ -84,11 +84,11 @@ async function formatRekapUserData(clientId, role) {
   if (clientType === "org") {
     const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
       const list = complete[d].join("\n\n");
-      return `SAT ${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
+      return `${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
     });
     const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
       const list = incomplete[d].join("\n\n");
-      return `SAT ${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
+      return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
     });
     const sections = [];
     if (completeLines.length) sections.push(`Sudah Lengkap :\n\n${completeLines.join("\n\n")}`);
@@ -105,11 +105,11 @@ async function formatRekapUserData(clientId, role) {
 
   const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
     const list = complete[d].join("\n\n");
-    return `Satfung ${d}, Sudah lengkap: (${complete[d].length})\n\n${list}`;
+    return `${d}, Sudah lengkap: (${complete[d].length})\n\n${list}`;
   });
   const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
     const list = incomplete[d].join("\n\n");
-    return `Satfung ${d}, Belum lengkap: (${incomplete[d].length})\n\n${list}`;
+    return `${d}, Belum lengkap: (${incomplete[d].length})\n\n${list}`;
   });
 
   const body = [...completeLines, ...incompleteLines].filter(Boolean).join("\n\n");
