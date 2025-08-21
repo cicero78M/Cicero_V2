@@ -42,17 +42,18 @@ export async function absensiKomentarInstagram(client_id, opts = {}) {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const clientNama = await getClientNama(targetClient);
+  const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
   if (
     roleFlag &&
-    typeof roleFlag === "string" &&
+    allowedRoles.includes(roleFlag.toLowerCase()) &&
     roleFlag.toUpperCase() === targetClient.toUpperCase()
   ) {
     users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
       (u) => u.status === true
     );
   } else {
-    users = await getUsersByClient(targetClient);
+    users = await getUsersByClient(targetClient, roleFlag);
   }
   const shortcodes = await getShortcodesTodayByClient(targetClient);
   if (!shortcodes.length)

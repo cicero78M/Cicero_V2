@@ -42,7 +42,10 @@ export async function absensiLikes(client_id, opts = {}) {
   const { nama: clientNama, clientType } = await getClientInfo(targetClient);
 
   if (clientType === "direktorat") {
-    const roleName = (roleFlag || targetClient).toLowerCase();
+    const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+    const roleName = allowedRoles.includes((roleFlag || "").toLowerCase())
+      ? roleFlag.toLowerCase()
+      : targetClient.toLowerCase();
     const polresIds = (await getClientsByRole(roleName)).map((c) =>
       c.toUpperCase()
     );
@@ -114,18 +117,7 @@ export async function absensiLikes(client_id, opts = {}) {
     return msg.trim();
   }
 
-  let users;
-  if (
-    roleFlag &&
-    typeof roleFlag === "string" &&
-    roleFlag.toUpperCase() === targetClient.toUpperCase()
-  ) {
-    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
-      (u) => u.status === true
-    );
-  } else {
-    users = await getUsersByClient(targetClient);
-  }
+  const users = await getUsersByClient(targetClient, roleFlag);
   const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)

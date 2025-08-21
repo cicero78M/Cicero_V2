@@ -52,8 +52,9 @@ test('marks user with @username as already liking', async () => {
   expect(msg).toMatch(/Belum melaksanakan\* : \*0 user\*/);
 });
 
-test('uses role-based users when roleFlag matches client', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
+test('uses directorate users when roleFlag matches directorate', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'DITBINMAS', client_type: 'direktorat' }] });
+  mockGetClientsByRole.mockResolvedValueOnce([]);
   mockGetUsersByDirektorat.mockResolvedValueOnce([
     {
       user_id: 'u1',
@@ -68,14 +69,23 @@ test('uses role-based users when roleFlag matches client', async () => {
   mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
   mockGetLikesByShortcode.mockResolvedValueOnce(['testuser']);
 
-  const msg = await absensiLikes('POLRES', {
+  const msg = await absensiLikes('DITBINMAS', {
     mode: 'sudah',
-    roleFlag: 'POLRES',
+    roleFlag: 'DITBINMAS',
   });
 
   expect(mockGetUsersByDirektorat).toHaveBeenCalled();
   expect(mockGetUsersByClient).not.toHaveBeenCalled();
-  expect(msg).toMatch(/Sudah melaksanakan\* : \*1 user\*/);
+});
+
+test('filters users by role when roleFlag provided for polres', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
+  mockGetUsersByClient.mockResolvedValueOnce([]);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce([]);
+
+  await absensiLikes('POLRES', { roleFlag: 'ditbinmas' });
+
+  expect(mockGetUsersByClient).toHaveBeenCalledWith('POLRES', 'ditbinmas');
 });
 
 test('directorate summarizes across clients', async () => {
