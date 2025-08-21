@@ -135,7 +135,7 @@ export const dashRequestHandlers = {
     const dashUsers = session.dash_users || [];
     if (!text) {
       const list = await Promise.all(
-        dashUsers.map(async (u) => {
+        dashUsers.map(async (u, idx) => {
           let cid = u.client_ids[0];
           let c = cid ? await findClientById(cid) : null;
           if (!cid || c?.client_type?.toLowerCase() === "direktorat") {
@@ -143,12 +143,12 @@ export const dashRequestHandlers = {
             c = await findClientById(cid);
           }
           const name = (c?.nama || cid).toUpperCase();
-          return `${name} (${cid.toUpperCase()})`;
+          return `${idx + 1}. ${name} (${cid.toUpperCase()})`;
         })
       );
       await waClient.sendMessage(
         chatId,
-        `Pilih Client:\n\n${list.join("\n\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
       );
       return;
     }
