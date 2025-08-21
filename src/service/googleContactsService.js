@@ -93,6 +93,13 @@ export async function searchByNumbers(auth, numbers = []) {
 }
 
 export async function saveGoogleContact(auth, { name, phone }) {
+  // Hindari duplikasi dengan memeriksa kontak yang sudah ada
+  try {
+    const exists = await searchByNumbers(auth, [phone]);
+    if (exists.includes(phone)) return;
+  } catch (err) {
+    console.error('[GOOGLE CONTACT] duplicate check failed:', err.message);
+  }
   const service = google.people({ version: 'v1', auth });
   await service.people.createContact({
     requestBody: {

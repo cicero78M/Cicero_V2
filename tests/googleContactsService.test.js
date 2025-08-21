@@ -127,7 +127,7 @@ describe('saveContactIfNew', () => {
 
     await saveContactIfNew('98765@c.us');
 
-    expect(mockSearchContacts).toHaveBeenCalledTimes(1);
+    expect(mockSearchContacts).toHaveBeenCalledTimes(2);
     expect(mockCreateContact).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledWith(

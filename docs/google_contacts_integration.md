@@ -29,7 +29,7 @@ async function addContact() {
 ```
 
 ### Avoiding Duplicates
-`saveContactIfNew(chatId)` checks a local table and Google Contacts before inserting:
+`saveGoogleContact` akan mengecek apakah nomor telepon sudah ada di Google Contacts sebelum menyimpan, sehingga tidak terjadi duplikasi. Untuk validasi tambahan terhadap tabel lokal, gunakan `saveContactIfNew(chatId)`:
 ```javascript
 import { saveContactIfNew } from './src/service/googleContactsService.js';
 
