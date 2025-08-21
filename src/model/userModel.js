@@ -230,7 +230,7 @@ export async function getUsersMissingDataByClient(clientId, roleFilter = null) {
   return res.rows;
 }
 
-// Ambil seluruh user aktif non-operator beserta data sosial
+// Ambil seluruh user aktif beserta data sosial
 export async function getUsersSocialByClient(clientId, roleFilter = null) {
   const { rows } = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',
@@ -247,8 +247,7 @@ export async function getUsersSocialByClient(clientId, roleFilter = null) {
        WHERE u.status = true
        GROUP BY u.user_id
        HAVING
-         BOOL_OR(LOWER(r.role_name) = LOWER($1))
-         AND NOT BOOL_OR(LOWER(r.role_name) = 'operator')
+        BOOL_OR(LOWER(r.role_name) = LOWER($1))
        ORDER BY u.client_id, u.divisi, u.nama`,
       [clientId]
     );
@@ -257,15 +256,10 @@ export async function getUsersSocialByClient(clientId, roleFilter = null) {
 
   const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
   const res = await query(
-    `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
-     FROM "user" u
-     WHERE ${clause} AND status = true
-       AND NOT EXISTS (
-         SELECT 1 FROM user_roles ur
-         JOIN roles r ON ur.role_id = r.role_id
-         WHERE ur.user_id = u.user_id AND r.role_name = 'operator'
-       )
-     ORDER BY u.client_id, u.divisi, u.nama`,
+      `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
+       FROM "user" u
+       WHERE ${clause} AND status = true
+       ORDER BY u.client_id, u.divisi, u.nama`,
     params
   );
   return res.rows;

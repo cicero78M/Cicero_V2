@@ -116,7 +116,7 @@ test('getUsersSocialByClient uses HAVING for directorate', async () => {
   expect(sql).toContain('GROUP BY');
   expect(sql).toContain('HAVING');
   expect(sql).toContain('BOOL_OR');
-  expect(sql).toContain("NOT BOOL_OR(LOWER(r.role_name) = 'operator')");
+  expect(sql).not.toContain('operator');
   expect(mockQuery.mock.calls[1][1]).toEqual(['ditlantas']);
 });
 
