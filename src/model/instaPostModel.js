@@ -41,16 +41,34 @@ export async function findPostByShortcode(shortcode) {
 }
 
 export async function getShortcodesTodayByClient(client_id) {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  const res = await query(
-    `SELECT shortcode FROM insta_post
-     WHERE client_id = $1 AND DATE(created_at) = $2`,
-    [client_id, `${yyyy}-${mm}-${dd}`]
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+
+  const typeRes = await query(
+    'SELECT client_type FROM clients WHERE LOWER(client_id) = LOWER($1)',
+    [client_id]
   );
-  return res.rows.map(r => r.shortcode);
+  const clientType = typeRes.rows[0]?.client_type?.toLowerCase();
+
+  let sql;
+  let params;
+  if (clientType === 'direktorat') {
+    sql =
+      `SELECT p.shortcode FROM insta_post p\n` +
+      `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
+      `WHERE LOWER(pr.role_name) = LOWER($1)\n` +
+      `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+    params = [client_id, today];
+  } else {
+    sql =
+      `SELECT shortcode FROM insta_post\n` +
+      `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+    params = [client_id, today];
+  }
+
+  const res = await query(sql, params);
+  return res.rows.map((r) => r.shortcode);
 }
 
 export async function getShortcodesTodayByUsername(username) {
