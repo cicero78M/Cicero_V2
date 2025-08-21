@@ -128,7 +128,28 @@ export async function saveContactIfNew(chatId) {
       );
       return;
     }
-    await saveGoogleContact(auth, { name: phone, phone });
+    let displayName = phone;
+    try {
+      const { rows } = await query(
+        `SELECT c.nama AS client_name
+         FROM dashboard_user du
+         JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+         JOIN clients c ON duc.client_id = c.client_id
+         WHERE du.whatsapp = $1
+         UNION
+         SELECT c.nama AS client_name FROM clients c WHERE c.client_operator = $1
+         LIMIT 1`,
+        [phone]
+      );
+      const clientName = rows[0]?.client_name;
+      if (clientName) displayName = `Admin ${clientName}`;
+    } catch (lookupErr) {
+      console.error(
+        '[GOOGLE CONTACT] client lookup failed:',
+        lookupErr.message
+      );
+    }
+    await saveGoogleContact(auth, { name: displayName, phone });
     await query(
       'INSERT INTO saved_contact (phone_number) VALUES ($1)',
       [phone]
