@@ -154,11 +154,17 @@ waClient.on("message", async (msg) => {
     return;
   }
   const chatId = msg.from;
-  await saveContactIfNew(chatId);
   const text = (msg.body || "").trim();
 
   // ===== Deklarasi State dan Konstanta =====
   const session = getSession(chatId);
+  // Hindari query ke tabel saved_contact saat menangani dashrequest
+  if (!(
+    text.toLowerCase() === "dashrequest" ||
+    (session && session.menu === "dashrequest")
+  )) {
+    await saveContactIfNew(chatId);
+  }
   const userWaNum = chatId.replace(/[^0-9]/g, "");
   const isAdminCommand = adminCommands.some((cmd) =>
     text.toLowerCase().startsWith(cmd)
@@ -346,6 +352,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     return;
   }
 
+  // ===== Menu Dashboard =====
+  // Validasi nomor hanya berdasarkan tabel dashboard_user tanpa fallback ke saved_contact
   if (text.toLowerCase() === "dashrequest") {
     const waId =
       userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
