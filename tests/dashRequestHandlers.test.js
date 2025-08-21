@@ -114,6 +114,35 @@ test('choose_menu uses selected client id', async () => {
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1');
 });
 
+test.each([
+  ['2', mockAbsensiLink],
+  ['3', mockAbsensiLikes],
+  ['4', mockAbsensiKomentarInstagram],
+  ['5', mockAbsensiKomentar],
+])('choose_menu forwards roleFlag to rekap functions', async (choice, handlerMock) => {
+  handlerMock.mockResolvedValue('ok');
+  const session = {
+    role: 'DITBINMAS',
+    selectedClientId: 'C1',
+    clientName: 'Client One',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.choose_menu(session, chatId, choice, waClient);
+
+  expect(handlerMock).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
+    mode: 'all',
+    roleFlag: 'DITBINMAS',
+  });
+
+  mainSpy.mockRestore();
+});
+
 test('choose_dash_user lists and selects dashboard user', async () => {
   mockFindClientById
     .mockResolvedValueOnce({ nama: 'Client One' })
