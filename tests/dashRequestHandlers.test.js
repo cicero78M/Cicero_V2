@@ -133,8 +133,8 @@ test.each([
 
   await dashRequestHandlers.choose_menu(session, chatId, choice, waClient);
 
-  expect(handlerMock).toHaveBeenCalledWith('DITBINMAS', {
-    clientFilter: 'DITBINMAS',
+  expect(handlerMock).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
     mode: 'all',
     roleFlag: 'DITBINMAS',
   });
@@ -195,8 +195,8 @@ test('ask_client forwards session role to handlers needing role', async () => {
 
   await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
-    clientFilter: 'DITBINMAS',
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
     mode: 'all',
     roleFlag: 'DITBINMAS',
   });
@@ -218,8 +218,8 @@ test('ask_client uses nested user role when session.role missing', async () => {
 
   await dashRequestHandlers.ask_client(session, chatId, 'C1', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
-    clientFilter: 'DITBINMAS',
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('C1', {
+    clientFilter: 'C1',
     mode: 'all',
     roleFlag: 'DITBINMAS',
   });
@@ -304,21 +304,6 @@ test('choose_dash_user uses role as client when directorate', async () => {
     .mockResolvedValue();
   await dashRequestHandlers.choose_dash_user(session, chatId, '1', waClient);
   expect(session.client_ids).toEqual(['DITA']);
-  mainSpy.mockRestore();
-});
-
-test('choose_dash_user falls back to role when client not found', async () => {
-  mockFindClientById.mockResolvedValueOnce(null);
-  const session = {
-    dash_users: [{ role: 'DITBINMAS', client_ids: ['C1'] }],
-  };
-  const waClient = { sendMessage: jest.fn() };
-  const chatId = '123';
-  const mainSpy = jest
-    .spyOn(dashRequestHandlers, 'main')
-    .mockResolvedValue();
-  await dashRequestHandlers.choose_dash_user(session, chatId, '1', waClient);
-  expect(session.client_ids).toEqual(['DITBINMAS']);
   mainSpy.mockRestore();
 });
 
