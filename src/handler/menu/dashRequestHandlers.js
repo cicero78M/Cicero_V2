@@ -196,15 +196,15 @@ export const dashRequestHandlers = {
         session.clientName = client?.nama || ids[0];
       } else if (ids.length > 1) {
         const list = await Promise.all(
-          ids.map(async (id) => {
+          ids.map(async (id, idx) => {
             const c = await findClientById(id);
             const name = (c?.nama || id).toUpperCase();
-            return `${name} (${id.toUpperCase()})`;
+            return `${idx + 1}. ${name} (${id.toUpperCase()})`;
           })
         );
         await waClient.sendMessage(
           chatId,
-          `Pilih Client:\n\n${list.join("\n\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+          `Pilih Client:\n\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
         );
         session.step = "choose_client";
         return;
