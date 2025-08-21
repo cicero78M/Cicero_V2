@@ -230,3 +230,42 @@ test('choose_menu aggregates directorate data by client', async () => {
   jest.useRealTimers();
 });
 
+test('directorate report orders directorate first with numbering', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-20T14:28:00Z'));
+
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'BINMAS', insta: null, tiktok: null },
+    { client_id: 'C1', insta: 'a', tiktok: 'b' },
+    { client_id: 'C1', insta: null, tiktok: 'b' },
+    { client_id: 'C2', insta: 'x', tiktok: 'y' },
+  ]);
+  mockFindClientById
+    .mockResolvedValueOnce({
+      nama: 'DIREKTORAT BINMAS',
+      client_type: 'direktorat',
+    })
+    .mockResolvedValueOnce({ nama: 'DIREKTORAT BINMAS' })
+    .mockResolvedValueOnce({ nama: 'Client One' })
+    .mockResolvedValueOnce({ nama: 'Client Two' });
+
+  const session = {
+    role: 'BINMAS',
+    selectedClientId: 'BINMAS',
+    clientName: 'DIREKTORAT BINMAS',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+
+  await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
+
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg.indexOf('1. DIREKTORAT BINMAS')).toBeLessThan(
+    msg.indexOf('2. CLIENT ONE')
+  );
+  expect(msg.indexOf('2. CLIENT ONE')).toBeLessThan(
+    msg.indexOf('3. CLIENT TWO')
+  );
+  jest.useRealTimers();
+});
+
