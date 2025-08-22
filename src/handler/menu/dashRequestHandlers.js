@@ -142,21 +142,21 @@ async function performAction(
       break;
     case "3":
       msg = await absensiLikes(clientId, {
-        clientFilter: userClientId,
+        ...(clientId === userClientId ? { clientFilter: userClientId } : {}),
         mode: "all",
         roleFlag,
       });
       break;
     case "4":
       msg = await absensiKomentarInstagram(clientId, {
-        clientFilter: userClientId,
+        ...(clientId === userClientId ? { clientFilter: userClientId } : {}),
         mode: "all",
         roleFlag,
       });
       break;
     case "5":
       msg = await absensiKomentar(clientId, {
-        clientFilter: userClientId,
+        ...(clientId === userClientId ? { clientFilter: userClientId } : {}),
         mode: "all",
         roleFlag,
       });

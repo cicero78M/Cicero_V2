@@ -142,7 +142,7 @@ test.each([
   mainSpy.mockRestore();
 });
 
-test('choose_menu uses directorate id for task and client id for filter', async () => {
+test('choose_menu uses directorate id without client filter', async () => {
   mockAbsensiLikes.mockResolvedValue('ok');
   const session = {
     role: 'DITBINMAS',
@@ -157,7 +157,6 @@ test('choose_menu uses directorate id for task and client id for filter', async 
     .mockResolvedValue();
   await dashRequestHandlers.choose_menu(session, chatId, '3', waClient);
   expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
-    clientFilter: 'C1',
     mode: 'all',
     roleFlag: 'DITBINMAS',
   });
