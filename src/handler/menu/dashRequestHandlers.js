@@ -123,11 +123,18 @@ async function formatRekapUserData(clientId) {
   ).trim();
 }
 
-async function performAction(action, clientId, waClient, chatId, roleFlag) {
+async function performAction(
+  action,
+  clientId,
+  waClient,
+  chatId,
+  roleFlag,
+  userClientId
+) {
   let msg = "";
   switch (action) {
     case "1": {
-      msg = await formatRekapUserData(clientId);
+      msg = await formatRekapUserData(userClientId || clientId);
       break;
     }
     case "2":
@@ -135,21 +142,21 @@ async function performAction(action, clientId, waClient, chatId, roleFlag) {
       break;
     case "3":
       msg = await absensiLikes(clientId, {
-        clientFilter: clientId,
+        clientFilter: userClientId,
         mode: "all",
         roleFlag,
       });
       break;
     case "4":
       msg = await absensiKomentarInstagram(clientId, {
-        clientFilter: clientId,
+        clientFilter: userClientId,
         mode: "all",
         roleFlag,
       });
       break;
     case "5":
       msg = await absensiKomentar(clientId, {
-        clientFilter: clientId,
+        clientFilter: userClientId,
         mode: "all",
         roleFlag,
       });
@@ -193,11 +200,9 @@ export const dashRequestHandlers = {
     const chosen = dashUsers[idx];
     session.role = chosen.role;
     const dir = await findClientById(chosen.role);
-    if (dir?.client_type?.toLowerCase() === "direktorat") {
-      session.client_ids = [chosen.role];
-    } else {
-      session.client_ids = chosen.client_ids;
-    }
+    session.client_ids = chosen.client_ids;
+    session.dir_client_id =
+      dir?.client_type?.toLowerCase() === "direktorat" ? chosen.role : null;
     delete session.dash_users;
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
@@ -287,19 +292,21 @@ export const dashRequestHandlers = {
       await waClient.sendMessage(chatId, "Masukkan Client ID target:");
       return;
     }
-    const clientId = session.selectedClientId;
-    if (!clientId) {
+    const userClientId = session.selectedClientId;
+    if (!userClientId) {
       await waClient.sendMessage(chatId, "Client belum dipilih.");
       session.step = "main";
       await dashRequestHandlers.main(session, chatId, "", waClient);
       return;
     }
+    const taskClientId = session.dir_client_id || userClientId;
     await performAction(
       choice,
-      clientId,
+      taskClientId,
       waClient,
       chatId,
-      session.role || session.user?.role
+      session.role || session.user?.role,
+      userClientId
     );
     session.step = "main";
     await dashRequestHandlers.main(session, chatId, "", waClient);
@@ -313,7 +320,8 @@ export const dashRequestHandlers = {
       clientId,
       waClient,
       chatId,
-      session.role || session.user?.role
+      session.role || session.user?.role,
+      clientId
     );
     delete session.pendingAction;
     session.step = "main";

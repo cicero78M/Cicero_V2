@@ -142,6 +142,28 @@ test.each([
   mainSpy.mockRestore();
 });
 
+test('choose_menu uses directorate id for task and client id for filter', async () => {
+  mockAbsensiLikes.mockResolvedValue('ok');
+  const session = {
+    role: 'DITBINMAS',
+    selectedClientId: 'C1',
+    clientName: 'Client One',
+    dir_client_id: 'DITBINMAS',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+  await dashRequestHandlers.choose_menu(session, chatId, '3', waClient);
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
+    clientFilter: 'C1',
+    mode: 'all',
+    roleFlag: 'DITBINMAS',
+  });
+  mainSpy.mockRestore();
+});
+
 test('choose_menu calls rekapLink with clientId only', async () => {
   mockRekapLink.mockResolvedValue('ok');
   const session = {
@@ -254,6 +276,7 @@ test('choose_dash_user lists and selects dashboard user', async () => {
   await dashRequestHandlers.choose_dash_user(session, chatId, '2', waClient);
   expect(session.role).toBe('user');
   expect(session.client_ids).toEqual(['C2']);
+  expect(session.dir_client_id).toBeNull();
   expect(mainSpy).toHaveBeenCalled();
   mainSpy.mockRestore();
 });
@@ -303,7 +326,8 @@ test('choose_dash_user uses role as client when directorate', async () => {
     .spyOn(dashRequestHandlers, 'main')
     .mockResolvedValue();
   await dashRequestHandlers.choose_dash_user(session, chatId, '1', waClient);
-  expect(session.client_ids).toEqual(['DITA']);
+  expect(session.client_ids).toEqual(['C1', 'C2']);
+  expect(session.dir_client_id).toBe('DITA');
   mainSpy.mockRestore();
 });
 
