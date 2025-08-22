@@ -370,11 +370,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     if (validUsers.length === 1) {
       const du = validUsers[0];
-      let clientIds = du.client_ids;
+      let dirClientId = null;
       try {
         const roleClient = await clientService.findClientById(du.role);
         if (roleClient?.client_type?.toLowerCase() === "direktorat") {
-          clientIds = [du.role];
+          dirClientId = du.role;
         }
       } catch (e) {
         // ignore lookup errors and fallback to dashboard user client_ids
@@ -383,7 +383,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         menu: "dashrequest",
         step: "main",
         role: du.role,
-        client_ids: clientIds,
+        client_ids: du.client_ids,
+        dir_client_id: dirClientId,
       });
       await dashRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
