@@ -1,13 +1,9 @@
 import { jest } from '@jest/globals';
 
 const mockQuery = jest.fn();
-const mockFindPost = jest.fn();
 
 jest.unstable_mockModule('../src/repository/db.js', () => ({
   query: mockQuery
-}));
-jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
-  findPostByShortcode: mockFindPost
 }));
 
 let createLinkReport;
@@ -31,7 +27,6 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockQuery.mockReset();
-  mockFindPost.mockReset();
 });
 
 function mockClientType(type = 'instansi') {
@@ -39,33 +34,22 @@ function mockClientType(type = 'instansi') {
 }
 
 test('createLinkReport inserts row', async () => {
-  const today = new Date().toISOString();
-  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc', created_at: today });
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const data = { shortcode: 'abc', user_id: '1', instagram_link: 'a' };
   const res = await createLinkReport(data);
   expect(res).toEqual({ shortcode: 'abc' });
-  expect(mockFindPost).toHaveBeenCalledWith('abc');
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('ON CONFLICT (shortcode, user_id)'),
-    ['abc', '1', 'a', null, null, null, null, today]
+    expect.stringContaining('FROM insta_post p'),
+    ['abc', '1', 'a', null, null, null, null]
   );
 });
 
-test('createLinkReport throws if post missing', async () => {
-  mockFindPost.mockResolvedValueOnce(null);
-  await expect(createLinkReport({ shortcode: 'xyz' })).rejects.toThrow('shortcode not found');
-  expect(mockFindPost).toHaveBeenCalledWith('xyz');
-  expect(mockQuery).not.toHaveBeenCalled();
-});
-
-test('createLinkReport rejects if post not from today', async () => {
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  mockFindPost.mockResolvedValueOnce({ shortcode: 'abc', created_at: yesterday });
-  await expect(
-    createLinkReport({ shortcode: 'abc', user_id: '1', instagram_link: 'a' })
-  ).rejects.toThrow("reports can only be created for today's posts");
-  expect(mockQuery).not.toHaveBeenCalled();
+test('createLinkReport throws when shortcode missing or not today', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await expect(createLinkReport({ shortcode: 'xyz' })).rejects.toThrow(
+    'shortcode not found or not from today'
+  );
+  expect(mockQuery).toHaveBeenCalled();
 });
 
 test('getLinkReports joins with insta_post', async () => {
