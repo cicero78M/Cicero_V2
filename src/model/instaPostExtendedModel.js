@@ -16,6 +16,17 @@ export async function upsertIgUser(user) {
 }
 
 export async function upsertIgPost(post, userId) {
+  const shortcode = post.code || post.shortcode || null;
+  if (!shortcode) return;
+
+  // ensure parent insta_post row exists to satisfy foreign key
+  await query(
+    `INSERT INTO insta_post (shortcode, created_at)
+     VALUES ($1, to_timestamp($2))
+     ON CONFLICT (shortcode) DO NOTHING`,
+    [shortcode, post.taken_at || post.taken_at_ts || null]
+  );
+
   await query(
     `INSERT INTO ig_ext_posts (post_id, shortcode, user_id, caption_text, created_at, like_count, comment_count, is_video, media_type, is_pinned)
      VALUES ($1,$2,$3,$4,to_timestamp($5),$6,$7,$8,$9,$10)
@@ -30,7 +41,7 @@ export async function upsertIgPost(post, userId) {
        created_at=to_timestamp($5)`,
     [
       post.id,
-      post.code || post.shortcode || null,
+      shortcode,
       userId,
       post.caption?.text || null,
       post.taken_at || post.taken_at_ts || null,
