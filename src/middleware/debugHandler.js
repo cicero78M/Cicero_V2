@@ -36,13 +36,15 @@ function parseAdminWA() {
  * @param {string} tag - Tag kategori pesan (misal: CRON TIKTOK)
  * @param {string|object} msg - Pesan yang akan dikirim/log.
  * @param {string} [client_id] - Opsional, client_id untuk prefix (jika ada)
+ * @param {string} [clientName] - Opsional, nama client untuk prefix
  */
-export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
+export function sendDebug({ tag = "DEBUG", msg, client_id = "", clientName = "" } = {}) {
   let safeMsg = typeof msg === "string" ? msg : safeStringify(msg);
 
   const adminWA = parseAdminWA();
   let prefix = `[${tag}]`;
   if (client_id) prefix += `[${client_id}]`;
+  if (clientName) prefix += `[${clientName}]`;
 
   const fullMsg = `${prefix} ${safeMsg}`;
 
@@ -64,9 +66,10 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
 }
 
 // Debug khusus yang hanya dicetak di console tanpa mengirim pesan WhatsApp
-export function sendConsoleDebug({ tag = "DEBUG", msg, client_id = "" } = {}) {
+export function sendConsoleDebug({ tag = "DEBUG", msg, client_id = "", clientName = "" } = {}) {
   const safeMsg = typeof msg === "string" ? msg : safeStringify(msg);
   let prefix = `[${tag}]`;
   if (client_id) prefix += `[${client_id}]`;
+  if (clientName) prefix += `[${clientName}]`;
   console.log(`${prefix} ${safeMsg}`);
 }

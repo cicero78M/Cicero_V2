@@ -1,3 +1,4 @@
+import './src/utils/logger.js';
 import express from 'express';
 import morgan from 'morgan';
 import { env } from './src/config/env.js';
