@@ -40,3 +40,27 @@ test('filters users by roleFlag when provided', async () => {
   expect(mockGetUsersByClient).toHaveBeenCalledWith('POLRES', 'ditbinmas');
   expect(mockGetUsersByDirektorat).not.toHaveBeenCalled();
 });
+
+test('reports per-user task and link counts', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
+  mockGetUsersByClient.mockResolvedValueOnce([
+    { user_id: 1, title: 'AIPTU', nama: 'HARIS ANTON A.', divisi: 'SI KEU', status: true, exception: false },
+    { user_id: 2, title: 'BRIPTU', nama: 'BUDI', divisi: 'SI KEU', status: true, exception: false },
+  ]);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1', 'sc2']);
+  mockGetReportsTodayByClient.mockResolvedValueOnce([
+    {
+      user_id: 1,
+      facebook_link: 'f',
+      instagram_link: 'i',
+      twitter_link: 't',
+      tiktok_link: 'tt',
+      youtube_link: 'y',
+    },
+  ]);
+
+  const msg = await absensiLink('POLRES');
+
+  expect(msg).toContain('AIPTU HARIS ANTON A. (Sudah Melaksanakan : 1 / Belum melaksanakan : 1 / Total Link : 5)');
+  expect(msg).toContain('BRIPTU BUDI (Sudah Melaksanakan : 0 / Belum melaksanakan : 2 / Total Link : 0)');
+});

@@ -33,19 +33,33 @@ export async function absensiLinkKhusus(client_id, opts = {}) {
   const reports = await getReportsTodayByClient(client_id);
   const userStats = {};
   users.forEach((u) => {
-    userStats[u.user_id] = { ...u, count: 0 };
+    userStats[u.user_id] = { ...u, tasksDone: 0, linkCount: 0 };
   });
   reports.forEach((r) => {
-    if (userStats[r.user_id]) userStats[r.user_id].count += 1;
+    const stat = userStats[r.user_id];
+    if (stat) {
+      stat.tasksDone += 1;
+      stat.linkCount +=
+        (r.facebook_link ? 1 : 0) +
+        (r.instagram_link ? 1 : 0) +
+        (r.twitter_link ? 1 : 0) +
+        (r.tiktok_link ? 1 : 0) +
+        (r.youtube_link ? 1 : 0);
+    }
   });
 
+  const totalLinks = Object.values(userStats).reduce(
+    (acc, u) => acc + u.linkCount,
+    0
+  );
   const totalKonten = shortcodes.length;
   let sudah = [];
   let belum = [];
   Object.values(userStats).forEach((u) => {
+    u.tasksPending = Math.max(totalKonten - u.tasksDone, 0);
     if (u.exception === true) {
       sudah.push(u);
-    } else if (u.count >= Math.ceil(totalKonten / 2)) {
+    } else if (u.tasksDone >= Math.ceil(totalKonten / 2)) {
       sudah.push(u);
     } else {
       belum.push(u);
@@ -56,16 +70,6 @@ export async function absensiLinkKhusus(client_id, opts = {}) {
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
-  const totalLinks = reports.reduce((acc, r) => {
-    return (
-      acc +
-      (r.facebook_link ? 1 : 0) +
-      (r.instagram_link ? 1 : 0) +
-      (r.twitter_link ? 1 : 0) +
-      (r.tiktok_link ? 1 : 0) +
-      (r.youtube_link ? 1 : 0)
-    );
-  }, 0);
 
   const mode = opts && opts.mode ? String(opts.mode).toLowerCase() : "all";
   const salam = getGreeting();
@@ -87,7 +91,10 @@ export async function absensiLinkKhusus(client_id, opts = {}) {
       msg += `*${div}* (${list.length} user):\n`;
       msg +=
         list
-          .map((u) => `- ${u.title ? u.title + " " : ""}${u.nama}`)
+          .map(
+            (u) =>
+              `- ${u.title ? u.title + " " : ""}${u.nama} (Sudah Melaksanakan : ${u.tasksDone} / Belum melaksanakan : ${u.tasksPending} / Total Link : ${u.linkCount})`
+          )
           .join("\n") +
         "\n";
       if (idx < arrKeys.length - 1) msg += "\n";
