@@ -1,8 +1,8 @@
 import { newDb } from 'pg-mem';
 import { jest } from '@jest/globals';
 
-describe('upsertIgPost', () => {
-  test('updates existing post on conflict', async () => {
+describe('upsertIgPost foreign key handling', () => {
+  test('creates parent insta_post row when missing', async () => {
     const db = newDb();
     const { Pool } = db.adapters.createPg();
     const pool = new Pool();
@@ -28,7 +28,7 @@ describe('upsertIgPost', () => {
       like_count INT,
       comment_count INT,
       is_video BOOLEAN,
-      media_type VARCHAR,
+      media_type INT,
       is_pinned BOOLEAN
     );`);
 
@@ -38,18 +38,13 @@ describe('upsertIgPost', () => {
 
     const { upsertIgPost } = await import('../src/model/instaPostExtendedModel.js');
 
-    const initialPost = { id: 'p1', shortcode: 'abc', taken_at: 1000, like_count: 5 };
-    await upsertIgPost(initialPost, 'u1');
+    const post = { id: 'p1', shortcode: 'abc', taken_at: 1000, like_count: 5 };
+    await upsertIgPost(post, 'u1');
 
-    const updatedPost = { id: 'p1', shortcode: 'abc', taken_at: 2000, like_count: 20 };
-    await upsertIgPost(updatedPost, 'u1');
+    const parent = await pool.query('SELECT shortcode FROM insta_post');
+    const child = await pool.query('SELECT shortcode FROM ig_ext_posts');
 
-    const res = await pool.query(
-      'SELECT like_count, extract(epoch from created_at) as ts FROM ig_ext_posts WHERE post_id = $1',
-      ['p1']
-    );
-
-    expect(res.rows[0].like_count).toBe(20);
-    expect(Number(res.rows[0].ts)).toBe(2000);
+    expect(parent.rows[0].shortcode).toBe('abc');
+    expect(child.rows[0].shortcode).toBe('abc');
   });
 });
