@@ -18,7 +18,7 @@ async function getClientNama(client_id) {
   return res.rows[0]?.nama || client_id;
 }
 
-export async function absensiLinkKhusus(client_id, opts = {}) {
+export async function absensiLinkKhusus(client_id) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -53,60 +53,72 @@ export async function absensiLinkKhusus(client_id, opts = {}) {
     0
   );
   const totalKonten = shortcodes.length;
-  let sudah = [];
-  let belum = [];
+
+  const sudah = [];
+  const belumLengkap = [];
+  const belum = [];
+
   Object.values(userStats).forEach((u) => {
     u.tasksPending = Math.max(totalKonten - u.tasksDone, 0);
-    if (u.exception === true) {
+    if (u.exception === true || u.tasksDone === totalKonten) {
       sudah.push(u);
-    } else if (u.tasksDone >= Math.ceil(totalKonten / 2)) {
-      sudah.push(u);
+    } else if (u.tasksDone > 0) {
+      belumLengkap.push(u);
     } else {
       belum.push(u);
     }
   });
-  belum = belum.filter((u) => !u.exception);
+
+  sudah.sort((a, b) => b.linkCount - a.linkCount);
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
 
-  const mode = opts && opts.mode ? String(opts.mode).toLowerCase() : "all";
   const salam = getGreeting();
-  let msg = `${salam}\n\n`;
-  msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientNama}* pada hari :\n`;
-  msg += `Hari : ${hari}\n`;
-  msg += `Tanggal : ${tanggal}\n`;
-  msg += `Pukul : ${jam}\n\n`;
-  msg += `Jumlah Konten Tugas Khusus : ${shortcodes.length}\n`;
-  msg += kontenLinks.length ? `${kontenLinks.join("\n")}\n\n` : "-\n\n";
-  msg += `Jumlah Personil yang melaksnakan : ${sudah.length}\n`;
-  msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+  let msg = `${salam},\n\n`;
+  msg += `Mohon ijin melaporkan Pelaksanaan Tugas Amplifikasi *${clientNama}* pada hari:\n\n`;
+  msg += `Hari: ${hari}\n\n`;
+  msg += `Tanggal: ${tanggal}\n\n`;
+  msg += `Pukul: ${jam}\n\n`;
+  msg += `Jumlah Konten Tugas Khusus: ${shortcodes.length}\n\n`;
+  msg += kontenLinks.join("\n\n") + "\n\n";
+  const totalPersonil = sudah.length + belumLengkap.length;
+  msg += `Jumlah Personil yang melaksanakan: ${totalPersonil}\n`;
+  msg += `Jumlah Total Link dari 5 Platform Sosial Media: ${totalLinks}\n\n`;
 
-  const formatList = (arr, label) => {
-    msg += `${label} (${arr.length} user):\n`;
-    const byDiv = groupByDivision(arr);
-    sortDivisionKeys(Object.keys(byDiv)).forEach((div, idx, arrKeys) => {
-      const list = byDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list
-          .map(
-            (u) =>
-              `- ${u.title ? u.title + " " : ""}${u.nama} (Sudah Melaksanakan : ${u.tasksDone} / Belum melaksanakan : ${u.tasksPending} / Total Link : ${u.linkCount})`
-          )
-          .join("\n") +
-        "\n";
-      if (idx < arrKeys.length - 1) msg += "\n";
-    });
-    if (Object.keys(byDiv).length === 0) msg += "-\n";
-    msg += "\n";
-  };
+  msg += `✅ Sudah Melaksanakan (${sudah.length} user)\n`;
+  msg += `Urut berdasarkan total link terbanyak\n\n`;
+  msg += sudah.length
+    ? sudah
+        .map(
+          (u) =>
+            `${u.divisi} – ${u.title ? u.title + " " : ""}${u.nama} (Sudah: ${u.tasksDone} Tugas / Belum: ${u.tasksPending} Tugas / Total Link: ${u.linkCount} Link)`
+        )
+        .join("\n\n") + "\n\n"
+    : "-\n\n";
 
-  if (mode === "all" || mode === "sudah") formatList(sudah, "✅ *Sudah melaksanakan*");
-  if (mode === "all" || mode === "belum") formatList(belum, "❌ *Belum melaksanakan*");
+  msg += `⚠️ Belum Lengkap (${belumLengkap.length} user)\n`;
+  msg += belumLengkap.length
+    ? belumLengkap
+        .map(
+          (u) =>
+            `${u.divisi} – ${u.title ? u.title + " " : ""}${u.nama} (Sudah: ${u.tasksDone} Tugas / Belum: ${u.tasksPending} Tugas / Total Link: ${u.linkCount} Link)`
+        )
+        .join("\n\n") + "\n\n"
+    : "-\n\n";
 
-  msg += `Terimakasih.`;
+  msg += `❌ Belum Melaksanakan (${belum.length} user)\n`;
+  msg += belum.length
+    ? belum
+        .map(
+          (u) =>
+            `${u.divisi} – ${u.title ? u.title + " " : ""}${u.nama} (Sudah: ${u.tasksDone} Tugas / Belum: ${u.tasksPending} Tugas / Total Link: ${u.linkCount} Link)`
+        )
+        .join("\n\n") + "\n\n"
+    : "-\n\n";
+
+  msg += `Terima kasih.`;
   return msg.trim();
 }
 
