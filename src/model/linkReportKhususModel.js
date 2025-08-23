@@ -1,19 +1,15 @@
 import { query } from '../repository/db.js';
-import { findPostByShortcode } from './instaPostKhususModel.js';
 
 export async function createLinkReport(data) {
-  const exists = await findPostByShortcode(data.shortcode);
-  if (!exists) {
-    const err = new Error('shortcode not found');
-    err.statusCode = 400;
-    throw err;
-  }
-
   const res = await query(
     `INSERT INTO link_report_khusus (
         shortcode, user_id, instagram_link, facebook_link,
         twitter_link, tiktok_link, youtube_link, created_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7, COALESCE($8, NOW()))
+     )
+     SELECT p.shortcode, $2, $3, $4, $5, $6, $7, p.created_at
+     FROM insta_post_khusus p
+     WHERE p.shortcode = $1
+       AND p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
      ON CONFLICT (shortcode, user_id) DO UPDATE
      SET instagram_link = EXCLUDED.instagram_link,
          facebook_link = EXCLUDED.facebook_link,
@@ -29,10 +25,16 @@ export async function createLinkReport(data) {
       data.facebook_link || null,
       data.twitter_link || null,
       data.tiktok_link || null,
-      data.youtube_link || null,
-      data.created_at || null
+      data.youtube_link || null
     ]
   );
+
+  if (res.rows.length === 0) {
+    const err = new Error('shortcode not found or not from today');
+    err.statusCode = 400;
+    throw err;
+  }
+
   return res.rows[0];
 }
 
