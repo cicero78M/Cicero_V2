@@ -2,6 +2,9 @@ import * as linkReportModel from '../model/linkReportModel.js';
 import { sendSuccess } from '../utils/response.js';
 import { extractFirstUrl } from '../utils/utilsHelper.js';
 import { generateLinkReportExcelBuffer } from '../service/amplifyExportService.js';
+import waClient, { waReady } from '../service/waService.js';
+import { findUserById } from '../model/userModel.js';
+import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
@@ -37,6 +40,25 @@ export async function createLinkReport(req, res, next) {
       if (data[f]) data[f] = extractFirstUrl(data[f]);
     });
     const report = await linkReportModel.createLinkReport(data);
+
+    if (waReady && data.user_id) {
+      const user = await findUserById(data.user_id);
+      if (user?.whatsapp) {
+        const wid = formatToWhatsAppId(user.whatsapp);
+        const msg =
+          'Terimakasih,\n' +
+          'Anda sudah melaksnakan Tugas Amplifikasi Konten dari Akun official :\n\n' +
+          `Link Tugas: https://www.instagram.com/p/${data.shortcode}\n\n` +
+          'Laporan Link Anda sebagai berikut :\n\n' +
+          ` - Link Facebook : ${report.facebook_link || '-'}\n` +
+          ` - Link Instagram : ${report.instagram_link || '-'}\n` +
+          ` - Link Twitter : ${report.twitter_link || '-'}\n` +
+          ` - Link Tiktok : ${report.tiktok_link || '-'}\n` +
+          ` - Link Youtube : ${report.youtube_link || '-'}\n`;
+        await safeSendMessage(waClient, wid, msg);
+      }
+    }
+
     sendSuccess(res, report, 201);
   } catch (err) {
     next(err);
