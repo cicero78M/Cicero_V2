@@ -61,6 +61,6 @@ test('reports per-user task and link counts', async () => {
 
   const msg = await absensiLink('POLRES');
 
-  expect(msg).toContain('AIPTU HARIS ANTON A. (Sudah Melaksanakan : 1 / Belum melaksanakan : 1 / Total Link : 5)');
-  expect(msg).toContain('BRIPTU BUDI (Sudah Melaksanakan : 0 / Belum melaksanakan : 2 / Total Link : 0)');
+  expect(msg).toContain('SI KEU – AIPTU HARIS ANTON A. (Sudah: 1 Tugas / Belum: 1 Tugas / Total Link: 5 Link)');
+  expect(msg).toContain('SI KEU – BRIPTU BUDI (Sudah: 0 Tugas / Belum: 2 Tugas / Total Link: 0 Link)');
 });
