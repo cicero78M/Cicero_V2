@@ -111,7 +111,28 @@ test('choose_menu uses selected client id', async () => {
 
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
-  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1', null);
+});
+
+test('choose_menu forwards roleFlag to getUsersSocialByClient', async () => {
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  mockFindClientById.mockResolvedValue({});
+  const session = {
+    role: 'DITBINMAS',
+    selectedClientId: 'C1',
+    clientName: 'Client One',
+  };
+  const waClient = { sendMessage: jest.fn() };
+  const chatId = '123';
+  const mainSpy = jest
+    .spyOn(dashRequestHandlers, 'main')
+    .mockResolvedValue();
+
+  await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('C1', 'DITBINMAS');
+
+  mainSpy.mockRestore();
 });
 
 test.each([
@@ -304,7 +325,7 @@ test('choose_menu formats directorate report header', async () => {
   await dashRequestHandlers.choose_menu(session, chatId, '1', waClient);
 
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS', null);
   expect(msg).toBe(
     'Selamat siang,\n\nMohon ijin Komandan, melaporkan absensi update data personil DIREKTORAT BINMAS pada hari Rabu, 20 Agustus 2025, pukul 14.28 WIB, sebagai berikut:'
   );
