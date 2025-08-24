@@ -51,6 +51,7 @@ import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { dashRequestHandlers } from "../handler/menu/dashRequestHandlers.js";
+import { dirRequestHandlers } from "../handler/menu/dirRequestHandlers.js";
 
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 
@@ -159,10 +160,12 @@ waClient.on("message", async (msg) => {
   // ===== Deklarasi State dan Konstanta =====
   const session = getSession(chatId);
   // Hindari query ke tabel saved_contact saat menangani dashrequest
-  if (!(
-    text.toLowerCase() === "dashrequest" ||
-    (session && session.menu === "dashrequest")
-  )) {
+  if (
+    !(
+      ["dashrequest", "dirrequest"].includes(text.toLowerCase()) ||
+      (session && ["dashrequest", "dirrequest"].includes(session.menu))
+    )
+  ) {
     await saveContactIfNew(chatId);
   }
   const userWaNum = chatId.replace(/[^0-9]/g, "");
@@ -310,6 +313,16 @@ waClient.on("message", async (msg) => {
     return;
   }
 
+  if (session && session.menu === "dirrequest") {
+    await dirRequestHandlers[session.step || "main"](
+      session,
+      chatId,
+      text,
+      waClient
+    );
+    return;
+  }
+
   // ===== MULAI Menu Operator dari command manual =====
   if (text.toLowerCase() === "oprrequest") {
     const waId =
@@ -395,6 +408,55 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       dash_users: validUsers,
     });
     await dashRequestHandlers.choose_dash_user(
+      getSession(chatId),
+      chatId,
+      "",
+      waClient
+    );
+    return;
+  }
+
+  if (text.toLowerCase() === "dirrequest") {
+    const waId =
+      userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
+    const dashUsers = await dashboardUserModel.findAllByWhatsApp(waId);
+    const validUsers = dashUsers.filter(
+      (u) => u.status === true && u.role !== "operator"
+    );
+    if (validUsers.length === 0) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Nomor Anda tidak terdaftar atau belum disetujui sebagai dashboard user."
+      );
+      return;
+    }
+    if (validUsers.length === 1) {
+      const du = validUsers[0];
+      let dirClientId = null;
+      try {
+        const roleClient = await clientService.findClientById(du.role);
+        if (roleClient?.client_type?.toLowerCase() === "direktorat") {
+          dirClientId = du.role;
+        }
+      } catch (e) {
+        // ignore lookup errors
+      }
+      setSession(chatId, {
+        menu: "dirrequest",
+        step: "main",
+        role: du.role,
+        client_ids: du.client_ids,
+        dir_client_id: dirClientId,
+      });
+      await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
+      return;
+    }
+    setSession(chatId, {
+      menu: "dirrequest",
+      step: "choose_dash_user",
+      dash_users: validUsers,
+    });
+    await dirRequestHandlers.choose_dash_user(
       getSession(chatId),
       chatId,
       "",

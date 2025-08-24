@@ -39,13 +39,12 @@ function extractUsernamesFromComments(comments) {
 export async function absensiKomentar(client_id, opts = {}) {
   const { clientFilter } = opts;
   const roleFlag = opts.roleFlag;
-  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientInfo = await getClientInfo(targetClient);
+  const clientInfo = await getClientInfo(client_id);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
   const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
@@ -53,26 +52,26 @@ export async function absensiKomentar(client_id, opts = {}) {
   if (
     roleFlag &&
     allowedRoles.includes(roleFlag.toLowerCase()) &&
-    roleFlag.toUpperCase() === targetClient.toUpperCase()
+    roleFlag.toUpperCase() === client_id.toUpperCase()
   ) {
-    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
-      (u) => u.status === true
-    );
+    users = (
+      await getUsersByDirektorat(roleFlag.toLowerCase(), clientFilter || client_id)
+    ).filter((u) => u.status === true);
   } else {
-    users = await getUsersByClient(targetClient, roleFlag);
+    users = await getUsersByClient(clientFilter || client_id, roleFlag);
   }
-  const posts = await getPostsTodayByClient(targetClient);
+  const posts = await getPostsTodayByClient(client_id);
 
   sendDebug({
     tag: "ABSEN TTK",
     msg: `Start per-konten absensi. Posts=${posts.length} users=${users.length}`,
-    client_id: targetClient,
+    client_id,
   });
 
   sendDebug({
     tag: "ABSEN TTK",
     msg: `Start absensi komentar. Posts=${posts.length} users=${users.length}`,
-    client_id: targetClient,
+    client_id,
   });
 
   if (!posts.length)

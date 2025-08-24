@@ -28,6 +28,7 @@ export const adminCommands = [
   "approvedash#",
   "denydash#",
   "dashrequest",
+  "dirrequest",
   "savecontact",
 ];
 
