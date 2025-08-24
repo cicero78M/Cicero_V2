@@ -21,30 +21,31 @@ async function getClientInfo(client_id) {
 
 export async function absensiLink(client_id, opts = {}) {
   const { clientFilter, roleFlag } = opts;
-  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const { nama: clientNama, clientType } = await getClientInfo(targetClient);
+  const { nama: clientNama, clientType } = await getClientInfo(client_id);
   let users;
+  let shortcodes;
   if (clientType === "direktorat") {
     const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
     const flag = allowedRoles.includes((roleFlag || "").toLowerCase())
       ? roleFlag.toLowerCase()
-      : targetClient.toLowerCase();
+      : client_id.toLowerCase();
+    shortcodes = await getShortcodesTodayByClient(flag);
     users = (
-      await getUsersByDirektorat(flag, targetClient)
+      await getUsersByDirektorat(flag, clientFilter || null)
     ).filter((u) => u.status === true);
   } else {
-    users = await getUsersByClient(targetClient, roleFlag);
+    shortcodes = await getShortcodesTodayByClient(client_id);
+    users = await getUsersByClient(clientFilter || client_id, roleFlag);
   }
-  const shortcodes = await getShortcodesTodayByClient(targetClient);
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
-  const reports = await getReportsTodayByClient(targetClient);
+  const reports = await getReportsTodayByClient(client_id);
   const userStats = {};
   users.forEach((u) => {
     userStats[u.user_id] = { ...u, tasksDone: 0, linkCount: 0 };

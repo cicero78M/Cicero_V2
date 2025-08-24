@@ -33,38 +33,42 @@ async function getClientInfo(client_id) {
 export async function absensiLikes(client_id, opts = {}) {
   const { clientFilter } = opts;
   const roleFlag = opts.roleFlag;
-  const targetClient = clientFilter || client_id;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const { nama: clientNama, clientType } = await getClientInfo(targetClient);
+  const { nama: clientNama, clientType } = await getClientInfo(client_id);
 
   if (clientType === "direktorat") {
     const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
     const roleName = allowedRoles.includes((roleFlag || "").toLowerCase())
       ? roleFlag.toLowerCase()
-      : targetClient.toLowerCase();
-    const polresIds = (await getClientsByRole(roleName)).map((c) =>
-      c.toUpperCase()
-    );
+      : client_id.toLowerCase();
     const shortcodes = await getShortcodesTodayByClient(roleName);
     if (!shortcodes.length)
       return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
-    const kontenLinks = shortcodes.map(
-      (sc) => `https://www.instagram.com/p/${sc}`
-    );
+    const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
     const likesSets = [];
     for (const sc of shortcodes) {
       const likes = await getLikesByShortcode(sc);
       likesSets.push(new Set((likes || []).map(normalizeUsername)));
     }
 
-    const allUsers = (
-      await getUsersByDirektorat(roleName, polresIds)
-    ).filter((u) => u.status === true);
+    let polresIds;
+    let allUsers;
+    if (clientFilter) {
+      polresIds = [clientFilter.toUpperCase()];
+      allUsers = (
+        await getUsersByDirektorat(roleName, clientFilter)
+      ).filter((u) => u.status === true);
+    } else {
+      polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+      allUsers = (
+        await getUsersByDirektorat(roleName, polresIds)
+      ).filter((u) => u.status === true);
+    }
     const usersByClient = {};
     allUsers.forEach((u) => {
       const cid = u.client_id?.toUpperCase() || "";
@@ -117,8 +121,8 @@ export async function absensiLikes(client_id, opts = {}) {
     return msg.trim();
   }
 
-  const users = await getUsersByClient(targetClient, roleFlag);
-  const shortcodes = await getShortcodesTodayByClient(targetClient);
+  const users = await getUsersByClient(clientFilter || client_id, roleFlag);
+  const shortcodes = await getShortcodesTodayByClient(client_id);
 
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;
