@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 test('filters users by roleFlag when provided', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_tiktok: '@abc' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_tiktok: '@abc', client_type: 'org' }] });
   mockGetUsersByClient.mockResolvedValueOnce([]);
   mockGetPostsTodayByClient.mockResolvedValueOnce([]);
 

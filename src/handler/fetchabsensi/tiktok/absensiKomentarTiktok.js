@@ -9,12 +9,13 @@ import { sendDebug } from "../../../middleware/debugHandler.js";
 // Dapatkan nama dan username tiktok client
 async function getClientInfo(client_id) {
   const res = await query(
-    "SELECT nama, client_tiktok FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_tiktok, client_type FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
   return {
     nama: res.rows[0]?.nama || client_id,
     tiktok: (res.rows[0]?.client_tiktok || "").replace(/^@/, "") || "username",
+    clientType: res.rows[0]?.client_type || null,
   };
 }
 
@@ -47,6 +48,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   const clientInfo = await getClientInfo(client_id);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
+  const clientType = clientInfo.clientType;
   const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
   if (
@@ -102,6 +104,48 @@ export async function absensiKomentar(client_id, opts = {}) {
   }
 
   const totalKonten = posts.length;
+
+  if (clientType === "direktorat") {
+    const groups = {};
+    Object.values(userStats).forEach((u) => {
+      const cid = u.client_id?.toUpperCase() || "";
+      if (!groups[cid]) groups[cid] = { total: 0, updated: 0, noUsername: 0 };
+      groups[cid].total++;
+      if (u.exception === true) {
+        groups[cid].updated++;
+      } else if (!u.tiktok || u.tiktok.trim() === "") {
+        groups[cid].noUsername++;
+      } else if (u.count >= Math.ceil(totalKonten / 2)) {
+        groups[cid].updated++;
+      }
+    });
+    const kontenLinks = posts.map(
+      (p) => `https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}`
+    );
+    const reports = await Promise.all(
+      Object.keys(groups).map(async (cid) => {
+        const { nama } = await getClientInfo(cid);
+        const g = groups[cid];
+        const belum = g.total - g.updated - g.noUsername;
+        return (
+          `*Polres*: *${nama}*\n` +
+          `*Jumlah user:* ${g.total}\n` +
+          `✅ *Sudah melaksanakan* : *${g.updated} user*\n` +
+          `❌ *Belum melaksanakan* : *${belum} user*\n` +
+          `⚠️ *Belum input username* : *${g.noUsername} user*`
+        );
+      })
+    );
+    let msg =
+      `Mohon ijin Komandan,\n\n` +
+      `📋 *Rekap Akumulasi Komentar TikTok*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+      `*Jumlah Konten:* ${totalKonten}\n` +
+      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+      reports.join("\n\n") +
+      `\n\nTerimakasih.`;
+    return msg.trim();
+  }
+
   let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {
