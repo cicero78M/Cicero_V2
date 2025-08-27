@@ -11,7 +11,7 @@ export async function absensiRegistrasiDashboardDitbinmas() {
 
   const { rows: clients } = await query(
     `SELECT client_id, nama FROM clients
-     WHERE LOWER(client_type) = 'org'
+     WHERE LOWER(client_type) = 'org' AND UPPER(client_id) <> 'DITBINMAS'
      ORDER BY nama`
   );
 
@@ -20,13 +20,17 @@ export async function absensiRegistrasiDashboardDitbinmas() {
      FROM dashboard_user du
      JOIN roles r ON du.role_id = r.role_id
      JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+     JOIN clients c ON c.client_id = duc.client_id
      WHERE LOWER(r.role_name) = 'ditbinmas' AND du.status = true
+       AND (LOWER(c.client_type) = 'org' OR UPPER(c.client_id) = 'DITBINMAS')
      GROUP BY duc.client_id`
   );
 
   const countMap = new Map(
     registeredRows.map((r) => [r.client_id.toUpperCase(), Number(r.operator)])
   );
+
+  const ditbinmasCount = countMap.get("DITBINMAS") || 0;
 
   const sudah = [];
   const belum = [];
@@ -46,6 +50,7 @@ export async function absensiRegistrasiDashboardDitbinmas() {
   msg += `${hari}, ${tanggal}\n`;
   msg += `Jam: ${jam}\n\n`;
   msg += `Absensi Registrasi User Direktorat dan Polres :\n\n`;
+  msg += `DITBINMAS : ${ditbinmasCount} Operator\n\n`;
   msg += `Sudah : ${sudah.length} Polres\n`;
   msg += sudah.length ? sudah.map((n) => `- ${n}`).join("\n") : "-";
   msg += `\nBelum : ${belum.length} Polres\n`;
