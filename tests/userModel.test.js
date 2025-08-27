@@ -239,7 +239,11 @@ test('getClientsByRole returns lowercase client ids', async () => {
   const clients = await getClientsByRole('operator');
   expect(clients).toEqual(['c1', 'c2']);
   expect(mockQuery).toHaveBeenCalledWith(
-    'SELECT DISTINCT LOWER(client_id) AS client_id FROM users WHERE LOWER(role_name) = LOWER($1)',
+    `SELECT DISTINCT LOWER(duc.client_id) AS client_id
+     FROM dashboard_user du
+     JOIN roles r ON du.role_id = r.role_id
+     JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+     WHERE LOWER(r.role_name) = LOWER($1)`,
     ['operator']
   );
 });
