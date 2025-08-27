@@ -11,6 +11,7 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../utils/utilsHelper.js";
+import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
 import { getAdminWANumbers, getAdminWAIds, sendWAFile } from "../../utils/waHelper.js";
 import * as linkReportModel from "../../model/linkReportModel.js";
 import { saveLinkReportExcel } from "../../service/linkReportExcelService.js";
@@ -206,10 +207,11 @@ export const clientRequestHandlers = {
 1️⃣2️⃣ Transfer User Sheet
 1️⃣3️⃣ Download Sheet Amplifikasi
 1️⃣4️⃣ Download Docs
+1️⃣5️⃣ Absensi Operator Ditbinmas
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-4])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-5])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -229,6 +231,7 @@ export const clientRequestHandlers = {
       12: "transferUserSheet_choose",
       13: "downloadSheet_choose",
       14: "downloadDocs_choose",
+      15: "absensiOprDitbinmas",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1584,6 +1587,14 @@ export const clientRequestHandlers = {
         `❌ Gagal menghapus WA admin: ${err.message}`
       );
     }
+    session.step = "main";
+  },
+
+
+  // ================== ABSENSI OPERATOR DITBINMAS ==================
+  absensiOprDitbinmas: async (session, chatId, _text, waClient) => {
+    const msg = await absensiRegistrasiDashboardDitbinmas();
+    await waClient.sendMessage(chatId, msg);
     session.step = "main";
   },
 
