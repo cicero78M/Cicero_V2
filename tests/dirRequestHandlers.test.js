@@ -4,7 +4,6 @@ process.env.TZ = 'Asia/Jakarta';
 
 const mockGetUsersSocialByClient = jest.fn();
 const mockGetClientsByRole = jest.fn();
-const mockAbsensiLink = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiKomentar = jest.fn();
 const mockFindClientById = jest.fn();
@@ -12,9 +11,6 @@ const mockFindClientById = jest.fn();
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
   getClientsByRole: mockGetClientsByRole,
-}));
-jest.unstable_mockModule('../src/handler/fetchabsensi/link/absensiLinkAmplifikasi.js', () => ({
-  absensiLink: mockAbsensiLink,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
   absensiLikes: mockAbsensiLikes,
@@ -76,5 +72,30 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(msg).toContain('POLRES PASURUAN KOTA');
   expect(msg).toContain('POLRES SIDOARJO');
   expect(msg).not.toMatch(/POLRES SIDOARJO\n\nJumlah User/);
+  jest.useRealTimers();
+});
+
+test('choose_menu option 2 rekap user data ditbinmas', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
+
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'ditbinmas', divisi: 'satA', title: 'BRIPTU', nama: 'BUDI', insta: null, tiktok: 'buditt' },
+    { client_id: 'ditbinmas', divisi: 'satB', title: 'AIPDA', nama: 'DEDI', insta: 'dediig', tiktok: null },
+  ]);
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '321';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas');
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toContain('SATA');
+  expect(msg).toContain('SATB');
+  expect(msg).toContain('BRIPTU BUDI');
+  expect(msg).toContain('TikTok');
   jest.useRealTimers();
 });

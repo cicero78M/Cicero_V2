@@ -1,5 +1,4 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
-import { absensiLink } from "../fetchabsensi/link/absensiLinkAmplifikasi.js";
 import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
@@ -141,6 +140,67 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   ).trim();
 }
 
+async function rekapUserDataDitbinmas() {
+  const clientId = "ditbinmas";
+  const usersAll = await getUsersSocialByClient(clientId);
+  const users = usersAll.filter(
+    (u) => u.client_id?.toLowerCase() === clientId
+  );
+  const salam = getGreeting();
+  const now = new Date();
+  const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
+  const tanggal = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const jam = now.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const complete = {};
+  const incomplete = {};
+  users.forEach((u) => {
+    const div = u.divisi || "-";
+    const nama = formatNama(u);
+    if (u.insta && u.tiktok) {
+      if (!complete[div]) complete[div] = [];
+      complete[div].push(nama);
+    } else {
+      const missing = [];
+      if (!u.insta) missing.push("Instagram");
+      if (!u.tiktok) missing.push("TikTok");
+      if (!incomplete[div]) incomplete[div] = [];
+      incomplete[div].push(`${nama}, ${missing.join(" & ")} belum diisi`);
+    }
+  });
+
+  const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
+    const list = complete[d].join("\n\n");
+    return `${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
+  });
+  const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
+    const list = incomplete[d].join("\n\n");
+    return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
+  });
+  const sections = [];
+  if (completeLines.length)
+    sections.push(`Sudah Lengkap:\n\n${completeLines.join("\n\n")}`);
+  if (incompleteLines.length)
+    sections.push(`Belum Lengkap:\n\n${incompleteLines.join("\n\n")}`);
+  const body = sections.join("\n\n");
+
+  const client = await findClientById(clientId);
+  return (
+    `${salam},\n\n` +
+    `Mohon ijin Komandan, melaporkan absensi update data personil ${
+      (client?.nama || clientId).toUpperCase()
+    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+    body
+  ).trim();
+}
+
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
   let msg = "";
   const userClient = userClientId ? await findClientById(userClientId) : null;
@@ -151,10 +211,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "2":
-      msg = await absensiLink(clientId, {
-        ...(userType === "org" ? { clientFilter: userClientId } : {}),
-        roleFlag,
-      });
+      msg = await rekapUserDataDitbinmas();
       break;
     case "3":
       msg = await absensiLikes(clientId, {
@@ -249,7 +306,7 @@ export const dirRequestHandlers = {
       `Client: *${clientName}*\n` +
       "┏━━━ *MENU DIRREQUEST* ━━━\n" +
       "1️⃣ Rekap user belum lengkapi data\n" +
-      "2️⃣ Absensi Amplifikasi Instagram\n" +
+      "2️⃣ Rekap user data Ditbinmas\n" +
       "3️⃣ Absensi Likes Instagram\n" +
       "4️⃣ Absensi Komentar TikTok\n" +
       "┗━━━━━━━━━━━━━━━━━┛\n" +
