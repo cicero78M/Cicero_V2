@@ -23,6 +23,6 @@ test('generates report with operator counts and unregistered clients', async () 
   });
 
   const msg = await absensiRegistrasiDashboardDitbinmas();
-  expect(msg).toContain('Sudah :\n- POLRES A : 2 Operator');
-  expect(msg).toContain('Belum :\n- POLRES B');
+  expect(msg).toContain('Sudah : 1 Polres\n- POLRES A : 2 Operator');
+  expect(msg).toContain('Belum : 1 Polres\n- POLRES B');
 });
