@@ -36,23 +36,17 @@ function mockClientType(type = 'instansi') {
 test('createLinkReport inserts row', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [] })
-    .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const data = { shortcode: 'abc', user_id: '1', instagram_link: 'a' };
   const res = await createLinkReport(data);
   expect(res).toEqual({ shortcode: 'abc' });
   expect(mockQuery).toHaveBeenNthCalledWith(
     1,
-    expect.stringContaining('FROM tasks'),
-    ['abc', '1']
-  );
-  expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
     expect.stringContaining('FROM link_report'),
     ['abc', '1']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
-    3,
+    2,
     expect.stringContaining('INSERT INTO link_report'),
     ['abc', '1', 'a', null, null, null, null]
   );
@@ -61,39 +55,19 @@ test('createLinkReport inserts row', async () => {
 test('createLinkReport throws when shortcode missing or not today', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [] })
-    .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] });
   await expect(
     createLinkReport({ shortcode: 'xyz', user_id: '1' })
   ).rejects.toThrow('shortcode not found or not from today');
-  expect(mockQuery).toHaveBeenCalledTimes(3);
-});
-
-test('createLinkReport throws when recent task exists', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ exists: 1 }] });
-  await expect(
-    createLinkReport({ shortcode: 'abc', user_id: '1' })
-  ).rejects.toThrow('duplicate report/task in last two days');
-  expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('FROM tasks'),
-    ['abc', '1']
-  );
+  expect(mockQuery).toHaveBeenCalledTimes(2);
 });
 
 test('createLinkReport throws when recent link report exists', async () => {
-  mockQuery
-    .mockResolvedValueOnce({ rows: [] })
-    .mockResolvedValueOnce({ rows: [{ exists: 1 }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ exists: 1 }] });
   await expect(
     createLinkReport({ shortcode: 'abc', user_id: '1' })
-  ).rejects.toThrow('duplicate report/task in last two days');
-  expect(mockQuery).toHaveBeenNthCalledWith(
-    1,
-    expect.stringContaining('FROM tasks'),
-    ['abc', '1']
-  );
-  expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
+  ).rejects.toThrow('anda mengirimkan link duplikasi');
+  expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('FROM link_report'),
     ['abc', '1']
   );

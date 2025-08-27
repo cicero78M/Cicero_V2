@@ -1,17 +1,5 @@
 import { query } from '../repository/db.js';
 
-export async function hasRecentTask(shortcode, user_id) {
-  const res = await query(
-    `SELECT 1 FROM tasks
-     WHERE shortcode = $1
-       AND user_id IS NOT DISTINCT FROM $2
-       AND created_at >= NOW() - INTERVAL '2 days'
-     LIMIT 1`,
-    [shortcode, user_id]
-  );
-  return res.rows.length > 0;
-}
-
 export async function hasRecentLinkReport(shortcode, user_id) {
   const res = await query(
     `SELECT 1 FROM link_report
@@ -25,11 +13,8 @@ export async function hasRecentLinkReport(shortcode, user_id) {
 }
 
 export async function createLinkReport(data) {
-  if (
-    (await hasRecentTask(data.shortcode, data.user_id || null)) ||
-    (await hasRecentLinkReport(data.shortcode, data.user_id || null))
-  ) {
-    const err = new Error('duplicate report/task in last two days');
+  if (await hasRecentLinkReport(data.shortcode, data.user_id || null)) {
+    const err = new Error('anda mengirimkan link duplikasi');
     err.statusCode = 400;
     throw err;
   }
