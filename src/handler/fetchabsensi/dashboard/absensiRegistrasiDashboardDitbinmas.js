@@ -46,9 +46,9 @@ export async function absensiRegistrasiDashboardDitbinmas() {
   msg += `${hari}, ${tanggal}\n`;
   msg += `Jam: ${jam}\n\n`;
   msg += `Absensi Registrasi User Direktorat dan Polres :\n\n`;
-  msg += `Sudah :\n`;
+  msg += `Sudah : ${sudah.length} Polres\n`;
   msg += sudah.length ? sudah.map((n) => `- ${n}`).join("\n") : "-";
-  msg += `\nBelum :\n`;
+  msg += `\nBelum : ${belum.length} Polres\n`;
   msg += belum.length ? belum.map((n) => `- ${n}`).join("\n") : "-";
   return msg.trim();
 }
