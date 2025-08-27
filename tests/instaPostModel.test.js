@@ -43,3 +43,13 @@ test('getShortcodesTodayByClient uses role filter for directorate', async () => 
   expect(sql).toContain('insta_post_roles');
   expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
 });
+
+test('getShortcodesTodayByClient falls back to role when client not found', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getShortcodesTodayByClient('ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('insta_post_roles');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
+});
