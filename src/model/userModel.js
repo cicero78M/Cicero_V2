@@ -90,7 +90,11 @@ async function buildClientFilter(
 // Ambil daftar client_id berdasarkan role_name
 export async function getClientsByRole(roleName) {
   const { rows } = await query(
-    'SELECT DISTINCT LOWER(client_id) AS client_id FROM users WHERE LOWER(role_name) = LOWER($1)',
+    `SELECT DISTINCT LOWER(duc.client_id) AS client_id
+     FROM dashboard_user du
+     JOIN roles r ON du.role_id = r.role_id
+     JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
+     WHERE LOWER(r.role_name) = LOWER($1)`,
     [roleName]
   );
   return rows.map((r) => r.client_id);
