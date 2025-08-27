@@ -40,31 +40,32 @@ export async function findPostByShortcode(shortcode) {
   return res.rows[0] || null;
 }
 
-export async function getShortcodesTodayByClient(client_id) {
+export async function getShortcodesTodayByClient(identifier) {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'Asia/Jakarta'
   });
 
   const typeRes = await query(
     'SELECT client_type FROM clients WHERE LOWER(client_id) = LOWER($1)',
-    [client_id]
+    [identifier]
   );
   const clientType = typeRes.rows[0]?.client_type?.toLowerCase();
 
   let sql;
   let params;
-  if (clientType === 'direktorat') {
+
+  if (clientType === 'direktorat' || typeRes.rows.length === 0) {
     sql =
       `SELECT p.shortcode FROM insta_post p\n` +
       `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
       `WHERE LOWER(pr.role_name) = LOWER($1)\n` +
       `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
-    params = [client_id, today];
+    params = [identifier, today];
   } else {
     sql =
       `SELECT shortcode FROM insta_post\n` +
       `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
-    params = [client_id, today];
+    params = [identifier, today];
   }
 
   const res = await query(sql, params);
