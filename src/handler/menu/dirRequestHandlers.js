@@ -6,9 +6,8 @@ import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 
 async function formatRekapUserData(clientId, roleFlag = null) {
-  const filterRole = ["ditbinmas", "ditlantas", "bidhumas"].includes(
-    roleFlag?.toLowerCase()
-  )
+  const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+  const filterRole = directorateRoles.includes(roleFlag?.toLowerCase())
     ? roleFlag
     : null;
   const client = await findClientById(clientId);
@@ -27,7 +26,11 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   });
 
   const clientType = client?.client_type?.toLowerCase();
-  if (clientType === "direktorat") {
+  const isDirektoratView =
+    clientType === "direktorat" ||
+    directorateRoles.includes(clientId.toLowerCase()) ||
+    directorateRoles.includes(roleFlag?.toLowerCase());
+  if (isDirektoratView) {
     const groups = {};
     users.forEach((u) => {
       const cid = u.client_id;

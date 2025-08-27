@@ -53,7 +53,7 @@ test('choose_menu aggregates directorate data by client_id', async () => {
     'polres_sidoarjo',
   ]);
   mockFindClientById.mockImplementation(async (cid) => ({
-    ditbinmas: { nama: 'DIT BINMAS', client_type: 'direktorat' },
+    ditbinmas: { nama: 'DIT BINMAS', client_type: 'org' },
     polres_pasuruan_kota: { nama: 'POLRES PASURUAN KOTA', client_type: 'org' },
     polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'org' },
   })[cid]);
