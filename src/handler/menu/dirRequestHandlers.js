@@ -133,7 +133,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
   const userType = userClient?.client_type?.toLowerCase();
   switch (action) {
     case "1": {
-      msg = await formatRekapUserData(userClientId || clientId, roleFlag);
+      msg = await formatRekapUserData(clientId, roleFlag);
       break;
     }
     case "2":
