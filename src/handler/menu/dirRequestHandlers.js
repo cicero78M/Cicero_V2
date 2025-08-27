@@ -1,4 +1,4 @@
-import { getUsersSocialByClient } from "../../model/userModel.js";
+import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
 import { absensiLink } from "../fetchabsensi/link/absensiLinkAmplifikasi.js";
 import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
@@ -36,27 +36,38 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       if (!u.insta || !u.tiktok) groups[cid].miss++;
     });
 
+    const roleName = filterRole || clientId;
+    const polresIds = await getClientsByRole(roleName);
+    const allIds = Array.from(
+      new Set([clientId, ...(polresIds || []), ...Object.keys(groups)])
+    );
+
     const entries = await Promise.all(
-      Object.entries(groups).map(async ([cid, stat]) => {
+      allIds.map(async (cid) => {
+        const stat = groups[cid] || { total: 0, miss: 0 };
         const c = await findClientById(cid);
+        if (cid !== clientId && c?.client_type?.toLowerCase() !== "org")
+          return null;
         const name = (c?.nama || cid).toUpperCase();
         const updated = stat.total - stat.miss;
         return { cid, name, stat, updated };
       })
     );
 
-    entries.sort((a, b) => {
+    const filtered = entries.filter(Boolean);
+    filtered.sort((a, b) => {
       if (a.cid === clientId) return -1;
       if (b.cid === clientId) return 1;
       return a.name.localeCompare(b.name);
     });
 
-    const lines = entries.map(
-      (e, idx) =>
-        `${idx + 1}. ${e.name}\n\n` +
-        `Jumlah User: ${e.stat.total}\n` +
-        `Jumlah User Sudah Update: ${e.updated}\n` +
-        `Jumlah User Belum Update: ${e.stat.miss}`
+    const lines = filtered.map((e, idx) =>
+      e.stat.total === 0
+        ? `${idx + 1}. ${e.name}`
+        : `${idx + 1}. ${e.name}\n\n` +
+          `Jumlah User: ${e.stat.total}\n` +
+          `Jumlah User Sudah Update: ${e.updated}\n` +
+          `Jumlah User Belum Update: ${e.stat.miss}`
     );
 
     const header =
