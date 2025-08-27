@@ -62,13 +62,56 @@ export async function absensiLink(client_id, opts = {}) {
         (r.youtube_link ? 1 : 0);
     }
   });
+  const totalKonten = shortcodes.length;
+
+  if (clientType === "direktorat") {
+    const groups = {};
+    Object.values(userStats).forEach((u) => {
+      const cid = u.client_id?.toUpperCase() || "";
+      if (!groups[cid]) groups[cid] = { total: 0, updated: 0 };
+      groups[cid].total++;
+      if (u.exception === true || u.tasksDone === totalKonten) {
+        groups[cid].updated++;
+      }
+    });
+
+    const kontenLinks = shortcodes.map(
+      (sc) => `https://www.instagram.com/p/${sc}`
+    );
+    const totalLinks = Object.values(userStats).reduce(
+      (acc, u) => acc + u.linkCount,
+      0
+    );
+    const reports = await Promise.all(
+      Object.keys(groups).map(async (cid) => {
+        const { nama } = await getClientInfo(cid);
+        const g = groups[cid];
+        return (
+          `*Polres*: *${nama}*\n` +
+          `*Jumlah personil:* ${g.total}\n` +
+          `✅ *Sudah melaksanakan* : *${g.updated} user*\n` +
+          `❌ *Belum melaksanakan* : *${g.total - g.updated} user*`
+        );
+      })
+    );
+    const salam = getGreeting();
+    let msg = `${salam},\n\n`;
+    msg += `Mohon ijin melaporkan Pelaksanaan Tugas Amplifikasi *${clientNama}* pada hari:\n\n`;
+    msg += `Hari: ${hari}\n\n`;
+    msg += `Tanggal: ${tanggal}\n\n`;
+    msg += `Pukul: ${jam}\n\n`;
+    msg += `Jumlah Konten Resmi Hari ini: ${shortcodes.length}\n\n`;
+    msg += kontenLinks.join("\n\n") + "\n\n";
+    msg += reports.join("\n\n") + "\n\n";
+    msg += `Jumlah Total Link dari 5 Platform Sosial Media: ${totalLinks}\n\n`;
+    msg += `Terima kasih.`;
+    return msg.trim();
+  }
 
   const totalLinks = Object.values(userStats).reduce(
     (acc, u) => acc + u.linkCount,
     0
   );
-  const totalKonten = shortcodes.length;
-
   const sudah = [];
   const belumLengkap = [];
   const belum = [];
