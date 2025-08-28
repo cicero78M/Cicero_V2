@@ -78,7 +78,9 @@ export async function absensiLikes(client_id, opts = {}) {
 
     const totalKonten = shortcodes.length;
     const reports = [];
-    for (const cid of polresIds) {
+    const totals = { total: 0, sudah: 0, kurang: 0, belum: 0 };
+    for (let i = 0; i < polresIds.length; i++) {
+      const cid = polresIds[i];
       const users = usersByClient[cid] || [];
       const { nama: clientName } = await getClientInfo(cid);
       const sudah = [];
@@ -104,23 +106,31 @@ export async function absensiLikes(client_id, opts = {}) {
         else if (percentage > 0) kurang.push(u);
         else belum.push(u);
       });
+      const belumCount = belum.length + tanpaUsername.length;
+      totals.total += users.length;
+      totals.sudah += sudah.length;
+      totals.kurang += kurang.length;
+      totals.belum += belumCount;
       reports.push(
-        `${clientName}\n` +
-          `Jumlah Personil : ${users.length}\n` +
-          `Sudah Melaksanakan Lengkap : ${sudah.length}\n` +
-          `Melaksanakan Kurang Lengkap : ${kurang.length}\n` +
-          `Belum Melaksanakan : ${belum.length}\n` +
-          `Belum Update Username : ${tanpaUsername.length}`
+        `${i + 1}. ${clientName}\n\n` +
+          `Jumlah Personil : ${users.length} pers\n` +
+          `Sudah melaksanakan : ${sudah.length} pers\n` +
+          `Melaksanakan kurang lengkap : ${kurang.length} pers\n` +
+          `Belum melaksanakan : ${belumCount} pers`
       );
     }
 
     let msg =
       `Mohon ijin Komandan,\n\n` +
-      `Rekap Akumulasi Likes Instagram\nDirektorat: ${clientNama}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+      `📋 Rekap Akumulasi Likes Instagram\n` +
+      `Polres: ${clientNama}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
       `Jumlah Konten: ${totalKonten}\n` +
       `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-      reports.join("\n\n") +
-      "\n\nTerimakasih.";
+      `Jumlah Total Personil : ${totals.total} pers\n` +
+      `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
+      `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+      `❌ Belum melaksanakan : ${totals.belum} pers\n\n` +
+      reports.join("\n\n");
     return msg.trim();
   }
 
