@@ -1366,7 +1366,8 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
       return;
     }
-    const [, client_id] = text.split("#");
+    const [, rawClientId] = text.split("#");
+    const client_id = (rawClientId || "").trim();
     if (!client_id) {
       await waClient.sendMessage(
         chatId,
