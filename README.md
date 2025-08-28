@@ -82,6 +82,8 @@ This allows operators to scope responses to the correct client.
     GOOGLE_CONTACT_SCOPE=https://www.googleapis.com/auth/contacts
     GOOGLE_SERVICE_ACCOUNT=/path/to/service-account.json
     GOOGLE_IMPERSONATE_EMAIL=admin@example.com
+    BACKUP_DIR=./backups
+    GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
     ```
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
 
@@ -127,6 +129,8 @@ The application can synchronize Google Workspace contacts using the People API. 
    - `GOOGLE_SERVICE_ACCOUNT` – JSON key or file path for the service account.
    - `GOOGLE_CONTACT_SCOPE` – OAuth scope for contacts, e.g. `https://www.googleapis.com/auth/contacts`.
    - `GOOGLE_IMPERSONATE_EMAIL` – Workspace user email to impersonate when accessing contacts.
+   - `BACKUP_DIR` – temporary folder for local database dumps.
+   - `GOOGLE_DRIVE_FOLDER_ID` – Google Drive folder ID to receive backups.
 
 For detailed setup and usage examples, see [`docs/google_contacts_integration.md`](docs/google_contacts_integration.md).
 
@@ -140,6 +144,8 @@ Example commands for backing up and restoring the database:
 pg_dump -U <dbuser> -h <host> -d <dbname> > cicero_backup.sql
 psql -U <dbuser> -h <host> -d <dbname> < cicero_backup.sql
 ```
+
+A cron job (`src/cron/cronDbBackup.js`) runs daily at **02:00** (Asia/Jakarta), storing dumps in `BACKUP_DIR` and uploading them to the Drive folder defined by `GOOGLE_DRIVE_FOLDER_ID`.
 
 ---
 

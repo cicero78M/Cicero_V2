@@ -21,6 +21,8 @@ export const env = cleanEnv(process.env, {
   APP_SESSION_NAME: str({ default: '' }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' }),
+  BACKUP_DIR: str({ default: 'backups' }),
+  GOOGLE_DRIVE_FOLDER_ID: str({ default: '' }),
   GOOGLE_SERVICE_ACCOUNT: str({ default: '' }),
   GOOGLE_IMPERSONATE_EMAIL: str({ default: '' }),
   GOOGLE_CONTACT_SCOPE: str({
