@@ -23,6 +23,7 @@ import './src/cron/cronAmplifyLinkMonthly.js';
 import './src/cron/cronPremiumRequest.js';
 import './src/cron/cronAbsensiUserData.js';
 import './src/cron/cronAbsensiOprDitbinmas.js';
+import './src/cron/cronDbBackup.js';
 
 const app = express();
 
