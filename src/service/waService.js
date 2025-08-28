@@ -147,15 +147,18 @@ waClient.on("ready", () => {
 // MESSAGE HANDLER UTAMA
 // =======================
 waClient.on("message", async (msg) => {
-  if (msg.from?.endsWith("@g.us") || msg.isStatus) {
+  const chatId = msg.from;
+  const text = (msg.body || "").trim();
+  if (msg.isStatus) {
+    return;
+  }
+  if (chatId?.endsWith("@g.us") && !text.toLowerCase().startsWith("thisgroup#")) {
     return;
   }
   if (!waReady) {
     console.warn("[WA] Message received before client ready, ignoring");
     return;
   }
-  const chatId = msg.from;
-  const text = (msg.body || "").trim();
 
   // ===== Deklarasi State dan Konstanta =====
   const session = getSession(chatId);
@@ -164,7 +167,8 @@ waClient.on("message", async (msg) => {
     !(
       ["dashrequest", "dirrequest"].includes(text.toLowerCase()) ||
       (session && ["dashrequest", "dirrequest"].includes(session.menu))
-    )
+    ) &&
+    !chatId.endsWith("@g.us")
   ) {
     await saveContactIfNew(chatId);
   }
