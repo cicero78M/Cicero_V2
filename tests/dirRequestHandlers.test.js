@@ -151,3 +151,24 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
   expect(msg).not.toMatch(/Aiptu Dodi/);
   jest.useRealTimers();
 });
+
+test('choose_menu option 3 absensi likes uses ditbinmas data for all users', async () => {
+  mockAbsensiLikes.mockResolvedValue('laporan');
+  mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
+
+  const session = {
+    role: 'ditbinmas',
+    selectedClientId: 'polres_a',
+    clientName: 'POLRES A',
+    dir_client_id: 'ditbinmas',
+  };
+  const chatId = '999';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
+
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('ditbinmas', {
+    mode: 'all',
+    roleFlag: 'ditbinmas',
+  });
+});

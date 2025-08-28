@@ -217,11 +217,17 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await rekapUserDataDitbinmas();
       break;
     case "3":
-      msg = await absensiLikes(clientId, {
-        ...(userType === "org" ? { clientFilter: userClientId } : {}),
-        mode: "all",
-        roleFlag,
-      });
+      {
+        const opts = { mode: "all", roleFlag };
+        const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+        if (
+          userType === "org" &&
+          !directorateRoles.includes((clientId || "").toLowerCase())
+        ) {
+          opts.clientFilter = userClientId;
+        }
+        msg = await absensiLikes(clientId, opts);
+      }
       break;
     case "4":
       msg = await absensiKomentar(clientId, {

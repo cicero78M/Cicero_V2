@@ -133,7 +133,7 @@ test('directorate summarizes across clients', async () => {
     'POLRESA',
     'POLRESB',
   ]);
-  expect(msg).toMatch(/Polres\*: \*POLRES A\*[\s\S]*Sudah melaksanakan\* : \*1 user\*[\s\S]*Belum melaksanakan\* : \*0 user\*[\s\S]*Belum input username\* : \*1 user/);
-  expect(msg).toMatch(/Polres\*: \*POLRES B\*[\s\S]*Sudah melaksanakan\* : \*0 user\*[\s\S]*Belum melaksanakan\* : \*1 user\*[\s\S]*Belum input username\* : \*0 user/);
+  expect(msg).toMatch(/Client\*: \*POLRES A\*[\s\S]*Sudah melaksanakan\* : \*1 user\*[\s\S]*Belum melaksanakan\* : \*0 user\*[\s\S]*Belum input username\* : \*1 user/);
+  expect(msg).toMatch(/Client\*: \*POLRES B\*[\s\S]*Sudah melaksanakan\* : \*0 user\*[\s\S]*Belum melaksanakan\* : \*1 user\*[\s\S]*Belum input username\* : \*0 user/);
 });
 
