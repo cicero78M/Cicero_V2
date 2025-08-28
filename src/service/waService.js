@@ -1353,33 +1353,13 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   }
 
   // =========================
-  // === UPDATE client_group dari WhatsApp GROUP (ADMIN)
+  // === UPDATE client_group dari WhatsApp GROUP
   // =========================
   if (text.toLowerCase().startsWith("thisgroup#")) {
     if (!msg.from.endsWith("@g.us")) {
       await waClient.sendMessage(
         chatId,
         "❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!"
-      );
-      return;
-    }
-    let isGroupAdmin = false;
-    try {
-      const chat = await msg.getChat();
-      const participant = chat.participants?.find(
-        (p) => p.id?._serialized === senderId
-      );
-      isGroupAdmin = participant?.isAdmin || participant?.isSuperAdmin || false;
-    } catch (e) {
-      console.error(
-        "[WA] Gagal memeriksa status admin grup:",
-        e.message
-      );
-    }
-    if (!isAdmin && !isGroupAdmin) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Perintah ini hanya bisa digunakan oleh admin WhatsApp!"
       );
       return;
     }
