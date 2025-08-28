@@ -45,20 +45,22 @@ test('createLinkReport inserts row', async () => {
     expect.stringContaining('FROM link_report'),
     ['abc', '1']
   );
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain("p.created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '2 days'");
   expect(mockQuery).toHaveBeenNthCalledWith(
     2,
-    expect.stringContaining('INSERT INTO link_report'),
+    expect.any(String),
     ['abc', '1', 'a', null, null, null, null]
   );
 });
 
-test('createLinkReport throws when shortcode missing or not today', async () => {
+test('createLinkReport throws when shortcode missing or older than 2 days', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] });
   await expect(
     createLinkReport({ shortcode: 'xyz', user_id: '1' })
-  ).rejects.toThrow('shortcode not found or not from today');
+  ).rejects.toThrow('shortcode not found or older than 2 days');
   expect(mockQuery).toHaveBeenCalledTimes(2);
 });
 

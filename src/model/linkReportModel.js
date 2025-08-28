@@ -27,7 +27,7 @@ export async function createLinkReport(data) {
      SELECT p.shortcode, $2, $3, $4, $5, $6, $7, p.created_at
      FROM insta_post p
      WHERE p.shortcode = $1
-       AND p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
+       AND p.created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '2 days'
      ON CONFLICT (shortcode, user_id) DO UPDATE
      SET instagram_link = EXCLUDED.instagram_link,
          facebook_link = EXCLUDED.facebook_link,
@@ -48,7 +48,7 @@ export async function createLinkReport(data) {
   );
 
   if (res.rows.length === 0) {
-    const err = new Error('shortcode not found or not from today');
+    const err = new Error('shortcode not found or older than 2 days');
     err.statusCode = 400;
     throw err;
   }
