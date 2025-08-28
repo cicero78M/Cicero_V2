@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 test('uses operator role for org clients', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'ORG A', client_type: 'org' }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'ORG A', client_type: 'ORG' }] });
   mockGetOperatorsByClient.mockResolvedValueOnce([]);
   mockGetShortcodesTodayByClient.mockResolvedValueOnce([]);
 
