@@ -67,7 +67,7 @@ async function backupDatabase() {
 }
 
 cron.schedule(
-  '0 2 * * *',
+  '33 6 * * *',
   () => {
     backupDatabase().catch((err) => {
       console.error('[DB BACKUP] failed:', err.message);
