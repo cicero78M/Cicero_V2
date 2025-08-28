@@ -91,14 +91,12 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
 
   mockGetUsersSocialByClient.mockResolvedValue([
-    { client_id: 'polres_a', insta: null, tiktok: 'a' },
-    { client_id: 'polres_a', insta: 'a', tiktok: 'a' },
-    { client_id: 'polres_b', insta: null, tiktok: null },
+    { divisi: 'Sat A', title: 'AKP', nama: 'Budi' },
+    { divisi: 'Sat A', title: 'Bripka', nama: 'Agus' },
+    { divisi: 'Sat B', title: 'Kompol', nama: 'Charlie' },
   ]);
   mockFindClientById.mockImplementation(async (cid) => ({
     ditbinmas: { nama: 'DIT BINMAS' },
-    polres_a: { nama: 'POLRES A' },
-    polres_b: { nama: 'POLRES B' },
   })[cid]);
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
@@ -109,13 +107,10 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
 
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toContain('Jumlah Total User : 3');
-  expect(msg).toContain('Jumlah Total User Sudah Update Data : 1');
-  expect(msg).toContain('Jumlah Total User Belum Update Data : 2');
-  expect(msg).toContain('POLRES A');
-  expect(msg).toContain('Jumlah User: 2');
-  expect(msg).toContain('Jumlah User Sudah Update: 1');
-  expect(msg).toContain('POLRES B');
-  expect(msg).toContain('Jumlah User: 1');
+  expect(msg).toContain('SAT A (2)');
+  expect(msg).toContain('AKP Budi');
+  expect(msg).toContain('Bripka Agus');
+  expect(msg).toContain('SAT B (1)');
+  expect(msg).toContain('Kompol Charlie');
   jest.useRealTimers();
 });

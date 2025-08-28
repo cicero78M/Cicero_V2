@@ -181,52 +181,23 @@ async function rekapUserDataDitbinmas() {
 
   const groups = {};
   users.forEach((u) => {
-    const cid = u.client_id;
-    if (!groups[cid]) groups[cid] = { total: 0, miss: 0 };
-    groups[cid].total++;
-    if (!u.insta || !u.tiktok) groups[cid].miss++;
+    const div = u.divisi || "-";
+    if (!groups[div]) groups[div] = [];
+    groups[div].push(u);
   });
 
-  const entries = await Promise.all(
-    Object.keys(groups).map(async (cid) => {
-      const stat = groups[cid];
-      const c = await findClientById(cid);
-      const name = (c?.nama || cid).toUpperCase();
-      const updated = stat.total - stat.miss;
-      return { cid, name, stat, updated };
-    })
-  );
-
-  entries.sort((a, b) => a.name.localeCompare(b.name));
-
-  const totals = entries.reduce(
-    (acc, e) => {
-      acc.total += e.stat.total;
-      acc.updated += e.updated;
-      acc.miss += e.stat.miss;
-      return acc;
-    },
-    { total: 0, updated: 0, miss: 0 }
-  );
-
-  const lines = entries.map(
-    (e, idx) =>
-      `${idx + 1}. ${e.name}\n\n` +
-      `Jumlah User: ${e.stat.total}\n` +
-      `Jumlah User Sudah Update: ${e.updated}\n` +
-      `Jumlah User Belum Update: ${e.stat.miss}`
-  );
+  const lines = sortDivisionKeys(Object.keys(groups)).map((div) => {
+    const list = groups[div].map((u) => formatNama(u)).join("\n");
+    return `${div.toUpperCase()} (${groups[div].length})\n${list}`;
+  });
 
   const client = await findClientById(clientId);
   const header =
     `${salam},\n\n` +
-    `Mohon ijin Komandan, melaporkan absensi update data personil ${
+    `Mohon ijin Komandan, melaporkan rekap data personil ${
       (client?.nama || clientId).toUpperCase()
-    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
-    `Jumlah Total User : ${totals.total}\n` +
-    `Jumlah Total User Sudah Update Data : ${totals.updated}\n` +
-    `Jumlah Total User Belum Update Data : ${totals.miss}`;
-  const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
+    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n`;
+  const body = lines.join("\n\n");
   return `${header}${body}`.trim();
 }
 
