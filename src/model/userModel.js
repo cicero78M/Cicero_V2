@@ -115,7 +115,7 @@ export async function getUsersByClient(client_id, roleFilter = null) {
 export async function getOperatorsByClient(client_id) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1);
   const res = await query(
-    `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception
+    `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.whatsapp
      FROM "user" u
      JOIN user_roles ur_opr ON ur_opr.user_id = u.user_id
      JOIN roles r_opr ON ur_opr.role_id = r_opr.role_id

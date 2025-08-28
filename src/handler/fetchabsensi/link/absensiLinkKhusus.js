@@ -1,5 +1,5 @@
 import { query } from "../../../db/index.js";
-import { getUsersByClient } from "../../../model/userModel.js";
+import { getUsersByClient, getOperatorsByClient } from "../../../model/userModel.js";
 import {
   getShortcodesTodayByClient,
 } from "../../../model/instaPostKhususModel.js";
@@ -10,12 +10,15 @@ import {
 import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision, sortDivisionKeys, getGreeting } from "../../../utils/utilsHelper.js";
 
-async function getClientNama(client_id) {
+async function getClientInfo(client_id) {
   const res = await query(
-    "SELECT nama FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_type FROM clients WHERE client_id = $1 LIMIT 1",
     [client_id]
   );
-  return res.rows[0]?.nama || client_id;
+  return {
+    nama: res.rows[0]?.nama || client_id,
+    clientType: res.rows[0]?.client_type || null,
+  };
 }
 
 export async function absensiLinkKhusus(client_id) {
@@ -24,8 +27,11 @@ export async function absensiLinkKhusus(client_id) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
-  const users = await getUsersByClient(client_id);
+  const { nama: clientNama, clientType } = await getClientInfo(client_id);
+  const users =
+    clientType === "org"
+      ? await getOperatorsByClient(client_id)
+      : await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
@@ -128,8 +134,11 @@ export async function absensiLinkKhususPerPost(client_id, opts = {}) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const clientNama = await getClientNama(client_id);
-  const users = await getUsersByClient(client_id);
+  const { nama: clientNama, clientType } = await getClientInfo(client_id);
+  const users =
+    clientType === "org"
+      ? await getOperatorsByClient(client_id)
+      : await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
