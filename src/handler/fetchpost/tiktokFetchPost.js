@@ -41,28 +41,35 @@ function isTodayJakarta(unixTimestamp) {
 /**
  * Dapatkan semua video_id tiktok hari ini dari DB
  */
-async function getVideoIdsToday() {
+async function getVideoIdsToday(clientId = null) {
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const res = await query(
-    `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`,
-    [`${yyyy}-${mm}-${dd}`]
-  );
+  let sql = `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`;
+  const params = [`${yyyy}-${mm}-${dd}`];
+  if (clientId) {
+    sql += ` AND client_id = $2`;
+    params.push(clientId);
+  }
+  const res = await query(sql, params);
   return res.rows.map((r) => r.video_id);
 }
 
-async function deleteVideoIds(videoIdsToDelete) {
+async function deleteVideoIds(videoIdsToDelete, clientId = null) {
   if (!videoIdsToDelete.length) return;
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  await query(
-    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`,
-    [videoIdsToDelete, `${yyyy}-${mm}-${dd}`]
-  );
+  let sql =
+    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`;
+  const params = [videoIdsToDelete, `${yyyy}-${mm}-${dd}`];
+  if (clientId) {
+    sql += ` AND client_id = $3`;
+    params.push(clientId);
+  }
+  await query(sql, params);
 }
 
 /**
@@ -92,6 +99,7 @@ export async function getTiktokSecUid(client) {
  * Fungsi utama: fetch & simpan post hari ini SAJA (update jika sudah ada)
  */
 export async function fetchAndStoreTiktokContent(
+  targetClientId = null,
   waClient = null,
   chatId = null
 ) {
@@ -118,17 +126,25 @@ export async function fetchAndStoreTiktokContent(
     }
   }, 4000);
 
-  const dbVideoIdsToday = await getVideoIdsToday();
+  const dbVideoIdsToday = await getVideoIdsToday(targetClientId);
   let fetchedVideoIdsToday = [];
   let hasSuccessfulFetch = false;
 
   const clients = await getEligibleTiktokClients();
+  const clientsToFetch = targetClientId
+    ? clients.filter((c) => c.id === targetClientId)
+    : clients;
   sendDebug({
     tag: "TIKTOK FETCH",
-    msg: `Eligible clients for TikTok fetch: jumlah client: ${clients.length}`,
+    msg: `Eligible clients for TikTok fetch: jumlah client: ${clientsToFetch.length}`,
   });
+  if (targetClientId && clientsToFetch.length === 0) {
+    processing = false;
+    clearInterval(intervalId);
+    throw new Error(`Client ID ${targetClientId} tidak ditemukan atau tidak aktif`);
+  }
 
-  for (const client of clients) {
+  for (const client of clientsToFetch) {
     let secUid;
     try {
       secUid = await getTiktokSecUid(client);
@@ -235,7 +251,7 @@ export async function fetchAndStoreTiktokContent(
       tag: "TIKTOK SYNC",
       msg: `Akan menghapus video_id yang tidak ada hari ini: jumlah=${videoIdsToDelete.length}`,
     });
-    await deleteVideoIds(videoIdsToDelete);
+    await deleteVideoIds(videoIdsToDelete, targetClientId);
   } else {
     sendDebug({
       tag: "TIKTOK SYNC",
@@ -260,10 +276,14 @@ export async function fetchAndStoreTiktokContent(
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const kontenHariIniRes = await query(
-    `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`,
-    [`${yyyy}-${mm}-${dd}`]
-  );
+  let kontenHariIniSql =
+    `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`;
+  const kontenParams = [`${yyyy}-${mm}-${dd}`];
+  if (targetClientId) {
+    kontenHariIniSql += ` AND client_id = $2`;
+    kontenParams.push(targetClientId);
+  }
+  const kontenHariIniRes = await query(kontenHariIniSql, kontenParams);
 
   // Bangun link dengan username TikTok asli (jika ada)
   const kontenLinksToday = kontenHariIniRes.rows.map((r) => {
@@ -271,7 +291,9 @@ export async function fetchAndStoreTiktokContent(
     return `https://www.tiktok.com/@${username}/video/${r.video_id}`;
   });
 
-  let msg = `✅ Fetch TikTok selesai!\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
+  let msg = `✅ Fetch TikTok selesai!`;
+  if (targetClientId) msg += `\nClient: *${targetClientId}*`;
+  msg += `\nJumlah konten hari ini: *${kontenLinksToday.length}*`;
   let maxPerMsg = 30;
   const totalMsg = Math.ceil(kontenLinksToday.length / maxPerMsg);
 
