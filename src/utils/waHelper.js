@@ -11,7 +11,9 @@ export function getAdminWhatsAppList() {
   return (process.env.ADMIN_WHATSAPP || '')
     .split(',')
     .map(s => s.trim())
-    .filter(wid => wid.endsWith('@c.us') && wid.length > 10);
+    .filter(Boolean)
+    .map(wid => (wid.endsWith('@c.us') ? wid : wid.replace(/\D/g, '') + '@c.us'))
+    .filter(wid => wid.length > 10);
 }
 
 export async function sendWAReport(waClient, message, chatIds = null) {
