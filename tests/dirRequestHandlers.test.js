@@ -28,8 +28,9 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
 }));
 
 let dirRequestHandlers;
+let formatRekapUserData;
 beforeAll(async () => {
-  ({ dirRequestHandlers } = await import('../src/handler/menu/dirRequestHandlers.js'));
+  ({ dirRequestHandlers, formatRekapUserData } = await import('../src/handler/menu/dirRequestHandlers.js'));
 });
 
 beforeEach(() => {
@@ -83,6 +84,40 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   const idxPasuruan = msg.indexOf('POLRES PASURUAN KOTA');
   const idxSidoarjo = msg.indexOf('POLRES SIDOARJO');
   expect(idxPasuruan).toBeLessThan(idxSidoarjo);
+  jest.useRealTimers();
+});
+
+test('formatRekapUserData sorts by updated then total', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
+
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'POLRES_A', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_A', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_B', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_B', insta: 'x', tiktok: null },
+    { client_id: 'POLRES_B', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_C', insta: 'x', tiktok: 'y' },
+  ]);
+  mockGetClientsByRole.mockResolvedValue([
+    'polres_a',
+    'polres_b',
+    'polres_c',
+  ]);
+  mockFindClientById.mockImplementation(async (cid) => ({
+    ditbinmas: { nama: 'DIT BINMAS', client_type: 'direktorat' },
+    polres_a: { nama: 'POLRES A', client_type: 'org' },
+    polres_b: { nama: 'POLRES B', client_type: 'org' },
+    polres_c: { nama: 'POLRES C', client_type: 'org' },
+  })[cid.toLowerCase()]);
+
+  const msg = await formatRekapUserData('ditbinmas', 'ditbinmas');
+
+  const idxB = msg.indexOf('POLRES B');
+  const idxA = msg.indexOf('POLRES A');
+  const idxC = msg.indexOf('POLRES C');
+  expect(idxB).toBeLessThan(idxA);
+  expect(idxA).toBeLessThan(idxC);
   jest.useRealTimers();
 });
 
