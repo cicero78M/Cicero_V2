@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 const mockQuery = jest.fn();
 const mockGetUsersByClient = jest.fn();
 const mockGetUsersByDirektorat = jest.fn();
+const mockGetOperatorsByClient = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetReportsTodayByClient = jest.fn();
 const mockGetReportsTodayByShortcode = jest.fn();
@@ -11,6 +12,7 @@ jest.unstable_mockModule('../src/db/index.js', () => ({ query: mockQuery }));
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersByClient: mockGetUsersByClient,
   getUsersByDirektorat: mockGetUsersByDirektorat,
+  getOperatorsByClient: mockGetOperatorsByClient,
 }));
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
   getShortcodesTodayByClient: mockGetShortcodesTodayByClient,

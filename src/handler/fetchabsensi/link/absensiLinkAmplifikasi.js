@@ -1,5 +1,9 @@
 import { query } from "../../../db/index.js";
-import { getUsersByClient, getUsersByDirektorat } from "../../../model/userModel.js";
+import {
+  getUsersByClient,
+  getUsersByDirektorat,
+  getOperatorsByClient,
+} from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import {
   getReportsTodayByClient,
@@ -38,6 +42,9 @@ export async function absensiLink(client_id, opts = {}) {
     users = (
       await getUsersByDirektorat(flag, clientFilter || null)
     ).filter((u) => u.status === true);
+  } else if (clientType === "org") {
+    shortcodes = await getShortcodesTodayByClient(client_id);
+    users = await getOperatorsByClient(clientFilter || client_id);
   } else {
     shortcodes = await getShortcodesTodayByClient(client_id);
     users = await getUsersByClient(clientFilter || client_id, roleFlag);
