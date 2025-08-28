@@ -54,13 +54,21 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       })
     );
 
-    entries.sort((a, b) => {
-      if (a.cid === clientId) return -1;
-      if (b.cid === clientId) return 1;
+    const filteredEntries = entries.filter((e) => e.cid !== clientId);
+
+    filteredEntries.sort((a, b) => {
+      const aHasUsers = a.stat.total > 0;
+      const bHasUsers = b.stat.total > 0;
+      if (aHasUsers && bHasUsers) {
+        if (a.updated !== b.updated) return b.updated - a.updated;
+        return a.name.localeCompare(b.name);
+      }
+      if (aHasUsers && !bHasUsers) return -1;
+      if (!aHasUsers && bHasUsers) return 1;
       return a.name.localeCompare(b.name);
     });
 
-    const lines = entries.map((e, idx) =>
+    const lines = filteredEntries.map((e, idx) =>
       e.stat.total === 0
         ? `${idx + 1}. ${e.name}`
         : `${idx + 1}. ${e.name}\n\n` +

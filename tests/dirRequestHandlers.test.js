@@ -68,10 +68,13 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas', 'ditbinmas');
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toContain('DIT BINMAS');
+  expect(msg).not.toMatch(/1\. DIT BINMAS/);
   expect(msg).toContain('POLRES PASURUAN KOTA');
   expect(msg).toContain('POLRES SIDOARJO');
   expect(msg).not.toMatch(/POLRES SIDOARJO\n\nJumlah User/);
+  const idxPasuruan = msg.indexOf('POLRES PASURUAN KOTA');
+  const idxSidoarjo = msg.indexOf('POLRES SIDOARJO');
+  expect(idxPasuruan).toBeLessThan(idxSidoarjo);
   jest.useRealTimers();
 });
 
