@@ -165,7 +165,9 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
 async function rekapUserDataDitbinmas() {
   const clientId = "ditbinmas";
-  const users = await getUsersSocialByClient(clientId);
+  const users = (await getUsersSocialByClient(clientId, clientId)).filter(
+    (u) => (u.client_id || "").toLowerCase() === clientId
+  );
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
