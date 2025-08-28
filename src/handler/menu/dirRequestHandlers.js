@@ -230,6 +230,43 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         roleFlag,
       });
       break;
+    case "5": {
+      const { fetchAndStoreInstaContent } = await import(
+        "../fetchpost/instaFetchPost.js"
+      );
+      await fetchAndStoreInstaContent(
+        ["shortcode", "caption", "like_count", "timestamp"],
+        waClient,
+        chatId,
+        "DITBINMAS"
+      );
+      msg = "✅ Selesai fetch Instagram DITBINMAS.";
+      break;
+    }
+    case "6": {
+      const { handleFetchLikesInstagram } = await import(
+        "../fetchengagement/fetchLikesInstagram.js"
+      );
+      await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
+      msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
+      break;
+    }
+    case "7": {
+      const { fetchAndStoreTiktokContent } = await import(
+        "../fetchpost/tiktokFetchPost.js"
+      );
+      await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
+      msg = "✅ Selesai fetch TikTok DITBINMAS.";
+      break;
+    }
+    case "8": {
+      const { handleFetchKomentarTiktokBatch } = await import(
+        "../fetchengagement/fetchCommentTiktok.js"
+      );
+      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
+      msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -312,6 +349,10 @@ export const dirRequestHandlers = {
       "2️⃣ Rekap user data Ditbinmas\n" +
       "3️⃣ Absensi Likes Instagram\n" +
       "4️⃣ Absensi Komentar TikTok\n" +
+      "5️⃣ Fetch Insta\n" +
+      "6️⃣ Fetch Likes Insta\n" +
+      "7️⃣ Fetch TikTok\n" +
+      "8️⃣ Fetch Komentar TikTok\n" +
       "┗━━━━━━━━━━━━━━━━━┛\n" +
       "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -336,7 +377,7 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (!["1", "2", "3", "4"].includes(choice)) {
+    if (!["1", "2", "3", "4", "5", "6", "7", "8"].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
