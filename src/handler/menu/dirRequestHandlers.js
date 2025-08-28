@@ -32,16 +32,17 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   if (isDirektoratView) {
     const groups = {};
     users.forEach((u) => {
-      const cid = u.client_id;
+      const cid = (u.client_id || "").toLowerCase();
       if (!groups[cid]) groups[cid] = { total: 0, miss: 0 };
       groups[cid].total++;
       if (!u.insta || !u.tiktok) groups[cid].miss++;
     });
 
-    const roleName = filterRole || clientId;
-    const polresIds = await getClientsByRole(roleName);
+    const roleName = (filterRole || clientId).toLowerCase();
+    const polresIds = (await getClientsByRole(roleName)) || [];
+    const clientIdLower = clientId.toLowerCase();
     const allIds = Array.from(
-      new Set([clientId, ...(polresIds || []), ...Object.keys(groups)])
+      new Set([clientIdLower, ...polresIds.map((id) => id.toLowerCase()), ...Object.keys(groups)])
     );
 
     const entries = await Promise.all(
@@ -54,7 +55,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       })
     );
 
-    const filteredEntries = entries.filter((e) => e.cid !== clientId);
+    const filteredEntries = entries.filter((e) => e.cid !== clientIdLower);
     const withData = filteredEntries.filter((e) => e.stat.total > 0);
     const noData = filteredEntries.filter((e) => e.stat.total === 0);
 
@@ -80,8 +81,12 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
 
     const sections = [];
-    if (withDataLines.length)
-      sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
+    if (withDataLines.length) {
+      const totalUpdated = withData.reduce((sum, e) => sum + e.updated, 0);
+      sections.push(
+        `Jumlah Total Personil Sudah Input: ${totalUpdated}\n\nSudah Input Data:\n\n${withDataLines.join("\n\n")}`
+      );
+    }
     if (noDataLines.length)
       sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
     const body = sections.length ? `\n\n${sections.join("\n\n")}` : "";

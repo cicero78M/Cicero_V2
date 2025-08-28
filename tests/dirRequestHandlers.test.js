@@ -41,8 +41,8 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
 
   mockGetUsersSocialByClient.mockResolvedValue([
-    { client_id: 'ditbinmas', insta: null, tiktok: null },
-    { client_id: 'polres_pasuruan_kota', insta: null, tiktok: null },
+    { client_id: 'DITBINMAS', insta: null, tiktok: null },
+    { client_id: 'POLRES_PASURUAN_KOTA', insta: 'x', tiktok: 'y' },
   ]);
   mockGetClientsByRole.mockResolvedValue([
     'polres_pasuruan_kota',
@@ -50,9 +50,12 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   ]);
   mockFindClientById.mockImplementation(async (cid) => ({
     ditbinmas: { nama: 'DIT BINMAS', client_type: 'org' },
-    polres_pasuruan_kota: { nama: 'POLRES PASURUAN KOTA', client_type: 'org' },
+    polres_pasuruan_kota: {
+      nama: 'POLRES PASURUAN KOTA',
+      client_type: 'org',
+    },
     polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'polda' },
-  })[cid]);
+  })[cid.toLowerCase()]);
 
   const session = {
     role: 'ditbinmas',
@@ -69,8 +72,11 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).not.toMatch(/1\. DIT BINMAS/);
+  expect(msg).toContain('Jumlah Total Personil Sudah Input: 1');
   expect(msg).toContain('POLRES PASURUAN KOTA');
-  expect(msg).toContain('POLRES SIDOARJO');
+  expect(msg.match(/POLRES PASURUAN KOTA/g).length).toBe(1);
+  expect(msg).toMatch(/Client Belum Input Data:\n1\. POLRES SIDOARJO/);
+  expect(msg).not.toMatch(/Client Belum Input Data.*PASURUAN/);
   expect(msg).not.toMatch(/POLRES SIDOARJO\n\nJumlah User/);
   const idxPasuruan = msg.indexOf('POLRES PASURUAN KOTA');
   const idxSidoarjo = msg.indexOf('POLRES SIDOARJO');
