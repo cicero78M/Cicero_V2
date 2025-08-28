@@ -48,22 +48,19 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       allIds.map(async (cid) => {
         const stat = groups[cid] || { total: 0, miss: 0 };
         const c = await findClientById(cid);
-        if (cid !== clientId && c?.client_type?.toLowerCase() !== "org")
-          return null;
         const name = (c?.nama || cid).toUpperCase();
         const updated = stat.total - stat.miss;
         return { cid, name, stat, updated };
       })
     );
 
-    const filtered = entries.filter(Boolean);
-    filtered.sort((a, b) => {
+    entries.sort((a, b) => {
       if (a.cid === clientId) return -1;
       if (b.cid === clientId) return 1;
       return a.name.localeCompare(b.name);
     });
 
-    const lines = filtered.map((e, idx) =>
+    const lines = entries.map((e, idx) =>
       e.stat.total === 0
         ? `${idx + 1}. ${e.name}`
         : `${idx + 1}. ${e.name}\n\n` +
@@ -142,10 +139,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
 async function rekapUserDataDitbinmas() {
   const clientId = "ditbinmas";
-  const usersAll = await getUsersSocialByClient(clientId);
-  const users = usersAll.filter(
-    (u) => u.client_id?.toLowerCase() === clientId
-  );
+  const users = await getUsersSocialByClient(clientId);
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -159,46 +153,42 @@ async function rekapUserDataDitbinmas() {
     minute: "2-digit",
   });
 
-  const complete = {};
-  const incomplete = {};
+  const groups = {};
   users.forEach((u) => {
-    const div = u.divisi || "-";
-    const nama = formatNama(u);
-    if (u.insta && u.tiktok) {
-      if (!complete[div]) complete[div] = [];
-      complete[div].push(nama);
-    } else {
-      const missing = [];
-      if (!u.insta) missing.push("Instagram");
-      if (!u.tiktok) missing.push("TikTok");
-      if (!incomplete[div]) incomplete[div] = [];
-      incomplete[div].push(`${nama}, ${missing.join(" & ")} belum diisi`);
-    }
+    const cid = u.client_id;
+    if (!groups[cid]) groups[cid] = { total: 0, miss: 0 };
+    groups[cid].total++;
+    if (!u.insta || !u.tiktok) groups[cid].miss++;
   });
 
-  const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
-    const list = complete[d].join("\n\n");
-    return `${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
-  });
-  const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
-    const list = incomplete[d].join("\n\n");
-    return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
-  });
-  const sections = [];
-  if (completeLines.length)
-    sections.push(`Sudah Lengkap:\n\n${completeLines.join("\n\n")}`);
-  if (incompleteLines.length)
-    sections.push(`Belum Lengkap:\n\n${incompleteLines.join("\n\n")}`);
-  const body = sections.join("\n\n");
+  const entries = await Promise.all(
+    Object.keys(groups).map(async (cid) => {
+      const stat = groups[cid];
+      const c = await findClientById(cid);
+      const name = (c?.nama || cid).toUpperCase();
+      const updated = stat.total - stat.miss;
+      return { cid, name, stat, updated };
+    })
+  );
+
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+
+  const lines = entries.map(
+    (e, idx) =>
+      `${idx + 1}. ${e.name}\n\n` +
+      `Jumlah User: ${e.stat.total}\n` +
+      `Jumlah User Sudah Update: ${e.updated}\n` +
+      `Jumlah User Belum Update: ${e.stat.miss}`
+  );
 
   const client = await findClientById(clientId);
-  return (
+  const header =
     `${salam},\n\n` +
     `Mohon ijin Komandan, melaporkan absensi update data personil ${
       (client?.nama || clientId).toUpperCase()
-    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
-    body
-  ).trim();
+    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
+  const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
+  return `${header}${body}`.trim();
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
