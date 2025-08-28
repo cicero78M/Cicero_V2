@@ -547,7 +547,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 
 
   // ========== VALIDASI ADMIN COMMAND ==========
-  if (isAdminCommand && !isAdmin) {
+  if (
+    isAdminCommand &&
+    !isAdmin &&
+    !text.toLowerCase().startsWith("thisgroup#")
+  ) {
     await waClient.sendMessage(
       chatId,
       "❌ Anda tidak memiliki akses ke sistem ini."
