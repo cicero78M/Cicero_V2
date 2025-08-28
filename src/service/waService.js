@@ -176,7 +176,8 @@ waClient.on("message", async (msg) => {
   const isAdminCommand = adminCommands.some((cmd) =>
     text.toLowerCase().startsWith(cmd)
   );
-  const isAdmin = isAdminWhatsApp(chatId);
+  const senderId = msg.author || chatId;
+  const isAdmin = isAdminWhatsApp(senderId);
 
   // =========== Menu User Interaktif ===========
   if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
@@ -1355,6 +1356,13 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       await waClient.sendMessage(
         chatId,
         "❌ Perintah ini hanya bisa digunakan di dalam group WhatsApp!"
+      );
+      return;
+    }
+    if (!isAdmin) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Perintah ini hanya bisa digunakan oleh admin WhatsApp!"
       );
       return;
     }
