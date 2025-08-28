@@ -77,21 +77,21 @@ export async function absensiLikes(client_id, opts = {}) {
     });
 
     const totalKonten = shortcodes.length;
-    const threshold = Math.ceil(totalKonten * 0.5);
     const reports = [];
     for (const cid of polresIds) {
       const users = usersByClient[cid] || [];
       const { nama: clientName } = await getClientInfo(cid);
       const sudah = [];
+      const kurang = [];
       const belum = [];
-      const noUsername = [];
+      const tanpaUsername = [];
       users.forEach((u) => {
         if (u.exception === true) {
           sudah.push(u);
           return;
         }
         if (!u.insta || u.insta.trim() === "") {
-          noUsername.push(u);
+          tanpaUsername.push(u);
           return;
         }
         const uname = normalizeUsername(u.insta);
@@ -99,15 +99,18 @@ export async function absensiLikes(client_id, opts = {}) {
         likesSets.forEach((set) => {
           if (set.has(uname)) count += 1;
         });
-        if (count >= threshold) sudah.push(u);
+        const percentage = totalKonten ? (count / totalKonten) * 100 : 0;
+        if (percentage >= 50) sudah.push(u);
+        else if (percentage > 0) kurang.push(u);
         else belum.push(u);
       });
       reports.push(
         `*Client*: *${clientName}*\n` +
           `*Jumlah user:* ${users.length}\n` +
           `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
+          `⚠️ *Kurang melaksanakan* : *${kurang.length} user*\n` +
           `❌ *Belum melaksanakan* : *${belum.length} user*\n` +
-          `⚠️ *Belum input username* : *${noUsername.length} user*`
+          `❓ *Tanpa username* : *${tanpaUsername.length} user*`
       );
     }
 

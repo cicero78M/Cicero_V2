@@ -218,15 +218,13 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     case "3":
       {
-        const opts = { mode: "all", roleFlag };
-        const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
-        if (
-          userType === "org" &&
-          !directorateRoles.includes((clientId || "").toLowerCase())
-        ) {
-          opts.clientFilter = userClientId;
+        const normalizedId = (clientId || "").toLowerCase();
+        if (normalizedId !== "ditbinmas") {
+          msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
+          break;
         }
-        msg = await absensiLikes(clientId, opts);
+        const opts = { mode: "all", roleFlag: "ditbinmas" };
+        msg = await absensiLikes("ditbinmas", opts);
       }
       break;
     case "4":
