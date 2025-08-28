@@ -94,9 +94,10 @@ test('directorate summarizes across clients', async () => {
     .mockResolvedValueOnce({ rows: [{ nama: 'POLRES A' }] })
     .mockResolvedValueOnce({ rows: [{ nama: 'POLRES B' }] });
   mockGetClientsByRole.mockResolvedValueOnce(['polresa', 'polresb']);
-  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1', 'sc2']);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1', 'sc2', 'sc3']);
   mockGetLikesByShortcode
-    .mockResolvedValueOnce(['user1'])
+    .mockResolvedValueOnce(['user1', 'user3'])
+    .mockResolvedValueOnce(['user3'])
     .mockResolvedValueOnce([]);
   mockGetUsersByDirektorat.mockResolvedValueOnce([
     {
@@ -123,6 +124,14 @@ test('directorate summarizes across clients', async () => {
       exception: false,
       status: true,
     },
+    {
+      user_id: 'u4',
+      nama: 'User4',
+      insta: '@user4',
+      client_id: 'POLRESB',
+      exception: false,
+      status: true,
+    },
   ]);
 
   const msg = await absensiLikes('DITBINMAS');
@@ -133,7 +142,7 @@ test('directorate summarizes across clients', async () => {
     'POLRESA',
     'POLRESB',
   ]);
-  expect(msg).toMatch(/Client\*: \*POLRES A\*[\s\S]*Sudah melaksanakan\* : \*1 user\*[\s\S]*Belum melaksanakan\* : \*0 user\*[\s\S]*Belum input username\* : \*1 user/);
-  expect(msg).toMatch(/Client\*: \*POLRES B\*[\s\S]*Sudah melaksanakan\* : \*0 user\*[\s\S]*Belum melaksanakan\* : \*1 user\*[\s\S]*Belum input username\* : \*0 user/);
+  expect(msg).toMatch(/Client\*: \*POLRES A\*[\s\S]*Sudah melaksanakan\* : \*0 user\*[\s\S]*Kurang melaksanakan\* : \*1 user\*[\s\S]*Belum melaksanakan\* : \*0 user\*[\s\S]*Tanpa username\* : \*1 user/);
+  expect(msg).toMatch(/Client\*: \*POLRES B\*[\s\S]*Sudah melaksanakan\* : \*1 user\*[\s\S]*Kurang melaksanakan\* : \*0 user\*[\s\S]*Belum melaksanakan\* : \*1 user\*[\s\S]*Tanpa username\* : \*0 user/);
 });
 

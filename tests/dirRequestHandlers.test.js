@@ -172,3 +172,23 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
     roleFlag: 'ditbinmas',
   });
 });
+
+test('choose_menu option 3 skips when client is not ditbinmas', async () => {
+  mockAbsensiLikes.mockResolvedValue('laporan');
+
+  const session = {
+    role: 'polres',
+    selectedClientId: 'polres_a',
+    clientName: 'POLRES A',
+  };
+  const chatId = '555';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
+
+  expect(mockAbsensiLikes).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('DITBINMAS')
+  );
+});
