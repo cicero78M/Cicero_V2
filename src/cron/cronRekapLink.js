@@ -13,6 +13,7 @@ async function getActiveClients() {
     `SELECT client_id, nama, client_operator, client_super, client_group
      FROM clients
      WHERE client_status=true AND client_amplify_status=true
+       AND LOWER(client_type)='org'
      ORDER BY client_id`
   );
   return rows.rows;
@@ -45,35 +46,34 @@ function getRecipients(client) {
   return Array.from(result);
 }
 
-cron.schedule(
-  "2 15,18,21 * * *",
-  async () => {
-    sendDebug({ tag: "CRON LINK", msg: "Mulai rekap link harian" });
-    try {
-      const clients = await getActiveClients();
-      for (const client of clients) {
-        try {
-          const msg = await absensiLink(client.client_id);
-          const targets = getRecipients(client);
-          for (const wa of targets) {
-            await waClient.sendMessage(wa, msg).catch(() => {});
-          }
-          sendDebug({
-            tag: "CRON LINK",
-            msg: `[${client.client_id}] Rekap absensi link dikirim ke ${targets.length} penerima`,
-          });
-        } catch (err) {
-          sendDebug({
-            tag: "CRON LINK",
-            msg: `[${client.client_id}] ERROR absensi link: ${err.message}`,
-          });
+export async function runCron() {
+  sendDebug({ tag: "CRON LINK", msg: "Mulai rekap link harian" });
+  try {
+    const clients = await getActiveClients();
+    for (const client of clients) {
+      try {
+        const msg = await absensiLink(client.client_id, { roleFlag: "operator" });
+        const targets = getRecipients(client);
+        for (const wa of targets) {
+          await waClient.sendMessage(wa, msg).catch(() => {});
         }
+        sendDebug({
+          tag: "CRON LINK",
+          msg: `[${client.client_id}] Rekap absensi link dikirim ke ${targets.length} penerima`,
+        });
+      } catch (err) {
+        sendDebug({
+          tag: "CRON LINK",
+          msg: `[${client.client_id}] ERROR absensi link: ${err.message}`,
+        });
       }
-    } catch (err) {
-      sendDebug({ tag: "CRON LINK", msg: `[ERROR GLOBAL] ${err.message || err}` });
     }
-  },
-  { timezone: "Asia/Jakarta" }
-);
+  } catch (err) {
+    sendDebug({ tag: "CRON LINK", msg: `[ERROR GLOBAL] ${err.message || err}` });
+  }
+}
+
+cron.schedule("2 15,18,21 * * *", runCron, { timezone: "Asia/Jakarta" });
+export { getActiveClients, getRecipients };
 
 export default null;
