@@ -230,8 +230,8 @@ test('getUsersByDirektorat filters by client and flag', async () => {
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('user_roles');
   expect(sql).toContain('LOWER(u.client_id) = LOWER($2)');
-  expect(sql).toContain('LOWER(r2.role_name) = LOWER(u.client_id)');
-  expect(sql.match(/EXISTS/g).length).toBeGreaterThanOrEqual(2);
+  expect(sql).not.toContain('LOWER(r2.role_name) = LOWER(u.client_id)');
+  expect(sql.match(/EXISTS/g).length).toBe(1);
 });
 
 test('getClientsByRole returns lowercase client ids', async () => {

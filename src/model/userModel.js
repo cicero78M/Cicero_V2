@@ -400,21 +400,13 @@ export async function getUsersByDirektorat(flag, clientId = null) {
     Array.isArray(clientId) ? clientId.length > 0 : typeof clientId === 'string' && clientId.trim() !== '';
 
   if (hasClientId) {
-    sql += ` AND EXISTS (
-        SELECT 1
-        FROM user_roles ur2
-        JOIN roles r2 ON r2.role_id = ur2.role_id
-        WHERE ur2.user_id = u.user_id
-        AND LOWER(r2.role_name) = LOWER(u.client_id)
-      )`;
-
     if (Array.isArray(clientId)) {
       sql += ` AND LOWER(u.client_id) = ANY($${p})`;
       params.push(clientId.map((c) => String(c).toLowerCase()));
       p += 1;
     } else {
       sql += ` AND LOWER(u.client_id) = LOWER($${p})`;
-      params.push(clientId.trim());
+      params.push(clientId.trim().toLowerCase());
       p += 1;
     }
   }
