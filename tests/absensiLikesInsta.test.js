@@ -142,15 +142,16 @@ test('directorate summarizes across clients', async () => {
     'POLRESA',
     'POLRESB',
   ]);
-  expect(msg).toMatch(/Jumlah Total Personil : 4 pers/);
-  expect(msg).toMatch(/✅ Sudah melaksanakan : 1 pers/);
-  expect(msg).toMatch(/Melaksanakan kurang lengkap : 1 pers/);
-  expect(msg).toMatch(/❌ Belum melaksanakan : 2 pers/);
-  expect(msg).toMatch(
-    /1\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 1 pers/
-  );
-  expect(msg).toMatch(
-    /2\. POLRES B\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 1 pers\nMelaksanakan kurang lengkap : 0 pers\nBelum melaksanakan : 1 pers/
-  );
+    expect(msg).toMatch(/Jumlah Total Personil : 4 pers/);
+    expect(msg).toMatch(/✅ Sudah melaksanakan : 1 pers/);
+    expect(msg).toMatch(/Melaksanakan kurang lengkap : 1 pers/);
+    expect(msg).toMatch(/❌ Belum melaksanakan : 1 pers/);
+    expect(msg).toMatch(/Belum update username Instagram : 1 pers/);
+    expect(msg).toMatch(
+      /1\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 0 pers\nBelum update username Instagram : 1 pers/
+    );
+    expect(msg).toMatch(
+      /2\. POLRES B\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 1 pers\nMelaksanakan kurang lengkap : 0 pers\nBelum melaksanakan : 1 pers\nBelum update username Instagram : 0 pers/
+    );
 });
 

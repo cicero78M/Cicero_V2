@@ -78,7 +78,7 @@ export async function absensiLikes(client_id, opts = {}) {
 
     const totalKonten = shortcodes.length;
     const reports = [];
-    const totals = { total: 0, sudah: 0, kurang: 0, belum: 0 };
+    const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, tanpaUsername: 0 };
     for (let i = 0; i < polresIds.length; i++) {
       const cid = polresIds[i];
       const users = usersByClient[cid] || [];
@@ -106,17 +106,18 @@ export async function absensiLikes(client_id, opts = {}) {
         else if (percentage > 0) kurang.push(u);
         else belum.push(u);
       });
-      const belumCount = belum.length + tanpaUsername.length;
       totals.total += users.length;
       totals.sudah += sudah.length;
       totals.kurang += kurang.length;
-      totals.belum += belumCount;
+      totals.belum += belum.length;
+      totals.tanpaUsername += tanpaUsername.length;
       reports.push(
         `${i + 1}. ${clientName}\n\n` +
           `Jumlah Personil : ${users.length} pers\n` +
           `Sudah melaksanakan : ${sudah.length} pers\n` +
           `Melaksanakan kurang lengkap : ${kurang.length} pers\n` +
-          `Belum melaksanakan : ${belumCount} pers`
+          `Belum melaksanakan : ${belum.length} pers\n` +
+          `Belum update username Instagram : ${tanpaUsername.length} pers`
       );
     }
 
@@ -129,7 +130,8 @@ export async function absensiLikes(client_id, opts = {}) {
       `Jumlah Total Personil : ${totals.total} pers\n` +
       `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
       `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
-      `❌ Belum melaksanakan : ${totals.belum} pers\n\n` +
+      `❌ Belum melaksanakan : ${totals.belum} pers\n` +
+      `Belum update username Instagram : ${totals.tanpaUsername} pers\n\n` +
       reports.join("\n\n");
     return msg.trim();
   }
