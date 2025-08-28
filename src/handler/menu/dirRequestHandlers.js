@@ -61,6 +61,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
     withData.sort((a, b) => {
       if (a.updated !== b.updated) return b.updated - a.updated;
+      if (a.stat.total !== b.stat.total) return b.stat.total - a.stat.total;
       return a.name.localeCompare(b.name);
     });
     noData.sort((a, b) => a.name.localeCompare(b.name));
