@@ -51,7 +51,7 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   mockFindClientById.mockImplementation(async (cid) => ({
     ditbinmas: { nama: 'DIT BINMAS', client_type: 'org' },
     polres_pasuruan_kota: { nama: 'POLRES PASURUAN KOTA', client_type: 'org' },
-    polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'org' },
+    polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'polda' },
   })[cid]);
 
   const session = {
@@ -80,10 +80,15 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
 
   mockGetUsersSocialByClient.mockResolvedValue([
-    { client_id: 'ditbinmas', divisi: 'satA', title: 'BRIPTU', nama: 'BUDI', insta: null, tiktok: 'buditt' },
-    { client_id: 'ditbinmas', divisi: 'satB', title: 'AIPDA', nama: 'DEDI', insta: 'dediig', tiktok: null },
+    { client_id: 'polres_a', insta: null, tiktok: 'a' },
+    { client_id: 'polres_a', insta: 'a', tiktok: 'a' },
+    { client_id: 'polres_b', insta: null, tiktok: null },
   ]);
-  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  mockFindClientById.mockImplementation(async (cid) => ({
+    ditbinmas: { nama: 'DIT BINMAS' },
+    polres_a: { nama: 'POLRES A' },
+    polres_b: { nama: 'POLRES B' },
+  })[cid]);
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '321';
@@ -93,9 +98,10 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
 
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toContain('SATA');
-  expect(msg).toContain('SATB');
-  expect(msg).toContain('BRIPTU BUDI');
-  expect(msg).toContain('TikTok');
+  expect(msg).toContain('POLRES A');
+  expect(msg).toContain('Jumlah User: 2');
+  expect(msg).toContain('Jumlah User Sudah Update: 1');
+  expect(msg).toContain('POLRES B');
+  expect(msg).toContain('Jumlah User: 1');
   jest.useRealTimers();
 });
