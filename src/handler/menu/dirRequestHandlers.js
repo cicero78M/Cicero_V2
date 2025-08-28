@@ -55,34 +55,37 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     );
 
     const filteredEntries = entries.filter((e) => e.cid !== clientId);
+    const withData = filteredEntries.filter((e) => e.stat.total > 0);
+    const noData = filteredEntries.filter((e) => e.stat.total === 0);
 
-    filteredEntries.sort((a, b) => {
-      const aHasUsers = a.stat.total > 0;
-      const bHasUsers = b.stat.total > 0;
-      if (aHasUsers && bHasUsers) {
-        if (a.updated !== b.updated) return b.updated - a.updated;
-        return a.name.localeCompare(b.name);
-      }
-      if (aHasUsers && !bHasUsers) return -1;
-      if (!aHasUsers && bHasUsers) return 1;
+    withData.sort((a, b) => {
+      if (a.updated !== b.updated) return b.updated - a.updated;
       return a.name.localeCompare(b.name);
     });
+    noData.sort((a, b) => a.name.localeCompare(b.name));
 
-    const lines = filteredEntries.map((e, idx) =>
-      e.stat.total === 0
-        ? `${idx + 1}. ${e.name}`
-        : `${idx + 1}. ${e.name}\n\n` +
-          `Jumlah User: ${e.stat.total}\n` +
-          `Jumlah User Sudah Update: ${e.updated}\n` +
-          `Jumlah User Belum Update: ${e.stat.miss}`
+    const withDataLines = withData.map(
+      (e, idx) =>
+        `${idx + 1}. ${e.name}\n\n` +
+        `Jumlah User: ${e.stat.total}\n` +
+        `Jumlah User Sudah Update: ${e.updated}\n` +
+        `Jumlah User Belum Update: ${e.stat.miss}`
     );
+    const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
 
     const header =
       `${salam},\n\n` +
       `Mohon ijin Komandan, melaporkan absensi update data personil ${
         (client?.nama || clientId).toUpperCase()
       } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
-    const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
+
+    const sections = [];
+    if (withDataLines.length)
+      sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
+    if (noDataLines.length)
+      sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
+    const body = sections.length ? `\n\n${sections.join("\n\n")}` : "";
+
     return `${header}${body}`.trim();
   }
 
