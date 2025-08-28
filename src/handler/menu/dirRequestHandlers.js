@@ -216,17 +216,16 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     case "2":
       msg = await rekapUserDataDitbinmas();
       break;
-    case "3":
-      {
-        const normalizedId = (clientId || "").toLowerCase();
-        if (normalizedId !== "ditbinmas") {
-          msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
-          break;
-        }
-        const opts = { mode: "all", roleFlag: "ditbinmas" };
-        msg = await absensiLikes("ditbinmas", opts);
+    case "3": {
+      const normalizedId = (clientId || "").toUpperCase();
+      if (normalizedId !== "DITBINMAS") {
+        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
+        break;
       }
+      const opts = { mode: "all", roleFlag: "ditbinmas" };
+      msg = await absensiLikes("DITBINMAS", opts);
       break;
+    }
     case "4":
       msg = await absensiKomentar(clientId, {
         ...(userType === "org" ? { clientFilter: userClientId } : {}),

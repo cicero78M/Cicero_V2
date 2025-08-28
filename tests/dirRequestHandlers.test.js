@@ -167,7 +167,7 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
 
   await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('ditbinmas', {
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
     mode: 'all',
     roleFlag: 'ditbinmas',
   });
