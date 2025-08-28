@@ -49,12 +49,17 @@ export async function getShortcodesTodayByClient(identifier) {
     'SELECT client_type FROM clients WHERE LOWER(client_id) = LOWER($1)',
     [identifier]
   );
+
+  const isDitbinmas = identifier.toLowerCase() === 'ditbinmas';
   const clientType = typeRes.rows[0]?.client_type?.toLowerCase();
 
   let sql;
   let params;
 
-  if (clientType === 'direktorat' || typeRes.rows.length === 0) {
+  if (
+    typeRes.rows.length === 0 ||
+    (clientType === 'direktorat' && !isDitbinmas)
+  ) {
     sql =
       `SELECT p.shortcode FROM insta_post p\n` +
       `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
