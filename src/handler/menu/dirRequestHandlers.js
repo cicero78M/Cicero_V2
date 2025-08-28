@@ -65,33 +65,43 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     });
     noData.sort((a, b) => a.name.localeCompare(b.name));
 
-    const withDataLines = withData.map(
-      (e, idx) =>
-        `${idx + 1}. ${e.name}\n\n` +
-        `Jumlah User: ${e.stat.total}\n` +
-        `Jumlah User Sudah Update: ${e.updated}\n` +
-        `Jumlah User Belum Update: ${e.stat.miss}`
-    );
-    const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
-
-    const header =
-      `${salam},\n\n` +
-      `Mohon ijin Komandan, melaporkan absensi update data personil ${
-        (client?.nama || clientId).toUpperCase()
-      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
-
-    const sections = [];
-    if (withDataLines.length) {
-      const totalUpdated = withData.reduce((sum, e) => sum + e.updated, 0);
-      sections.push(
-        `Jumlah Total Personil Sudah Input: ${totalUpdated}\n\nSudah Input Data:\n\n${withDataLines.join("\n\n")}`
+      const withDataLines = withData.map(
+        (e, idx) =>
+          `${idx + 1}. ${e.name}\n\n` +
+          `Jumlah User: ${e.stat.total}\n` +
+          `Jumlah User Sudah Update: ${e.updated}\n` +
+          `Jumlah User Belum Update: ${e.stat.miss}`
       );
-    }
-    if (noDataLines.length)
-      sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
-    const body = sections.length ? `\n\n${sections.join("\n\n")}` : "";
+      const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
 
-    return `${header}${body}`.trim();
+      const totals = filteredEntries.reduce(
+        (acc, e) => {
+          acc.total += e.stat.total;
+          acc.updated += e.updated;
+          acc.miss += e.stat.miss;
+          return acc;
+        },
+        { total: 0, updated: 0, miss: 0 }
+      );
+
+      const header =
+        `${salam},\n\n` +
+        `Mohon ijin Komandan, melaporkan absensi update data personil ${
+          (client?.nama || clientId).toUpperCase()
+        } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
+
+      const sections = [
+        `Jumlah Total User : ${totals.total}\n` +
+          `Jumlah Total User Sudah Update Data : ${totals.updated}\n` +
+          `Jumlah Total User Belum Update Data : ${totals.miss}`,
+      ];
+      if (withDataLines.length)
+        sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
+      if (noDataLines.length)
+        sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
+      const body = `\n\n${sections.join("\n\n")}`;
+
+      return `${header}${body}`.trim();
   }
 
   const complete = {};
@@ -189,6 +199,16 @@ async function rekapUserDataDitbinmas() {
 
   entries.sort((a, b) => a.name.localeCompare(b.name));
 
+  const totals = entries.reduce(
+    (acc, e) => {
+      acc.total += e.stat.total;
+      acc.updated += e.updated;
+      acc.miss += e.stat.miss;
+      return acc;
+    },
+    { total: 0, updated: 0, miss: 0 }
+  );
+
   const lines = entries.map(
     (e, idx) =>
       `${idx + 1}. ${e.name}\n\n` +
@@ -202,7 +222,10 @@ async function rekapUserDataDitbinmas() {
     `${salam},\n\n` +
     `Mohon ijin Komandan, melaporkan absensi update data personil ${
       (client?.nama || clientId).toUpperCase()
-    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
+    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+    `Jumlah Total User : ${totals.total}\n` +
+    `Jumlah Total User Sudah Update Data : ${totals.updated}\n` +
+    `Jumlah Total User Belum Update Data : ${totals.miss}`;
   const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
   return `${header}${body}`.trim();
 }

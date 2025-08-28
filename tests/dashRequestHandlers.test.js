@@ -327,7 +327,7 @@ test('choose_menu formats directorate report header', async () => {
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('BINMAS', null);
   expect(msg).toBe(
-    'Selamat siang,\n\nMohon ijin Komandan, melaporkan absensi update data personil DIREKTORAT BINMAS pada hari Rabu, 20 Agustus 2025, pukul 14.28 WIB, sebagai berikut:'
+    'Selamat siang,\n\nMohon ijin Komandan, melaporkan absensi update data personil DIREKTORAT BINMAS pada hari Rabu, 20 Agustus 2025, pukul 14.28 WIB, sebagai berikut:\n\nJumlah Total User : 0\nJumlah Total User Sudah Update Data : 0\nJumlah Total User Belum Update Data : 0'
   );
 
   jest.useRealTimers();

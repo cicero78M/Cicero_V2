@@ -37,36 +37,49 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       if (!u.insta || !u.tiktok) groups[cid].miss++;
     });
 
-    const entries = await Promise.all(
-      Object.entries(groups).map(async ([cid, stat]) => {
-        const c = await findClientById(cid);
-        const name = (c?.nama || cid).toUpperCase();
-        const updated = stat.total - stat.miss;
-        return { cid, name, stat, updated };
-      })
-    );
+      const entries = await Promise.all(
+        Object.entries(groups).map(async ([cid, stat]) => {
+          const c = await findClientById(cid);
+          const name = (c?.nama || cid).toUpperCase();
+          const updated = stat.total - stat.miss;
+          return { cid, name, stat, updated };
+        })
+      );
 
-    entries.sort((a, b) => {
-      if (a.cid === clientId) return -1;
-      if (b.cid === clientId) return 1;
-      return a.name.localeCompare(b.name);
-    });
+      entries.sort((a, b) => {
+        if (a.cid === clientId) return -1;
+        if (b.cid === clientId) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
-    const lines = entries.map(
-      (e, idx) =>
-        `${idx + 1}. ${e.name}\n\n` +
-        `Jumlah User: ${e.stat.total}\n` +
-        `Jumlah User Sudah Update: ${e.updated}\n` +
-        `Jumlah User Belum Update: ${e.stat.miss}`
-    );
+      const totals = entries.reduce(
+        (acc, e) => {
+          acc.total += e.stat.total;
+          acc.updated += e.updated;
+          acc.miss += e.stat.miss;
+          return acc;
+        },
+        { total: 0, updated: 0, miss: 0 }
+      );
 
-    const header =
-      `${salam},\n\n` +
-      `Mohon ijin Komandan, melaporkan absensi update data personil ${
-        (client?.nama || clientId).toUpperCase()
-      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
-    const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
-    return `${header}${body}`.trim();
+      const lines = entries.map(
+        (e, idx) =>
+          `${idx + 1}. ${e.name}\n\n` +
+          `Jumlah User: ${e.stat.total}\n` +
+          `Jumlah User Sudah Update: ${e.updated}\n` +
+          `Jumlah User Belum Update: ${e.stat.miss}`
+      );
+
+      const header =
+        `${salam},\n\n` +
+        `Mohon ijin Komandan, melaporkan absensi update data personil ${
+          (client?.nama || clientId).toUpperCase()
+        } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+        `Jumlah Total User : ${totals.total}\n` +
+        `Jumlah Total User Sudah Update Data : ${totals.updated}\n` +
+        `Jumlah Total User Belum Update Data : ${totals.miss}`;
+      const body = lines.length ? `\n\n${lines.join("\n\n")}` : "";
+      return `${header}${body}`.trim();
   }
 
   const complete = {};
