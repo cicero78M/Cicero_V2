@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import waClient from '../service/waService.js';
 import { query } from '../db/index.js';
-import { getUsersMissingDataByClient } from '../model/userModel.js';
+import { getUsersMissingDataByClient, getClientsByRole } from '../model/userModel.js';
 import {
   formatToWhatsAppId,
   safeSendMessage,
@@ -10,18 +10,24 @@ import {
 } from '../utils/waHelper.js';
 
 async function getActiveClients() {
+  const clientIds = await getClientsByRole('ditbinmas');
+  const ids = Array.from(new Set(['ditbinmas', ...clientIds]));
+  if (ids.length === 0) return [];
   const res = await query(
-    'SELECT client_id, nama, client_operator, client_type FROM clients WHERE client_status = true'
+    `SELECT client_id, nama, client_operator, client_type
+     FROM clients
+     WHERE client_status = true AND LOWER(client_id) = ANY($1::text[])`,
+    [ids.map((id) => id.toLowerCase())]
   );
   return res.rows;
 }
 
 function sortClients(clients) {
-  const typeOrder = { direktorat: 0, org: 1 };
   return clients.sort((a, b) => {
-    const typeA = typeOrder[a.client_type?.toLowerCase()] ?? 2;
-    const typeB = typeOrder[b.client_type?.toLowerCase()] ?? 2;
-    if (typeA !== typeB) return typeA - typeB;
+    const idA = a.client_id?.toUpperCase();
+    const idB = b.client_id?.toUpperCase();
+    if (idA === 'DITBINMAS') return -1;
+    if (idB === 'DITBINMAS') return 1;
     return a.nama.localeCompare(b.nama);
   });
 }
