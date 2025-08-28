@@ -19,7 +19,7 @@ async function getClientInfo(client_id) {
   );
   return {
     nama: res.rows[0]?.nama || client_id,
-    clientType: res.rows[0]?.client_type || null,
+    clientType: res.rows[0]?.client_type?.toLowerCase() || null,
   };
 }
 
