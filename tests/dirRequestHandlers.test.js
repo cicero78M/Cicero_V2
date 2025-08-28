@@ -91,9 +91,10 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
 
   mockGetUsersSocialByClient.mockResolvedValue([
-    { divisi: 'Sat A', title: 'AKP', nama: 'Budi' },
-    { divisi: 'Sat A', title: 'Bripka', nama: 'Agus' },
-    { divisi: 'Sat B', title: 'Kompol', nama: 'Charlie' },
+    { client_id: 'ditbinmas', divisi: 'Sat A', title: 'AKP', nama: 'Budi' },
+    { client_id: 'ditbinmas', divisi: 'Sat A', title: 'Bripka', nama: 'Agus' },
+    { client_id: 'ditbinmas', divisi: 'Sat B', title: 'Kompol', nama: 'Charlie' },
+    { client_id: 'other', divisi: 'Sat C', title: 'Aiptu', nama: 'Dodi' },
   ]);
   mockFindClientById.mockImplementation(async (cid) => ({
     ditbinmas: { nama: 'DIT BINMAS' },
@@ -105,12 +106,13 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
 
-  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas');
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas', 'ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).toContain('SAT A (2)');
   expect(msg).toContain('AKP Budi');
   expect(msg).toContain('Bripka Agus');
   expect(msg).toContain('SAT B (1)');
   expect(msg).toContain('Kompol Charlie');
+  expect(msg).not.toMatch(/Aiptu Dodi/);
   jest.useRealTimers();
 });
