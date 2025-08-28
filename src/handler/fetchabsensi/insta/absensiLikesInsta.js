@@ -82,7 +82,7 @@ export async function absensiLikes(client_id, opts = {}) {
     });
 
     const totalKonten = shortcodes.length;
-    const reports = [];
+    const reportEntries = [];
     const totals = { total: 0, sudah: 0, kurang: 0, belum: 0 };
     for (let i = 0; i < polresIds.length; i++) {
       const cid = polresIds[i];
@@ -116,14 +116,29 @@ export async function absensiLikes(client_id, opts = {}) {
       totals.sudah += sudah.length;
       totals.kurang += kurang.length;
       totals.belum += belumCount;
-      reports.push(
-        `${i + 1}. ${clientName}\n\n` +
-          `Jumlah Personil : ${users.length} pers\n` +
-          `Sudah melaksanakan : ${sudah.length} pers\n` +
-          `Melaksanakan kurang lengkap : ${kurang.length} pers\n` +
-          `Belum melaksanakan : ${belumCount} pers`
-      );
+      reportEntries.push({
+        clientName,
+        usersCount: users.length,
+        sudahCount: sudah.length,
+        kurangCount: kurang.length,
+        belumCount,
+      });
     }
+
+    reportEntries.sort((a, b) => {
+      if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
+      if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
+      return a.clientName.localeCompare(b.clientName);
+    });
+
+    const reports = reportEntries.map(
+      (r, idx) =>
+        `${idx + 1}. ${r.clientName}\n\n` +
+        `Jumlah Personil : ${r.usersCount} pers\n` +
+        `Sudah melaksanakan : ${r.sudahCount} pers\n` +
+        `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
+        `Belum melaksanakan : ${r.belumCount} pers`
+    );
 
     let msg =
       `Mohon ijin Komandan,\n\n` +
