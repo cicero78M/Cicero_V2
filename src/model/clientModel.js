@@ -8,9 +8,12 @@ export const findAll = async () => {
   return res.rows;
 };
 
-// Ambil client by client_id
+// Ambil client by client_id (case-insensitive)
 export const findById = async (client_id) => {
-  const res = await query('SELECT * FROM clients WHERE client_id = $1', [client_id]);
+  const res = await query(
+    'SELECT * FROM clients WHERE LOWER(client_id) = LOWER($1)',
+    [client_id]
+  );
   return res.rows[0] || null;
 };
 
