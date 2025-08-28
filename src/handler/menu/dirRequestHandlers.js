@@ -360,5 +360,7 @@ export const dirRequestHandlers = {
   },
 };
 
+export { formatRekapUserData, rekapUserDataDitbinmas };
+
 export default dirRequestHandlers;
 
