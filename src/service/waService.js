@@ -1387,10 +1387,14 @@ Ketik *angka* menu, atau *batal* untuk keluar.
           groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : "";
         } catch (e) {}
         let dataText = `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`;
-        await waClient.sendMessage(chatId, dataText);
+        await waClient.sendMessage(senderId, dataText);
+        await waClient.sendMessage(
+          chatId,
+          "✅ Group ID telah dikirim ke chat pribadi Anda."
+        );
         if (updated.client_operator && updated.client_operator.length >= 8) {
           const operatorId = formatToWhatsAppId(updated.client_operator);
-          if (operatorId !== chatId) {
+          if (operatorId !== senderId) {
             await waClient.sendMessage(
               operatorId,
               `[Notifikasi]: Client group *${client_id}* diupdate ke group ID: ${groupId}`
