@@ -1363,7 +1363,20 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       );
       return;
     }
-    if (!isAdmin) {
+    let isGroupAdmin = false;
+    try {
+      const chat = await msg.getChat();
+      const participant = chat.participants?.find(
+        (p) => p.id?._serialized === senderId
+      );
+      isGroupAdmin = participant?.isAdmin || participant?.isSuperAdmin || false;
+    } catch (e) {
+      console.error(
+        "[WA] Gagal memeriksa status admin grup:",
+        e.message
+      );
+    }
+    if (!isAdmin && !isGroupAdmin) {
       await waClient.sendMessage(
         chatId,
         "❌ Perintah ini hanya bisa digunakan oleh admin WhatsApp!"
