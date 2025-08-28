@@ -97,7 +97,7 @@ export const update = async (client_id, clientData) => {
     RETURNING *
   `;
   const values = [
-    client_id,
+    old.client_id,
     merged.nama,
     merged.client_type,
     merged.client_status,
