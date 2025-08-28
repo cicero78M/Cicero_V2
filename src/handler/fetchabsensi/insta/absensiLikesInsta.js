@@ -39,12 +39,17 @@ export async function absensiLikes(client_id, opts = {}) {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const { nama: clientNama, clientType } = await getClientInfo(client_id);
+  const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+  const normalizedRole = (roleFlag || "").toLowerCase();
+  const normalizedClient = (client_id || "").toLowerCase();
+  const isDirektoratContext =
+    clientType === "direktorat" ||
+    (allowedRoles.includes(normalizedRole) && normalizedRole === normalizedClient);
 
-  if (clientType === "direktorat") {
-    const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
-    const roleName = allowedRoles.includes((roleFlag || "").toLowerCase())
-      ? roleFlag.toLowerCase()
-      : client_id.toLowerCase();
+  if (isDirektoratContext) {
+    const roleName = allowedRoles.includes(normalizedRole)
+      ? normalizedRole
+      : normalizedClient;
     const shortcodes = await getShortcodesTodayByClient(roleName);
     if (!shortcodes.length)
       return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
