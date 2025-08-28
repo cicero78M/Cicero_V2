@@ -72,7 +72,9 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).not.toMatch(/1\. DIT BINMAS/);
-  expect(msg).toContain('Jumlah Total Personil Sudah Input: 1');
+  expect(msg).toContain('Jumlah Total User : 1');
+  expect(msg).toContain('Jumlah Total User Sudah Update Data : 1');
+  expect(msg).toContain('Jumlah Total User Belum Update Data : 0');
   expect(msg).toContain('POLRES PASURUAN KOTA');
   expect(msg.match(/POLRES PASURUAN KOTA/g).length).toBe(1);
   expect(msg).toMatch(/Client Belum Input Data:\n1\. POLRES SIDOARJO/);
@@ -107,6 +109,9 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
 
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toContain('Jumlah Total User : 3');
+  expect(msg).toContain('Jumlah Total User Sudah Update Data : 1');
+  expect(msg).toContain('Jumlah Total User Belum Update Data : 2');
   expect(msg).toContain('POLRES A');
   expect(msg).toContain('Jumlah User: 2');
   expect(msg).toContain('Jumlah User Sudah Update: 1');
