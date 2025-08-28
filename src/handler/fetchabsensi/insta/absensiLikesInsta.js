@@ -105,20 +105,20 @@ export async function absensiLikes(client_id, opts = {}) {
         else belum.push(u);
       });
       reports.push(
-        `*Client*: *${clientName}*\n` +
-          `*Jumlah user:* ${users.length}\n` +
-          `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
-          `⚠️ *Kurang melaksanakan* : *${kurang.length} user*\n` +
-          `❌ *Belum melaksanakan* : *${belum.length} user*\n` +
-          `❓ *Tanpa username* : *${tanpaUsername.length} user*`
+        `${clientName}\n` +
+          `Jumlah Personil : ${users.length}\n` +
+          `Sudah Melaksanakan Lengkap : ${sudah.length}\n` +
+          `Melaksanakan Kurang Lengkap : ${kurang.length}\n` +
+          `Belum Melaksanakan : ${belum.length}\n` +
+          `Belum Update Username : ${tanpaUsername.length}`
       );
     }
 
     let msg =
       `Mohon ijin Komandan,\n\n` +
-      `📋 *Rekap Akumulasi Likes Instagram*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
-      `*Jumlah Konten:* ${totalKonten}\n` +
-      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+      `Rekap Akumulasi Likes Instagram\nDirektorat: ${clientNama}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+      `Jumlah Konten: ${totalKonten}\n` +
+      `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
       reports.join("\n\n") +
       "\n\nTerimakasih.";
     return msg.trim();
