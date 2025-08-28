@@ -81,7 +81,7 @@ export async function absensiLikes(client_id, opts = {}) {
     const reports = [];
     for (const cid of polresIds) {
       const users = usersByClient[cid] || [];
-      const { nama: polresNama } = await getClientInfo(cid);
+      const { nama: clientName } = await getClientInfo(cid);
       const sudah = [];
       const belum = [];
       const noUsername = [];
@@ -103,7 +103,7 @@ export async function absensiLikes(client_id, opts = {}) {
         else belum.push(u);
       });
       reports.push(
-        `*Polres*: *${polresNama}*\n` +
+        `*Client*: *${clientName}*\n` +
           `*Jumlah user:* ${users.length}\n` +
           `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
           `❌ *Belum melaksanakan* : *${belum.length} user*\n` +
