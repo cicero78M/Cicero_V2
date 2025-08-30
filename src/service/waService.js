@@ -153,12 +153,32 @@ waClient.on("ready", () => {
   }
 });
 
+// Tambahan logging untuk memantau status dan potensi error
+waClient.on("loading_screen", (percent, message) => {
+  console.log(`[WA] Loading ${percent}%: ${message}`);
+});
+
+waClient.on("authenticated", () => {
+  console.log("[WA] Client authenticated");
+});
+
+waClient.on("auth_failure", (err) => {
+  waReady = false;
+  console.error("[WA] Authentication failure:", err);
+});
+
+waClient.on("disconnected", (reason) => {
+  waReady = false;
+  console.warn("[WA] Client disconnected:", reason);
+});
+
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = (msg.body || "").trim();
+  console.log(`[WA] Incoming message from ${chatId}: ${text}`);
   if (msg.isStatus) {
     return;
   }
@@ -2035,6 +2055,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 // INISIALISASI WA CLIENT
 // =======================
 try {
+  console.log("[WA] Initializing WhatsApp client...");
   waClient.initialize();
 } catch (err) {
   console.error("[WA] Initialization failed:", err.message);
