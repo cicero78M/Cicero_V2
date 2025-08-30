@@ -194,15 +194,18 @@ waClient.on("disconnected", (reason) => {
 waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = (msg.body || "").trim();
+  console.log(`[WA] Incoming message from ${chatId}: ${text}`);
   if (msg.isStatus) {
+    console.log(`[WA] Ignored status message from ${chatId}`);
     return;
   }
   if (chatId?.endsWith("@g.us") && !text.toLowerCase().startsWith("thisgroup#")) {
+    console.log(`[WA] Ignored group message from ${chatId}`);
     return;
   }
   if (!waReady) {
     console.warn(
-      `[WA] Message from ${msg.from} deferred until client ready`
+      `[WA] Client not ready, message from ${msg.from} deferred`
     );
     pendingMessages.push(msg);
     waClient
@@ -2063,6 +2066,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       "Untuk melihat daftar perintah dan bantuan penggunaan, silakan ketik *userrequest*." +
       clientInfoText
   );
+  console.log(`[WA] Message from ${chatId} processed with fallback handler`);
   return;
 });
 
