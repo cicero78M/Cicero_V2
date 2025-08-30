@@ -122,11 +122,8 @@ export const waClient = new Client({
     clientId: process.env.APP_SESSION_NAME,
   }),
   webVersion: "2.2412.54",
-  webVersionCache: {
-    type: "remote",
-    remotePath:
-      "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html",
-  },
+  webVersionCache: { type: 'local', path: './.wwebjs_cache' }
+,
   puppeteer: {
     headless: "new",
     args: [
