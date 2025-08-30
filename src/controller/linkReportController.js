@@ -6,7 +6,7 @@ import {
   formatNama,
 } from '../utils/utilsHelper.js';
 import { generateLinkReportExcelBuffer } from '../service/amplifyExportService.js';
-import waClient, { waReady } from '../service/waService.js';
+import waClient, { waitForWaReady } from '../service/waService.js';
 import { findUserById } from '../model/userModel.js';
 import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 
@@ -45,34 +45,37 @@ export async function createLinkReport(req, res, next) {
     });
     const report = await linkReportModel.createLinkReport(data);
 
-    if (waReady && data.user_id) {
-      const user = await findUserById(data.user_id);
-      if (user?.whatsapp) {
-        const wid = formatToWhatsAppId(user.whatsapp);
-        const greeting = getGreeting();
-        const fullName = formatNama(user);
-        const links = [
-          report.facebook_link || 'Facebook Nihil',
-          report.instagram_link || 'Instagram Nihil',
-          report.twitter_link || 'Twitter Nihil',
-          report.tiktok_link || 'Tiktok Nihil',
-          report.youtube_link || 'Youtube Nihil',
-        ]
-          .map((l) => `- ${l}`)
-          .join('\n');
-        const msg =
-          `${greeting},\n\n` +
-          `Terimakasih, ${fullName}.\n` +
-          `Anda sudah melaksanakan Tugas Amplifikasi Konten:\n` +
-          `- https://www.instagram.com/p/${data.shortcode}\n\n` +
-          `Link Amplifikasi Anda :\n` +
-          links;
-        await safeSendMessage(waClient, wid, msg);
+    if (data.user_id) {
+      try {
+        await waitForWaReady();
+        const user = await findUserById(data.user_id);
+        if (user?.whatsapp) {
+          const wid = formatToWhatsAppId(user.whatsapp);
+          const greeting = getGreeting();
+          const fullName = formatNama(user);
+          const links = [
+            report.facebook_link || 'Facebook Nihil',
+            report.instagram_link || 'Instagram Nihil',
+            report.twitter_link || 'Twitter Nihil',
+            report.tiktok_link || 'Tiktok Nihil',
+            report.youtube_link || 'Youtube Nihil',
+          ]
+            .map((l) => `- ${l}`)
+            .join('\n');
+          const msg =
+            `${greeting},\n\n` +
+            `Terimakasih, ${fullName}.\n` +
+            `Anda sudah melaksanakan Tugas Amplifikasi Konten:\n` +
+            `- https://www.instagram.com/p/${data.shortcode}\n\n` +
+            `Link Amplifikasi Anda :\n` +
+            links;
+          await safeSendMessage(waClient, wid, msg);
+        }
+      } catch (err) {
+        console.warn(
+          `[WA] Skipping link report notification: ${err.message}`
+        );
       }
-    } else if (!waReady && data.user_id) {
-      console.warn(
-        '[WA] Skipping link report notification: WhatsApp client not ready'
-      );
     }
 
     sendSuccess(res, report, 201);

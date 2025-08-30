@@ -131,6 +131,7 @@ export const waClient = new Client({
 
 let waReady = false;
 const pendingMessages = [];
+const readyResolvers = [];
 
 function flushPendingMessages() {
   if (pendingMessages.length) {
@@ -142,6 +143,31 @@ function flushPendingMessages() {
   }
 }
 
+function markWaReady() {
+  if (!waReady) {
+    waReady = true;
+    readyResolvers.splice(0).forEach((resolve) => resolve());
+  }
+  flushPendingMessages();
+}
+
+export function waitForWaReady(timeout = 30000) {
+  if (waReady) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let timer;
+    const resolver = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    readyResolvers.push(resolver);
+    timer = setTimeout(() => {
+      const idx = readyResolvers.indexOf(resolver);
+      if (idx !== -1) readyResolvers.splice(idx, 1);
+      reject(new Error("WhatsApp client not ready"));
+    }, timeout);
+  });
+}
+
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
   qrcode.generate(qr, { small: true });
@@ -150,9 +176,8 @@ waClient.on("qr", (qr) => {
 
 // Wa Bot siap
 waClient.on("ready", () => {
-  waReady = true;
   console.log("[WA] WhatsApp client is ready!");
-  flushPendingMessages();
+  markWaReady();
 });
 
 // Log client states during initialization
@@ -163,9 +188,8 @@ waClient.on("loading_screen", (percent, message) => {
 waClient.on("authenticated", () => {
   console.log("[WA] Client authenticated");
   if (!waReady) {
-    waReady = true;
     console.log("[WA] WhatsApp client is ready (authenticated)!");
-    flushPendingMessages();
+    markWaReady();
   }
 });
 
@@ -177,9 +201,8 @@ waClient.on("auth_failure", (msg) => {
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
   if ((state === "open" || state === "CONNECTED") && !waReady) {
-    waReady = true;
     console.log("[WA] WhatsApp client is ready (state change)!");
-    flushPendingMessages();
+    markWaReady();
   }
 });
 
@@ -2087,6 +2110,5 @@ waClient
   });
 
 export default waClient;
-export { waReady };
 
 // ======================= end of file ======================

@@ -14,13 +14,17 @@ import {
   safeSendMessage,
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
-import waClient, { waReady } from "../service/waService.js";
+import waClient, { waitForWaReady } from "../service/waService.js";
 import { insertVisitorLog } from "../model/visitorLogModel.js";
 import { insertLoginLog } from "../model/loginLogModel.js";
 
-function notifyAdmin(message) {
-  if (!waReady) {
-    console.warn('[WA] Skipping admin notification: WhatsApp client not ready');
+async function notifyAdmin(message) {
+  try {
+    await waitForWaReady();
+  } catch (err) {
+    console.warn(
+      `[WA] Skipping admin notification: ${err.message}`
+    );
     return;
   }
   for (const wa of getAdminWAIds()) {
@@ -184,17 +188,20 @@ router.post('/dashboard-register', async (req, res) => {
       clientIds.length ? clientIds.join(', ') : '-'
     }\n\nBalas approvedash#${username} untuk menyetujui atau denydash#${username} untuk menolak.`
   );
-  if (waReady && whatsapp) {
-    const wid = formatToWhatsAppId(whatsapp);
-    safeSendMessage(
-      waClient,
-      wid,
-      "\uD83D\uDCCB Permintaan registrasi dashboard Anda telah diterima dan menunggu persetujuan admin."
-    );
-  } else if (!waReady && whatsapp) {
-    console.warn(
-      `[WA] Skipping user notification for ${whatsapp}: WhatsApp client not ready`
-    );
+  if (whatsapp) {
+    try {
+      await waitForWaReady();
+      const wid = formatToWhatsAppId(whatsapp);
+      safeSendMessage(
+        waClient,
+        wid,
+        "\uD83D\uDCCB Permintaan registrasi dashboard Anda telah diterima dan menunggu persetujuan admin."
+      );
+    } catch (err) {
+      console.warn(
+        `[WA] Skipping user notification for ${whatsapp}: ${err.message}`
+      );
+    }
   }
   return res
     .status(201)
