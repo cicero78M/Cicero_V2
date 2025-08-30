@@ -162,6 +162,11 @@ waClient.on("loading_screen", (percent, message) => {
 
 waClient.on("authenticated", () => {
   console.log("[WA] Client authenticated");
+  if (!waReady) {
+    waReady = true;
+    console.log("[WA] WhatsApp client is ready (authenticated)!");
+    flushPendingMessages();
+  }
 });
 
 waClient.on("auth_failure", (msg) => {
