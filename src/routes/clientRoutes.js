@@ -7,7 +7,7 @@ const router = express.Router();
 // Routes untuk client
 router.get("/", clientController.getAllClients);
 // routes profile client
-router.get("/profile", authRequired, clientController.getClientProfile);
+router.get("/profile", clientController.getClientProfile);
 router.get("/active", clientController.getActiveClients);
 router.get("/:client_id", clientController.getClientById);
 router.put("/:client_id", clientController.updateClient);
