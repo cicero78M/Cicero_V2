@@ -154,16 +154,43 @@ export function getAdminWANumbers() {
 }
 
 // Send WhatsApp message with basic error handling
+async function waitUntilReady(waClient, timeout = 10000) {
+  if (!waClient) return false;
+
+  try {
+    if (typeof waClient.getState === 'function') {
+      const state = await waClient.getState();
+      if (state === 'CONNECTED' || state === 'open') return true;
+    }
+  } catch {
+    // ignore and fall back to event listener
+  }
+
+  if (typeof waClient.once !== 'function') return false;
+  return new Promise((resolve) => {
+    const onReady = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      waClient.off?.('ready', onReady);
+      resolve(false);
+    }, timeout);
+    waClient.once('ready', onReady);
+  });
+}
+
 export async function safeSendMessage(waClient, chatId, message, options = {}) {
   try {
-    if (waClient && waClient.info) {
-      await waClient.sendMessage(chatId, message, options);
-      console.log(
-        `[WA] Sent message to ${chatId}: ${message.substring(0, 64)}`
-      );
-    } else {
+    const ready = await waitUntilReady(waClient);
+    if (!ready) {
       console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
+      return;
     }
+    await waClient.sendMessage(chatId, message, options);
+    console.log(
+      `[WA] Sent message to ${chatId}: ${message.substring(0, 64)}`
+    );
   } catch (err) {
     console.error(`[WA] Failed to send message to ${chatId}:`, err.message);
   }
