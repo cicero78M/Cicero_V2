@@ -37,4 +37,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = env.PORT;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Backend server running on port ${PORT}`));
