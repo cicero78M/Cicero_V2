@@ -6,13 +6,7 @@ import bcrypt from 'bcrypt';
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
 const mockInsertLoginLog = jest.fn();
-const mockWAClient = {
-  info: {},
-  sendMessage: jest.fn(),
-  getState: jest.fn().mockResolvedValue('CONNECTED'),
-  once: jest.fn(),
-  off: jest.fn(),
-};
+const mockSendMessage = jest.fn();
 const actualWaHelper = await import('../src/utils/waHelper.js');
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
@@ -34,9 +28,9 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   formatToWhatsAppId: (nohp) => `${nohp}@c.us`
 }));
 
-jest.unstable_mockModule('../src/service/waService.js', () => ({
-  default: mockWAClient,
-  waitForWaReady: () => Promise.resolve()
+jest.unstable_mockModule('../src/service/waApiClient.js', () => ({
+  sendMessage: mockSendMessage,
+  sendReport: jest.fn()
 }));
 
 let app;
@@ -56,7 +50,7 @@ beforeEach(() => {
   mockRedis.sAdd.mockReset();
   mockRedis.set.mockReset();
   mockInsertLoginLog.mockReset();
-  mockWAClient.sendMessage.mockReset();
+  mockSendMessage.mockReset();
 });
 
 describe('POST /login', () => {
@@ -302,16 +296,14 @@ describe('POST /dashboard-register', () => {
         expect.stringContaining('INSERT INTO dashboard_user_clients'),
         [expect.any(String), 'c1']
       );
-      expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
-      expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
+      expect(mockSendMessage).toHaveBeenCalledTimes(2);
+      expect(mockSendMessage).toHaveBeenCalledWith(
         'admin@c.us',
-        expect.stringContaining('Permintaan User Approval'),
-        {}
+        expect.stringContaining('Permintaan User Approval')
       );
-      expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
+      expect(mockSendMessage).toHaveBeenCalledWith(
         '628121234@c.us',
-        expect.stringContaining('Permintaan registrasi dashboard Anda telah diterima'),
-        {}
+        expect.stringContaining('Permintaan registrasi dashboard Anda telah diterima')
       );
   });
 
@@ -350,7 +342,7 @@ describe('POST /dashboard-register', () => {
     expect(mockQuery.mock.calls[1][0]).toContain('FROM roles');
     expect(mockQuery.mock.calls[1][1]).toEqual(['ditbinmas']);
     expect(mockQuery.mock.calls[2][1][3]).toBe(5);
-    expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
+    expect(mockSendMessage).toHaveBeenCalledTimes(2);
   });
 
   test('creates default role when missing', async () => {

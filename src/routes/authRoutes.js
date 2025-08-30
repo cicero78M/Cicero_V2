@@ -11,24 +11,15 @@ import {
   formatToWhatsAppId,
   getAdminWAIds,
   normalizeWhatsappNumber,
-  safeSendMessage,
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
-import waClient, { waitForWaReady } from "../service/waService.js";
+import { sendMessage } from "../service/waApiClient.js";
 import { insertVisitorLog } from "../model/visitorLogModel.js";
 import { insertLoginLog } from "../model/loginLogModel.js";
 
 async function notifyAdmin(message) {
-  try {
-    await waitForWaReady();
-  } catch (err) {
-    console.warn(
-      `[WA] Skipping admin notification: ${err.message}`
-    );
-    return;
-  }
   for (const wa of getAdminWAIds()) {
-    safeSendMessage(waClient, wa, message);
+    sendMessage(wa, message);
   }
 }
 
@@ -190,10 +181,8 @@ router.post('/dashboard-register', async (req, res) => {
   );
   if (whatsapp) {
     try {
-      await waitForWaReady();
       const wid = formatToWhatsAppId(whatsapp);
-      safeSendMessage(
-        waClient,
+      await sendMessage(
         wid,
         "\uD83D\uDCCB Permintaan registrasi dashboard Anda telah diterima dan menunggu persetujuan admin."
       );

@@ -5,7 +5,9 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "start:wa": "node wa-bot.js",
     "dev": "nodemon app.js",
+    "dev:wa": "nodemon wa-bot.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.js\""
