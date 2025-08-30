@@ -6,6 +6,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';
+import healthRoutes from './src/routes/healthRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
@@ -25,6 +26,9 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(dedupRequest);
+
+// ===== ROUTE HEALTHCHECK =====
+app.use('/', healthRoutes);
 
 // ===== ROUTE LOGIN (TANPA TOKEN) =====
 app.use('/api/auth', authRoutes);
