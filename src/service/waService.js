@@ -2,7 +2,7 @@
 // IMPORTS & KONFIGURASI
 // =======================
 import pkg from "whatsapp-web.js";
-const { Client, LocalAuth, RemoteWebCache } = pkg;
+const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
@@ -122,10 +122,11 @@ export const waClient = new Client({
     clientId: process.env.APP_SESSION_NAME,
   }),
   webVersion: "2.2412.54",
-  webVersionCache: new RemoteWebCache({
+  webVersionCache: {
+    type: "remote",
     remotePath:
       "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html",
-  }),
+  },
   puppeteer: {
     headless: "new",
     args: [
