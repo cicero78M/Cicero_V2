@@ -420,15 +420,6 @@ export async function getUsersByDirektorat(flag, clientId = null) {
 }
 
 
-export async function findUserByInsta(insta) {
-  if (!insta) return null;
-  const { rows } = await query(
-    `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.insta) = LOWER($1)\n     GROUP BY u.user_id`,
-    [insta]
-  );
-  return rows[0];
-}
-
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const { rows } = await query(

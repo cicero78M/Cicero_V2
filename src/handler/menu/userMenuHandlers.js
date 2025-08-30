@@ -412,15 +412,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         );
         return;
       }
-      value = igMatch[2].toLowerCase();
-      const existing = await userModel.findUserByInsta(value);
-      if (existing && existing.user_id !== user_id) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Akun Instagram tersebut sudah terdaftar pada pengguna lain."
-        );
-        return;
-      }
+      value = igMatch[2];
     }
     if (field === "tiktok") {
       const ttMatch = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)/i);
