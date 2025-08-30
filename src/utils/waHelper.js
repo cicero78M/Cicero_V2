@@ -26,7 +26,12 @@ export async function sendWAReport(waClient, message, chatIds = null) {
       continue;
     }
     try {
-      await waClient.sendMessage(target, message);
+      const wid = await waClient.getNumberId(target);
+      if (!wid) {
+        console.warn(`[SKIP WA] Unregistered wid: ${target}`);
+        continue;
+      }
+      await waClient.sendMessage(wid._serialized, message);
       console.log(`[WA CRON] Sent WA to ${target}: ${message.substring(0, 64)}...`);
     } catch (err) {
       console.error(`[WA CRON] ERROR send WA to ${target}:`, err.message);
@@ -54,7 +59,12 @@ export async function sendWAFile(
       continue;
     }
     try {
-      await waClient.sendMessage(target, media, { sendMediaAsDocument: true });
+      const wid = await waClient.getNumberId(target);
+      if (!wid) {
+        console.warn(`[SKIP WA] Unregistered wid: ${target}`);
+        continue;
+      }
+      await waClient.sendMessage(wid._serialized, media, { sendMediaAsDocument: true });
       console.log(`[WA CRON] Sent file to ${target}: ${filename}`);
     } catch (err) {
       console.error(`[WA CRON] ERROR send file to ${target}:`, err.message);
