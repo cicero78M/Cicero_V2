@@ -130,6 +130,7 @@ export const waClient = new Client({
 });
 
 let waReady = false;
+const pendingMessages = [];
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
@@ -141,6 +142,15 @@ waClient.on("qr", (qr) => {
 waClient.on("ready", () => {
   waReady = true;
   console.log("[WA] WhatsApp client is ready!");
+  if (pendingMessages.length) {
+    console.log(
+      `[WA] Processing ${pendingMessages.length} deferred message(s)`
+    );
+    pendingMessages.splice(0).forEach((msg) => {
+      console.log(`[WA] Processing deferred message from ${msg.from}`);
+      waClient.emit("message", msg);
+    });
+  }
 });
 
 // =======================
@@ -156,7 +166,17 @@ waClient.on("message", async (msg) => {
     return;
   }
   if (!waReady) {
-    console.warn("[WA] Message received before client ready, ignoring");
+    console.warn(
+      `[WA] Message from ${msg.from} deferred until client ready`
+    );
+    pendingMessages.push(msg);
+    waClient
+      .sendMessage(msg.from, "🤖 Bot sedang memuat, silakan tunggu")
+      .catch(() => {
+        console.warn(
+          `[WA] Failed to notify ${msg.from} about loading state`
+        );
+      });
     return;
   }
 
