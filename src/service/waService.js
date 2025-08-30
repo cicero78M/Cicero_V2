@@ -132,6 +132,16 @@ export const waClient = new Client({
 let waReady = false;
 const pendingMessages = [];
 
+function flushPendingMessages() {
+  if (pendingMessages.length) {
+    console.log(`[WA] Processing ${pendingMessages.length} deferred message(s)`);
+    pendingMessages.splice(0).forEach((msg) => {
+      console.log(`[WA] Processing deferred message from ${msg.from}`);
+      waClient.emit("message", msg);
+    });
+  }
+}
+
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
   qrcode.generate(qr, { small: true });
@@ -142,15 +152,7 @@ waClient.on("qr", (qr) => {
 waClient.on("ready", () => {
   waReady = true;
   console.log("[WA] WhatsApp client is ready!");
-  if (pendingMessages.length) {
-    console.log(
-      `[WA] Processing ${pendingMessages.length} deferred message(s)`
-    );
-    pendingMessages.splice(0).forEach((msg) => {
-      console.log(`[WA] Processing deferred message from ${msg.from}`);
-      waClient.emit("message", msg);
-    });
-  }
+  flushPendingMessages();
 });
 
 // Log client states during initialization
@@ -169,6 +171,11 @@ waClient.on("auth_failure", (msg) => {
 
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
+  if ((state === "open" || state === "CONNECTED") && !waReady) {
+    waReady = true;
+    console.log("[WA] WhatsApp client is ready (state change)!");
+    flushPendingMessages();
+  }
 });
 
 waClient.on("disconnected", (reason) => {
