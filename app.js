@@ -9,12 +9,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
-import { waitForWaReady } from './src/service/waService.js';
-
-// Pastikan inisialisasi WhatsApp selesai sebelum melanjutkan
-await waitForWaReady().catch(err => {
-  console.error('[WA] Ready wait failed:', err.message);
-});
+import { waClient } from './src/service/waService.js';
 
 // Import semua cron jobs setelah WhatsApp siap
 const cronModules = [
@@ -33,7 +28,10 @@ const cronModules = [
   './src/cron/cronDirRequest.js',
   './src/cron/cronDbBackup.js',
 ];
-await Promise.all(cronModules.map(m => import(m)));
+
+waClient.on('ready', async () => {
+  await Promise.all(cronModules.map(m => import(m)));
+});
 
 const app = express();
 app.disable('etag');
