@@ -121,9 +121,6 @@ export const waClient = new Client({
   authStrategy: new LocalAuth({
     clientId: process.env.APP_SESSION_NAME,
   }),
-  webVersion: "2.2412.54",
-  webVersionCache: { type: 'local', path: './.wwebjs_cache' }
-,
   puppeteer: {
     headless: "new",
     args: [
