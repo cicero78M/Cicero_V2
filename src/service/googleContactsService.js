@@ -178,7 +178,7 @@ export async function saveContactIfNew(chatId) {
     }
     await saveGoogleContact(auth, { name: displayName, phone });
     await query(
-      'INSERT INTO saved_contact (phone_number) VALUES ($1)',
+      'INSERT INTO saved_contact (phone_number) VALUES ($1) ON CONFLICT DO NOTHING',
       [phone]
     );
     addToCache(phone);
