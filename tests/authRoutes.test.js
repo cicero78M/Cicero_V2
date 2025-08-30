@@ -30,7 +30,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({
   default: mockWAClient,
-  waReady: true
+  waitForWaReady: () => Promise.resolve()
 }));
 
 let app;
