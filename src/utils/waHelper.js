@@ -156,8 +156,10 @@ export function getAdminWANumbers() {
 // Send WhatsApp message with basic error handling
 export async function safeSendMessage(waClient, chatId, message, options = {}) {
   try {
-    if (waClient) {
+    if (waClient && waClient.info) {
       await waClient.sendMessage(chatId, message, options);
+    } else {
+      console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
     }
   } catch (err) {
     console.error(`[WA] Failed to send message to ${chatId}:`, err.message);

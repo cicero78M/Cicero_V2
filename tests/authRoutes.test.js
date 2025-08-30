@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
 const mockInsertLoginLog = jest.fn();
-const mockWAClient = { sendMessage: jest.fn() };
+const mockWAClient = { info: {}, sendMessage: jest.fn() };
 const actualWaHelper = await import('../src/utils/waHelper.js');
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
