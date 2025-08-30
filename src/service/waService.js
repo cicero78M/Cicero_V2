@@ -153,6 +153,29 @@ waClient.on("ready", () => {
   }
 });
 
+// Log client states during initialization
+waClient.on("loading_screen", (percent, message) => {
+  console.log(`[WA] Loading ${percent}%: ${message}`);
+});
+
+waClient.on("authenticated", () => {
+  console.log("[WA] Client authenticated");
+});
+
+waClient.on("auth_failure", (msg) => {
+  waReady = false;
+  console.error("[WA] Authentication failure:", msg);
+});
+
+waClient.on("change_state", (state) => {
+  console.log(`[WA] Client state changed: ${state}`);
+});
+
+waClient.on("disconnected", (reason) => {
+  waReady = false;
+  console.warn("[WA] Client disconnected:", reason);
+});
+
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
@@ -2034,11 +2057,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 // =======================
 // INISIALISASI WA CLIENT
 // =======================
-try {
-  waClient.initialize();
-} catch (err) {
-  console.error("[WA] Initialization failed:", err.message);
-}
+console.log("[WA] Starting WhatsApp client initialization");
+waClient
+  .initialize()
+  .catch((err) => {
+    console.error("[WA] Initialization failed:", err.message);
+  });
 
 export default waClient;
 export { waReady };
