@@ -85,6 +85,7 @@ import {
   formatToWhatsAppId,
   formatClientData,
   safeSendMessage,
+  getAdminWAIds,
 } from "../utils/waHelper.js";
 import {
   IG_PROFILE_REGEX,
@@ -136,6 +137,7 @@ export const waClient = new Client({
 let waReady = false;
 const pendingMessages = [];
 const readyResolvers = [];
+const adminNotificationQueue = [];
 
 function flushPendingMessages() {
   if (pendingMessages.length) {
@@ -147,6 +149,22 @@ function flushPendingMessages() {
   }
 }
 
+export function queueAdminNotification(message) {
+  adminNotificationQueue.push(message);
+}
+
+export function flushAdminNotificationQueue() {
+  if (!adminNotificationQueue.length) return;
+  console.log(
+    `[WA] Sending ${adminNotificationQueue.length} queued admin notification(s)`
+  );
+  adminNotificationQueue.splice(0).forEach((msg) => {
+    for (const wa of getAdminWAIds()) {
+      safeSendMessage(waClient, wa, msg);
+    }
+  });
+}
+
 function markWaReady(src = "unknown") {
   if (!waReady) {
     waReady = true;
@@ -154,6 +172,7 @@ function markWaReady(src = "unknown") {
     readyResolvers.splice(0).forEach((resolve) => resolve());
   }
   flushPendingMessages();
+  flushAdminNotificationQueue();
 }
 
 export function waitForWaReady(timeout = 30000) {

@@ -14,7 +14,10 @@ import {
   safeSendMessage,
 } from "../utils/waHelper.js";
 import redis from "../config/redis.js";
-import waClient, { waitForWaReady } from "../service/waService.js";
+import waClient, {
+  waitForWaReady,
+  queueAdminNotification,
+} from "../service/waService.js";
 import { insertVisitorLog } from "../model/visitorLogModel.js";
 import { insertLoginLog } from "../model/loginLogModel.js";
 
@@ -23,8 +26,9 @@ async function notifyAdmin(message) {
     await waitForWaReady();
   } catch (err) {
     console.warn(
-      `[WA] Skipping admin notification: ${err.message}`
+      `[WA] Queueing admin notification: ${err.message}`
     );
+    queueAdminNotification(message);
     return;
   }
   for (const wa of getAdminWAIds()) {
