@@ -60,6 +60,10 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "", clientName = "" 
     for (const wa of adminWA) {
       waClient.sendMessage(wa, waMsg).catch(() => {});
     }
+  } else if (!waReady && (isStartOrEnd || isError)) {
+    console.warn(
+      '[WA] Skipping debug WhatsApp send: WhatsApp client not ready'
+    );
   }
 
   console.log(fullMsg);

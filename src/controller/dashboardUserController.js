@@ -21,6 +21,10 @@ export async function approveDashboardUser(req, res, next) {
         wid,
         `✅ Registrasi dashboard Anda telah disetujui.\nUsername: ${usr.username}`
       );
+    } else if (!waReady && usr.whatsapp) {
+      console.warn(
+        `[WA] Skipping approval notification for ${usr.username}: WhatsApp client not ready`
+      );
     }
     sendSuccess(res, updated);
   } catch (err) {
@@ -45,6 +49,10 @@ export async function rejectDashboardUser(req, res, next) {
         waClient,
         wid,
         `❌ Registrasi dashboard Anda ditolak.\nUsername: ${usr.username}`
+      );
+    } else if (!waReady && usr.whatsapp) {
+      console.warn(
+        `[WA] Skipping rejection notification for ${usr.username}: WhatsApp client not ready`
       );
     }
     sendSuccess(res, updated);
