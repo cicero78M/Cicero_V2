@@ -1,6 +1,6 @@
 // src/middleware/debugHandler.js
 
-import waClient, { waitForWaReady } from "../service/waService.js";
+import { sendMessage } from "../service/waApiClient.js";
 
 // Helper: stringifier aman untuk circular object
 function safeStringify(obj) {
@@ -52,22 +52,13 @@ export function sendDebug({ tag = "DEBUG", msg, client_id = "", clientName = "" 
   const isError = /error/i.test(safeMsg);
 
   if (isStartOrEnd || isError) {
-    waitForWaReady()
-      .then(() => {
-        let waMsg = fullMsg;
-        if (isError) {
-          // kirim hanya potongan pendek agar tidak mengandung raw data
-          waMsg = `${prefix} ${safeMsg.toString().substring(0, 200)}`;
-        }
-        for (const wa of adminWA) {
-          waClient.sendMessage(wa, waMsg).catch(() => {});
-        }
-      })
-      .catch(() => {
-        console.warn(
-          '[WA] Skipping debug WhatsApp send: WhatsApp client not ready'
-        );
-      });
+    let waMsg = fullMsg;
+    if (isError) {
+      waMsg = `${prefix} ${safeMsg.toString().substring(0, 200)}`;
+    }
+    for (const wa of adminWA) {
+      sendMessage(wa, waMsg).catch(() => {});
+    }
   }
 
   console.log(fullMsg);

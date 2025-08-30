@@ -1,6 +1,6 @@
 import * as dashboardUserModel from '../model/dashboardUserModel.js';
-import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
-import waClient, { waitForWaReady } from '../service/waService.js';
+import { formatToWhatsAppId } from '../utils/waHelper.js';
+import { sendMessage } from '../service/waApiClient.js';
 import { sendSuccess } from '../utils/response.js';
 
 export async function approveDashboardUser(req, res, next) {
@@ -16,10 +16,8 @@ export async function approveDashboardUser(req, res, next) {
     const updated = await dashboardUserModel.updateStatus(id, true);
     if (usr.whatsapp) {
       try {
-        await waitForWaReady();
         const wid = formatToWhatsAppId(usr.whatsapp);
-        await safeSendMessage(
-          waClient,
+        await sendMessage(
           wid,
           `✅ Registrasi dashboard Anda telah disetujui.\nUsername: ${usr.username}`
         );
@@ -48,10 +46,8 @@ export async function rejectDashboardUser(req, res, next) {
     const updated = await dashboardUserModel.updateStatus(id, false);
     if (usr.whatsapp) {
       try {
-        await waitForWaReady();
         const wid = formatToWhatsAppId(usr.whatsapp);
-        await safeSendMessage(
-          waClient,
+        await sendMessage(
           wid,
           `❌ Registrasi dashboard Anda ditolak.\nUsername: ${usr.username}`
         );
