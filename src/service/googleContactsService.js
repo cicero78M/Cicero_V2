@@ -7,6 +7,29 @@ const SCOPES = ['https://www.googleapis.com/auth/contacts'];
 const TOKEN_PATH = path.resolve('token.json');
 const CREDENTIALS_PATH = path.resolve('credentials.json');
 
+// Cache phone numbers that have been processed to avoid redundant DB lookups
+const processedContacts = new Map(); // phone -> expiration timestamp
+let contactCacheTtl = Number(process.env.CONTACT_CACHE_TTL_MS) || 300000; // default 5 minutes
+
+export function setContactCacheTTL(ms) {
+  contactCacheTtl = ms;
+}
+
+export function clearContactCache() {
+  processedContacts.clear();
+}
+
+function isCached(phone) {
+  const expiry = processedContacts.get(phone);
+  if (expiry && expiry > Date.now()) return true;
+  processedContacts.delete(phone);
+  return false;
+}
+
+function addToCache(phone) {
+  processedContacts.set(phone, Date.now() + contactCacheTtl);
+}
+
 export async function authorize() {
   let credentials;
   try {
@@ -111,13 +134,16 @@ export async function saveGoogleContact(auth, { name, phone }) {
 
 export async function saveContactIfNew(chatId) {
   const phone = (chatId || '').replace(/[^0-9]/g, '');
-  if (!phone) return;
+  if (!phone || isCached(phone)) return;
   try {
     const check = await query(
       'SELECT phone_number FROM saved_contact WHERE phone_number = $1',
       [phone]
     );
-    if (check.rowCount > 0) return;
+    if (check.rowCount > 0) {
+      addToCache(phone);
+      return;
+    }
     const auth = await authorize();
     if (!auth) return;
     const exists = await searchByNumbers(auth, [phone]);
@@ -126,6 +152,7 @@ export async function saveContactIfNew(chatId) {
         'INSERT INTO saved_contact (phone_number) VALUES ($1) ON CONFLICT DO NOTHING',
         [phone]
       );
+      addToCache(phone);
       return;
     }
     let displayName = phone;
@@ -154,6 +181,7 @@ export async function saveContactIfNew(chatId) {
       'INSERT INTO saved_contact (phone_number) VALUES ($1)',
       [phone]
     );
+    addToCache(phone);
   } catch (err) {
     const status = err?.response?.status || err.code;
     console.error(
