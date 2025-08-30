@@ -16,7 +16,6 @@ if (env.ENABLE_CRON_JOBS) {
 }
 
 const app = express();
-app.disable('etag');
 
 app.use(cors({
   origin: env.CORS_ORIGIN,
