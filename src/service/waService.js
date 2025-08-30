@@ -153,9 +153,10 @@ function flushPendingMessages() {
   }
 }
 
-function markWaReady() {
+function markWaReady(src = "unknown") {
   if (!waReady) {
     waReady = true;
+    console.log(`[WA] READY via ${src}`);
     readyResolvers.splice(0).forEach((resolve) => resolve());
   }
   flushPendingMessages();
@@ -196,9 +197,8 @@ waClient.on("qr", (qr) => {
 });
 
 // Wa Bot siap
-waClient.on("ready", () => {
-  console.log("[WA] WhatsApp client is ready!");
-  markWaReady();
+waClient.once("ready", () => {
+  markWaReady("ready");
 });
 
 // Log client states during initialization
@@ -217,6 +217,7 @@ waClient.on("auth_failure", (msg) => {
 
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
+  if (state === "CONNECTED") markWaReady("state");
 });
 
 waClient.on("disconnected", (reason) => {
@@ -2121,6 +2122,17 @@ waClient
   .catch((err) => {
     console.error("[WA] Initialization failed:", err.message);
   });
+
+// Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
+setTimeout(async () => {
+  try {
+    const state = await waClient.getState();
+    console.log("[WA] getState:", state);
+    if (state === "CONNECTED") markWaReady("getState");
+  } catch (e) {
+    console.log("[WA] getState error:", e?.message);
+  }
+}, 60000);
 
 export default waClient;
 
