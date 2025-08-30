@@ -187,10 +187,6 @@ waClient.on("loading_screen", (percent, message) => {
 
 waClient.on("authenticated", () => {
   console.log("[WA] Client authenticated");
-  if (!waReady) {
-    console.log("[WA] WhatsApp client is ready (authenticated)!");
-    markWaReady();
-  }
 });
 
 waClient.on("auth_failure", (msg) => {
@@ -200,10 +196,6 @@ waClient.on("auth_failure", (msg) => {
 
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
-  if ((state === "open" || state === "CONNECTED") && !waReady) {
-    console.log("[WA] WhatsApp client is ready (state change)!");
-    markWaReady();
-  }
 });
 
 waClient.on("disconnected", (reason) => {

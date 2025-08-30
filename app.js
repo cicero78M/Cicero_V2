@@ -9,22 +9,31 @@ import authRoutes from './src/routes/authRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
+import { waitForWaReady } from './src/service/waService.js';
 
-// Import semua cron jobs (jalankan di background)
-import './src/cron/cronInstaService.js';
-import './src/cron/cronTiktokService.js';
-import './src/cron/cronInstaLaphar.js';
-import './src/cron/cronTiktokLaphar.js';
-import './src/cron/cronNotifikasiLikesDanKomentar.js';
-import './src/cron/cronInstaDataMining.js';
-import './src/cron/cronPremiumSubscription.js';
-import './src/cron/cronRekapLink.js';
-import './src/cron/cronAmplifyLinkMonthly.js';
-import './src/cron/cronPremiumRequest.js';
-import './src/cron/cronAbsensiUserData.js';
-import './src/cron/cronAbsensiOprDitbinmas.js';
-import './src/cron/cronDirRequest.js';
-import './src/cron/cronDbBackup.js';
+// Pastikan inisialisasi WhatsApp selesai sebelum melanjutkan
+await waitForWaReady().catch(err => {
+  console.error('[WA] Ready wait failed:', err.message);
+});
+
+// Import semua cron jobs setelah WhatsApp siap
+const cronModules = [
+  './src/cron/cronInstaService.js',
+  './src/cron/cronTiktokService.js',
+  './src/cron/cronInstaLaphar.js',
+  './src/cron/cronTiktokLaphar.js',
+  './src/cron/cronNotifikasiLikesDanKomentar.js',
+  './src/cron/cronInstaDataMining.js',
+  './src/cron/cronPremiumSubscription.js',
+  './src/cron/cronRekapLink.js',
+  './src/cron/cronAmplifyLinkMonthly.js',
+  './src/cron/cronPremiumRequest.js',
+  './src/cron/cronAbsensiUserData.js',
+  './src/cron/cronAbsensiOprDitbinmas.js',
+  './src/cron/cronDirRequest.js',
+  './src/cron/cronDbBackup.js',
+];
+await Promise.all(cronModules.map(m => import(m)));
 
 const app = express();
 app.disable('etag');
