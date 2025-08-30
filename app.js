@@ -9,6 +9,29 @@ import authRoutes from './src/routes/authRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
+import { waClient } from './src/service/waService.js';
+
+// Import semua cron jobs setelah WhatsApp siap
+const cronModules = [
+  './src/cron/cronInstaService.js',
+  './src/cron/cronTiktokService.js',
+  './src/cron/cronInstaLaphar.js',
+  './src/cron/cronTiktokLaphar.js',
+  './src/cron/cronNotifikasiLikesDanKomentar.js',
+  './src/cron/cronInstaDataMining.js',
+  './src/cron/cronPremiumSubscription.js',
+  './src/cron/cronRekapLink.js',
+  './src/cron/cronAmplifyLinkMonthly.js',
+  './src/cron/cronPremiumRequest.js',
+  './src/cron/cronAbsensiUserData.js',
+  './src/cron/cronAbsensiOprDitbinmas.js',
+  './src/cron/cronDirRequest.js',
+  './src/cron/cronDbBackup.js',
+];
+
+waClient.on('ready', async () => {
+  await Promise.all(cronModules.map(m => import(m)));
+});
 
 const app = express();
 app.disable('etag');

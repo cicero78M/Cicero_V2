@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 
 const mockFindById = jest.fn();
 const mockUpdateStatus = jest.fn();
-const mockSendMessage = jest.fn();
+const mockSafeSendMessage = jest.fn();
 
 jest.unstable_mockModule('../src/model/dashboardUserModel.js', () => ({
   findById: mockFindById,
@@ -10,12 +10,14 @@ jest.unstable_mockModule('../src/model/dashboardUserModel.js', () => ({
 }));
 
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
-  formatToWhatsAppId: (num) => num
+  formatToWhatsAppId: (num) => num,
+  safeSendMessage: mockSafeSendMessage
 }));
 
-jest.unstable_mockModule('../src/service/waApiClient.js', () => ({
-  sendMessage: mockSendMessage,
-  sendReport: jest.fn()
+const mockWaClient = {};
+jest.unstable_mockModule('../src/service/waService.js', () => ({
+  default: mockWaClient,
+  waitForWaReady: () => Promise.resolve()
 }));
 
 let controller;
@@ -27,7 +29,7 @@ beforeAll(async () => {
 beforeEach(() => {
   mockFindById.mockReset();
   mockUpdateStatus.mockReset();
-  mockSendMessage.mockReset();
+  mockSafeSendMessage.mockReset();
 });
 
 test('approveDashboardUser sends approval message', async () => {
@@ -41,7 +43,8 @@ test('approveDashboardUser sends approval message', async () => {
   await controller.approveDashboardUser(req, res, next);
 
   expect(mockUpdateStatus).toHaveBeenCalledWith('1', true);
-  expect(mockSendMessage).toHaveBeenCalledWith(
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    mockWaClient,
     '0812',
     expect.stringContaining('disetujui')
   );
@@ -60,7 +63,8 @@ test('rejectDashboardUser sends rejection message', async () => {
   await controller.rejectDashboardUser(req, res, next);
 
   expect(mockUpdateStatus).toHaveBeenCalledWith('1', false);
-  expect(mockSendMessage).toHaveBeenCalledWith(
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    mockWaClient,
     '0812',
     expect.stringContaining('ditolak')
   );

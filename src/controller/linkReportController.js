@@ -6,9 +6,9 @@ import {
   formatNama,
 } from '../utils/utilsHelper.js';
 import { generateLinkReportExcelBuffer } from '../service/amplifyExportService.js';
+import waClient, { waitForWaReady } from '../service/waService.js';
 import { findUserById } from '../model/userModel.js';
-import { formatToWhatsAppId } from '../utils/waHelper.js';
-import { sendMessage } from '../service/waApiClient.js';
+import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
@@ -47,6 +47,7 @@ export async function createLinkReport(req, res, next) {
 
     if (data.user_id) {
       try {
+        await waitForWaReady();
         const user = await findUserById(data.user_id);
         if (user?.whatsapp) {
           const wid = formatToWhatsAppId(user.whatsapp);
@@ -68,7 +69,7 @@ export async function createLinkReport(req, res, next) {
             `- https://www.instagram.com/p/${data.shortcode}\n\n` +
             `Link Amplifikasi Anda :\n` +
             links;
-          await sendMessage(wid, msg);
+          await safeSendMessage(waClient, wid, msg);
         }
       } catch (err) {
         console.warn(

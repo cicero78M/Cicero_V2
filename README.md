@@ -19,10 +19,8 @@ The full architecture is described in [docs/enterprise_architecture.md](docs/ent
 ## Folder Structure
 
 ```
-``` 
 Cicero_V2/
-├── app.js                       # Backend API entry point
-├── wa-bot.js                    # WhatsApp bot & cron entry
+├── app.js                       # Application entry point
 ├── package.json                 # NPM configuration
 ├── src/
 │   ├── config/                  # Environment and Redis config
@@ -103,15 +101,13 @@ This allows operators to scope responses to the correct client.
    sudo systemctl start rabbitmq-server
    ```
 5. **Initialize the database** using scripts in `sql/schema.sql`.
-6. **Start the services**
+6. **Start the application**
     ```bash
-    npm start       # backend API
-    npm run start:wa  # WhatsApp bot & cron workers
+    npm start
     ```
     Or with PM2:
     ```bash
     pm2 start app.js --name cicero_v2
-    pm2 start wa-bot.js --name wa_bot
     ```
 7. **Lint & Test**
     ```bash
