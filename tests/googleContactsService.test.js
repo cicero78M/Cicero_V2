@@ -171,6 +171,9 @@ describe('saveContactIfNew', () => {
       })
     );
     expect(mockQuery).toHaveBeenCalledTimes(3);
+    expect(mockQuery.mock.calls[2][0]).toMatch(
+      /INSERT INTO saved_contact \(phone_number\) VALUES \(\$1\) ON CONFLICT DO NOTHING/
+    );
   });
 
   test('queries database only for new numbers', async () => {
