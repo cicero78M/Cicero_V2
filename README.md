@@ -84,9 +84,12 @@ This allows operators to scope responses to the correct client.
     GOOGLE_IMPERSONATE_EMAIL=admin@example.com
     BACKUP_DIR=./backups
     GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
+    ENABLE_CRON_JOBS=false
+    CRON_JOBS=
     ```
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
+   Set `ENABLE_CRON_JOBS=true` to load cron jobs within `app.js` (useful for development). `CRON_JOBS` accepts a comma-separated list of cron identifiers (e.g. `cronInstaService,cronTiktokService`) to limit which jobs run; leave empty to run all.
 
 3. **Set up Redis**
     ```bash
@@ -108,6 +111,7 @@ This allows operators to scope responses to the correct client.
     Or with PM2:
     ```bash
     pm2 start app.js --name cicero_v2
+    pm2 start cronRunner.js --name cicero_cron
     ```
 7. **Lint & Test**
     ```bash

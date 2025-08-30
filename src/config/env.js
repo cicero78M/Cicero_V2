@@ -27,5 +27,7 @@ export const env = cleanEnv(process.env, {
   GOOGLE_IMPERSONATE_EMAIL: str({ default: '' }),
   GOOGLE_CONTACT_SCOPE: str({
     default: 'https://www.googleapis.com/auth/contacts'
-  })
+  }),
+  ENABLE_CRON_JOBS: bool({ default: false }),
+  CRON_JOBS: str({ default: '' })
 });

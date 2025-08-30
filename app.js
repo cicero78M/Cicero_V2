@@ -10,21 +10,9 @@ import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
 
-// Import semua cron jobs (jalankan di background)
-import './src/cron/cronInstaService.js';
-import './src/cron/cronTiktokService.js';
-import './src/cron/cronInstaLaphar.js';
-import './src/cron/cronTiktokLaphar.js';
-import './src/cron/cronNotifikasiLikesDanKomentar.js';
-import './src/cron/cronInstaDataMining.js';
-import './src/cron/cronPremiumSubscription.js';
-import './src/cron/cronRekapLink.js';
-import './src/cron/cronAmplifyLinkMonthly.js';
-import './src/cron/cronPremiumRequest.js';
-import './src/cron/cronAbsensiUserData.js';
-import './src/cron/cronAbsensiOprDitbinmas.js';
-import './src/cron/cronDirRequest.js';
-import './src/cron/cronDbBackup.js';
+if (env.ENABLE_CRON_JOBS) {
+  await import('./cronRunner.js');
+}
 
 const app = express();
 
