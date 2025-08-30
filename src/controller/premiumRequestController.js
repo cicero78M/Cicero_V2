@@ -22,6 +22,10 @@ export async function updatePremiumRequest(req, res, next) {
     if (req.body.screenshot_url && waReady) {
       const msg = `\uD83D\uDD14 Permintaan subscription\nUser: ${row.user_id}\nNama: ${row.sender_name}\nRek: ${row.account_number}\nBank: ${row.bank_name}\nID: ${row.request_id}\nBalas grantsub#${row.request_id} untuk menyetujui atau denysub#${row.request_id} untuk menolak.`;
       await sendWAReport(waClient, msg);
+    } else if (req.body.screenshot_url && !waReady) {
+      console.warn(
+        `[WA] Skipping premium request notification for ${row.request_id}: WhatsApp client not ready`
+      );
     }
     res.json({ success: true, request: row });
   } catch (err) {

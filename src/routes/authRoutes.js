@@ -19,7 +19,10 @@ import { insertVisitorLog } from "../model/visitorLogModel.js";
 import { insertLoginLog } from "../model/loginLogModel.js";
 
 function notifyAdmin(message) {
-  if (!waReady) return;
+  if (!waReady) {
+    console.warn('[WA] Skipping admin notification: WhatsApp client not ready');
+    return;
+  }
   for (const wa of getAdminWAIds()) {
     safeSendMessage(waClient, wa, message);
   }
@@ -187,6 +190,10 @@ router.post('/dashboard-register', async (req, res) => {
       waClient,
       wid,
       "\uD83D\uDCCB Permintaan registrasi dashboard Anda telah diterima dan menunggu persetujuan admin."
+    );
+  } else if (!waReady && whatsapp) {
+    console.warn(
+      `[WA] Skipping user notification for ${whatsapp}: WhatsApp client not ready`
     );
   }
   return res

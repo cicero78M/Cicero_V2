@@ -69,6 +69,10 @@ export async function createLinkReport(req, res, next) {
           links;
         await safeSendMessage(waClient, wid, msg);
       }
+    } else if (!waReady && data.user_id) {
+      console.warn(
+        '[WA] Skipping link report notification: WhatsApp client not ready'
+      );
     }
 
     sendSuccess(res, report, 201);
