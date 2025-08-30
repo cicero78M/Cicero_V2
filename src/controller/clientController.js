@@ -151,6 +151,11 @@ export const getClientProfile = async (req, res, next) => {
     if (!client_id) {
       return res.status(400).json({ error: "client_id required" });
     }
+    console.log('[CLIENT PROFILE] request source', {
+      ip: req.ip,
+      userId: req.user?.user_id,
+      userAgent: req.headers?.['user-agent'],
+    });
     const client = await clientService.findClientById(client_id);
 
     if (!client) {
