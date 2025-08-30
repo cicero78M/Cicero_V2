@@ -2,7 +2,7 @@
 // IMPORTS & KONFIGURASI
 // =======================
 import pkg from "whatsapp-web.js";
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, RemoteWebCache } = pkg;
 import qrcode from "qrcode-terminal";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
@@ -118,15 +118,24 @@ function formatUserSummary(user) {
 
 // Inisialisasi WhatsApp client dengan LocalAuth
 export const waClient = new Client({
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true
-
-    },
-    authStrategy: new LocalAuth({
-        clientId: process.env.APP_SESSION_NAME,
-    }),
-    
+  authStrategy: new LocalAuth({
+    clientId: process.env.APP_SESSION_NAME,
+  }),
+  webVersion: "2.2412.54",
+  webVersionCache: new RemoteWebCache({
+    remotePath:
+      "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html",
+  }),
+  puppeteer: {
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
+  },
+  takeoverOnConflict: true,
+  takeoverTimeoutMs: 10000,
 });
 
 let waReady = false;
@@ -167,6 +176,17 @@ export function waitForWaReady(timeout = 30000) {
     }, timeout);
   });
 }
+
+// Pastikan semua pengiriman pesan menunggu hingga client siap
+const _sendMessage = waClient.sendMessage.bind(waClient);
+waClient.sendMessage = async (...args) => {
+  try {
+    await waitForWaReady();
+  } catch {
+    console.warn("[WA] sendMessage called before ready");
+  }
+  return _sendMessage(...args);
+};
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {

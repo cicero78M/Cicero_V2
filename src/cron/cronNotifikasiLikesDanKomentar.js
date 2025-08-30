@@ -2,7 +2,8 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 import { query } from "../db/index.js";
-import waClient from "../service/waService.js";
+import waClient, { waitForWaReady } from "../service/waService.js";
+import { safeSendMessage } from "../utils/waHelper.js";
 
 import { getUsersByClient } from "../model/userModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
@@ -25,6 +26,12 @@ function formatNama(user) {
 // --- MAIN JOB ---
 export async function cronNotifikasiAbsenLikesKomentar() {
   console.log("[CRON] Mulai pengecekan tugas Likes & Komentar seluruh client...");
+  try {
+    await waitForWaReady();
+  } catch (err) {
+    console.error(`[CRON] WA not ready: ${err.message}`);
+    return;
+  }
   // Ambil seluruh client aktif
   const { rows: clients } = await query("SELECT client_id, nama FROM clients WHERE client_status = true");
   for (const client of clients) {
@@ -120,8 +127,14 @@ export async function cronNotifikasiAbsenLikesKomentar() {
 
       // --- Kirim pesan ---
       try {
-        await waClient.sendMessage(formatToWhatsAppId(user.whatsapp), pesan);
-        console.log(`[WA] Notifikasi dikirim ke ${user.nama} (${user.whatsapp})`);
+        await safeSendMessage(
+          waClient,
+          formatToWhatsAppId(user.whatsapp),
+          pesan
+        );
+        console.log(
+          `[WA] Notifikasi dikirim ke ${user.nama} (${user.whatsapp})`
+        );
         await new Promise((resolve) => setTimeout(resolve, 10000)); // JEDA 10 DETIK
       } catch (err) {
         console.error(`[WA] Gagal kirim notifikasi ke ${user.nama} (${user.whatsapp}): ${err.message}`);
