@@ -39,7 +39,7 @@ jest.unstable_mockModule('googleapis', () => ({
   },
 }));
 
-let saveContactIfNew, authorize;
+let saveContactIfNew, authorize, setContactCacheTTL, clearContactCache;
 
 beforeAll(async () => {
   await fs.writeFile(
@@ -56,7 +56,12 @@ beforeAll(async () => {
       expiry_date: Date.now() + 3600000,
     })
   );
-  ({ saveContactIfNew, authorize } = await import('../src/service/googleContactsService.js'));
+  ({
+    saveContactIfNew,
+    authorize,
+    setContactCacheTTL,
+    clearContactCache,
+  } = await import('../src/service/googleContactsService.js'));
 });
 
 afterAll(async () => {
@@ -69,6 +74,8 @@ beforeEach(() => {
   mockSearchContacts.mockReset();
   mockCreateContact.mockReset();
   mockPeople.mockClear();
+  clearContactCache();
+  setContactCacheTTL(300000);
 });
 
 describe('saveContactIfNew', () => {
@@ -164,6 +171,26 @@ describe('saveContactIfNew', () => {
       })
     );
     expect(mockQuery).toHaveBeenCalledTimes(3);
+  });
+
+  test('queries database only for new numbers', async () => {
+    setContactCacheTTL(10000);
+    mockQuery
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({});
+    mockSearchContacts
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } });
+    mockCreateContact.mockResolvedValueOnce({});
+
+    await saveContactIfNew('55555@c.us');
+    const firstCall = mockQuery.mock.calls.length;
+    await saveContactIfNew('55555@c.us');
+
+    expect(mockQuery).toHaveBeenCalledTimes(firstCall);
+    expect(mockSearchContacts).toHaveBeenCalledTimes(2);
+    expect(mockCreateContact).toHaveBeenCalledTimes(1);
   });
 });
 
