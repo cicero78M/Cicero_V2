@@ -2070,6 +2070,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   return;
 });
 
+// Fallback handler for environments that emit `message_create` instead of `message`
+waClient.on("message_create", (msg) => {
+  if (msg.fromMe) return;
+  waClient.emit("message", msg);
+});
+
 // =======================
 // INISIALISASI WA CLIENT
 // =======================
