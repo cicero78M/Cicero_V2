@@ -46,14 +46,46 @@ export async function createBaileysClient() {
   const sessionsDir = path.join('sessions', 'baileys');
   ensureDir(sessionsDir);
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
-  const sock = makeWASocket({
-    auth: state,
-    browser: ['Ubuntu', 'Chrome', '22.04.4'],
-    printQRInTerminal: false,
-  });
-  sock.ev.on('creds.update', saveCreds);
 
   const emitter = new EventEmitter();
+  let sock;
+
+  const handleMessages = (m) => {
+    if (m.type !== 'notify') return;
+    for (const msg of m.messages) {
+      const body =
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        '';
+      emitter.emit('message', { from: msg.key.remoteJid, body });
+    }
+  };
+
+  const onConnectionUpdate = (update) => {
+    if (update.qr) qrcode.generate(update.qr, { small: true });
+    if (update.connection === 'open') emitter.emit('ready');
+    if (update.connection === 'close') {
+      const status = update.lastDisconnect?.error?.output?.statusCode;
+      emitter.emit('disconnected', update.lastDisconnect?.error);
+      if (status === 515) startSock();
+    }
+  };
+
+  const startSock = () => {
+    try {
+      sock?.end();
+    } catch {}
+    sock = makeWASocket({
+      auth: state,
+      browser: ['Ubuntu', 'Chrome', '22.04.4'],
+      printQRInTerminal: false,
+    });
+    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('messages.upsert', handleMessages);
+    sock.ev.on('connection.update', onConnectionUpdate);
+  };
+
+  startSock();
 
   emitter.connect = async () => {
     // Wait until the underlying Baileys socket is ready
@@ -77,6 +109,7 @@ export async function createBaileysClient() {
       sock.ws.on('error', onClose);
     });
   };
+
   emitter.disconnect = async () => sock.end();
   emitter.sendMessage = (jid, message, options = {}) =>
     sock.sendMessage(jid, { text: message }, options);
@@ -84,23 +117,6 @@ export async function createBaileysClient() {
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
   emitter.isReady = async () => Boolean(sock.authState?.creds?.me);
   emitter.getState = async () => (await emitter.isReady()) ? 'open' : 'close';
-
-  sock.ev.on('messages.upsert', (m) => {
-    if (m.type !== 'notify') return;
-    for (const msg of m.messages) {
-      const body =
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        '';
-      emitter.emit('message', { from: msg.key.remoteJid, body });
-    }
-  });
-
-  sock.ev.on('connection.update', (update) => {
-    if (update.qr) qrcode.generate(update.qr, { small: true });
-    if (update.connection === 'open') emitter.emit('ready');
-    if (update.connection === 'close') emitter.emit('disconnected', update.lastDisconnect?.error);
-  });
 
   return emitter;
 }

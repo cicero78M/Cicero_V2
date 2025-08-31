@@ -147,12 +147,19 @@ async function switchToBaileys() {
     await waClient?.disconnect();
   } catch {}
   waClient = await createBaileysClient();
-  waClient.onDisconnect(() => switchToWWeb());
+  waClient.onDisconnect(handleDisconnect);
   wrapSendMessage(waClient);
   await waClient.connect();
 }
 
-waClient.onDisconnect(() => switchToWWeb());
+function handleDisconnect(reason) {
+  waReady = false;
+  console.warn("[WA] Client disconnected:", reason);
+  const status = reason?.output?.statusCode;
+  if (status !== 515) switchToWWeb();
+}
+
+waClient.onDisconnect(handleDisconnect);
 
 let waReady = false;
 const pendingMessages = [];
@@ -255,11 +262,6 @@ waClient.on("auth_failure", (msg) => {
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
   if (state === "CONNECTED") markWaReady("state");
-});
-
-waClient.on("disconnected", (reason) => {
-  waReady = false;
-  console.warn("[WA] Client disconnected:", reason);
 });
 
 // =======================
