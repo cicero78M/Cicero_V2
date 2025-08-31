@@ -519,6 +519,8 @@ export async function updateUser(userId, userData) {
       delete userData[rf];
     }
   }
+  // Prevent primary key updates
+  delete userData.user_id;
   const columns = Object.keys(userData);
   if (columns.length > 0) {
     const setClause = columns.map((c, i) => `${c}=$${i + 1}`).join(', ');
