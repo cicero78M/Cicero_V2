@@ -40,3 +40,9 @@ client who has the role `ditbinmas`.
 When requesting data for a regular organization and the authenticated user role is
 not `operator`, only users having the same role as the requester are included in
 the response.
+
+## Ditbinmas Shortcut
+
+The `GET /likes/instagram` endpoint returns the same payload as above but
+always aggregates data for users with the `ditbinmas` role. It does not require
+`client_id` and ignores the authenticated user's role and client filters.
