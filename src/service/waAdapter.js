@@ -12,7 +12,7 @@ function ensureDir(dir) {
   }
 }
 
-export function createWwebClient() {
+export function createWWebClient() {
   const client = new Client({
     authStrategy: new LocalAuth({
       clientId: process.env.APP_SESSION_NAME,
