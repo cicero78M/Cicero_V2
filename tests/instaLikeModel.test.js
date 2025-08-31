@@ -87,12 +87,12 @@ test('filters users by role when role is ditbinmas', async () => {
   const params = mockQuery.mock.calls[0][1];
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
   expect(sql).toContain('1=1');
   expect(sql).not.toContain('insta_post_roles');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
-  expect(params).toEqual(['DITBINMAS', 'ditbinmas']);
+  expect(params).toEqual(['ditbinmas']);
 });
 
 test('ignores non-ditbinmas roles', async () => {

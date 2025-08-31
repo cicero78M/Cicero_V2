@@ -136,7 +136,8 @@ export async function getRekapLikesByClient(
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
   if (roleLower === 'ditbinmas') {
-    params[0] = 'ditbinmas';
+    params.shift();
+    tanggalFilter = tanggalFilter.replace(/\$(\d+)/g, (_, n) => `$${n - 1}`);
     postClientFilter = '1=1';
     const roleIdx = params.push(roleLower);
     userWhere = `EXISTS (
