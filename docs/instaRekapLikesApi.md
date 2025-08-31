@@ -9,17 +9,22 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
   "success": true,
   "data": [ /* user like rows */ ],
   "chartHeight": 300,
-  "usersWithLikes": ["alice", "charlie"],
-  "usersWithoutLikes": ["bob"],
-  "usersWithLikesCount": 2,
-  "usersWithoutLikesCount": 1,
-  "usersCount": 3
+  "totalPosts": 4,
+  "sudahUsers": ["alice"],
+  "kurangUsers": ["bob"],
+  "belumUsers": ["charlie"],
+  "sudahUsersCount": 1,
+  "kurangUsersCount": 1,
+  "belumUsersCount": 1,
+  "noUsernameUsersCount": 1,
+  "usersCount": 4
 }
 ```
 
-- **usersWithLikes** – usernames with `jumlah_like > 0`.
-- **usersWithoutLikes** – usernames with `jumlah_like = 0`.
-- Count fields provide totals for each category.
+- **sudahUsers** – usernames that liked at least 50% of posts or are marked as exception.
+- **kurangUsers** – usernames that liked some posts but less than 50%.
+- **belumUsers** – usernames that did not like any posts.
+- **noUsernameUsersCount** – number of users without an Instagram username.
 - **usersCount** – total number of users returned in `data`.
 
 ### Directorate Clients

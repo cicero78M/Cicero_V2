@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 test('accepts tanggal_mulai and tanggal_selesai', async () => {
-  mockGetRekap.mockResolvedValue([]);
+  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
   const req = {
     query: {
       client_id: 'c1',
@@ -61,7 +61,7 @@ test('returns 403 when client_id unauthorized', async () => {
 });
 
 test('allows authorized client_id', async () => {
-  mockGetRekap.mockResolvedValue([]);
+  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
   const req = {
     query: { client_id: 'c1' },
     user: { client_ids: ['c1', 'c2'] }
@@ -76,11 +76,12 @@ test('allows authorized client_id', async () => {
 
 test('returns user like summaries', async () => {
   const rows = [
-    { username: 'alice', jumlah_like: 3 },
-    { username: 'bob', jumlah_like: 0 },
-    { username: 'charlie', jumlah_like: 1 }
+    { username: 'alice', jumlah_like: 4 },
+    { username: 'bob', jumlah_like: 1 },
+    { username: 'charlie', jumlah_like: 0 },
+    { username: null, jumlah_like: 0 }
   ];
-  mockGetRekap.mockResolvedValue(rows);
+  mockGetRekap.mockResolvedValue({ rows, totalKonten: 4 });
   const req = {
     query: { client_id: 'c1' },
     user: { client_ids: ['c1'] }
@@ -90,11 +91,14 @@ test('returns user like summaries', async () => {
   await getInstaRekapLikes(req, res);
   expect(json).toHaveBeenCalledWith(
     expect.objectContaining({
-      usersWithLikes: ['alice', 'charlie'],
-      usersWithoutLikes: ['bob'],
-      usersWithLikesCount: 2,
-      usersWithoutLikesCount: 1,
-      usersCount: 3
+      sudahUsers: ['alice'],
+      kurangUsers: ['bob'],
+      belumUsers: ['charlie'],
+      sudahUsersCount: 1,
+      kurangUsersCount: 1,
+      belumUsersCount: 1,
+      noUsernameUsersCount: 1,
+      usersCount: 4
     })
   );
 });

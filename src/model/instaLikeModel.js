@@ -143,11 +143,13 @@ export async function getRekapLikesByClient(
     lower(replace(trim(u.insta), '@', '')) = lc.username
     AND LOWER(u.client_id) = LOWER(lc.client_id)
   `;
-  let postRoleJoin = '';
+  let postRoleJoinLikes = '';
+  let postRoleJoinPosts = '';
   let postRoleFilter = '';
   if (clientType === 'direktorat' || roleLower === 'ditbinmas') {
     const roleIdx = params.push(roleLower || client_id);
-    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
@@ -162,7 +164,8 @@ export async function getRekapLikesByClient(
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
   } else if (roleLower && roleLower !== 'operator') {
     const roleIndex = params.push(roleLower);
-    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
+    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIndex})`;
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
@@ -180,7 +183,7 @@ export async function getRekapLikesByClient(
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
-      ${postRoleJoin}
+      ${postRoleJoinLikes}
       JOIN LATERAL (
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
@@ -207,7 +210,6 @@ export async function getRekapLikesByClient(
     LEFT JOIN like_counts lc
       ON ${likeJoin}
     WHERE u.status = true
-      AND u.insta IS NOT NULL
       AND ${userWhere}
     ORDER BY jumlah_like DESC, u.nama ASC
   `, params);
@@ -216,5 +218,19 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  return rows;
+  const { rows: postRows } = await query(
+    `WITH posts AS (
+      SELECT p.shortcode
+      FROM insta_post p
+      ${postRoleJoinPosts}
+      WHERE ${postClientFilter}
+        ${postRoleFilter}
+        AND ${tanggalFilter}
+    )
+    SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,
+    params
+  );
+  const totalKonten = parseInt(postRows[0]?.total_post || '0', 10);
+
+  return { rows, totalKonten };
 }

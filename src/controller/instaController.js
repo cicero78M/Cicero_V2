@@ -57,7 +57,7 @@ export async function getInstaRekapLikes(req, res) {
   }
   try {
     sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}` });
-    const data = await getRekapLikesByClient(
+    const { rows, totalKonten } = await getRekapLikesByClient(
       client_id,
       periode,
       tanggal,
@@ -65,22 +65,41 @@ export async function getInstaRekapLikes(req, res) {
       endDate,
       role
     );
-    const length = Array.isArray(data) ? data.length : 0;
+    const length = Array.isArray(rows) ? rows.length : 0;
     const chartHeight = Math.max(length * 30, 300);
 
-    const usersWithLikes = data.filter((u) => u.jumlah_like > 0).map((u) => u.username);
-    const usersWithoutLikes = data
-      .filter((u) => u.jumlah_like === 0)
-      .map((u) => u.username);
+    const threshold = Math.ceil(totalKonten * 0.5);
+    const sudahUsers = [];
+    const kurangUsers = [];
+    const belumUsers = [];
+    const noUsernameUsers = [];
+
+    rows.forEach((u) => {
+      if (u.exception === true) {
+        sudahUsers.push(u.username);
+      } else if (!u.username || u.username.trim() === "") {
+        noUsernameUsers.push(u.username);
+      } else if (u.jumlah_like >= threshold) {
+        sudahUsers.push(u.username);
+      } else if (u.jumlah_like > 0) {
+        kurangUsers.push(u.username);
+      } else {
+        belumUsers.push(u.username);
+      }
+    });
 
     res.json({
       success: true,
-      data,
+      data: rows,
       chartHeight,
-      usersWithLikes,
-      usersWithoutLikes,
-      usersWithLikesCount: usersWithLikes.length,
-      usersWithoutLikesCount: usersWithoutLikes.length,
+      totalPosts: totalKonten,
+      sudahUsers,
+      kurangUsers,
+      belumUsers,
+      sudahUsersCount: sudahUsers.length,
+      kurangUsersCount: kurangUsers.length,
+      belumUsersCount: belumUsers.length,
+      noUsernameUsersCount: noUsernameUsers.length,
       usersCount: length,
     });
   } catch (err) {
