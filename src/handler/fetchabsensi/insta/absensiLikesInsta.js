@@ -159,7 +159,8 @@ export async function absensiLikes(client_id, opts = {}) {
   }
 
   const users = await getUsersByClient(clientFilter || client_id, roleFlag);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+  const targetClient = roleFlag || client_id;
+  const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;
@@ -289,7 +290,9 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
   const { nama: clientNama } = await getClientInfo(client_id);
   const users = await getUsersByClient(client_id);
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+  const roleFlag = opts.roleFlag;
+  const targetClient = roleFlag || client_id;
+  const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;

@@ -99,6 +99,7 @@ test('filters users by role when roleFlag provided for polres', async () => {
   await absensiLikes('POLRES', { roleFlag: 'ditbinmas' });
 
   expect(mockGetUsersByClient).toHaveBeenCalledWith('POLRES', 'ditbinmas');
+  expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('ditbinmas');
 });
 
 test('directorate summarizes across clients', async () => {
