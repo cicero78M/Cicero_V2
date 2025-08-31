@@ -120,17 +120,31 @@ test('handles mixed-case client_type for directorate', async () => {
   expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
-test('filters users by role for non-directorate clients', async () => {
+test('treats ditbinmas role as directorate regardless of client type', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(sql).toContain('user_roles ur');
+  expect(sql).toContain('insta_post_roles pr');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
+  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(params).toEqual(['c1', 'ditbinmas']);
+});
+
+test('filters users by role for non-directorate clients with regular role', async () => {
+  mockClientType('regular');
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditintelkam');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).toContain('insta_post_roles pr');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
-  expect(params).toEqual(['c1', 'ditbinmas']);
+  expect(params).toEqual(['c1', 'ditintelkam']);
 });
 
 test('skips role filter for operator role on non-directorate clients', async () => {
