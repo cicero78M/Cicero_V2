@@ -1,12 +1,16 @@
 // =======================
 // IMPORTS & KONFIGURASI
 // =======================
-import pkg from "whatsapp-web.js";
-const { Client, LocalAuth } = pkg;
 import qrcode from "qrcode-terminal";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
 const pool = { query };
+
+// Adapter creators for WhatsApp clients
+import {
+  createWwebClient,
+  createBaileysClient,
+} from "./waAdapter.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -117,22 +121,27 @@ function formatUserSummary(user) {
 // INISIALISASI CLIENT WA
 // =======================
 
-// Inisialisasi WhatsApp client dengan LocalAuth
-export const waClient = new Client({
-  authStrategy: new LocalAuth({
-    clientId: process.env.APP_SESSION_NAME,
-  }),
-  puppeteer: {
-    headless: "new",
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-    ],
-  },
-  takeoverOnConflict: true,
-  takeoverTimeoutMs: 10000,
-});
+// Inisialisasi WhatsApp client melalui adapter
+export let waClient;
+try {
+  waClient = createWwebClient();
+} catch (err) {
+  console.warn("[WA] createWwebClient failed:", err.message);
+  waClient = createBaileysClient();
+}
+
+async function switchToBaileys() {
+  console.log("[WA] Switching to Baileys client");
+  try {
+    await waClient?.disconnect();
+  } catch {}
+  waClient = createBaileysClient();
+  waClient.onDisconnect(() => switchToBaileys());
+  wrapSendMessage(waClient);
+  await waClient.connect();
+}
+
+waClient.onDisconnect(() => switchToBaileys());
 
 let waReady = false;
 const pendingMessages = [];
@@ -193,15 +202,19 @@ export function waitForWaReady(timeout = 30000) {
 }
 
 // Pastikan semua pengiriman pesan menunggu hingga client siap
-const _sendMessage = waClient.sendMessage.bind(waClient);
-waClient.sendMessage = async (...args) => {
-  try {
-    await waitForWaReady();
-  } catch {
-    console.warn("[WA] sendMessage called before ready");
-  }
-  return _sendMessage(...args);
-};
+function wrapSendMessage(client) {
+  const original = client.sendMessage;
+  client._originalSendMessage = original;
+  client.sendMessage = async (...args) => {
+    try {
+      await waitForWaReady();
+    } catch {
+      console.warn("[WA] sendMessage called before ready");
+    }
+    return original.apply(client, args);
+  };
+}
+wrapSendMessage(waClient);
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
@@ -2131,7 +2144,7 @@ waClient.on("message_create", (msg) => {
 // =======================
 console.log("[WA] Starting WhatsApp client initialization");
 waClient
-  .initialize()
+  .connect()
   .catch((err) => {
     console.error("[WA] Initialization failed:", err.message);
   });

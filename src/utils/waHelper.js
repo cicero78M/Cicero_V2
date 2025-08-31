@@ -26,13 +26,10 @@ export async function sendWAReport(waClient, message, chatIds = null) {
       continue;
     }
     try {
-      const wid = await waClient.getNumberId(target);
-      if (!wid) {
-        console.warn(`[SKIP WA] Unregistered wid: ${target}`);
-        continue;
-      }
-      await waClient.sendMessage(wid._serialized, message);
-      console.log(`[WA CRON] Sent WA to ${target}: ${message.substring(0, 64)}...`);
+      await waClient.sendMessage(target, message);
+      console.log(
+        `[WA CRON] Sent WA to ${target}: ${message.substring(0, 64)}...`
+      );
     } catch (err) {
       console.error(`[WA CRON] ERROR send WA to ${target}:`, err.message);
     }
@@ -158,7 +155,10 @@ async function waitUntilReady(waClient, timeout = 10000) {
   if (!waClient) return false;
 
   try {
-    if (typeof waClient.getState === 'function') {
+    if (typeof waClient.isReady === 'function') {
+      const ok = await waClient.isReady();
+      if (ok) return true;
+    } else if (typeof waClient.getState === 'function') {
       const state = await waClient.getState();
       if (state === 'CONNECTED' || state === 'open') return true;
     }
