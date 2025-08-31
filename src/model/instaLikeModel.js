@@ -87,12 +87,6 @@ export async function getRekapLikesByClient(
   end_date,
   role
 ) {
-  const clientTypeRes = await query(
-    'SELECT client_type FROM clients WHERE client_id = $1',
-    [client_id]
-  );
-  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
-
   const roleLower = role ? role.toLowerCase() : null;
   const params = [client_id];
   let tanggalFilter =
@@ -141,8 +135,8 @@ export async function getRekapLikesByClient(
   let postRoleJoinLikes = '';
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
-  if (clientType === 'direktorat' || roleLower === 'ditbinmas') {
-    const roleIdx = params.push(roleLower || client_id);
+  if (roleLower === 'ditbinmas') {
+    const roleIdx = params.push(roleLower);
     postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
     postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
