@@ -23,6 +23,7 @@ function mockClientType(type = 'regular') {
 test('harian with specific date uses date filter', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1', 'harian', '2023-10-05');
   const expected = "p.created_at::date = $2::date";
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining(expected), ['1', '2023-10-05']);
@@ -31,6 +32,7 @@ test('harian with specific date uses date filter', async () => {
 test('mingguan with date truncs week', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1', 'mingguan', '2023-10-05');
   const expected = "date_trunc('week', p.created_at) = date_trunc('week', $2::date)";
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining(expected), ['1', '2023-10-05']);
@@ -39,6 +41,7 @@ test('mingguan with date truncs week', async () => {
 test('bulanan converts month string', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1', 'bulanan', '2023-10');
   const expected = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $2::date)";
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining(expected), ['1', '2023-10-01']);
@@ -47,6 +50,7 @@ test('bulanan converts month string', async () => {
 test('semua uses no date filter', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1', 'semua');
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('1=1'), ['1']);
 });
@@ -54,6 +58,7 @@ test('semua uses no date filter', async () => {
 test('date range uses between filter', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1', 'harian', undefined, '2023-10-01', '2023-10-07');
   const expected = "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date";
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining(expected), ['1', '2023-10-01', '2023-10-07']);
@@ -62,6 +67,7 @@ test('date range uses between filter', async () => {
 test('query normalizes instagram usernames', async () => {
   mockClientType();
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1');
   expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('jsonb_array_elements(l.likes)'), ['1']);
 });
@@ -77,13 +83,15 @@ test('parses jumlah_like as integer', async () => {
     exception: false,
     jumlah_like: '3',
   }] });
-  const rows = await getRekapLikesByClient('1');
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
+  const { rows } = await getRekapLikesByClient('1');
   expect(rows[0].jumlah_like).toBe(3);
 });
 
 test('filters users by client_id for non-directorate clients', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('1');
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
@@ -93,6 +101,7 @@ test('filters users by client_id for non-directorate clients', async () => {
 test('filters users by role for directorate clients', async () => {
   mockClientType('direktorat');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
@@ -110,6 +119,7 @@ test('filters users by role for directorate clients', async () => {
 test('handles mixed-case client_type for directorate', async () => {
   mockClientType('Direktorat');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
@@ -123,6 +133,7 @@ test('handles mixed-case client_type for directorate', async () => {
 test('treats ditbinmas role as directorate regardless of client type', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
@@ -137,6 +148,7 @@ test('treats ditbinmas role as directorate regardless of client type', async () 
 test('filters users by role for non-directorate clients with regular role', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditintelkam');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
@@ -150,6 +162,7 @@ test('filters users by role for non-directorate clients with regular role', asyn
 test('skips role filter for operator role on non-directorate clients', async () => {
   mockClientType('regular');
   mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'operator');
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
@@ -185,7 +198,8 @@ test('aggregates likes across multiple client IDs for directorate role', async (
       },
     ],
   });
-  const rows = await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
+  const { rows } = await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
