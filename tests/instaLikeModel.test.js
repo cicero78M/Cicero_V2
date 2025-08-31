@@ -82,15 +82,14 @@ test('parses jumlah_like as integer', async () => {
 test('filters users by role when role is ditbinmas', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
-  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[0][0];
   const params = mockQuery.mock.calls[0][1];
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
-  expect(sql).toContain('insta_post_roles pr');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
-  expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
   expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).not.toContain('insta_post_roles');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });

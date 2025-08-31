@@ -136,10 +136,8 @@ export async function getRekapLikesByClient(
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
   if (roleLower === 'ditbinmas') {
+    params[0] = 'ditbinmas';
     const roleIdx = params.push(roleLower);
-    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
-    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
