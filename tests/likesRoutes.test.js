@@ -31,6 +31,8 @@ test('GET /likes/instagram returns ditbinmas like summary', async () => {
   const app = express();
   app.use('/api/likes', likesRoutes);
 
+  const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
   const res = await request(app).get('/api/likes/instagram');
 
   expect(res.status).toBe(200);
@@ -49,4 +51,7 @@ test('GET /likes/instagram returns ditbinmas like summary', async () => {
       success: true
     })
   );
+
+  expect(logSpy).toHaveBeenCalledWith('\x1b[33m%s\x1b[0m', 'GET /api/likes/instagram');
+  logSpy.mockRestore();
 });
