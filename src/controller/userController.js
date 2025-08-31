@@ -115,6 +115,23 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+export const updateUserRoles = async (req, res, next) => {
+  try {
+    const roles = Array.isArray(req.body.roles)
+      ? req.body.roles.map((r) => r.toLowerCase())
+      : [];
+    const allowed = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'];
+    const data = {};
+    for (const r of allowed) {
+      data[r] = roles.includes(r);
+    }
+    const user = await userModel.updateUser(req.params.id, data);
+    sendSuccess(res, user);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteUser = async (req, res, next) => {
   try {
     const user = await userModel.deleteUser(req.params.id);
