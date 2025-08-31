@@ -46,3 +46,14 @@ test('sendWAFile falls back to onWhatsApp when getNumberId missing', async () =>
     fileName: 'file.txt',
   });
 });
+
+test('sendWAFile uses Excel mime when sending .xls file', async () => {
+  const waClient = {
+    getNumberId: jest.fn().mockResolvedValue({ _serialized: '123@c.us' }),
+    sendMessage: jest.fn().mockResolvedValue(),
+  };
+  const buffer = Buffer.from('excel');
+  await sendWAFile(waClient, buffer, 'report.xls', '123@c.us');
+  const [, media] = waClient.sendMessage.mock.calls[0];
+  expect(media.mimetype).toBe('application/vnd.ms-excel');
+});

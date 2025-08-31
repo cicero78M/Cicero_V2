@@ -2,11 +2,16 @@
 import dotenv from 'dotenv';
 import pkg from 'whatsapp-web.js';
 import mime from 'mime-types';
+import path from 'path';
 const { MessageMedia } = pkg;
 dotenv.config();
 
-const defaultMimeType =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const spreadsheetMimeTypes = {
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+
+const defaultMimeType = spreadsheetMimeTypes['.xlsx'];
 
 export function getAdminWhatsAppList() {
   return (process.env.ADMIN_WHATSAPP || '')
@@ -49,8 +54,9 @@ export async function sendWAFile(
       ? chatIds
       : [chatIds]
     : getAdminWhatsAppList();
+  const ext = path.extname(filename).toLowerCase();
   const resolvedMimeType =
-    mimeType || mime.lookup(filename) || defaultMimeType;
+    mimeType || spreadsheetMimeTypes[ext] || mime.lookup(filename) || defaultMimeType;
   const base64 = buffer.toString('base64');
   const media = new MessageMedia(resolvedMimeType, base64, filename);
   for (const target of targets) {
