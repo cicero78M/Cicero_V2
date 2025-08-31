@@ -1,10 +1,11 @@
 // src/utils/waHelper.js
 import dotenv from 'dotenv';
 import pkg from 'whatsapp-web.js';
+import mime from 'mime-types';
 const { MessageMedia } = pkg;
 dotenv.config();
 
-const DEFAULT =
+const defaultMimeType =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export function getAdminWhatsAppList() {
@@ -41,15 +42,17 @@ export async function sendWAFile(
   buffer,
   filename,
   chatIds = null,
-  mimeType = DEFAULT
+  mimeType
 ) {
   const targets = chatIds
     ? Array.isArray(chatIds)
       ? chatIds
       : [chatIds]
     : getAdminWhatsAppList();
+  const resolvedMimeType =
+    mimeType || mime.lookup(filename) || defaultMimeType;
   const base64 = buffer.toString('base64');
-  const media = new MessageMedia(mimeType, base64, filename);
+  const media = new MessageMedia(resolvedMimeType, base64, filename);
   for (const target of targets) {
     if (!target || !target.endsWith('@c.us')) {
       console.warn(`[SKIP WA] Invalid wid: ${target}`);
@@ -74,7 +77,7 @@ export async function sendWAFile(
         chatId = result.jid || chatId;
         await waClient.sendMessage(chatId, {
           document: buffer,
-          mimetype: mimeType,
+          mimetype: resolvedMimeType,
           fileName: filename,
         });
       } else {
