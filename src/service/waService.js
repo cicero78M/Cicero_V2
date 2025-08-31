@@ -124,10 +124,21 @@ function formatUserSummary(user) {
 // Inisialisasi WhatsApp client melalui adapter
 export let waClient;
 try {
-  waClient = createWWebClient();
-} catch (err) {
-  console.warn("[WA] createWWebClient failed:", err.message);
   waClient = await createBaileysClient();
+} catch (err) {
+  console.warn("[WA] createBaileysClient failed:", err.message);
+  waClient = createWWebClient();
+}
+
+async function switchToWWeb() {
+  console.log("[WA] Switching to WWeb client");
+  try {
+    await waClient?.disconnect();
+  } catch {}
+  waClient = createWWebClient();
+  waClient.onDisconnect(() => switchToBaileys());
+  wrapSendMessage(waClient);
+  await waClient.connect();
 }
 
 async function switchToBaileys() {
@@ -136,12 +147,12 @@ async function switchToBaileys() {
     await waClient?.disconnect();
   } catch {}
   waClient = await createBaileysClient();
-  waClient.onDisconnect(() => switchToBaileys());
+  waClient.onDisconnect(() => switchToWWeb());
   wrapSendMessage(waClient);
   await waClient.connect();
 }
 
-waClient.onDisconnect(() => switchToBaileys());
+waClient.onDisconnect(() => switchToWWeb());
 
 let waReady = false;
 const pendingMessages = [];

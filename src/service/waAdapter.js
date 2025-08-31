@@ -48,6 +48,8 @@ export async function createBaileysClient() {
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
   const sock = makeWASocket({
     auth: state,
+    browser: ['Ubuntu', 'Chrome', '22.04.4'],
+    printQRInTerminal: false,
   });
   sock.ev.on('creds.update', saveCreds);
 
