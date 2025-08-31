@@ -54,7 +54,15 @@ export async function createBaileysClient() {
 
   const emitter = new EventEmitter();
 
-  emitter.connect = async () => {};
+  emitter.connect = async () => {
+    // Ensure the underlying websocket is opened and wait for the 'ready' event
+    if (typeof sock.ws?.open === 'function') {
+      await sock.ws.open();
+    }
+    if (!(await emitter.isReady())) {
+      await new Promise((resolve) => emitter.once('ready', resolve));
+    }
+  };
   emitter.disconnect = async () => sock.end();
   emitter.sendMessage = (jid, message, options = {}) =>
     sock.sendMessage(jid, { text: message }, options);

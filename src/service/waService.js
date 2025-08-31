@@ -2143,11 +2143,11 @@ waClient.on("message_create", (msg) => {
 // INISIALISASI WA CLIENT
 // =======================
 console.log("[WA] Starting WhatsApp client initialization");
-waClient
-  .connect()
-  .catch((err) => {
-    console.error("[WA] Initialization failed:", err.message);
-  });
+try {
+  await waClient.connect();
+} catch (err) {
+  console.error("[WA] Initialization failed:", err.message);
+}
 
 // Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
 setTimeout(async () => {
