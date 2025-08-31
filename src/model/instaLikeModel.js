@@ -145,7 +145,7 @@ export async function getRekapLikesByClient(
   `;
   let postRoleJoin = '';
   let postRoleFilter = '';
-  if (clientType === 'direktorat') {
+  if (clientType === 'direktorat' || roleLower === 'ditbinmas') {
     const roleIdx = params.push(roleLower || client_id);
     postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
