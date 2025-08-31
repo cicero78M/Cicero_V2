@@ -94,8 +94,9 @@ export async function getRekapLikesByClient(
   const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
 
   const roleLower = role ? role.toLowerCase() : null;
-
-  const params = clientType === 'direktorat' ? [] : [client_id];
+  const isDitbinmas =
+    client_id.toLowerCase() === "ditbinmas" || roleLower === "ditbinmas";
+  const params = clientType === "direktorat" && !isDitbinmas ? [] : [client_id];
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
@@ -128,7 +129,10 @@ export async function getRekapLikesByClient(
     tanggalFilter = `p.created_at::date = $${idx}::date`;
   }
 
-  let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
+  let postClientFilter =
+    clientType === "direktorat" && !isDitbinmas
+      ? "1=1"
+      : 'LOWER(p.client_id) = LOWER($1)';
   let userWhere = 'LOWER(u.client_id) = LOWER($1)';
   let likeCountsSelect = `
     SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
@@ -142,7 +146,6 @@ export async function getRekapLikesByClient(
   let postRoleJoin = '';
   let postRoleFilter = '';
   if (clientType === 'direktorat') {
-    postClientFilter = '1=1';
     const roleIdx = params.push(roleLower || client_id);
     postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
