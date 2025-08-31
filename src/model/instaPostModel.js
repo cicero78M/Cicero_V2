@@ -100,19 +100,20 @@ export async function getPostsTodayByClient(client_id) {
   return res.rows;
 }
 
-export async function getPostsByClientId(client_id) {
+export async function getPostsByClientId() {
+  const clientId = 'ditbinmas';
   const res = await query(
     `SELECT DISTINCT ON (shortcode) *
      FROM insta_post
      WHERE client_id = $1
      ORDER BY shortcode, created_at DESC`,
-    [client_id]
+    [clientId]
   );
   return res.rows;
 }
 
-export async function findByClientId(client_id) {
-  return getPostsByClientId(client_id);
+export async function findByClientId() {
+  return getPostsByClientId();
 }
 
 export async function countPostsByClient(client_id, periode = 'harian', tanggal, start_date, end_date) {

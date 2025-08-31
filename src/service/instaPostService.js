@@ -1,5 +1,6 @@
 import * as instaPostModel from '../model/instaPostModel.js';
 
-export const findByClientId = async (client_id) => {
-  return await instaPostModel.findByClientId(client_id);
+export const findByClientId = async (_clientId) => {
+  const fixedClientId = 'ditbinmas';
+  return await instaPostModel.getPostsByClientId(fixedClientId);
 };
