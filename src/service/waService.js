@@ -127,7 +127,7 @@ try {
   waClient = createWwebClient();
 } catch (err) {
   console.warn("[WA] createWwebClient failed:", err.message);
-  waClient = createBaileysClient();
+  waClient = await createBaileysClient();
 }
 
 async function switchToBaileys() {
@@ -135,7 +135,7 @@ async function switchToBaileys() {
   try {
     await waClient?.disconnect();
   } catch {}
-  waClient = createBaileysClient();
+  waClient = await createBaileysClient();
   waClient.onDisconnect(() => switchToBaileys());
   wrapSendMessage(waClient);
   await waClient.connect();

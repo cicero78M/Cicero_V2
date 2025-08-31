@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
-import makeWASocket, { useSingleFileAuthState } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import path from 'path';
 
@@ -42,15 +42,15 @@ export function createWwebClient() {
   return client;
 }
 
-export function createBaileysClient() {
+export async function createBaileysClient() {
   const sessionsDir = path.join('sessions', 'baileys');
   ensureDir(sessionsDir);
-  const { state, saveState } = useSingleFileAuthState(path.join(sessionsDir, 'auth.json'));
+  const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
   const sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
   });
-  sock.ev.on('creds.update', saveState);
+  sock.ev.on('creds.update', saveCreds);
 
   const emitter = new EventEmitter();
 
