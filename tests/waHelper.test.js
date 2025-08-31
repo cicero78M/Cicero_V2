@@ -2,9 +2,10 @@ import { jest } from '@jest/globals';
 import { EventEmitter } from 'events';
 
 let safeSendMessage;
+let isAdminWhatsApp;
 
 beforeAll(async () => {
-  ({ safeSendMessage } = await import('../src/utils/waHelper.js'));
+  ({ safeSendMessage, isAdminWhatsApp } = await import('../src/utils/waHelper.js'));
 });
 
 test('safeSendMessage waits for client ready', async () => {
@@ -18,4 +19,14 @@ test('safeSendMessage waits for client ready', async () => {
   waClient.emit('ready');
   await promise;
   expect(waClient.sendMessage).toHaveBeenCalledWith('123@c.us', 'hello', {});
+});
+
+test('isAdminWhatsApp recognizes various input formats', () => {
+  const original = process.env.ADMIN_WHATSAPP;
+  process.env.ADMIN_WHATSAPP = '6281';
+  expect(isAdminWhatsApp('6281@c.us')).toBe(true);
+  expect(isAdminWhatsApp('6281@s.whatsapp.net')).toBe(true);
+  expect(isAdminWhatsApp('+62 81')).toBe(true);
+  expect(isAdminWhatsApp('999@c.us')).toBe(false);
+  process.env.ADMIN_WHATSAPP = original;
 });
