@@ -17,7 +17,7 @@ beforeEach(() => {
   mockGetRekap.mockReset();
 });
 
-test('returns ditbinmas like summaries without client filter', async () => {
+test('returns ditbinmas like summaries', async () => {
   const rows = [
     { username: 'alice', jumlah_like: 4 },
     { username: 'bob', jumlah_like: 1 },
