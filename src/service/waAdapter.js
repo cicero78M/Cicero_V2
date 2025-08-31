@@ -111,8 +111,10 @@ export async function createBaileysClient() {
   };
 
   emitter.disconnect = async () => sock.end();
-  emitter.sendMessage = (jid, message, options = {}) =>
-    sock.sendMessage(jid, { text: message }, options);
+  emitter.sendMessage = (jid, message, options = {}) => {
+    const content = typeof message === 'string' ? { text: message } : message;
+    return sock.sendMessage(jid, content, options);
+  };
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
   emitter.isReady = async () => Boolean(sock.authState?.creds?.me);

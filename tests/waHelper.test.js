@@ -3,9 +3,10 @@ import { EventEmitter } from 'events';
 
 let safeSendMessage;
 let isAdminWhatsApp;
+let sendWAFile;
 
 beforeAll(async () => {
-  ({ safeSendMessage, isAdminWhatsApp } = await import('../src/utils/waHelper.js'));
+  ({ safeSendMessage, isAdminWhatsApp, sendWAFile } = await import('../src/utils/waHelper.js'));
 });
 
 test('safeSendMessage waits for client ready', async () => {
@@ -29,4 +30,19 @@ test('isAdminWhatsApp recognizes various input formats', () => {
   expect(isAdminWhatsApp('+62 81')).toBe(true);
   expect(isAdminWhatsApp('999@c.us')).toBe(false);
   process.env.ADMIN_WHATSAPP = original;
+});
+
+test('sendWAFile falls back to onWhatsApp when getNumberId missing', async () => {
+  const waClient = {
+    onWhatsApp: jest.fn().mockResolvedValue([{ jid: '123@s.whatsapp.net', exists: true }]),
+    sendMessage: jest.fn().mockResolvedValue(),
+  };
+  const buffer = Buffer.from('hello');
+  await sendWAFile(waClient, buffer, 'file.txt', '123@c.us', 'text/plain');
+  expect(waClient.onWhatsApp).toHaveBeenCalledWith('123@c.us');
+  expect(waClient.sendMessage).toHaveBeenCalledWith('123@s.whatsapp.net', {
+    document: buffer,
+    mimetype: 'text/plain',
+    fileName: 'file.txt',
+  });
 });
