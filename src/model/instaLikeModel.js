@@ -136,7 +136,8 @@ export async function getRekapLikesByClient(
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
   if (roleLower === 'ditbinmas') {
-    params[0] = 'ditbinmas';
+    params[0] = 'DITBINMAS';
+    postClientFilter = '1=1';
     const roleIdx = params.push(roleLower);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
@@ -149,16 +150,6 @@ export async function getRekapLikesByClient(
       GROUP BY username
     `;
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
-  } else if (roleLower && roleLower !== 'operator') {
-    const roleIndex = params.push(roleLower);
-    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
-    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIndex})`;
-    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIndex})
-    )`;
   }
 
   const { rows } = await query(`
