@@ -48,7 +48,6 @@ export async function createBaileysClient() {
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
   });
   sock.ev.on('creds.update', saveCreds);
 
@@ -96,6 +95,7 @@ export async function createBaileysClient() {
   });
 
   sock.ev.on('connection.update', (update) => {
+    if (update.qr) qrcode.generate(update.qr, { small: true });
     if (update.connection === 'open') emitter.emit('ready');
     if (update.connection === 'close') emitter.emit('disconnected', update.lastDisconnect?.error);
   });
