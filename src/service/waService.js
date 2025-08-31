@@ -556,21 +556,53 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   }
 
   if (text.toLowerCase() === "dirrequest") {
-    if (!isAdmin) {
+    const waId =
+      userWaNum.startsWith("62")
+        ? userWaNum
+        : "62" + userWaNum.replace(/^0/, "");
+    const dashUsers = await dashboardUserModel.findAllByWhatsApp(waId);
+    const validUsers = dashUsers.filter(
+      (u) => u.status === true && u.role !== "operator"
+    );
+    if (validUsers.length === 0) {
       await waClient.sendMessage(
         chatId,
-        "❌ Menu ini hanya dapat diakses oleh admin."
+        "❌ Nomor Anda tidak terdaftar atau belum disetujui sebagai dashboard user."
       );
+      return;
+    }
+    if (validUsers.length === 1) {
+      const du = validUsers[0];
+      let dirClientId = null;
+      try {
+        const roleClient = await clientService.findClientById(du.role);
+        if (roleClient?.client_type?.toLowerCase() === "direktorat") {
+          dirClientId = du.role;
+        }
+      } catch (e) {
+        // ignore lookup errors and fallback to dashboard user client_ids
+      }
+      setSession(chatId, {
+        menu: "dirrequest",
+        step: "main",
+        role: du.role,
+        client_ids: du.client_ids,
+        dir_client_id: dirClientId,
+      });
+      await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
     }
     setSession(chatId, {
       menu: "dirrequest",
-      step: "main",
-      role: "ditbinmas",
-      client_ids: ["ditbinmas"],
-      dir_client_id: "ditbinmas",
+      step: "choose_dash_user",
+      dash_users: validUsers,
     });
-    await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
+    await dirRequestHandlers.choose_dash_user(
+      getSession(chatId),
+      chatId,
+      "",
+      waClient
+    );
     return;
   }
 
