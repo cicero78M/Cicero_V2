@@ -108,12 +108,12 @@ test('filters users by role for directorate clients', async () => {
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
   expect(sql).toContain('EXISTS');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('insta_post_roles pr');
-  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas']);
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
 test('handles mixed-case client_type for directorate', async () => {
@@ -124,10 +124,10 @@ test('handles mixed-case client_type for directorate', async () => {
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
   expect(sql).toContain('user_roles ur');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas']);
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
 test('treats ditbinmas role as directorate regardless of client type', async () => {
@@ -170,7 +170,7 @@ test('skips role filter for operator role on non-directorate clients', async () 
   expect(sql).not.toContain('insta_post_roles');
 });
 
-test('aggregates likes across multiple client IDs for directorate role', async () => {
+test('aggregates likes only for ditbinmas client when role is ditbinmas', async () => {
   mockClientType('direktorat');
   mockQuery.mockResolvedValueOnce({
     rows: [
@@ -181,8 +181,8 @@ test('aggregates likes across multiple client IDs for directorate role', async (
         username: 'andi',
         divisi: 'BAG',
         exception: false,
-        client_id: 'c1',
-        client_name: 'Client 1',
+        client_id: 'ditbinmas',
+        client_name: 'Ditbinmas',
         jumlah_like: '2',
       },
       {
@@ -192,8 +192,8 @@ test('aggregates likes across multiple client IDs for directorate role', async (
         username: 'budi',
         divisi: 'BAG',
         exception: false,
-        client_id: 'c2',
-        client_name: 'Client 2',
+        client_id: 'ditbinmas',
+        client_name: 'Ditbinmas',
         jumlah_like: '3',
       },
     ],
@@ -202,12 +202,12 @@ test('aggregates likes across multiple client IDs for directorate role', async (
   const { rows } = await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[1][0];
   const params = mockQuery.mock.calls[1][1];
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
   expect(sql).toContain('insta_post_roles pr');
-  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas']);
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
   expect(rows).toHaveLength(2);
-  expect(rows.map(r => r.client_id)).toEqual(['c1', 'c2']);
+  expect(rows.map(r => r.client_id)).toEqual(['ditbinmas', 'ditbinmas']);
 });
