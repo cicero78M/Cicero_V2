@@ -197,6 +197,8 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
+  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
+
   const { rows: postRows } = await query(
     `WITH posts AS (
       SELECT p.shortcode
@@ -207,7 +209,7 @@ export async function getRekapLikesByClient(
         AND ${tanggalFilter}
     )
     SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,
-    params
+    postParams
   );
   const totalKonten = parseInt(postRows[0]?.total_post || '0', 10);
 
