@@ -88,7 +88,8 @@ export async function getRekapLikesByClient(
   role
 ) {
   const roleLower = role ? role.toLowerCase() : null;
-  const params = roleLower === 'ditbinmas' ? [] : [client_id];
+  // Always include client_id to ensure queries are scoped to a single client
+  const params = [client_id];
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
@@ -137,11 +138,10 @@ export async function getRekapLikesByClient(
   let postRoleFilter = '';
   if (roleLower === 'ditbinmas') {
     const roleIdx = params.push(roleLower);
-    postClientFilter = '1=1';
     postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = l.shortcode';
     postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
-    userWhere = `EXISTS (
+    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
