@@ -8,7 +8,7 @@ const pool = { query };
 
 // Adapter creators for WhatsApp clients
 import {
-  createWwebClient,
+  createWWebClient,
   createBaileysClient,
 } from "./waAdapter.js";
 
@@ -124,10 +124,10 @@ function formatUserSummary(user) {
 // Inisialisasi WhatsApp client melalui adapter
 export let waClient;
 try {
-  waClient = createWwebClient();
+  waClient = createWWebClient();
 } catch (err) {
-  console.warn("[WA] createWwebClient failed:", err.message);
-  waClient = createBaileysClient();
+  console.warn("[WA] createWWebClient failed:", err.message);
+  waClient = await createBaileysClient();
 }
 
 async function switchToBaileys() {
@@ -135,7 +135,7 @@ async function switchToBaileys() {
   try {
     await waClient?.disconnect();
   } catch {}
-  waClient = createBaileysClient();
+  waClient = await createBaileysClient();
   waClient.onDisconnect(() => switchToBaileys());
   wrapSendMessage(waClient);
   await waClient.connect();
