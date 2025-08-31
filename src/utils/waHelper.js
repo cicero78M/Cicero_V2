@@ -76,7 +76,13 @@ export function isAdminWhatsApp(number) {
     .map((n) => n.trim())
     .filter(Boolean)
     .map((n) => (n.endsWith("@c.us") ? n : n.replace(/\D/g, "") + "@c.us"));
-  return adminNumbers.includes(number);
+  const normalized =
+    typeof number === "string"
+      ? number.endsWith("@c.us")
+        ? number
+        : number.replace(/\D/g, "") + "@c.us"
+      : "";
+  return adminNumbers.includes(normalized);
 }
 
 // Konversi nomor ke WhatsAppID (xxxx@c.us)
