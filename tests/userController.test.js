@@ -24,12 +24,14 @@ jest.unstable_mockModule('../src/service/clientService.js', () => ({
 let createUser;
 let getUserList;
 let getUsersByClientCtrl;
+let updateUserRolesCtrl;
 
 beforeAll(async () => {
   const mod = await import('../src/controller/userController.js');
   createUser = mod.createUser;
   getUserList = mod.getUserList;
   getUsersByClientCtrl = mod.getUsersByClient;
+  updateUserRolesCtrl = mod.updateUserRoles;
 });
 
 beforeEach(() => {
@@ -167,6 +169,40 @@ test('operator reactivates existing user with multiple roles', async () => {
       ditbinmas: true,
       nama: 'E'
     }
+  });
+});
+
+test('updateUserRoles updates roles based on array', async () => {
+  mockUpdateUser.mockResolvedValue({
+    user_id: '1',
+    operator: true,
+    ditbinmas: true,
+    ditlantas: false,
+    bidhumas: false,
+  });
+  const req = { params: { id: '1' }, body: { roles: ['operator', 'ditbinmas'] } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await updateUserRolesCtrl(req, res, () => {});
+
+  expect(mockUpdateUser).toHaveBeenCalledWith('1', {
+    operator: true,
+    ditbinmas: true,
+    ditlantas: false,
+    bidhumas: false,
+  });
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    data: {
+      user_id: '1',
+      operator: true,
+      ditbinmas: true,
+      ditlantas: false,
+      bidhumas: false,
+    },
   });
 });
 
