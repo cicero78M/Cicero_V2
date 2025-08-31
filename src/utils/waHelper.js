@@ -56,12 +56,30 @@ export async function sendWAFile(
       continue;
     }
     try {
-      const wid = await waClient.getNumberId(target);
-      if (!wid) {
-        console.warn(`[SKIP WA] Unregistered wid: ${target}`);
-        continue;
+      let chatId = target;
+      if (typeof waClient.getNumberId === 'function') {
+        const wid = await waClient.getNumberId(target);
+        if (!wid) {
+          console.warn(`[SKIP WA] Unregistered wid: ${target}`);
+          continue;
+        }
+        chatId = wid._serialized || wid;
+        await waClient.sendMessage(chatId, media, { sendMediaAsDocument: true });
+      } else if (typeof waClient.onWhatsApp === 'function') {
+        const [result] = await waClient.onWhatsApp(target);
+        if (!result?.exists) {
+          console.warn(`[SKIP WA] Unregistered wid: ${target}`);
+          continue;
+        }
+        chatId = result.jid || chatId;
+        await waClient.sendMessage(chatId, {
+          document: buffer,
+          mimetype: mimeType,
+          fileName: filename,
+        });
+      } else {
+        await waClient.sendMessage(chatId, media, { sendMediaAsDocument: true });
       }
-      await waClient.sendMessage(wid._serialized, media, { sendMediaAsDocument: true });
       console.log(`[WA CRON] Sent file to ${target}: ${filename}`);
     } catch (err) {
       console.error(`[WA CRON] ERROR send file to ${target}:`, err.message);
