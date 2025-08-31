@@ -36,7 +36,10 @@ export async function getInstaRekapLikes(req, res) {
   }
 
   if (req.user?.client_ids) {
-    const idsLower = req.user.client_ids.map((c) => c.toLowerCase());
+    const userClientIds = Array.isArray(req.user.client_ids)
+      ? req.user.client_ids
+      : [req.user.client_ids];
+    const idsLower = userClientIds.map((c) => c.toLowerCase());
     if (
       !idsLower.includes(client_id.toLowerCase()) &&
       roleLower !== client_id.toLowerCase()
@@ -48,7 +51,7 @@ export async function getInstaRekapLikes(req, res) {
   }
   if (
     req.user?.client_id &&
-    req.user.client_id !== client_id &&
+    req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
     roleLower !== client_id.toLowerCase()
   ) {
     return res
