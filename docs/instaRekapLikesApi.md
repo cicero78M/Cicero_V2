@@ -15,7 +15,7 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
   "belumUsers": ["charlie"],
   "sudahUsersCount": 1,
   "kurangUsersCount": 1,
-  "belumUsersCount": 1,
+  "belumUsersCount": 2,
   "noUsernameUsersCount": 1,
   "usersCount": 4
 }
@@ -24,6 +24,7 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 - **sudahUsers** – usernames that liked at least 50% of posts or are marked as exception.
 - **kurangUsers** – usernames that liked some posts but less than 50%.
 - **belumUsers** – usernames that did not like any posts.
+- **belumUsersCount** – users who did not like any posts **or** have no Instagram username.
 - **noUsernameUsersCount** – number of users without an Instagram username.
 - **usersCount** – total number of users returned in `data`.
 

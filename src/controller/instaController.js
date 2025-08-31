@@ -88,6 +88,8 @@ export async function getInstaRekapLikes(req, res) {
       }
     });
 
+    const belumUsersCount = belumUsers.length + noUsernameUsers.length;
+
     res.json({
       success: true,
       data: rows,
@@ -98,7 +100,7 @@ export async function getInstaRekapLikes(req, res) {
       belumUsers,
       sudahUsersCount: sudahUsers.length,
       kurangUsersCount: kurangUsers.length,
-      belumUsersCount: belumUsers.length,
+      belumUsersCount,
       noUsernameUsersCount: noUsernameUsers.length,
       usersCount: length,
     });

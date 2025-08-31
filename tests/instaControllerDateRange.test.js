@@ -96,7 +96,7 @@ test('returns user like summaries', async () => {
       belumUsers: ['charlie'],
       sudahUsersCount: 1,
       kurangUsersCount: 1,
-      belumUsersCount: 1,
+      belumUsersCount: 2,
       noUsernameUsersCount: 1,
       usersCount: 4
     })
