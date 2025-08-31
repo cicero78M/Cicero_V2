@@ -88,9 +88,7 @@ export const getInstagramPosts = async (req, res, next) => {
 // Semua like posting IG client (rekap)
 export const getInstagramLikes = async (req, res, next) => {
   try {
-    const role = req.user?.role?.toLowerCase();
-    const clientId = role === "ditbinmas" ? "DITBINMAS" : req.params.client_id;
-    const posts = await instaPostService.findByClientId(clientId);
+    const posts = await instaPostService.findByClientId(req.params.client_id);
     let likesData = [];
     for (const post of posts) {
       const like = await instaLikeService.findByShortcode(post.shortcode);
