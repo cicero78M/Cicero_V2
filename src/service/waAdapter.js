@@ -54,7 +54,28 @@ export function createBaileysClient() {
 
   const emitter = new EventEmitter();
 
-  emitter.connect = async () => {};
+  emitter.connect = async () => {
+    // Wait until the underlying Baileys socket is ready
+    if (sock.ws?.readyState === sock.ws.OPEN) return;
+    await new Promise((resolve, reject) => {
+      const onOpen = () => {
+        cleanup();
+        resolve();
+      };
+      const onClose = (err) => {
+        cleanup();
+        reject(err);
+      };
+      const cleanup = () => {
+        sock.ws.off('open', onOpen);
+        sock.ws.off('close', onClose);
+        sock.ws.off('error', onClose);
+      };
+      sock.ws.on('open', onOpen);
+      sock.ws.on('close', onClose);
+      sock.ws.on('error', onClose);
+    });
+  };
   emitter.disconnect = async () => sock.end();
   emitter.sendMessage = (jid, message, options = {}) =>
     sock.sendMessage(jid, { text: message }, options);
