@@ -5,7 +5,8 @@ process.env.JWT_SECRET = 'test';
 
 const baileysClient = new EventEmitter();
 baileysClient.connect = jest.fn(
-  () => new Promise((resolve) => baileysClient.once('ready', resolve)),
+
+  () => new Promise((resolve) => baileysClient.once('ready', resolve))
 );
 baileysClient.disconnect = jest.fn().mockResolvedValue();
 baileysClient.sendMessage = jest.fn().mockResolvedValue();
@@ -36,6 +37,8 @@ test('fallback to Baileys when wweb client fails', async () => {
   const { createWwebClient, createBaileysClient } = adapter;
 
 
+
+test('fallback to Baileys when wweb client fails', async () => {
   await safeSendMessage(waClient, '123@c.us', 'hello');
   expect(createWWebClient).toHaveBeenCalled();
   expect(createBaileysClient).toHaveBeenCalled();
