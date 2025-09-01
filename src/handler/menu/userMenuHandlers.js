@@ -142,7 +142,7 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     if (!/^\d+$/.test(user_id)) {
       await waClient.sendMessage(
         chatId,
-        "Balas pesan ini dengan NRP Anda, \n*Contoh Pesan Balasan : 87020990*"
+        "❌ NRP hanya boleh berisi angka.\nContoh: 87020990\nKetik *batal* untuk keluar."
       );
       return;
     }
@@ -197,11 +197,17 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
   // --- Update User ID manual
   updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
+    const lower = text.trim().toLowerCase();
+    if (lower === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(chatId, "✅ Menu ditutup. Terima kasih.");
+      return;
+    }
     const nrp = text.trim();
     if (!/^\d+$/.test(nrp)) {
       await waClient.sendMessage(
         chatId,
-        "Balas pesan ini dengan NRP Anda, \n*Contoh Pesan Balasan : 87020990*"
+        "❌ NRP hanya boleh berisi angka.\nContoh: 87020990\nKetik *batal* untuk keluar."
       );
       return;
     }
@@ -260,13 +266,23 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       allowedFields.push({ key: "desa", label: "Desa Binaan" });
     }
 
+    const lower = text.trim().toLowerCase();
     const maxOption = allowedFields.length;
-    if (!new RegExp(`^[1-${maxOption}]$`).test(text.trim())) {
+    if (lower === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(chatId, "✅ Menu ditutup. Terima kasih.");
+      return;
+    }
+    if (!new RegExp(`^[1-${maxOption}]$`).test(lower)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Pilihan tidak valid. Balas dengan angka sesuai daftar (contoh: 1) atau ketik *batal* untuk keluar."
+      );
       await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     }
 
-    const idx = parseInt(text.trim()) - 1;
+    const idx = parseInt(lower) - 1;
     const field = allowedFields[idx].key;
     session.updateField = field;
 
@@ -346,6 +362,12 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   updateAskValue: async (session, chatId, text, waClient, pool, userModel) => {
+    const lower = text.trim().toLowerCase();
+    if (lower === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(chatId, "Perubahan dibatalkan. Ketik *userrequest* untuk memulai lagi.");
+      return;
+    }
     const user_id = session.updateUserId;
     let field = session.updateField;
     let value = text.trim();
