@@ -10,6 +10,7 @@ const mockFindClientById = jest.fn();
 const mockFetchAndStoreInstaContent = jest.fn();
 const mockHandleFetchLikesInstagram = jest.fn();
 const mockRekapLikesIG = jest.fn();
+const mockLapharDitbinmas = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
@@ -18,6 +19,7 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
   absensiLikes: mockAbsensiLikes,
   rekapLikesIG: mockRekapLikesIG,
+  lapharDitbinmas: mockLapharDitbinmas,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,

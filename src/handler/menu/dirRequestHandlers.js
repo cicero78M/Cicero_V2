@@ -1,8 +1,10 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
-import { absensiLikes } from "../fetchabsensi/insta/absensiLikesInsta.js";
+import { absensiLikes, lapharDitbinmas } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
+import { sendWAFile } from "../../utils/waHelper.js";
+import { writeFile } from "fs/promises";
 
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
@@ -11,6 +13,12 @@ const pangkatOrder = [
   "AKP",
   "IPTU",
   "IPDA",
+  "AIPTU",
+  "AIPDA",
+  "BRIPKA",
+  "BRIGADIR",
+  "BRIPTU",
+  "BRIPDA",
 ];
 const rankIdx = (t) => {
   const i = pangkatOrder.indexOf((t || "").toUpperCase());
@@ -322,6 +330,14 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
       break;
     }
+    case "9": {
+      const { text, filename } = await lapharDitbinmas();
+      const buffer = Buffer.from(text, "utf-8");
+      await writeFile(filename, buffer);
+      await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+      msg = "✅ Laphar Ditbinmas dikirim.";
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -408,6 +424,7 @@ export const dirRequestHandlers = {
       "6️⃣ Fetch Likes Insta\n" +
       "7️⃣ Fetch TikTok\n" +
       "8️⃣ Fetch Komentar TikTok\n" +
+      "9️⃣ Laphar Ditbinmas\n" +
       "┗━━━━━━━━━━━━━━━━━┛\n" +
       "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -432,7 +449,7 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (!["1", "2", "3", "4", "5", "6", "7", "8"].includes(choice)) {
+    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
