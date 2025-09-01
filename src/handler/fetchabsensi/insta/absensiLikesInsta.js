@@ -151,7 +151,7 @@ export async function absensiLikes(client_id, opts = {}) {
       `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
       `Jumlah Total Personil : ${totals.total} pers\n` +
       `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
-      `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+      `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
       `❌ Belum melaksanakan : ${totals.belum} pers\n` +
       `Belum Update Username Instagram : ${totals.noUsername} pers\n\n` +
       reports.join("\n\n");
