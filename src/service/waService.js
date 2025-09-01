@@ -326,12 +326,12 @@ waClient.on("message", async (msg) => {
       const salam = getGreeting();
       if (userByWA) {
         userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-        setMenuTimeout(chatId);
+        setMenuTimeout(chatId, waClient);
         const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
         await waClient.sendMessage(chatId, msg.trim());
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
-        setMenuTimeout(chatId);
+        setMenuTimeout(chatId, waClient);
         const msg =
           `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
           "\n\nBalas pesan ini dengan memasukan NRP Anda," +
@@ -388,12 +388,12 @@ waClient.on("message", async (msg) => {
       const salam = getGreeting();
       if (userByWA) {
         userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-        setMenuTimeout(chatId);
+        setMenuTimeout(chatId, waClient);
         const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
         await waClient.sendMessage(chatId, msg.trim());
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
-        setMenuTimeout(chatId);
+        setMenuTimeout(chatId, waClient);
         const msg =
           `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
           "\n\nBalas pesan ini dengan memasukan NRP Anda," +
@@ -628,7 +628,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 
   // ===== Handler Menu User Interaktif Step Lanjut =====
   if (userMenuContext[chatId]) {
-    setMenuTimeout(chatId);
+    setMenuTimeout(chatId, waClient);
     const session = userMenuContext[chatId];
     const handler = userMenuHandlers[session.step];
     if (handler) {
@@ -649,7 +649,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // ========== Mulai Menu Interaktif User ==========
   if (text.toLowerCase() === "userrequest") {
     userMenuContext[chatId] = {};
-    setMenuTimeout(chatId);
+    setMenuTimeout(chatId, waClient);
     await userMenuHandlers.main(
       userMenuContext[chatId],
       chatId,
@@ -2048,12 +2048,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     const salam = getGreeting();
     if (userByWA) {
       userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-      setMenuTimeout(chatId);
+      setMenuTimeout(chatId, waClient);
       const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
         await safeSendMessage(waClient, chatId, msg.trim());
       } else {
         userMenuContext[chatId] = { step: "inputUserId" };
-        setMenuTimeout(chatId);
+        setMenuTimeout(chatId, waClient);
         const msg =
           `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
           clientInfoText +
