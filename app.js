@@ -25,6 +25,7 @@ const cronModules = [
   './src/cron/cronPremiumRequest.js',
   './src/cron/cronAbsensiUserData.js',
   './src/cron/cronAbsensiOprDitbinmas.js',
+  './src/cron/cronRekapUserDataDitbinmas.js',
   './src/cron/cronDirRequest.js',
   './src/cron/cronDirRequestFetchInsta.js',
   './src/cron/cronDbBackup.js',
