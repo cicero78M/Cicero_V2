@@ -6,7 +6,7 @@ export async function getEvents(userId) {
     `SELECT e.*, u.username AS updated_by_username
      FROM editorial_event e
      LEFT JOIN penmas_user u ON u.user_id = e.updated_by
-     WHERE e.created_by = $1
+     WHERE e.created_by = $1 OR e.assignee = $1
      ORDER BY e.event_date ASC`,
     [userId]
   );

@@ -25,3 +25,12 @@ test('getEvents joins with penmas_user for username', async () => {
     ['u1']
   );
 });
+
+test('getEvents filters by creator or assignee', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getEvents('u2');
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('WHERE e.created_by = $1 OR e.assignee = $1'),
+    ['u2']
+  );
+});
