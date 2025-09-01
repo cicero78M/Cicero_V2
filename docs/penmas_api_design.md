@@ -88,7 +88,7 @@ CREATE TABLE change_log (
 - `POST /api/auth/penmas-register` – body: `{ username, password, role }` → returns `{ success, user_id }`.
 
 ### Editorial Calendar
-- `GET /api/events` – list all events for the authenticated user.
+- `GET /api/events` – list events created by or assigned to the authenticated user.
 - `POST /api/events` – create a new event.
 - `PUT /api/events/:id` – update an event.
 - `DELETE /api/events/:id` – remove an event.
