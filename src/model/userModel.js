@@ -394,7 +394,8 @@ export async function getUsersByDirektorat(flag, clientId = null) {
       JOIN roles r1 ON r1.role_id = ur1.role_id
       WHERE ur1.user_id = u.user_id
         AND r1.role_name = $1
-    )`;
+    )
+    AND u.status = true`;
 
   const hasClientId =
     Array.isArray(clientId) ? clientId.length > 0 : typeof clientId === 'string' && clientId.trim() !== '';
