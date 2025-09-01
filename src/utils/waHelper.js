@@ -223,3 +223,15 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     console.error(`[WA] Failed to send message to ${chatId}:`, err.message);
   }
 }
+
+export function isUnsupportedVersionError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  if (!msg) return false;
+  return (
+    msg.includes('update whatsapp') ||
+    msg.includes('upgrade whatsapp') ||
+    (msg.includes('update') && msg.includes('whatsapp')) ||
+    msg.includes('unsupported version') ||
+    msg.includes('versi whatsapp anda terlalu lama')
+  );
+}

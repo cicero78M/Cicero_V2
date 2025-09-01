@@ -4,9 +4,10 @@ import { EventEmitter } from 'events';
 let safeSendMessage;
 let isAdminWhatsApp;
 let sendWAFile;
+let isUnsupportedVersionError;
 
 beforeAll(async () => {
-  ({ safeSendMessage, isAdminWhatsApp, sendWAFile } = await import('../src/utils/waHelper.js'));
+  ({ safeSendMessage, isAdminWhatsApp, sendWAFile, isUnsupportedVersionError } = await import('../src/utils/waHelper.js'));
 });
 
 test('safeSendMessage waits for client ready', async () => {
@@ -74,4 +75,13 @@ test('sendWAFile accepts s.whatsapp.net wid', async () => {
     mimetype: 'text/plain',
     fileName: 'file.txt',
   });
+});
+
+test('isUnsupportedVersionError detects update prompts', () => {
+  expect(
+    isUnsupportedVersionError(
+      new Error('please update whatsapp to continue')
+    )
+  ).toBe(true);
+  expect(isUnsupportedVersionError(new Error('random error'))).toBe(false);
 });

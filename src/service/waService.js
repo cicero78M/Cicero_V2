@@ -87,6 +87,7 @@ import {
   formatClientData,
   safeSendMessage,
   getAdminWAIds,
+  isUnsupportedVersionError,
 } from "../utils/waHelper.js";
 import {
   IG_PROFILE_REGEX,
@@ -654,14 +655,26 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   if (text.toLowerCase() === "userrequest") {
     userMenuContext[chatId] = {};
     setMenuTimeout(chatId, waClient);
-    await userMenuHandlers.main(
-      userMenuContext[chatId],
-      chatId,
-      "",
-      waClient,
-      pool,
-      userModel
-    );
+    try {
+      await userMenuHandlers.main(
+        userMenuContext[chatId],
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    } catch (err) {
+      if (isUnsupportedVersionError(err)) {
+        await safeSendMessage(
+          waClient,
+          chatId,
+          "Versi WhatsApp Anda tidak mendukung menu ini. Silakan update aplikasi melalui Play Store:\nhttps://play.google.com/store/apps/details?id=com.whatsapp"
+        );
+      } else {
+        console.error(`[WA] userrequest menu error: ${err.message}`);
+      }
+    }
     return;
   }
 
