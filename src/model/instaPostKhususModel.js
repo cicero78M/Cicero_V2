@@ -90,3 +90,31 @@ export async function getPostsByClientId(client_id) {
 export async function findByClientId(client_id) {
   return getPostsByClientId(client_id);
 }
+
+export async function getPostsByClientAndDateRange(
+  client_id,
+  { days, startDate, endDate } = {}
+) {
+  let text =
+    'SELECT * FROM insta_post_khusus WHERE client_id = $1';
+  const values = [client_id];
+
+  if (days) {
+    const safeDays = parseInt(days);
+    text += ` AND created_at >= NOW() - INTERVAL '${safeDays} days'`;
+  } else {
+    if (startDate) {
+      values.push(startDate);
+      text += ` AND created_at::date >= $${values.length}`;
+    }
+    if (endDate) {
+      values.push(endDate);
+      text += ` AND created_at::date <= $${values.length}`;
+    }
+  }
+
+  text += ' ORDER BY created_at DESC';
+
+  const res = await query(text, values);
+  return res.rows;
+}
