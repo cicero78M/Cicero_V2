@@ -5,6 +5,8 @@
 // =======================
 
 const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit
+const USER_MENU_TIMEOUT = 5 * 60 * 1000; // 5 menit
+const MENU_WARNING = 1 * 60 * 1000;    // 1 menit sebelum berakhir
 const MENU_TIMEOUT = 2 * 60 * 1000;    // 2 menit
 const BIND_TIMEOUT = 2 * 60 * 1000;    // 2 menit
 
@@ -22,15 +24,33 @@ const clientRequestSessions = {};          // { chatId: {step, data, ...} }
 
 /**
  * Set timeout auto-expire pada userMenuContext (menu interaktif user).
- * @param {string} chatId 
+ * @param {string} chatId
+ * @param {object} waClient - client untuk mengirim pesan WA
  */
-export function setMenuTimeout(chatId) {
-  if (userMenuContext[chatId]?.timeout) {
-    clearTimeout(userMenuContext[chatId].timeout);
+export function setMenuTimeout(chatId, waClient) {
+  if (!userMenuContext[chatId]) {
+    userMenuContext[chatId] = {};
   }
-  userMenuContext[chatId].timeout = setTimeout(() => {
+  const ctx = userMenuContext[chatId];
+  if (ctx.timeout) {
+    clearTimeout(ctx.timeout);
+  }
+  if (ctx.warningTimeout) {
+    clearTimeout(ctx.warningTimeout);
+  }
+  ctx.timeout = setTimeout(() => {
     delete userMenuContext[chatId];
-  }, MENU_TIMEOUT);
+  }, USER_MENU_TIMEOUT);
+  ctx.warningTimeout = setTimeout(() => {
+    if (waClient) {
+      waClient
+        .sendMessage(
+          chatId,
+          "⏰ Sesi akan berakhir dalam 1 menit. Balas sesuai pilihan Anda untuk melanjutkan."
+        )
+        .catch((e) => console.error(e));
+    }
+  }, USER_MENU_TIMEOUT - MENU_WARNING);
 }
 
 // Timeout untuk proses binding WhatsApp
