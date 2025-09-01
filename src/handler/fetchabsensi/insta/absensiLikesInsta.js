@@ -561,11 +561,22 @@ export async function lapharDitbinmas() {
       );
     }
 
+    const igPercent = users.length
+      ? ((users.length - noUname.length) / users.length) * 100
+      : 0;
+    const tiktokPercent = users.length
+      ? ((users.length - noTiktok) / users.length) * 100
+      : 0;
+
     perClientStats.push({
       cid,
       name: clientName.toUpperCase(),
       likes: likeSum,
       block: blockLines.join("\n"),
+      igPercent,
+      tiktokPercent,
+      noUsername: noUname.length,
+      totalUsers: users.length,
     });
   }
   perClientStats.sort((a, b) => {
@@ -584,11 +595,70 @@ export async function lapharDitbinmas() {
   const targetLikes = Math.ceil(totalPossibleLikes * 0.95);
   const deficit = targetLikes - totalLikes;
 
-  const topContrib = [...perClientStats]
+  const topContribArr = [...perClientStats]
     .sort((a, b) => b.likes - a.likes)
-    .slice(0, 4)
+    .slice(0, 4);
+  const topContrib = topContribArr
     .map((p) => `${p.name} ${p.likes}`)
     .join(", ");
+  const topContribPercent = totalLikes
+    ? (
+        (topContribArr.reduce((acc, p) => acc + p.likes, 0) / totalLikes) *
+        100
+      ).toFixed(1)
+    : "0";
+
+  const topIg = [...perClientStats]
+    .sort((a, b) => b.igPercent - a.igPercent)
+    .slice(0, 5)
+    .map((p) => `${p.name} ${p.igPercent.toFixed(1)}%`)
+    .join(", ");
+  const topTiktok = [...perClientStats]
+    .sort((a, b) => b.tiktokPercent - a.tiktokPercent)
+    .slice(0, 5)
+    .map((p) => `${p.name} ${p.tiktokPercent.toFixed(1)}%`)
+    .join(", ");
+
+  const zeroIg = perClientStats
+    .filter((p) => p.igPercent === 0)
+    .map((p) => p.name);
+  const zeroTiktok = perClientStats
+    .filter((p) => p.tiktokPercent === 0)
+    .map((p) => p.name);
+
+  const seg70 = perClientStats.filter((p) => p.igPercent >= 70).length;
+  const seg50 = perClientStats.filter(
+    (p) => p.igPercent >= 50 && p.igPercent < 70
+  ).length;
+  const seg10 = perClientStats.filter(
+    (p) => p.igPercent >= 10 && p.igPercent < 50
+  ).length;
+  const seg0 = perClientStats.filter((p) => p.igPercent < 10).length;
+
+  const topNoUsername = [...perClientStats]
+    .filter((p) => p.noUsername > 0)
+    .sort((a, b) => b.noUsername - a.noUsername)
+    .slice(0, 6)
+    .map((p) => `${p.name} ${p.noUsername}`)
+    .join(", ");
+
+  const anomalies = perClientStats
+    .filter((p) => {
+      const updated = p.totalUsers - p.noUsername;
+      const possible = updated * shortcodes.length;
+      const likePct = possible ? (p.likes / possible) * 100 : 0;
+      return p.igPercent >= 80 && likePct < 10;
+    })
+    .map((p) => {
+      const updated = p.totalUsers - p.noUsername;
+      return `${p.name}: IG ${updated}/${p.totalUsers} (${p.igPercent.toFixed(
+        1
+      )}%) namun likes konten hanya ${p.likes}${
+        p.noUsername
+          ? ` dan "Belum Update Data" tercatat ${p.noUsername}`
+          : ""
+      }`;
+    });
 
   const igUpdatePercent = (
     ((totals.total - totals.noUsername) / totals.total) * 100 || 0
@@ -621,14 +691,38 @@ export async function lapharDitbinmas() {
     `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
     `DIREKTORAT BINMAS\n\n` +
     `Konten hari ini: ${shortcodes.length} link: ${kontenLinks[0] || "-"}\n\n` +
-    `*Kinerja Likes konten:* ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(2)}%)\n` +
-    `Target harian ≥95% = ${targetLikes} likes${deficit > 0 ? ` → kekurangan ${deficit}` : ""}.\n\n` +
-    `*Absensi Update Data*\n\n` +
+    `Kinerja Likes konten: ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(
+      2
+    )}%)\n` +
+    `Target harian ≥95% = ${targetLikes} likes${
+      deficit > 0 ? ` → kekurangan ${deficit}` : ""
+    }\n\n` +
+    `Kontributor likes terbesar (konten hari ini):\n${
+      topContrib
+        ? `${topContrib} → menyumbang ${topContribPercent}% dari total likes saat ini.`
+        : "-"
+    }\n\n` +
+    `Absensi Update Data\n\n` +
     `· IG: ${totals.total - totals.noUsername}/${totals.total} (${igUpdatePercent}%)\n` +
     `· TikTok: ${totals.total - totals.noTiktok}/${totals.total} (${tiktokUpdatePercent}%)\n` +
     `· Belum update data: ${totals.noUsername} (${noUsernamePercent}%)\n\n` +
-    `Analisa update data: IG ${igUpdatePercent}%, TikTok ${tiktokUpdatePercent}%.\n\n` +
-    `*Pendorong Likes*\n${topContrib || "-"}\n\n` +
+    `Pendorong & Tertinggal\n\n` +
+    `IG (persentase update username tertinggi):\n${topIg || "-"}.\n\n` +
+    `TikTok (persentase update tertinggi):\n${topTiktok || "-"}.\n\n` +
+    `Satuan 0% (belum ada update):\nIG (${zeroIg.length}): ${
+      zeroIg.length ? zeroIg.join(", ") : "-"
+    }.\nTikTok (${zeroTiktok.length}): ${
+      zeroTiktok.length ? zeroTiktok.join(", ") : "-"
+    }.\n\n` +
+    `Segmentasi Capaian (IG)\n\n` +
+    `≥70%: ${seg70} satker\n\n` +
+    `50–69%: ${seg50} satker\n\n` +
+    `10–49%: ${seg10} satker\n\n` +
+    `<10%: ${seg0} satker${
+      zeroIg.length ? ` (termasuk ${zeroIg.length} yang 0%)` : ""
+    }\n\n` +
+    `Belum Update Data: ${topNoUsername || "-"}.\n\n` +
+    `Anomali :\n${anomalies.length ? anomalies.join("\n") : "nihil"}\n\n` +
     `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
 
   return { filename, text: text.trim(), narrative };

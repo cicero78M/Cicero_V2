@@ -59,4 +59,7 @@ test('orders clients by likes with ditbinmas first and returns narrative', async
   expect(idxDit).toBeLessThan(idxA);
   expect(idxA).toBeLessThan(idxB);
   expect(result.narrative).toMatch(/POLRES A 1/);
+  expect(result.narrative).toMatch(/Kontributor likes terbesar/);
+  expect(result.narrative).toMatch(/Anomali/);
+  expect(result.narrative).toMatch(/nihil/);
 });
