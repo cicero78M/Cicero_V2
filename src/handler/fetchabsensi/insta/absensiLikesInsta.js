@@ -471,11 +471,7 @@ export async function lapharDitbinmas() {
     noUsername: 0,
     noTiktok: 0,
   };
-  const perClientLines = [];
-  const sudahUsers = [];
-  const kurangUsers = [];
-  const belumUsers = [];
-  const noUsernameUsers = [];
+  const perClientBlocks = [];
 
   for (const cid of clientIds) {
     const users = usersByClient[cid] || [];
@@ -508,27 +504,57 @@ export async function lapharDitbinmas() {
     totals.noUsername += noUname.length;
     totals.noTiktok += noTiktok;
 
-    sudahUsers.push(...already);
-    kurangUsers.push(...partial);
-    belumUsers.push(...none);
-    noUsernameUsers.push(...noUname);
-
     const { nama: clientName } = await getClientInfo(cid);
-    perClientLines.push(
+
+    const sortUsers = (arr) =>
+      arr.sort(
+        (a, b) =>
+          rankIdx(a.title) - rankIdx(b.title) ||
+          String(a.user_id).localeCompare(String(b.user_id))
+      );
+
+    sortUsers(already);
+    sortUsers(partial);
+    sortUsers(none);
+    sortUsers(noUname);
+
+    const blockLines = [
       `*${clientName.toUpperCase()}* : ${users.length} / ${already.length} / ${partial.length} / ${
         none.length + noUname.length
-      } / ${noUname.length} / ${noTiktok}`
-    );
-  }
+      } / ${noUname.length} / ${noTiktok}`,
+      `Sudah Likes : ${already.length}`,
+      ...already.map((u) => `- ${formatNama(u)}, ${u.count}`),
+    ];
 
-  const sortUsers = (arr) =>
-    arr.sort(
-      (a, b) =>
-        rankIdx(a.title) - rankIdx(b.title) ||
-        String(a.user_id).localeCompare(String(b.user_id))
-    );
-  const formatUser = (u) =>
-    `- ${formatNama(u)}${u.count !== undefined ? ", " + u.count : ""}`;
+    blockLines.push("");
+    blockLines.push(`Kurang likes : ${partial.length}`);
+    if (partial.length) {
+      blockLines.push(...partial.map((u) => `- ${formatNama(u)}, ${u.count}`));
+    }
+
+    blockLines.push("");
+    blockLines.push(`Belum Likes : ${none.length}`);
+    if (none.length) {
+      blockLines.push("");
+      blockLines.push(...none.map((u) => `- ${formatNama(u)}, ${u.insta}`));
+    }
+
+    blockLines.push("");
+    blockLines.push(`Belum Input Sosial media : ${noUname.length}`);
+    if (noUname.length) {
+      blockLines.push("");
+      blockLines.push(
+        ...noUname.map(
+          (u) =>
+            `- ${formatNama(u)}, IG ${u.insta ? u.insta : "Kosong"}, Tiktok ${
+              u.tiktok ? u.tiktok : "Kosong"
+            }`
+        )
+      );
+    }
+
+    perClientBlocks.push(blockLines.join("\n"));
+  }
 
   const text =
     `Mohon ijin Komandan,\n\n` +
@@ -544,16 +570,8 @@ export async function lapharDitbinmas() {
     `Belum melaksanakan : ${totals.belum} pers\n` +
     `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
     `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
-    `_Kesatuan  :  Jumlah user / sudah likes / likes kurang/ belum likes/ belum input instagram  / belum input tiktok_\n` +
-    `${perClientLines.join("\n")}\n\n` +
-    `*Sudah Melaksanakan Likes :* ${sudahUsers.length}\n` +
-    `${sortUsers(sudahUsers).map(formatUser).join("\n")}\n` +
-    `*Likes Kurang :* ${kurangUsers.length}\n` +
-    `${sortUsers(kurangUsers).map(formatUser).join("\n")}\n` +
-    `*Belum Melaksanakan Likes :* ${belumUsers.length}\n` +
-    `${sortUsers(belumUsers).map(formatUser).join("\n")}\n` +
-    `*Belum Input Instagram :* ${noUsernameUsers.length}\n` +
-    `${sortUsers(noUsernameUsers).map(formatUser).join("\n")}`;
+    `_Kesatuan  :  Jumlah user / Sudah likes / Likes kurang/ Belum likes/ Belum input IG / Belum input TikTok_\n` +
+    `${perClientBlocks.join("\n\n")}`;
 
   return { filename, text: text.trim() };
 }
