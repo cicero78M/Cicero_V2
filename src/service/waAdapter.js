@@ -9,8 +9,15 @@ function ensureDir(dir) {
   }
 }
 
-export async function createBaileysClient() {
+function clearDir(dir) {
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+export async function createBaileysClient({ refreshAuth = false } = {}) {
   const sessionsDir = path.join('sessions', 'baileys');
+  if (refreshAuth) clearDir(sessionsDir);
   ensureDir(sessionsDir);
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
 
@@ -90,8 +97,14 @@ export async function createBaileysClient() {
   return emitter;
 }
 
-export async function requestPairingCode(phoneNumber) {
+export function refreshAuthState() {
   const sessionsDir = path.join('sessions', 'baileys');
+  clearDir(sessionsDir);
+}
+
+export async function requestPairingCode(phoneNumber, { refreshAuth = false } = {}) {
+  const sessionsDir = path.join('sessions', 'baileys');
+  if (refreshAuth) clearDir(sessionsDir);
   ensureDir(sessionsDir);
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
 
