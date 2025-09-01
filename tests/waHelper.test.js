@@ -60,3 +60,18 @@ test('sendWAFile uses Excel mime when sending .xls file', async () => {
     fileName: 'report.xls',
   });
 });
+
+test('sendWAFile accepts s.whatsapp.net wid', async () => {
+  const waClient = {
+    onWhatsApp: jest.fn().mockResolvedValue([{ jid: '123@s.whatsapp.net', exists: true }]),
+    sendMessage: jest.fn().mockResolvedValue(),
+  };
+  const buffer = Buffer.from('hello');
+  await sendWAFile(waClient, buffer, 'file.txt', '123@s.whatsapp.net', 'text/plain');
+  expect(waClient.onWhatsApp).toHaveBeenCalledWith('123@s.whatsapp.net');
+  expect(waClient.sendMessage).toHaveBeenCalledWith('123@s.whatsapp.net', {
+    document: buffer,
+    mimetype: 'text/plain',
+    fileName: 'file.txt',
+  });
+});
