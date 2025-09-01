@@ -37,7 +37,7 @@ function getAdminWAIds() {
 const cronTag = "CRON DIRREQUEST";
 
 cron.schedule(
-  "0 7-20 * * *",
+  "3 7-20 * * *",
   async () => {
     sendDebug({ tag: cronTag, msg: "Mulai rekap dirrequest" });
     try {
