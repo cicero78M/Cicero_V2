@@ -279,13 +279,23 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       const { fetchAndStoreInstaContent } = await import(
         "../fetchpost/instaFetchPost.js"
       );
+      const { handleFetchLikesInstagram } = await import(
+        "../fetchengagement/fetchLikesInstagram.js"
+      );
+      const { rekapLikesIG } = await import(
+        "../fetchabsensi/insta/absensiLikesInsta.js"
+      );
       await fetchAndStoreInstaContent(
         ["shortcode", "caption", "like_count", "timestamp"],
         waClient,
         chatId,
         "DITBINMAS"
       );
-      msg = "✅ Selesai fetch Instagram DITBINMAS.";
+      await handleFetchLikesInstagram(null, null, "DITBINMAS");
+      const rekapMsg = await rekapLikesIG("DITBINMAS");
+      msg =
+        rekapMsg ||
+        "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
     case "6": {

@@ -7,6 +7,9 @@ const mockGetClientsByRole = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiKomentar = jest.fn();
 const mockFindClientById = jest.fn();
+const mockFetchAndStoreInstaContent = jest.fn();
+const mockHandleFetchLikesInstagram = jest.fn();
+const mockRekapLikesIG = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
@@ -14,12 +17,19 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
   absensiLikes: mockAbsensiLikes,
+  rekapLikesIG: mockRekapLikesIG,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
+}));
+jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
+  fetchAndStoreInstaContent: mockFetchAndStoreInstaContent,
+}));
+jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
+  handleFetchLikesInstagram: mockHandleFetchLikesInstagram,
 }));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
@@ -208,4 +218,31 @@ test('choose_menu option 3 skips when client is not ditbinmas', async () => {
     chatId,
     expect.stringContaining('DITBINMAS')
   );
+});
+
+test('choose_menu option 5 fetch insta returns rekap likes report', async () => {
+  mockFetchAndStoreInstaContent.mockResolvedValue();
+  mockHandleFetchLikesInstagram.mockResolvedValue();
+  mockRekapLikesIG.mockResolvedValue('laporan likes');
+
+  const session = {
+    role: 'ditbinmas',
+    selectedClientId: 'ditbinmas',
+    clientName: 'DITBINMAS',
+    dir_client_id: 'ditbinmas',
+  };
+  const chatId = '777';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
+
+  expect(mockFetchAndStoreInstaContent).toHaveBeenCalledWith(
+    ['shortcode', 'caption', 'like_count', 'timestamp'],
+    waClient,
+    chatId,
+    'DITBINMAS'
+  );
+  expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+  expect(mockRekapLikesIG).toHaveBeenCalledWith('DITBINMAS');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan likes');
 });
