@@ -11,6 +11,15 @@ const spreadsheetMimeTypes = {
 
 const defaultMimeType = spreadsheetMimeTypes['.xlsx'];
 
+const validWaSuffixes = ['@c.us', '@s.whatsapp.net', '@g.us'];
+
+export function isValidWid(wid) {
+  return (
+    typeof wid === 'string' &&
+    validWaSuffixes.some(suffix => wid.endsWith(suffix))
+  );
+}
+
 export function getAdminWhatsAppList() {
   return (process.env.ADMIN_WHATSAPP || '')
     .split(',')
@@ -25,7 +34,7 @@ export async function sendWAReport(waClient, message, chatIds = null) {
     ? (Array.isArray(chatIds) ? chatIds : [chatIds])
     : getAdminWhatsAppList();
   for (const target of targets) {
-    if (!target || !target.endsWith('@c.us')) {
+    if (!isValidWid(target)) {
       console.warn(`[SKIP WA] Invalid wid: ${target}`);
       continue;
     }
@@ -56,7 +65,7 @@ export async function sendWAFile(
   const resolvedMimeType =
     mimeType || spreadsheetMimeTypes[ext] || mime.lookup(filename) || defaultMimeType;
   for (const target of targets) {
-    if (!target || !target.endsWith('@c.us')) {
+    if (!isValidWid(target)) {
       console.warn(`[SKIP WA] Invalid wid: ${target}`);
       continue;
     }
