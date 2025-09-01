@@ -7,7 +7,7 @@ import { query } from "../db/index.js";
 const pool = { query };
 
 // Adapter creators for WhatsApp clients
-import { createBaileysClient } from "./waAdapter.js";
+import { createBaileysClient, refreshAuthState } from "./waAdapter.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -119,7 +119,11 @@ function formatUserSummary(user) {
 // =======================
 
 // Inisialisasi WhatsApp client melalui Baileys
-export let waClient = await createBaileysClient();
+const refreshAuth = process.env.WA_REFRESH_AUTH === "true";
+if (refreshAuth) {
+  refreshAuthState();
+}
+export let waClient = await createBaileysClient({ refreshAuth });
 
 async function reconnectBaileys() {
   console.log("[WA] Reconnecting to Baileys client");
