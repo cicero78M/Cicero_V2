@@ -437,8 +437,23 @@ export async function getInstagramUser(req, res) {
           .status(403)
           .json({ success: false, message: "client_id tidak diizinkan" });
       }
-      sendConsoleDebug({ tag: "INSTA", msg: `getInstaPostsKhusus ${client_id}` });
-      const posts = await instaPostKhususService.findTodayByClientId(client_id);
+      const days = req.query.days ? parseInt(req.query.days) : undefined;
+      const startDate = req.query.start_date;
+      const endDate = req.query.end_date;
+
+      sendConsoleDebug({
+        tag: "INSTA",
+        msg: `getInstaPostsKhusus ${client_id} ${days || ''} ${startDate || ''} ${endDate || ''}`,
+      });
+
+      let posts = await instaPostKhususService.findTodayByClientId(client_id);
+      if (posts.length === 0 && (days || startDate || endDate)) {
+        posts = await instaPostKhususService.findByClientIdRange(client_id, {
+          days,
+          startDate,
+          endDate,
+        });
+      }
       sendSuccess(res, posts);
     } catch (err) {
     sendConsoleDebug({
