@@ -380,8 +380,9 @@ export async function rekapLikesIG(client_id) {
 
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length) return null;
+
   let totalLikes = 0;
-  let detailLikes = [];
+  const detailLikes = [];
   for (const sc of shortcodes) {
     const likes = await getLikesByShortcode(sc);
     const jumlahLikes = (likes || []).length;
@@ -392,13 +393,20 @@ export async function rekapLikesIG(client_id) {
       jumlahLikes,
     });
   }
+
   let msg =
-    `📊 Rekap Likes IG\n*Polres*: *${polresNama}*\n` +
-    `Jumlah konten hari ini: *${shortcodes.length}*\n` +
-    `Total likes semua konten: *${totalLikes}*\n\n` +
-    `Rincian:\n`;
+    "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media Ditbinmas.\n\n" +
+    "Tugas Likes dan Komentar Konten IG\n" +
+    `${polresNama.toUpperCase()}\n` +
+    `Jumlah konten hari ini: ${shortcodes.length}\n` +
+    `Total likes semua konten: ${totalLikes}\n\n` +
+    "Rincian:\n";
+
   detailLikes.forEach((d) => {
-    msg += `- ${d.link}: ${d.jumlahLikes} like\n`;
+    msg += `- ${d.link} : ${d.jumlahLikes} like\n`;
   });
+
+  msg += "\nSilahkan Melaksanakan Likes, Komentar dan Share.";
+
   return msg.trim();
 }
