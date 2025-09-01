@@ -471,7 +471,7 @@ export async function lapharDitbinmas() {
     noUsername: 0,
     noTiktok: 0,
   };
-  const perClientBlocks = [];
+  const perClientStats = [];
 
   for (const cid of clientIds) {
     const users = usersByClient[cid] || [];
@@ -518,6 +518,10 @@ export async function lapharDitbinmas() {
     sortUsers(none);
     sortUsers(noUname);
 
+    const likeSum =
+      already.reduce((acc, u) => acc + (u.count || 0), 0) +
+      partial.reduce((acc, u) => acc + (u.count || 0), 0);
+
     const blockLines = [
       `*${clientName.toUpperCase()}* : ${users.length} / ${already.length} / ${partial.length} / ${
         none.length + noUname.length
@@ -553,8 +557,34 @@ export async function lapharDitbinmas() {
       );
     }
 
-    perClientBlocks.push(blockLines.join("\n"));
+    perClientStats.push({
+      cid,
+      name: clientName.toUpperCase(),
+      likes: likeSum,
+      block: blockLines.join("\n"),
+    });
   }
+  perClientStats.sort((a, b) => {
+    if (a.cid === "DITBINMAS") return -1;
+    if (b.cid === "DITBINMAS") return 1;
+    if (a.likes !== b.likes) return b.likes - a.likes;
+    return a.name.localeCompare(b.name);
+  });
+
+  const perClientBlocks = perClientStats.map((p) => p.block);
+  const totalLikes = perClientStats.reduce((acc, p) => acc + p.likes, 0);
+  const totalPossibleLikes = totals.total * shortcodes.length;
+  const likePercent = totalPossibleLikes
+    ? (totalLikes / totalPossibleLikes) * 100
+    : 0;
+  const targetLikes = Math.ceil(totalPossibleLikes * 0.95);
+  const deficit = targetLikes - totalLikes;
+
+  const topContrib = [...perClientStats]
+    .sort((a, b) => b.likes - a.likes)
+    .slice(0, 4)
+    .map((p) => `${p.name} ${p.likes}`)
+    .join(", ");
 
   const text =
     `Mohon ijin Komandan,\n\n` +
@@ -573,5 +603,24 @@ export async function lapharDitbinmas() {
     `_Kesatuan  :  Jumlah user / Sudah likes / Likes kurang/ Belum likes/ Belum input IG / Belum input TikTok_\n` +
     `${perClientBlocks.join("\n\n")}`;
 
-  return { filename, text: text.trim() };
+  const narrative =
+    `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
+    `DIREKTORAT BINMAS\n\n` +
+    `Konten hari ini: ${shortcodes.length} link: ${kontenLinks[0] || "-"}\n\n` +
+    `*Kinerja Likes konten:* ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(2)}%)\n` +
+    `Target harian ≥95% = ${targetLikes} likes${deficit > 0 ? ` → kekurangan ${deficit}` : ""}.\n\n` +
+    `*Absensi Update Data*\n\n` +
+    `· IG: ${totals.total - totals.noUsername}/${totals.total} (${(
+      ((totals.total - totals.noUsername) / totals.total) * 100 || 0
+    ).toFixed(2)}%)\n` +
+    `· TikTok: ${totals.total - totals.noTiktok}/${totals.total} (${(
+      ((totals.total - totals.noTiktok) / totals.total) * 100 || 0
+    ).toFixed(2)}%)\n` +
+    `· Belum update data: ${totals.noUsername} (${(
+      (totals.noUsername / totals.total) * 100 || 0
+    ).toFixed(2)}%)\n\n` +
+    `*Pendorong Likes*\n${topContrib || "-"}\n\n` +
+    `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
+
+  return { filename, text: text.trim(), narrative };
 }
