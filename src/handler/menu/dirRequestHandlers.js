@@ -331,11 +331,11 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "9": {
-      const { text, filename } = await lapharDitbinmas();
+      const { text, filename, narrative } = await lapharDitbinmas();
       const buffer = Buffer.from(text, "utf-8");
       await writeFile(filename, buffer);
       await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
-      msg = "✅ Laphar Ditbinmas dikirim.";
+      msg = narrative || "✅ Laphar Ditbinmas dikirim.";
       break;
     }
     default:
