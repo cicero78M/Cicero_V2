@@ -72,18 +72,15 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('ditbinmas', 'ditbinmas');
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).not.toMatch(/1\. DIT BINMAS/);
-  expect(msg).toContain('Jumlah Total User : 1');
-  expect(msg).toContain('Jumlah Total User Sudah Update Data : 1');
-  expect(msg).toContain('Jumlah Total User Belum Update Data : 0');
-  expect(msg).toContain('POLRES PASURUAN KOTA');
-  expect(msg.match(/POLRES PASURUAN KOTA/g).length).toBe(1);
-  expect(msg).toMatch(/Client Belum Input Data:\n1\. POLRES SIDOARJO/);
-  expect(msg).not.toMatch(/Client Belum Input Data.*PASURUAN/);
-  expect(msg).not.toMatch(/POLRES SIDOARJO\n\nJumlah User/);
+  expect(msg).toMatch(/1\. DIT BINMAS/);
+  expect(msg).toMatch(/Jumlah Total Personil : 2/);
+  expect(msg).toMatch(/Jumlah Total Personil Sudah Mengisi Instagram : 1/);
+  expect(msg).toMatch(/Jumlah Total Personil Sudah Mengisi Tiktok : 1/);
+  expect(msg).toMatch(/Jumlah Total User Belum Update Data : 1/);
+  const idxBinmas = msg.indexOf('DIT BINMAS');
   const idxPasuruan = msg.indexOf('POLRES PASURUAN KOTA');
-  const idxSidoarjo = msg.indexOf('POLRES SIDOARJO');
-  expect(idxPasuruan).toBeLessThan(idxSidoarjo);
+  expect(idxBinmas).toBeLessThan(idxPasuruan);
+  expect(msg).toMatch(/Client Belum Input Data:\n1\. POLRES SIDOARJO/);
   jest.useRealTimers();
 });
 
@@ -113,12 +110,29 @@ test('formatRekapUserData sorts by updated then total', async () => {
 
   const msg = await formatRekapUserData('ditbinmas', 'ditbinmas');
 
+  const idxBinmas = msg.indexOf('DIT BINMAS');
   const idxB = msg.indexOf('POLRES B');
   const idxA = msg.indexOf('POLRES A');
   const idxC = msg.indexOf('POLRES C');
+  expect(idxBinmas).toBeLessThan(idxB);
   expect(idxB).toBeLessThan(idxA);
   expect(idxA).toBeLessThan(idxC);
   jest.useRealTimers();
+});
+
+test('formatRekapUserData orders users by rank', async () => {
+  mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'POLRES_A', divisi: 'Sat A', title: 'AKP', nama: 'Budi', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_A', divisi: 'Sat A', title: 'KOMPOL', nama: 'Agus', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_A', divisi: 'Sat A', title: 'IPDA', nama: 'Charlie', insta: 'x', tiktok: null },
+  ]);
+  const msg = await formatRekapUserData('POLRES_A');
+  const idxKompol = msg.indexOf('KOMPOL Agus');
+  const idxAkp = msg.indexOf('AKP Budi');
+  const idxIpda = msg.indexOf('IPDA Charlie');
+  expect(idxKompol).toBeLessThan(idxAkp);
+  expect(idxAkp).toBeLessThan(idxIpda);
 });
 
 test('choose_menu option 2 rekap user data ditbinmas', async () => {
@@ -146,6 +160,9 @@ test('choose_menu option 2 rekap user data ditbinmas', async () => {
   expect(msg).toContain('SAT A (2)');
   expect(msg).toContain('AKP Budi');
   expect(msg).toContain('Bripka Agus');
+  const idxAkp = msg.indexOf('AKP Budi');
+  const idxBripka = msg.indexOf('Bripka Agus');
+  expect(idxAkp).toBeLessThan(idxBripka);
   expect(msg).toContain('SAT B (1)');
   expect(msg).toContain('Kompol Charlie');
   expect(msg).not.toMatch(/Aiptu Dodi/);

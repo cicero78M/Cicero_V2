@@ -4,6 +4,19 @@ import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 
+const pangkatOrder = [
+  "KOMISARIS BESAR POLISI",
+  "AKBP",
+  "KOMPOL",
+  "AKP",
+  "IPTU",
+  "IPDA",
+];
+const rankIdx = (t) => {
+  const i = pangkatOrder.indexOf((t || "").toUpperCase());
+  return i === -1 ? pangkatOrder.length : i;
+};
+
 async function formatRekapUserData(clientId, roleFlag = null) {
   const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   const filterRole = directorateRoles.includes(roleFlag?.toLowerCase())
@@ -33,9 +46,11 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     const groups = {};
     users.forEach((u) => {
       const cid = (u.client_id || "").toLowerCase();
-      if (!groups[cid]) groups[cid] = { total: 0, miss: 0 };
+      if (!groups[cid]) groups[cid] = { total: 0, insta: 0, tiktok: 0, complete: 0 };
       groups[cid].total++;
-      if (!u.insta || !u.tiktok) groups[cid].miss++;
+      if (u.insta) groups[cid].insta++;
+      if (u.tiktok) groups[cid].tiktok++;
+      if (u.insta && u.tiktok) groups[cid].complete++;
     });
 
     const roleName = (filterRole || clientId).toLowerCase();
@@ -47,88 +62,106 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
     const entries = await Promise.all(
       allIds.map(async (cid) => {
-        const stat = groups[cid] || { total: 0, miss: 0 };
+        const stat =
+          groups[cid] || { total: 0, insta: 0, tiktok: 0, complete: 0 };
         const c = await findClientById(cid);
         const name = (c?.nama || cid).toUpperCase();
-        const updated = stat.total - stat.miss;
-        return { cid, name, stat, updated };
+        return { cid, name, stat };
       })
     );
 
-    const filteredEntries = entries.filter((e) => e.cid !== clientIdLower);
-    const withData = filteredEntries.filter((e) => e.stat.total > 0);
-    const noData = filteredEntries.filter((e) => e.stat.total === 0);
+    const withData = entries.filter(
+      (e) => e.cid === "ditbinmas" || e.stat.total > 0
+    );
+    const noData = entries.filter(
+      (e) => e.stat.total === 0 && e.cid !== "ditbinmas"
+    );
 
     withData.sort((a, b) => {
-      if (a.updated !== b.updated) return b.updated - a.updated;
+      if (a.cid === "ditbinmas") return -1;
+      if (b.cid === "ditbinmas") return 1;
+      if (a.stat.complete !== b.stat.complete)
+        return b.stat.complete - a.stat.complete;
       if (a.stat.total !== b.stat.total) return b.stat.total - a.stat.total;
       return a.name.localeCompare(b.name);
     });
-    noData.sort((a, b) => a.name.localeCompare(b.name));
+    noData.sort((a, b) => {
+      if (a.cid === "ditbinmas") return -1;
+      if (b.cid === "ditbinmas") return 1;
+      return a.name.localeCompare(b.name);
+    });
 
-      const withDataLines = withData.map(
-        (e, idx) =>
-          `${idx + 1}. ${e.name}\n\n` +
-          `Jumlah User: ${e.stat.total}\n` +
-          `Jumlah User Sudah Update: ${e.updated}\n` +
-          `Jumlah User Belum Update: ${e.stat.miss}`
-      );
-      const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
+    const withDataLines = withData.map(
+      (e, idx) =>
+        `${idx + 1}. ${e.name}\n\n` +
+        `Jumlah Total Personil : ${e.stat.total}\n` +
+        `Jumlah Total Personil Sudah Mengisi Instagram : ${e.stat.insta}\n` +
+        `Jumlah Total Personil Sudah Mengisi Tiktok : ${e.stat.tiktok}\n` +
+        `Jumlah Total User Belum Update Data : ${e.stat.total - e.stat.complete}`
+    );
+    const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
 
-      const totals = filteredEntries.reduce(
-        (acc, e) => {
-          acc.total += e.stat.total;
-          acc.updated += e.updated;
-          acc.miss += e.stat.miss;
-          return acc;
-        },
-        { total: 0, updated: 0, miss: 0 }
-      );
+    const totals = entries.reduce(
+      (acc, e) => {
+        acc.total += e.stat.total;
+        acc.insta += e.stat.insta;
+        acc.tiktok += e.stat.tiktok;
+        acc.complete += e.stat.complete;
+        return acc;
+      },
+      { total: 0, insta: 0, tiktok: 0, complete: 0 }
+    );
 
-      const header =
-        `${salam},\n\n` +
-        `Mohon ijin Komandan, melaporkan absensi update data personil ${
-          (client?.nama || clientId).toUpperCase()
-        } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
+    const header =
+      `${salam},\n\n` +
+      `Mohon ijin Komandan, melaporkan absensi update data personil ${
+        (client?.nama || clientId).toUpperCase()
+      } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:`;
 
-      const sections = [
-        `Jumlah Total User : ${totals.total}\n` +
-          `Jumlah Total User Sudah Update Data : ${totals.updated}\n` +
-          `Jumlah Total User Belum Update Data : ${totals.miss}`,
-      ];
-      if (withDataLines.length)
-        sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
-      if (noDataLines.length)
-        sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
-      const body = `\n\n${sections.join("\n\n")}`;
+    const sections = [
+      `Jumlah Total Personil : ${totals.total}\n` +
+        `Jumlah Total Personil Sudah Mengisi Instagram : ${totals.insta}\n` +
+        `Jumlah Total Personil Sudah Mengisi Tiktok : ${totals.tiktok}\n` +
+        `Jumlah Total User Belum Update Data : ${totals.total - totals.complete}`,
+    ];
+    if (withDataLines.length)
+      sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
+    if (noDataLines.length)
+      sections.push(`Client Belum Input Data:\n${noDataLines.join("\n")}`);
+    const body = `\n\n${sections.join("\n\n")}`;
 
-      return `${header}${body}`.trim();
+    return `${header}${body}`.trim();
   }
 
   const complete = {};
   const incomplete = {};
   users.forEach((u) => {
     const div = u.divisi || "-";
-    const nama = formatNama(u);
     if (u.insta && u.tiktok) {
       if (!complete[div]) complete[div] = [];
-      complete[div].push(nama);
+      complete[div].push(u);
     } else {
       const missing = [];
       if (!u.insta) missing.push("Instagram kosong");
       if (!u.tiktok) missing.push("TikTok kosong");
       if (!incomplete[div]) incomplete[div] = [];
-      incomplete[div].push(`${nama}, ${missing.join(", ")}`);
+      incomplete[div].push({ ...u, missing: missing.join(", ") });
     }
   });
 
   if (clientType === "org") {
     const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
-      const list = complete[d].join("\n\n");
+      const list = complete[d]
+        .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
+        .map((u) => formatNama(u))
+        .join("\n\n");
       return `${d.toUpperCase()} (${complete[d].length})\n\n${list}`;
     });
     const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
-      const list = incomplete[d].join("\n\n");
+      const list = incomplete[d]
+        .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
+        .map((u) => `${formatNama(u)}, ${u.missing}`)
+        .join("\n\n");
       return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
     });
     const sections = [];
@@ -145,11 +178,17 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   }
 
   const completeLines = sortDivisionKeys(Object.keys(complete)).map((d) => {
-    const list = complete[d].join("\n\n");
+    const list = complete[d]
+      .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
+      .map((u) => formatNama(u))
+      .join("\n\n");
     return `${d}, Sudah lengkap: (${complete[d].length})\n\n${list}`;
   });
   const incompleteLines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
-    const list = incomplete[d].join("\n\n");
+    const list = incomplete[d]
+      .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
+      .map((u) => `${formatNama(u)}, ${u.missing}`)
+      .join("\n\n");
     return `${d}, Belum lengkap: (${incomplete[d].length})\n\n${list}`;
   });
 
@@ -190,7 +229,10 @@ async function rekapUserDataDitbinmas() {
   });
 
   const lines = sortDivisionKeys(Object.keys(groups)).map((div) => {
-    const list = groups[div].map((u) => formatNama(u)).join("\n");
+    const list = groups[div]
+      .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
+      .map((u) => formatNama(u))
+      .join("\n");
     return `${div.toUpperCase()} (${groups[div].length})\n${list}`;
   });
 
