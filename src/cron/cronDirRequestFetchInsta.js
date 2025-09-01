@@ -4,6 +4,7 @@ dotenv.config();
 
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
+import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
@@ -24,7 +25,7 @@ const groupId = "120363419830216549@g.us";
 const cronTag = "CRON DIRREQUEST FETCH INSTA";
 
 cron.schedule(
-  "50 6-21 * * *",
+  "0,30 6-21 * * *",
   async () => {
     sendDebug({ tag: cronTag, msg: "Mulai fetch Instagram DITBINMAS" });
     try {
@@ -47,18 +48,28 @@ cron.schedule(
           tag: cronTag,
           msg: `Kirim ${links.length} link ke group`,
         });
-        try {
-          sendDebug({ tag: cronTag, msg: "Mulai fetch likes IG" });
-          await handleFetchLikesInstagram(null, null, "DITBINMAS");
-          sendDebug({ tag: cronTag, msg: "Selesai fetch likes IG" });
-        } catch (err) {
-          sendDebug({
-            tag: cronTag,
-            msg: `[ERROR fetch likes] ${err.message || err}`,
-          });
-        }
       } else {
+        await waClient
+          .sendMessage(
+            groupId,
+            "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini."
+          )
+          .catch(() => {});
         sendDebug({ tag: cronTag, msg: "Tidak ada konten IG hari ini" });
+      }
+      try {
+        sendDebug({ tag: cronTag, msg: "Mulai fetch likes IG" });
+        await handleFetchLikesInstagram(null, null, "DITBINMAS");
+        sendDebug({ tag: cronTag, msg: "Selesai fetch likes IG" });
+      } catch (err) {
+        sendDebug({
+          tag: cronTag,
+          msg: `[ERROR fetch likes] ${err.message || err}`,
+        });
+      }
+      const rekapMsg = await rekapLikesIG("DITBINMAS");
+      if (rekapMsg) {
+        await waClient.sendMessage(groupId, rekapMsg).catch(() => {});
       }
     } catch (err) {
       sendDebug({ tag: cronTag, msg: `[ERROR] ${err.message || err}` });
