@@ -20,7 +20,7 @@ test('findByClientId uses DISTINCT ON to avoid duplicates', async () => {
   await findByClientId('c1');
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('DISTINCT ON (shortcode)'),
-    ['ditbinmas']
+    ['c1']
   );
 });
 
