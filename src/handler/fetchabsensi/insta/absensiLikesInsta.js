@@ -430,7 +430,11 @@ export async function lapharDitbinmas() {
     likesSets.push(new Set((likes || []).map(normalizeUsername)));
   }
 
-  const polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+  const polresIds = (
+    await getClientsByRole(roleName)
+  )
+    .map((c) => c.toUpperCase())
+    .filter((cid) => cid !== "DITBINMAS");
   const clientIds = ["DITBINMAS", ...polresIds];
   const allUsers = (
     await getUsersByDirektorat(roleName, clientIds)
@@ -586,6 +590,16 @@ export async function lapharDitbinmas() {
     .map((p) => `${p.name} ${p.likes}`)
     .join(", ");
 
+  const igUpdatePercent = (
+    ((totals.total - totals.noUsername) / totals.total) * 100 || 0
+  ).toFixed(2);
+  const tiktokUpdatePercent = (
+    ((totals.total - totals.noTiktok) / totals.total) * 100 || 0
+  ).toFixed(2);
+  const noUsernamePercent = (
+    (totals.noUsername / totals.total) * 100 || 0
+  ).toFixed(2);
+
   const text =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Likes Instagram\n` +
@@ -610,15 +624,10 @@ export async function lapharDitbinmas() {
     `*Kinerja Likes konten:* ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(2)}%)\n` +
     `Target harian ≥95% = ${targetLikes} likes${deficit > 0 ? ` → kekurangan ${deficit}` : ""}.\n\n` +
     `*Absensi Update Data*\n\n` +
-    `· IG: ${totals.total - totals.noUsername}/${totals.total} (${(
-      ((totals.total - totals.noUsername) / totals.total) * 100 || 0
-    ).toFixed(2)}%)\n` +
-    `· TikTok: ${totals.total - totals.noTiktok}/${totals.total} (${(
-      ((totals.total - totals.noTiktok) / totals.total) * 100 || 0
-    ).toFixed(2)}%)\n` +
-    `· Belum update data: ${totals.noUsername} (${(
-      (totals.noUsername / totals.total) * 100 || 0
-    ).toFixed(2)}%)\n\n` +
+    `· IG: ${totals.total - totals.noUsername}/${totals.total} (${igUpdatePercent}%)\n` +
+    `· TikTok: ${totals.total - totals.noTiktok}/${totals.total} (${tiktokUpdatePercent}%)\n` +
+    `· Belum update data: ${totals.noUsername} (${noUsernamePercent}%)\n\n` +
+    `Analisa update data: IG ${igUpdatePercent}%, TikTok ${tiktokUpdatePercent}%.\n\n` +
     `*Pendorong Likes*\n${topContrib || "-"}\n\n` +
     `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
 
