@@ -32,7 +32,7 @@ test('isAdminWhatsApp recognizes various input formats', () => {
   process.env.ADMIN_WHATSAPP = original;
 });
 
-test('sendWAFile falls back to onWhatsApp when getNumberId missing', async () => {
+test('sendWAFile uses onWhatsApp when available', async () => {
   const waClient = {
     onWhatsApp: jest.fn().mockResolvedValue([{ jid: '123@s.whatsapp.net', exists: true }]),
     sendMessage: jest.fn().mockResolvedValue(),
@@ -49,11 +49,14 @@ test('sendWAFile falls back to onWhatsApp when getNumberId missing', async () =>
 
 test('sendWAFile uses Excel mime when sending .xls file', async () => {
   const waClient = {
-    getNumberId: jest.fn().mockResolvedValue({ _serialized: '123@c.us' }),
+    onWhatsApp: jest.fn().mockResolvedValue([{ jid: '123@s.whatsapp.net', exists: true }]),
     sendMessage: jest.fn().mockResolvedValue(),
   };
   const buffer = Buffer.from('excel');
   await sendWAFile(waClient, buffer, 'report.xls', '123@c.us');
-  const [, media] = waClient.sendMessage.mock.calls[0];
-  expect(media.mimetype).toBe('application/vnd.ms-excel');
+  expect(waClient.sendMessage).toHaveBeenCalledWith('123@s.whatsapp.net', {
+    document: buffer,
+    mimetype: 'application/vnd.ms-excel',
+    fileName: 'report.xls',
+  });
 });

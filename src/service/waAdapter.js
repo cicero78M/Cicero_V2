@@ -1,7 +1,4 @@
 import { EventEmitter } from 'events';
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
-import qrcode from 'qrcode-terminal';
 import makeWASocket, { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import path from 'path';
@@ -10,36 +7,6 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-}
-
-export function createWWebClient() {
-  const client = new Client({
-    authStrategy: new LocalAuth({
-      clientId: process.env.APP_SESSION_NAME,
-    }),
-    puppeteer: {
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    },
-    takeoverOnConflict: true,
-    takeoverTimeoutMs: 10000,
-  });
-
-  client.connect = () => client.initialize();
-  client.disconnect = () => client.destroy();
-  client.onMessage = (handler) => client.on('message', handler);
-  client.onDisconnect = (handler) => client.on('disconnected', handler);
-  client.isReady = async () => {
-    try {
-      const state = await client.getState();
-      return state === 'CONNECTED';
-    } catch {
-      return false;
-    }
-  };
-  // Display QR via console
-  client.on('qr', (qr) => qrcode.generate(qr, { small: true }));
-  return client;
 }
 
 export async function createBaileysClient() {
@@ -62,7 +29,7 @@ export async function createBaileysClient() {
   };
 
   const onConnectionUpdate = (update) => {
-    if (update.qr) qrcode.generate(update.qr, { small: true });
+    if (update.qr) emitter.emit('qr', update.qr);
     if (update.connection === 'open') emitter.emit('ready');
     if (update.connection === 'close') {
       const status = update.lastDisconnect?.error?.output?.statusCode;

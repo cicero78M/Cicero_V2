@@ -10,7 +10,7 @@ This document provides a high level overview of the architecture behind Cicero W
 - **Database**: PostgreSQL (with optional support for MySQL or SQLite via the database adapter).
 - **Queue**: RabbitMQ for high‑volume asynchronous jobs.
 - **Cache/Session**: Redis for caching and session storage.
-- **Messaging**: WhatsApp integration via `whatsapp-web.js` library.
+- **Messaging**: WhatsApp integration via `@whiskeysockets/baileys` library.
 - **External APIs**: Instagram and TikTok data fetched through RapidAPI.
 
 ## Components
@@ -81,7 +81,7 @@ Below is a conceptual diagram of the main components and their interactions:
      |  ^            Redis & RabbitMQ            ^
      |  |--------------------------------------- |
      |        External Services (Instagram, TikTok, WhatsApp)
-     |             via RapidAPI & whatsapp-web.js
+     |             via RapidAPI & @whiskeysockets/baileys
 ```
 
 The frontend communicates only with the backend. The backend orchestrates data retrieval, persistence, caching, and messaging integrations.

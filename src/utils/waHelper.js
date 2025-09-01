@@ -1,9 +1,7 @@
 // src/utils/waHelper.js
 import dotenv from 'dotenv';
-import pkg from 'whatsapp-web.js';
 import mime from 'mime-types';
 import path from 'path';
-const { MessageMedia } = pkg;
 dotenv.config();
 
 const spreadsheetMimeTypes = {
@@ -57,8 +55,6 @@ export async function sendWAFile(
   const ext = path.extname(filename).toLowerCase();
   const resolvedMimeType =
     mimeType || spreadsheetMimeTypes[ext] || mime.lookup(filename) || defaultMimeType;
-  const base64 = buffer.toString('base64');
-  const media = new MessageMedia(resolvedMimeType, base64, filename);
   for (const target of targets) {
     if (!target || !target.endsWith('@c.us')) {
       console.warn(`[SKIP WA] Invalid wid: ${target}`);
@@ -66,29 +62,19 @@ export async function sendWAFile(
     }
     try {
       let chatId = target;
-      if (typeof waClient.getNumberId === 'function') {
-        const wid = await waClient.getNumberId(target);
-        if (!wid) {
-          console.warn(`[SKIP WA] Unregistered wid: ${target}`);
-          continue;
-        }
-        chatId = wid._serialized || wid;
-        await waClient.sendMessage(chatId, media, { sendMediaAsDocument: true });
-      } else if (typeof waClient.onWhatsApp === 'function') {
+      if (typeof waClient.onWhatsApp === 'function') {
         const [result] = await waClient.onWhatsApp(target);
         if (!result?.exists) {
           console.warn(`[SKIP WA] Unregistered wid: ${target}`);
           continue;
         }
         chatId = result.jid || chatId;
-        await waClient.sendMessage(chatId, {
-          document: buffer,
-          mimetype: resolvedMimeType,
-          fileName: filename,
-        });
-      } else {
-        await waClient.sendMessage(chatId, media, { sendMediaAsDocument: true });
       }
+      await waClient.sendMessage(chatId, {
+        document: buffer,
+        mimetype: resolvedMimeType,
+        fileName: filename,
+      });
       console.log(`[WA CRON] Sent file to ${target}: ${filename}`);
     } catch (err) {
       console.error(`[WA CRON] ERROR send file to ${target}:`, err.message);

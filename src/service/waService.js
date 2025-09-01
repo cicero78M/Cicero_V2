@@ -7,10 +7,7 @@ import { query } from "../db/index.js";
 const pool = { query };
 
 // Adapter creators for WhatsApp clients
-import {
-  createWWebClient,
-  createBaileysClient,
-} from "./waAdapter.js";
+import { createBaileysClient } from "./waAdapter.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -121,28 +118,11 @@ function formatUserSummary(user) {
 // INISIALISASI CLIENT WA
 // =======================
 
-// Inisialisasi WhatsApp client melalui adapter
-export let waClient;
-try {
-  waClient = await createBaileysClient();
-} catch (err) {
-  console.warn("[WA] createBaileysClient failed:", err.message);
-  waClient = createWWebClient();
-}
+// Inisialisasi WhatsApp client melalui Baileys
+export let waClient = await createBaileysClient();
 
-async function switchToWWeb() {
-  console.log("[WA] Switching to WWeb client");
-  try {
-    await waClient?.disconnect();
-  } catch {}
-  waClient = createWWebClient();
-  waClient.onDisconnect(() => switchToBaileys());
-  wrapSendMessage(waClient);
-  await waClient.connect();
-}
-
-async function switchToBaileys() {
-  console.log("[WA] Switching to Baileys client");
+async function reconnectBaileys() {
+  console.log("[WA] Reconnecting to Baileys client");
   try {
     await waClient?.disconnect();
   } catch {}
@@ -155,8 +135,7 @@ async function switchToBaileys() {
 function handleDisconnect(reason) {
   waReady = false;
   console.warn("[WA] Client disconnected:", reason);
-  const status = reason?.output?.statusCode;
-  if (status !== 515) switchToWWeb();
+  reconnectBaileys();
 }
 
 waClient.onDisconnect(handleDisconnect);
