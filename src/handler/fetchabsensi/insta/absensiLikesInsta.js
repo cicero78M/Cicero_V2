@@ -7,7 +7,7 @@ import {
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
 import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
-import { groupByDivision, sortDivisionKeys } from "../../../utils/utilsHelper.js";
+import { groupByDivision, sortDivisionKeys, formatNama } from "../../../utils/utilsHelper.js";
 import { findClientById } from "../../../service/clientService.js";
 
 function normalizeUsername(username) {
@@ -409,4 +409,151 @@ export async function rekapLikesIG(client_id) {
   msg += "\nSilahkan Melaksanakan Likes, Komentar dan Share.";
 
   return msg.trim();
+}
+
+export async function lapharDitbinmas() {
+  const roleName = "ditbinmas";
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+  const filename = `Absensi_Likes_IG_Ditbinmas_${hari}_${tanggal.replace(/\//g, "-")}.txt`;
+
+  const shortcodes = await getShortcodesTodayByClient(roleName);
+  if (!shortcodes.length)
+    return { filename, text: "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini." };
+
+  const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
+  const likesSets = [];
+  for (const sc of shortcodes) {
+    const likes = await getLikesByShortcode(sc);
+    likesSets.push(new Set((likes || []).map(normalizeUsername)));
+  }
+
+  const polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+  const clientIds = ["DITBINMAS", ...polresIds];
+  const allUsers = (
+    await getUsersByDirektorat(roleName, clientIds)
+  ).filter((u) => u.status === true);
+
+  const usersByClient = {};
+  clientIds.forEach((cid) => (usersByClient[cid] = []));
+  allUsers.forEach((u) => {
+    const cid = (u.client_id || "").toUpperCase();
+    if (!usersByClient[cid]) usersByClient[cid] = [];
+    usersByClient[cid].push(u);
+  });
+
+  const pangkatOrder = [
+    "KOMISARIS BESAR POLISI",
+    "AKBP",
+    "KOMPOL",
+    "AKP",
+    "IPTU",
+    "IPDA",
+    "AIPTU",
+    "AIPDA",
+    "BRIPKA",
+    "BRIGADIR",
+    "BRIPTU",
+    "BRIPDA",
+  ];
+  const rankIdx = (t) => {
+    const i = pangkatOrder.indexOf((t || "").toUpperCase());
+    return i === -1 ? pangkatOrder.length : i;
+  };
+
+  const totals = {
+    total: 0,
+    sudah: 0,
+    kurang: 0,
+    belum: 0,
+    noUsername: 0,
+    noTiktok: 0,
+  };
+  const perClientLines = [];
+  const sudahUsers = [];
+  const kurangUsers = [];
+  const belumUsers = [];
+  const noUsernameUsers = [];
+
+  for (const cid of clientIds) {
+    const users = usersByClient[cid] || [];
+    const already = [];
+    const partial = [];
+    const none = [];
+    const noUname = [];
+    let noTiktok = 0;
+
+    users.forEach((u) => {
+      if (!u.tiktok) noTiktok++;
+      if (!u.insta || u.insta.trim() === "") {
+        noUname.push(u);
+        return;
+      }
+      const uname = normalizeUsername(u.insta);
+      let count = 0;
+      likesSets.forEach((set) => {
+        if (set.has(uname)) count += 1;
+      });
+      if (count === shortcodes.length) already.push({ ...u, count });
+      else if (count > 0) partial.push({ ...u, count });
+      else none.push({ ...u, count });
+    });
+
+    totals.total += users.length;
+    totals.sudah += already.length;
+    totals.kurang += partial.length;
+    totals.belum += none.length + noUname.length;
+    totals.noUsername += noUname.length;
+    totals.noTiktok += noTiktok;
+
+    sudahUsers.push(...already);
+    kurangUsers.push(...partial);
+    belumUsers.push(...none);
+    noUsernameUsers.push(...noUname);
+
+    const { nama: clientName } = await getClientInfo(cid);
+    perClientLines.push(
+      `*${clientName.toUpperCase()}* : ${users.length} / ${already.length} / ${partial.length} / ${
+        none.length + noUname.length
+      } / ${noUname.length} / ${noTiktok}`
+    );
+  }
+
+  const sortUsers = (arr) =>
+    arr.sort(
+      (a, b) =>
+        rankIdx(a.title) - rankIdx(b.title) ||
+        String(a.user_id).localeCompare(String(b.user_id))
+    );
+  const formatUser = (u) =>
+    `- ${formatNama(u)}${u.count !== undefined ? ", " + u.count : ""}`;
+
+  const text =
+    `Mohon ijin Komandan,\n\n` +
+    `📋 Rekap Akumulasi Likes Instagram\n` +
+    `Polres: DIREKTORAT BINMAS\n` +
+    `${hari}, ${tanggal}\n` +
+    `Jam: ${jam}\n\n` +
+    `Jumlah Konten: ${shortcodes.length}\n` +
+    `Daftar Link Konten:\n${kontenLinks.map((l) => `- ${l}`).join("\n")}\n\n` +
+    `Jumlah Total Personil : ${totals.total} pers\n` +
+    `Sudah melaksanakan : ${totals.sudah} pers\n` +
+    `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+    `Belum melaksanakan : ${totals.belum} pers\n` +
+    `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
+    `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
+    `_Kesatuan  :  Jumlah user / sudah likes / likes kurang/ belum likes/ belum input instagram  / belum input tiktok_\n` +
+    `${perClientLines.join("\n")}\n\n` +
+    `*Sudah Melaksanakan Likes :* ${sudahUsers.length}\n` +
+    `${sortUsers(sudahUsers).map(formatUser).join("\n")}\n` +
+    `*Likes Kurang :* ${kurangUsers.length}\n` +
+    `${sortUsers(kurangUsers).map(formatUser).join("\n")}\n` +
+    `*Belum Melaksanakan Likes :* ${belumUsers.length}\n` +
+    `${sortUsers(belumUsers).map(formatUser).join("\n")}\n` +
+    `*Belum Input Instagram :* ${noUsernameUsers.length}\n` +
+    `${sortUsers(noUsernameUsers).map(formatUser).join("\n")}`;
+
+  return { filename, text: text.trim() };
 }
