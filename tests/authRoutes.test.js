@@ -243,7 +243,7 @@ describe('POST /user-register', () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+        .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
 
     const res = await request(app)
       .post('/api/auth/user-register')

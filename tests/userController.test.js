@@ -209,7 +209,7 @@ test('updateUserRoles updates roles based on array', async () => {
 test('reactivates existing user and attaches ditbinmas role', async () => {
   mockFindUserById
     .mockResolvedValueOnce({ user_id: '1', status: false })
-    .mockResolvedValueOnce({ user_id: '1', status: true, ditbinmas: true, nama: 'B' });
+    .mockResolvedValueOnce({ user_id: '1', status: true, ditbinmas: true, nama: 'B', operator: false });
   const req = { body: { user_id: '1', nama: 'B' }, user: { role: 'ditbinmas', client_id: 'c2' } };
   const json = jest.fn();
   const status = jest.fn().mockReturnThis();
@@ -224,7 +224,7 @@ test('reactivates existing user and attaches ditbinmas role', async () => {
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({
     success: true,
-    data: { user_id: '1', status: true, ditbinmas: true, nama: 'B' }
+    data: { user_id: '1', status: true, ditbinmas: true, nama: 'B', operator: false }
   });
 });
 
