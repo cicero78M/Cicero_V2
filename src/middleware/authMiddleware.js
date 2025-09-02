@@ -7,8 +7,12 @@ export function authRequired(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    if (decoded.role === 'user' && !req.path.startsWith('/claim')) {
-      return res.status(403).json({ success: false, message: 'Forbidden' });
+    if (decoded.role === 'user') {
+      const allowedPaths = ['/claim', '/clients'];
+      const hasAccess = allowedPaths.some((p) => req.path.startsWith(p));
+      if (!hasAccess) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
     }
     next();
   } catch (err) {
