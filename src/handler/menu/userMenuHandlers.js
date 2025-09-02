@@ -426,11 +426,13 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       }
     }
     if (field === "insta") {
-      const igMatch = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
+      const igMatch = value.match(
+        /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?(\?.*)?$/i
+      );
       if (!igMatch) {
         await waClient.sendMessage(
           chatId,
-          "❌ Format salah! Masukkan *link profil Instagram* (contoh: https://www.instagram.com/username)"
+          "❌ Link tersebut bukan *link profil Instagram*! Masukkan *link profil Instagram* (contoh: https://www.instagram.com/username)"
         );
         return;
       }
