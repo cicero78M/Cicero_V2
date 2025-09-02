@@ -6,9 +6,10 @@
 
 const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 menit
 const USER_MENU_TIMEOUT = 5 * 60 * 1000; // 5 menit
-const MENU_WARNING = 1 * 60 * 1000;    // 1 menit sebelum berakhir
-const MENU_TIMEOUT = 2 * 60 * 1000;    // 2 menit
-const BIND_TIMEOUT = 2 * 60 * 1000;    // 2 menit
+const MENU_WARNING = 1 * 60 * 1000; // 1 menit sebelum berakhir
+const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit
+const BIND_TIMEOUT = 2 * 60 * 1000; // 2 menit
+const NO_REPLY_TIMEOUT = 30 * 1000; // 30 detik
 
 export const userMenuContext = {};         // { chatId: {step, ...} }
 export const updateUsernameSession = {};   // { chatId: {step, ...} }
@@ -24,10 +25,12 @@ const clientRequestSessions = {};          // { chatId: {step, data, ...} }
 
 /**
  * Set timeout auto-expire pada userMenuContext (menu interaktif user).
+ * Sekaligus mengatur timeout balasan jika diperlukan.
  * @param {string} chatId
  * @param {object} waClient - client untuk mengirim pesan WA
+ * @param {boolean} [expectReply=false] - apakah menunggu balasan user
  */
-export function setMenuTimeout(chatId, waClient) {
+export function setMenuTimeout(chatId, waClient, expectReply = false) {
   if (!userMenuContext[chatId]) {
     userMenuContext[chatId] = {};
   }
@@ -37,6 +40,9 @@ export function setMenuTimeout(chatId, waClient) {
   }
   if (ctx.warningTimeout) {
     clearTimeout(ctx.warningTimeout);
+  }
+  if (ctx.noReplyTimeout) {
+    clearTimeout(ctx.noReplyTimeout);
   }
   ctx.timeout = setTimeout(() => {
     delete userMenuContext[chatId];
@@ -51,6 +57,18 @@ export function setMenuTimeout(chatId, waClient) {
         .catch((e) => console.error(e));
     }
   }, USER_MENU_TIMEOUT - MENU_WARNING);
+  if (expectReply) {
+    ctx.noReplyTimeout = setTimeout(() => {
+      if (waClient) {
+        waClient
+          .sendMessage(
+            chatId,
+            "maaf, sistem belum membaca pesan balasan anda, kirim ulang pesan anda."
+          )
+          .catch((e) => console.error(e));
+      }
+    }, NO_REPLY_TIMEOUT);
+  }
 }
 
 // Timeout untuk proses binding WhatsApp
