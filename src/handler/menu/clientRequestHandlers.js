@@ -244,13 +244,14 @@ export const clientRequestHandlers = {
 1️⃣1️⃣ Hapus WA User
 1️⃣2️⃣ Transfer User Sheet
 1️⃣3️⃣ Download Sheet Amplifikasi
-1️⃣4️⃣ Download Docs
-1️⃣5️⃣ Absensi Operator Ditbinmas
-1️⃣6️⃣ Hapus Session Baileys
+1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
+1️⃣5️⃣ Download Docs
+1️⃣6️⃣ Absensi Operator Ditbinmas
+1️⃣7️⃣ Hapus Session Baileys
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-6])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-7])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -269,9 +270,10 @@ export const clientRequestHandlers = {
       11: "hapusWAUser_start",
       12: "transferUserSheet_choose",
       13: "downloadSheet_choose",
-      14: "downloadDocs_choose",
-      15: "absensiOprDitbinmas",
-      16: "deleteBaileysSession_start",
+      14: "downloadSheetPrev_choose",
+      15: "downloadDocs_choose",
+      16: "absensiOprDitbinmas",
+      17: "deleteBaileysSession_start",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1420,6 +1422,74 @@ export const clientRequestHandlers = {
       const monthName = new Date().toLocaleString("id-ID", {
         month: "long",
         timeZone: "Asia/Jakarta"
+      });
+      const filePath = await saveLinkReportExcel(rows, client_id, monthName);
+      const buffer = await fs.readFile(filePath);
+      await sendWAFile(
+        waClient,
+        buffer,
+        path.basename(filePath),
+        getAdminWAIds(),
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      await waClient.sendMessage(chatId, "✅ File Excel dikirim ke admin.");
+      await fs.unlink(filePath);
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal membuat Excel: ${err.message}`);
+      console.error(err);
+    }
+  },
+
+  // =========== DOWNLOAD SHEET AMPLIFIKASI BULAN SEBELUMNYA ===========
+  downloadSheetPrev_choose: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool
+  ) => {
+    const rows = await query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "downloadSheetPrev_action";
+  },
+  downloadSheetPrev_action: async (
+    session,
+    chatId,
+    text,
+    waClient
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka sesuai daftar."
+      );
+      return;
+    }
+    const client_id = clients[idx].client_id;
+    session.step = "main";
+    await waClient.sendMessage(chatId, "⏳ Menyiapkan file Excel...");
+    try {
+      const rows = await linkReportModel.getReportsPrevMonthByClient(client_id);
+      const date = new Date();
+      date.setMonth(date.getMonth() - 1);
+      const monthName = date.toLocaleString("id-ID", {
+        month: "long",
+        timeZone: "Asia/Jakarta",
       });
       const filePath = await saveLinkReportExcel(rows, client_id, monthName);
       const buffer = await fs.readFile(filePath);

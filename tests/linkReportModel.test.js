@@ -12,6 +12,7 @@ let findLinkReportByShortcode;
 let getReportsTodayByClient;
 let getReportsTodayByShortcode;
 let getReportsThisMonthByClient;
+let getReportsPrevMonthByClient;
 let getRekapLinkByClient;
 
 beforeAll(async () => {
@@ -22,6 +23,7 @@ beforeAll(async () => {
   getReportsTodayByClient = mod.getReportsTodayByClient;
   getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
   getReportsThisMonthByClient = mod.getReportsThisMonthByClient;
+  getReportsPrevMonthByClient = mod.getReportsPrevMonthByClient;
   getRekapLinkByClient = mod.getRekapLinkByClient;
 });
 
@@ -158,6 +160,16 @@ test('getReportsThisMonthByClient selects monthly rows', async () => {
   expect(rows).toEqual([{ date: '2024-01-01' }]);
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining("date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta')"),
+    ['POLRES']
+  );
+});
+
+test('getReportsPrevMonthByClient selects previous month rows', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ date: '2023-12-01' }] });
+  const rows = await getReportsPrevMonthByClient('POLRES');
+  expect(rows).toEqual([{ date: '2023-12-01' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining("date_trunc('month', (NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '1 month')"),
     ['POLRES']
   );
 });
