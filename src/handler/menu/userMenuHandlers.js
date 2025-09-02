@@ -437,6 +437,13 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         return;
       }
       value = igMatch[2].toLowerCase();
+      if (value === "cicero_devs") {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Instagram tersebut adalah milik Super Admin. Gunakan akun Instagram Anda sendiri."
+        );
+        return;
+      }
       const existing = await userModel.findUserByInsta(value);
       if (existing && existing.user_id !== user_id) {
         await waClient.sendMessage(
