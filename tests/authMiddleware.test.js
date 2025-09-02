@@ -17,8 +17,8 @@ describe('authRequired middleware', () => {
     app.use('/api', authRequired, router);
   });
 
-  test('allows user role on claim routes', async () => {
-    const token = jwt.sign({ user_id: 'u1', role: 'user' }, process.env.JWT_SECRET);
+  test('allows operator role on claim routes', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/claim/ok')
       .set('Authorization', `Bearer ${token}`);
@@ -35,8 +35,8 @@ describe('authRequired middleware', () => {
     expect(res.body.success).toBe(true);
   });
 
-  test('blocks user role on unauthorized routes', async () => {
-    const token = jwt.sign({ user_id: 'u1', role: 'user' }, process.env.JWT_SECRET);
+  test('blocks operator role on unauthorized routes', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/other')
       .set('Authorization', `Bearer ${token}`);
@@ -44,8 +44,8 @@ describe('authRequired middleware', () => {
     expect(res.body.success).toBe(false);
   });
 
-  test('allows non-user roles on non-claim routes', async () => {
-    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+  test('allows user role on non-claim routes', async () => {
+    const token = jwt.sign({ user_id: 'u1', role: 'user' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/other')
       .set('Authorization', `Bearer ${token}`);

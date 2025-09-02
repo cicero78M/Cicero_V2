@@ -6,6 +6,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';
+import claimRoutes from './src/routes/claimRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
@@ -52,6 +53,7 @@ app.use(dedupRequest);
 
 // ===== ROUTE LOGIN (TANPA TOKEN) =====
 app.use('/api/auth', authRoutes);
+app.use('/api/claim', claimRoutes);
 
 // ===== ROUTE LAIN (WAJIB TOKEN) =====
 app.use('/api', authRequired, routes);
