@@ -330,14 +330,26 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
       break;
     }
-    case "9": {
-      const { text, filename, narrative } = await lapharDitbinmas();
-      const buffer = Buffer.from(text, "utf-8");
-      await writeFile(filename, buffer);
-      await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
-      msg = narrative || "✅ Laphar Ditbinmas dikirim.";
-      break;
-    }
+      case "9": {
+        const { text, filename, narrative, textBelum, filenameBelum } =
+          await lapharDitbinmas();
+        const buffer = Buffer.from(text, "utf-8");
+        await writeFile(filename, buffer);
+        await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+        if (textBelum && filenameBelum) {
+          const bufferBelum = Buffer.from(textBelum, "utf-8");
+          await writeFile(filenameBelum, bufferBelum);
+          await sendWAFile(
+            waClient,
+            bufferBelum,
+            filenameBelum,
+            chatId,
+            "text/plain"
+          );
+        }
+        msg = narrative || "✅ Laphar Ditbinmas dikirim.";
+        break;
+      }
     default:
       msg = "Menu tidak dikenal.";
   }
