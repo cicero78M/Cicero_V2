@@ -22,46 +22,9 @@ import { mdToPdf } from "md-to-pdf";
 import { query } from "../../db/index.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
+import { deleteBaileysFilesByNumber } from "../../service/baileysSessionService.js";
 
 function ignore(..._args) {}
-
-async function deleteFilesByNumber(dir, number) {
-  let deleted = 0;
-  try {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        deleted += await deleteFilesByNumber(fullPath, number);
-        const remaining = await fs
-          .readdir(fullPath)
-          .catch(() => []);
-        if (!remaining.length) {
-          await fs.rmdir(fullPath).catch(() => {});
-        }
-      } else if (entry.isFile()) {
-        if (entry.name.includes(number)) {
-          await fs.unlink(fullPath).catch(() => {});
-          deleted++;
-          continue;
-        }
-        const content = await fs.readFile(fullPath, "utf8").catch(() => "");
-        if (content.includes(number)) {
-          await fs.unlink(fullPath).catch(() => {});
-          deleted++;
-        }
-      }
-    }
-  } catch (err) {
-    if (err.code !== "ENOENT") throw err;
-  }
-  return deleted;
-}
-
-export async function deleteBaileysFilesByNumber(number) {
-  const sessionsDir = path.join("sessions", "baileys");
-  return deleteFilesByNumber(sessionsDir, number);
-}
 
 async function collectMarkdownFiles(dir, files = []) {
   const entries = await fs.readdir(dir, { withFileTypes: true });

@@ -32,6 +32,7 @@ const cronModules = [
   './src/cron/cronDirRequestLaphar.js',
   './src/cron/cronDirRequestFetchInsta.js',
   './src/cron/cronDbBackup.js',
+  './src/cron/cronBaileysCleanup.js',
 ];
 
 waClient.on('ready', async () => {
