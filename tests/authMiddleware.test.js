@@ -12,6 +12,7 @@ describe('authRequired middleware', () => {
     app = express();
     const router = express.Router();
     router.get('/claim/ok', (req, res) => res.json({ success: true }));
+    router.get('/clients/data', (req, res) => res.json({ success: true }));
     router.get('/other', (req, res) => res.json({ success: true }));
     app.use('/api', authRequired, router);
   });
@@ -25,7 +26,16 @@ describe('authRequired middleware', () => {
     expect(res.body.success).toBe(true);
   });
 
-  test('blocks user role on non-claim routes', async () => {
+  test('allows user role on client routes', async () => {
+    const token = jwt.sign({ user_id: 'u1', role: 'user' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .get('/api/clients/data')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('blocks user role on unauthorized routes', async () => {
     const token = jwt.sign({ user_id: 'u1', role: 'user' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/other')
