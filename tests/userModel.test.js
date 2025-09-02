@@ -34,9 +34,9 @@ beforeEach(() => {
 });
 
 test('findUserByIdAndWhatsApp returns user', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const user = await findUserByIdAndWhatsApp('1', '0808');
-  expect(user).toEqual({ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false });
+  expect(user).toEqual({ user_id: '1', nama: 'Test', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false });
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('FROM "user" u');
   expect(sql).toContain('u.user_id = $1 AND u.whatsapp = $2');
@@ -46,9 +46,9 @@ test('findUserByIdAndWhatsApp returns user', async () => {
 test('findUserByIdAndClient returns user for non-direktorat client', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
-    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const user = await findUserByIdAndClient('1', 'C1');
-  expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false });
+  expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false });
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('FROM "user" u');
   expect(sql).toContain('u.user_id=$1');
@@ -59,9 +59,9 @@ test('findUserByIdAndClient returns user for non-direktorat client', async () =>
 test('findUserByIdAndClient ignores client_id for direktorat', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
-    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const user = await findUserByIdAndClient('1', 'ditbinmas');
-  expect(user).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(user).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('EXISTS');
   expect(sql).not.toContain('u.client_id =');
@@ -137,9 +137,9 @@ test('getUsersSocialByClient filters by client or role for non-direktorat', asyn
 test('findUserByIdAndClient filters by role for instansi', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
-    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'C1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const user = await findUserByIdAndClient('1', 'C1', 'ditbinmas');
-  expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(user).toEqual({ user_id: '1', client_id: 'C1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('u.user_id=$1');
   expect(sql).toContain('u.client_id = $2');
@@ -152,10 +152,10 @@ test('createUser inserts with directorate flags only', async () => {
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
-    .mockResolvedValueOnce({ rows: [{ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const data = { user_id: '9', nama: 'X', ditbinmas: true, ditlantas: false };
   const row = await createUser(data);
-  expect(row).toEqual({ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(row).toEqual({ user_id: '9', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   expect(mockQuery.mock.calls[0][0]).toContain('INSERT INTO "user"');
   expect(mockQuery.mock.calls[1][1]).toEqual(['ditbinmas']);
   expect(mockQuery.mock.calls[2][1][1]).toBe('ditbinmas');
@@ -167,7 +167,7 @@ test('createUser assigns operator role when specified', async () => {
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
-    .mockResolvedValueOnce({ rows: [{ user_id: '10', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '10', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const data = { user_id: '10', nama: 'Y', operator: true };
   await createUser(data);
   expect(mockQuery.mock.calls[1][1]).toEqual(['operator']);
@@ -177,7 +177,7 @@ test('createUser assigns operator role when specified', async () => {
 test('createUser without role does not assign any', async () => {
   mockQuery
     .mockResolvedValueOnce({})
-    .mockResolvedValueOnce({ rows: [{ user_id: '11', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '11', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const data = { user_id: '11', nama: 'Z' };
   await createUser(data);
   expect(mockQuery.mock.calls.length).toBe(2);
@@ -187,18 +187,18 @@ test('updateUserField updates ditbinmas field', async () => {
   mockQuery
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
-    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const row = await updateUserField('1', 'ditbinmas', true);
-  expect(row).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false });
+  expect(row).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
 });
 
 test('updateUserField updates desa field', async () => {
   mockQuery
     .mockResolvedValueOnce({})
-    .mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const row = await updateUserField('1', 'desa', 'ABC');
-  expect(row).toEqual({ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false });
+  expect(row).toEqual({ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false });
   expect(mockQuery.mock.calls[0][0]).toContain('UPDATE "user" SET desa=$1 WHERE user_id=$2');
 });
 
@@ -213,9 +213,9 @@ test('updatePremiumStatus updates fields', async () => {
 });
 
 test('getUsersByDirektorat queries by flag', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const users = await getUsersByDirektorat('ditbinmas');
-  expect(users).toEqual([{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false }]);
+  expect(users).toEqual([{ user_id: '2', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }]);
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('user_roles');
   expect(sql).toContain('r1.role_name = $1');
@@ -225,9 +225,9 @@ test('getUsersByDirektorat queries by flag', async () => {
 });
 
 test('getUsersByDirektorat filters by client and flag', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false }] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false, operator: false }] });
   const users = await getUsersByDirektorat('bidhumas', 'c1');
-  expect(users).toEqual([{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false }]);
+  expect(users).toEqual([{ user_id: '3', bidhumas: true, ditbinmas: false, ditlantas: false, operator: false }]);
   const sql = mockQuery.mock.calls[0][0];
   expect(sql).toContain('user_roles');
   expect(sql).toContain('LOWER(u.client_id) = LOWER($2)');

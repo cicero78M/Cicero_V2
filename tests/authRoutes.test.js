@@ -13,6 +13,7 @@ const mockWAClient = {
   once: jest.fn(),
   off: jest.fn(),
 };
+const mockQueueAdminNotification = jest.fn();
 const actualWaHelper = await import('../src/utils/waHelper.js');
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
@@ -37,7 +38,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
 jest.unstable_mockModule('../src/service/waService.js', () => ({
   default: mockWAClient,
   waitForWaReady: () => Promise.resolve(),
-  queueAdminNotification: jest.fn(),
+  queueAdminNotification: mockQueueAdminNotification,
 }));
 
 let app;
@@ -58,6 +59,7 @@ beforeEach(() => {
   mockRedis.set.mockReset();
   mockInsertLoginLog.mockReset();
   mockWAClient.sendMessage.mockReset();
+  mockQueueAdminNotification.mockReset();
 });
 
 describe('POST /login', () => {
@@ -241,7 +243,7 @@ describe('POST /user-register', () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: false, ditlantas: false, bidhumas: false }] });
+        .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
 
     const res = await request(app)
       .post('/api/auth/user-register')
@@ -570,6 +572,10 @@ describe('POST /user-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
+      ['u1', '62808', '0808']
+    );
     expect(mockRedis.sAdd).toHaveBeenCalledWith('user_login:u1', res.body.token);
     expect(mockRedis.set).toHaveBeenCalledWith(
       `login_token:${res.body.token}`,
@@ -581,5 +587,39 @@ describe('POST /user-login', () => {
       loginType: 'user',
       loginSource: 'mobile'
     });
+    expect(mockQueueAdminNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Login user: u1 - User')
+    );
+  });
+
+  test('logs in user using password field', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ user_id: 'u2', nama: 'User2' }]
+    });
+
+    const res = await request(app)
+      .post('/api/auth/user-login')
+      .send({ nrp: 'u2', password: '0812' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
+      ['u2', '62812', '0812']
+    );
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('user_login:u2', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'user:u2',
+      { EX: 2 * 60 * 60 }
+    );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'u2',
+      loginType: 'user',
+      loginSource: 'mobile'
+    });
+    expect(mockQueueAdminNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Login user: u2 - User2')
+    );
   });
 });
