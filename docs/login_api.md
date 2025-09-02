@@ -28,6 +28,8 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests.
 }
 ```
 
+> **Note:** For legacy Android clients, the `password` field may be used instead of `whatsapp`. Both are treated equivalently.
+
 ### User Registration
 `POST /api/auth/user-register`
 ```json
