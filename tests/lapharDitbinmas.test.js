@@ -53,6 +53,7 @@ test('orders clients by likes with ditbinmas first and returns narrative', async
   const result = await lapharDitbinmas();
 
   expect(result.narrative).toMatch(/Mohon Ijin Komandan/);
+  expect(result.narrative).toMatch(/https:\/\/www\.instagram\.com\/p\/sc1 : 2/);
   const idxDit = result.text.indexOf('DIREKTORAT BINMAS');
   const idxA = result.text.indexOf('POLRES A');
   const idxB = result.text.indexOf('POLRES B');
