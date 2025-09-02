@@ -257,6 +257,8 @@ test('choose_menu option 9 sends laphar file and narrative', async () => {
   mockLapharDitbinmas.mockResolvedValue({
     text: 'lap',
     filename: 'lap.txt',
+    textBelum: 'belum',
+    filenameBelum: 'belum.txt',
     narrative: 'narasi',
   });
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
@@ -266,11 +268,29 @@ test('choose_menu option 9 sends laphar file and narrative', async () => {
   await dirRequestHandlers.choose_menu(session, chatId, '9', waClient);
 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
-  expect(mockWriteFile).toHaveBeenCalledWith('lap.txt', expect.any(Buffer));
-  expect(mockSendWAFile).toHaveBeenCalledWith(
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    1,
+    'lap.txt',
+    expect.any(Buffer)
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    1,
     waClient,
     expect.any(Buffer),
     'lap.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    2,
+    'belum.txt',
+    expect.any(Buffer)
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    2,
+    waClient,
+    expect.any(Buffer),
+    'belum.txt',
     chatId,
     'text/plain'
   );

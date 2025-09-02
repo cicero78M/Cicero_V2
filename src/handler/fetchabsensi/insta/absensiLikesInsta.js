@@ -417,7 +417,10 @@ export async function lapharDitbinmas() {
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
-  const filename = `Absensi_Likes_IG_Ditbinmas_${hari}_${tanggal.replace(/\//g, "-")}.txt`;
+  const dateSafe = tanggal.replace(/\//g, "-");
+  const timeSafe = jam.replace(/[:.]/g, "-");
+  const filename = `Absensi_All_Likes_IG_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filenameBelum = `Absensi_Belum_Likes_IG_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
 
   const shortcodes = await getShortcodesTodayByClient(roleName);
   if (!shortcodes.length)
@@ -476,6 +479,7 @@ export async function lapharDitbinmas() {
     noTiktok: 0,
   };
   const perClientStats = [];
+  const perClientBelumBlocks = [];
 
   for (const cid of clientIds) {
     const users = usersByClient[cid] || [];
@@ -578,6 +582,27 @@ export async function lapharDitbinmas() {
       noUsername: noUname.length,
       totalUsers: users.length,
     });
+
+    if (none.length || noUname.length) {
+      const belumLines = [`*${clientName.toUpperCase()}*`];
+      if (none.length) {
+        belumLines.push(`Belum Likes : ${none.length}`);
+        belumLines.push(...none.map((u) => `- ${formatNama(u)}, ${u.insta}`));
+      }
+      if (noUname.length) {
+        if (none.length) belumLines.push("");
+        belumLines.push(`Belum Input Sosial media : ${noUname.length}`);
+        belumLines.push(
+          ...noUname.map(
+            (u) =>
+              `- ${formatNama(u)}, IG ${u.insta ? u.insta : "Kosong"}, Tiktok ${
+                u.tiktok ? u.tiktok : "Kosong"
+              }`
+          )
+        );
+      }
+      perClientBelumBlocks.push(belumLines.join("\n"));
+    }
   }
   perClientStats.sort((a, b) => {
     if (a.cid === "DITBINMAS") return -1;
@@ -725,5 +750,18 @@ export async function lapharDitbinmas() {
     `Anomali :\n${anomalies.length ? anomalies.join("\n") : "nihil"}\n\n` +
     `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
 
-  return { filename, text: text.trim(), narrative };
+  const textBelum =
+    `Belum melaksanakan Likes atau belum input username IG/Tiktok\n` +
+    `Polres: DIREKTORAT BINMAS\n` +
+    `${hari}, ${tanggal}\n` +
+    `Jam: ${jam}\n\n` +
+    `${perClientBelumBlocks.join("\n\n")}`;
+
+  return {
+    filename,
+    text: text.trim(),
+    narrative,
+    filenameBelum,
+    textBelum: textBelum.trim(),
+  };
 }

@@ -13,23 +13,33 @@ cron.schedule(
   "55 17,19 * * *",
   async () => {
     sendDebug({ tag: cronTag, msg: "Mulai rekap laphar dirrequest" });
-    try {
-      const { text, filename, narrative } = await lapharDitbinmas();
-      const buffer = Buffer.from(text, "utf-8");
-      await sendWAFile(waClient, buffer, filename);
-      const admins = getAdminWhatsAppList();
-      for (const wa of admins) {
-        await waClient
-          .sendMessage(wa, narrative || "✅ Laphar Ditbinmas dikirim.")
-          .catch(() => {});
+      try {
+        const {
+          text,
+          filename,
+          narrative,
+          textBelum,
+          filenameBelum,
+        } = await lapharDitbinmas();
+        const buffer = Buffer.from(text, "utf-8");
+        await sendWAFile(waClient, buffer, filename);
+        if (textBelum && filenameBelum) {
+          const bufferBelum = Buffer.from(textBelum, "utf-8");
+          await sendWAFile(waClient, bufferBelum, filenameBelum);
+        }
+        const admins = getAdminWhatsAppList();
+        for (const wa of admins) {
+          await waClient
+            .sendMessage(wa, narrative || "✅ Laphar Ditbinmas dikirim.")
+            .catch(() => {});
+        }
+        sendDebug({
+          tag: cronTag,
+          msg: `Laphar dirrequest dikirim ke ${admins.length} admin`,
+        });
+      } catch (err) {
+        sendDebug({ tag: cronTag, msg: `[ERROR] ${err.message || err}` });
       }
-      sendDebug({
-        tag: cronTag,
-        msg: `Laphar dirrequest dikirim ke ${admins.length} admin`,
-      });
-    } catch (err) {
-      sendDebug({ tag: cronTag, msg: `[ERROR] ${err.message || err}` });
-    }
   },
   { timezone: "Asia/Jakarta" }
 );
