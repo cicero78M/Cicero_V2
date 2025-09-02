@@ -426,12 +426,21 @@ export async function lapharDitbinmas() {
   if (!shortcodes.length)
     return { filename, text: "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini." };
 
-  const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
+  const kontenLinks = [];
   const likesSets = [];
+  const likesCounts = [];
   for (const sc of shortcodes) {
+    const link = `https://www.instagram.com/p/${sc}`;
+    kontenLinks.push(link);
     const likes = await getLikesByShortcode(sc);
-    likesSets.push(new Set((likes || []).map(normalizeUsername)));
+    const likeSet = new Set((likes || []).map(normalizeUsername));
+    likesSets.push(likeSet);
+    likesCounts.push(likeSet.size);
   }
+
+  const kontenLinkLikes = kontenLinks.map(
+    (link, idx) => `${link} : ${likesCounts[idx]}`
+  );
 
   const polresIds = (
     await getClientsByRole(roleName)
@@ -715,7 +724,7 @@ export async function lapharDitbinmas() {
   const narrative =
     `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
     `DIREKTORAT BINMAS\n\n` +
-    `Konten hari ini: ${shortcodes.length} link: ${kontenLinks[0] || "-"}\n\n` +
+    `Konten hari ini: ${shortcodes.length} link: ${kontenLinkLikes.join(", " )}\n\n` +
     `Kinerja Likes konten: ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(
       2
     )}%)\n` +
