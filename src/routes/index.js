@@ -18,6 +18,7 @@ import approvalRequestRoutes from './approvalRequestRoutes.js';
 import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 import premiumRequestRoutes from './premiumRequestRoutes.js';
 import likesRoutes from './likesRoutes.js';
+import claimRoutes from './claimRoutes.js';
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/insta", instaRoutes);
 router.use("/tiktok", tiktokRoutes);
 router.use('/likes', likesRoutes);
+router.use('/claim', claimRoutes);
 router.use('/quotes', quoteRoutes);
 router.use('/oauth', oauthRoutes);
 router.use('/metadata', metaRoutes);
