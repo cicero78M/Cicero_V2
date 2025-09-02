@@ -573,8 +573,8 @@ describe('POST /user-login', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(mockQuery).toHaveBeenCalledWith(
-      'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND whatsapp = $2',
-      ['u1', '62808']
+      'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
+      ['u1', '62808', '0808']
     );
     expect(mockRedis.sAdd).toHaveBeenCalledWith('user_login:u1', res.body.token);
     expect(mockRedis.set).toHaveBeenCalledWith(

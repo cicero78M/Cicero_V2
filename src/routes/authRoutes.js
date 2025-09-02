@@ -418,9 +418,10 @@ router.post('/user-login', async (req, res) => {
       .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
   }
   const wa = normalizeWhatsappNumber(whatsapp);
+  const rawWa = String(whatsapp).replace(/\D/g, "");
   const { rows } = await query(
-    'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND whatsapp = $2',
-    [nrp, wa]
+    'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
+    [nrp, wa, rawWa]
   );
   const user = rows[0];
   if (!user) {
