@@ -417,9 +417,10 @@ router.post('/user-login', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
   }
+  const wa = normalizeWhatsappNumber(whatsapp);
   const { rows } = await query(
     'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND whatsapp = $2',
-    [nrp, whatsapp]
+    [nrp, wa]
   );
   const user = rows[0];
   if (!user) {
@@ -450,10 +451,14 @@ router.post('/user-login', async (req, res) => {
     loginType: 'user',
     loginSource: 'mobile'
   });
-  const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-  notifyAdmin(
-    `\uD83D\uDD11 Login user: ${user.user_id} - ${user.nama}\nWaktu: ${time}`
-  );
+  if (process.env.ADMIN_NOTIFY_LOGIN !== 'false') {
+    const time = new Date().toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta'
+    });
+    queueAdminNotification(
+      `\uD83D\uDD11 Login user: ${user.user_id} - ${user.nama}\nWaktu: ${time}`
+    );
+  }
   return res.json({ success: true, token, user: payload });
 });
 
