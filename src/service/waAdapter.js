@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import makeWASocket, { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import path from 'path';
+import { deleteBaileysFilesByNumber } from './baileysSessionService.js';
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
@@ -41,6 +42,13 @@ export async function createBaileysClient({ refreshAuth = false } = {}) {
     if (update.connection === 'close') {
       const status = update.lastDisconnect?.error?.output?.statusCode;
       emitter.emit('disconnected', update.lastDisconnect?.error);
+      if (status === 401) {
+        const jid = sock.authState?.creds?.me?.id || '';
+        const number = jid.replace(/\D/g, '');
+        if (number) {
+          deleteBaileysFilesByNumber(number).catch(() => {});
+        }
+      }
       if (status === 515) startSock();
     }
   };
