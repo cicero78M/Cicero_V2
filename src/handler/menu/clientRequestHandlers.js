@@ -25,6 +25,44 @@ import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
 function ignore(..._args) {}
 
+async function deleteFilesByNumber(dir, number) {
+  let deleted = 0;
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        deleted += await deleteFilesByNumber(fullPath, number);
+        const remaining = await fs
+          .readdir(fullPath)
+          .catch(() => []);
+        if (!remaining.length) {
+          await fs.rmdir(fullPath).catch(() => {});
+        }
+      } else if (entry.isFile()) {
+        if (entry.name.includes(number)) {
+          await fs.unlink(fullPath).catch(() => {});
+          deleted++;
+          continue;
+        }
+        const content = await fs.readFile(fullPath, "utf8").catch(() => "");
+        if (content.includes(number)) {
+          await fs.unlink(fullPath).catch(() => {});
+          deleted++;
+        }
+      }
+    }
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+  return deleted;
+}
+
+export async function deleteBaileysFilesByNumber(number) {
+  const sessionsDir = path.join("sessions", "baileys");
+  return deleteFilesByNumber(sessionsDir, number);
+}
+
 async function collectMarkdownFiles(dir, files = []) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -191,7 +229,7 @@ export const clientRequestHandlers = {
     fetchAndStoreLikesInstaContent,
     handleFetchKomentarTiktokBatch
   ) => {
-    let msg = `
+ let msg = `
  ┏━━━ *MENU CLIENT CICERO* ━━━
 1️⃣ Tambah client baru
 2️⃣ Kelola client (update/hapus/info)
@@ -208,10 +246,11 @@ export const clientRequestHandlers = {
 1️⃣3️⃣ Download Sheet Amplifikasi
 1️⃣4️⃣ Download Docs
 1️⃣5️⃣ Absensi Operator Ditbinmas
+1️⃣6️⃣ Hapus Session Baileys
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-5])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-6])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -232,6 +271,7 @@ export const clientRequestHandlers = {
       13: "downloadSheet_choose",
       14: "downloadDocs_choose",
       15: "absensiOprDitbinmas",
+      16: "deleteBaileysSession_start",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1590,6 +1630,50 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 
+  // ================== DELETE BAILEYS SESSION ==================
+  deleteBaileysSession_start: async (session, chatId, _text, waClient) => {
+    session.step = "deleteBaileysSession_number";
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan nomor WhatsApp yang sesi Baileys-nya akan dihapus:"
+    );
+  },
+  deleteBaileysSession_number: async (session, chatId, text, waClient) => {
+    const number = text.replace(/[^0-9]/g, "");
+    session.target_wa = number;
+    session.step = "deleteBaileysSession_confirm";
+    await waClient.sendMessage(
+      chatId,
+      `Konfirmasi hapus sesi Baileys untuk *${number}*? Balas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
+    );
+  },
+  deleteBaileysSession_confirm: async (session, chatId, text, waClient) => {
+    if (text.trim().toLowerCase() !== "ya") {
+      await waClient.sendMessage(chatId, "Dibatalkan.");
+      session.step = "main";
+      return;
+    }
+    try {
+      const deleted = await deleteBaileysFilesByNumber(session.target_wa);
+      if (deleted > 0) {
+        await waClient.sendMessage(
+          chatId,
+          `✅ ${deleted} file sesi Baileys dihapus.`
+        );
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "⚠️ Tidak ditemukan file sesi dengan nomor tersebut."
+        );
+      }
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menghapus sesi Baileys: ${err.message}`
+      );
+    }
+    session.step = "main";
+  },
 
   // ================== ABSENSI OPERATOR DITBINMAS ==================
   absensiOprDitbinmas: async (session, chatId, _text, waClient) => {
