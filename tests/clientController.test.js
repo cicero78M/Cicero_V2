@@ -64,3 +64,16 @@ test('uses role client data for social media fields when non-operator org', asyn
     }),
   });
 });
+
+test('uses token client_id when not provided in request', async () => {
+  mockFindClientById.mockResolvedValueOnce({ client_id: 'C1', client_type: 'org' });
+  const req = { params: {}, query: {}, body: {}, user: { client_id: 'C1' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { json, status };
+
+  await getClientProfile(req, res, () => {});
+
+  expect(mockFindClientById).toHaveBeenCalledWith('C1');
+  expect(json).toHaveBeenCalledWith({ success: true, client: { client_id: 'C1', client_type: 'org' } });
+});
