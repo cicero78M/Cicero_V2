@@ -213,14 +213,16 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     const ready = await waitUntilReady(waClient);
     if (!ready) {
       console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
-      return;
+      return false;
     }
     await waClient.sendMessage(chatId, message, options);
     console.log(
       `[WA] Sent message to ${chatId}: ${message.substring(0, 64)}`
     );
+    return true;
   } catch (err) {
     console.error(`[WA] Failed to send message to ${chatId}:`, err.message);
+    return false;
   }
 }
 

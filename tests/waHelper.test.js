@@ -19,7 +19,8 @@ test('safeSendMessage waits for client ready', async () => {
   await Promise.resolve();
   expect(waClient.sendMessage).not.toHaveBeenCalled();
   waClient.emit('ready');
-  await promise;
+  const result = await promise;
+  expect(result).toBe(true);
   expect(waClient.sendMessage).toHaveBeenCalledWith('123@c.us', 'hello', {});
 });
 

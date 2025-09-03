@@ -36,12 +36,21 @@ export async function requestOtp(req, res, next) {
       }
     }
     const otp = generateOtp(nrp, wa);
+    let sent;
     try {
       await waitForWaReady();
       const wid = formatToWhatsAppId(wa);
-      await safeSendMessage(waClient, wid, `Kode OTP Anda: ${otp}`);
+      sent = await safeSendMessage(waClient, wid, `Kode OTP Anda: ${otp}`);
     } catch (err) {
       console.warn(`[WA] Failed to send OTP to ${wa}: ${err.message}`);
+      return res
+        .status(503)
+        .json({ success: false, message: 'layanan WhatsApp tidak tersedia' });
+    }
+    if (!sent) {
+      return res
+        .status(503)
+        .json({ success: false, message: 'layanan WhatsApp tidak tersedia' });
     }
     sendSuccess(res, { message: 'OTP dikirim' });
   } catch (err) {
