@@ -10,14 +10,18 @@ function isConnectionError(err) {
 
 function extractInstagramUsername(value) {
   if (!value) return undefined;
-  const match = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
+  const match = value.match(
+    /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?(\?.*)?$/i
+  );
   const username = match ? match[2] : value.replace(/^@/, '');
   return username.toLowerCase();
 }
 
 function extractTiktokUsername(value) {
   if (!value) return undefined;
-  const match = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)/i);
+  const match = value.match(
+    /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
+  );
   const username = match ? match[2] : value.replace(/^@/, '');
   return `@${username.toLowerCase()}`;
 }
