@@ -18,3 +18,10 @@ test('generateOtp and verifyOtp flow', () => {
   clearVerification('u1');
   expect(isVerified('u1', '0812')).toBe(false);
 });
+
+test('nrp handled consistently for strings and numbers', () => {
+  const otp = generateOtp(1, '0812');
+  expect(verifyOtp('1', '0812', otp)).toBe(true);
+  expect(isVerified(1, '0812')).toBe(true);
+  clearVerification('1');
+});
