@@ -10,6 +10,7 @@ beforeAll(async () => {
   jest.unstable_mockModule('../src/controller/claimController.js', () => ({
     requestOtp: (req, res) => res.status(202).json({ success: true }),
     verifyOtpController: (req, res) => res.status(200).json({ success: true }),
+    getUserData: (req, res) => res.status(200).json({ success: true }),
     updateUserData: (req, res) => res.status(200).json({ success: true })
   }));
   const claimMod = await import('../src/routes/claimRoutes.js');
@@ -27,6 +28,7 @@ describe('claim routes access', () => {
   test('allows access without token', async () => {
     await request(app).post('/api/claim/request-otp').send({ nrp: '1', whatsapp: '1' }).expect(202);
     await request(app).post('/api/claim/verify-otp').send({ nrp: '1', whatsapp: '1', otp: '123' }).expect(200);
+    await request(app).post('/api/claim/user-data').send({ nrp: '1', whatsapp: '1' }).expect(200);
     await request(app).put('/api/claim/update').send({ nrp: '1', whatsapp: '1' }).expect(200);
   });
 
