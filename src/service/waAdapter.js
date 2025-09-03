@@ -1,7 +1,11 @@
 import { EventEmitter } from 'events';
-import makeWASocket, { useMultiFileAuthState } from '@whiskeysockets/baileys';
+import makeWASocket, {
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+} from '@whiskeysockets/baileys';
 import fs from 'fs';
 import path from 'path';
+import PQueue from 'p-queue';
 import { deleteBaileysFilesByNumber } from './baileysSessionService.js';
 
 function ensureDir(dir) {
@@ -16,13 +20,25 @@ function clearDir(dir) {
   }
 }
 
+async function retryBackoff(fn, retries = 5, delay = 500) {
+  try {
+    return await fn();
+  } catch (err) {
+    if (retries <= 0) throw err;
+    await new Promise((res) => setTimeout(res, delay));
+    return retryBackoff(fn, retries - 1, delay * 2);
+  }
+}
+
 export async function createBaileysClient({ refreshAuth = false } = {}) {
   const sessionsDir = path.join('sessions', 'baileys');
   if (refreshAuth) clearDir(sessionsDir);
   ensureDir(sessionsDir);
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
+  const { version } = await fetchLatestBaileysVersion();
 
   const emitter = new EventEmitter();
+  const messageQueue = new PQueue({ concurrency: 3 });
   let sock;
 
   const handleMessages = (m) => {
@@ -59,9 +75,15 @@ export async function createBaileysClient({ refreshAuth = false } = {}) {
     } catch {}
     sock = makeWASocket({
       auth: state,
+      version,
       browser: ['Ubuntu', 'Chrome', '22.04.4'],
       printQRInTerminal: false,
+      keepAliveIntervalMs: 20000,
+      defaultQueryTimeoutMs: 60000,
+      emitOwnEvents: false,
+      shouldSyncHistoryMessage: () => false,
     });
+    if (sock.logger) sock.logger.level = 'warn';
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('messages.upsert', handleMessages);
     sock.ev.on('connection.update', onConnectionUpdate);
@@ -95,7 +117,9 @@ export async function createBaileysClient({ refreshAuth = false } = {}) {
   emitter.disconnect = async () => sock.end();
   emitter.sendMessage = (jid, message, options = {}) => {
     const content = typeof message === 'string' ? { text: message } : message;
-    return sock.sendMessage(jid, content, options);
+    return messageQueue.add(() =>
+      retryBackoff(() => sock.sendMessage(jid, content, options))
+    );
   };
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
@@ -115,12 +139,19 @@ export async function requestPairingCode(phoneNumber, { refreshAuth = false } = 
   if (refreshAuth) clearDir(sessionsDir);
   ensureDir(sessionsDir);
   const { state, saveCreds } = await useMultiFileAuthState(sessionsDir);
+  const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
     auth: state,
+    version,
     browser: ['Ubuntu', 'Chrome', '22.04.4'],
     printQRInTerminal: false,
+    keepAliveIntervalMs: 20000,
+    defaultQueryTimeoutMs: 60000,
+    emitOwnEvents: false,
+    shouldSyncHistoryMessage: () => false,
   });
+  if (sock.logger) sock.logger.level = 'warn';
   sock.ev.on('creds.update', saveCreds);
   try {
     const code = await sock.requestPairingCode(phoneNumber);
