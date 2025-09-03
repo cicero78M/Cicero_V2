@@ -95,6 +95,42 @@ export async function verifyOtpController(req, res, next) {
   }
 }
 
+export async function getUserData(req, res, next) {
+  try {
+    const { nrp, whatsapp } = req.body;
+    if (!nrp || !whatsapp) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
+    }
+    const wa = normalizeWhatsappNumber(whatsapp);
+    if (!(await isVerified(nrp, wa))) {
+      return res
+        .status(403)
+        .json({ success: false, message: 'OTP belum diverifikasi' });
+    }
+    let user;
+    try {
+      user = await userModel.findUserById(nrp);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        return res
+          .status(503)
+          .json({ success: false, message: 'Database tidak tersedia' });
+      }
+      throw err;
+    }
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'User tidak ditemukan' });
+    }
+    sendSuccess(res, user);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function updateUserData(req, res, next) {
   try {
     const { nrp, whatsapp, nama, title, divisi, jabatan, desa, insta, tiktok } = req.body;
