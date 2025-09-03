@@ -73,3 +73,13 @@ test('returns 503 when safeSendMessage returns false', async () => {
   await requestOtp(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(503);
 });
+
+test('returns 503 when findUserById throws connection error', async () => {
+  const err = Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
+  userModel.findUserById.mockRejectedValue(err);
+  const req = { body: { nrp: '1', whatsapp: '628123' } };
+  const res = createRes();
+  await requestOtp(req, res, () => {});
+  expect(res.status).toHaveBeenCalledWith(503);
+  expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Database tidak tersedia' });
+});
