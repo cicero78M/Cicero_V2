@@ -20,40 +20,43 @@ function cleanupStores() {
 setInterval(cleanupStores, CLEANUP_INTERVAL_MS).unref();
 
 export function generateOtp(nrp, whatsapp) {
+  const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   const expires = Date.now() + OTP_TTL_MS;
-  otpStore.set(nrp, { otp, whatsapp: wa, expires });
+  otpStore.set(key, { otp, whatsapp: wa, expires });
   return otp;
 }
 
 export function verifyOtp(nrp, whatsapp, code) {
+  const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
-  const record = otpStore.get(nrp);
+  const record = otpStore.get(key);
   if (!record) return false;
   if (record.whatsapp !== wa) return false;
   if (record.expires < Date.now()) {
-    otpStore.delete(nrp);
+    otpStore.delete(key);
     return false;
   }
   if (record.otp !== code) return false;
-  otpStore.delete(nrp);
-  verifiedStore.set(nrp, { whatsapp: wa, expires: Date.now() + VERIFY_TTL_MS });
+  otpStore.delete(key);
+  verifiedStore.set(key, { whatsapp: wa, expires: Date.now() + VERIFY_TTL_MS });
   return true;
 }
 
 export function isVerified(nrp, whatsapp) {
+  const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
-  const record = verifiedStore.get(nrp);
+  const record = verifiedStore.get(key);
   if (!record) return false;
   if (record.whatsapp !== wa) return false;
   if (record.expires < Date.now()) {
-    verifiedStore.delete(nrp);
+    verifiedStore.delete(key);
     return false;
   }
   return true;
 }
 
 export function clearVerification(nrp) {
-  verifiedStore.delete(nrp);
+  verifiedStore.delete(String(nrp));
 }
