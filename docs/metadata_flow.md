@@ -40,9 +40,7 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
    - Summaries can be retrieved via dashboard endpoints under `/dashboard`.
 3. **Reporting**
    - Additional cron tasks (`cronInstaLaphar.js`, `cronTiktokLaphar.js`) send daily recap reports to admins through WhatsApp using `waService.js`.
-4. **Notification Reminders**
-   - `cronNotifikasiLikesDanKomentar.js` reminds users who have not interacted with posts.
-5. **Queue Processing (Optional)**
+4. **Queue Processing (Optional)**
    - Heavy operations can publish tasks to RabbitMQ with `rabbitMQService.js` and are processed asynchronously.
 
 ## 4. Final Output
