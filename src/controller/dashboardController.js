@@ -1,8 +1,7 @@
 // src/controller/dashboardController.js
 import { getAllClients } from "../model/clientModel.js";
 import { getAllUsers } from "../model/userModel.js";
-import { countPostsByClient as countInstaPostsByClient } from "../model/instaPostModel.js";
-import { countPostsByClient as countTiktokPostsByClient } from "../model/tiktokPostModel.js";
+import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 
@@ -20,8 +19,8 @@ export async function getDashboardStats(req, res) {
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
       getAllUsers(client_id), // <- ini
-      countInstaPostsByClient(client_id, periode, tanggal, start_date, end_date),
-      countTiktokPostsByClient(client_id, periode, tanggal, start_date, end_date),
+      getInstaPostCount(client_id, periode, tanggal, start_date, end_date),
+      getTiktokPostCount(client_id, periode, tanggal, start_date, end_date),
     ]);
 
     // === FILTER HANYA USER AKTIF
