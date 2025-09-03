@@ -47,24 +47,6 @@ test('returns user data when verified', async () => {
   expect(res.json).toHaveBeenCalledWith({ success: true, data: { user_id: '1', nama: 'Test' } });
 });
 
-test('strips link fields from user data', async () => {
-  userModel.findUserById.mockResolvedValue({
-    user_id: '1',
-    nama: 'Test',
-    link: 'should-remove',
-    instagram_link: 'should-remove-too',
-  });
-  otpService.isVerified.mockResolvedValue(true);
-  const req = { body: { nrp: '1', whatsapp: '08123' } };
-  const res = createRes();
-  await getUserData(req, res, () => {});
-  expect(res.status).toHaveBeenCalledWith(200);
-  expect(res.json).toHaveBeenCalledWith({
-    success: true,
-    data: { user_id: '1', nama: 'Test' },
-  });
-});
-
 test('rejects when OTP not verified', async () => {
   otpService.isVerified.mockResolvedValue(false);
   const req = { body: { nrp: '1', whatsapp: '08123' } };

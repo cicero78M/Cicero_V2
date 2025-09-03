@@ -124,13 +124,6 @@ export async function getUserData(req, res, next) {
         .status(404)
         .json({ success: false, message: 'User tidak ditemukan' });
     }
-    // Permintaan berbasis OTP hanya membutuhkan data user dasar.
-    // Jangan sertakan atau ambil informasi link agar respons tetap ringan.
-    if (user) {
-      Object.keys(user).forEach((k) => {
-        if (k.toLowerCase().includes('link')) delete user[k];
-      });
-    }
     sendSuccess(res, user);
   } catch (err) {
     next(err);
