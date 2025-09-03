@@ -1,11 +1,21 @@
 import cron from 'node-cron';
-import { clearAllBaileysSessions } from '../service/baileysSessionService.js';
+import { clearAllBaileysSessions, clearBaileysAuthFiles } from '../service/baileysSessionService.js';
 
 cron.schedule(
   '0 2 * * *',
   () => {
     clearAllBaileysSessions().catch((err) => {
       console.error('[BAILEYS] cleanup failed:', err.message);
+    });
+  },
+  { timezone: 'Asia/Jakarta' }
+);
+
+cron.schedule(
+  '*/15 * * * *',
+  () => {
+    clearBaileysAuthFiles().catch((err) => {
+      console.error('[BAILEYS] auth cleanup failed:', err.message);
     });
   },
   { timezone: 'Asia/Jakarta' }
