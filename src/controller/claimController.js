@@ -47,7 +47,7 @@ export async function requestOtp(req, res, next) {
         return res.status(400).json({ success: false, message: 'whatsapp tidak sesuai' });
       }
     }
-    const otp = generateOtp(nrp, wa);
+    const otp = await generateOtp(nrp, wa);
     let sent;
     try {
       await waitForWaReady();
@@ -77,7 +77,7 @@ export async function verifyOtpController(req, res, next) {
       return res.status(400).json({ success: false, message: 'nrp, whatsapp, dan otp wajib diisi' });
     }
     const wa = normalizeWhatsappNumber(whatsapp);
-    const valid = verifyOtp(nrp, wa, otp);
+    const valid = await verifyOtp(nrp, wa, otp);
     if (!valid) {
       return res.status(400).json({ success: false, message: 'OTP tidak valid' });
     }
@@ -106,7 +106,7 @@ export async function updateUserData(req, res, next) {
       return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
     }
     const wa = normalizeWhatsappNumber(whatsapp);
-    if (!isVerified(nrp, wa)) {
+    if (!(await isVerified(nrp, wa))) {
       return res.status(403).json({ success: false, message: 'OTP belum diverifikasi' });
     }
     const data = { nama, title, divisi, jabatan, desa };
@@ -130,7 +130,7 @@ export async function updateUserData(req, res, next) {
     }
     Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
     const updated = await userModel.updateUser(nrp, data);
-    clearVerification(nrp);
+    await clearVerification(nrp);
     sendSuccess(res, updated);
   } catch (err) {
     next(err);
