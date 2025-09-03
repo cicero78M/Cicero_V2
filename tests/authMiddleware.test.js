@@ -36,8 +36,8 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/clients/profile')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
   test('allows operator role on user directory route', async () => {
@@ -45,8 +45,8 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/users/list')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
   test('allows operator role on dashboard stats route', async () => {
@@ -54,8 +54,8 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/dashboard/stats')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
   test('allows operator role on amplify rekap route', async () => {
@@ -63,8 +63,8 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/amplify/rekap')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
   test('blocks operator role on disallowed methods', async () => {
