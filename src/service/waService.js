@@ -213,7 +213,15 @@ function wrapSendMessage(client) {
     } catch {
       console.warn("[WA] sendMessage called before ready");
     }
-    return original.apply(client, args);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await original.apply(client, args);
+      } catch (err) {
+        const isRateLimit = err?.data === 429 || err?.message === 'rate-overlimit';
+        if (!isRateLimit || attempt === 2) throw err;
+        await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000));
+      }
+    }
   };
 }
 wrapSendMessage(waClient);
