@@ -7,7 +7,12 @@ const mockSock = { requestPairingCode: mockRequestPairingCode, ev: { on: jest.fn
 jest.unstable_mockModule('@whiskeysockets/baileys', () => ({
   __esModule: true,
   default: jest.fn(() => mockSock),
-  useMultiFileAuthState: jest.fn().mockResolvedValue({ state: {}, saveCreds: jest.fn() }),
+  useMultiFileAuthState: jest
+    .fn()
+    .mockResolvedValue({ state: {}, saveCreds: jest.fn() }),
+  fetchLatestBaileysVersion: jest
+    .fn()
+    .mockResolvedValue({ version: [0, 0, 0] }),
 }));
 
 const { requestPairingCode } = await import('../src/service/waAdapter.js');
