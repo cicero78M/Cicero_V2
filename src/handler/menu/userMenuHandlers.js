@@ -453,17 +453,19 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         return;
       }
     }
-    if (field === "tiktok") {
-      const ttMatch = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)/i);
-      if (!ttMatch) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Format salah! Masukkan *link profil TikTok* (contoh: https://www.tiktok.com/@username)"
+      if (field === "tiktok") {
+        const ttMatch = value.match(
+          /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
         );
-        return;
+        if (!ttMatch) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Format salah! Masukkan *link profil TikTok* (contoh: https://www.tiktok.com/@username)"
+          );
+          return;
+        }
+        value = "@" + ttMatch[2].toLowerCase();
       }
-      value = "@" + ttMatch[2];
-    }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
     if (["nama", "title", "divisi", "jabatan", "desa"].includes(field)) value = value.toUpperCase();
 

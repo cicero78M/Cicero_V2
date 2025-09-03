@@ -37,8 +37,8 @@ describe('updateUserData', () => {
       body: {
         nrp: '1',
         whatsapp: '08123',
-        insta: 'https://www.instagram.com/TestUser',
-        tiktok: 'https://www.tiktok.com/@TikUser'
+        insta: 'https://www.instagram.com/TestUser?igsh=abc',
+        tiktok: 'https://www.tiktok.com/@TikUser?lang=id'
       }
     };
     const res = createRes();
