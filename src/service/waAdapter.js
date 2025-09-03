@@ -85,7 +85,19 @@ export async function createBaileysClient({ refreshAuth = false } = {}) {
     });
     if (sock.logger) sock.logger.level = 'warn';
     sock.ev.on('creds.update', saveCreds);
-    sock.ev.on('messages.upsert', handleMessages);
+    sock.ev.on('messages.upsert', (m) => {
+      try {
+        handleMessages(m);
+      } catch (err) {
+        if (err?.name === 'PreKeyError') {
+          refreshAuthState();
+          startSock();
+          handleMessages(m);
+        } else {
+          throw err;
+        }
+      }
+    });
     sock.ev.on('connection.update', onConnectionUpdate);
   };
 
