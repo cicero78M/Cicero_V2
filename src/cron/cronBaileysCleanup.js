@@ -12,7 +12,7 @@ cron.schedule(
 );
 
 cron.schedule(
-  '*/15 * * * *',
+  '0 * * * *',
   () => {
     clearBaileysAuthFiles().catch((err) => {
       console.error('[BAILEYS] auth cleanup failed:', err.message);
