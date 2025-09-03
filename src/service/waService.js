@@ -135,12 +135,12 @@ if (refreshAuth) {
 export let waClient = await createBaileysClient({ refreshAuth });
 export let wwebjsClient = await createWwebjsClient();
 
-async function reconnectBaileys() {
+async function reconnectBaileys(forceRefresh = false) {
   console.log("[WA] Reconnecting to Baileys client");
   try {
     await waClient?.disconnect();
   } catch {}
-  waClient = await createBaileysClient();
+  waClient = await createBaileysClient({ refreshAuth: forceRefresh });
   waClient.onDisconnect(handleDisconnect);
   wrapSendMessage(waClient);
   await waClient.connect();
@@ -149,7 +149,9 @@ async function reconnectBaileys() {
 function handleDisconnect(reason) {
   waReady = false;
   console.warn("[WA] Client disconnected:", reason);
-  reconnectBaileys();
+  const unauthorized =
+    reason?.output?.statusCode === 401 || reason?.data?.reason === "401";
+  reconnectBaileys(unauthorized);
 }
 
 waClient.onDisconnect(handleDisconnect);
