@@ -1,62 +1,39 @@
+import redis from '../config/redis.js';
 import { normalizeWhatsappNumber } from '../utils/waHelper.js';
 
-const OTP_TTL_MS = 5 * 60 * 1000;
-const VERIFY_TTL_MS = 10 * 60 * 1000;
-const CLEANUP_INTERVAL_MS = 60 * 1000;
+const OTP_TTL_SEC = 5 * 60;
+const VERIFY_TTL_SEC = 10 * 60;
 
-const otpStore = new Map();
-const verifiedStore = new Map();
-
-function cleanupStores() {
-  const now = Date.now();
-  for (const [nrp, { expires }] of otpStore) {
-    if (expires < now) otpStore.delete(nrp);
-  }
-  for (const [nrp, record] of verifiedStore) {
-    if (record.expires < now) verifiedStore.delete(nrp);
-  }
-}
-
-setInterval(cleanupStores, CLEANUP_INTERVAL_MS).unref();
-
-export function generateOtp(nrp, whatsapp) {
+export async function generateOtp(nrp, whatsapp) {
   const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
   const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const expires = Date.now() + OTP_TTL_MS;
-  otpStore.set(key, { otp, whatsapp: wa, expires });
+  const value = JSON.stringify({ otp, whatsapp: wa });
+  await redis.set(`otp:${key}`, value, { EX: OTP_TTL_SEC });
   return otp;
 }
 
-export function verifyOtp(nrp, whatsapp, code) {
+export async function verifyOtp(nrp, whatsapp, code) {
   const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
-  const record = otpStore.get(key);
-  if (!record) return false;
-  if (record.whatsapp !== wa) return false;
-  if (record.expires < Date.now()) {
-    otpStore.delete(key);
-    return false;
-  }
-  if (record.otp !== code) return false;
-  otpStore.delete(key);
-  verifiedStore.set(key, { whatsapp: wa, expires: Date.now() + VERIFY_TTL_MS });
+  const data = await redis.get(`otp:${key}`);
+  if (!data) return false;
+  const { otp, whatsapp: storedWa } = JSON.parse(data);
+  if (storedWa !== wa || otp !== code) return false;
+  await redis.del(`otp:${key}`);
+  await redis.set(`verified:${key}`, wa, { EX: VERIFY_TTL_SEC });
   return true;
 }
 
-export function isVerified(nrp, whatsapp) {
+export async function isVerified(nrp, whatsapp) {
   const key = String(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
-  const record = verifiedStore.get(key);
-  if (!record) return false;
-  if (record.whatsapp !== wa) return false;
-  if (record.expires < Date.now()) {
-    verifiedStore.delete(key);
-    return false;
-  }
+  const storedWa = await redis.get(`verified:${key}`);
+  if (!storedWa) return false;
+  if (storedWa !== wa) return false;
   return true;
 }
 
-export function clearVerification(nrp) {
-  verifiedStore.delete(String(nrp));
+export async function clearVerification(nrp) {
+  await redis.del(`verified:${String(nrp)}`);
 }
