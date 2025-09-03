@@ -4,6 +4,20 @@ import { formatToWhatsAppId, normalizeWhatsappNumber, safeSendMessage } from '..
 import waClient, { waitForWaReady } from '../service/waService.js';
 import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
 
+function extractInstagramUsername(value) {
+  if (!value) return undefined;
+  const match = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
+  const username = match ? match[2] : value.replace(/^@/, '');
+  return username.toLowerCase();
+}
+
+function extractTiktokUsername(value) {
+  if (!value) return undefined;
+  const match = value.match(/^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)/i);
+  const username = match ? match[2] : value.replace(/^@/, '');
+  return `@${username.toLowerCase()}`;
+}
+
 export async function requestOtp(req, res, next) {
   try {
     const { nrp, whatsapp } = req.body;
@@ -63,7 +77,25 @@ export async function updateUserData(req, res, next) {
     if (!isVerified(nrp, wa)) {
       return res.status(403).json({ success: false, message: 'OTP belum diverifikasi' });
     }
-    const data = { nama, title, divisi, jabatan, desa, insta, tiktok };
+    const data = { nama, title, divisi, jabatan, desa };
+    if (insta !== undefined) {
+      const igUsername = extractInstagramUsername(insta);
+      if (igUsername === 'cicero_devs') {
+        return res
+          .status(400)
+          .json({ success: false, message: 'username instagram tidak valid' });
+      }
+      data.insta = igUsername;
+    }
+    if (tiktok !== undefined) {
+      const ttUsername = extractTiktokUsername(tiktok);
+      if (ttUsername.replace(/^@/, '') === 'cicero_devs') {
+        return res
+          .status(400)
+          .json({ success: false, message: 'username tiktok tidak valid' });
+      }
+      data.tiktok = ttUsername;
+    }
     Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
     const updated = await userModel.updateUser(nrp, data);
     clearVerification(nrp);
