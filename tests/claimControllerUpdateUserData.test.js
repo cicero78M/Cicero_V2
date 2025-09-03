@@ -17,9 +17,8 @@ describe('updateUserData', () => {
       generateOtp: jest.fn(),
       verifyOtp: jest.fn()
     }));
-    jest.unstable_mockModule('../src/service/waService.js', () => ({
-      default: {},
-      waitForWaReady: jest.fn()
+    jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
+      enqueueOtp: jest.fn(),
     }));
     ({ updateUserData } = await import('../src/controller/claimController.js'));
     userModel = await import('../src/model/userModel.js');

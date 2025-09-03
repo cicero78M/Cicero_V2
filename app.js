@@ -11,6 +11,7 @@ import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
 import { waClient } from './src/service/waService.js';
+import { startOtpWorker } from './src/service/otpQueue.js';
 
 // Import semua cron jobs setelah WhatsApp siap
 const cronModules = [
@@ -38,6 +39,8 @@ const cronModules = [
 waClient.on('ready', async () => {
   await Promise.all(cronModules.map(m => import(m)));
 });
+
+startOtpWorker().catch(err => console.error('[OTP] worker error', err));
 
 const app = express();
 app.disable('etag');
