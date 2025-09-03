@@ -2,6 +2,7 @@
 // IMPORTS & KONFIGURASI
 // =======================
 import qrcode from "qrcode-terminal";
+import PQueue from "p-queue";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
 const pool = { query };
@@ -96,6 +97,12 @@ import {
 } from "../utils/constants.js";
 
 dotenv.config();
+
+const messageQueue = new PQueue({ concurrency: 1 });
+
+function randomDelay() {
+  return 2000 + Math.floor(Math.random() * 3000);
+}
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
@@ -207,21 +214,27 @@ export function waitForWaReady(timeout = 30000) {
 function wrapSendMessage(client) {
   const original = client.sendMessage;
   client._originalSendMessage = original;
-  client.sendMessage = async (...args) => {
+
+  async function sendWithRetry(args, attempt = 0) {
     try {
-      await waitForWaReady();
-    } catch {
-      console.warn("[WA] sendMessage called before ready");
-    }
-    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return await original.apply(client, args);
-      } catch (err) {
-        const isRateLimit = err?.data === 429 || err?.message === 'rate-overlimit';
-        if (!isRateLimit || attempt === 2) throw err;
-        await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000));
+        await waitForWaReady();
+      } catch {
+        console.warn("[WA] sendMessage called before ready");
       }
+      return await original.apply(client, args);
+    } catch (err) {
+      const isRateLimit = err?.data === 429 || err?.message === "rate-overlimit";
+      if (!isRateLimit || attempt >= 4) throw err;
+      const baseDelay = 2 ** attempt * 1000;
+      const jitter = Math.floor(Math.random() * 0.2 * baseDelay);
+      await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
+      return sendWithRetry(args, attempt + 1);
     }
+  }
+
+  client.sendMessage = (...args) => {
+    return messageQueue.add(() => sendWithRetry(args), { delay: randomDelay() });
   };
 }
 wrapSendMessage(waClient);
