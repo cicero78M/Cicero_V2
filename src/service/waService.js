@@ -101,7 +101,7 @@ dotenv.config();
 const messageQueue = new PQueue({ concurrency: 1 });
 
 // Fixed delay to ensure consistent response timing
-const responseDelayMs = 2000;
+const responseDelayMs = 800;
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
@@ -225,7 +225,7 @@ function wrapSendMessage(client) {
     } catch (err) {
       const isRateLimit = err?.data === 429 || err?.message === "rate-overlimit";
       if (!isRateLimit || attempt >= 4) throw err;
-      const baseDelay = 2 ** attempt * 1000;
+      const baseDelay = 2 ** attempt * 800;
       const jitter = Math.floor(Math.random() * 0.2 * baseDelay);
       await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
       return sendWithRetry(args, attempt + 1);

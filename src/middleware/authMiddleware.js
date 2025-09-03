@@ -7,23 +7,8 @@ export function authRequired(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    if (decoded.role === 'operator') {
-      const path = req.path;
-      const method = req.method.toLowerCase();
-
-      // Routes that operator can access with any method
-      const allowedPrefixes = ['/claim', '/clients/profile'];
-
-      // Additional data-fetching routes allowed only for GET requests
-      const allowedGetPrefixes = ['/users', '/dashboard', '/amplify'];
-
-      const allowed =
-        allowedPrefixes.some(p => path.startsWith(p)) ||
-        (method === 'get' && allowedGetPrefixes.some(p => path.startsWith(p)));
-
-      if (!allowed) {
-        return res.status(403).json({ success: false, message: 'Forbidden' });
-      }
+    if (decoded.role === 'operator' && !req.path.startsWith('/claim')) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     next();
   } catch (err) {
