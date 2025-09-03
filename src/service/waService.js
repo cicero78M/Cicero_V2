@@ -9,6 +9,8 @@ const pool = { query };
 
 // Adapter creators for WhatsApp clients
 import { createBaileysClient, refreshAuthState } from "./waAdapter.js";
+import { createWwebjsClient } from "./wwebjsAdapter.js";
+import { handleIncoming } from "./waEventAggregator.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -131,6 +133,7 @@ if (refreshAuth) {
   refreshAuthState();
 }
 export let waClient = await createBaileysClient({ refreshAuth });
+export let wwebjsClient = await createWwebjsClient();
 
 async function reconnectBaileys() {
   console.log("[WA] Reconnecting to Baileys client");
@@ -271,7 +274,7 @@ waClient.on("change_state", (state) => {
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
-waClient.on("message", async (msg) => {
+async function handleMessage(msg) {
   const chatId = msg.from;
   const text = (msg.body || "").trim();
   console.log(`[WA] Incoming message from ${chatId}: ${text}`);
@@ -2202,7 +2205,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   );
   console.log(`[WA] Message from ${chatId} processed with fallback handler`);
   return;
-});
+}
+
+waClient.on('message', (msg) => handleIncoming('baileys', msg, handleMessage));
+wwebjsClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
 // Fallback handler for environments that emit `message_create` instead of `message`
 waClient.on("message_create", (msg) => {
@@ -2218,6 +2224,13 @@ try {
   await waClient.connect();
 } catch (err) {
   console.error("[WA] Initialization failed:", err.message);
+}
+
+console.log("[WA] Starting wwebjs standby client initialization");
+try {
+  await wwebjsClient.connect();
+} catch (err) {
+  console.error("[WA] wwebjs initialization failed:", err.message);
 }
 
 // Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
