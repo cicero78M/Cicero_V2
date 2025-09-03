@@ -12,10 +12,7 @@ This document summarizes the automated jobs ("activity") that run inside Cicero_
 | `cronInstaLaphar.js` | `00 15,18,21 * * *` | Daily at 15:00, 18:00 and 21:00. Fetches Instagram posts, updates likes and distributes daily reports. |
 | `cronTiktokLaphar.js` | `03 15,18,21 * * *` | Daily at 15:03, 18:03 and 21:03. Fetches TikTok posts and comments then sends attendance reports to recipients. |
 | `cronInstaDataMining.js` | `40 23 * * *` | Daily at 23:40. Crawls Instagram accounts for new posts and stores extended metadata. |
-| `cronNotifikasiLikesDanKomentar.js` | `10 12,16,19 * * *` | Daily at 12:10, 16:10 and 19:10. Sends WhatsApp reminders to users who have not liked/commented on today's posts. |
 | `cronRekapLink.js` | `2 15,18,21 * * *` | Daily at 15:02, 18:02 and 21:02. Sends attendance link recaps to operators and admins. |
-| `cronPremiumSubscription.js` | `0 0 * * *` | Daily at 00:00. Revokes `premium_status` for users whose `premium_end_date` has passed. |
-| `cronPremiumRequest.js` | `*/30 * * * *` | Every 30 minutes. Expires premium subscription requests older than three hours. |
 | `cronAbsensiUserData.js` | `0 13 * * *` | Daily at 13:00. Notifies users and operators about incomplete registration data. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | At 23:00 on the last day of each month. Generates monthly amplification link reports and sends an Excel file to each operator. |
 

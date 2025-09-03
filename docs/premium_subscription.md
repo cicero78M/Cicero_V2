@@ -17,12 +17,6 @@ name of the account holder, the account number and the originating bank. After
 the user transfers the fee they upload the proof of payment and confirm the
 request. Only at this confirmation stage does the system notify the
 administrators via WhatsApp.
-
-Each request will automatically expire after three hours if no confirmation is
-received. Administrators approve by replying `grantsub#<id>` or reject with
+ 
+Administrators approve by replying `grantsub#<id>` or reject with
 `denysub#<id>`. Approval sets `premium_status` to `true` for the user.
-
-## Scheduled Maintenance
-
-- `cronPremiumRequest.js` runs every 30 minutes to clean up premium requests that have not been confirmed within three hours.
-- `cronPremiumSubscription.js` runs daily at midnight (00:00) to disable `premium_status` for users whose `premium_end_date` has passed.
