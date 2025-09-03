@@ -220,12 +220,11 @@ function wrapSendMessage(client) {
   client._originalSendMessage = original;
 
   async function sendWithRetry(args, attempt = 0) {
+    await waitForWaReady().catch(() => {
+      console.warn("[WA] sendMessage called before ready");
+      throw new Error("WhatsApp client not ready");
+    });
     try {
-      try {
-        await waitForWaReady();
-      } catch {
-        console.warn("[WA] sendMessage called before ready");
-      }
       return await original.apply(client, args);
     } catch (err) {
       const isRateLimit = err?.data === 429 || err?.message === "rate-overlimit";
