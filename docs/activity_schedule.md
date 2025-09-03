@@ -15,6 +15,7 @@ This document summarizes the automated jobs ("activity") that run inside Cicero_
 | `cronRekapLink.js` | `2 15,18,21 * * *` | Daily at 15:02, 18:02 and 21:02. Sends attendance link recaps to operators and admins. |
 | `cronAbsensiUserData.js` | `0 13 * * *` | Daily at 13:00. Notifies users and operators about incomplete registration data. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | At 23:00 on the last day of each month. Generates monthly amplification link reports and sends an Excel file to each operator. |
+| `cronBaileysCleanup.js` | `15,45 * * * *` | Twice per hour. Deletes Baileys auth files older than 24 hours when the client is disconnected. |
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp, and updates the system accordingly. The cron files are imported in `app.js` so no additional setup is required.
 
