@@ -8,7 +8,7 @@ let app;
 beforeAll(async () => {
   process.env.JWT_SECRET = 'testsecret';
   jest.unstable_mockModule('../src/controller/claimController.js', () => ({
-    requestOtp: (req, res) => res.status(200).json({ success: true }),
+    requestOtp: (req, res) => res.status(202).json({ success: true }),
     verifyOtpController: (req, res) => res.status(200).json({ success: true }),
     updateUserData: (req, res) => res.status(200).json({ success: true })
   }));
@@ -25,7 +25,7 @@ beforeAll(async () => {
 
 describe('claim routes access', () => {
   test('allows access without token', async () => {
-    await request(app).post('/api/claim/request-otp').send({ nrp: '1', whatsapp: '1' }).expect(200);
+    await request(app).post('/api/claim/request-otp').send({ nrp: '1', whatsapp: '1' }).expect(202);
     await request(app).post('/api/claim/verify-otp').send({ nrp: '1', whatsapp: '1', otp: '123' }).expect(200);
     await request(app).put('/api/claim/update').send({ nrp: '1', whatsapp: '1' }).expect(200);
   });

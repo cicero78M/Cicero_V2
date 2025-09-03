@@ -1,7 +1,7 @@
 import * as userModel from '../model/userModel.js';
 import { sendSuccess } from '../utils/response.js';
-import { formatToWhatsAppId, normalizeWhatsappNumber, safeSendMessage } from '../utils/waHelper.js';
-import waClient, { waitForWaReady } from '../service/waService.js';
+import { normalizeWhatsappNumber } from '../utils/waHelper.js';
+import { enqueueOtp } from '../service/otpQueue.js';
 import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
 
 function isConnectionError(err) {
@@ -52,23 +52,15 @@ export async function requestOtp(req, res, next) {
       }
     }
     const otp = await generateOtp(nrp, wa);
-    let sent;
     try {
-      await waitForWaReady();
-      const wid = formatToWhatsAppId(wa);
-      sent = await safeSendMessage(waClient, wid, `Kode OTP Anda: ${otp}`);
+      await enqueueOtp(wa, otp);
     } catch (err) {
-      console.warn(`[WA] Failed to send OTP to ${wa}: ${err.message}`);
+      console.warn(`[OTP] Failed to enqueue OTP for ${wa}: ${err.message}`);
       return res
         .status(503)
         .json({ success: false, message: 'layanan WhatsApp tidak tersedia' });
     }
-    if (!sent) {
-      return res
-        .status(503)
-        .json({ success: false, message: 'layanan WhatsApp tidak tersedia' });
-    }
-    sendSuccess(res, { message: 'OTP dikirim' });
+    sendSuccess(res, { message: 'OTP akan dikirim sesaat lagi' }, 202);
   } catch (err) {
     next(err);
   }
