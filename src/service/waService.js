@@ -275,11 +275,11 @@ waClient.on("message", async (msg) => {
   const chatId = msg.from;
   const text = (msg.body || "").trim();
   console.log(`[WA] Incoming message from ${chatId}: ${text}`);
-  if (msg.isStatus) {
+  if (msg.isStatus || chatId === "status@broadcast") {
     console.log(`[WA] Ignored status message from ${chatId}`);
     return;
   }
-  if (chatId?.endsWith("@g.us") && !text.toLowerCase().startsWith("thisgroup#")) {
+  if (chatId?.endsWith("@g.us")) {
     console.log(`[WA] Ignored group message from ${chatId}`);
     return;
   }
