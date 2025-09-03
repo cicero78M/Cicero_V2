@@ -100,9 +100,8 @@ dotenv.config();
 
 const messageQueue = new PQueue({ concurrency: 1 });
 
-function randomDelay() {
-  return 2000 + Math.floor(Math.random() * 3000);
-}
+// Fixed delay to ensure consistent response timing
+const responseDelayMs = 2000;
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
@@ -234,7 +233,7 @@ function wrapSendMessage(client) {
   }
 
   client.sendMessage = (...args) => {
-    return messageQueue.add(() => sendWithRetry(args), { delay: randomDelay() });
+    return messageQueue.add(() => sendWithRetry(args), { delay: responseDelayMs });
   };
 }
 wrapSendMessage(waClient);
