@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { clearAllBaileysSessions, clearBaileysAuthFiles } from '../service/baileysSessionService.js';
 
 cron.schedule(
-  '0 2 * * *',
+  '0 3 * * *',
   () => {
     clearAllBaileysSessions().catch((err) => {
       console.error('[BAILEYS] cleanup failed:', err.message);
@@ -12,7 +12,7 @@ cron.schedule(
 );
 
 cron.schedule(
-  '0 * * * *',
+  '15 * * * *',
   () => {
     clearBaileysAuthFiles().catch((err) => {
       console.error('[BAILEYS] auth cleanup failed:', err.message);
