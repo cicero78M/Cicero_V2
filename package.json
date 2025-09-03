@@ -39,7 +39,10 @@
     "rabbitmq": "^0.0.2",
     "redis": "^4.6.7",
     "sequelize": "^6.32.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "whatsapp-web.js": "^1.23.0",
+    "bullmq": "^5.6.0",
+    "bottleneck": "^2.19.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
