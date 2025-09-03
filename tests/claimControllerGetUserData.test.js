@@ -54,3 +54,13 @@ test('rejects when OTP not verified', async () => {
   await getUserData(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(403);
 });
+
+test('normalizes nrp before fetching user', async () => {
+  userModel.findUserById.mockResolvedValue({ user_id: '00123', nama: 'Test' });
+  otpService.isVerified.mockResolvedValue(true);
+  const req = { body: { nrp: ' 00-123 ', whatsapp: '08123' } };
+  const res = createRes();
+  await getUserData(req, res, () => {});
+  expect(userModel.findUserById).toHaveBeenCalledWith('00123');
+  expect(res.status).toHaveBeenCalledWith(200);
+});

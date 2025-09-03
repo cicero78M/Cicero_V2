@@ -1,19 +1,22 @@
 // src/model/userModel.js
 
 import { query } from '../repository/db.js';
+import { normalizeUserId } from '../utils/utilsHelper.js';
 
 async function addRole(userId, roleName) {
+  const uid = normalizeUserId(userId);
   await query('INSERT INTO roles (role_name) VALUES ($1) ON CONFLICT (role_name) DO NOTHING', [roleName]);
   await query(
     'INSERT INTO user_roles (user_id, role_id) VALUES ($1, (SELECT role_id FROM roles WHERE role_name=$2)) ON CONFLICT DO NOTHING',
-    [userId, roleName]
+    [uid, roleName]
   );
 }
 
 async function removeRole(userId, roleName) {
+  const uid = normalizeUserId(userId);
   await query(
     'DELETE FROM user_roles WHERE user_id=$1 AND role_id=(SELECT role_id FROM roles WHERE role_name=$2)',
-    [userId, roleName]
+    [uid, roleName]
   );
 }
 
@@ -283,19 +286,21 @@ export async function getUsersSocialByClient(clientId, roleFilter = null) {
 }
 
 export async function findUserById(user_id) {
+  const uid = normalizeUserId(user_id);
   const { rows } = await query(
       `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1\n     GROUP BY u.user_id`,
-    [user_id]
+    [uid]
   );
   return rows[0];
 }
 
 // Ambil user berdasarkan user_id dan client_id
 export async function findUserByIdAndClient(user_id, client_id, roleFilter = null) {
+  const uid = normalizeUserId(user_id);
   const { clause, params: clientParams } = await buildClientFilter(client_id, 'u', 2, roleFilter);
   const { rows } = await query(
       `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND ${clause}\n     GROUP BY u.user_id`,
-    [user_id, ...clientParams]
+    [uid, ...clientParams]
   );
   return rows[0];
 }
@@ -312,6 +317,7 @@ export async function updatePremiumStatus(userId, status, endDate) {
  * Update field user (termasuk insta/tiktok/whatsapp/exception/status/nama/title/divisi/jabatan)
  */
 export async function updateUserField(user_id, field, value) {
+  const uid = normalizeUserId(user_id);
   const allowed = [
     "insta",
     "tiktok",
@@ -332,15 +338,15 @@ export async function updateUserField(user_id, field, value) {
     value = value.toUpperCase();
   }
   if (roleFields.includes(field)) {
-    if (value) await addRole(user_id, field);
-    else await removeRole(user_id, field);
-    return findUserById(user_id);
+    if (value) await addRole(uid, field);
+    else await removeRole(uid, field);
+    return findUserById(uid);
   }
   await query(
     `UPDATE "user" SET ${field}=$1 WHERE user_id=$2`,
-    [value, user_id]
+    [value, uid]
   );
-  return findUserById(user_id);
+  return findUserById(uid);
 }
 
 // Ambil user dengan exception per client
@@ -441,9 +447,10 @@ export async function findUserByWhatsApp(wa) {
 
 export async function findUserByIdAndWhatsApp(userId, wa) {
   if (!userId || !wa) return null;
+  const uid = normalizeUserId(userId);
   const { rows } = await query(
       `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id`,
-    [userId, wa]
+    [uid, wa]
   );
   return rows[0];
 }
@@ -481,6 +488,7 @@ export async function getAvailableSatfung(clientId = null, roleFilter = null) {
 export async function createUser(userData) {
   // Contoh userData: {user_id, nama, title, divisi, jabatan, ...}
   // Sesuaikan dengan struktur dan database-mu!
+  userData.user_id = normalizeUserId(userData.user_id);
   normalizeUserFields(userData);
   const roles = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'].filter(
     (r) => userData[r]
@@ -511,6 +519,7 @@ export async function createUser(userData) {
 }
 
 export async function updateUser(userId, userData) {
+  const uid = normalizeUserId(userId);
   normalizeUserFields(userData);
   const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'];
   const roles = {};
@@ -526,23 +535,24 @@ export async function updateUser(userId, userData) {
   if (columns.length > 0) {
     const setClause = columns.map((c, i) => `${c}=$${i + 1}`).join(', ');
     const params = columns.map((c) => userData[c]);
-    params.push(userId);
+    params.push(uid);
     await query(
       `UPDATE "user" SET ${setClause} WHERE user_id=$${columns.length + 1}`,
       params
     );
   }
   for (const [r, val] of Object.entries(roles)) {
-    if (val) await addRole(userId, r);
-    else await removeRole(userId, r);
+    if (val) await addRole(uid, r);
+    else await removeRole(uid, r);
   }
-  return findUserById(userId);
+  return findUserById(uid);
 }
 
 export async function deleteUser(userId) {
+  const uid = normalizeUserId(userId);
   const { rows } = await query(
     'DELETE FROM "user" WHERE user_id=$1 RETURNING *',
-    [userId]
+    [uid]
   );
   return rows[0];
 }

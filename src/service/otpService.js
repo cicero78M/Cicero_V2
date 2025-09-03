@@ -1,11 +1,12 @@
 import redis from '../config/redis.js';
 import { normalizeWhatsappNumber } from '../utils/waHelper.js';
+import { normalizeUserId } from '../utils/utilsHelper.js';
 
 const OTP_TTL_SEC = 5 * 60;
 const VERIFY_TTL_SEC = 10 * 60;
 
 export async function generateOtp(nrp, whatsapp) {
-  const key = String(nrp);
+  const key = normalizeUserId(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   const value = JSON.stringify({ otp, whatsapp: wa });
@@ -14,7 +15,7 @@ export async function generateOtp(nrp, whatsapp) {
 }
 
 export async function verifyOtp(nrp, whatsapp, code) {
-  const key = String(nrp);
+  const key = normalizeUserId(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
   const data = await redis.get(`otp:${key}`);
   if (!data) return false;
@@ -26,7 +27,7 @@ export async function verifyOtp(nrp, whatsapp, code) {
 }
 
 export async function isVerified(nrp, whatsapp) {
-  const key = String(nrp);
+  const key = normalizeUserId(nrp);
   const wa = normalizeWhatsappNumber(whatsapp);
   const storedWa = await redis.get(`verified:${key}`);
   if (!storedWa) return false;
@@ -35,5 +36,6 @@ export async function isVerified(nrp, whatsapp) {
 }
 
 export async function clearVerification(nrp) {
-  await redis.del(`verified:${String(nrp)}`);
+  const key = normalizeUserId(nrp);
+  await redis.del(`verified:${key}`);
 }

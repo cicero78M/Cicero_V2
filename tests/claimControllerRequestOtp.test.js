@@ -51,14 +51,14 @@ test('rejects request when stored whatsapp differs', async () => {
   expect(res.status).toHaveBeenCalledWith(400);
 });
 
-test('returns 503 when enqueueOtp fails', async () => {
+test('continues request even if enqueueOtp fails', async () => {
   userModel.findUserById.mockResolvedValue({ user_id: '1', whatsapp: '08123' });
   const req = { body: { nrp: '1', whatsapp: '628123' } };
   const res = createRes();
   const { enqueueOtp } = await import('../src/service/otpQueue.js');
   enqueueOtp.mockRejectedValue(new Error('queue fail'));
   await requestOtp(req, res, () => {});
-  expect(res.status).toHaveBeenCalledWith(503);
+  expect(res.status).toHaveBeenCalledWith(202);
 });
 
 test('returns 503 when findUserById throws connection error', async () => {
