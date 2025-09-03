@@ -13,7 +13,7 @@ const groupId = "120363419830216549@g.us";
 const cronTag = "CRON DIRREQUEST ABSENSI LIKES";
 
 cron.schedule(
-  "1 10,15,18,20 * * *",
+  "50 14,17,19 * * *",
   async () => {
     sendDebug({ tag: cronTag, msg: "Mulai fetch & absensi IG DITBINMAS" });
     try {
