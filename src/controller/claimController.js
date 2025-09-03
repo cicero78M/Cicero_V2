@@ -4,6 +4,10 @@ import { formatToWhatsAppId, normalizeWhatsappNumber, safeSendMessage } from '..
 import waClient, { waitForWaReady } from '../service/waService.js';
 import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
 
+function isConnectionError(err) {
+  return err && err.code === 'ECONNREFUSED';
+}
+
 function extractInstagramUsername(value) {
   if (!value) return undefined;
   const match = value.match(/^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)/i);
@@ -25,7 +29,15 @@ export async function requestOtp(req, res, next) {
       return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
     }
     const wa = normalizeWhatsappNumber(whatsapp);
-    const user = await userModel.findUserById(nrp);
+    let user;
+    try {
+      user = await userModel.findUserById(nrp);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        return res.status(503).json({ success: false, message: 'Database tidak tersedia' });
+      }
+      throw err;
+    }
     if (!user) {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
     }
@@ -69,7 +81,15 @@ export async function verifyOtpController(req, res, next) {
     if (!valid) {
       return res.status(400).json({ success: false, message: 'OTP tidak valid' });
     }
-    const user = await userModel.findUserById(nrp);
+    let user;
+    try {
+      user = await userModel.findUserById(nrp);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        return res.status(503).json({ success: false, message: 'Database tidak tersedia' });
+      }
+      throw err;
+    }
     if (user && !user.whatsapp) {
       await userModel.updateUserField(nrp, 'whatsapp', wa);
     }
