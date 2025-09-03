@@ -32,20 +32,26 @@ async function deleteFilesByNumber(dir, number) {
   return deleted;
 }
 
-async function deleteFilesByPatterns(dir, patterns) {
+async function deleteFilesByPatterns(dir, patterns, minAgeMs = 0) {
   let deleted = 0;
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        deleted += await deleteFilesByPatterns(fullPath, patterns);
+        deleted += await deleteFilesByPatterns(fullPath, patterns, minAgeMs);
         const remaining = await fs.readdir(fullPath).catch(() => []);
         if (!remaining.length) {
           await fs.rmdir(fullPath).catch(() => {});
         }
       } else if (entry.isFile()) {
-        if (patterns.some(p => entry.name.includes(p))) {
+        if (minAgeMs) {
+          const stat = await fs.stat(fullPath).catch(() => null);
+          if (stat && Date.now() - stat.mtimeMs < minAgeMs) {
+            continue;
+          }
+        }
+        if (patterns.some((p) => entry.name.includes(p))) {
           await fs.unlink(fullPath).catch(() => {});
           deleted++;
         }
@@ -62,10 +68,10 @@ export async function deleteBaileysFilesByNumber(number) {
   return deleteFilesByNumber(sessionsDir, number);
 }
 
-export async function clearBaileysAuthFiles() {
+export async function clearBaileysAuthFiles(minAgeMs = 0) {
   const sessionsDir = path.join('sessions', 'baileys');
   const patterns = ['sender-key', 'session', 'pre-key'];
-  return deleteFilesByPatterns(sessionsDir, patterns);
+  return deleteFilesByPatterns(sessionsDir, patterns, minAgeMs);
 }
 
 export async function clearAllBaileysSessions() {
