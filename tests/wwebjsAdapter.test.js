@@ -13,8 +13,10 @@ const mockClient = {
 };
 
 jest.unstable_mockModule('whatsapp-web.js', () => ({
-  Client: jest.fn(() => mockClient),
-  LocalAuth: jest.fn().mockImplementation(() => ({})),
+  default: {
+    Client: jest.fn(() => mockClient),
+    LocalAuth: jest.fn().mockImplementation(() => ({})),
+  },
 }));
 
 const { createWwebjsClient } = await import('../src/service/wwebjsAdapter.js');
