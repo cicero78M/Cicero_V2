@@ -29,8 +29,11 @@ export async function requestOtp(req, res, next) {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
     }
-    if (user.whatsapp && user.whatsapp !== wa) {
-      return res.status(400).json({ success: false, message: 'whatsapp tidak sesuai' });
+    if (user.whatsapp) {
+      const storedWa = normalizeWhatsappNumber(user.whatsapp);
+      if (storedWa !== wa) {
+        return res.status(400).json({ success: false, message: 'whatsapp tidak sesuai' });
+      }
     }
     const otp = generateOtp(nrp, wa);
     try {
