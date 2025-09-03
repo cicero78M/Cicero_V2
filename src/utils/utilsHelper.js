@@ -9,6 +9,12 @@ export function sortDivisionKeys(keys) {
   });
 }
 
+// Normalisasi user_id/NRP menjadi hanya digit tanpa spasi atau karakter lain
+export function normalizeUserId(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim().replace(/[^0-9]/g, "");
+}
+
 export function sortTitleKeys(keys, pangkatOrder) {
   // pangkatOrder: array urut dari DB
   return keys.slice().sort((a, b) => {

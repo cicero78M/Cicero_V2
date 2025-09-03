@@ -1,6 +1,7 @@
 import * as userModel from '../model/userModel.js';
 import { sendSuccess } from '../utils/response.js';
 import { normalizeWhatsappNumber } from '../utils/waHelper.js';
+import { normalizeUserId } from '../utils/utilsHelper.js';
 import { enqueueOtp } from '../service/otpQueue.js';
 import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
 
@@ -28,7 +29,8 @@ function extractTiktokUsername(value) {
 
 export async function requestOtp(req, res, next) {
   try {
-    const { nrp, whatsapp } = req.body;
+    const { nrp: rawNrp, whatsapp } = req.body;
+    const nrp = normalizeUserId(rawNrp);
     if (!nrp || !whatsapp) {
       return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
     }
@@ -52,14 +54,9 @@ export async function requestOtp(req, res, next) {
       }
     }
     const otp = await generateOtp(nrp, wa);
-    try {
-      await enqueueOtp(wa, otp);
-    } catch (err) {
-      console.warn(`[OTP] Failed to enqueue OTP for ${wa}: ${err.message}`);
-      return res
-        .status(503)
-        .json({ success: false, message: 'layanan WhatsApp tidak tersedia' });
-    }
+    enqueueOtp(wa, otp).catch((err) =>
+      console.warn(`[OTP] Failed to enqueue OTP for ${wa}: ${err.message}`)
+    );
     sendSuccess(res, { message: 'OTP akan dikirim sesaat lagi' }, 202);
   } catch (err) {
     next(err);
@@ -68,7 +65,8 @@ export async function requestOtp(req, res, next) {
 
 export async function verifyOtpController(req, res, next) {
   try {
-    const { nrp, whatsapp, otp } = req.body;
+    const { nrp: rawNrp, whatsapp, otp } = req.body;
+    const nrp = normalizeUserId(rawNrp);
     if (!nrp || !whatsapp || !otp) {
       return res.status(400).json({ success: false, message: 'nrp, whatsapp, dan otp wajib diisi' });
     }
@@ -97,7 +95,8 @@ export async function verifyOtpController(req, res, next) {
 
 export async function getUserData(req, res, next) {
   try {
-    const { nrp, whatsapp } = req.body;
+    const { nrp: rawNrp, whatsapp } = req.body;
+    const nrp = normalizeUserId(rawNrp);
     if (!nrp || !whatsapp) {
       return res
         .status(400)
@@ -133,7 +132,8 @@ export async function getUserData(req, res, next) {
 
 export async function updateUserData(req, res, next) {
   try {
-    const { nrp, whatsapp, nama, title, divisi, jabatan, desa, insta, tiktok } = req.body;
+    const { nrp: rawNrp, whatsapp, nama, title, divisi, jabatan, desa, insta, tiktok } = req.body;
+    const nrp = normalizeUserId(rawNrp);
     if (!nrp || !whatsapp) {
       return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
     }
