@@ -25,11 +25,7 @@ async function runAbsensi(chatIds) {
       return;
     }
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
-    const msg = await absensiLikes("DITBINMAS", {
-      mode: "all",
-      roleFlag: "ditbinmas",
-      clientFilter: "DITBINMAS",
-    });
+    const msg = await absensiLikes("DITBINMAS", { mode: "all", roleFlag: "ditbinmas" });
     if (msg) {
       for (const wa of chatIds) {
         await waClient.sendMessage(wa, msg).catch(() => {});

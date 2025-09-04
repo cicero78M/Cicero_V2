@@ -184,7 +184,6 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
   expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
     mode: 'all',
     roleFlag: 'ditbinmas',
-    clientFilter: 'DITBINMAS',
   });
 });
 

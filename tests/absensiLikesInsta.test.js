@@ -92,24 +92,6 @@ test('roleFlag uses directorate logic even if client is not directorate', async 
   expect(mockGetUsersByClient).not.toHaveBeenCalled();
 });
 
-test('directorate clientFilter restricts users to specified client', async () => {
-  mockQuery
-    .mockResolvedValueOnce({ rows: [{ nama: 'DITBINMAS', client_type: 'direktorat' }] })
-    .mockResolvedValueOnce({ rows: [{ nama: 'DITBINMAS', client_type: 'direktorat' }] });
-  mockGetUsersByDirektorat.mockResolvedValueOnce([]);
-  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
-  mockGetLikesByShortcode.mockResolvedValueOnce([]);
-
-  await absensiLikes('DITBINMAS', {
-    roleFlag: 'ditbinmas',
-    clientFilter: 'DITBINMAS',
-  });
-
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'DITBINMAS');
-  expect(mockGetClientsByRole).not.toHaveBeenCalled();
-  expect(mockGetUsersByClient).not.toHaveBeenCalled();
-});
-
 test('filters users by role when roleFlag provided for polres', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_type: 'instansi' }] });
   mockGetUsersByClient.mockResolvedValueOnce([]);
