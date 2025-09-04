@@ -298,6 +298,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       case "9": {
         const { text, filename, narrative, textBelum, filenameBelum } =
           await lapharDitbinmas();
+        if (narrative) {
+          await waClient.sendMessage(chatId, narrative.trim());
+        }
         const buffer = Buffer.from(text, "utf-8");
         await writeFile(filename, buffer);
         await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
@@ -312,8 +315,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
             "text/plain"
           );
         }
-        msg = narrative || "✅ Laphar Ditbinmas dikirim.";
-        break;
+        return;
       }
     default:
       msg = "Menu tidak dikenal.";

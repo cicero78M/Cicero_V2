@@ -276,5 +276,9 @@ test('choose_menu option 9 sends laphar file and narrative', async () => {
     chatId,
     'text/plain'
   );
+  expect(waClient.sendMessage.mock.calls[0][0]).toBe(chatId);
   expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
+  expect(waClient.sendMessage.mock.invocationCallOrder[0]).toBeLessThan(
+    mockWriteFile.mock.invocationCallOrder[0],
+  );
 });
