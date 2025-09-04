@@ -5,6 +5,7 @@ process.env.TZ = 'Asia/Jakarta';
 const mockGetUsersSocialByClient = jest.fn();
 const mockGetClientsByRole = jest.fn();
 const mockAbsensiLikes = jest.fn();
+const mockAbsensiLikesDitbinmasReport = jest.fn();
 const mockAbsensiKomentar = jest.fn();
 const mockFindClientById = jest.fn();
 const mockFetchAndStoreInstaContent = jest.fn();
@@ -22,6 +23,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js
   absensiLikes: mockAbsensiLikes,
   rekapLikesIG: mockRekapLikesIG,
   lapharDitbinmas: mockLapharDitbinmas,
+  absensiLikesDitbinmasReport: mockAbsensiLikesDitbinmasReport,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,
@@ -152,7 +154,7 @@ test('formatRekapUserData orders users by rank', async () => {
 });
 
 test('choose_menu option 2 absensi likes ditbinmas', async () => {
-  mockAbsensiLikes.mockResolvedValue('laporan');
+  mockAbsensiLikesDitbinmasReport.mockResolvedValue('laporan');
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '321';
@@ -160,11 +162,7 @@ test('choose_menu option 2 absensi likes ditbinmas', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
-    mode: 'all',
-    roleFlag: 'ditbinmas',
-    clientFilter: 'ditbinmas',
-  });
+  expect(mockAbsensiLikesDitbinmasReport).toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
 });
 
@@ -186,6 +184,7 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
   expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
     mode: 'all',
     roleFlag: 'ditbinmas',
+    clientFilter: 'DITBINMAS',
   });
 });
 

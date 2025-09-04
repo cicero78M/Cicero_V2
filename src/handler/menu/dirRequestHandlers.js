@@ -1,5 +1,9 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
-import { absensiLikes, lapharDitbinmas } from "../fetchabsensi/insta/absensiLikesInsta.js";
+import {
+  absensiLikes,
+  lapharDitbinmas,
+  absensiLikesDitbinmasReport,
+} from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
@@ -212,8 +216,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 }
 
 async function absensiLikesDitbinmas() {
-  const opts = { mode: "all", roleFlag: "ditbinmas", clientFilter: "ditbinmas" };
-  return await absensiLikes("DITBINMAS", opts);
+  return await absensiLikesDitbinmasReport();
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
@@ -234,7 +237,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
         break;
       }
-      const opts = { mode: "all", roleFlag: "ditbinmas" };
+      const opts = { mode: "all", roleFlag: "ditbinmas", clientFilter: "DITBINMAS" };
       msg = await absensiLikes("DITBINMAS", opts);
       break;
     }
