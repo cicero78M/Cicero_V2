@@ -237,7 +237,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
         break;
       }
-      const opts = { mode: "all", roleFlag: "ditbinmas" };
+      const opts = { mode: "all", roleFlag: "ditbinmas", clientFilter: "DITBINMAS" };
       msg = await absensiLikes("DITBINMAS", opts);
       break;
     }
