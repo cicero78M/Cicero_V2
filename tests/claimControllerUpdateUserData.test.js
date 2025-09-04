@@ -77,4 +77,31 @@ describe('updateUserData', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(userModel.updateUser).not.toHaveBeenCalled();
   });
+
+  test('verifies otp when provided', async () => {
+    jest.resetModules();
+    jest.unstable_mockModule('../src/model/userModel.js', () => ({
+      updateUser: jest.fn().mockResolvedValue({ ok: true }),
+      findUserById: jest.fn(),
+      updateUserField: jest.fn()
+    }));
+    jest.unstable_mockModule('../src/service/otpService.js', () => ({
+      isVerified: jest.fn().mockResolvedValue(false),
+      clearVerification: jest.fn(),
+      generateOtp: jest.fn(),
+      verifyOtp: jest.fn().mockResolvedValue(true)
+    }));
+    jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
+      enqueueOtp: jest.fn(),
+    }));
+    ({ updateUserData } = await import('../src/controller/claimController.js'));
+    userModel = await import('../src/model/userModel.js');
+    const otpService = await import('../src/service/otpService.js');
+    const req = { body: { nrp: '1', whatsapp: '08123', otp: '123456' } };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    expect(otpService.verifyOtp).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
 });
