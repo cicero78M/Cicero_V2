@@ -1,9 +1,5 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
-import {
-  absensiLikes,
-  lapharDitbinmas,
-  absensiLikesDitbinmasReport,
-} from "../fetchabsensi/insta/absensiLikesInsta.js";
+import { absensiLikes, lapharDitbinmas } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
@@ -216,7 +212,10 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 }
 
 async function absensiLikesDitbinmas() {
-  return await absensiLikesDitbinmasReport();
+  return await absensiLikes("DITBINMAS", {
+    mode: "all",
+    roleFlag: "ditbinmas",
+  });
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
