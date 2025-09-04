@@ -4,7 +4,7 @@ dotenv.config();
 
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
-import { formatRekapUserData, rekapUserDataDitbinmas } from "../handler/menu/dirRequestHandlers.js";
+import { formatRekapUserData } from "../handler/menu/dirRequestHandlers.js";
 
 async function getActiveClients() {
   const { query } = await import("../db/index.js");
@@ -59,18 +59,6 @@ cron.schedule(
             msg: `[${client.client_id}] ERROR menu 1: ${err.message}`,
           });
         }
-      }
-      try {
-        const msg2 = await rekapUserDataDitbinmas();
-        for (const wa of admins) {
-          await waClient.sendMessage(wa, msg2).catch(() => {});
-        }
-        sendDebug({
-          tag: cronTag,
-          msg: `Rekap menu 2 dikirim ke ${admins.length} admin`,
-        });
-      } catch (err) {
-        sendDebug({ tag: cronTag, msg: `[ERROR menu 2] ${err.message}` });
       }
     } catch (err) {
       sendDebug({ tag: cronTag, msg: `[ERROR GLOBAL] ${err.message || err}` });
