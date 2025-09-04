@@ -22,7 +22,6 @@ import { mdToPdf } from "md-to-pdf";
 import { query } from "../../db/index.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
-import { deleteBaileysFilesByNumber } from "../../service/baileysSessionService.js";
 
 function ignore(..._args) {}
 
@@ -210,11 +209,10 @@ export const clientRequestHandlers = {
 1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
-1️⃣7️⃣ Hapus Session Baileys
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-7])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-6])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -236,7 +234,6 @@ export const clientRequestHandlers = {
       14: "downloadSheetPrev_choose",
       15: "downloadDocs_choose",
       16: "absensiOprDitbinmas",
-      17: "deleteBaileysSession_start",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1658,51 +1655,6 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(
         chatId,
         `❌ Gagal menghapus WA admin: ${err.message}`
-      );
-    }
-    session.step = "main";
-  },
-
-  // ================== DELETE BAILEYS SESSION ==================
-  deleteBaileysSession_start: async (session, chatId, _text, waClient) => {
-    session.step = "deleteBaileysSession_number";
-    await waClient.sendMessage(
-      chatId,
-      "Masukkan nomor WhatsApp yang sesi Baileys-nya akan dihapus:"
-    );
-  },
-  deleteBaileysSession_number: async (session, chatId, text, waClient) => {
-    const number = text.replace(/[^0-9]/g, "");
-    session.target_wa = number;
-    session.step = "deleteBaileysSession_confirm";
-    await waClient.sendMessage(
-      chatId,
-      `Konfirmasi hapus sesi Baileys untuk *${number}*? Balas *ya* untuk melanjutkan atau *tidak* untuk membatalkan.`
-    );
-  },
-  deleteBaileysSession_confirm: async (session, chatId, text, waClient) => {
-    if (text.trim().toLowerCase() !== "ya") {
-      await waClient.sendMessage(chatId, "Dibatalkan.");
-      session.step = "main";
-      return;
-    }
-    try {
-      const deleted = await deleteBaileysFilesByNumber(session.target_wa);
-      if (deleted > 0) {
-        await waClient.sendMessage(
-          chatId,
-          `✅ ${deleted} file sesi Baileys dihapus.`
-        );
-      } else {
-        await waClient.sendMessage(
-          chatId,
-          "⚠️ Tidak ditemukan file sesi dengan nomor tersebut."
-        );
-      }
-    } catch (err) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal menghapus sesi Baileys: ${err.message}`
       );
     }
     session.step = "main";
