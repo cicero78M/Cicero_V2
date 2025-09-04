@@ -453,8 +453,12 @@ export async function absensiLikesDitbinmasReport() {
     likesSets.push(new Set((likes || []).map(normalizeUsername)));
   }
 
+  const polresIds = (await getClientsByRole(roleName)).map((c) =>
+    c.toUpperCase()
+  );
+  const clientIds = ["DITBINMAS", ...polresIds];
   const allUsers = (
-    await getUsersByDirektorat(roleName, "DITBINMAS")
+    await getUsersByDirektorat(roleName, clientIds)
   ).filter((u) => u.status === true);
 
   const already = [];
