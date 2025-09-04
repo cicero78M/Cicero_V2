@@ -17,9 +17,10 @@ jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({ getShortcode
 jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({ getLikesByShortcode: mockGetLikesByShortcode }));
 
 let absensiLikes;
+let lapharDitbinmas;
 
 beforeAll(async () => {
-  ({ absensiLikes } = await import('../src/handler/fetchabsensi/insta/absensiLikesInsta.js'));
+  ({ absensiLikes, lapharDitbinmas } = await import('../src/handler/fetchabsensi/insta/absensiLikesInsta.js'));
 });
 
 beforeEach(() => {
@@ -167,5 +168,26 @@ test('directorate summarizes across clients', async () => {
   expect(msg).toMatch(
     /2\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 1 pers\nBelum Update Username Instagram : 1 pers/
   );
+});
+
+test('lapharDitbinmas counts exception usernames as likes', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'DITBINMAS', client_type: 'direktorat' }] });
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
+  mockGetLikesByShortcode.mockResolvedValueOnce([]);
+  mockGetClientsByRole.mockResolvedValueOnce([]);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([
+    {
+      user_id: 'u1',
+      nama: 'User1',
+      insta: '@user1',
+      client_id: 'DITBINMAS',
+      exception: true,
+      status: true,
+    },
+  ]);
+
+  const result = await lapharDitbinmas();
+
+  expect(result.narrative).toMatch(/https:\/\/www.instagram.com\/p\/sc1 : 1/);
 });
 

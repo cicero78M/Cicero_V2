@@ -70,7 +70,7 @@ export async function absensiLikes(client_id, opts = {}) {
       ).filter((u) => u.status === true);
     } else {
       polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
-      allUsers = (
+    allUsers = (
         await getUsersByDirektorat(roleName, polresIds)
       ).filter((u) => u.status === true);
     }
@@ -79,6 +79,18 @@ export async function absensiLikes(client_id, opts = {}) {
       const cid = u.client_id?.toUpperCase() || "";
       if (!usersByClient[cid]) usersByClient[cid] = [];
       usersByClient[cid].push(u);
+    });
+
+    const exceptionUsernames = allUsers
+      .filter(
+        (u) =>
+          u.exception === true &&
+          u.insta &&
+          u.insta.trim() !== ""
+      )
+      .map((u) => normalizeUsername(u.insta));
+    likesSets.forEach((set) => {
+      exceptionUsernames.forEach((uname) => set.add(uname));
     });
 
     const totalKonten = shortcodes.length;
@@ -303,9 +315,19 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
 
+  const exceptionUsernames = users
+    .filter(
+      (u) =>
+        u.exception === true &&
+        u.insta &&
+        u.insta.trim() !== ""
+    )
+    .map((u) => normalizeUsername(u.insta));
+
   for (const sc of shortcodes) {
     const likes = await getLikesByShortcode(sc);
     const likesSet = new Set((likes || []).map(normalizeUsername));
+    exceptionUsernames.forEach((uname) => likesSet.add(uname));
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
@@ -438,10 +460,6 @@ export async function lapharDitbinmas() {
     likesCounts.push(likeSet.size);
   }
 
-  const kontenLinkLikes = kontenLinks.map(
-    (link, idx) => `${link} : ${likesCounts[idx]}`
-  );
-
   const polresIds = (
     await getClientsByRole(roleName)
   )
@@ -459,6 +477,22 @@ export async function lapharDitbinmas() {
     if (!usersByClient[cid]) usersByClient[cid] = [];
     usersByClient[cid].push(u);
   });
+
+  const exceptionUsernames = allUsers
+    .filter(
+      (u) =>
+        u.exception === true &&
+        u.insta &&
+        u.insta.trim() !== ""
+    )
+    .map((u) => normalizeUsername(u.insta));
+  likesSets.forEach((set, idx) => {
+    exceptionUsernames.forEach((uname) => set.add(uname));
+    likesCounts[idx] = set.size;
+  });
+  const kontenLinkLikes = kontenLinks.map(
+    (link, idx) => `${link} : ${likesCounts[idx]}`
+  );
 
   const pangkatOrder = [
     "KOMISARIS BESAR POLISI",
