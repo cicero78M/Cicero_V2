@@ -453,12 +453,8 @@ export async function absensiLikesDitbinmasReport() {
     likesSets.push(new Set((likes || []).map(normalizeUsername)));
   }
 
-  const polresIds = (await getClientsByRole(roleName)).map((c) =>
-    c.toUpperCase()
-  );
-  const clientIds = ["DITBINMAS", ...polresIds];
   const allUsers = (
-    await getUsersByDirektorat(roleName, clientIds)
+    await getUsersByDirektorat(roleName, "DITBINMAS")
   ).filter((u) => u.status === true);
 
   const already = [];
@@ -526,7 +522,7 @@ export async function absensiLikesDitbinmasReport() {
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Likes Instagram\n` +
-    `Polres: DIREKTORAT BINMAS\n` +
+    `DIREKTORAT BINMAS\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `Jumlah Konten: ${shortcodes.length}\n` +

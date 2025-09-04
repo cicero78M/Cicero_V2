@@ -18,9 +18,14 @@ jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({ getLikesBySh
 
 let absensiLikes;
 let lapharDitbinmas;
+let absensiLikesDitbinmasReport;
 
 beforeAll(async () => {
-  ({ absensiLikes, lapharDitbinmas } = await import('../src/handler/fetchabsensi/insta/absensiLikesInsta.js'));
+  ({
+    absensiLikes,
+    lapharDitbinmas,
+    absensiLikesDitbinmasReport,
+  } = await import('../src/handler/fetchabsensi/insta/absensiLikesInsta.js'));
 });
 
 beforeEach(() => {
@@ -168,6 +173,16 @@ test('directorate summarizes across clients', async () => {
   expect(msg).toMatch(
     /2\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 1 pers\nBelum Update Username Instagram : 1 pers/
   );
+});
+
+test('absensiLikesDitbinmasReport filters users by client_id DITBINMAS', async () => {
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
+  mockGetLikesByShortcode.mockResolvedValueOnce([]);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([]);
+
+  await absensiLikesDitbinmasReport();
+
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'DITBINMAS');
 });
 
 test('lapharDitbinmas counts exception usernames as likes', async () => {
