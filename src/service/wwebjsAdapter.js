@@ -19,7 +19,12 @@ export async function createWwebjsClient() {
   client.on('ready', () => emitter.emit('ready'));
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', (msg) => {
-    emitter.emit('message', { from: msg.from, body: msg.body });
+    emitter.emit('message', {
+      from: msg.from,
+      body: msg.body,
+      id: msg.id,
+      author: msg.author,
+    });
   });
 
   emitter.connect = async () => {
