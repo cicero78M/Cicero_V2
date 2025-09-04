@@ -26,8 +26,9 @@ test('wwebjs adapter relays messages', async () => {
   const onMessage = jest.fn();
   client.onMessage(onMessage);
   await client.connect();
-  listeners['message']({ from: '123', body: 'hi' });
-  expect(onMessage).toHaveBeenCalledWith({ from: '123', body: 'hi' });
+  const incoming = { from: '123', body: 'hi', id: { id: 'm1', _serialized: 'm1' } };
+  listeners['message'](incoming);
+  expect(onMessage).toHaveBeenCalledWith(incoming);
   const id = await client.sendMessage('123', 'hello');
   expect(id).toBe('abc');
   await client.disconnect();
