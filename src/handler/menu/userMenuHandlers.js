@@ -35,8 +35,7 @@ function formatFieldList(showDesa = false) {
 3. Satfung
 4. Jabatan
 5. Instagram
-6. TikTok
-7. Hapus WhatsApp${showDesa ? "\n8. Desa Binaan" : ""}
+6. TikTok${showDesa ? "\n7. Desa Binaan" : ""}
 
 Balas angka field di atas atau *batal* untuk keluar.
 `.trim();
@@ -260,7 +259,6 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
       { key: "jabatan", label: "Jabatan" },
       { key: "insta", label: "Instagram" },
       { key: "tiktok", label: "TikTok" },
-      { key: "hapus_whatsapp", label: "Hapus WhatsApp" },
     ];
     if (session.isDitbinmas) {
       allowedFields.push({ key: "desa", label: "Desa Binaan" });
@@ -285,16 +283,6 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     const idx = parseInt(lower) - 1;
     const field = allowedFields[idx].key;
     session.updateField = field;
-
-    // Konfirmasi khusus hapus WA
-    if (field === "hapus_whatsapp") {
-      session.step = "konfirmasiHapusWhatsapp";
-      await waClient.sendMessage(
-        chatId,
-        "⚠️ Apakah Anda yakin ingin *menghapus nomor WhatsApp* dari database?\nBalas *ya* untuk menghapus, *tidak* untuk membatalkan."
-      );
-      return;
-    }
 
     // Tampilkan list pangkat/satfung jika perlu
     if (field === "pangkat") {
@@ -336,28 +324,6 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
     await waClient.sendMessage(
       chatId,
       `Ketik nilai baru untuk field *${allowedFields[idx].label}*${extra}:`
-    );
-  },
-
-  konfirmasiHapusWhatsapp: async (session, chatId, text, waClient, pool, userModel) => {
-    if (text.trim().toLowerCase() === "ya") {
-      const user_id = session.updateUserId;
-      await userModel.updateUserField(user_id, "whatsapp", "");
-      await waClient.sendMessage(
-        chatId,
-        `✅ Nomor WhatsApp untuk NRP ${user_id} berhasil dihapus dari database.`
-      );
-      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
-      return;
-    }
-    if (text.trim().toLowerCase() === "tidak") {
-      await waClient.sendMessage(chatId, "Dibatalkan. Nomor WhatsApp tidak dihapus.");
-      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
-      return;
-    }
-    await waClient.sendMessage(
-      chatId,
-      "Balas *ya* untuk menghapus WhatsApp, *tidak* untuk membatalkan."
     );
   },
 

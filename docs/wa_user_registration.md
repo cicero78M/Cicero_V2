@@ -19,6 +19,6 @@ menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.
    atau memulai proses registrasi kembali.
 
 Proses di atas memastikan setiap pengguna terhubung dengan satu nomor
-WhatsApp yang valid. Jika ingin mengganti atau menghapus nomor,
+WhatsApp yang valid. Jika ingin mengganti nomor,
 jalankan perintah `userrequest` kembali dan ikuti instruksi yang
 muncul.
