@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, MessageMedia } = pkg;
 
 /**
  * Create a whatsapp-web.js client that matches the WAAdapter contract.
@@ -35,11 +35,26 @@ export async function createWwebjsClient() {
     await client.destroy();
   };
 
-  emitter.sendMessage = async (jid, content) => {
-    const message = await client.sendMessage(
-      jid,
-      typeof content === 'string' ? content : content.text
-    );
+  emitter.sendMessage = async (jid, content, options = {}) => {
+    let message;
+    if (
+      content &&
+      typeof content === 'object' &&
+      'document' in content
+    ) {
+      const media = new MessageMedia(
+        content.mimetype || 'application/octet-stream',
+        Buffer.from(content.document).toString('base64'),
+        content.fileName
+      );
+      message = await client.sendMessage(jid, media, {
+        ...options,
+        sendMediaAsDocument: true,
+      });
+    } else {
+      const text = typeof content === 'string' ? content : content.text;
+      message = await client.sendMessage(jid, text, options);
+    }
     return message.id._serialized || message.id.id || '';
   };
 
