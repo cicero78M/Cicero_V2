@@ -132,13 +132,28 @@ export async function getUserData(req, res, next) {
 
 export async function updateUserData(req, res, next) {
   try {
-    const { nrp: rawNrp, whatsapp, nama, title, divisi, jabatan, desa, insta, tiktok } = req.body;
+    const {
+      nrp: rawNrp,
+      whatsapp,
+      nama,
+      title,
+      divisi,
+      jabatan,
+      desa,
+      insta,
+      tiktok,
+      otp,
+    } = req.body;
     const nrp = normalizeUserId(rawNrp);
     if (!nrp || !whatsapp) {
       return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
     }
     const wa = normalizeWhatsappNumber(whatsapp);
-    if (!(await isVerified(nrp, wa))) {
+    let verified = await isVerified(nrp, wa);
+    if (!verified && otp) {
+      verified = await verifyOtp(nrp, wa, otp);
+    }
+    if (!verified) {
       return res.status(403).json({ success: false, message: 'OTP belum diverifikasi' });
     }
     const data = { nama, title, divisi, jabatan, desa };
