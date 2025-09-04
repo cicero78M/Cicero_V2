@@ -211,47 +211,9 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   ).trim();
 }
 
-async function rekapUserDataDitbinmas() {
-  const clientId = "ditbinmas";
-  const users = (await getUsersSocialByClient(clientId, clientId)).filter(
-    (u) => (u.client_id || "").toLowerCase() === clientId
-  );
-  const salam = getGreeting();
-  const now = new Date();
-  const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
-  const tanggal = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-  const jam = now.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const groups = {};
-  users.forEach((u) => {
-    const div = u.divisi || "-";
-    if (!groups[div]) groups[div] = [];
-    groups[div].push(u);
-  });
-
-  const lines = sortDivisionKeys(Object.keys(groups)).map((div) => {
-    const list = groups[div]
-      .sort((a, b) => rankIdx(a.title) - rankIdx(b.title) || formatNama(a).localeCompare(formatNama(b)))
-      .map((u) => formatNama(u))
-      .join("\n");
-    return `${div.toUpperCase()} (${groups[div].length})\n${list}`;
-  });
-
-  const client = await findClientById(clientId);
-  const header =
-    `${salam},\n\n` +
-    `Mohon ijin Komandan, melaporkan rekap data personil ${
-      (client?.nama || clientId).toUpperCase()
-    } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n`;
-  const body = lines.join("\n\n");
-  return `${header}${body}`.trim();
+async function absensiLikesDitbinmas() {
+  const opts = { mode: "all", roleFlag: "ditbinmas", clientFilter: "ditbinmas" };
+  return await absensiLikes("DITBINMAS", opts);
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
@@ -264,7 +226,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "2":
-      msg = await rekapUserDataDitbinmas();
+      msg = await absensiLikesDitbinmas();
       break;
     case "3": {
       const normalizedId = (clientId || "").toUpperCase();
@@ -429,7 +391,7 @@ export const dirRequestHandlers = {
       `Client: *${clientName}*\n` +
       "┏━━━ *MENU DIRREQUEST* ━━━\n" +
       "1️⃣ Rekap user belum lengkapi data\n" +
-      "2️⃣ Rekap user data Ditbinmas\n" +
+      "2️⃣ Absensi Likes Ditbinmas\n" +
       "3️⃣ Absensi Likes Instagram\n" +
       "4️⃣ Absensi Komentar TikTok\n" +
       "5️⃣ Fetch Insta\n" +
@@ -486,7 +448,7 @@ export const dirRequestHandlers = {
   },
 };
 
-export { formatRekapUserData, rekapUserDataDitbinmas };
+export { formatRekapUserData, absensiLikesDitbinmas };
 
 export default dirRequestHandlers;
 
