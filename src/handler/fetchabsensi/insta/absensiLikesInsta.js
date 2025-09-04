@@ -749,6 +749,7 @@ export async function lapharDitbinmas() {
       igPercent,
       tiktokPercent,
       noUsername: noUname.length,
+      noTiktok,
       totalUsers: users.length,
     });
 
@@ -802,67 +803,143 @@ export async function lapharDitbinmas() {
       ).toFixed(1)
     : "0";
 
-  const topIg = [...perClientStats]
-    .sort((a, b) => b.igPercent - a.igPercent)
-    .slice(0, 5)
-    .map((p) => `${p.name} ${p.igPercent.toFixed(1)}%`)
+  const satkerStats = perClientStats.filter((p) => p.cid !== "DITBINMAS");
+  const fmtNum = (n) => n.toLocaleString("id-ID");
+  const fmtPct = (n) =>
+    n.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const median = (arr) => {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  const igUpdated = totals.total - totals.noUsername;
+  const tiktokUpdated = totals.total - totals.noTiktok;
+  const igOverallPercent = totals.total
+    ? (igUpdated / totals.total) * 100
+    : 0;
+  const tiktokOverallPercent = totals.total
+    ? (tiktokUpdated / totals.total) * 100
+    : 0;
+  const avgIg =
+    satkerStats.reduce((acc, p) => acc + p.igPercent, 0) /
+      (satkerStats.length || 1);
+  const avgTiktok =
+    satkerStats.reduce((acc, p) => acc + p.tiktokPercent, 0) /
+      (satkerStats.length || 1);
+  const medianIg = median(satkerStats.map((p) => p.igPercent));
+  const medianTiktok = median(satkerStats.map((p) => p.tiktokPercent));
+  const lowSatker = satkerStats.filter(
+    (p) => p.igPercent < 10 && p.tiktokPercent < 10
+  );
+  const bestSatkers = satkerStats.filter(
+    (p) => p.igPercent >= 90 && p.tiktokPercent >= 90
+  );
+  const strongSatkers = satkerStats.filter(
+    (p) =>
+      p.igPercent >= 80 &&
+      p.tiktokPercent >= 80 &&
+      (p.igPercent < 90 || p.tiktokPercent < 90)
+  );
+  const topAvgStats = satkerStats
+    .map((p) => ({ ...p, avg: (p.igPercent + p.tiktokPercent) / 2 }))
+    .sort((a, b) => b.avg - a.avg);
+  const topPerformers = topAvgStats.slice(0, 5);
+  const topPerformerLines = topPerformers
+    .map(
+      (p, idx) =>
+        `${idx + 1}. ${p.name} ${p.igPercent.toFixed(1)}/${p.tiktokPercent.toFixed(1)}`
+    )
     .join(", ");
-  const topTiktok = [...perClientStats]
-    .sort((a, b) => b.tiktokPercent - a.tiktokPercent)
-    .slice(0, 5)
-    .map((p) => `${p.name} ${p.tiktokPercent.toFixed(1)}%`)
-    .join(", ");
-
-  const zeroIg = perClientStats
-    .filter((p) => p.igPercent === 0)
+  const bottomPerformersArr = [...topAvgStats].reverse().slice(0, 5);
+  const bottomPerformerLines = bottomPerformersArr
+    .map(
+      (p) =>
+        `* ${p.name} ${p.igPercent.toFixed(1)}% / ${p.tiktokPercent.toFixed(1)}%`
+    )
+    .join("\n");
+  const extraUnderTen = satkerStats
+    .filter(
+      (p) =>
+        p.igPercent < 10 &&
+        p.tiktokPercent < 10 &&
+        !bottomPerformersArr.some((b) => b.cid === p.cid)
+    )
     .map((p) => p.name);
-  const zeroTiktok = perClientStats
-    .filter((p) => p.tiktokPercent === 0)
-    .map((p) => p.name);
-
-  const seg70 = perClientStats.filter((p) => p.igPercent >= 70).length;
-  const seg50 = perClientStats.filter(
-    (p) => p.igPercent >= 50 && p.igPercent < 70
-  ).length;
-  const seg10 = perClientStats.filter(
-    (p) => p.igPercent >= 10 && p.igPercent < 50
-  ).length;
-  const seg0 = perClientStats.filter((p) => p.igPercent < 10).length;
-
-  const topNoUsername = [...perClientStats]
+  const gapThreshold = 10;
+  const gapCandidates = perClientStats.filter(
+    (p) => Math.abs(p.igPercent - p.tiktokPercent) >= gapThreshold
+  );
+  const gapLines = gapCandidates.map((p) => {
+    const diff = p.igPercent - p.tiktokPercent;
+    const sign = diff >= 0 ? "+" : "-";
+    const dir = diff >= 0 ? "ke IG" : "ke TT";
+    return `* *${p.name}* IG ${p.igPercent.toFixed(1)}% vs TT ${p.tiktokPercent.toFixed(
+      1
+    )}% (*${sign}${Math.abs(diff).toFixed(1)} poin ${dir}*)`;
+  });
+  const igBacklog = totals.noUsername;
+  const tiktokBacklog = totals.noTiktok;
+  const top10Ig = [...satkerStats]
     .filter((p) => p.noUsername > 0)
     .sort((a, b) => b.noUsername - a.noUsername)
-    .slice(0, 6)
-    .map((p) => `${p.name} ${p.noUsername}`)
+    .slice(0, 10);
+  const top10IgList = top10Ig
+    .map((p) => `${p.name} (${fmtNum(p.noUsername)})`)
     .join(", ");
-
-  const anomalies = perClientStats
-    .filter((p) => {
-      const updated = p.totalUsers - p.noUsername;
-      const possible = updated * shortcodes.length;
-      const likePct = possible ? (p.likes / possible) * 100 : 0;
-      return p.igPercent >= 80 && likePct < 10;
-    })
-    .map((p) => {
-      const updated = p.totalUsers - p.noUsername;
-      return `${p.name}: IG ${updated}/${p.totalUsers} (${p.igPercent.toFixed(
-        1
-      )}%) namun likes konten hanya ${p.likes}${
-        p.noUsername
-          ? ` dan "Belum Update Data" tercatat ${p.noUsername}`
-          : ""
-      }`;
-    });
-
-  const igUpdatePercent = (
-    ((totals.total - totals.noUsername) / totals.total) * 100 || 0
-  ).toFixed(2);
-  const tiktokUpdatePercent = (
-    ((totals.total - totals.noTiktok) / totals.total) * 100 || 0
-  ).toFixed(2);
-  const noUsernamePercent = (
-    (totals.noUsername / totals.total) * 100 || 0
-  ).toFixed(2);
+  const top10IgSum = top10Ig.reduce((acc, p) => acc + p.noUsername, 0);
+  const top10IgPercent = igBacklog
+    ? (top10IgSum / igBacklog) * 100
+    : 0;
+  const top10Tiktok = [...satkerStats]
+    .filter((p) => p.noTiktok > 0)
+    .sort((a, b) => b.noTiktok - a.noTiktok)
+    .slice(0, 10);
+  const top10TiktokList = top10Tiktok
+    .map((p) => `${p.name} (${fmtNum(p.noTiktok)})`)
+    .join(", ");
+  const top10TiktokSum = top10Tiktok.reduce((acc, p) => acc + p.noTiktok, 0);
+  const top10TiktokPercent = tiktokBacklog
+    ? (top10TiktokSum / tiktokBacklog) * 100
+    : 0;
+  const projectedIgPercent = totals.total
+    ? ((igUpdated + 0.7 * top10IgSum) / totals.total) * 100
+    : 0;
+  const projectedTiktokPercent = totals.total
+    ? ((tiktokUpdated + 0.7 * top10TiktokSum) / totals.total) * 100
+    : 0;
+  const backlogBig = top10Ig.slice(0, 6).map((p) => p.name);
+  const largestGapPos = gapCandidates
+    .filter((p) => p.igPercent > p.tiktokPercent)
+    .sort(
+      (a, b) => (b.igPercent - b.tiktokPercent) - (a.igPercent - a.tiktokPercent)
+    )[0];
+  const largestGapNeg = gapCandidates
+    .filter((p) => p.tiktokPercent > p.igPercent)
+    .sort(
+      (a, b) => (b.tiktokPercent - b.igPercent) - (a.tiktokPercent - a.igPercent)
+    )[0];
+  const mentorList = topPerformers.map((p) => p.name);
+  const bestSatkerNames = bestSatkers.map((p) => p.name);
+  const strongSatkerList = strongSatkers.map(
+    (p) => `${p.name} (${p.igPercent.toFixed(1)}% / ${p.tiktokPercent.toFixed(1)}%)`
+  );
+  const notesLines = [];
+  if (backlogBig.length)
+    notesLines.push(`* *${backlogBig.join(', ')}* → backlog terbesar;`);
+  if (largestGapPos)
+    notesLines.push(
+      `* *${largestGapPos.name}* → Anomali TT sangat rendah; Menjadi perhatian khusus.`
+    );
+  if (largestGapNeg)
+    notesLines.push(`* *${largestGapNeg.name}* → TT unggul;`);
+  if (mentorList.length)
+    notesLines.push(
+      `* *${mentorList.join('/')}* → pertahankan; mendorong sebagai mentor lintas satker( minta saran masukan).`
+    );
+  const notesSection = notesLines.join("\n");
 
   const text =
     `Mohon ijin Komandan,\n\n` +
@@ -884,39 +961,30 @@ export async function lapharDitbinmas() {
   const narrative =
     `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
     `DIREKTORAT BINMAS\n\n` +
-    `Konten hari ini: ${shortcodes.length} link: ${kontenLinkLikes.join(", " )}\n\n` +
-    `Kinerja Likes konten: ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(
-      2
-    )}%)\n` +
-    `Target harian ≥95% = ${targetLikes} likes${
-      deficit > 0 ? ` → kekurangan ${deficit}` : ""
-    }\n\n` +
-    `Kontributor likes terbesar (konten hari ini):\n${
-      topContrib
-        ? `${topContrib} → menyumbang ${topContribPercent}% dari total likes saat ini.`
-        : "-"
-    }\n\n` +
+    `Konten hari ini: ${shortcodes.length} link: ${kontenLinkLikes.join(", ")}\n\n` +
+    `Kinerja Likes konten: ${totalLikes}/${totalPossibleLikes} (${likePercent.toFixed(2)}%)\n` +
+    `Target harian ≥95% = ${targetLikes} likes${deficit > 0 ? ` → kekurangan ${deficit}` : ""}\n\n` +
+    `Kontributor likes terbesar (konten hari ini):\n${topContrib ? `${topContrib} → menyumbang ${topContribPercent}% dari total likes saat ini.` : "-"}\n\n` +
     `Absensi Update Data\n\n` +
-    `· IG: ${totals.total - totals.noUsername}/${totals.total} (${igUpdatePercent}%)\n` +
-    `· TikTok: ${totals.total - totals.noTiktok}/${totals.total} (${tiktokUpdatePercent}%)\n` +
-    `· Belum update data: ${totals.noUsername} (${noUsernamePercent}%)\n\n` +
-    `Pendorong & Tertinggal\n\n` +
-    `IG (persentase update username tertinggi):\n${topIg || "-"}.\n\n` +
-    `TikTok (persentase update tertinggi):\n${topTiktok || "-"}.\n\n` +
-    `Satuan 0% (belum ada update):\nIG (${zeroIg.length}): ${
-      zeroIg.length ? zeroIg.join(", ") : "-"
-    }.\nTikTok (${zeroTiktok.length}): ${
-      zeroTiktok.length ? zeroTiktok.join(", ") : "-"
-    }.\n\n` +
-    `Segmentasi Capaian (IG)\n\n` +
-    `≥70%: ${seg70} satker\n\n` +
-    `50–69%: ${seg50} satker\n\n` +
-    `10–49%: ${seg10} satker\n\n` +
-    `<10%: ${seg0} satker${
-      zeroIg.length ? ` (termasuk ${zeroIg.length} yang 0%)` : ""
-    }\n\n` +
-    `Belum Update Data: ${topNoUsername || "-"}.\n\n` +
-    `Anomali :\n${anomalies.length ? anomalies.join("\n") : "nihil"}\n\n` +
+    `*Personil Saat ini :* ${fmtNum(totals.total)} Personil\n` +
+    `* *Cakupan keseluruhan:* IG *${fmtPct(igOverallPercent)}%* (${fmtNum(igUpdated)}/${fmtNum(totals.total)}), TT *${fmtPct(tiktokOverallPercent)}%* (${fmtNum(tiktokUpdated)}/${fmtNum(totals.total)}).\n` +
+    `* *Rata-rata satker:* IG *${fmtPct(avgIg)}%* (median ${fmtPct(medianIg)}%), TT *${fmtPct(avgTiktok)}%* (median ${fmtPct(medianTiktok)}%)${lowSatker.length ? ` → penyebaran masih lebar, ${lowSatker.length} satker di bawah 10%.` : ""}\n` +
+    `* *Satker dengan Capaian terbaik (≥90% IG & TT):* ${bestSatkerNames.length ? `*${bestSatkerNames.join(', ')}*` : '-'}\n` +
+    `* *Tambahan kuat (≥80% IG & TT):* ${strongSatkerList.length ? `*${strongSatkerList.join(', ')}*` : '-'}\n\n` +
+    `#Highlight Pencapaian & Masalah\n\n` +
+    `*Top performer (rata-rata IG/TT):*\n\n` +
+    `${topPerformerLines}\n\n` +
+    `*Bottom performer (rata-rata IG/TT, sangat rendah di kedua platform):*\n\n` +
+    `${bottomPerformerLines}${extraUnderTen.length ? `\n  *(juga: ${extraUnderTen.join(', ')} berada <10% IG/TT)*` : ''}\n\n` +
+    `*Kesenjangan IG vs TikTok (perlu investigasi):*\n\n` +
+    `${gapLines.length ? gapLines.join('\n') : '-'}\n\n` +
+    `# Konsentrasi Backlog (prioritas penanganan)\n\n` +
+    `> *Top-10 yang usernya belum melakukan update username menyerap >50% backlog* masing-masing platform.\n\n` +
+    `* *IG Belum Diisi (${fmtNum(igBacklog)})* – 10 terbesar (≈*${fmtPct(top10IgPercent)}%* dari backlog):\n  ${top10IgList}.\n\n` +
+    `* *TikTok Belum Diisi (${fmtNum(tiktokBacklog)})* – 10 terbesar (≈*${fmtPct(top10TiktokPercent)}%*):\n  ${top10TiktokList}.\n\n` +
+    `*Proyeksi dampak cepat:* menutup *70%* backlog di Top-10 (mendorong satker untuk update data cepat) akan menaikkan capaian *IG → ~${fmtPct(projectedIgPercent)}%* dan *TT → ~${fmtPct(projectedTiktokPercent)}%*.\n\n` +
+    `## Catatan per Satker.\n\n` +
+    `${notesSection}\n\n` +
     `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
 
   const textBelum =

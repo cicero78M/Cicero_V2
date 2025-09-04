@@ -61,8 +61,9 @@ test('orders clients by likes with ditbinmas first and returns narrative', async
   expect(idxA).toBeLessThan(idxB);
   expect(result.narrative).toMatch(/POLRES A 1/);
   expect(result.narrative).toMatch(/Kontributor likes terbesar/);
-  expect(result.narrative).toMatch(/Anomali/);
-  expect(result.narrative).toMatch(/nihil/);
+  expect(result.narrative).toMatch(/Absensi Update Data/);
+  expect(result.narrative).toMatch(/Highlight Pencapaian/);
+  expect(result.narrative).toMatch(/Konsentrasi Backlog/);
   expect(result.filename).toMatch(/^Absensi_All_Likes_IG_Ditbinmas_/);
   expect(result.filenameBelum).toMatch(/^Absensi_Belum_Likes_IG_Ditbinmas_/);
   expect(result.textBelum).toMatch(/Belum Input Sosial media/);
