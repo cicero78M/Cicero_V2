@@ -67,12 +67,4 @@ cron.schedule(
   options
 );
 
-cron.schedule(
-  "0 22 * * 4",
-  async () => {
-    await sendLaphar([dirRequestGroup, dirRequestNumber]);
-  },
-  options
-);
-
 export default null;
