@@ -11,11 +11,12 @@
     "format": "prettier --write \"**/*.js\""
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.19",
     "amqplib": "^0.10.8",
     "axios": "^1.6.0",
     "bcrypt": "^5.1.0",
     "body-parser": "^1.20.2",
+    "bottleneck": "^2.19.5",
+    "bullmq": "^5.6.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "cron": "4.3.1",
@@ -39,10 +40,8 @@
     "rabbitmq": "^0.0.2",
     "redis": "^4.6.7",
     "sequelize": "^6.32.1",
-    "xlsx": "^0.18.5",
     "whatsapp-web.js": "^1.23.0",
-    "bullmq": "^5.6.0",
-    "bottleneck": "^2.19.5"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",

@@ -7,8 +7,7 @@ import dotenv from "dotenv";
 import { query } from "../db/index.js";
 const pool = { query };
 
-// Adapter creators for WhatsApp clients
-import { createBaileysClient, refreshAuthState } from "./waAdapter.js";
+// WhatsApp client using whatsapp-web.js
 import { createWwebjsClient } from "./wwebjsAdapter.js";
 import { handleIncoming } from "./waEventAggregator.js";
 
@@ -127,31 +126,17 @@ function formatUserSummary(user) {
 // INISIALISASI CLIENT WA
 // =======================
 
-// Inisialisasi WhatsApp client melalui Baileys
-const refreshAuth = process.env.WA_REFRESH_AUTH === "true";
-if (refreshAuth) {
-  refreshAuthState();
-}
-export let waClient = await createBaileysClient({ refreshAuth });
-export let wwebjsClient = await createWwebjsClient();
-
-async function reconnectBaileys(forceRefresh = false) {
-  console.log("[WA] Reconnecting to Baileys client");
-  try {
-    await waClient?.disconnect();
-  } catch {}
-  waClient = await createBaileysClient({ refreshAuth: forceRefresh });
-  waClient.onDisconnect(handleDisconnect);
-  wrapSendMessage(waClient);
-  await waClient.connect();
-}
+// Initialize WhatsApp client via whatsapp-web.js
+export let waClient = await createWwebjsClient();
 
 function handleDisconnect(reason) {
   waReady = false;
   console.warn("[WA] Client disconnected:", reason);
-  const unauthorized =
-    reason?.output?.statusCode === 401 || reason?.data?.reason === "401";
-  reconnectBaileys(unauthorized);
+  setTimeout(() => {
+    waClient.connect().catch((err) => {
+      console.error("[WA] Reconnect failed:", err.message);
+    });
+  }, 5000);
 }
 
 waClient.onDisconnect(handleDisconnect);
@@ -253,23 +238,10 @@ waClient.once("ready", () => {
   markWaReady("ready");
 });
 
-// Log client states during initialization
-waClient.on("loading_screen", (percent, message) => {
-  console.log(`[WA] Loading ${percent}%: ${message}`);
-});
-
-waClient.on("authenticated", () => {
-  console.log("[WA] Client authenticated");
-});
-
-waClient.on("auth_failure", (msg) => {
-  waReady = false;
-  console.error("[WA] Authentication failure:", msg);
-});
-
+// Log client state changes if available
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
-  if (state === "CONNECTED") markWaReady("state");
+  if (state === "CONNECTED" || state === "open") markWaReady("state");
 });
 
 // =======================
@@ -381,7 +353,7 @@ async function handleMessage(msg) {
       setSession(chatId, { menu: "clientrequest", step: "main" });
       await waClient.sendMessage(
         chatId,
-        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n1️⃣7️⃣ Hapus Session Baileys\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -733,7 +705,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
-1️⃣7️⃣ Hapus Session Baileys
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
@@ -2208,14 +2179,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   return;
 }
 
-waClient.on('message', (msg) => handleIncoming('baileys', msg, handleMessage));
-wwebjsClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
+waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
 // Fallback handler for environments that emit `message_create` instead of `message`
-waClient.on("message_create", (msg) => {
-  if (msg.fromMe) return;
-  waClient.emit("message", msg);
-});
 
 // =======================
 // INISIALISASI WA CLIENT
@@ -2227,19 +2193,12 @@ try {
   console.error("[WA] Initialization failed:", err.message);
 }
 
-console.log("[WA] Starting wwebjs standby client initialization");
-try {
-  await wwebjsClient.connect();
-} catch (err) {
-  console.error("[WA] wwebjs initialization failed:", err.message);
-}
-
 // Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
 setTimeout(async () => {
   try {
     const state = await waClient.getState();
     console.log("[WA] getState:", state);
-    if (state === "CONNECTED") markWaReady("getState");
+    if (state === "CONNECTED" || state === "open") markWaReady("getState");
   } catch (e) {
     console.log("[WA] getState error:", e?.message);
   }
