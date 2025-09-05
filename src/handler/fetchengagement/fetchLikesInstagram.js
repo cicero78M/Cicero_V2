@@ -42,27 +42,19 @@ async function getExistingLikes(shortcode) {
  */
 async function fetchAndStoreLikes(shortcode, client_id = null) {
   const allLikes = await fetchAllInstagramLikes(shortcode);
-  const uniqueLikes = [...new Set(allLikes.map(normalizeUsername))];
 
-  let limitedLikes = uniqueLikes;
-  if (uniqueLikes.length > 50) {
-    limitedLikes = uniqueLikes.slice(0, 50);
-    if (client_id) {
-      const exceptionUsers = await getExceptionUsersByClient(client_id);
-      const exceptionSet = new Set(
-        exceptionUsers.map((u) => normalizeUsername(u.insta))
-      );
-      for (const uname of uniqueLikes) {
-        if (exceptionSet.has(uname)) {
-          limitedLikes.push(uname);
-        }
-      }
-      limitedLikes = [...new Set(limitedLikes)];
+  const uniqueLikes = [...new Set(allLikes.map(normalizeUsername))];
+  const existingLikes = await getExistingLikes(shortcode);
+  const mergedSet = new Set([...existingLikes, ...uniqueLikes]);
+
+  if (mergedSet.size > 50 && client_id) {
+    const exceptionUsers = await getExceptionUsersByClient(client_id);
+    for (const u of exceptionUsers) {
+      const uname = normalizeUsername(u.insta);
+      if (uname) mergedSet.add(uname);
     }
   }
 
-  const existingLikes = await getExistingLikes(shortcode);
-  const mergedSet = new Set([...existingLikes, ...limitedLikes]);
   const mergedLikes = [...mergedSet];
   sendDebug({
     tag: "IG LIKES FINAL",
