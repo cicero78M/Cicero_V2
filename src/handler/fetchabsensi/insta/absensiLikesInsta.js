@@ -391,7 +391,8 @@ export async function getActiveClientsIG() {
      FROM clients
      WHERE client_status = true
        AND (client_insta_status = true OR client_amplify_status = true)
-       AND client_insta IS NOT NULL`
+       AND client_insta IS NOT NULL
+       AND LOWER(client_type) = 'org'`
   );
   return res.rows;
 }
