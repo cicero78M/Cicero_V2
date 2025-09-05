@@ -12,6 +12,7 @@ async function getActiveClients() {
     `SELECT client_id
      FROM clients
      WHERE client_status=true
+       AND UPPER(client_id) = 'DITBINMAS'
      ORDER BY client_id`
   );
   return rows.rows;
