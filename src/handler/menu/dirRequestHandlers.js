@@ -256,7 +256,7 @@ async function formatRekapBelumLengkapDitbinmas() {
       )
       .map((u) => `${formatNama(u)}, ${u.missing}`)
       .join("\n\n");
-    return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
+    return `*${d.toUpperCase()}* (${incomplete[d].length})\n\n${list}`;
   });
   const body = lines.length
     ? lines.join("\n\n")
