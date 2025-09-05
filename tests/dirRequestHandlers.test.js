@@ -94,7 +94,8 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(msg).toMatch(/Jumlah Total Personil : 2/);
   expect(msg).toMatch(/Jumlah Total Personil Sudah Mengisi Instagram : 1/);
   expect(msg).toMatch(/Jumlah Total Personil Sudah Mengisi Tiktok : 1/);
-  expect(msg).toMatch(/Jumlah Total User Belum Update Data : 1/);
+  expect(msg).toMatch(/Jumlah Total Personil Belum Mengisi Instagram : 1/);
+  expect(msg).toMatch(/Jumlah Total Personil Belum Mengisi Tiktok : 1/);
   const idxBinmas = msg.indexOf('DIT BINMAS');
   const idxPasuruan = msg.indexOf('POLRES PASURUAN KOTA');
   expect(idxBinmas).toBeLessThan(idxPasuruan);
