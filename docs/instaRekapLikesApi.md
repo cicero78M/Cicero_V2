@@ -21,7 +21,7 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 }
 ```
 
-- **sudahUsers** – usernames that liked at least 50% of posts or are marked as exception.
+- **sudahUsers** – usernames that liked at least 50% of posts.
 - **kurangUsers** – usernames that liked some posts but less than 50%.
 - **belumUsers** – usernames that did not like any posts.
 - **belumUsersCount** – users who did not like any posts **or** have no Instagram username.

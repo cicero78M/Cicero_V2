@@ -185,7 +185,7 @@ test('absensiLikesDitbinmasReport filters users by client_id DITBINMAS', async (
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'DITBINMAS');
 });
 
-test('lapharDitbinmas counts exception usernames as likes', async () => {
+test('lapharDitbinmas does not count exception usernames as likes', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'DITBINMAS', client_type: 'direktorat' }] });
   mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
   mockGetLikesByShortcode.mockResolvedValueOnce([]);
@@ -203,6 +203,6 @@ test('lapharDitbinmas counts exception usernames as likes', async () => {
 
   const result = await lapharDitbinmas();
 
-  expect(result.narrative).toMatch(/https:\/\/www.instagram.com\/p\/sc1 : 1/);
+  expect(result.narrative).toMatch(/https:\/\/www.instagram.com\/p\/sc1 : 0/);
 });
 
