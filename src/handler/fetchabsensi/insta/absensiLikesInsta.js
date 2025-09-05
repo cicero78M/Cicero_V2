@@ -923,6 +923,7 @@ export async function lapharDitbinmas() {
       (a, b) => (b.tiktokPercent - b.igPercent) - (a.tiktokPercent - a.igPercent)
     )[0];
   const mentorList = topPerformers.map((p) => p.name);
+  const lowestInput = bottomPerformersArr.map((p) => p.name);
   const bestSatkerNames = bestSatkers.map((p) => p.name);
   const strongSatkerList = strongSatkers.map(
     (p) => `${p.name} (${p.igPercent.toFixed(1)}% / ${p.tiktokPercent.toFixed(1)}%)`
@@ -930,6 +931,10 @@ export async function lapharDitbinmas() {
   const notesLines = [];
   if (backlogBig.length)
     notesLines.push(`* *${backlogBig.join(', ')}* → backlog terbesar;`);
+  if (lowestInput.length)
+    notesLines.push(
+      `* *${lowestInput.join(', ')}* → Input Username Ter rendah`
+    );
   if (largestGapPos)
     notesLines.push(
       `* *${largestGapPos.name}* → Anomali TT sangat rendah; Menjadi perhatian khusus.`
