@@ -154,21 +154,41 @@ test('formatRekapUserData orders users by rank', async () => {
   expect(idxAkp).toBeLessThan(idxIpda);
 });
 
-test('choose_menu option 2 absensi likes ditbinmas', async () => {
+test('choose_menu option 2 executive summary reports totals', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2025-09-05T00:16:00Z'));
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'a', insta: 'x', tiktok: 'y' },
+    { client_id: 'a', insta: null, tiktok: 'y' },
+    { client_id: 'b', insta: 'x', tiktok: null },
+  ]);
+  mockFindClientById.mockImplementation(async (cid) => ({ nama: cid.toUpperCase() }));
+  const session = { selectedClientId: 'a', clientName: 'A' };
+  const chatId = '111';
+  const waClient = { sendMessage: jest.fn() };
+  await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toMatch(/Personil Saat ini: 3/);
+  expect(msg).toMatch(/IG 66\.7% \(2\/3\)/);
+  expect(msg).toMatch(/TT 66\.7% \(2\/3\)/);
+  jest.useRealTimers();
+});
+
+test('choose_menu option 3 absensi likes ditbinmas', async () => {
   mockAbsensiLikesDitbinmasReport.mockResolvedValue('laporan');
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '321';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
 
   expect(mockAbsensiLikesDitbinmasReport).toHaveBeenCalled();
   expect(mockAbsensiLikes).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
 });
 
-test('choose_menu option 3 absensi likes uses ditbinmas data for all users', async () => {
+test('choose_menu option 4 absensi likes uses ditbinmas data for all users', async () => {
   mockAbsensiLikes.mockResolvedValue('laporan');
   mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
 
@@ -181,7 +201,7 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
   const chatId = '999';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '4', waClient);
 
   expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
     mode: 'all',
@@ -189,7 +209,7 @@ test('choose_menu option 3 absensi likes uses ditbinmas data for all users', asy
   });
 });
 
-test('choose_menu option 3 skips when client is not ditbinmas', async () => {
+test('choose_menu option 4 skips ketika client bukan ditbinmas', async () => {
   mockAbsensiLikes.mockResolvedValue('laporan');
 
   const session = {
@@ -200,7 +220,7 @@ test('choose_menu option 3 skips when client is not ditbinmas', async () => {
   const chatId = '555';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '3', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '4', waClient);
 
   expect(mockAbsensiLikes).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(
@@ -209,7 +229,7 @@ test('choose_menu option 3 skips when client is not ditbinmas', async () => {
   );
 });
 
-test('choose_menu option 5 fetch insta returns rekap likes report', async () => {
+test('choose_menu option 6 fetch insta returns rekap likes report', async () => {
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockRekapLikesIG.mockResolvedValue('laporan likes');
@@ -223,7 +243,7 @@ test('choose_menu option 5 fetch insta returns rekap likes report', async () => 
   const chatId = '777';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '6', waClient);
 
   expect(mockFetchAndStoreInstaContent).toHaveBeenCalledWith(
     ['shortcode', 'caption', 'like_count', 'timestamp'],
@@ -236,7 +256,7 @@ test('choose_menu option 5 fetch insta returns rekap likes report', async () => 
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan likes');
 });
 
-test('choose_menu option 9 sends laphar file and narrative', async () => {
+test('choose_menu option 10 sends laphar file and narrative', async () => {
   mockLapharDitbinmas.mockResolvedValue({
     text: 'lap',
     filename: 'lap.txt',
@@ -248,7 +268,7 @@ test('choose_menu option 9 sends laphar file and narrative', async () => {
   const chatId = '999';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '9', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '10', waClient);
 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
   expect(mockWriteFile).toHaveBeenNthCalledWith(

@@ -221,6 +221,165 @@ async function absensiLikesDitbinmas() {
   return await absensiLikesDitbinmasReport();
 }
 
+async function formatExecutiveSummary(clientId, roleFlag = null) {
+  const users = await getUsersSocialByClient(clientId, roleFlag);
+  const groups = {};
+  users.forEach((u) => {
+    const cid = (u.client_id || "").toLowerCase();
+    if (!groups[cid]) groups[cid] = { total: 0, insta: 0, tiktok: 0 };
+    groups[cid].total++;
+    if (u.insta) groups[cid].insta++;
+    if (u.tiktok) groups[cid].tiktok++;
+  });
+  const stats = await Promise.all(
+    Object.entries(groups).map(async ([cid, stat]) => {
+      const client = await findClientById(cid);
+      const name = (client?.nama || cid).toUpperCase();
+      const igPct = stat.total ? (stat.insta / stat.total) * 100 : 0;
+      const ttPct = stat.total ? (stat.tiktok / stat.total) * 100 : 0;
+      return { cid, name, ...stat, igPct, ttPct };
+    })
+  );
+  const totals = stats.reduce(
+    (acc, s) => {
+      acc.total += s.total;
+      acc.insta += s.insta;
+      acc.tiktok += s.tiktok;
+      return acc;
+    },
+    { total: 0, insta: 0, tiktok: 0 }
+  );
+  const toPercent = (num, den) => (den ? ((num / den) * 100).toFixed(1) : "0.0");
+  const arrAvg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+  const arrMedian = (arr) => {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  };
+  const igArr = stats.map((s) => s.igPct);
+  const ttArr = stats.map((s) => s.ttPct);
+  const avgIg = arrAvg(igArr);
+  const avgTt = arrAvg(ttArr);
+  const medIg = arrMedian(igArr);
+  const medTt = arrMedian(ttArr);
+  const lowSatkers = stats.filter((s) => s.igPct < 10 && s.ttPct < 10).length;
+  const topSatkers = stats
+    .filter((s) => s.igPct >= 90 && s.ttPct >= 90)
+    .map((s) => s.name);
+  const strongSatkers = stats
+    .filter((s) => s.igPct >= 80 && s.ttPct >= 80 && !(s.igPct >= 90 && s.ttPct >= 90))
+    .map((s) => `${s.name} (${s.igPct.toFixed(1)}% / ${s.ttPct.toFixed(1)}%)`);
+  const sortedAvg = [...stats].sort((a, b) => b.igPct + b.ttPct - (a.igPct + a.ttPct));
+  const topPerformers = sortedAvg
+    .slice(0, 5)
+    .map((s, i) => `${i + 1}) ${s.name} ${s.igPct.toFixed(1)} / ${s.ttPct.toFixed(1)}`);
+  const bottomPerformers = sortedAvg
+    .slice(-5)
+    .map((s) => `${s.name} ${s.igPct.toFixed(1)}% / ${s.ttPct.toFixed(1)}%`);
+  const anomalies = stats
+    .filter((s) => Math.abs(s.igPct - s.ttPct) >= 15)
+    .map((s) => {
+      const diff = (s.igPct - s.ttPct).toFixed(1);
+      if (s.igPct > s.ttPct)
+        return `${s.name} IG ${s.igPct.toFixed(1)}% vs TT ${s.ttPct.toFixed(1)}% (+${diff} poin ke IG)`;
+      return `${s.name} IG ${s.igPct.toFixed(1)}% vs TT ${s.ttPct.toFixed(1)}% (${diff} ke IG)`;
+    });
+  const backlogIg = stats
+    .map((s) => ({ name: s.name, count: s.total - s.insta }))
+    .sort((a, b) => b.count - a.count);
+  const backlogTt = stats
+    .map((s) => ({ name: s.name, count: s.total - s.tiktok }))
+    .sort((a, b) => b.count - a.count);
+  const top10Ig = backlogIg.slice(0, 10);
+  const top10Tt = backlogTt.slice(0, 10);
+  const top10IgCount = top10Ig.reduce((a, b) => a + b.count, 0);
+  const top10TtCount = top10Tt.reduce((a, b) => a + b.count, 0);
+  const missingIg = totals.total - totals.insta;
+  const missingTt = totals.total - totals.tiktok;
+  const percentTopIg = missingIg ? ((top10IgCount / missingIg) * 100).toFixed(1) : "0.0";
+  const percentTopTt = missingTt ? ((top10TtCount / missingTt) * 100).toFixed(1) : "0.0";
+  const projectedIg = ((totals.insta + 0.7 * top10IgCount) / totals.total) * 100;
+  const projectedTt = ((totals.tiktok + 0.7 * top10TtCount) / totals.total) * 100;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = now.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const lines = [
+    "Mohon Ijin Komandan,",
+    "",
+    `Rekap User Insight ${dateStr} ${timeStr} WIB`,
+    `Personil Saat ini: ${totals.total.toLocaleString("id-ID")} personil`,
+    "",
+    `Cakupan keseluruhan: IG ${toPercent(totals.insta, totals.total)}% (${totals.insta}/${totals.total}), TT ${toPercent(totals.tiktok, totals.total)}% (${totals.tiktok}/${totals.total}).`,
+    "",
+    `Rata-rata satker: IG ${avgIg.toFixed(1)}% (median ${medIg.toFixed(1)}%), TT ${avgTt.toFixed(1)}% (median ${medTt.toFixed(1)}%)${
+      lowSatkers ? " → penyebaran masih lebar, banyak satker di bawah 10%." : ""
+    }`,
+  ];
+  if (topSatkers.length)
+    lines.push("", `Satker dengan capaian terbaik (≥90% IG & TT): ${topSatkers.join(", ")}.`);
+  if (strongSatkers.length)
+    lines.push("", `Tambahan kuat (≥80% IG & TT): ${strongSatkers.join(", ")}.`);
+  if (topPerformers.length || bottomPerformers.length) lines.push("", "Highlight Pencapaian & Masalah");
+  if (topPerformers.length)
+    lines.push("", `Top performer (rata-rata IG/TT): ${topPerformers.join(", ")}.`);
+  if (bottomPerformers.length)
+    lines.push(
+      "",
+      `Bottom performer (rata-rata IG/TT, sangat rendah di kedua platform): ${bottomPerformers.join(" • ")}`
+    );
+  if (anomalies.length) lines.push("", "Anomali :", anomalies.join("\n"));
+  lines.push("", "Konsentrasi Backlog (prioritas penanganan)", "");
+  lines.push(
+    `Top-10 penyumbang backlog menyerap >50% backlog masing-masing platform.`
+  );
+  if (missingIg)
+    lines.push(
+      "",
+      `IG Belum Diisi (${missingIg}) – 10 terbesar (≈${percentTopIg}%):`,
+      top10Ig.map((s) => `${s.name} (${s.count})`).join(", ")
+    );
+  if (missingTt)
+    lines.push(
+      "",
+      `TikTok Belum Diisi (${missingTt}) – 10 terbesar (≈${percentTopTt}%):`,
+      top10Tt.map((s) => `${s.name} (${s.count})`).join(", ")
+    );
+  lines.push(
+    "",
+    `Proyeksi dampak cepat: Menutup 70% backlog di Top-10 → proyeksi capaian naik ke IG ≈ ${projectedIg.toFixed(
+      1
+    )}% dan TT ≈ ${projectedTt.toFixed(1)}%.`
+  );
+  const backlogNames = top10Ig.slice(0, 6).map((s) => s.name);
+  const ttBetter = stats
+    .filter((s) => s.ttPct - s.igPct >= 10)
+    .map((s) => s.name);
+  const roleModel = topSatkers;
+  if (backlogNames.length || anomalies.length || ttBetter.length || roleModel.length)
+    lines.push("", "Catatan per Satker");
+  if (backlogNames.length) lines.push("", `Backlog terbesar: ${backlogNames.join(", ")}.`);
+  if (anomalies.length)
+    lines.push(
+      "",
+      `Anomali: ${anomalies.map((a) => a.split(" IG")[0]).join(", ")} — perlu audit teknis/sosialisasi ulang.`
+    );
+  if (ttBetter.length) lines.push("", `TT unggul: ${ttBetter.join(", ")} (pertahankan).`);
+  if (roleModel.length)
+    lines.push(
+      "",
+      `Role model: ${roleModel.join(", ")} — didorong menjadi mentor lintas satker.`
+    );
+  return lines.join("\n").trim();
+}
+
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
   let msg = "";
   const userClient = userClientId ? await findClientById(userClientId) : null;
@@ -230,10 +389,14 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await formatRekapUserData(clientId, roleFlag);
       break;
     }
-    case "2":
+    case "2": {
+      msg = await formatExecutiveSummary(clientId, roleFlag);
+      break;
+    }
+    case "3":
       msg = await absensiLikesDitbinmas();
       break;
-    case "3": {
+    case "4": {
       const normalizedId = (clientId || "").toUpperCase();
       if (normalizedId !== "DITBINMAS") {
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
@@ -243,14 +406,14 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await absensiLikes("DITBINMAS", opts);
       break;
     }
-    case "4":
+    case "5":
       msg = await absensiKomentar(clientId, {
         ...(userType === "org" ? { clientFilter: userClientId } : {}),
         mode: "all",
         roleFlag,
       });
       break;
-    case "5": {
+    case "6": {
       const { fetchAndStoreInstaContent } = await import(
         "../fetchpost/instaFetchPost.js"
       );
@@ -273,7 +436,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
-    case "6": {
+    case "7": {
       const { handleFetchLikesInstagram } = await import(
         "../fetchengagement/fetchLikesInstagram.js"
       );
@@ -281,7 +444,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
       break;
     }
-    case "7": {
+    case "8": {
       const { fetchAndStoreTiktokContent } = await import(
         "../fetchpost/tiktokFetchPost.js"
       );
@@ -289,7 +452,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ Selesai fetch TikTok DITBINMAS.";
       break;
     }
-    case "8": {
+    case "9": {
       const { handleFetchKomentarTiktokBatch } = await import(
         "../fetchengagement/fetchCommentTiktok.js"
       );
@@ -297,7 +460,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
       break;
     }
-      case "9": {
+    case "10": {
         const { text, filename, narrative, textBelum, filenameBelum } =
           await lapharDitbinmas();
         if (narrative) {
@@ -394,20 +557,21 @@ export const dirRequestHandlers = {
     }
 
     const clientName = session.clientName;
-    const menu =
-      `Client: *${clientName}*\n` +
-      "┏━━━ *MENU DIRREQUEST* ━━━\n" +
-      "1️⃣ Rekap user belum lengkapi data\n" +
-      "2️⃣ Absensi Likes Ditbinmas\n" +
-      "3️⃣ Absensi Likes Instagram\n" +
-      "4️⃣ Absensi Komentar TikTok\n" +
-      "5️⃣ Fetch Insta\n" +
-      "6️⃣ Fetch Likes Insta\n" +
-      "7️⃣ Fetch TikTok\n" +
-      "8️⃣ Fetch Komentar TikTok\n" +
-      "9️⃣ Laphar Ditbinmas\n" +
-      "┗━━━━━━━━━━━━━━━━━┛\n" +
-      "Ketik *angka* menu atau *batal* untuk keluar.";
+      const menu =
+        `Client: *${clientName}*\n` +
+        "┏━━━ *MENU DIRREQUEST* ━━━\n" +
+        "1️⃣ Rekap user belum lengkapi data\n" +
+        "2️⃣ Executive summary input data personil\n" +
+        "3️⃣ Absensi Likes Ditbinmas\n" +
+        "4️⃣ Absensi Likes Instagram\n" +
+        "5️⃣ Absensi Komentar TikTok\n" +
+        "6️⃣ Fetch Insta\n" +
+        "7️⃣ Fetch Likes Insta\n" +
+        "8️⃣ Fetch TikTok\n" +
+        "9️⃣ Fetch Komentar TikTok\n" +
+        "🔟 Laphar Ditbinmas\n" +
+        "┗━━━━━━━━━━━━━━━━━┛\n" +
+        "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
     session.step = "choose_menu";
   },
@@ -430,7 +594,7 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(choice)) {
+    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
@@ -455,7 +619,7 @@ export const dirRequestHandlers = {
   },
 };
 
-export { formatRekapUserData, absensiLikesDitbinmas };
+export { formatRekapUserData, absensiLikesDitbinmas, formatExecutiveSummary };
 
 export default dirRequestHandlers;
 
