@@ -220,6 +220,53 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 async function absensiLikesDitbinmas() {
   return await absensiLikesDitbinmasReport();
 }
+async function formatRekapBelumLengkapDitbinmas() {
+  const users = await getUsersSocialByClient("DITBINMAS", "ditbinmas");
+  const ditbinmasUsers = users.filter(
+    (u) => (u.client_id || "").toUpperCase() === "DITBINMAS"
+  );
+  const salam = getGreeting();
+  const now = new Date();
+  const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
+  const tanggal = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const jam = now.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const incomplete = {};
+  ditbinmasUsers.forEach((u) => {
+    if (u.insta && u.tiktok) return;
+    const div = u.divisi || "-";
+    const missing = [];
+    if (!u.insta) missing.push("Instagram kosong");
+    if (!u.tiktok) missing.push("TikTok kosong");
+    if (!incomplete[div]) incomplete[div] = [];
+    incomplete[div].push({ ...u, missing: missing.join(", ") });
+  });
+  const lines = sortDivisionKeys(Object.keys(incomplete)).map((d) => {
+    const list = incomplete[d]
+      .sort(
+        (a, b) =>
+          rankIdx(a.title) - rankIdx(b.title) ||
+          formatNama(a).localeCompare(formatNama(b))
+      )
+      .map((u) => `${formatNama(u)}, ${u.missing}`)
+      .join("\n\n");
+    return `${d.toUpperCase()} (${incomplete[d].length})\n\n${list}`;
+  });
+  const body = lines.length
+    ? lines.join("\n\n")
+    : "Seluruh personil telah melengkapi data Instagram dan TikTok.";
+  return (
+    `${salam},\n\n` +
+    `Mohon ijin Komandan, melaporkan personil DITBINMAS yang belum melengkapi data Instagram/TikTok pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+    body
+  ).trim();
+}
 
 async function formatExecutiveSummary(clientId, roleFlag = null) {
   const users = await getUsersSocialByClient(clientId, roleFlag);
@@ -485,6 +532,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         return;
       }
+    case "11":
+      msg = await formatRekapBelumLengkapDitbinmas();
+      break;
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -573,6 +623,7 @@ export const dirRequestHandlers = {
         "8️⃣ Fetch TikTok\n" +
         "9️⃣ Fetch Komentar TikTok\n" +
         "🔟 Laphar Ditbinmas\n" +
+        "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -597,7 +648,7 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(choice)) {
+    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
@@ -622,7 +673,7 @@ export const dirRequestHandlers = {
   },
 };
 
-export { formatRekapUserData, absensiLikesDitbinmas, formatExecutiveSummary };
+export { formatRekapUserData, absensiLikesDitbinmas, formatExecutiveSummary, formatRekapBelumLengkapDitbinmas };
 
 export default dirRequestHandlers;
 
