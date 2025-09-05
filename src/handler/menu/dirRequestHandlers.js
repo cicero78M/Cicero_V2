@@ -314,49 +314,49 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
   const lines = [
     "Mohon Ijin Komandan,",
     "",
-    `**Rekap User Insight ${dateStr} ${timeStr} WIB**`,
-    `**Personil Saat ini:** ${totals.total.toLocaleString("id-ID")} personil`,
+    `*Rekap User Insight ${dateStr} ${timeStr} WIB*`,
+    `*Personil Saat ini:* ${totals.total.toLocaleString("id-ID")} personil`,
     "",
-    `**Cakupan keseluruhan:** IG ${toPercent(totals.insta, totals.total)}% (${totals.insta}/${totals.total}), TT ${toPercent(totals.tiktok, totals.total)}% (${totals.tiktok}/${totals.total}).`,
+    `*Cakupan keseluruhan:* IG ${toPercent(totals.insta, totals.total)}% (${totals.insta}/${totals.total}), TT ${toPercent(totals.tiktok, totals.total)}% (${totals.tiktok}/${totals.total}).`,
     "",
-    `**Rata-rata satker:** IG ${avgIg.toFixed(1)}% (median ${medIg.toFixed(1)}%), TT ${avgTt.toFixed(1)}% (median ${medTt.toFixed(1)}%)${
+    `*Rata-rata satker:* IG ${avgIg.toFixed(1)}% (median ${medIg.toFixed(1)}%), TT ${avgTt.toFixed(1)}% (median ${medTt.toFixed(1)}%)${
       lowSatkers ? " → *penyebaran masih lebar, banyak satker di bawah 10%.*" : ""
     }`,
   ];
   if (topSatkers.length)
-    lines.push("", `**Satker dengan capaian terbaik (≥90% IG & TT):** ${topSatkers.join(", ")}.`);
+    lines.push("", `*Satker dengan capaian terbaik (≥90% IG & TT):* ${topSatkers.join(", ")}.`);
   if (strongSatkers.length)
-    lines.push("", `**Tambahan kuat (≥80% IG & TT):** ${strongSatkers.join(", ")}.`);
+    lines.push("", `*Tambahan kuat (≥80% IG & TT):* ${strongSatkers.join(", ")}.`);
   if (topPerformers.length || bottomPerformers.length)
-    lines.push("", "**Highlight Pencapaian & Masalah**");
+    lines.push("", "*Highlight Pencapaian & Masalah*");
   if (topPerformers.length)
-    lines.push("", `**Top performer** (rata-rata IG/TT): ${topPerformers.join(", ")}.`);
+    lines.push("", `*Top performer* (rata-rata IG/TT): ${topPerformers.join(", ")}.`);
   if (bottomPerformers.length)
     lines.push(
       "",
-      `**Bottom performer** (rata-rata IG/TT, sangat rendah di kedua platform): ${bottomPerformers.join(" • ")}`
+      `*Bottom performer* (rata-rata IG/TT, sangat rendah di kedua platform): ${bottomPerformers.join(" • ")}`
     );
   if (anomalies.length)
-    lines.push("", "**Anomali :**", anomalies.map((a) => `*${a}*`).join("\n"));
-  lines.push("", "**Konsentrasi Backlog (prioritas penanganan)**", "");
+    lines.push("", "*Anomali :*", anomalies.map((a) => `*${a}*`).join("\n"));
+  lines.push("", "*Konsentrasi Backlog (prioritas penanganan)*", "");
   lines.push(
     `Top-10 penyumbang backlog menyerap >50% backlog masing-masing platform.`
   );
   if (missingIg)
     lines.push(
       "",
-      `**IG Belum Diisi (${missingIg}) – 10 terbesar (≈${percentTopIg}%):**`,
+      `*IG Belum Diisi (${missingIg}) – 10 terbesar (≈${percentTopIg}%):*`,
       top10Ig.map((s) => `${s.name} (${s.count})`).join(", ")
     );
   if (missingTt)
     lines.push(
       "",
-      `**TikTok Belum Diisi (${missingTt}) – 10 terbesar (≈${percentTopTt}%):**`,
+      `*TikTok Belum Diisi (${missingTt}) – 10 terbesar (≈${percentTopTt}%):*`,
       top10Tt.map((s) => `${s.name} (${s.count})`).join(", ")
     );
   lines.push(
     "",
-    `**Proyeksi dampak cepat:** Menutup 70% backlog di Top-10 → proyeksi capaian naik ke IG ≈ ${projectedIg.toFixed(
+    `*Proyeksi dampak cepat:* Menutup 70% backlog di Top-10 → proyeksi capaian naik ke IG ≈ ${projectedIg.toFixed(
       1
     )}% dan TT ≈ ${projectedTt.toFixed(1)}%.`
   );
@@ -366,19 +366,19 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
     .map((s) => s.name);
   const roleModel = topSatkers;
   if (backlogNames.length || anomalies.length || ttBetter.length || roleModel.length)
-    lines.push("", "**Catatan per Satker**");
+    lines.push("", "*Catatan per Satker*");
   if (backlogNames.length)
-    lines.push("", `**Backlog terbesar:** ${backlogNames.join(", ")}.`);
+    lines.push("", `*Backlog terbesar:* ${backlogNames.join(", ")}.`);
   if (ttBetter.length)
-    lines.push("", `**TT unggul:** ${ttBetter.join(", ")} (pertahankan).`);
+    lines.push("", `*TT unggul:* ${ttBetter.join(", ")} (pertahankan).`);
   if (roleModel.length)
     lines.push(
       "",
-      `**Role model:** ${roleModel.join(", ")} — didorong menjadi mentor lintas satker.`
+      `*Role model:* ${roleModel.join(", ")} — didorong menjadi mentor lintas satker.`
     );
   lines.push(
     "",
-    "_Catatan kaki:_ IG = Instagram; TT = TikTok; backlog = pekerjaan tertunda; satker = satuan kerja."
+    "_Catatan kaki:_ IG = Instagram; TT = TikTok; backlog = pekerjaan tertunda / User Belum Update data;"
   );
   return lines.join("\n").trim();
 }
