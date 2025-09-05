@@ -349,6 +349,14 @@ export async function updateUserField(user_id, field, value) {
   return findUserById(uid);
 }
 
+// Ambil semua user dengan exception true
+export async function getAllExceptionUsers() {
+  const { rows } = await query(
+    'SELECT * FROM "user" u WHERE exception = true'
+  );
+  return rows;
+}
+
 // Ambil user dengan exception per client
 export async function getExceptionUsersByClient(client_id, roleFilter = null) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1, roleFilter);
