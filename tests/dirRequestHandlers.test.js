@@ -168,7 +168,7 @@ test('choose_menu option 2 executive summary reports totals', async () => {
   const waClient = { sendMessage: jest.fn() };
   await dirRequestHandlers.choose_menu(session, chatId, '2', waClient);
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toMatch(/Personil Saat ini: 3/);
+  expect(msg).toMatch(/\*\*Personil Saat ini:\*\* 3/);
   expect(msg).toMatch(/IG 66\.7% \(2\/3\)/);
   expect(msg).toMatch(/TT 66\.7% \(2\/3\)/);
   jest.useRealTimers();
