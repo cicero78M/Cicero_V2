@@ -930,6 +930,11 @@ export async function lapharDitbinmas() {
   const notesLines = [];
   if (backlogBig.length)
     notesLines.push(`* *${backlogBig.join(', ')}* → backlog terbesar;`);
+  const bottomPerformerNames = bottomPerformersArr.map((p) => p.name);
+  if (bottomPerformerNames.length)
+    notesLines.push(
+      `* *${bottomPerformerNames.join(', ')}* → Input Username Ter rendah;`
+    );
   if (largestGapPos)
     notesLines.push(
       `* *${largestGapPos.name}* → Anomali TT sangat rendah; Menjadi perhatian khusus.`
