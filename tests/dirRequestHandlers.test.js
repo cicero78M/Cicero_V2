@@ -304,3 +304,28 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
     mockWriteFile.mock.invocationCallOrder[0],
   );
 });
+test('choose_menu option 11 reports ditbinmas incomplete users by division', async () => {
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'DITBINMAS', divisi: 'Div A', title: 'AKP', nama: 'Budi', insta: null, tiktok: 'x' },
+    { client_id: 'DITBINMAS', divisi: 'Div A', title: 'IPTU', nama: 'Adi', insta: 'y', tiktok: null },
+    { client_id: 'DITBINMAS', divisi: 'Div B', title: 'KOMPOL', nama: 'Cici', insta: null, tiktok: null },
+    { client_id: 'POLRES_A', divisi: 'Div B', title: 'AKP', nama: 'Edi', insta: null, tiktok: null },
+  ]);
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '444';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '11', waClient);
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('DITBINMAS', 'ditbinmas');
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toMatch(/DIV A \(2\)/);
+  expect(msg).toMatch(/AKP Budi, Instagram kosong/);
+  expect(msg).toMatch(/IPTU Adi, TikTok kosong/);
+  const idxBudi = msg.indexOf('AKP Budi');
+  const idxAdi = msg.indexOf('IPTU Adi');
+  expect(idxBudi).toBeLessThan(idxAdi);
+  expect(msg).toMatch(/DIV B \(1\)/);
+  expect(msg).toMatch(/KOMPOL Cici, Instagram kosong, TikTok kosong/);
+  expect(msg).not.toMatch(/Edi/);
+});
