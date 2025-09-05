@@ -39,16 +39,12 @@ async function runAbsensi(chatIds) {
 
 const options = { timezone: "Asia/Jakarta" };
 
-cron.schedule("12 15 * * *", () => runAbsensi([dirRequestGroup]), options);
-cron.schedule("12 18 * * *", () => runAbsensi([dirRequestGroup]), options);
+cron.schedule("0 15 * * *", () => runAbsensi([dirRequestGroup]), options);
+cron.schedule("0 18 * * *", () => runAbsensi([dirRequestGroup]), options);
+cron.schedule("30 20 * * *", () => runAbsensi([dirRequestGroup]), options);
 cron.schedule(
-  "12 20 * * *",
-  () => runAbsensi([dirRequestGroup, dirRequestNumber, ...getAdminWAIds()]),
-  options
-);
-cron.schedule(
-  "12 22 * * 4",
-  () => runAbsensi([dirRequestGroup, dirRequestNumber, ...getAdminWAIds()]),
+  "30 20 * * *",
+  () => runAbsensi([dirRequestNumber, ...getAdminWAIds()]),
   options
 );
 
