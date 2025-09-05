@@ -319,13 +319,13 @@ test('choose_menu option 11 reports ditbinmas incomplete users by division', asy
 
   expect(mockGetUsersSocialByClient).toHaveBeenCalledWith('DITBINMAS', 'ditbinmas');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toMatch(/DIV A \(2\)/);
+  expect(msg).toMatch(/\*DIV A\* \(2\)/);
   expect(msg).toMatch(/AKP Budi, Instagram kosong/);
   expect(msg).toMatch(/IPTU Adi, TikTok kosong/);
   const idxBudi = msg.indexOf('AKP Budi');
   const idxAdi = msg.indexOf('IPTU Adi');
   expect(idxBudi).toBeLessThan(idxAdi);
-  expect(msg).toMatch(/DIV B \(1\)/);
+  expect(msg).toMatch(/\*DIV B\* \(1\)/);
   expect(msg).toMatch(/KOMPOL Cici, Instagram kosong, TikTok kosong/);
   expect(msg).not.toMatch(/Edi/);
 });
