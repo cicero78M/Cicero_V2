@@ -55,6 +55,26 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+test('main filters non-direktorat client IDs', async () => {
+  mockFindClientById.mockImplementation(async (cid) => ({
+    a: { nama: 'CLIENT A', client_type: 'direktorat' },
+    b: { nama: 'CLIENT B', client_type: 'org' },
+    c: { nama: 'CLIENT C', client_type: 'direktorat' },
+  })[cid.toLowerCase()]);
+  const session = { client_ids: ['a', 'b', 'c'] };
+  const chatId = '123';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.main(session, chatId, '', waClient);
+
+  expect(session.client_ids).toEqual(['a', 'c']);
+  const msg = waClient.sendMessage.mock.calls[0][1];
+  expect(msg).toMatch(/1\. CLIENT A \(A\)/);
+  expect(msg).toMatch(/2\. CLIENT C \(C\)/);
+  expect(msg).not.toMatch(/CLIENT B/);
+  expect(session.step).toBe('choose_client');
+});
+
 test('choose_menu aggregates directorate data by client_id', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));

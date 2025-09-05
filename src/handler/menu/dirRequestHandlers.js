@@ -583,7 +583,20 @@ export const dirRequestHandlers = {
   },
 
   async main(session, chatId, _text, waClient) {
-    const ids = session.client_ids || [];
+    const originalIds = session.client_ids || [];
+    const ids = [];
+    for (const id of originalIds) {
+      try {
+        const client = await findClientById(id);
+        if (client?.client_type?.toLowerCase() === "direktorat") {
+          ids.push(id);
+        }
+      } catch {
+        // ignore lookup errors
+      }
+    }
+    session.client_ids = ids;
+
     if (!session.selectedClientId) {
       if (ids.length === 1) {
         session.selectedClientId = ids[0];
