@@ -78,9 +78,7 @@ export async function getInstaRekapLikes(req, res) {
     const noUsernameUsers = [];
 
     rows.forEach((u) => {
-      if (u.exception === true) {
-        sudahUsers.push(u.username);
-      } else if (!u.username || u.username.trim() === "") {
+      if (!u.username || u.username.trim() === "") {
         noUsernameUsers.push(u.username);
       } else if (u.jumlah_like >= threshold) {
         sudahUsers.push(u.username);

@@ -81,17 +81,6 @@ export async function absensiLikes(client_id, opts = {}) {
       usersByClient[cid].push(u);
     });
 
-    const exceptionUsernames = allUsers
-      .filter(
-        (u) =>
-          u.exception === true &&
-          u.insta &&
-          u.insta.trim() !== ""
-      )
-      .map((u) => normalizeUsername(u.insta));
-    likesSets.forEach((set) => {
-      exceptionUsernames.forEach((uname) => set.add(uname));
-    });
 
     const totalKonten = shortcodes.length;
     const reportEntries = [];
@@ -105,10 +94,6 @@ export async function absensiLikes(client_id, opts = {}) {
       const belum = [];
       const tanpaUsername = [];
       users.forEach((u) => {
-        if (u.exception === true) {
-          sudah.push(u);
-          return;
-        }
         if (!u.insta || u.insta.trim() === "") {
           tanpaUsername.push(u);
           return;
@@ -202,9 +187,7 @@ export async function absensiLikes(client_id, opts = {}) {
   let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {
-    if (u.exception === true) {
-      sudah.push(u); // selalu masuk ke sudah!
-    } else if (
+    if (
       u.insta &&
       u.insta.trim() !== "" &&
       u.count >= threshold
@@ -214,9 +197,6 @@ export async function absensiLikes(client_id, opts = {}) {
       belum.push(u);
     }
   });
-
-  // Hapus user exception dari list belum!
-  belum = belum.filter((u) => !u.exception);
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -315,32 +295,18 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
 
-  const exceptionUsernames = users
-    .filter(
-      (u) =>
-        u.exception === true &&
-        u.insta &&
-        u.insta.trim() !== ""
-    )
-    .map((u) => normalizeUsername(u.insta));
-
   for (const sc of shortcodes) {
     const likes = await getLikesByShortcode(sc);
     const likesSet = new Set((likes || []).map(normalizeUsername));
-    exceptionUsernames.forEach((uname) => likesSet.add(uname));
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
-      if (u.exception === true) {
-        userSudah.push(u); // Selalu ke sudah!
-      } else if (u.insta && u.insta.trim() !== "" && likesSet.has(normalizeUsername(u.insta))) {
+      if (u.insta && u.insta.trim() !== "" && likesSet.has(normalizeUsername(u.insta))) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
       }
     });
-    // Hilangkan user exception dari belum!
-    userBelum = userBelum.filter(u => !u.exception);
 
     // Header per konten
     msg += `\nKonten: https://www.instagram.com/p/${sc}\n`;
@@ -464,10 +430,6 @@ export async function absensiLikesDitbinmasReport() {
   const noUsername = [];
 
   allUsers.forEach((u) => {
-    if (u.exception === true) {
-      already.push({ ...u, count: shortcodes.length });
-      return;
-    }
     if (!u.insta || u.insta.trim() === "") {
       noUsername.push(u);
       return;
@@ -605,16 +567,7 @@ export async function lapharDitbinmas() {
     usersByClient[cid].push(u);
   });
 
-  const exceptionUsernames = allUsers
-    .filter(
-      (u) =>
-        u.exception === true &&
-        u.insta &&
-        u.insta.trim() !== ""
-    )
-    .map((u) => normalizeUsername(u.insta));
   likesSets.forEach((set, idx) => {
-    exceptionUsernames.forEach((uname) => set.add(uname));
     likesCounts[idx] = set.size;
   });
   const kontenLinkLikes = kontenLinks.map(
