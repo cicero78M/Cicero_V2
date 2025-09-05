@@ -5,7 +5,8 @@ dotenv.config();
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { lapharDitbinmas } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
-import { sendWAFile } from "../utils/waHelper.js";
+import { sendWAFile, getAdminWAIds } from "../utils/waHelper.js";
+import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 
 const cronTag = "CRON DIRREQUEST LAPHAR";
 const dirRequestGroup = "120363419830216549@g.us";
@@ -14,6 +15,7 @@ const dirRequestNumber = "6281234560377@c.us";
 async function sendLaphar(chatIds) {
   sendDebug({ tag: cronTag, msg: "Mulai rekap laphar dirrequest" });
   try {
+    await handleFetchLikesInstagram(null, null, "DITBINMAS");
     const {
       text,
       filename,
@@ -60,9 +62,17 @@ cron.schedule(
 );
 
 cron.schedule(
-  "0 20 * * *",
+  "30 20 * * *",
   async () => {
-    await sendLaphar([dirRequestGroup, dirRequestNumber]);
+    await sendLaphar([dirRequestGroup]);
+  },
+  options
+);
+
+cron.schedule(
+  "30 20 * * *",
+  async () => {
+    await sendLaphar([dirRequestNumber, ...getAdminWAIds()]);
   },
   options
 );
