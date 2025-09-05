@@ -359,6 +359,14 @@ export async function getExceptionUsersByClient(client_id, roleFilter = null) {
   return rows;
 }
 
+// Ambil semua user dengan exception tanpa filter client
+export async function getExceptionUsers() {
+  const { rows } = await query(
+    'SELECT * FROM "user" u WHERE exception = true'
+  );
+  return rows;
+}
+
 // Ambil user dengan flag direktorat binmas atau lantas
 export async function getDirektoratUsers(clientId = null) {
   let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name IN ('ditbinmas','ditlantas','bidhumas')`;

@@ -3,7 +3,7 @@
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllInstagramLikes } from "../../service/instagramApi.js";
-import { getExceptionUsersByClient } from "../../model/userModel.js";
+import { getExceptionUsers } from "../../model/userModel.js";
 
 function normalizeUsername(username) {
   return (username || "")
@@ -47,18 +47,16 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
   let limitedLikes = uniqueLikes;
   if (uniqueLikes.length > 50) {
     limitedLikes = uniqueLikes.slice(0, 50);
-    if (client_id) {
-      const exceptionUsers = await getExceptionUsersByClient(client_id);
-      const exceptionSet = new Set(
-        exceptionUsers.map((u) => normalizeUsername(u.insta))
-      );
-      for (const uname of uniqueLikes) {
-        if (exceptionSet.has(uname)) {
-          limitedLikes.push(uname);
-        }
+    const exceptionUsers = await getExceptionUsers();
+    const exceptionSet = new Set(
+      exceptionUsers.map((u) => normalizeUsername(u.insta))
+    );
+    for (const uname of uniqueLikes) {
+      if (exceptionSet.has(uname)) {
+        limitedLikes.push(uname);
       }
-      limitedLikes = [...new Set(limitedLikes)];
     }
+    limitedLikes = [...new Set(limitedLikes)];
   }
 
   const existingLikes = await getExistingLikes(shortcode);
