@@ -43,20 +43,25 @@ async function getExistingLikes(shortcode) {
 async function fetchAndStoreLikes(shortcode, client_id = null) {
   const allLikes = await fetchAllInstagramLikes(shortcode);
   const uniqueLikes = [...new Set(allLikes.map(normalizeUsername))];
+  const exceptionUsers = await getAllExceptionUsers();
+  const exceptionUsernames = exceptionUsers
+    .map((u) => normalizeUsername(u.insta))
+    .filter(Boolean);
+
+  for (const uname of exceptionUsernames) {
+    if (!uniqueLikes.includes(uname)) {
+      uniqueLikes.push(uname);
+    }
+  }
 
   let limitedLikes = uniqueLikes;
   if (uniqueLikes.length > 50) {
     limitedLikes = uniqueLikes.slice(0, 50);
-    const exceptionUsers = await getAllExceptionUsers();
-    const exceptionSet = new Set(
-      exceptionUsers.map((u) => normalizeUsername(u.insta))
-    );
-    for (const uname of uniqueLikes) {
-      if (exceptionSet.has(uname)) {
+    for (const uname of exceptionUsernames) {
+      if (!limitedLikes.includes(uname)) {
         limitedLikes.push(uname);
       }
     }
-    limitedLikes = [...new Set(limitedLikes)];
   }
 
   const existingLikes = await getExistingLikes(shortcode);
