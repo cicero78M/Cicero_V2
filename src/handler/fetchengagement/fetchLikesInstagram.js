@@ -3,6 +3,15 @@
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllInstagramLikes } from "../../service/instagramApi.js";
+import { getExceptionUsersByClient } from "../../model/userModel.js";
+
+function normalizeUsername(username) {
+  return (username || "")
+    .toString()
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+}
 
 // Ambil likes lama (existing) dari database dan kembalikan sebagai array string
 async function getExistingLikes(shortcode) {
@@ -13,10 +22,12 @@ async function getExistingLikes(shortcode) {
   if (!res.rows.length) return [];
   const val = res.rows[0].likes;
   if (!val) return [];
-  if (Array.isArray(val)) return val;
+  if (Array.isArray(val)) return val.map(normalizeUsername);
   if (typeof val === "string") {
     try {
-      return JSON.parse(val) || [];
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed.map(normalizeUsername);
+      return [];
     } catch {
       return [];
     }
@@ -32,9 +43,19 @@ async function getExistingLikes(shortcode) {
 async function fetchAndStoreLikes(shortcode, client_id = null) {
   const allLikes = await fetchAllInstagramLikes(shortcode);
 
-  const uniqueLikes = [...new Set(allLikes)];
+  const uniqueLikes = [...new Set(allLikes.map(normalizeUsername))];
   const existingLikes = await getExistingLikes(shortcode);
-  const mergedLikes = [...new Set([...existingLikes, ...uniqueLikes])];
+  const mergedSet = new Set([...existingLikes, ...uniqueLikes]);
+
+  if (mergedSet.size > 50 && client_id) {
+    const exceptionUsers = await getExceptionUsersByClient(client_id);
+    for (const u of exceptionUsers) {
+      const uname = normalizeUsername(u.insta);
+      if (uname) mergedSet.add(uname);
+    }
+  }
+
+  const mergedLikes = [...mergedSet];
   sendDebug({
     tag: "IG LIKES FINAL",
     msg: `Shortcode ${shortcode} FINAL jumlah unique: ${mergedLikes.length}`,
@@ -97,7 +118,7 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
           tag: "IG FETCH LIKES ERROR",
           // Hanya log message/error string, jangan objek error utuh!
           msg: `Gagal fetch likes untuk shortcode: ${r.shortcode}, error: ${(err && err.message) || String(err)}`,
-          client_id
+          client_id,
         });
         gagal++;
       }
@@ -119,7 +140,7 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
     sendDebug({
       tag: "IG FETCH LIKES ERROR",
       msg: (err && err.message) || String(err),
-      client_id
+      client_id,
     });
   }
 }
