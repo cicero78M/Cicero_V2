@@ -109,7 +109,8 @@ async function formatRekapUserData(clientId, roleFlag = null) {
         `Jumlah Total Personil : ${e.stat.total}\n` +
         `Jumlah Total Personil Sudah Mengisi Instagram : ${e.stat.insta}\n` +
         `Jumlah Total Personil Sudah Mengisi Tiktok : ${e.stat.tiktok}\n` +
-        `Jumlah Total User Belum Update Data : ${e.stat.total - e.stat.complete}`
+        `Jumlah Total Personil Belum Mengisi Instagram : ${e.stat.total - e.stat.insta}\n` +
+        `Jumlah Total Personil Belum Mengisi Tiktok : ${e.stat.total - e.stat.tiktok}`
     );
     const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
 
@@ -134,7 +135,8 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       `Jumlah Total Personil : ${totals.total}\n` +
         `Jumlah Total Personil Sudah Mengisi Instagram : ${totals.insta}\n` +
         `Jumlah Total Personil Sudah Mengisi Tiktok : ${totals.tiktok}\n` +
-        `Jumlah Total User Belum Update Data : ${totals.total - totals.complete}`,
+        `Jumlah Total Personil Belum Mengisi Instagram : ${totals.total - totals.insta}\n` +
+        `Jumlah Total Personil Belum Mengisi Tiktok : ${totals.total - totals.tiktok}`,
     ];
     if (withDataLines.length)
       sections.push(`Sudah Input Data:\n\n${withDataLines.join("\n\n")}`);
