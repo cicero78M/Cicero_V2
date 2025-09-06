@@ -199,6 +199,9 @@ export function waitForWaReady(timeout = 30000) {
   });
 }
 
+// Expose readiness helper for consumers like safeSendMessage
+waClient.waitForWaReady = waitForWaReady;
+
 // Pastikan semua pengiriman pesan menunggu hingga client siap
 function wrapSendMessage(client) {
   const original = client.sendMessage;
