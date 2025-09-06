@@ -533,9 +533,7 @@ export async function updateUser(userId, userData) {
   if (userData.user_id) {
     const newUid = normalizeUserId(userData.user_id);
     if (newUid !== uid) {
-      // Update mapping in user_roles first to satisfy foreign key constraint
       await updateUserRolesUserId(uid, newUid);
-      await query('UPDATE "user" SET user_id=$1 WHERE user_id=$2', [newUid, uid]);
       uid = newUid;
     }
     delete userData.user_id;
@@ -571,7 +569,19 @@ export async function updateUser(userId, userData) {
 export async function updateUserRolesUserId(oldUserId, newUserId) {
   const oldUid = normalizeUserId(oldUserId);
   const newUid = normalizeUserId(newUserId);
-  await query('UPDATE user_roles SET user_id=$1 WHERE user_id=$2', [newUid, oldUid]);
+  await query('BEGIN');
+  try {
+    const { rows } = await query('SELECT role_id FROM user_roles WHERE user_id=$1', [oldUid]);
+    await query('DELETE FROM user_roles WHERE user_id=$1', [oldUid]);
+    await query('UPDATE "user" SET user_id=$1 WHERE user_id=$2', [newUid, oldUid]);
+    for (const r of rows) {
+      await query('INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)', [newUid, r.role_id]);
+    }
+    await query('COMMIT');
+  } catch (err) {
+    await query('ROLLBACK');
+    throw err;
+  }
 }
 
 export async function deleteUser(userId) {

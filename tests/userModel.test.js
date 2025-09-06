@@ -197,17 +197,37 @@ test('updateUserField updates ditbinmas field', async () => {
   expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
 });
 
-test('updateUserRolesUserId updates user_roles table', async () => {
-  mockQuery.mockResolvedValueOnce({});
+test('updateUserRolesUserId migrates roles and updates user_id', async () => {
+  mockQuery
+    .mockResolvedValueOnce({}) // BEGIN
+    .mockResolvedValueOnce({ rows: [{ role_id: 1 }] }) // select roles
+    .mockResolvedValueOnce({}) // delete old roles
+    .mockResolvedValueOnce({}) // update user
+    .mockResolvedValueOnce({}) // insert new role
+    .mockResolvedValueOnce({}); // COMMIT
   await updateUserRolesUserId('1', '2');
-  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE user_roles SET user_id=$1 WHERE user_id=$2');
-  expect(mockQuery.mock.calls[0][1]).toEqual(['2', '1']);
+  expect(mockQuery.mock.calls[1][0]).toContain(
+    'SELECT role_id FROM user_roles WHERE user_id=$1'
+  );
+  expect(mockQuery.mock.calls[2][0]).toContain(
+    'DELETE FROM user_roles WHERE user_id=$1'
+  );
+  expect(mockQuery.mock.calls[3][0]).toContain(
+    'UPDATE "user" SET user_id=$1 WHERE user_id=$2'
+  );
+  expect(mockQuery.mock.calls[4][0]).toContain(
+    'INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)'
+  );
 });
 
-test('updateUser updates user_id and user_roles', async () => {
+test('updateUser updates user_id and migrates roles', async () => {
   mockQuery
-    .mockResolvedValueOnce({}) // update user_roles
+    .mockResolvedValueOnce({}) // BEGIN
+    .mockResolvedValueOnce({ rows: [{ role_id: 1 }] }) // select roles
+    .mockResolvedValueOnce({}) // delete old roles
     .mockResolvedValueOnce({}) // update user
+    .mockResolvedValueOnce({}) // insert new role
+    .mockResolvedValueOnce({}) // COMMIT
     .mockResolvedValueOnce({
       rows: [
         {
@@ -222,11 +242,25 @@ test('updateUser updates user_id and user_roles', async () => {
 
   const row = await updateUser('1', { user_id: '2' });
 
-  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE user_roles SET user_id=$1 WHERE user_id=$2');
-  expect(mockQuery.mock.calls[0][1]).toEqual(['2', '1']);
-  expect(mockQuery.mock.calls[1][0]).toContain('UPDATE "user" SET user_id=$1 WHERE user_id=$2');
-  expect(mockQuery.mock.calls[1][1]).toEqual(['2', '1']);
-  expect(row).toEqual({ user_id: '2', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false });
+  expect(mockQuery.mock.calls[1][0]).toContain(
+    'SELECT role_id FROM user_roles WHERE user_id=$1'
+  );
+  expect(mockQuery.mock.calls[2][0]).toContain(
+    'DELETE FROM user_roles WHERE user_id=$1'
+  );
+  expect(mockQuery.mock.calls[3][0]).toContain(
+    'UPDATE "user" SET user_id=$1 WHERE user_id=$2'
+  );
+  expect(mockQuery.mock.calls[4][0]).toContain(
+    'INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)'
+  );
+  expect(row).toEqual({
+    user_id: '2',
+    ditbinmas: false,
+    ditlantas: false,
+    bidhumas: false,
+    operator: false,
+  });
 });
 
 test('updateUserField updates desa field', async () => {
