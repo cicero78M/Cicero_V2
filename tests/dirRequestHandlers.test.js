@@ -14,6 +14,7 @@ const mockRekapLikesIG = jest.fn();
 const mockLapharDitbinmas = jest.fn();
 const mockWriteFile = jest.fn();
 const mockSendWAFile = jest.fn();
+const mockSafeSendMessage = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
@@ -32,7 +33,10 @@ jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
 }));
 jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile }));
-jest.unstable_mockModule('../src/utils/waHelper.js', () => ({ sendWAFile: mockSendWAFile }));
+jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
+  sendWAFile: mockSendWAFile,
+  safeSendMessage: mockSafeSendMessage,
+}));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
   fetchAndStoreInstaContent: mockFetchAndStoreInstaContent,
 }));
@@ -254,6 +258,7 @@ test('choose_menu option 6 fetch insta returns rekap likes report', async () => 
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockRekapLikesIG.mockResolvedValue('laporan likes');
+  mockSafeSendMessage.mockResolvedValue(true);
 
   const session = {
     role: 'ditbinmas',
@@ -275,6 +280,11 @@ test('choose_menu option 6 fetch insta returns rekap likes report', async () => 
   expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockRekapLikesIG).toHaveBeenCalledWith('DITBINMAS');
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan likes');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    '120363419830216549@g.us',
+    'laporan likes'
+  );
 });
 
 test('choose_menu option 10 sends laphar file and narrative', async () => {
