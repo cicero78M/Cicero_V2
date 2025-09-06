@@ -53,19 +53,8 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
       uniqueLikes.push(uname);
     }
   }
-
-  let limitedLikes = uniqueLikes;
-  if (uniqueLikes.length > 50) {
-    limitedLikes = uniqueLikes.slice(0, 50);
-    for (const uname of exceptionUsernames) {
-      if (!limitedLikes.includes(uname)) {
-        limitedLikes.push(uname);
-      }
-    }
-  }
-
   const existingLikes = await getExistingLikes(shortcode);
-  const mergedSet = new Set([...existingLikes, ...limitedLikes]);
+  const mergedSet = new Set([...existingLikes, ...uniqueLikes]);
   const mergedLikes = [...mergedSet];
   sendDebug({
     tag: "IG LIKES FINAL",
