@@ -300,7 +300,7 @@ export async function fetchAllInstagramLikes(shortcode, maxPage = 20) {
   return all;
 }
 
-export async function fetchAllInstagramLikesItems(shortcode, maxPage = 20) {
+export async function fetchAllInstagramLikesItems(shortcode, maxPage = 100) {
   const all = [];
   let cursor = null;
   let page = 0;
@@ -310,7 +310,7 @@ export async function fetchAllInstagramLikesItems(shortcode, maxPage = 20) {
     all.push(...items);
     cursor = next_cursor;
     page++;
-    if (!has_more || !cursor || page >= maxPage) break;
+    if (!has_more || !cursor || (maxPage && page >= maxPage)) break;
   } while (true);
   return all;
 }

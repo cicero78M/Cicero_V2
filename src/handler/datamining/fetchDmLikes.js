@@ -7,6 +7,7 @@ import { getPostIdShortcodePairsTodayByUsername } from '../../model/instaPostExt
 import { sendDebug } from '../../middleware/debugHandler.js';
 
 const limit = pLimit(3);
+const MAX_LIKE_PAGES = 100;
 
 export async function handleFetchLikesInstagramDM(username) {
   try {
@@ -19,7 +20,7 @@ export async function handleFetchLikesInstagramDM(username) {
     for (const p of posts) {
       await limit(async () => {
         try {
-          const likes = await fetchAllInstagramLikesItems(p.post_id);
+          const likes = await fetchAllInstagramLikesItems(p.post_id, MAX_LIKE_PAGES);
           const usernames = likes.map(l => l?.username).filter(Boolean);
           await upsertInstaLike(p.shortcode, usernames);
           for (const u of likes) {
