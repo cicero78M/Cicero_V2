@@ -16,8 +16,9 @@ export async function handleFetchLikesInstagramDM(username) {
       return;
     }
     let sukses = 0, gagal = 0;
+    const tasks = [];
     for (const p of posts) {
-      await limit(async () => {
+      const task = limit(async () => {
         try {
           const likes = await fetchAllInstagramLikesItems(p.post_id);
           const usernames = likes.map(l => l?.username).filter(Boolean);
@@ -32,7 +33,9 @@ export async function handleFetchLikesInstagramDM(username) {
           sendDebug({ tag: 'IG DM LIKES ERROR', msg: `[${p.shortcode}] ${err.message}` });
         }
       });
+      tasks.push(task);
     }
+    await Promise.all(tasks);
     sendDebug({ tag: 'IG DM LIKES', msg: `Selesai likes @${username}. Berhasil: ${sukses}, Gagal: ${gagal}` });
   } catch (err) {
     sendDebug({ tag: 'IG DM LIKES ERROR', msg: err.message });
