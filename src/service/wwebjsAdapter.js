@@ -16,7 +16,18 @@ export async function createWwebjsClient() {
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
-  client.on('ready', () => emitter.emit('ready'));
+  client.on('ready', async () => {
+    await client.pupPage.evaluate(() => {
+      if (
+        window.Store?.WidFactory &&
+        !window.Store.WidFactory.toUserWidOrThrow
+      ) {
+        window.Store.WidFactory.toUserWidOrThrow = (jid) =>
+          window.Store.WidFactory.createWid(jid);
+      }
+    });
+    emitter.emit('ready');
+  });
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', (msg) => {
     emitter.emit('message', {
