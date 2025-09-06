@@ -22,10 +22,6 @@ const cronModules = [
   './src/cron/cronInstaDataMining.js',
   './src/cron/cronRekapLink.js',
   './src/cron/cronAmplifyLinkMonthly.js',
-  './src/cron/cronDirRequest.js',
-  './src/cron/cronDirRequestAbsensiLikes.js',
-  './src/cron/cronDirRequestLaphar.js',
-  './src/cron/cronDirRequestFetchInsta.js',
   './src/cron/cronDbBackup.js',
 ];
 
