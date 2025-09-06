@@ -95,9 +95,9 @@ export async function authorize() {
 }
 
 export async function searchByNumbers(auth, numbers = []) {
-  if (!numbers.length) return [];
+  if (!numbers.length) return {};
   const service = google.people({ version: 'v1', auth });
-  const found = [];
+  const found = {};
   for (const num of numbers) {
     try {
       const res = await service.people.searchContacts({
@@ -106,7 +106,8 @@ export async function searchByNumbers(auth, numbers = []) {
         pageSize: 1,
       });
       if (res.data.results && res.data.results.length) {
-        found.push(num);
+        const resourceName = res.data.results[0]?.person?.resourceName || null;
+        found[num] = resourceName;
       }
     } catch (err) {
       console.error('[GOOGLE CONTACT] search failed:', err.message);
@@ -119,17 +120,18 @@ export async function saveGoogleContact(auth, { name, phone }) {
   // Hindari duplikasi dengan memeriksa kontak yang sudah ada
   try {
     const exists = await searchByNumbers(auth, [phone]);
-    if (exists.includes(phone)) return;
+    if (exists[phone]) return exists[phone];
   } catch (err) {
     console.error('[GOOGLE CONTACT] duplicate check failed:', err.message);
   }
   const service = google.people({ version: 'v1', auth });
-  await service.people.createContact({
+  const res = await service.people.createContact({
     requestBody: {
       names: [{ givenName: name }],
       phoneNumbers: [{ value: `+${phone}` }],
     },
   });
+  return res.data.resourceName;
 }
 
 export async function saveContactIfNew(chatId) {
@@ -137,20 +139,59 @@ export async function saveContactIfNew(chatId) {
   if (!phone || isCached(phone)) return;
   try {
     const check = await query(
-      'SELECT phone_number FROM saved_contact WHERE phone_number = $1',
+      'SELECT phone_number, resource_name FROM saved_contact WHERE phone_number = $1',
       [phone]
     );
-    if (check.rowCount > 0) {
+    if (check.rowCount > 0 && check.rows[0]?.resource_name) {
       addToCache(phone);
       return;
     }
     const auth = await authorize();
     if (!auth) return;
+
+    if (check.rowCount > 0 && !check.rows[0]?.resource_name) {
+      const existing = await searchByNumbers(auth, [phone]);
+      if (existing[phone]) {
+        await query(
+          `INSERT INTO saved_contact (phone_number, resource_name)
+           VALUES ($1, $2)
+           ON CONFLICT (phone_number) DO UPDATE SET resource_name = EXCLUDED.resource_name`,
+          [phone, existing[phone]]
+        );
+        addToCache(phone);
+        return;
+      }
+      try {
+        const { rows } = await query(
+          'SELECT nama FROM "user" WHERE whatsapp = $1 LIMIT 1',
+          [phone]
+        );
+        const userName = rows[0]?.nama || phone;
+        const resourceName = await saveGoogleContact(auth, {
+          name: userName,
+          phone,
+        });
+        await query(
+          `INSERT INTO saved_contact (phone_number, resource_name)
+           VALUES ($1, $2)
+           ON CONFLICT (phone_number) DO UPDATE SET resource_name = EXCLUDED.resource_name`,
+          [phone, resourceName]
+        );
+        addToCache(phone);
+        return;
+      } catch (lookupErr) {
+        console.error('[GOOGLE CONTACT] user lookup failed:', lookupErr.message);
+        return;
+      }
+    }
+
     const exists = await searchByNumbers(auth, [phone]);
-    if (exists.includes(phone)) {
+    if (exists[phone]) {
       await query(
-        'INSERT INTO saved_contact (phone_number) VALUES ($1) ON CONFLICT DO NOTHING',
-        [phone]
+        `INSERT INTO saved_contact (phone_number, resource_name)
+         VALUES ($1, $2)
+         ON CONFLICT (phone_number) DO UPDATE SET resource_name = EXCLUDED.resource_name`,
+        [phone, exists[phone]]
       );
       addToCache(phone);
       return;
@@ -176,10 +217,15 @@ export async function saveContactIfNew(chatId) {
         lookupErr.message
       );
     }
-    await saveGoogleContact(auth, { name: displayName, phone });
+    const resourceName = await saveGoogleContact(auth, {
+      name: displayName,
+      phone,
+    });
     await query(
-      'INSERT INTO saved_contact (phone_number) VALUES ($1) ON CONFLICT DO NOTHING',
-      [phone]
+      `INSERT INTO saved_contact (phone_number, resource_name)
+       VALUES ($1, $2)
+       ON CONFLICT (phone_number) DO UPDATE SET resource_name = EXCLUDED.resource_name`,
+      [phone, resourceName]
     );
     addToCache(phone);
   } catch (err) {

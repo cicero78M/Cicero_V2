@@ -120,7 +120,10 @@ describe('saveContactIfNew', () => {
     );
   });
   test('skips existing contact', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [{ phone_number: '123' }] });
+    mockQuery.mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [{ phone_number: '123', resource_name: 'people/123' }],
+    });
     await saveContactIfNew('12345@c.us');
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(mockPeople).not.toHaveBeenCalled();
@@ -133,7 +136,10 @@ describe('saveContactIfNew', () => {
     mockSearchContacts
       .mockResolvedValueOnce({ data: { results: [] } })
       .mockResolvedValueOnce({ data: { results: [] } });
-    mockCreateContact.mockRejectedValueOnce({ message: 'Forbidden', response: { status: 403 } });
+    mockCreateContact.mockRejectedValueOnce({
+      message: 'Forbidden',
+      response: { status: 403 },
+    });
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await saveContactIfNew('98765@c.us');
@@ -158,7 +164,9 @@ describe('saveContactIfNew', () => {
     mockSearchContacts
       .mockResolvedValueOnce({ data: { results: [] } })
       .mockResolvedValueOnce({ data: { results: [] } });
-    mockCreateContact.mockResolvedValueOnce({});
+    mockCreateContact.mockResolvedValueOnce({
+      data: { resourceName: 'people/88888' },
+    });
 
     await saveContactIfNew('88888@c.us');
 
@@ -172,7 +180,38 @@ describe('saveContactIfNew', () => {
     );
     expect(mockQuery).toHaveBeenCalledTimes(3);
     expect(mockQuery.mock.calls[2][0]).toMatch(
-      /INSERT INTO saved_contact \(phone_number\) VALUES \(\$1\) ON CONFLICT DO NOTHING/
+      /INSERT INTO saved_contact \(phone_number, resource_name\)[\s\S]*ON CONFLICT \(phone_number\) DO UPDATE SET resource_name = EXCLUDED.resource_name/
+    );
+  });
+
+  test('re-saves contact when resource_name is null', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ phone_number: '999', resource_name: null }],
+      })
+      .mockResolvedValueOnce({ rows: [{ nama: 'User Name' }] })
+      .mockResolvedValueOnce({});
+    mockSearchContacts
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } });
+    mockCreateContact.mockResolvedValueOnce({
+      data: { resourceName: 'people/999' },
+    });
+
+    await saveContactIfNew('999@c.us');
+
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestBody: expect.objectContaining({
+          names: [{ givenName: 'User Name' }],
+          phoneNumbers: [{ value: '+999' }],
+        }),
+      })
+    );
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+    expect(mockQuery.mock.calls[2][0]).toMatch(
+      /INSERT INTO saved_contact \(phone_number, resource_name\)[\s\S]*ON CONFLICT \(phone_number\) DO UPDATE SET resource_name = EXCLUDED.resource_name/
     );
   });
 
@@ -185,7 +224,9 @@ describe('saveContactIfNew', () => {
     mockSearchContacts
       .mockResolvedValueOnce({ data: { results: [] } })
       .mockResolvedValueOnce({ data: { results: [] } });
-    mockCreateContact.mockResolvedValueOnce({});
+    mockCreateContact.mockResolvedValueOnce({
+      data: { resourceName: 'people/55555' },
+    });
 
     await saveContactIfNew('55555@c.us');
     const firstCall = mockQuery.mock.calls.length;
