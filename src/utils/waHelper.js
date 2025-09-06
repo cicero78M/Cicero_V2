@@ -71,7 +71,7 @@ export async function sendWAFile(
     }
     try {
       let chatId = target;
-      if (typeof waClient.onWhatsApp === 'function') {
+      if (typeof waClient.onWhatsApp === 'function' && !target.endsWith('@g.us')) {
         const [result] = await waClient.onWhatsApp(target);
         if (!result?.exists) {
           console.warn(`[SKIP WA] Unregistered wid: ${target}`);

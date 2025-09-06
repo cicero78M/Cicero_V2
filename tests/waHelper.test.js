@@ -78,6 +78,21 @@ test('sendWAFile accepts s.whatsapp.net wid', async () => {
   });
 });
 
+test('sendWAFile skips onWhatsApp for group ids', async () => {
+  const waClient = {
+    onWhatsApp: jest.fn(),
+    sendMessage: jest.fn().mockResolvedValue(),
+  };
+  const buffer = Buffer.from('hello');
+  await sendWAFile(waClient, buffer, 'file.txt', '123@g.us', 'text/plain');
+  expect(waClient.onWhatsApp).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith('123@g.us', {
+    document: buffer,
+    mimetype: 'text/plain',
+    fileName: 'file.txt',
+  });
+});
+
 test('isUnsupportedVersionError detects update prompts', () => {
   expect(
     isUnsupportedVersionError(
