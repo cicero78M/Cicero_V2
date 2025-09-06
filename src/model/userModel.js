@@ -527,8 +527,18 @@ export async function createUser(userData) {
 }
 
 export async function updateUser(userId, userData) {
-  const uid = normalizeUserId(userId);
+  let uid = normalizeUserId(userId);
   normalizeUserFields(userData);
+
+  if (userData.user_id) {
+    const newUid = normalizeUserId(userData.user_id);
+    if (newUid !== uid) {
+      await query('UPDATE "user" SET user_id=$1 WHERE user_id=$2', [newUid, uid]);
+      uid = newUid;
+    }
+    delete userData.user_id;
+  }
+
   const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'];
   const roles = {};
   for (const rf of roleFields) {
@@ -537,8 +547,7 @@ export async function updateUser(userId, userData) {
       delete userData[rf];
     }
   }
-  // Prevent primary key updates
-  delete userData.user_id;
+
   const columns = Object.keys(userData);
   if (columns.length > 0) {
     const setClause = columns.map((c, i) => `${c}=$${i + 1}`).join(', ');
@@ -549,11 +558,18 @@ export async function updateUser(userId, userData) {
       params
     );
   }
+
   for (const [r, val] of Object.entries(roles)) {
     if (val) await addRole(uid, r);
     else await removeRole(uid, r);
   }
   return findUserById(uid);
+}
+
+export async function updateUserRolesUserId(oldUserId, newUserId) {
+  const oldUid = normalizeUserId(oldUserId);
+  const newUid = normalizeUserId(newUserId);
+  await query('UPDATE user_roles SET user_id=$1 WHERE user_id=$2', [newUid, oldUid]);
 }
 
 export async function deleteUser(userId) {

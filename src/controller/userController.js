@@ -132,6 +132,16 @@ export const updateUserRoles = async (req, res, next) => {
   }
 };
 
+export const updateUserRoleIds = async (req, res, next) => {
+  try {
+    const { old_user_id, new_user_id } = req.body;
+    await userModel.updateUserRolesUserId(old_user_id, new_user_id);
+    sendSuccess(res, { old_user_id, new_user_id });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteUser = async (req, res, next) => {
   try {
     const user = await userModel.deleteUser(req.params.id);

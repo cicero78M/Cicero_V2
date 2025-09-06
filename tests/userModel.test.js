@@ -15,6 +15,7 @@ let getUsersByDirektorat;
 let getClientsByRole;
 let getUsersByClient;
 let getUsersSocialByClient;
+let updateUserRolesUserId;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -27,6 +28,7 @@ beforeAll(async () => {
   getClientsByRole = mod.getClientsByRole;
   getUsersByClient = mod.getUsersByClient;
   getUsersSocialByClient = mod.getUsersSocialByClient;
+  updateUserRolesUserId = mod.updateUserRolesUserId;
 });
 
 beforeEach(() => {
@@ -191,6 +193,13 @@ test('updateUserField updates ditbinmas field', async () => {
   const row = await updateUserField('1', 'ditbinmas', true);
   expect(row).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
+});
+
+test('updateUserRolesUserId updates user_roles table', async () => {
+  mockQuery.mockResolvedValueOnce({});
+  await updateUserRolesUserId('1', '2');
+  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE user_roles SET user_id=$1 WHERE user_id=$2');
+  expect(mockQuery.mock.calls[0][1]).toEqual(['2', '1']);
 });
 
 test('updateUserField updates desa field', async () => {

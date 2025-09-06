@@ -18,6 +18,7 @@ import approvalRequestRoutes from './approvalRequestRoutes.js';
 import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 import premiumRequestRoutes from './premiumRequestRoutes.js';
 import likesRoutes from './likesRoutes.js';
+import userRolesRoutes from './userRolesRoutes.js';
 
 const router = express.Router();
 
@@ -40,6 +41,7 @@ router.use('/press-release-details', pressReleaseDetailRoutes);
 router.use('/amplify', amplifyRoutes);
 router.use('/amplify-khusus', amplifyKhususRoutes);
 router.use('/premium-requests', premiumRequestRoutes);
+router.use('/user_roles', userRolesRoutes);
 export default router;
 
 

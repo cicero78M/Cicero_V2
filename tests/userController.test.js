@@ -7,6 +7,7 @@ const mockUpdateUser = jest.fn();
 const mockGetUsersByClient = jest.fn();
 const mockGetUsersByDirektorat = jest.fn();
 const mockFindClientById = jest.fn();
+const mockUpdateUserRolesUserId = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   createUser: mockCreateUser,
@@ -14,7 +15,8 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
   updateUserField: mockUpdateUserField,
   updateUser: mockUpdateUser,
   getUsersByClient: mockGetUsersByClient,
-  getUsersByDirektorat: mockGetUsersByDirektorat
+  getUsersByDirektorat: mockGetUsersByDirektorat,
+  updateUserRolesUserId: mockUpdateUserRolesUserId
 }));
 
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
@@ -25,6 +27,7 @@ let createUser;
 let getUserList;
 let getUsersByClientCtrl;
 let updateUserRolesCtrl;
+let updateUserRoleIdsCtrl;
 
 beforeAll(async () => {
   const mod = await import('../src/controller/userController.js');
@@ -32,6 +35,7 @@ beforeAll(async () => {
   getUserList = mod.getUserList;
   getUsersByClientCtrl = mod.getUsersByClient;
   updateUserRolesCtrl = mod.updateUserRoles;
+  updateUserRoleIdsCtrl = mod.updateUserRoleIds;
 });
 
 beforeEach(() => {
@@ -42,6 +46,7 @@ beforeEach(() => {
   mockGetUsersByClient.mockReset();
   mockGetUsersByDirektorat.mockReset();
   mockFindClientById.mockReset();
+  mockUpdateUserRolesUserId.mockReset();
 });
 
 test('operator adds user with defaults', async () => {
@@ -203,6 +208,22 @@ test('updateUserRoles updates roles based on array', async () => {
       ditlantas: false,
       bidhumas: false,
     },
+  });
+});
+
+test('updateUserRoleIds updates user_roles mapping', async () => {
+  const req = { body: { old_user_id: '1', new_user_id: '2' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await updateUserRoleIdsCtrl(req, res, () => {});
+
+  expect(mockUpdateUserRolesUserId).toHaveBeenCalledWith('1', '2');
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    data: { old_user_id: '1', new_user_id: '2' }
   });
 });
 
