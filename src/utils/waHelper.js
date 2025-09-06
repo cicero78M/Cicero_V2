@@ -210,14 +210,18 @@ async function waitUntilReady(waClient, timeout = 10000) {
 
 export async function safeSendMessage(waClient, chatId, message, options = {}) {
   try {
-    const ready = await waitUntilReady(waClient);
-    if (!ready) {
-      console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
-      return false;
+    if (typeof waClient?.waitForWaReady === 'function') {
+      await waClient.waitForWaReady();
+    } else {
+      const ready = await waitUntilReady(waClient);
+      if (!ready) {
+        console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
+        return false;
+      }
     }
     await waClient.sendMessage(chatId, message, options);
     console.log(
-      `[WA] Sent message to ${chatId}: ${message.substring(0, 64)}`
+      `[WA] Sent message to ${chatId}: ${String(message).substring(0, 64)}`
     );
     return true;
   } catch (err) {
