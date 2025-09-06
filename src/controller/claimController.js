@@ -168,7 +168,7 @@ export async function updateUserData(req, res, next) {
     }
     if (tiktok !== undefined) {
       const ttUsername = extractTiktokUsername(tiktok);
-      if (ttUsername.replace(/^@/, '') === 'cicero_devs') {
+      if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
         return res
           .status(400)
           .json({ success: false, message: 'username tiktok tidak valid' });

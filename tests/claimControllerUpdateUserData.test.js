@@ -78,6 +78,22 @@ describe('updateUserData', () => {
     expect(userModel.updateUser).not.toHaveBeenCalled();
   });
 
+  test('allows empty tiktok without error', async () => {
+    const req = {
+      body: {
+        nrp: '1',
+        whatsapp: '08123',
+        tiktok: ''
+      }
+    };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    const [, data] = userModel.updateUser.mock.calls[0];
+    expect(data.tiktok).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+
   test('verifies otp when provided', async () => {
     jest.resetModules();
     jest.unstable_mockModule('../src/model/userModel.js', () => ({
