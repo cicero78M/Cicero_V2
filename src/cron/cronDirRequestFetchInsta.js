@@ -26,7 +26,7 @@ const groupId = "120363419830216549@g.us";
 const cronTag = "CRON DIRREQUEST FETCH INSTA";
 
 cron.schedule(
-  "15,45 6-19 * * *",
+  "22,52 6-19 * * *",
   async () => {
     sendDebug({ tag: cronTag, msg: "Mulai fetch Instagram DITBINMAS" });
     try {
