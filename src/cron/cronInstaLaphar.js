@@ -23,12 +23,12 @@ async function getActiveClientsIG() {
 }
 
 // Helper: format WhatsApp ID (biar aman)
-function toWAid(nomor) {
-  if (!nomor || typeof nomor !== "string") return null;
-  const no = nomor.trim();
-  if (!no) return null;
-  if (no.endsWith("@c.us")) return no;
-  return no.replace(/\D/g, "") + "@c.us";
+function toWAid(id) {
+  if (!id || typeof id !== "string") return null;
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
+  return trimmed.replace(/\D/g, "") + "@c.us";
 }
 function getAdminWAIds() {
   return (process.env.ADMIN_WHATSAPP || "")
