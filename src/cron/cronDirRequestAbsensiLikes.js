@@ -21,14 +21,22 @@ async function runAbsensi(chatIds) {
     await fetchAndStoreInstaContent(keys, null, null, "DITBINMAS");
     const shortcodes = await getShortcodesTodayByClient("DITBINMAS");
     if (shortcodes.length === 0) {
-      sendDebug({ tag: cronTag, msg: "Tidak ada tugas IG hari ini" });
+      const infoMsg = "Tidak ada tugas IG hari ini";
+      sendDebug({ tag: cronTag, msg: infoMsg });
+      for (const wa of chatIds) {
+        await waClient.sendMessage(wa, infoMsg).catch((err) => {
+          sendDebug({ tag: cronTag, msg: `[ERROR SEND] ${err.message || err}` });
+        });
+      }
       return;
     }
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
     const msg = await absensiLikes("DITBINMAS", { mode: "all", roleFlag: "ditbinmas" });
     if (msg) {
       for (const wa of chatIds) {
-        await waClient.sendMessage(wa, msg).catch(() => {});
+        await waClient.sendMessage(wa, msg).catch((err) => {
+          sendDebug({ tag: cronTag, msg: `[ERROR SEND] ${err.message || err}` });
+        });
       }
       sendDebug({ tag: cronTag, msg: `Laporan absensi IG dikirim ke ${chatIds.length} target` });
     }
