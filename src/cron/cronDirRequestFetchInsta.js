@@ -7,6 +7,7 @@ import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikes
 import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { safeSendMessage } from "../utils/waHelper.js";
 
 async function getTodayInstaLinks(clientId) {
   const { query } = await import("../db/index.js");
@@ -35,26 +36,42 @@ cron.schedule(
       if (links.length > 0) {
         const header =
           `✅ Fetch Instagram DITBINMAS\nJumlah konten hari ini: *${links.length}*`;
-        await waClient.sendMessage(groupId, header).catch(() => {});
+        const sentHeader = await safeSendMessage(waClient, groupId, header);
+        if (!sentHeader)
+          sendDebug({
+            tag: cronTag,
+            msg: "Gagal kirim pesan header ke group",
+          });
         const maxPerMsg = 30;
         const totalMsg = Math.ceil(links.length / maxPerMsg);
         for (let i = 0; i < totalMsg; i++) {
           const chunk = links.slice(i * maxPerMsg, (i + 1) * maxPerMsg);
-          await waClient
-            .sendMessage(groupId, `Link konten Instagram:\n${chunk.join("\n")}`)
-            .catch(() => {});
+          const ok = await safeSendMessage(
+            waClient,
+            groupId,
+            `Link konten Instagram:\n${chunk.join("\n")}`
+          );
+          if (!ok)
+            sendDebug({
+              tag: cronTag,
+              msg: `Gagal kirim batch link IG ke group (${i + 1}/${totalMsg})`,
+            });
         }
         sendDebug({
           tag: cronTag,
           msg: `Kirim ${links.length} link ke group`,
         });
       } else {
-        await waClient
-          .sendMessage(
-            groupId,
-            "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini."
-          )
-          .catch(() => {});
+        const sent = await safeSendMessage(
+          waClient,
+          groupId,
+          "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini."
+        );
+        if (!sent)
+          sendDebug({
+            tag: cronTag,
+            msg: "Gagal kirim notifikasi tidak ada konten IG",
+          });
         sendDebug({ tag: cronTag, msg: "Tidak ada konten IG hari ini" });
       }
       try {
@@ -69,7 +86,12 @@ cron.schedule(
       }
       const rekapMsg = await rekapLikesIG("DITBINMAS");
       if (rekapMsg) {
-        await waClient.sendMessage(groupId, rekapMsg).catch(() => {});
+        const okRekap = await safeSendMessage(waClient, groupId, rekapMsg);
+        if (!okRekap)
+          sendDebug({
+            tag: cronTag,
+            msg: "Gagal kirim pesan rekap likes IG",
+          });
       }
     } catch (err) {
       sendDebug({ tag: cronTag, msg: `[ERROR] ${err.message || err}` });
