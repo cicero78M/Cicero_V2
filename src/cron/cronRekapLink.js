@@ -19,12 +19,12 @@ async function getActiveClients() {
   return rows.rows;
 }
 
-function toWAid(number) {
-  if (!number || typeof number !== "string") return null;
-  const no = number.trim();
-  if (!no) return null;
-  if (no.endsWith("@c.us")) return no;
-  return no.replace(/\D/g, "") + "@c.us";
+function toWAid(id) {
+  if (!id || typeof id !== "string") return null;
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
+  return trimmed.replace(/\D/g, "") + "@c.us";
 }
 
 function getAdminWAIds() {
