@@ -23,6 +23,7 @@ const cronModules = [
   './src/cron/cronRekapLink.js',
   './src/cron/cronAmplifyLinkMonthly.js',
   './src/cron/cronDirRequestFetchInsta.js',
+  './src/cron/cronDirRequestRekapUpdate.js',
   './src/cron/cronDbBackup.js',
 ];
 
