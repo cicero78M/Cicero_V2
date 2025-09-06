@@ -736,7 +736,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       let saved = 0;
       for (const u of users) {
         const exists = await searchByNumbers(auth, [u.whatsapp]);
-        if (exists.length === 0) {
+        if (!exists[u.whatsapp]) {
           await saveGoogleContact(auth, { name: u.nama, phone: u.whatsapp });
           saved++;
         }
