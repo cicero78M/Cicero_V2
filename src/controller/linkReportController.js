@@ -31,7 +31,7 @@ export async function getLinkReportByShortcode(req, res, next) {
   }
 }
 
-export async function createLinkReport(req, res, next) {
+export async function createLinkReport(req, res) {
   try {
     const data = { ...req.body };
     [
@@ -80,7 +80,9 @@ export async function createLinkReport(req, res, next) {
 
     sendSuccess(res, report, 201);
   } catch (err) {
-    next(err);
+    return res
+      .status(err.statusCode || 400)
+      .json({ success: false, message: err.message });
   }
 }
 
