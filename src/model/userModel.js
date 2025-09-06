@@ -533,6 +533,8 @@ export async function updateUser(userId, userData) {
   if (userData.user_id) {
     const newUid = normalizeUserId(userData.user_id);
     if (newUid !== uid) {
+      // Update mapping in user_roles first to satisfy foreign key constraint
+      await updateUserRolesUserId(uid, newUid);
       await query('UPDATE "user" SET user_id=$1 WHERE user_id=$2', [newUid, uid]);
       uid = newUid;
     }
