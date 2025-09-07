@@ -8,7 +8,8 @@ import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
 
 const dirRequestGroup = "120363419830216549@g.us";
 
@@ -515,15 +516,21 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     case "10": {
         const { text, filename, narrative, textBelum, filenameBelum } =
           await lapharDitbinmas();
+        const dirPath = "laphar";
+        await mkdir(dirPath, { recursive: true });
         if (narrative) {
           await waClient.sendMessage(chatId, narrative.trim());
         }
-        const buffer = Buffer.from(text, "utf-8");
-        await writeFile(filename, buffer);
-        await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+        if (text && filename) {
+          const buffer = Buffer.from(text, "utf-8");
+          const filePath = join(dirPath, filename);
+          await writeFile(filePath, buffer);
+          await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+        }
         if (textBelum && filenameBelum) {
           const bufferBelum = Buffer.from(textBelum, "utf-8");
-          await writeFile(filenameBelum, bufferBelum);
+          const filePathBelum = join(dirPath, filenameBelum);
+          await writeFile(filePathBelum, bufferBelum);
           await sendWAFile(
             waClient,
             bufferBelum,

@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import path from 'path';
 
 const mockLapharDitbinmas = jest.fn();
 const mockAbsensiLikes = jest.fn();
@@ -6,6 +7,7 @@ const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockSendDebug = jest.fn();
 const mockWriteFile = jest.fn();
+const mockMkdir = jest.fn();
 const mockGetAdminWAIds = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {} }));
@@ -21,7 +23,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
 }));
-jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile }));
+jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile, mkdir: mockMkdir }));
 
 let runCron;
 
@@ -40,11 +42,24 @@ beforeEach(() => {
     filenameBelum: 'belum.txt',
   });
   mockAbsensiLikes.mockResolvedValue('absensi');
+  mockMkdir.mockResolvedValue();
+  mockWriteFile.mockResolvedValue();
 });
 
 test('runCron sends reports to admin, group, and extra number', async () => {
   await runCron();
 
+  expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    1,
+    path.join('laphar', 'file.txt'),
+    expect.any(Buffer)
+  );
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    2,
+    path.join('laphar', 'belum.txt'),
+    expect.any(Buffer)
+  );
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     {},

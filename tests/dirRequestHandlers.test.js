@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import path from 'path';
 
 process.env.TZ = 'Asia/Jakarta';
 
@@ -13,6 +14,7 @@ const mockHandleFetchLikesInstagram = jest.fn();
 const mockRekapLikesIG = jest.fn();
 const mockLapharDitbinmas = jest.fn();
 const mockWriteFile = jest.fn();
+const mockMkdir = jest.fn();
 const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
 
@@ -32,7 +34,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
 }));
-jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile }));
+jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile, mkdir: mockMkdir }));
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: mockSendWAFile,
   safeSendMessage: mockSafeSendMessage,
@@ -57,6 +59,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockMkdir.mockResolvedValue();
+  mockWriteFile.mockResolvedValue();
 });
 
 test('main filters non-direktorat client IDs', async () => {
@@ -302,9 +306,10 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
   await dirRequestHandlers.choose_menu(session, chatId, '10', waClient);
 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
+  expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
   expect(mockWriteFile).toHaveBeenNthCalledWith(
     1,
-    'lap.txt',
+    path.join('laphar', 'lap.txt'),
     expect.any(Buffer)
   );
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
@@ -317,7 +322,7 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
   );
   expect(mockWriteFile).toHaveBeenNthCalledWith(
     2,
-    'belum.txt',
+    path.join('laphar', 'belum.txt'),
     expect.any(Buffer)
   );
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
