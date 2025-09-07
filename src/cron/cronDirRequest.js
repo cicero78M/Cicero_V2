@@ -19,6 +19,7 @@ async function getActiveClients() {
 }
 
 const groupId = "120363419830216549@g.us";
+const dirRequestNumber = "6281234560377@c.us";
 const cronTag = "CRON DIRREQUEST";
 const options = { timezone: "Asia/Jakarta" };
 
@@ -49,6 +50,6 @@ async function runRekap(chatIds) {
 }
 
 cron.schedule("0 15,18 * * *", () => runRekap([groupId]), options);
-cron.schedule("30 20 * * *", () => runRekap([groupId]), options);
+cron.schedule("30 20 * * *", () => runRekap([groupId, dirRequestNumber]), options);
 
 export default null;
