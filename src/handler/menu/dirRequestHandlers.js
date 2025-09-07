@@ -7,8 +7,10 @@ import {
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
-import { sendWAFile } from "../../utils/waHelper.js";
+import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
 import { writeFile } from "fs/promises";
+
+const dirRequestGroup = "120363419830216549@g.us";
 
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
@@ -539,6 +541,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "Menu tidak dikenal.";
   }
   await waClient.sendMessage(chatId, msg.trim());
+  if (action === "6") {
+    await safeSendMessage(waClient, dirRequestGroup, msg.trim());
+  }
 }
 
 export const dirRequestHandlers = {

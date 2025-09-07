@@ -22,12 +22,12 @@ const cronModules = [
   './src/cron/cronInstaDataMining.js',
   './src/cron/cronRekapLink.js',
   './src/cron/cronAmplifyLinkMonthly.js',
-  './src/cron/cronDirRequest.js',
-  './src/cron/cronDirRequestAbsensiLikes.js',
-  './src/cron/cronDirRequestLaphar.js',
-  './src/cron/cronDirRequestFetchInsta.js',
-  './src/cron/cronDbBackup.js',
-];
+    './src/cron/cronDirRequestFetchInsta.js',
+    './src/cron/cronDirRequestRekapUpdate.js',
+    './src/cron/cronDirRequestRekapLaphar.js',
+    './src/cron/cronDirRequestDirektorat.js',
+    './src/cron/cronDbBackup.js',
+  ];
 
 waClient.on('ready', async () => {
   await Promise.all(cronModules.map(m => import(m)));

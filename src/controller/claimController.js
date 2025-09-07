@@ -24,7 +24,7 @@ function extractTiktokUsername(value) {
     /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
   );
   const username = match ? match[2] : value.replace(/^@/, '');
-  return `@${username.toLowerCase()}`;
+  return username ? `@${username.toLowerCase()}` : undefined;
 }
 
 export async function requestOtp(req, res, next) {
@@ -166,15 +166,15 @@ export async function updateUserData(req, res, next) {
       }
       data.insta = igUsername;
     }
-    if (tiktok !== undefined) {
-      const ttUsername = extractTiktokUsername(tiktok);
-      if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
-        return res
-          .status(400)
-          .json({ success: false, message: 'username tiktok tidak valid' });
-      }
-      data.tiktok = ttUsername;
+  if (tiktok !== undefined) {
+    const ttUsername = extractTiktokUsername(tiktok);
+    if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
+      return res
+        .status(400)
+        .json({ success: false, message: 'username tiktok tidak valid' });
     }
+    data.tiktok = ttUsername;
+  }
     Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
     const updated = await userModel.updateUser(nrp, data);
     await clearVerification(nrp);

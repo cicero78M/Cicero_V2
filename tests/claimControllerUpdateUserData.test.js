@@ -36,15 +36,15 @@ describe('updateUserData', () => {
       body: {
         nrp: '1',
         whatsapp: '08123',
-        insta: 'https://www.instagram.com/TestUser?igsh=abc',
-        tiktok: 'https://www.tiktok.com/@TikUser?lang=id'
+        insta: 'https://www.instagram.com/de_saputra88?igsh=MWJxMnY1YmtnZ3Rmeg==',
+        tiktok: 'https://www.tiktok.com/@sidik.prayitno37?_t=ZS-8zPPyl5Q4SO&_r=1'
       }
     };
     const res = createRes();
     await updateUserData(req, res, () => {});
     expect(userModel.updateUser).toHaveBeenCalledWith('1', expect.objectContaining({
-      insta: 'testuser',
-      tiktok: '@tikuser'
+      insta: 'de_saputra88',
+      tiktok: '@sidik.prayitno37'
     }));
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
