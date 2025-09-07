@@ -24,7 +24,7 @@ function extractTiktokUsername(value) {
     /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
   );
   const username = match ? match[2] : value.replace(/^@/, '');
-  return username.toLowerCase();
+  return username ? `@${username.toLowerCase()}` : undefined;
 }
 
 export async function requestOtp(req, res, next) {
@@ -168,7 +168,7 @@ export async function updateUserData(req, res, next) {
     }
   if (tiktok !== undefined) {
     const ttUsername = extractTiktokUsername(tiktok);
-    if (ttUsername && ttUsername === 'cicero_devs') {
+    if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
       return res
         .status(400)
         .json({ success: false, message: 'username tiktok tidak valid' });

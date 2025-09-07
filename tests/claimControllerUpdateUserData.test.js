@@ -44,7 +44,7 @@ describe('updateUserData', () => {
     await updateUserData(req, res, () => {});
     expect(userModel.updateUser).toHaveBeenCalledWith('1', expect.objectContaining({
       insta: 'de_saputra88',
-      tiktok: 'sidik.prayitno37'
+      tiktok: '@sidik.prayitno37'
     }));
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
