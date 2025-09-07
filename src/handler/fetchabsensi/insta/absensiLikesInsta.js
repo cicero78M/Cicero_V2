@@ -125,6 +125,10 @@ export async function absensiLikes(client_id, opts = {}) {
     }
 
     reportEntries.sort((a, b) => {
+      const aBinmas = a.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+      const bBinmas = b.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+      if (aBinmas && !bBinmas) return -1;
+      if (bBinmas && !aBinmas) return 1;
       if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
       if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
       return a.clientName.localeCompare(b.clientName);
