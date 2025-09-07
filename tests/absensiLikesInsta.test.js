@@ -175,6 +175,39 @@ test('directorate summarizes across clients', async () => {
   );
 });
 
+test('DIREKTORAT BINMAS is placed first regardless of counts', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ nama: 'DIREKTORAT BINMAS', client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [{ nama: 'DIREKTORAT BINMAS' }] })
+    .mockResolvedValueOnce({ rows: [{ nama: 'POLRES A' }] });
+  mockGetClientsByRole.mockResolvedValueOnce(['ditbinmas', 'polresa']);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
+  mockGetLikesByShortcode.mockResolvedValueOnce(['user2']);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([
+    {
+      user_id: 'u1',
+      nama: 'User1',
+      insta: '@user1',
+      client_id: 'DITBINMAS',
+      exception: false,
+      status: true,
+    },
+    {
+      user_id: 'u2',
+      nama: 'User2',
+      insta: '@user2',
+      client_id: 'POLRESA',
+      exception: false,
+      status: true,
+    },
+  ]);
+
+  const msg = await absensiLikes('DITBINMAS');
+
+  expect(msg).toMatch(/1\. DIREKTORAT BINMAS\n/);
+  expect(msg).toMatch(/2\. POLRES A\n/);
+});
+
 test('absensiLikesDitbinmasReport filters users by client_id DITBINMAS', async () => {
   mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1']);
   mockGetLikesByShortcode.mockResolvedValueOnce([]);
