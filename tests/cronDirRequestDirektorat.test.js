@@ -30,7 +30,7 @@ beforeEach(() => {
   mockRekap.mockResolvedValue('rekap');
 });
 
-test('runCron sends absensi and rekap to admin, group, and extra number', async () => {
+test('runCron sends absensi and rekap to admin and rekap recipient', async () => {
   await runCron();
 
   expect(mockAbsensi).toHaveBeenCalled();
@@ -38,10 +38,8 @@ test('runCron sends absensi and rekap to admin, group, and extra number', async 
 
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'absensi');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'rekap');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'absensi');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'rekap');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '081234560377@c.us', 'absensi');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '081234560377@c.us', 'rekap');
-  expect(mockSafeSend).toHaveBeenCalledTimes(6);
+  expect(mockSafeSend).toHaveBeenCalledWith({}, '6281234560377@c.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, '6281234560377@c.us', 'rekap');
+  expect(mockSafeSend).toHaveBeenCalledTimes(4);
 });
 

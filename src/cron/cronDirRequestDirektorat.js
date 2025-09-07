@@ -10,20 +10,10 @@ import {
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const DIRREQUEST_GROUP = "120363419830216549@g.us";
-const EXTRA_WA = "081234560377";
-
-function toWAid(id) {
-  if (!id || typeof id !== "string") return null;
-  const trimmed = id.trim();
-  if (!trimmed) return null;
-  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
-  return trimmed.replace(/\D/g, "") + "@c.us";
-}
+const REKAP_RECIPIENT = "6281234560377@c.us";
 
 function getRecipients() {
-  const extra = toWAid(EXTRA_WA);
-  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP, extra].filter(Boolean));
+  return new Set([...getAdminWAIds(), REKAP_RECIPIENT]);
 }
 
 export async function runCron() {
