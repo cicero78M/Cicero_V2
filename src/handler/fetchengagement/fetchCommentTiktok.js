@@ -7,6 +7,12 @@ import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
 
 const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
 
+function normalizeUsername(uname) {
+  if (typeof uname !== "string" || uname.length === 0) return null;
+  const lower = uname.trim().toLowerCase();
+  return lower.startsWith("@") ? lower : `@${lower}`;
+}
+
 /**
  * Fetch semua komentar TikTok untuk 1 video_id dari API terbaru
  * Return: array komentar (object asli dari API)
@@ -15,7 +21,7 @@ const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
 /**
  * Ekstrak & normalisasi username dari array objek komentar TikTok.
  * Diprioritaskan dari: user.unique_id, fallback: username (kalau ada)
- * Return: array string username unik (lowercase, tanpa @)
+ * Return: array string username unik (lowercase, diawali @)
  */
 function extractUniqueUsernamesFromComments(commentsArr) {
   const usernames = [];
@@ -26,8 +32,8 @@ function extractUniqueUsernamesFromComments(commentsArr) {
     } else if (c && typeof c.username === "string") {
       uname = c.username;
     }
-    if (uname && uname.length > 0)
-      usernames.push(uname.trim().toLowerCase().replace(/^@/, ""));
+    const normalized = normalizeUsername(uname);
+    if (normalized) usernames.push(normalized);
   }
   // Unikkan username (no duplicate)
   return [...new Set(usernames)];
@@ -42,7 +48,7 @@ async function getExistingUsernames(video_id) {
   if (res.rows.length && Array.isArray(res.rows[0].comments)) {
     // pastikan string array
     return res.rows[0].comments
-      .map(u => (typeof u === "string" ? u.trim().toLowerCase().replace(/^@/, "") : null))
+      .map((u) => normalizeUsername(u))
       .filter(Boolean);
   }
   return [];
