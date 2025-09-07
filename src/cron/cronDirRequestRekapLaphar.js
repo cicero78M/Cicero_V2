@@ -9,9 +9,10 @@ import { sendDebug } from "../middleware/debugHandler.js";
 import { writeFile } from "fs/promises";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
+const REKAP_RECIPIENT = "6281234560377@c.us";
 
 function getRecipients() {
-  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
+  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP, REKAP_RECIPIENT]);
 }
 
 export async function runCron() {
