@@ -38,6 +38,6 @@ export async function runCron() {
   }
 }
 
-cron.schedule("0 21 * * *", runCron, { timezone: "Asia/Jakarta" });
+cron.schedule("45 20 * * *", runCron, { timezone: "Asia/Jakarta" });
 
 export default null;
