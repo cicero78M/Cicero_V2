@@ -12,7 +12,11 @@ import { sendDebug } from '../middleware/debugHandler.js';
 
 async function getActiveClientsIG() {
   const res = await query(
-    `SELECT client_id, client_insta FROM clients WHERE client_status = true AND client_insta_status = true`
+    `SELECT client_id, client_insta, client_insta_status
+     FROM clients
+     WHERE client_status = true
+       AND client_insta_status = true
+       AND LOWER(client_type) = 'org'`
   );
   return res.rows;
 }
