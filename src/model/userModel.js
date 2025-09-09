@@ -322,6 +322,7 @@ export async function updateUserField(user_id, field, value) {
     "insta",
     "tiktok",
     "whatsapp",
+    "email",
     "exception",
     "status",
     "nama",

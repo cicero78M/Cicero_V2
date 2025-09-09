@@ -26,10 +26,13 @@ beforeAll(async () => {
 
 describe('claim routes access', () => {
   test('allows access without token', async () => {
-    await request(app).post('/api/claim/request-otp').send({ nrp: '1', whatsapp: '1' }).expect(202);
-    await request(app).post('/api/claim/verify-otp').send({ nrp: '1', whatsapp: '1', otp: '123' }).expect(200);
-    await request(app).post('/api/claim/user-data').send({ nrp: '1', whatsapp: '1' }).expect(200);
-    await request(app).put('/api/claim/update').send({ nrp: '1', whatsapp: '1' }).expect(200);
+    await request(app).post('/api/claim/request-otp').send({ nrp: '1', email: 'a@a.com' }).expect(202);
+    await request(app)
+      .post('/api/claim/verify-otp')
+      .send({ nrp: '1', email: 'a@a.com', otp: '123' })
+      .expect(200);
+    await request(app).post('/api/claim/user-data').send({ nrp: '1', email: 'a@a.com' }).expect(200);
+    await request(app).put('/api/claim/update').send({ nrp: '1', email: 'a@a.com' }).expect(200);
   });
 
   test('blocks other routes without token', async () => {

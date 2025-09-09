@@ -8,9 +8,10 @@ import {
 
 const router = express.Router();
 
-router.post('/request-otp', requestOtp);
-router.post('/verify-otp', verifyOtpController);
-router.post('/user-data', getUserData);
-router.put('/update', updateUserData);
+// Routes for OTP flow via email
+router.post('/request-otp', requestOtp); // body: { nrp, email }
+router.post('/verify-otp', verifyOtpController); // body: { nrp, email, otp }
+router.post('/user-data', getUserData); // body: { nrp, email }
+router.put('/update', updateUserData); // body: { nrp, email, ... }
 
 export default router;

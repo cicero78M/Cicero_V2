@@ -21,13 +21,6 @@ beforeEach(async () => {
     isVerified: jest.fn(),
     clearVerification: jest.fn(),
   }));
-  jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
-    normalizeWhatsappNumber: (nohp) => {
-      let number = String(nohp).replace(/\D/g, '');
-      if (!number.startsWith('62')) number = '62' + number.replace(/^0/, '');
-      return number;
-    },
-  }));
   jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
     enqueueOtp: jest.fn().mockResolvedValue(),
   }));
@@ -35,25 +28,25 @@ beforeEach(async () => {
   userModel = await import('../src/model/userModel.js');
 });
 
-test('allows request when stored whatsapp matches after normalization', async () => {
-  userModel.findUserById.mockResolvedValue({ user_id: '1', whatsapp: '08123' });
-  const req = { body: { nrp: '1', whatsapp: '628123' } };
+test('allows request when stored email matches after normalization', async () => {
+  userModel.findUserById.mockResolvedValue({ user_id: '1', email: 'User@Example.com' });
+  const req = { body: { nrp: '1', email: 'user@example.com ' } };
   const res = createRes();
   await requestOtp(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(202);
 });
 
-test('rejects request when stored whatsapp differs', async () => {
-  userModel.findUserById.mockResolvedValue({ user_id: '1', whatsapp: '08123' });
-  const req = { body: { nrp: '1', whatsapp: '08124' } };
+test('rejects request when stored email differs', async () => {
+  userModel.findUserById.mockResolvedValue({ user_id: '1', email: 'user@example.com' });
+  const req = { body: { nrp: '1', email: 'other@example.com' } };
   const res = createRes();
   await requestOtp(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(400);
 });
 
 test('continues request even if enqueueOtp fails', async () => {
-  userModel.findUserById.mockResolvedValue({ user_id: '1', whatsapp: '08123' });
-  const req = { body: { nrp: '1', whatsapp: '628123' } };
+  userModel.findUserById.mockResolvedValue({ user_id: '1', email: 'user@example.com' });
+  const req = { body: { nrp: '1', email: 'user@example.com' } };
   const res = createRes();
   const { enqueueOtp } = await import('../src/service/otpQueue.js');
   enqueueOtp.mockRejectedValue(new Error('queue fail'));
@@ -64,7 +57,7 @@ test('continues request even if enqueueOtp fails', async () => {
 test('returns 503 when findUserById throws connection error', async () => {
   const err = Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
   userModel.findUserById.mockRejectedValue(err);
-  const req = { body: { nrp: '1', whatsapp: '628123' } };
+  const req = { body: { nrp: '1', email: 'user@example.com' } };
   const res = createRes();
   await requestOtp(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(503);

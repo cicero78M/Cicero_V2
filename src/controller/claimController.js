@@ -1,7 +1,6 @@
 import * as userModel from '../model/userModel.js';
 import { sendSuccess } from '../utils/response.js';
-import { normalizeWhatsappNumber } from '../utils/waHelper.js';
-import { normalizeUserId } from '../utils/utilsHelper.js';
+import { normalizeUserId, normalizeEmail } from '../utils/utilsHelper.js';
 import { enqueueOtp } from '../service/otpQueue.js';
 import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
 
@@ -29,12 +28,12 @@ function extractTiktokUsername(value) {
 
 export async function requestOtp(req, res, next) {
   try {
-    const { nrp: rawNrp, whatsapp } = req.body;
+    const { nrp: rawNrp, email } = req.body;
     const nrp = normalizeUserId(rawNrp);
-    if (!nrp || !whatsapp) {
-      return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
+    if (!nrp || !email) {
+      return res.status(400).json({ success: false, message: 'nrp dan email wajib diisi' });
     }
-    const wa = normalizeWhatsappNumber(whatsapp);
+    const em = normalizeEmail(email);
     let user;
     try {
       user = await userModel.findUserById(nrp);
@@ -47,15 +46,15 @@ export async function requestOtp(req, res, next) {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
     }
-    if (user.whatsapp) {
-      const storedWa = normalizeWhatsappNumber(user.whatsapp);
-      if (storedWa !== wa) {
-        return res.status(400).json({ success: false, message: 'whatsapp tidak sesuai' });
+    if (user.email) {
+      const storedEmail = normalizeEmail(user.email);
+      if (storedEmail !== em) {
+        return res.status(400).json({ success: false, message: 'email tidak sesuai' });
       }
     }
-    const otp = await generateOtp(nrp, wa);
-    enqueueOtp(wa, otp).catch((err) =>
-      console.warn(`[OTP] Failed to enqueue OTP for ${wa}: ${err.message}`)
+    const otp = await generateOtp(nrp, em);
+    enqueueOtp(em, otp).catch((err) =>
+      console.warn(`[OTP] Failed to enqueue OTP for ${em}: ${err.message}`)
     );
     sendSuccess(res, { message: 'OTP akan dikirim sesaat lagi' }, 202);
   } catch (err) {
@@ -65,13 +64,13 @@ export async function requestOtp(req, res, next) {
 
 export async function verifyOtpController(req, res, next) {
   try {
-    const { nrp: rawNrp, whatsapp, otp } = req.body;
+    const { nrp: rawNrp, email, otp } = req.body;
     const nrp = normalizeUserId(rawNrp);
-    if (!nrp || !whatsapp || !otp) {
-      return res.status(400).json({ success: false, message: 'nrp, whatsapp, dan otp wajib diisi' });
+    if (!nrp || !email || !otp) {
+      return res.status(400).json({ success: false, message: 'nrp, email, dan otp wajib diisi' });
     }
-    const wa = normalizeWhatsappNumber(whatsapp);
-    const valid = await verifyOtp(nrp, wa, otp);
+    const em = normalizeEmail(email);
+    const valid = await verifyOtp(nrp, em, otp);
     if (!valid) {
       return res.status(400).json({ success: false, message: 'OTP tidak valid' });
     }
@@ -84,8 +83,8 @@ export async function verifyOtpController(req, res, next) {
       }
       throw err;
     }
-    if (user && !user.whatsapp) {
-      await userModel.updateUserField(nrp, 'whatsapp', wa);
+    if (user && !user.email) {
+      await userModel.updateUserField(nrp, 'email', em);
     }
     sendSuccess(res, { verified: true });
   } catch (err) {
@@ -95,15 +94,15 @@ export async function verifyOtpController(req, res, next) {
 
 export async function getUserData(req, res, next) {
   try {
-    const { nrp: rawNrp, whatsapp } = req.body;
+    const { nrp: rawNrp, email } = req.body;
     const nrp = normalizeUserId(rawNrp);
-    if (!nrp || !whatsapp) {
+    if (!nrp || !email) {
       return res
         .status(400)
-        .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
+        .json({ success: false, message: 'nrp dan email wajib diisi' });
     }
-    const wa = normalizeWhatsappNumber(whatsapp);
-    if (!(await isVerified(nrp, wa))) {
+    const em = normalizeEmail(email);
+    if (!(await isVerified(nrp, em))) {
       return res
         .status(403)
         .json({ success: false, message: 'OTP belum diverifikasi' });
@@ -134,7 +133,7 @@ export async function updateUserData(req, res, next) {
   try {
     const {
       nrp: rawNrp,
-      whatsapp,
+      email,
       nama,
       title,
       divisi,
@@ -145,13 +144,13 @@ export async function updateUserData(req, res, next) {
       otp,
     } = req.body;
     const nrp = normalizeUserId(rawNrp);
-    if (!nrp || !whatsapp) {
-      return res.status(400).json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
+    if (!nrp || !email) {
+      return res.status(400).json({ success: false, message: 'nrp dan email wajib diisi' });
     }
-    const wa = normalizeWhatsappNumber(whatsapp);
-    let verified = await isVerified(nrp, wa);
+    const em = normalizeEmail(email);
+    let verified = await isVerified(nrp, em);
     if (!verified && otp) {
-      verified = await verifyOtp(nrp, wa, otp);
+      verified = await verifyOtp(nrp, em, otp);
     }
     if (!verified) {
       return res.status(403).json({ success: false, message: 'OTP belum diverifikasi' });
@@ -166,15 +165,15 @@ export async function updateUserData(req, res, next) {
       }
       data.insta = igUsername;
     }
-  if (tiktok !== undefined) {
-    const ttUsername = extractTiktokUsername(tiktok);
-    if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
-      return res
-        .status(400)
-        .json({ success: false, message: 'username tiktok tidak valid' });
+    if (tiktok !== undefined) {
+      const ttUsername = extractTiktokUsername(tiktok);
+      if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
+        return res
+          .status(400)
+          .json({ success: false, message: 'username tiktok tidak valid' });
+      }
+      data.tiktok = ttUsername;
     }
-    data.tiktok = ttUsername;
-  }
     Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
     const updated = await userModel.updateUser(nrp, data);
     await clearVerification(nrp);
