@@ -357,10 +357,10 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
 export async function getActiveClientsIG() {
   const res = await query(
-    `SELECT client_id, client_insta, client_insta_status, client_amplify_status
+    `SELECT client_id, client_insta, client_insta_status
      FROM clients
      WHERE client_status = true
-       AND (client_insta_status = true OR client_amplify_status = true)
+       AND client_insta_status = true
        AND client_insta IS NOT NULL
        AND LOWER(client_type) = 'org'`
   );
