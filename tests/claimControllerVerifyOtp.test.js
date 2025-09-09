@@ -32,7 +32,7 @@ beforeEach(async () => {
 test('returns 503 when findUserById throws connection error', async () => {
   const err = Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
   userModel.findUserById.mockRejectedValue(err);
-  const req = { body: { nrp: '1', whatsapp: '08123', otp: '123456' } };
+  const req = { body: { nrp: '1', email: 'user@example.com', otp: '123456' } };
   const res = createRes();
   await verifyOtpController(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(503);

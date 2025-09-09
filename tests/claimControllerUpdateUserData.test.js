@@ -35,7 +35,7 @@ describe('updateUserData', () => {
     const req = {
       body: {
         nrp: '1',
-        whatsapp: '08123',
+        email: 'user@example.com',
         insta: 'https://www.instagram.com/de_saputra88?igsh=MWJxMnY1YmtnZ3Rmeg==',
         tiktok: 'https://www.tiktok.com/@sidik.prayitno37?_t=ZS-8zPPyl5Q4SO&_r=1'
       }
@@ -54,7 +54,7 @@ describe('updateUserData', () => {
     const req = {
       body: {
         nrp: '1',
-        whatsapp: '08123',
+        email: 'user@example.com',
         insta: 'cicero_devs'
       }
     };
@@ -68,7 +68,7 @@ describe('updateUserData', () => {
     const req = {
       body: {
         nrp: '1',
-        whatsapp: '08123',
+        email: 'user@example.com',
         tiktok: 'cicero_devs'
       }
     };
@@ -82,7 +82,7 @@ describe('updateUserData', () => {
     const req = {
       body: {
         nrp: '1',
-        whatsapp: '08123',
+        email: 'user@example.com',
         tiktok: ''
       }
     };
@@ -113,7 +113,7 @@ describe('updateUserData', () => {
     ({ updateUserData } = await import('../src/controller/claimController.js'));
     userModel = await import('../src/model/userModel.js');
     const otpService = await import('../src/service/otpService.js');
-    const req = { body: { nrp: '1', whatsapp: '08123', otp: '123456' } };
+    const req = { body: { nrp: '1', email: 'user@example.com', otp: '123456' } };
     const res = createRes();
     await updateUserData(req, res, () => {});
     expect(otpService.verifyOtp).toHaveBeenCalled();

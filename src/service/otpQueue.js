@@ -1,18 +1,15 @@
-import waClient, { waitForWaReady } from './waService.js';
-import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
+import { sendOtpEmail } from './emailService.js';
 
 /**
- * Send an OTP message directly via WhatsApp. The previous implementation
- * used a RabbitMQ queue which introduced noticeable delay. By sending the
- * message synchronously, the OTP reaches the user immediately.
+ * Send an OTP email directly. The previous implementation
+ * used a queue introducing delay. By sending the
+ * email synchronously, the OTP reaches the user immediately.
  */
-export async function enqueueOtp(wa, otp) {
+export async function enqueueOtp(email, otp) {
   try {
-    await waitForWaReady();
-    const wid = formatToWhatsAppId(wa);
-    await safeSendMessage(waClient, wid, `Kode OTP Anda: ${otp}`);
+    await sendOtpEmail(email, otp);
   } catch (err) {
-    console.warn(`[WA] Failed to send OTP to ${wa}: ${err.message}`);
+    console.warn(`[Email] Failed to send OTP to ${email}: ${err.message}`);
     throw err;
   }
 }

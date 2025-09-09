@@ -25,13 +25,6 @@ beforeEach(async () => {
   jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
     enqueueOtp: jest.fn(),
   }));
-  jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
-    normalizeWhatsappNumber: (nohp) => {
-      let number = String(nohp).replace(/\D/g, '');
-      if (!number.startsWith('62')) number = '62' + number.replace(/^0/, '');
-      return number;
-    },
-  }));
   ({ getUserData } = await import('../src/controller/claimController.js'));
   userModel = await import('../src/model/userModel.js');
   otpService = await import('../src/service/otpService.js');
@@ -40,7 +33,7 @@ beforeEach(async () => {
 test('returns user data when verified', async () => {
   userModel.findUserById.mockResolvedValue({ user_id: '1', nama: 'Test' });
   otpService.isVerified.mockResolvedValue(true);
-  const req = { body: { nrp: '1', whatsapp: '08123' } };
+  const req = { body: { nrp: '1', email: 'user@example.com' } };
   const res = createRes();
   await getUserData(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(200);
@@ -49,7 +42,7 @@ test('returns user data when verified', async () => {
 
 test('rejects when OTP not verified', async () => {
   otpService.isVerified.mockResolvedValue(false);
-  const req = { body: { nrp: '1', whatsapp: '08123' } };
+  const req = { body: { nrp: '1', email: 'user@example.com' } };
   const res = createRes();
   await getUserData(req, res, () => {});
   expect(res.status).toHaveBeenCalledWith(403);
@@ -58,7 +51,7 @@ test('rejects when OTP not verified', async () => {
 test('normalizes nrp before fetching user', async () => {
   userModel.findUserById.mockResolvedValue({ user_id: '00123', nama: 'Test' });
   otpService.isVerified.mockResolvedValue(true);
-  const req = { body: { nrp: ' 00-123 ', whatsapp: '08123' } };
+  const req = { body: { nrp: ' 00-123 ', email: 'user@example.com' } };
   const res = createRes();
   await getUserData(req, res, () => {});
   expect(userModel.findUserById).toHaveBeenCalledWith('00123');

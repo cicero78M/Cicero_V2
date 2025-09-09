@@ -34,29 +34,29 @@ describe('otpService', () => {
   });
 
   test('generateOtp and verifyOtp flow', async () => {
-    const otp = await generateOtp('u1', '0812');
+    const otp = await generateOtp('u1', 'user@example.com');
     expect(otp).toHaveLength(6);
-    expect(await verifyOtp('u1', '0812', '000000')).toBe(false);
-    expect(await verifyOtp('u1', '0812', otp)).toBe(true);
-    expect(await isVerified('u1', '0812')).toBe(true);
+    expect(await verifyOtp('u1', 'user@example.com', '000000')).toBe(false);
+    expect(await verifyOtp('u1', 'user@example.com', otp)).toBe(true);
+    expect(await isVerified('u1', 'user@example.com')).toBe(true);
     await clearVerification('u1');
-    expect(await isVerified('u1', '0812')).toBe(false);
+    expect(await isVerified('u1', 'user@example.com')).toBe(false);
   });
 
   test('nrp handled consistently for strings and numbers', async () => {
-    const otp = await generateOtp(1, '0812');
-    expect(await verifyOtp('1', '0812', otp)).toBe(true);
-    expect(await isVerified(1, '0812')).toBe(true);
+    const otp = await generateOtp(1, 'user@example.com');
+    expect(await verifyOtp('1', 'user@example.com', otp)).toBe(true);
+    expect(await isVerified(1, 'user@example.com')).toBe(true);
     await clearVerification('1');
   });
 
   test('blocks after max attempts', async () => {
-    const otp = await generateOtp('2', '08123');
+    const otp = await generateOtp('2', 'user2@example.com');
     for (let i = 0; i < 3; i++) {
-      const res = await verifyOtp('2', '08123', '000000');
+      const res = await verifyOtp('2', 'user2@example.com', '000000');
       expect(res).toBe(false);
     }
-    const blocked = await verifyOtp('2', '08123', otp);
+    const blocked = await verifyOtp('2', 'user2@example.com', otp);
     expect(blocked).toBe(false);
   });
 });
