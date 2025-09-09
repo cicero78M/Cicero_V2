@@ -1,14 +1,8 @@
 import { query } from '../repository/db.js';
 
-function normalizeUsername(uname) {
-  if (typeof uname !== 'string' || uname.length === 0) return null;
-  const lower = uname.toLowerCase();
-  return lower.startsWith('@') ? lower : `@${lower}`;
-}
-
 /**
  * Simpan/Update komentar TikTok untuk video tertentu.
- * Yang disimpan ke DB: hanya array username unik (string) dengan awalan "@",
+ * Yang disimpan ke DB: hanya array username unik (string) tanpa awalan "@",
  * bukan objek komentar.
  * @param {string} video_id - ID video TikTok
  * @param {Array} commentsArr - Array of comment objects dari API
@@ -23,8 +17,9 @@ export async function upsertTiktokComments(video_id, commentsArr) {
     } else if (c && typeof c.username === "string") {
       uname = c.username;
     }
-    const normalized = normalizeUsername(uname);
-    if (normalized) usernames.push(normalized);
+    if (uname && uname.length > 0) {
+      usernames.push(uname.toLowerCase().replace(/^@/, ""));
+    }
   }
   // Unikkan username (no duplicate)
   const uniqUsernames = [...new Set(usernames)];
@@ -35,7 +30,9 @@ export async function upsertTiktokComments(video_id, commentsArr) {
   let existing = [];
   if (res.rows[0] && Array.isArray(res.rows[0].comments)) {
     existing = res.rows[0].comments
-      .map((u) => normalizeUsername(u))
+      .map((u) =>
+        typeof u === "string" ? u.toLowerCase().replace(/^@/, "") : null
+      )
       .filter(Boolean);
   }
   // Merge dan unikkan lagi
