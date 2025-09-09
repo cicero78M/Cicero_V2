@@ -23,6 +23,7 @@ CREATE TABLE "user" (
   divisi VARCHAR,
   insta VARCHAR,
   tiktok VARCHAR,
+  email VARCHAR,
   desa VARCHAR,
   client_id VARCHAR REFERENCES clients(client_id),
   status BOOLEAN DEFAULT TRUE,
