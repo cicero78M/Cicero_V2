@@ -498,11 +498,27 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "8": {
+      const normalizedId = (clientId || "").toUpperCase();
+      if (normalizedId !== "DITBINMAS") {
+        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
+        break;
+      }
       const { fetchAndStoreTiktokContent } = await import(
         "../fetchpost/tiktokFetchPost.js"
       );
+      const { handleFetchKomentarTiktokBatch } = await import(
+        "../fetchengagement/fetchCommentTiktok.js"
+      );
       await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
-      msg = "✅ Selesai fetch TikTok DITBINMAS.";
+      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
+      const rekapTiktok = await absensiKomentar("DITBINMAS", {
+        ...(userType === "org" ? { clientFilter: userClientId } : {}),
+        mode: "all",
+        roleFlag,
+      });
+      msg =
+        rekapTiktok ||
+        "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
     case "9": {
@@ -548,7 +564,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "Menu tidak dikenal.";
   }
   await waClient.sendMessage(chatId, msg.trim());
-  if (action === "6") {
+  if (action === "6" || action === "8") {
     await safeSendMessage(waClient, dirRequestGroup, msg.trim());
   }
 }
@@ -645,7 +661,7 @@ export const dirRequestHandlers = {
         "5️⃣ Absensi Komentar TikTok\n" +
         "6️⃣ Fetch Insta\n" +
         "7️⃣ Fetch Likes Insta\n" +
-        "8️⃣ Fetch TikTok\n" +
+        "8️⃣ Fetch TikTok (Laporan)\n" +
         "9️⃣ Fetch Komentar TikTok\n" +
         "🔟 Laphar Ditbinmas\n" +
         "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +

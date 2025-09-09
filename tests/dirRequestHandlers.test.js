@@ -17,6 +17,8 @@ const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
+const mockFetchAndStoreTiktokContent = jest.fn();
+const mockHandleFetchKomentarTiktokBatch = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
@@ -44,6 +46,12 @@ jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
 }));
 jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
   handleFetchLikesInstagram: mockHandleFetchLikesInstagram,
+}));
+jest.unstable_mockModule('../src/handler/fetchpost/tiktokFetchPost.js', () => ({
+  fetchAndStoreTiktokContent: mockFetchAndStoreTiktokContent,
+}));
+jest.unstable_mockModule('../src/handler/fetchengagement/fetchCommentTiktok.js', () => ({
+  handleFetchKomentarTiktokBatch: mockHandleFetchKomentarTiktokBatch,
 }));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
@@ -288,6 +296,46 @@ test('choose_menu option 6 fetch insta returns rekap likes report', async () => 
     waClient,
     '120363419830216549@g.us',
     'laporan likes'
+  );
+});
+
+test('choose_menu option 8 fetch tiktok returns komentar report', async () => {
+  mockFetchAndStoreTiktokContent.mockResolvedValue();
+  mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
+  mockAbsensiKomentar.mockResolvedValue('laporan tiktok');
+  mockSafeSendMessage.mockResolvedValue(true);
+  mockFindClientById.mockResolvedValue({ client_type: 'direktorat', nama: 'DITBINMAS' });
+
+  const session = {
+    role: 'ditbinmas',
+    selectedClientId: 'ditbinmas',
+    clientName: 'DITBINMAS',
+    dir_client_id: 'ditbinmas',
+  };
+  const chatId = '888';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '8', waClient);
+
+  expect(mockFetchAndStoreTiktokContent).toHaveBeenCalledWith(
+    'DITBINMAS',
+    waClient,
+    chatId
+  );
+  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(
+    waClient,
+    chatId,
+    'DITBINMAS'
+  );
+  expect(mockAbsensiKomentar).toHaveBeenCalledWith(
+    'DITBINMAS',
+    expect.objectContaining({ mode: 'all', roleFlag: 'ditbinmas' })
+  );
+  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan tiktok');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    '120363419830216549@g.us',
+    'laporan tiktok'
   );
 });
 
