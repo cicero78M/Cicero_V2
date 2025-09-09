@@ -36,7 +36,6 @@ waClient.on('ready', async () => {
 startOtpWorker().catch(err => console.error('[OTP] worker error', err));
 
 const app = express();
-app.disable('etag');
 
 app.use(cors({
   origin: env.CORS_ORIGIN,
