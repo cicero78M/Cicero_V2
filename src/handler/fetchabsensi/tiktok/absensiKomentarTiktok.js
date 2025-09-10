@@ -243,6 +243,26 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
+export async function lapharTiktokDitbinmas() {
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+  const dateSafe = tanggal.replace(/\//g, "-");
+  const timeSafe = jam.replace(/[:.]/g, "-");
+  const filename = `Absensi_All_Komentar_Tiktok_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filenameBelum = `Absensi_Belum_Komentar_Tiktok_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const text = await absensiKomentar("DITBINMAS", {
+    mode: "all",
+    roleFlag: "ditbinmas",
+  });
+  const textBelum = await absensiKomentar("DITBINMAS", {
+    mode: "belum",
+    roleFlag: "ditbinmas",
+  });
+  return { filename, text, filenameBelum, textBelum, narrative: text };
+}
+
 // === PER KONTEN ===
 export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const now = new Date();

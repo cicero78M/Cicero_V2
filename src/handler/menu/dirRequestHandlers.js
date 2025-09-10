@@ -4,7 +4,10 @@ import {
   lapharDitbinmas,
   absensiLikesDitbinmasReport,
 } from "../fetchabsensi/insta/absensiLikesInsta.js";
-import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import {
+  absensiKomentar,
+  lapharTiktokDitbinmas,
+} from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
@@ -589,6 +592,34 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await generateSosmedTaskMessage(targetId);
       break;
     }
+    case "13": {
+      const { text, filename, narrative, textBelum, filenameBelum } =
+        await lapharTiktokDitbinmas();
+      const dirPath = "laphar";
+      await mkdir(dirPath, { recursive: true });
+      if (narrative) {
+        await waClient.sendMessage(chatId, narrative.trim());
+      }
+      if (text && filename) {
+        const buffer = Buffer.from(text, "utf-8");
+        const filePath = join(dirPath, filename);
+        await writeFile(filePath, buffer);
+        await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+      }
+      if (textBelum && filenameBelum) {
+        const bufferBelum = Buffer.from(textBelum, "utf-8");
+        const filePathBelum = join(dirPath, filenameBelum);
+        await writeFile(filePathBelum, bufferBelum);
+        await sendWAFile(
+          waClient,
+          bufferBelum,
+          filenameBelum,
+          chatId,
+          "text/plain"
+        );
+      }
+      return;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -695,6 +726,7 @@ export const dirRequestHandlers = {
         "🔟 Laphar Instagram Ditbinmas\n" +
         "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +
         "1️⃣2️⃣ Fetch Sosial Media\n" +
+        "1️⃣3️⃣ Laphar TikTok Ditbinmas\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -719,7 +751,21 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (!["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"].includes(choice)) {
+    if (![
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+    ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
