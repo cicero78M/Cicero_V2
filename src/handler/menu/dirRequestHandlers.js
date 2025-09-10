@@ -687,12 +687,12 @@ export const dirRequestHandlers = {
         "2️⃣ Executive summary input data personil\n" +
         "3️⃣ Absensi Likes Ditbinmas\n" +
         "4️⃣ Absensi Likes Instagram\n" +
-        "5️⃣ Absensi Komentar TikTok\n" +
+        "5️⃣ Absensi Komentar Ditbinmas\n" +
         "6️⃣ Fetch Insta\n" +
         "7️⃣ Fetch Likes Insta\n" +
         "8️⃣ Fetch TikTok (Laporan)\n" +
         "9️⃣ Fetch Komentar TikTok\n" +
-        "🔟 Laphar Ditbinmas\n" +
+        "🔟 Laphar Instagram Ditbinmas\n" +
         "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +
         "1️⃣2️⃣ Fetch Sosial Media\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
