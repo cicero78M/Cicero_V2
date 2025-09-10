@@ -3,6 +3,8 @@ import { getLikesByShortcode } from "../../model/instaLikeModel.js";
 import { getPostsTodayByClient as getTiktokPostsToday } from "../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../model/tiktokCommentModel.js";
 import { findClientById } from "../../service/clientService.js";
+import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
+import { handleFetchKomentarTiktokBatch } from "../fetchengagement/fetchCommentTiktok.js";
 
 export async function generateSosmedTaskMessage() {
   const clientId = "DITBINMAS";
@@ -21,6 +23,7 @@ export async function generateSosmedTaskMessage() {
   let shortcodes = [];
   try {
     shortcodes = await getShortcodesTodayByClient(clientId);
+    await handleFetchLikesInstagram(null, null, clientId);
   } catch {
     shortcodes = [];
   }
@@ -41,6 +44,7 @@ export async function generateSosmedTaskMessage() {
   let tiktokPosts = [];
   try {
     tiktokPosts = await getTiktokPostsToday(clientId);
+    await handleFetchKomentarTiktokBatch(null, null, clientId);
   } catch {
     tiktokPosts = [];
   }

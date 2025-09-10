@@ -5,6 +5,8 @@ const mockGetLikesByShortcode = jest.fn();
 const mockGetTiktokPostsToday = jest.fn();
 const mockGetCommentsByVideoId = jest.fn();
 const mockFindClientById = jest.fn();
+const mockHandleFetchLikesInstagram = jest.fn();
+const mockHandleFetchKomentarTiktokBatch = jest.fn();
 
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
   getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
@@ -21,6 +23,12 @@ jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
 }));
+jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
+  handleFetchLikesInstagram: mockHandleFetchLikesInstagram,
+}));
+jest.unstable_mockModule('../src/handler/fetchengagement/fetchCommentTiktok.js', () => ({
+  handleFetchKomentarTiktokBatch: mockHandleFetchKomentarTiktokBatch,
+}));
 
 let generateSosmedTaskMessage;
 beforeAll(async () => {
@@ -33,6 +41,8 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   mockGetLikesByShortcode.mockResolvedValue([{}, {}]);
   mockGetTiktokPostsToday.mockResolvedValue([{ video_id: '123' }]);
   mockGetCommentsByVideoId.mockResolvedValue({ comments: [{}] });
+  mockHandleFetchLikesInstagram.mockResolvedValue();
+  mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
 
   const msg = await generateSosmedTaskMessage();
 
@@ -41,4 +51,6 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   expect(msg).toContain('Total komentar semua konten: 1');
   expect(msg).toContain('https://www.tiktok.com/video/123');
   expect(msg).toContain('2 likes');
+  expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
 });
