@@ -12,14 +12,18 @@ import { join } from "path";
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 const REKAP_RECIPIENT = "6281234560377@c.us";
 
-function getRecipients() {
-  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP, REKAP_RECIPIENT]);
+function getRecipients(includeRekap = false) {
+  const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
+  if (includeRekap) {
+    recipients.add(REKAP_RECIPIENT);
+  }
+  return recipients;
 }
 
-export async function runCron() {
+export async function runCron(includeRekap = false) {
   sendDebug({ tag: "CRON DIRREQ LAPHAR", msg: "Mulai cron dirrequest laphar" });
   try {
-    const recipients = getRecipients();
+    const recipients = getRecipients(includeRekap);
 
     const { text, filename, narrative, textBelum, filenameBelum } = await lapharDitbinmas();
     const dirPath = "laphar";
@@ -53,7 +57,7 @@ export async function runCron() {
   }
 }
 
-cron.schedule("0 15,18 * * *", runCron, { timezone: "Asia/Jakarta" });
-cron.schedule("30 20 * * *", runCron, { timezone: "Asia/Jakarta" });
+cron.schedule("0 15,18 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
+cron.schedule("30 20 * * *", () => runCron(true), { timezone: "Asia/Jakarta" });
 
 export default null;
