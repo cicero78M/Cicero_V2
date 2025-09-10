@@ -5,31 +5,20 @@ dotenv.config();
 import waClient from "../service/waService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
-import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
-import { safeSendMessage } from "../utils/waHelper.js";
+import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
+import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
+import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
+import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
-function toWAid(id) {
-  if (!id || typeof id !== "string") return null;
-  const trimmed = id.trim();
-  if (!trimmed) return null;
-  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
-  return trimmed.replace(/\D/g, "") + "@c.us";
-}
-
-function getAdminWAIds() {
-  return (process.env.ADMIN_WHATSAPP || "")
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean)
-    .map(toWAid)
-    .filter(Boolean);
+function getRecipients() {
+  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
 }
 
 export async function runCron() {
-  sendDebug({ tag: "CRON DIRFETCH IG", msg: "Mulai cron dirrequest fetch insta" });
+  sendDebug({ tag: "CRON DIRFETCH SOSMED", msg: "Mulai cron dirrequest fetch sosmed" });
   try {
     await fetchAndStoreInstaContent(
       ["shortcode", "caption", "like_count", "timestamp"],
@@ -38,22 +27,20 @@ export async function runCron() {
       "DITBINMAS"
     );
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
-    const msg =
-      (await rekapLikesIG("DITBINMAS")) ||
-      "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
-
-    const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
+    await fetchAndStoreTiktokContent("DITBINMAS");
+    await handleFetchKomentarTiktokBatch(null, null, "DITBINMAS");
+    const msg = await generateSosmedTaskMessage();
+    const recipients = getRecipients();
     for (const wa of recipients) {
       await safeSendMessage(waClient, wa, msg.trim());
     }
-
     sendDebug({
-      tag: "CRON DIRFETCH IG",
+      tag: "CRON DIRFETCH SOSMED",
       msg: `Laporan dikirim ke ${recipients.size} penerima`,
     });
   } catch (err) {
     sendDebug({
-      tag: "CRON DIRFETCH IG",
+      tag: "CRON DIRFETCH SOSMED",
       msg: `[ERROR] ${err.message || err}`,
     });
   }
@@ -63,4 +50,3 @@ cron.schedule("30 6 * * *", runCron, { timezone: "Asia/Jakarta" });
 cron.schedule("0,30 7-21 * * *", runCron, { timezone: "Asia/Jakarta" });
 
 export default null;
-
