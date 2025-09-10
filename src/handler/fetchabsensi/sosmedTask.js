@@ -4,43 +4,75 @@ import { getPostsTodayByClient as getTiktokPostsToday } from "../../model/tiktok
 import { getCommentsByVideoId } from "../../model/tiktokCommentModel.js";
 import { findClientById } from "../../service/clientService.js";
 
-export async function generateSosmedTaskMessage(clientId) {
-  const client = await findClientById(clientId);
-  const clientName = (client?.nama || clientId).toUpperCase();
-  const tiktokUsername = (client?.client_tiktok || "").replace(/^@/, "");
+export async function generateSosmedTaskMessage() {
+  const clientId = "DITBINMAS";
 
-  const shortcodes = await getShortcodesTodayByClient(clientId);
+  let clientName = clientId;
+  let tiktokUsername = "";
+
+  try {
+    const client = await findClientById(clientId);
+    clientName = (client?.nama || clientId).toUpperCase();
+    tiktokUsername = (client?.client_tiktok || "").replace(/^@/, "");
+  } catch {
+    // ignore errors, use defaults
+  }
+
+  let shortcodes = [];
+  try {
+    shortcodes = await getShortcodesTodayByClient(clientId);
+  } catch {
+    shortcodes = [];
+  }
+
+  const likeResults = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc).catch(() => []))
+  );
+
   let totalLikes = 0;
-  const igDetails = [];
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
+  const igDetails = shortcodes.map((sc, idx) => {
+    const likes = likeResults[idx];
     const count = Array.isArray(likes) ? likes.length : 0;
     totalLikes += count;
-    igDetails.push(`- https://www.instagram.com/p/${sc} : ${count} like`);
+    const suffix = count === 1 ? "like" : "likes";
+    return `- https://www.instagram.com/p/${sc} : ${count} ${suffix}`;
+  });
+
+  let tiktokPosts = [];
+  try {
+    tiktokPosts = await getTiktokPostsToday(clientId);
+  } catch {
+    tiktokPosts = [];
   }
 
-  const tiktokPosts = await getTiktokPostsToday(clientId);
+  const commentResults = await Promise.all(
+    tiktokPosts.map((post) =>
+      getCommentsByVideoId(post.video_id).catch(() => ({ comments: [] }))
+    )
+  );
+
   let totalComments = 0;
-  const tiktokDetails = [];
-  for (const post of tiktokPosts) {
-    const { comments } = await getCommentsByVideoId(post.video_id);
+  const tiktokDetails = tiktokPosts.map((post, idx) => {
+    const { comments } = commentResults[idx];
     const count = Array.isArray(comments) ? comments.length : 0;
     totalComments += count;
-    const link = `https://www.tiktok.com/@${tiktokUsername}/video/${post.video_id}`;
-    tiktokDetails.push(`- ${link} : ${count} komentar`);
-  }
+    const link = tiktokUsername
+      ? `https://www.tiktok.com/@${tiktokUsername}/video/${post.video_id}`
+      : `https://www.tiktok.com/video/${post.video_id}`;
+    return `- ${link} : ${count} komentar`;
+  });
 
   let msg =
     "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media Ditbinmas.\n\n" +
     "Tugas Likes dan Komentar Konten Instagram dan Tiktok \n" +
     `${clientName}\n` +
     `Jumlah konten Instagram hari ini: ${shortcodes.length} \n` +
-    `Total engagement semua konten: ${totalLikes} \n\n` +
+    `Total likes semua konten: ${totalLikes} \n\n` +
     "Rincian:\n";
   msg += igDetails.length ? igDetails.join("\n") : "-";
   msg +=
     `\n\nJumlah konten Tiktok hari ini: ${tiktokPosts.length} \n` +
-    `Total likes semua konten: ${totalComments}\n\n` +
+    `Total komentar semua konten: ${totalComments}\n\n` +
     "Rincian:\n";
   msg += tiktokDetails.length ? tiktokDetails.join("\n") : "-";
   msg += "\n\nSilahkan Melaksanakan Likes, Komentar dan Share.";
@@ -48,4 +80,3 @@ export async function generateSosmedTaskMessage(clientId) {
 }
 
 export default generateSosmedTaskMessage;
-
