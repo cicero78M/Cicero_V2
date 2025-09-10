@@ -14,8 +14,12 @@ const mockHandleFetchLikesInstagram = jest.fn();
 const mockRekapLikesIG = jest.fn();
 const mockLapharDitbinmas = jest.fn();
 const mockLapharTiktokDitbinmas = jest.fn();
+const mockCollectLikesRecap = jest.fn();
+const mockSaveLikesRecapExcel = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
+const mockReadFile = jest.fn();
+const mockUnlink = jest.fn();
 const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockFetchAndStoreTiktokContent = jest.fn();
@@ -31,6 +35,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js
   rekapLikesIG: mockRekapLikesIG,
   lapharDitbinmas: mockLapharDitbinmas,
   absensiLikesDitbinmasReport: mockAbsensiLikesDitbinmasReport,
+  collectLikesRecap: mockCollectLikesRecap,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,
@@ -39,7 +44,12 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
 }));
-jest.unstable_mockModule('fs/promises', () => ({ writeFile: mockWriteFile, mkdir: mockMkdir }));
+jest.unstable_mockModule('fs/promises', () => ({
+  writeFile: mockWriteFile,
+  mkdir: mockMkdir,
+  readFile: mockReadFile,
+  unlink: mockUnlink,
+}));
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: mockSendWAFile,
   safeSendMessage: mockSafeSendMessage,
@@ -58,6 +68,9 @@ jest.unstable_mockModule('../src/handler/fetchengagement/fetchCommentTiktok.js',
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/sosmedTask.js', () => ({
   generateSosmedTaskMessage: mockGenerateSosmedTaskMessage,
+}));
+jest.unstable_mockModule('../src/service/likesRecapExcelService.js', () => ({
+  saveLikesRecapExcel: mockSaveLikesRecapExcel,
 }));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
@@ -480,6 +493,39 @@ test('choose_menu option 13 sends tiktok laphar file and narrative', async () =>
   );
   expect(waClient.sendMessage.mock.calls[0][0]).toBe(chatId);
   expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
+});
+
+test('choose_menu option 14 generates likes recap excel and sends file', async () => {
+  mockCollectLikesRecap.mockResolvedValue({
+    shortcodes: ['sc1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', sc1: 1 }] },
+  });
+  mockSaveLikesRecapExcel.mockResolvedValue('/tmp/recap.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '777';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '14', waClient);
+
+  expect(mockCollectLikesRecap).toHaveBeenCalledWith('ditbinmas');
+  expect(mockSaveLikesRecapExcel).toHaveBeenCalledWith({
+    shortcodes: ['sc1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', sc1: 1 }] },
+  });
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/recap.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/recap.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/recap.xlsx');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('File Excel dikirim')
+  );
 });
 test('choose_menu option 11 reports ditbinmas incomplete users by division', async () => {
   mockGetUsersSocialByClient.mockResolvedValue([

@@ -29,6 +29,49 @@ async function getClientInfo(client_id) {
   };
 }
 
+export async function collectLikesRecap(clientId) {
+  const shortcodes = await getShortcodesTodayByClient(clientId);
+  const likesSets = [];
+  for (const sc of shortcodes) {
+    const likes = await getLikesByShortcode(sc);
+    likesSets.push(new Set((likes || []).map(normalizeUsername)));
+  }
+  const polresIds = await getClientsByRole(clientId);
+  const allUsers = (
+    await getUsersByDirektorat(clientId, polresIds)
+  ).filter((u) => u.status === true);
+  const usersByClient = {};
+  allUsers.forEach((u) => {
+    const cid = u.client_id?.toUpperCase() || "";
+    if (!usersByClient[cid]) usersByClient[cid] = [];
+    usersByClient[cid].push(u);
+  });
+  const recap = {};
+  for (const cid of polresIds) {
+    const { nama: clientName } = await getClientInfo(cid);
+    const users = usersByClient[cid] || [];
+    const byDiv = groupByDivision(users);
+    const sortedDiv = sortDivisionKeys(Object.keys(byDiv));
+    const rows = [];
+    sortedDiv.forEach((div) => {
+      byDiv[div].forEach((u) => {
+        const row = {
+          pangkat: u.title || "",
+          nama: u.nama || "",
+          satfung: div,
+        };
+        shortcodes.forEach((sc, idx) => {
+          const uname = normalizeUsername(u.insta);
+          row[sc] = uname && likesSets[idx].has(uname) ? 1 : 0;
+        });
+        rows.push(row);
+      });
+    });
+    recap[clientName] = rows;
+  }
+  return { shortcodes, recap };
+}
+
 // === AKUMULASI ===
 export async function absensiLikes(client_id, opts = {}) {
   const { clientFilter } = opts;

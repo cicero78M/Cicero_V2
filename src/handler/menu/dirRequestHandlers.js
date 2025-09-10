@@ -3,6 +3,7 @@ import {
   absensiLikes,
   lapharDitbinmas,
   absensiLikesDitbinmasReport,
+  collectLikesRecap,
 } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import {
   absensiKomentar,
@@ -11,8 +12,9 @@ import {
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { writeFile, mkdir, readFile, unlink } from "fs/promises";
+import { join, basename } from "path";
+import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 
@@ -620,6 +622,25 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       }
       return;
     }
+    case "14": {
+      const data = await collectLikesRecap(clientId);
+      if (!data.shortcodes.length) {
+        msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
+        break;
+      }
+      const filePath = await saveLikesRecapExcel(data);
+      const buffer = await readFile(filePath);
+      await sendWAFile(
+        waClient,
+        buffer,
+        basename(filePath),
+        chatId,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      await unlink(filePath);
+      msg = "✅ File Excel dikirim.";
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -727,6 +748,7 @@ export const dirRequestHandlers = {
         "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +
         "1️⃣2️⃣ Fetch Sosial Media\n" +
         "1️⃣3️⃣ Laphar TikTok Ditbinmas\n" +
+        "1️⃣4️⃣ Rekap Likes Instagram (Excel)\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -765,6 +787,7 @@ export const dirRequestHandlers = {
       "11",
       "12",
       "13",
+      "14",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
