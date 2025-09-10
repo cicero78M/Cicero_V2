@@ -16,7 +16,7 @@ async function getActiveClientsIG() {
      FROM clients
      WHERE client_status = true
        AND client_insta_status = true
-       AND LOWER(client_type) = 'org'`
+       AND client_type = 'ORG'`
   );
   return res.rows;
 }
