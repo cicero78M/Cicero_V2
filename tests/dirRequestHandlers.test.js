@@ -13,6 +13,7 @@ const mockFetchAndStoreInstaContent = jest.fn();
 const mockHandleFetchLikesInstagram = jest.fn();
 const mockRekapLikesIG = jest.fn();
 const mockLapharDitbinmas = jest.fn();
+const mockLapharTiktokDitbinmas = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockSendWAFile = jest.fn();
@@ -33,6 +34,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,
+  lapharTiktokDitbinmas: mockLapharTiktokDitbinmas,
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
@@ -432,6 +434,52 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
   expect(waClient.sendMessage.mock.invocationCallOrder[0]).toBeLessThan(
     mockWriteFile.mock.invocationCallOrder[0],
   );
+});
+
+test('choose_menu option 13 sends tiktok laphar file and narrative', async () => {
+  mockLapharTiktokDitbinmas.mockResolvedValue({
+    text: 'lap',
+    filename: 'lap.txt',
+    textBelum: 'belum',
+    filenameBelum: 'belum.txt',
+    narrative: 'narasi',
+  });
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '555';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '13', waClient);
+
+  expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
+  expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    1,
+    path.join('laphar', 'lap.txt'),
+    expect.any(Buffer)
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    1,
+    waClient,
+    expect.any(Buffer),
+    'lap.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockWriteFile).toHaveBeenNthCalledWith(
+    2,
+    path.join('laphar', 'belum.txt'),
+    expect.any(Buffer)
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    2,
+    waClient,
+    expect.any(Buffer),
+    'belum.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(waClient.sendMessage.mock.calls[0][0]).toBe(chatId);
+  expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
 });
 test('choose_menu option 11 reports ditbinmas incomplete users by division', async () => {
   mockGetUsersSocialByClient.mockResolvedValue([
