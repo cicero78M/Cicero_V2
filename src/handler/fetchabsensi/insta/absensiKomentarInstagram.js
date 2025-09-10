@@ -49,7 +49,7 @@ export async function absensiKomentarInstagram(client_id, opts = {}) {
     allowedRoles.includes(roleFlag.toLowerCase()) &&
     roleFlag.toUpperCase() === targetClient.toUpperCase()
   ) {
-    users = (await getUsersByDirektorat(roleFlag.toLowerCase(), targetClient)).filter(
+    users = (await getUsersByDirektorat(roleFlag.toLowerCase())).filter(
       (u) => u.status === true
     );
   } else {

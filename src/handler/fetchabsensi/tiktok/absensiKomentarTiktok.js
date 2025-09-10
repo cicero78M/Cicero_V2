@@ -57,7 +57,7 @@ export async function absensiKomentar(client_id, opts = {}) {
     roleFlag.toUpperCase() === client_id.toUpperCase()
   ) {
     users = (
-      await getUsersByDirektorat(roleFlag.toLowerCase(), clientFilter || client_id)
+      await getUsersByDirektorat(roleFlag.toLowerCase())
     ).filter((u) => u.status === true);
   } else {
     users = await getUsersByClient(clientFilter || client_id, roleFlag);
