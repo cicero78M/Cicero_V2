@@ -42,6 +42,8 @@ test('aggregates directorate data per client', async () => {
 
   const msg = await absensiKomentar('ditbinmas', { roleFlag: 'ditbinmas' });
 
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
+
   expect(msg).toContain('POLRES A');
   expect(msg).toContain('✅ *Sudah melaksanakan* : *1 user*');
   expect(msg).toContain('POLRES B');

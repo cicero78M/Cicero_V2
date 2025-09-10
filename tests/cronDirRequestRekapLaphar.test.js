@@ -46,8 +46,8 @@ beforeEach(() => {
   mockWriteFile.mockResolvedValue();
 });
 
-test('runCron sends reports to admin, group, and extra number', async () => {
-  await runCron();
+test('runCron without rekap sends reports to admin and group only', async () => {
+  await runCron(false);
 
   expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
   expect(mockWriteFile).toHaveBeenNthCalledWith(
@@ -60,6 +60,49 @@ test('runCron sends reports to admin, group, and extra number', async () => {
     path.join('laphar', 'belum.txt'),
     expect.any(Buffer)
   );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '120363419830216549@g.us',
+    'nar'
+  );
+  expect(mockSafeSendMessage).not.toHaveBeenCalledWith(
+    {},
+    '6281234560377@c.us',
+    'nar'
+  );
+
+  expect(mockSendWAFile).not.toHaveBeenCalledWith(
+    {},
+    expect.any(Buffer),
+    'file.txt',
+    '6281234560377@c.us',
+    'text/plain'
+  );
+  expect(mockSendWAFile).not.toHaveBeenCalledWith(
+    {},
+    expect.any(Buffer),
+    'belum.txt',
+    '6281234560377@c.us',
+    'text/plain'
+  );
+
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'absensi');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '120363419830216549@g.us',
+    'absensi'
+  );
+  expect(mockSafeSendMessage).not.toHaveBeenCalledWith(
+    {},
+    '6281234560377@c.us',
+    'absensi'
+  );
+});
+
+test('runCron with rekap sends reports to admin, group, and extra number', async () => {
+  await runCron(true);
+
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     {},
