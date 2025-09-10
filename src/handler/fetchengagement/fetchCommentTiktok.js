@@ -7,6 +7,10 @@ import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
 
 const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
 
+function normalizeClientId(id) {
+  return typeof id === "string" ? id.trim().toLowerCase() : id;
+}
+
 function normalizeUsername(uname) {
   if (typeof uname !== "string" || uname.length === 0) return null;
   const lower = uname.trim().toLowerCase();
@@ -83,9 +87,10 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const dd = String(today.getDate()).padStart(2, "0");
+    const normalizedId = normalizeClientId(client_id);
     const { rows } = await query(
-      `SELECT video_id FROM tiktok_post WHERE client_id = $1 AND DATE(created_at) = $2`,
-      [client_id, `${yyyy}-${mm}-${dd}`]
+      `SELECT video_id FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND DATE(created_at) = $2`,
+      [normalizedId, `${yyyy}-${mm}-${dd}`]
     );
     const videoIds = rows.map((r) => r.video_id);
     sendDebug({

@@ -38,6 +38,10 @@ function isTodayJakarta(unixTimestamp) {
   );
 }
 
+function normalizeClientId(id) {
+  return typeof id === "string" ? id.trim().toLowerCase() : id;
+}
+
 /**
  * Dapatkan semua video_id tiktok hari ini dari DB
  */
@@ -49,8 +53,8 @@ async function getVideoIdsToday(clientId = null) {
   let sql = `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`;
   const params = [`${yyyy}-${mm}-${dd}`];
   if (clientId) {
-    sql += ` AND client_id = $2`;
-    params.push(clientId);
+    sql += ` AND LOWER(TRIM(client_id)) = $2`;
+    params.push(normalizeClientId(clientId));
   }
   const res = await query(sql, params);
   return res.rows.map((r) => r.video_id);
@@ -66,8 +70,8 @@ async function deleteVideoIds(videoIdsToDelete, clientId = null) {
     `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`;
   const params = [videoIdsToDelete, `${yyyy}-${mm}-${dd}`];
   if (clientId) {
-    sql += ` AND client_id = $3`;
-    params.push(clientId);
+    sql += ` AND LOWER(TRIM(client_id)) = $3`;
+    params.push(normalizeClientId(clientId));
   }
   await query(sql, params);
 }
@@ -280,8 +284,8 @@ export async function fetchAndStoreTiktokContent(
     `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`;
   const kontenParams = [`${yyyy}-${mm}-${dd}`];
   if (targetClientId) {
-    kontenHariIniSql += ` AND client_id = $2`;
-    kontenParams.push(targetClientId);
+    kontenHariIniSql += ` AND LOWER(TRIM(client_id)) = $2`;
+    kontenParams.push(normalizeClientId(targetClientId));
   }
   const kontenHariIniRes = await query(kontenHariIniSql, kontenParams);
 

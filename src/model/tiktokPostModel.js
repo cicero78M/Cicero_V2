@@ -1,6 +1,10 @@
 // src/model/tiktokPostModel.js
 import { query } from '../repository/db.js';
 
+function normalizeClientId(id) {
+  return typeof id === "string" ? id.trim().toLowerCase() : id;
+}
+
 /**
  * Simpan/update satu atau banyak post TikTok (array of objects)
  * @param {string} client_id
@@ -40,12 +44,13 @@ export async function getVideoIdsTodayByClient(client_id) {
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
+  const normalizedId = normalizeClientId(client_id);
   const res = await query(
     `SELECT video_id FROM tiktok_post
-     WHERE client_id = $1 AND DATE(created_at) = $2`,
-    [client_id, `${yyyy}-${mm}-${dd}`]
+     WHERE LOWER(TRIM(client_id)) = $1 AND DATE(created_at) = $2`,
+    [normalizedId, `${yyyy}-${mm}-${dd}`]
   );
-  return res.rows.map(r => r.video_id);
+  return res.rows.map((r) => r.video_id);
 }
 
 /**
@@ -54,9 +59,10 @@ export async function getVideoIdsTodayByClient(client_id) {
  * @returns {Array} Array of post object
  */
 export async function getPostsTodayByClient(client_id) {
+  const normalizedId = normalizeClientId(client_id);
   const res = await query(
-    `SELECT * FROM tiktok_post WHERE client_id = $1 AND created_at::date = NOW()::date`,
-    [client_id]
+    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND created_at::date = NOW()::date`,
+    [normalizedId]
   );
   return res.rows;
 }
@@ -67,9 +73,10 @@ export async function getPostsTodayByClient(client_id) {
  * @returns {Array} Array of post object
  */
 export async function getPostsByClientId(client_id) {
+  const normalizedId = normalizeClientId(client_id);
   const res = await query(
-    `SELECT * FROM tiktok_post WHERE client_id = $1 ORDER BY created_at DESC`,
-    [client_id]
+    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 ORDER BY created_at DESC`,
+    [normalizedId]
   );
   return res.rows;
 }
@@ -78,7 +85,8 @@ export const findByClientId = getPostsByClientId;
 
 export async function countPostsByClient(client_id, periode = 'harian', tanggal, start_date, end_date) {
   let dateFilter = "created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  const params = [client_id];
+  const normalizedId = normalizeClientId(client_id);
+  const params = [normalizedId];
   if (start_date && end_date) {
     params.push(start_date, end_date);
     dateFilter = 'created_at::date BETWEEN $2::date AND $3::date';
@@ -105,7 +113,7 @@ export async function countPostsByClient(client_id, periode = 'harian', tanggal,
   }
 
   const { rows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post WHERE client_id = $1 AND ${dateFilter}`,
+    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND ${dateFilter}`,
     params
   );
   return parseInt(rows[0]?.jumlah_post || '0', 10);
