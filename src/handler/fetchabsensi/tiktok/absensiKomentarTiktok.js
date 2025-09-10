@@ -9,7 +9,7 @@ import { sendDebug } from "../../../middleware/debugHandler.js";
 // Dapatkan nama dan username tiktok client
 async function getClientInfo(client_id) {
   const res = await query(
-    "SELECT nama, client_tiktok, client_type FROM clients WHERE client_id = $1 LIMIT 1",
+    "SELECT nama, client_tiktok, client_type FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
     [client_id]
   );
   return {
