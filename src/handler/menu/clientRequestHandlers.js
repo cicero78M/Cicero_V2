@@ -1,10 +1,6 @@
 // src/handler/menu/clientRequestHandlers.js
 
 import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
-import {
-  absensiKomentar,
-  absensiKomentarTiktokPerKonten,
-} from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { formatClientInfo } from "../../utils/utilsHelper.js";
 import {
   groupByDivision,
@@ -1131,7 +1127,10 @@ export const clientRequestHandlers = {
     }
     try {
       let msg = "";
+      const absensiKomentarPath =
+        "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
       if ([1, 2, 3].includes(pilihan)) {
+        const { absensiKomentar } = await import(absensiKomentarPath);
         if (pilihan === 1)
           msg = await absensiKomentar(client_id, { mode: "all" });
         else if (pilihan === 2)
@@ -1139,6 +1138,9 @@ export const clientRequestHandlers = {
         else if (pilihan === 3)
           msg = await absensiKomentar(client_id, { mode: "belum" });
       } else if ([4, 5, 6].includes(pilihan)) {
+        const { absensiKomentarTiktokPerKonten } = await import(
+          absensiKomentarPath
+        );
         if (pilihan === 4)
           msg = await absensiKomentarTiktokPerKonten(client_id, {
             mode: "all",
