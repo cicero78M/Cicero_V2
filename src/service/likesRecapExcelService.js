@@ -1,8 +1,9 @@
 import { mkdir } from 'fs/promises';
 import path from 'path';
 import XLSX from 'xlsx';
+import { hariIndo } from '../utils/constants.js';
 
-export async function saveLikesRecapExcel(data) {
+export async function saveLikesRecapExcel(data, clientId) {
   const { shortcodes, recap } = data;
   const wb = XLSX.utils.book_new();
   Object.entries(recap).forEach(([polres, users]) => {
@@ -22,9 +23,19 @@ export async function saveLikesRecapExcel(data) {
   });
   const exportDir = path.resolve('export_data/likes_recap');
   await mkdir(exportDir, { recursive: true });
+
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString('id-ID');
+  const jam = now.toLocaleTimeString('id-ID', { hour12: false });
+  const dateSafe = tanggal.replace(/\//g, '-');
+  const timeSafe = jam.replace(/[:.]/g, '-');
+  const formattedClient = (clientId || '')
+    .toLowerCase()
+    .replace(/^./, (c) => c.toUpperCase());
   const filePath = path.join(
     exportDir,
-    `likes_recap_${Date.now()}.xlsx`
+    `Rekap_Likes_IG_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
   );
   XLSX.writeFile(wb, filePath);
   return filePath;

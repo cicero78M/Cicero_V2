@@ -562,7 +562,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         const recapData = await collectLikesRecap(clientId);
         if (recapData.shortcodes.length) {
-          const excelPath = await saveLikesRecapExcel(recapData);
+          const excelPath = await saveLikesRecapExcel(recapData, clientId);
           const bufferExcel = await readFile(excelPath);
           await sendWAFile(
             waClient,
@@ -641,7 +641,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
         break;
       }
-      const filePath = await saveLikesRecapExcel(data);
+      const filePath = await saveLikesRecapExcel(data, clientId);
       const buffer = await readFile(filePath);
       await sendWAFile(
         waClient,
