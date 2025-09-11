@@ -540,6 +540,23 @@ test('choose_menu option 13 sends tiktok laphar file narrative and recap excel',
   expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
 });
 
+test('choose_menu option 5 filters users to ditbinmas', async () => {
+  mockAbsensiKomentar.mockResolvedValue('ok');
+  const originalMain = dirRequestHandlers.main;
+  dirRequestHandlers.main = jest.fn();
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '555';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
+
+  expect(mockAbsensiKomentar).toHaveBeenCalledWith(
+    'ditbinmas',
+    expect.objectContaining({ mode: 'all', clientFilter: 'ditbinmas' })
+  );
+  dirRequestHandlers.main = originalMain;
+});
+
 test('choose_menu option 14 generates likes recap excel and sends file', async () => {
   mockCollectLikesRecap.mockResolvedValue({
     shortcodes: ['sc1'],
