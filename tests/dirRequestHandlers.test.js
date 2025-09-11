@@ -86,8 +86,10 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
 
 let dirRequestHandlers;
 let formatRekapUserData;
+let dirRequestHandlersModule;
 beforeAll(async () => {
-  ({ dirRequestHandlers, formatRekapUserData } = await import('../src/handler/menu/dirRequestHandlers.js'));
+  dirRequestHandlersModule = await import('../src/handler/menu/dirRequestHandlers.js');
+  ({ dirRequestHandlers, formatRekapUserData } = dirRequestHandlersModule);
 });
 
 beforeEach(() => {
@@ -569,6 +571,92 @@ test('choose_menu option 14 generates likes recap excel and sends file', async (
     chatId,
     expect.stringContaining('File Excel dikirim')
   );
+});
+
+test('choose_menu option 15 sends combined sosmed recap and files', async () => {
+  mockLapharDitbinmas.mockResolvedValue({
+    text: 'ig',
+    filename: 'ig.txt',
+    textBelum: 'igbelum',
+    filenameBelum: 'igbelum.txt',
+    narrative: 'narIG',
+  });
+  mockCollectLikesRecap.mockResolvedValue({ shortcodes: ['sc1'] });
+  mockSaveLikesRecapExcel.mockResolvedValue('/tmp/ig.xlsx');
+  mockLapharTiktokDitbinmas.mockResolvedValue({
+    text: 'tt',
+    filename: 'tt.txt',
+    textBelum: 'ttbelum',
+    filenameBelum: 'ttbelum.txt',
+    narrative: 'narTT',
+  });
+  mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
+  mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tt.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  mockUnlink.mockResolvedValue();
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '888';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '15', waClient);
+
+  expect(mockLapharDitbinmas).toHaveBeenCalled();
+  expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
+  const combined = waClient.sendMessage.mock.calls[0][1];
+  expect(combined).toContain('narIG');
+  expect(combined).toContain('narTT');
+  expect(combined).toMatch(/Seluruh personil telah melengkapi data/);
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    1,
+    waClient,
+    expect.any(Buffer),
+    'ig.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    2,
+    waClient,
+    expect.any(Buffer),
+    'igbelum.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    3,
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/ig.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    4,
+    waClient,
+    expect.any(Buffer),
+    'tt.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    5,
+    waClient,
+    expect.any(Buffer),
+    'ttbelum.txt',
+    chatId,
+    'text/plain'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    6,
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/tt.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/ig.xlsx');
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tt.xlsx');
 });
 test('choose_menu option 11 reports ditbinmas incomplete users by division', async () => {
   mockGetUsersSocialByClient.mockResolvedValue([

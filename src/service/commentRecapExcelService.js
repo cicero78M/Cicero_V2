@@ -35,7 +35,7 @@ export async function saveCommentRecapExcel(data, clientId) {
     .replace(/^./, (c) => c.toUpperCase());
   const filePath = path.join(
     exportDir,
-    `Rekap_Komentar_TikTok_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
+    `Rekap_Engagement_Tiktok_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
   );
   XLSX.writeFile(wb, filePath);
   return filePath;

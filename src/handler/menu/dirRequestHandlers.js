@@ -669,6 +669,86 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "✅ File Excel dikirim.";
       break;
     }
+    case "15": {
+      const dirPath = "laphar";
+      await mkdir(dirPath, { recursive: true });
+      const [ig, tt] = await Promise.all([
+        lapharDitbinmas(),
+        lapharTiktokDitbinmas(),
+      ]);
+      const updateMsg = await formatRekapBelumLengkapDitbinmas();
+      const narrativeParts = [ig.narrative, tt.narrative, updateMsg]
+        .filter(Boolean)
+        .join("\n\n");
+      if (narrativeParts) {
+        await waClient.sendMessage(chatId, narrativeParts.trim());
+      }
+
+      if (ig.text && ig.filename) {
+        const buffer = Buffer.from(ig.text, "utf-8");
+        const filePath = join(dirPath, ig.filename);
+        await writeFile(filePath, buffer);
+        await sendWAFile(waClient, buffer, ig.filename, chatId, "text/plain");
+      }
+      if (ig.textBelum && ig.filenameBelum) {
+        const bufferBelum = Buffer.from(ig.textBelum, "utf-8");
+        const filePathBelum = join(dirPath, ig.filenameBelum);
+        await writeFile(filePathBelum, bufferBelum);
+        await sendWAFile(
+          waClient,
+          bufferBelum,
+          ig.filenameBelum,
+          chatId,
+          "text/plain"
+        );
+      }
+      const igRecap = await collectLikesRecap(clientId);
+      if (igRecap.shortcodes.length) {
+        const excelPath = await saveLikesRecapExcel(igRecap, clientId);
+        const bufferExcel = await readFile(excelPath);
+        await sendWAFile(
+          waClient,
+          bufferExcel,
+          basename(excelPath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(excelPath);
+      }
+
+      if (tt.text && tt.filename) {
+        const buffer = Buffer.from(tt.text, "utf-8");
+        const filePath = join(dirPath, tt.filename);
+        await writeFile(filePath, buffer);
+        await sendWAFile(waClient, buffer, tt.filename, chatId, "text/plain");
+      }
+      if (tt.textBelum && tt.filenameBelum) {
+        const bufferBelum = Buffer.from(tt.textBelum, "utf-8");
+        const filePathBelum = join(dirPath, tt.filenameBelum);
+        await writeFile(filePathBelum, bufferBelum);
+        await sendWAFile(
+          waClient,
+          bufferBelum,
+          tt.filenameBelum,
+          chatId,
+          "text/plain"
+        );
+      }
+      const ttRecap = await collectKomentarRecap(clientId);
+      if (ttRecap.videoIds.length) {
+        const excelPath = await saveCommentRecapExcel(ttRecap, clientId);
+        const bufferExcel = await readFile(excelPath);
+        await sendWAFile(
+          waClient,
+          bufferExcel,
+          basename(excelPath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(excelPath);
+      }
+      return;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -777,6 +857,7 @@ export const dirRequestHandlers = {
         "1️⃣2️⃣ Fetch Sosial Media\n" +
         "1️⃣3️⃣ Laphar TikTok Ditbinmas\n" +
         "1️⃣4️⃣ Rekap Likes Instagram (Excel)\n" +
+        "1️⃣5️⃣ Rekap All Sosmed\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -816,6 +897,7 @@ export const dirRequestHandlers = {
       "12",
       "13",
       "14",
+      "15",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
