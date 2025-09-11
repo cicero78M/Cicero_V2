@@ -51,15 +51,7 @@ export async function runCron(includeRekap = false) {
     const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
 
     const igBuffer = ig.text && ig.filename ? Buffer.from(ig.text, "utf-8") : null;
-    const igBelumBuffer =
-      ig.textBelum && ig.filenameBelum
-        ? Buffer.from(ig.textBelum, "utf-8")
-        : null;
     const ttBuffer = tt.text && tt.filename ? Buffer.from(tt.text, "utf-8") : null;
-    const ttBelumBuffer =
-      tt.textBelum && tt.filenameBelum
-        ? Buffer.from(tt.textBelum, "utf-8")
-        : null;
 
     let igRecapPath = null;
     let igRecapBuffer = null;
@@ -83,17 +75,9 @@ export async function runCron(includeRekap = false) {
       const filePath = join(dirPath, ig.filename);
       await writeFile(filePath, igBuffer);
     }
-    if (igBelumBuffer) {
-      const filePathBelum = join(dirPath, ig.filenameBelum);
-      await writeFile(filePathBelum, igBelumBuffer);
-    }
     if (ttBuffer) {
       const filePath = join(dirPath, tt.filename);
       await writeFile(filePath, ttBuffer);
-    }
-    if (ttBelumBuffer) {
-      const filePathBelum = join(dirPath, tt.filenameBelum);
-      await writeFile(filePathBelum, ttBelumBuffer);
     }
 
     for (const wa of recipients) {
@@ -103,26 +87,8 @@ export async function runCron(includeRekap = false) {
       if (igBuffer) {
         await sendWAFile(waClient, igBuffer, ig.filename, wa, "text/plain");
       }
-      if (igBelumBuffer) {
-        await sendWAFile(
-          waClient,
-          igBelumBuffer,
-          ig.filenameBelum,
-          wa,
-          "text/plain"
-        );
-      }
       if (ttBuffer) {
         await sendWAFile(waClient, ttBuffer, tt.filename, wa, "text/plain");
-      }
-      if (ttBelumBuffer) {
-        await sendWAFile(
-          waClient,
-          ttBelumBuffer,
-          tt.filenameBelum,
-          wa,
-          "text/plain"
-        );
       }
       if (igRecapBuffer) {
         await sendWAFile(
