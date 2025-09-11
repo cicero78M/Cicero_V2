@@ -2217,6 +2217,10 @@ const handleUserMessage = createHandleMessage(waUserClient);
 waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
 waUserClient.on('message', (msg) => {
+  const from = msg.from || '';
+  if (from.endsWith('@g.us') || from === 'status@broadcast') {
+    return;
+  }
   const text = (msg.body || '').trim().toLowerCase();
   if (text === 'userrequest' || userMenuContext[msg.from]) {
     handleIncoming('wwebjs-user', msg, handleUserMessage);
