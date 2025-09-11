@@ -2,6 +2,7 @@ import { query } from "../../../db/index.js";
 import {
   getUsersByClient,
   getUsersByDirektorat,
+  getClientsByRole,
 } from "../../../model/userModel.js";
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
@@ -45,6 +46,50 @@ function normalizeUsername(username) {
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
+}
+
+export async function collectKomentarRecap(clientId) {
+  const posts = await getPostsTodayByClient(clientId);
+  const videoIds = posts.map((p) => p.video_id);
+  const commentSets = [];
+  for (const vid of videoIds) {
+    const { comments } = await getCommentsByVideoId(vid);
+    commentSets.push(new Set(extractUsernamesFromComments(comments)));
+  }
+  const polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+  const allUsers = (
+    await getUsersByDirektorat(clientId, polresIds)
+  ).filter((u) => u.status === true);
+  const usersByClient = {};
+  allUsers.forEach((u) => {
+    const cid = u.client_id?.toUpperCase() || "";
+    if (!usersByClient[cid]) usersByClient[cid] = [];
+    usersByClient[cid].push(u);
+  });
+  const recap = {};
+  for (const cid of polresIds) {
+    const { nama: clientName } = await getClientInfo(cid);
+    const users = usersByClient[cid] || [];
+    const byDiv = groupByDivision(users);
+    const sortedDiv = sortDivisionKeys(Object.keys(byDiv));
+    const rows = [];
+    sortedDiv.forEach((div) => {
+      byDiv[div].forEach((u) => {
+        const row = {
+          pangkat: u.title || "",
+          nama: u.nama || "",
+          satfung: div,
+        };
+        videoIds.forEach((vid, idx) => {
+          const uname = normalizeUsername(u.tiktok);
+          row[vid] = uname && commentSets[idx].has(uname) ? 1 : 0;
+        });
+        rows.push(row);
+      });
+    });
+    recap[clientName] = rows;
+  }
+  return { videoIds, recap };
 }
 
 // === AKUMULASI (min 50%) ===

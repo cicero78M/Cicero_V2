@@ -8,6 +8,7 @@ import {
 import {
   absensiKomentar,
   lapharTiktokDitbinmas,
+  collectKomentarRecap,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
@@ -15,6 +16,7 @@ import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
 import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
 import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
+import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 
@@ -632,6 +634,19 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
           chatId,
           "text/plain"
         );
+      }
+      const recapData = await collectKomentarRecap(clientId);
+      if (recapData.videoIds.length) {
+        const excelPath = await saveCommentRecapExcel(recapData, clientId);
+        const bufferExcel = await readFile(excelPath);
+        await sendWAFile(
+          waClient,
+          bufferExcel,
+          basename(excelPath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(excelPath);
       }
       return;
     }

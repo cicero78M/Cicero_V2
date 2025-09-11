@@ -10,6 +10,7 @@ jest.unstable_mockModule('../src/db/index.js', () => ({ query: mockQuery }));
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersByClient: jest.fn(),
   getUsersByDirektorat: mockGetUsersByDirektorat,
+  getClientsByRole: jest.fn(),
 }));
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getPostsTodayByClient: mockGetPostsTodayByClient,
