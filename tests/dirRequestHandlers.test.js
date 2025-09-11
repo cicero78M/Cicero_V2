@@ -293,6 +293,32 @@ test('choose_menu option 4 skips ketika client bukan ditbinmas', async () => {
   );
 });
 
+test('choose_menu option 5 absensi komentar filters users to ditbinmas', async () => {
+  mockAbsensiKomentar.mockResolvedValue('laporan komentar');
+  mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
+
+  const session = {
+    role: 'ditbinmas',
+    selectedClientId: 'polres_a',
+    clientName: 'POLRES A',
+    dir_client_id: 'ditbinmas',
+  };
+  const chatId = '4321';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
+
+  expect(mockAbsensiKomentar).toHaveBeenCalledWith(
+    'DITBINMAS',
+    expect.objectContaining({
+      mode: 'all',
+      roleFlag: 'ditbinmas',
+      clientFilter: 'DITBINMAS',
+    })
+  );
+  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan komentar');
+});
+
 test('choose_menu option 6 fetch insta returns rekap likes report', async () => {
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
