@@ -420,7 +420,7 @@ test('choose_menu option 10 sends laphar file, narrative, and likes recap excel'
 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
   expect(mockCollectLikesRecap).toHaveBeenCalledWith('ditbinmas');
-  expect(mockSaveLikesRecapExcel).toHaveBeenCalledWith({ shortcodes: ['sc1'] });
+  expect(mockSaveLikesRecapExcel).toHaveBeenCalledWith({ shortcodes: ['sc1'] }, 'ditbinmas');
   expect(mockReadFile).toHaveBeenCalledWith('/tmp/recap.xlsx');
   expect(mockUnlink).toHaveBeenCalledWith('/tmp/recap.xlsx');
   expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
@@ -528,7 +528,7 @@ test('choose_menu option 14 generates likes recap excel and sends file', async (
   expect(mockSaveLikesRecapExcel).toHaveBeenCalledWith({
     shortcodes: ['sc1'],
     recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', sc1: 1 }] },
-  });
+  }, 'ditbinmas');
   expect(mockReadFile).toHaveBeenCalledWith('/tmp/recap.xlsx');
   expect(mockSendWAFile).toHaveBeenCalledWith(
     waClient,
