@@ -7,11 +7,13 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  * Create a whatsapp-web.js client that matches the WAAdapter contract.
  * The client stays in standby mode and does not mark messages as read
  * unless explicitly invoked.
+ *
+ * @param {string} [clientId='wa-admin'] - WhatsApp client identifier used by LocalAuth.
  */
-export async function createWwebjsClient() {
+export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId: 'wa-admin' }),
+    authStrategy: new LocalAuth({ clientId }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
   });
 
