@@ -35,7 +35,7 @@ export async function saveLikesRecapExcel(data, clientId) {
     .replace(/^./, (c) => c.toUpperCase());
   const filePath = path.join(
     exportDir,
-    `Rekap_Likes_IG_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
+    `Rekap_Engagement_Instagram_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
   );
   XLSX.writeFile(wb, filePath);
   return filePath;

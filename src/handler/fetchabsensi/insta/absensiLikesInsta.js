@@ -577,8 +577,8 @@ export async function lapharDitbinmas() {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
   const dateSafe = tanggal.replace(/\//g, "-");
   const timeSafe = jam.replace(/[:.]/g, "-");
-  const filename = `Absensi_All_Likes_IG_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
-  const filenameBelum = `Absensi_Belum_Likes_IG_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filename = `Absensi_All_Engagement_Instagram_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filenameBelum = `Absensi_Belum_Engagement_Instagram_${hari}_${dateSafe}_${timeSafe}.txt`;
 
   const shortcodes = await getShortcodesTodayByClient(roleName);
   if (!shortcodes.length)

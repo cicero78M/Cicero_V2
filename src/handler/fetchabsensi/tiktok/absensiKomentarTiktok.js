@@ -307,8 +307,8 @@ export async function lapharTiktokDitbinmas() {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
   const dateSafe = tanggal.replace(/\//g, "-");
   const timeSafe = jam.replace(/[:.]/g, "-");
-  const filename = `Absensi_All_Komentar_Tiktok_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
-  const filenameBelum = `Absensi_Belum_Komentar_Tiktok_Ditbinmas_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filename = `Absensi_All_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
+  const filenameBelum = `Absensi_Belum_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
 
   const posts = await getPostsTodayByClient(roleName);
   if (!posts.length)
