@@ -112,13 +112,9 @@ export async function getRekapKomentarByClient(
 
   let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
   let userWhere = "LOWER(u.client_id) = LOWER($1)";
-  let postRoleJoin = "";
-  let postRoleFilter = "";
   if (clientType === "direktorat") {
     postClientFilter = "1=1";
     const roleIdx = params.push(roleLower || client_id);
-    postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = c.video_id";
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -126,8 +122,6 @@ export async function getRekapKomentarByClient(
     )`;
   } else if (roleLower && roleLower !== "operator") {
     const roleIdx = params.push(roleLower);
-    postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = c.video_id";
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -142,9 +136,8 @@ export async function getRekapKomentarByClient(
              lower(replace(trim(cmt), '@', '')) AS username
       FROM tiktok_comment c
       JOIN tiktok_post p ON p.video_id = c.video_id
-      ${postRoleJoin}
       JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
-      WHERE ${postClientFilter} ${postRoleFilter} AND ${tanggalFilter}
+      WHERE ${postClientFilter} AND ${tanggalFilter}
     ),
     comment_counts AS (
       SELECT username, COUNT(DISTINCT video_id) AS jumlah_komentar
