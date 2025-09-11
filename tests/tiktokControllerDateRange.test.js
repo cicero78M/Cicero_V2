@@ -29,7 +29,6 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   mockGetRekap.mockResolvedValue([]);
   const req = {
     query: {
-      client_id: 'c1',
       periode: 'harian',
       tanggal_mulai: '2024-01-01',
       tanggal_selesai: '2024-01-31'
@@ -39,7 +38,7 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   const res = { json, status: jest.fn().mockReturnThis() };
   await getTiktokRekapKomentar(req, res);
   expect(mockGetRekap).toHaveBeenCalledWith(
-    'c1',
+    'DITBINMAS',
     'harian',
     undefined,
     '2024-01-01',
@@ -49,40 +48,6 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 300 }));
 });
 
-test('returns 403 when client_id unauthorized', async () => {
-  const req = {
-    query: { client_id: 'c2' },
-    user: { client_ids: ['c1'] }
-  };
-  const json = jest.fn();
-  const res = { json, status: jest.fn().mockReturnThis() };
-  await getTiktokRekapKomentar(req, res);
-  expect(res.status).toHaveBeenCalledWith(403);
-  expect(json).toHaveBeenCalledWith({ success: false, message: 'client_id tidak diizinkan' });
-  expect(mockGetRekap).not.toHaveBeenCalled();
-});
-
-test('allows authorized client_id', async () => {
-  mockGetRekap.mockResolvedValue([]);
-  const req = {
-    query: { client_id: 'c1' },
-    user: { client_ids: ['c1', 'c2'] }
-  };
-  const json = jest.fn();
-  const res = { json, status: jest.fn().mockReturnThis() };
-  await getTiktokRekapKomentar(req, res);
-  expect(res.status).not.toHaveBeenCalledWith(403);
-  expect(mockGetRekap).toHaveBeenCalledWith(
-    'c1',
-    'harian',
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  );
-  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-});
-
 test('returns user comment summaries with counts', async () => {
   const rows = [
     { username: 'alice', jumlah_komentar: 2 },
@@ -90,7 +55,7 @@ test('returns user comment summaries with counts', async () => {
     { username: 'charlie', jumlah_komentar: 1 }
   ];
   mockGetRekap.mockResolvedValue(rows);
-  const req = { query: { client_id: 'c1' } };
+  const req = { query: {} };
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getTiktokRekapKomentar(req, res);

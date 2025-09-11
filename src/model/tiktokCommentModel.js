@@ -135,12 +135,6 @@ export async function getRekapKomentarByClient(
     )`;
   }
 
-  const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM tiktok_post p JOIN tiktok_comment c ON c.video_id = p.video_id ${postRoleJoin} WHERE ${postClientFilter} ${postRoleFilter} AND ${tanggalFilter}`,
-    params
-  );
-  const max_comment = parseInt(postRows[0]?.jumlah_post || "0", 10);
-
   const { rows } = await query(
     `WITH valid_comments AS (
       SELECT c.video_id,
@@ -164,7 +158,6 @@ export async function getRekapKomentarByClient(
       u.nama,
       u.tiktok AS username,
       u.divisi,
-      u.exception,
       COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar
     FROM "user" u
     LEFT JOIN comment_counts cc
@@ -176,17 +169,7 @@ export async function getRekapKomentarByClient(
     params
   );
   for (const user of rows) {
-    if (
-      user.exception === true ||
-      user.exception === "true" ||
-      user.exception == 1 ||
-      user.exception === "1"
-    ) {
-      user.jumlah_komentar = max_comment;
-    } else {
-      user.jumlah_komentar = parseInt(user.jumlah_komentar, 10);
-    }
-    user.display_nama = user.title ? `${user.title} ${user.nama}` : user.nama;
+    user.jumlah_komentar = parseInt(user.jumlah_komentar, 10);
   }
 
   return rows;

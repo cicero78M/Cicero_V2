@@ -61,20 +61,11 @@ export async function getTiktokPosts(req, res) {
 import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
 
 export async function getTiktokRekapKomentar(req, res) {
-  const client_id = req.query.client_id;
+  const client_id = 'DITBINMAS';
   const periode = req.query.periode || 'harian';
   const tanggal = req.query.tanggal;
-  const startDate =
-    req.query.start_date || req.query.tanggal_mulai;
+  const startDate = req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
-  if (!client_id) {
-    return res.status(400).json({ success: false, message: 'client_id wajib diisi' });
-  }
-  if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
-    return res
-      .status(403)
-      .json({ success: false, message: 'client_id tidak diizinkan' });
-  }
   try {
     const role = req.user?.role;
     const data = await getRekapKomentarByClient(
