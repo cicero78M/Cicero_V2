@@ -954,7 +954,13 @@ export const dirRequestHandlers = {
   },
 };
 
-export { formatRekapUserData, absensiLikesDitbinmas, formatExecutiveSummary, formatRekapBelumLengkapDitbinmas };
+export {
+  formatRekapUserData,
+  absensiLikesDitbinmas,
+  formatExecutiveSummary,
+  formatRekapBelumLengkapDitbinmas,
+  formatRekapAllSosmed,
+};
 
 export default dirRequestHandlers;
 
