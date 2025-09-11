@@ -36,6 +36,6 @@ test('getRekapKomentarByClient includes directorate role filter for ditbinmas', 
   await getRekapKomentarByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
   const sql = mockQuery.mock.calls[1][0];
-  expect(sql).toContain('tiktok_post_roles');
+  expect(sql).not.toContain('tiktok_post_roles');
   expect(sql).toContain('user_roles');
 });
