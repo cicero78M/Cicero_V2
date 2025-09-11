@@ -18,6 +18,7 @@ export const env = cleanEnv(process.env, {
   JWT_SECRET: str(),
   RAPIDAPI_KEY: str({ default: '' }),
   ADMIN_WHATSAPP: str({ default: '' }),
+  USER_WA_CLIENT_ID: str({ default: 'wa-admin' }),
   APP_SESSION_NAME: str({ default: '' }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' }),

@@ -69,6 +69,7 @@ This allows operators to scope responses to the correct client.
     DB_PORT=5432
     DB_DRIVER=postgres
     ADMIN_WHATSAPP=628xxxxxx,628yyyyyy
+    USER_WA_CLIENT_ID=wa-admin
     CLIENT_OPERATOR=628123456789
     NEXT_PUBLIC_API_URL=http://localhost:3000/api
     NEXT_PUBLIC_ADMIN_WHATSAPP=628xxxxxx@c.us
@@ -86,6 +87,7 @@ This allows operators to scope responses to the correct client.
     GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
     ```
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
+   `USER_WA_CLIENT_ID` defines the session identifier for the WhatsApp client. Change it to isolate sessions when multiple instances run on the same server.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
 
 3. **Set up Redis**
