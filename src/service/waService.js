@@ -128,6 +128,7 @@ function formatUserSummary(user) {
 
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
+export let waUserClient = await createWwebjsClient('wa-userrequest');
 
 function handleDisconnect(reason) {
   waReady = false;
@@ -140,6 +141,17 @@ function handleDisconnect(reason) {
 }
 
 waClient.onDisconnect(handleDisconnect);
+
+function handleUserDisconnect(reason) {
+  console.warn("[WA-USER] Client disconnected:", reason);
+  setTimeout(() => {
+    waUserClient.connect().catch((err) => {
+      console.error("[WA-USER] Reconnect failed:", err.message);
+    });
+  }, 5000);
+}
+
+waUserClient.onDisconnect(handleUserDisconnect);
 
 let waReady = false;
 const pendingMessages = [];
@@ -229,6 +241,7 @@ function wrapSendMessage(client) {
   };
 }
 wrapSendMessage(waClient);
+wrapSendMessage(waUserClient);
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
@@ -247,12 +260,26 @@ waClient.on("change_state", (state) => {
   if (state === "CONNECTED" || state === "open") markWaReady("state");
 });
 
+waUserClient.on("qr", (qr) => {
+  qrcode.generate(qr, { small: true });
+  console.log("[WA-USER] Scan QR dengan WhatsApp Anda!");
+});
+
+waUserClient.once("ready", () => {
+  console.log("[WA-USER] READY");
+});
+
+waUserClient.on("change_state", (state) => {
+  console.log(`[WA-USER] Client state changed: ${state}`);
+});
+
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
-async function handleMessage(msg) {
-  const chatId = msg.from;
-  const text = (msg.body || "").trim();
+export function createHandleMessage(waClient) {
+  return async function handleMessage(msg) {
+    const chatId = msg.from;
+    const text = (msg.body || "").trim();
   console.log(`[WA] Incoming message from ${chatId}: ${text}`);
   if (msg.isStatus || chatId === "status@broadcast") {
     console.log(`[WA] Ignored status message from ${chatId}`);
@@ -2180,9 +2207,26 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   );
   console.log(`[WA] Message from ${chatId} processed with fallback handler`);
   return;
+  };
 }
 
+const handleMessage = createHandleMessage(waClient);
+const handleUserMessage = createHandleMessage(waUserClient);
+
 waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
+
+waUserClient.on('message', (msg) => {
+  const text = (msg.body || '').trim().toLowerCase();
+  if (text === 'userrequest' || userMenuContext[msg.from]) {
+    handleIncoming('wwebjs-user', msg, handleUserMessage);
+  } else {
+    safeSendMessage(
+      waUserClient,
+      msg.from,
+      '🤖 Untuk memulai menu pengguna, silakan ketik *userrequest*.'
+    );
+  }
+});
 
 // Fallback handler for environments that emit `message_create` instead of `message`
 
@@ -2194,6 +2238,13 @@ try {
   await waClient.connect();
 } catch (err) {
   console.error("[WA] Initialization failed:", err.message);
+}
+
+console.log("[WA-USER] Starting WhatsApp client initialization");
+try {
+  await waUserClient.connect();
+} catch (err) {
+  console.error("[WA-USER] Initialization failed:", err.message);
 }
 
 // Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
