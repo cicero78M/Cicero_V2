@@ -560,6 +560,19 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
             "text/plain"
           );
         }
+        const recapData = await collectLikesRecap(clientId);
+        if (recapData.shortcodes.length) {
+          const excelPath = await saveLikesRecapExcel(recapData);
+          const bufferExcel = await readFile(excelPath);
+          await sendWAFile(
+            waClient,
+            bufferExcel,
+            basename(excelPath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          await unlink(excelPath);
+        }
         return;
       }
     case "11":

@@ -400,7 +400,7 @@ test('choose_menu option 12 fetch sosial media sends combined task', async () =>
   );
 });
 
-test('choose_menu option 10 sends laphar file and narrative', async () => {
+test('choose_menu option 10 sends laphar file, narrative, and likes recap excel', async () => {
   mockLapharDitbinmas.mockResolvedValue({
     text: 'lap',
     filename: 'lap.txt',
@@ -408,6 +408,10 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
     filenameBelum: 'belum.txt',
     narrative: 'narasi',
   });
+  mockCollectLikesRecap.mockResolvedValue({ shortcodes: ['sc1'] });
+  mockSaveLikesRecapExcel.mockResolvedValue('/tmp/recap.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  mockUnlink.mockResolvedValue();
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '999';
   const waClient = { sendMessage: jest.fn() };
@@ -415,6 +419,10 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
   await dirRequestHandlers.choose_menu(session, chatId, '10', waClient);
 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
+  expect(mockCollectLikesRecap).toHaveBeenCalledWith('ditbinmas');
+  expect(mockSaveLikesRecapExcel).toHaveBeenCalledWith({ shortcodes: ['sc1'] });
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/recap.xlsx');
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/recap.xlsx');
   expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
   expect(mockWriteFile).toHaveBeenNthCalledWith(
     1,
@@ -441,6 +449,14 @@ test('choose_menu option 10 sends laphar file and narrative', async () => {
     'belum.txt',
     chatId,
     'text/plain'
+  );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    3,
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/recap.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
   expect(waClient.sendMessage.mock.calls[0][0]).toBe(chatId);
   expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
