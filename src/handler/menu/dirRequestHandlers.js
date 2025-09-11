@@ -17,6 +17,7 @@ import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
 import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
+import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 
@@ -437,7 +438,40 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
     "",
     "_Catatan kaki:_ IG = Instagram; TT = TikTok; backlog = pekerjaan tertunda / User Belum Update data;"
   );
-  return lines.join("\n").trim();
+return lines.join("\n").trim();
+}
+
+function formatRekapAllSosmed(igNarrative, ttNarrative) {
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const parsePart = (text) => {
+    const afterDir = text.split("DIREKTORAT BINMAS")[1] || "";
+    const [beforeUpdate, afterUpdate = ""] = afterDir.split("Absensi Update Data");
+    return { beforeUpdate: beforeUpdate.trim(), afterUpdate: afterUpdate.trim() };
+    };
+
+  const igParts = parsePart(igNarrative);
+  const ttParts = parsePart(ttNarrative);
+
+  const intro =
+    `Mohon Ijin Komandan, melaporkan perkembangan implementasi update data dan absensi engagement Instagram, TikTok dan update data oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
+    `DIREKTORAT BINMAS\n\n`;
+
+  const updateSection = igParts.afterUpdate
+    ? `ABSENSI UPDATE DATA PERSONIL\n\n${igParts.afterUpdate}`.trim()
+    : "";
+
+  return [
+    `${intro}${igParts.beforeUpdate}`,
+    ttParts.beforeUpdate,
+    updateSection,
+  ]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
 }
 
 async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
@@ -676,12 +710,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         lapharDitbinmas(),
         lapharTiktokDitbinmas(),
       ]);
-      const updateMsg = await formatRekapBelumLengkapDitbinmas();
-      const narrativeParts = [ig.narrative, tt.narrative, updateMsg]
-        .filter(Boolean)
-        .join("\n\n");
-      if (narrativeParts) {
-        await waClient.sendMessage(chatId, narrativeParts.trim());
+      const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
+      if (narrative) {
+        await waClient.sendMessage(chatId, narrative);
       }
 
       if (ig.text && ig.filename) {

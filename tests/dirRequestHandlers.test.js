@@ -579,7 +579,8 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
     filename: 'ig.txt',
     textBelum: 'igbelum',
     filenameBelum: 'igbelum.txt',
-    narrative: 'narIG',
+    narrative:
+      'IGHEADER\nDIREKTORAT BINMAS\nIGPART\nAbsensi Update Data\nIGUPDATE',
   });
   mockCollectLikesRecap.mockResolvedValue({ shortcodes: ['sc1'] });
   mockSaveLikesRecapExcel.mockResolvedValue('/tmp/ig.xlsx');
@@ -588,7 +589,8 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
     filename: 'tt.txt',
     textBelum: 'ttbelum',
     filenameBelum: 'ttbelum.txt',
-    narrative: 'narTT',
+    narrative:
+      'TTHEADER\nDIREKTORAT BINMAS\nTTPART\nAbsensi Update Data\nTTUPDATE',
   });
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
   mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tt.xlsx');
@@ -604,9 +606,11 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
   expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
   const combined = waClient.sendMessage.mock.calls[0][1];
-  expect(combined).toContain('narIG');
-  expect(combined).toContain('narTT');
-  expect(combined).toMatch(/Seluruh personil telah melengkapi data/);
+  expect(combined).toContain('IGPART');
+  expect(combined).toContain('TTPART');
+  expect(combined).toContain('ABSENSI UPDATE DATA PERSONIL');
+  expect(combined).toContain('IGUPDATE');
+  expect(combined).not.toContain('TTUPDATE');
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
     1,
     waClient,
