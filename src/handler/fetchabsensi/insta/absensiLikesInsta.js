@@ -36,7 +36,7 @@ export async function collectLikesRecap(clientId) {
     const likes = await getLikesByShortcode(sc);
     likesSets.push(new Set((likes || []).map(normalizeUsername)));
   }
-  const polresIds = await getClientsByRole(clientId);
+  const polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
   const allUsers = (
     await getUsersByDirektorat(clientId, polresIds)
   ).filter((u) => u.status === true);
