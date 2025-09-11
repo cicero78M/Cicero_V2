@@ -22,27 +22,20 @@ function mockClientType(type = 'instansi') {
 
 test('getRekapKomentarByClient uses updated_at BETWEEN for date range', async () => {
   mockClientType();
-  mockQuery
-    .mockResolvedValueOnce({ rows: [{ jumlah_post: '2' }] })
-    .mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapKomentarByClient('POLRES', 'harian', null, '2024-01-01', '2024-01-31');
-  expect(mockQuery).toHaveBeenCalledTimes(3);
+  expect(mockQuery).toHaveBeenCalledTimes(2);
   expect(mockQuery.mock.calls[1][0]).toContain('c.updated_at');
   expect(mockQuery.mock.calls[1][0]).toContain('BETWEEN $2::date AND $3::date');
   expect(mockQuery.mock.calls[1][1]).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
-  expect(mockQuery.mock.calls[2][0]).toContain('c.updated_at');
-  expect(mockQuery.mock.calls[2][0]).toContain('BETWEEN $2::date AND $3::date');
-  expect(mockQuery.mock.calls[2][1]).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
 });
 
 test('getRekapKomentarByClient includes directorate role filter for ditbinmas', async () => {
   mockClientType('direktorat');
-  mockQuery
-    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
-    .mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapKomentarByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
-  const sql = mockQuery.mock.calls[2][0];
+  const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('tiktok_post_roles');
   expect(sql).toContain('user_roles');
 });
