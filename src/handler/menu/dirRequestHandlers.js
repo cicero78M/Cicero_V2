@@ -501,8 +501,8 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "5":
-      msg = await absensiKomentar(clientId, {
-        ...(userType === "org" ? { clientFilter: userClientId } : {}),
+      msg = await absensiKomentar("DITBINMAS", {
+        clientFilter: "DITBINMAS",
         mode: "all",
         roleFlag,
       });
