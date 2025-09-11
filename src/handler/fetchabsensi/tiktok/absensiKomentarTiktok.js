@@ -104,7 +104,6 @@ export async function absensiKomentar(client_id, opts = {}) {
   const clientInfo = await getClientInfo(client_id);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
-  const clientType = clientInfo.clientType;
   const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
   if (
@@ -113,7 +112,7 @@ export async function absensiKomentar(client_id, opts = {}) {
     roleFlag.toUpperCase() === client_id.toUpperCase()
   ) {
     users = (
-      await getUsersByDirektorat(roleFlag.toLowerCase())
+      await getUsersByDirektorat(roleFlag.toLowerCase(), clientFilter || client_id)
     ).filter((u) => u.status === true);
   } else {
     users = await getUsersByClient(clientFilter || client_id, roleFlag);
@@ -161,7 +160,7 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   const totalKonten = posts.length;
 
-  if (clientType === "direktorat") {
+  if (client_id.toUpperCase() === "DITBINMAS") {
     const groups = {};
     Object.values(userStats).forEach((u) => {
       const cid = u.client_id?.toUpperCase() || "";
