@@ -5,6 +5,7 @@ import qrcode from "qrcode-terminal";
 import PQueue from "p-queue";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
+import { env } from "../config/env.js";
 const pool = { query };
 
 // WhatsApp client using whatsapp-web.js
@@ -128,7 +129,7 @@ function formatUserSummary(user) {
 
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
-export let waUserClient = await createWwebjsClient('wa-userrequest');
+export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
 
 function handleDisconnect(reason) {
   waReady = false;
