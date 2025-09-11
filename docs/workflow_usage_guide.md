@@ -34,7 +34,28 @@ Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
 - `oprrequest` → mengelola data user dan rekap link harian. Detail pada `docs/wa_operator_request.md`.
 - `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
 
-Pengguna cukup menyimpan nomor bot, mengirim perintah `userrequest`, lalu mengikuti instruksi balasan.
+Sistem menjalankan *dua* nomor WhatsApp:
+1. **Nomor utama** menangani seluruh perintah bot seperti `oprrequest`, `dashrequest`, dan lainnya.
+2. **Nomor kedua** khusus untuk perintah `userrequest` (registrasi dan pemutakhiran data user).
+
+### Konfigurasi Environment
+Tambahkan variabel berikut pada `.env` untuk mengatur sesi WhatsApp:
+
+```
+# ID sesi untuk nomor utama (opsional, default `wa-admin`)
+APP_SESSION_NAME=wa-admin
+
+# ID sesi untuk nomor kedua (`userrequest`)
+USER_WA_CLIENT_ID=wa-userrequest
+```
+
+### Langkah Login
+1. Jalankan `npm run dev` atau `npm start`.
+2. Terminal menampilkan QR `[WA]` untuk nomor utama; pindai dengan akun WhatsApp utama.
+3. Terminal juga menampilkan QR `[WA-USER]` untuk nomor kedua; pindai dengan nomor khusus `userrequest`.
+4. Setelah dipindai, sesi tersimpan di folder `.wwebjs_auth/` sehingga tidak perlu login ulang.
+
+Pengguna cukup menyimpan nomor bot yang sesuai, mengirim perintah `userrequest`, lalu mengikuti instruksi balasan.
 
 ## 5. Akses Dashboard
 
