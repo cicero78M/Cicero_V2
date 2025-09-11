@@ -6,9 +6,9 @@ import {
   collectLikesRecap,
 } from "../fetchabsensi/insta/absensiLikesInsta.js";
 import {
-  absensiKomentar,
   lapharTiktokDitbinmas,
   collectKomentarRecap,
+  absensiKomentarDitbinmasReport,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
@@ -501,11 +501,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "5":
-      msg = await absensiKomentar("DITBINMAS", {
-        clientFilter: "DITBINMAS",
-        mode: "all",
-        roleFlag,
-      });
+      msg = await absensiKomentarDitbinmasReport();
       break;
     case "6": {
       const { fetchAndStoreInstaContent } = await import(
@@ -552,11 +548,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       );
       await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
       await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
-      const rekapTiktok = await absensiKomentar("DITBINMAS", {
-        ...(userType === "org" ? { clientFilter: userClientId } : {}),
-        mode: "all",
-        roleFlag,
-      });
+      const rekapTiktok = await absensiKomentarDitbinmasReport(
+        userType === "org" ? { clientFilter: userClientId } : {}
+      );
       msg =
         rekapTiktok ||
         "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";

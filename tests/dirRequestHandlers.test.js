@@ -8,6 +8,7 @@ const mockGetClientsByRole = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiLikesDitbinmasReport = jest.fn();
 const mockAbsensiKomentar = jest.fn();
+const mockAbsensiKomentarDitbinmasReport = jest.fn();
 const mockFindClientById = jest.fn();
 const mockFetchAndStoreInstaContent = jest.fn();
 const mockHandleFetchLikesInstagram = jest.fn();
@@ -43,6 +44,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
   absensiKomentar: mockAbsensiKomentar,
   lapharTiktokDitbinmas: mockLapharTiktokDitbinmas,
   collectKomentarRecap: mockCollectKomentarRecap,
+  absensiKomentarDitbinmasReport: mockAbsensiKomentarDitbinmasReport,
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
@@ -293,9 +295,8 @@ test('choose_menu option 4 skips ketika client bukan ditbinmas', async () => {
   );
 });
 
-test('choose_menu option 5 absensi komentar filters users to ditbinmas', async () => {
-  mockAbsensiKomentar.mockResolvedValue('laporan komentar');
-  mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
+test('choose_menu option 5 absensi komentar uses ditbinmas report', async () => {
+  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan komentar');
 
   const session = {
     role: 'ditbinmas',
@@ -308,14 +309,7 @@ test('choose_menu option 5 absensi komentar filters users to ditbinmas', async (
 
   await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
 
-  expect(mockAbsensiKomentar).toHaveBeenCalledWith(
-    'DITBINMAS',
-    expect.objectContaining({
-      mode: 'all',
-      roleFlag: 'ditbinmas',
-      clientFilter: 'DITBINMAS',
-    })
-  );
+  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan komentar');
 });
 
@@ -355,7 +349,7 @@ test('choose_menu option 6 fetch insta returns rekap likes report', async () => 
 test('choose_menu option 8 fetch tiktok returns komentar report', async () => {
   mockFetchAndStoreTiktokContent.mockResolvedValue();
   mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
-  mockAbsensiKomentar.mockResolvedValue('laporan tiktok');
+  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan tiktok');
   mockSafeSendMessage.mockResolvedValue(true);
   mockFindClientById.mockResolvedValue({ client_type: 'direktorat', nama: 'DITBINMAS' });
 
@@ -380,10 +374,7 @@ test('choose_menu option 8 fetch tiktok returns komentar report', async () => {
     chatId,
     'DITBINMAS'
   );
-  expect(mockAbsensiKomentar).toHaveBeenCalledWith(
-    'DITBINMAS',
-    expect.objectContaining({ mode: 'all', roleFlag: 'ditbinmas' })
-  );
+  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan tiktok');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     waClient,
