@@ -16,6 +16,8 @@ const mockLapharDitbinmas = jest.fn();
 const mockLapharTiktokDitbinmas = jest.fn();
 const mockCollectLikesRecap = jest.fn();
 const mockSaveLikesRecapExcel = jest.fn();
+const mockCollectKomentarRecap = jest.fn();
+const mockSaveCommentRecapExcel = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -40,6 +42,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: mockAbsensiKomentar,
   lapharTiktokDitbinmas: mockLapharTiktokDitbinmas,
+  collectKomentarRecap: mockCollectKomentarRecap,
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
@@ -71,6 +74,9 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/sosmedTask.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/likesRecapExcelService.js', () => ({
   saveLikesRecapExcel: mockSaveLikesRecapExcel,
+}));
+jest.unstable_mockModule('../src/service/commentRecapExcelService.js', () => ({
+  saveCommentRecapExcel: mockSaveCommentRecapExcel,
 }));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
@@ -465,7 +471,7 @@ test('choose_menu option 10 sends laphar file, narrative, and likes recap excel'
   );
 });
 
-test('choose_menu option 13 sends tiktok laphar file and narrative', async () => {
+test('choose_menu option 13 sends tiktok laphar file narrative and recap excel', async () => {
   mockLapharTiktokDitbinmas.mockResolvedValue({
     text: 'lap',
     filename: 'lap.txt',
@@ -473,6 +479,12 @@ test('choose_menu option 13 sends tiktok laphar file and narrative', async () =>
     filenameBelum: 'belum.txt',
     narrative: 'narasi',
   });
+  mockCollectKomentarRecap.mockResolvedValue({
+    videoIds: ['vid1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', vid1: 1 }] },
+  });
+  mockSaveCommentRecapExcel.mockResolvedValue('/tmp/komentar.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '555';
   const waClient = { sendMessage: jest.fn() };
@@ -480,6 +492,12 @@ test('choose_menu option 13 sends tiktok laphar file and narrative', async () =>
   await dirRequestHandlers.choose_menu(session, chatId, '13', waClient);
 
   expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
+  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('ditbinmas');
+  expect(mockSaveCommentRecapExcel).toHaveBeenCalledWith({
+    videoIds: ['vid1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', vid1: 1 }] },
+  }, 'ditbinmas');
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/komentar.xlsx');
   expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
   expect(mockWriteFile).toHaveBeenNthCalledWith(
     1,
@@ -507,6 +525,15 @@ test('choose_menu option 13 sends tiktok laphar file and narrative', async () =>
     chatId,
     'text/plain'
   );
+  expect(mockSendWAFile).toHaveBeenNthCalledWith(
+    3,
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/komentar.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/komentar.xlsx');
   expect(waClient.sendMessage.mock.calls[0][0]).toBe(chatId);
   expect(waClient.sendMessage.mock.calls[0][1]).toBe('narasi');
 });
