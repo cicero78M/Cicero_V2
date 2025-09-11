@@ -502,9 +502,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     }
     case "5":
       msg = await absensiKomentar(clientId, {
-        ...(userType === "org" ? { clientFilter: userClientId } : {}),
         mode: "all",
         roleFlag,
+        clientFilter: "ditbinmas",
       });
       break;
     case "6": {
