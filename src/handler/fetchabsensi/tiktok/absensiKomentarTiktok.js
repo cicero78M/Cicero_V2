@@ -298,6 +298,138 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
+export async function absensiKomentarDitbinmasReport(opts = {}) {
+  const roleName = "ditbinmas";
+  const { clientFilter } = opts;
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const posts = await getPostsTodayByClient(roleName);
+  if (!posts.length)
+    return "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
+
+  const { tiktok: mainUsername } = await getClientInfo(roleName);
+  const kontenLinks = posts.map(
+    (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
+  );
+  const commentSets = [];
+  for (const p of posts) {
+    const { comments } = await getCommentsByVideoId(p.video_id);
+    commentSets.push(new Set(extractUsernamesFromComments(comments)));
+  }
+
+  let users = (
+    await getUsersByDirektorat(roleName, "DITBINMAS")
+  ).filter((u) => u.status === true);
+  if (clientFilter) {
+    const cid = clientFilter.toUpperCase();
+    users = users.filter(
+      (u) => (u.client_id || "").toUpperCase() === cid
+    );
+  }
+
+  const already = [];
+  const partial = [];
+  const none = [];
+  const noUsername = [];
+
+  users.forEach((u) => {
+    if (!u.tiktok || u.tiktok.trim() === "") {
+      noUsername.push(u);
+      return;
+    }
+    const uname = normalizeUsername(u.tiktok);
+    let count = 0;
+    commentSets.forEach((set) => {
+      if (set.has(uname)) count += 1;
+    });
+    if (count === posts.length) already.push({ ...u, count });
+    else if (count > 0) partial.push({ ...u, count });
+    else none.push({ ...u, count });
+  });
+
+  const totals = {
+    total: users.length,
+    sudah: already.length + partial.length,
+    kurang: partial.length,
+    belum: none.length + noUsername.length,
+    noUsername: noUsername.length,
+  };
+
+  const pangkatOrder = [
+    "KOMISARIS BESAR POLISI",
+    "AKBP",
+    "KOMPOL",
+    "AKP",
+    "IPTU",
+    "IPDA",
+    "AIPTU",
+    "AIPDA",
+    "BRIPKA",
+    "BRIGADIR",
+    "BRIPTU",
+    "BRIPDA",
+  ];
+  const rankIdx = (t) => {
+    const i = pangkatOrder.indexOf((t || "").toUpperCase());
+    return i === -1 ? pangkatOrder.length : i;
+  };
+  const sortUsers = (arr) =>
+    arr.sort(
+      (a, b) =>
+        rankIdx(a.title) - rankIdx(b.title) ||
+        formatNama(a).localeCompare(formatNama(b))
+    );
+
+  sortUsers(already);
+  sortUsers(partial);
+  sortUsers(none);
+  sortUsers(noUsername);
+
+  let msg =
+    `Mohon ijin Komandan,\n\n` +
+    `📋 Rekap Akumulasi Komentar TikTok\n` +
+    `DIREKTORAT BINMAS\n` +
+    `${hari}, ${tanggal}\n` +
+    `Jam: ${jam}\n\n` +
+    `Jumlah Konten: ${posts.length}\n` +
+    `Daftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
+    `Jumlah Total Personil : ${totals.total} pers\n` +
+    `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
+    `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+    `❌ Belum melaksanakan : ${totals.belum} pers\n` +
+    `⚠️⚠️ Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
+    `✅Sudah Komentar : ${already.length}\n` +
+    (already.length
+      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
+      : "-\n\n") +
+    `⚠️Kurang komentar : ${partial.length}\n` +
+    (partial.length
+      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
+      : "-\n\n") +
+    `❌Belum Komentar : ${none.length}\n` +
+    (none.length
+      ? none
+          .map((u) => `- ${formatNama(u)}, ${u.tiktok || "-"}`)
+          .join("\n") + "\n\n"
+      : "-\n\n") +
+    `⚠️⚠️Belum Input Sosial media : ${noUsername.length}\n` +
+    (noUsername.length
+      ? noUsername
+          .map(
+            (u) =>
+              `- ${formatNama(u)}, IG ${u.insta ? u.insta : "Kosong"}, Tiktok ${
+                u.tiktok ? u.tiktok : "Kosong"
+              }`
+          )
+          .join("\n")
+      : "-");
+
+  return msg.trim();
+}
+
 export async function lapharTiktokDitbinmas() {
   const roleName = "ditbinmas";
   const now = new Date();

@@ -26,6 +26,7 @@ jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js'
 jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js', () => ({
   absensiKomentar: jest.fn(),
   absensiKomentarTiktokPerKonten: jest.fn(),
+  absensiKomentarDitbinmasReport: jest.fn(),
 }));
 
 process.env.JWT_SECRET = 'test';

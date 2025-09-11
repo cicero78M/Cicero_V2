@@ -30,7 +30,10 @@ jest.unstable_mockModule(
 
 jest.unstable_mockModule(
   '../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js',
-  () => ({ absensiKomentar: mockAbsensiKomentar })
+  () => ({
+    absensiKomentar: mockAbsensiKomentar,
+    absensiKomentarDitbinmasReport: jest.fn(),
+  })
 );
 
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
