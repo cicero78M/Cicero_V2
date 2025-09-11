@@ -577,8 +577,6 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
   mockLapharDitbinmas.mockResolvedValue({
     text: 'ig',
     filename: 'ig.txt',
-    textBelum: 'igbelum',
-    filenameBelum: 'igbelum.txt',
     narrative:
       'IGHEADER\nDIREKTORAT BINMAS\nIGPART\nAbsensi Update Data\nIGUPDATE',
   });
@@ -587,8 +585,6 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
   mockLapharTiktokDitbinmas.mockResolvedValue({
     text: 'tt',
     filename: 'tt.txt',
-    textBelum: 'ttbelum',
-    filenameBelum: 'ttbelum.txt',
     narrative:
       'TTHEADER\nDIREKTORAT BINMAS\nTTPART\nAbsensi Update Data\nTTUPDATE',
   });
@@ -623,20 +619,12 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
     2,
     waClient,
     expect.any(Buffer),
-    'igbelum.txt',
-    chatId,
-    'text/plain'
-  );
-  expect(mockSendWAFile).toHaveBeenNthCalledWith(
-    3,
-    waClient,
-    expect.any(Buffer),
     path.basename('/tmp/ig.xlsx'),
     chatId,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
-    4,
+    3,
     waClient,
     expect.any(Buffer),
     'tt.txt',
@@ -644,15 +632,7 @@ test('choose_menu option 15 sends combined sosmed recap and files', async () => 
     'text/plain'
   );
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
-    5,
-    waClient,
-    expect.any(Buffer),
-    'ttbelum.txt',
-    chatId,
-    'text/plain'
-  );
-  expect(mockSendWAFile).toHaveBeenNthCalledWith(
-    6,
+    4,
     waClient,
     expect.any(Buffer),
     path.basename('/tmp/tt.xlsx'),

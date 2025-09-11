@@ -721,18 +721,6 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         await writeFile(filePath, buffer);
         await sendWAFile(waClient, buffer, ig.filename, chatId, "text/plain");
       }
-      if (ig.textBelum && ig.filenameBelum) {
-        const bufferBelum = Buffer.from(ig.textBelum, "utf-8");
-        const filePathBelum = join(dirPath, ig.filenameBelum);
-        await writeFile(filePathBelum, bufferBelum);
-        await sendWAFile(
-          waClient,
-          bufferBelum,
-          ig.filenameBelum,
-          chatId,
-          "text/plain"
-        );
-      }
       const igRecap = await collectLikesRecap(clientId);
       if (igRecap.shortcodes.length) {
         const excelPath = await saveLikesRecapExcel(igRecap, clientId);
@@ -752,18 +740,6 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         const filePath = join(dirPath, tt.filename);
         await writeFile(filePath, buffer);
         await sendWAFile(waClient, buffer, tt.filename, chatId, "text/plain");
-      }
-      if (tt.textBelum && tt.filenameBelum) {
-        const bufferBelum = Buffer.from(tt.textBelum, "utf-8");
-        const filePathBelum = join(dirPath, tt.filenameBelum);
-        await writeFile(filePathBelum, bufferBelum);
-        await sendWAFile(
-          waClient,
-          bufferBelum,
-          tt.filenameBelum,
-          chatId,
-          "text/plain"
-        );
       }
       const ttRecap = await collectKomentarRecap(clientId);
       if (ttRecap.videoIds.length) {
