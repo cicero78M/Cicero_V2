@@ -79,6 +79,7 @@ This allows operators to scope responses to the correct client.
     SECRET_KEY=your-secret
     JWT_SECRET=your-jwt-secret
     AMQP_URL=amqp://localhost
+    USER_WA_CLIENT_ID=wa-userrequest
     GOOGLE_CONTACT_SCOPE=https://www.googleapis.com/auth/contacts
     GOOGLE_SERVICE_ACCOUNT=/path/to/service-account.json
     GOOGLE_IMPERSONATE_EMAIL=admin@example.com
@@ -86,6 +87,7 @@ This allows operators to scope responses to the correct client.
     GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
     ```
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
+   `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
 
 3. **Set up Redis**
