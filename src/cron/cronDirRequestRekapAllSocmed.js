@@ -129,7 +129,19 @@ export async function runCron(includeRekap = false) {
   }
 }
 
-cron.schedule("0 15,18 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("30 20 * * *", () => runCron(true), { timezone: "Asia/Jakarta" });
+cron.schedule(
+  "0 0 15,18 * * *",
+  async () => {
+    await runCron(false);
+  },
+  { timezone: "Asia/Jakarta" }
+);
+cron.schedule(
+  "0 30 20 * * *",
+  async () => {
+    await runCron(true);
+  },
+  { timezone: "Asia/Jakarta" }
+);
 
 export default null;
