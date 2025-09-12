@@ -137,8 +137,13 @@ export async function absensiKomentar(client_id, opts = {}) {
     client_id,
   });
 
+  const clientLabel =
+    clientInfo.clientType && clientInfo.clientType.toLowerCase() === "direktorat"
+      ? "Direktorat"
+      : "Polres";
+
   if (!posts.length)
-    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten TikTok untuk *${clientLabel}*: *${clientNama}* hari ini.`;
 
   const userStats = {};
   users.forEach((u) => {
@@ -920,6 +925,10 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const clientInfo = await getClientInfo(client_id);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
+  const clientLabel =
+    clientInfo.clientType && clientInfo.clientType.toLowerCase() === "direktorat"
+      ? "Direktorat"
+      : "Polres";
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
   sendDebug({
@@ -929,12 +938,12 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   });
 
   if (!posts.length)
-    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten TikTok untuk *${clientLabel}*: *${clientNama}* hari ini.`;
 
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Per Konten Komentar TikTok*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `📋 *Rekap Per Konten Komentar TikTok*\n*${clientLabel}*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${posts.length}\n`;
 
   for (const p of posts) {
