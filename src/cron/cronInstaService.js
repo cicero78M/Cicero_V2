@@ -26,13 +26,30 @@ cron.schedule(
         "taken_at",
         "comment_count",
       ];
-      const fetchSummary = await fetchAndStoreInstaContent(keys);
+      const fetchSummary = {};
+      for (const client of clients) {
+        try {
+          const res = await fetchAndStoreInstaContent(
+            keys,
+            null,
+            null,
+            client.client_id
+          );
+          const stat = res?.[client.client_id] || {};
+          fetchSummary[client.client_id] = { count: stat.count || 0 };
+        } catch (err) {
+          fetchSummary[client.client_id] = {
+            count: 0,
+            error: err.message,
+          };
+        }
+      }
 
       let debugMsg = `[CRON IG] Ringkasan fetch Instagram\n`;
       debugMsg += `Tanggal: ${new Date().toLocaleString("id-ID", {
         timeZone: "Asia/Jakarta",
       })}\n`;
-      if (fetchSummary && typeof fetchSummary === "object") {
+      if (Object.keys(fetchSummary).length) {
         Object.entries(fetchSummary).forEach(([client, stat]) => {
           debugMsg += `Client: ${client}\n  - Jumlah post hari ini: ${stat.count || 0}\n`;
           if (stat.error) debugMsg += `  - Error: ${stat.error}\n`;
