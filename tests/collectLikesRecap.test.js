@@ -59,3 +59,32 @@ test('collectLikesRecap normalizes client IDs', async () => {
     },
   ]);
 });
+
+test('collectLikesRecap selfOnly limits to given client', async () => {
+  mockGetShortcodesTodayByClient.mockResolvedValue(['SC1']);
+  mockGetLikesByShortcode.mockResolvedValue(['user1']);
+  mockGetUsersByDirektorat.mockResolvedValue([
+    {
+      client_id: 'DITBINMAS',
+      divisi: 'Sat A',
+      title: 'AKP',
+      nama: 'Budi',
+      insta: 'user1',
+      status: true,
+    },
+  ]);
+  mockQuery.mockResolvedValue({ rows: [{ nama: 'DITBINMAS' }] });
+
+  const result = await collectLikesRecap('DITBINMAS', { selfOnly: true });
+
+  expect(mockGetClientsByRole).not.toHaveBeenCalled();
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('DITBINMAS', ['DITBINMAS']);
+  expect(result.recap['DITBINMAS']).toEqual([
+    {
+      pangkat: 'AKP',
+      nama: 'Budi',
+      satfung: 'Sat A',
+      SC1: 1,
+    },
+  ]);
+});
