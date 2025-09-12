@@ -36,91 +36,95 @@ export async function runCron(includeRekap = false) {
     tag: "CRON DIRREQ ALL SOCMED",
     msg: "Mulai cron dirrequest rekap all socmed",
   });
+  let igRecapPath = null;
+  let ttRecapPath = null;
   try {
-    const recipients = getRecipients(includeRekap);
-    const dirPath = "laphar";
-    await mkdir(dirPath, { recursive: true });
+    try {
+      const recipients = getRecipients(includeRekap);
+      const dirPath = "laphar";
+      await mkdir(dirPath, { recursive: true });
 
-    const [ig, tt, igRecap, ttRecap] = await Promise.all([
-      lapharDitbinmas(),
-      lapharTiktokDitbinmas(),
-      collectLikesRecap(CLIENT_ID),
-      collectKomentarRecap(CLIENT_ID),
-    ]);
+      const [ig, tt, igRecap, ttRecap] = await Promise.all([
+        lapharDitbinmas(),
+        lapharTiktokDitbinmas(),
+        collectLikesRecap(CLIENT_ID),
+        collectKomentarRecap(CLIENT_ID),
+      ]);
 
-    const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
+      const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
 
-    const igBuffer = ig.text && ig.filename ? Buffer.from(ig.text, "utf-8") : null;
-    const ttBuffer = tt.text && tt.filename ? Buffer.from(tt.text, "utf-8") : null;
+      const igBuffer =
+        ig.text && ig.filename ? Buffer.from(ig.text, "utf-8") : null;
+      const ttBuffer =
+        tt.text && tt.filename ? Buffer.from(tt.text, "utf-8") : null;
 
-    let igRecapPath = null;
-    let igRecapBuffer = null;
-    let igRecapName = null;
-    if (igRecap?.shortcodes?.length) {
-      igRecapPath = await saveLikesRecapExcel(igRecap, CLIENT_ID);
-      igRecapBuffer = await readFile(igRecapPath);
-      igRecapName = basename(igRecapPath);
-    }
-
-    let ttRecapPath = null;
-    let ttRecapBuffer = null;
-    let ttRecapName = null;
-    if (ttRecap?.videoIds?.length) {
-      ttRecapPath = await saveCommentRecapExcel(ttRecap, CLIENT_ID);
-      ttRecapBuffer = await readFile(ttRecapPath);
-      ttRecapName = basename(ttRecapPath);
-    }
-
-    if (igBuffer) {
-      const filePath = join(dirPath, ig.filename);
-      await writeFile(filePath, igBuffer);
-    }
-    if (ttBuffer) {
-      const filePath = join(dirPath, tt.filename);
-      await writeFile(filePath, ttBuffer);
-    }
-
-    for (const wa of recipients) {
-      if (narrative) {
-        await safeSendMessage(waClient, wa, narrative.trim());
+      let igRecapBuffer = null;
+      let igRecapName = null;
+      if (igRecap?.shortcodes?.length) {
+        igRecapPath = await saveLikesRecapExcel(igRecap, CLIENT_ID);
+        igRecapBuffer = await readFile(igRecapPath);
+        igRecapName = basename(igRecapPath);
       }
+
+      let ttRecapBuffer = null;
+      let ttRecapName = null;
+      if (ttRecap?.videoIds?.length) {
+        ttRecapPath = await saveCommentRecapExcel(ttRecap, CLIENT_ID);
+        ttRecapBuffer = await readFile(ttRecapPath);
+        ttRecapName = basename(ttRecapPath);
+      }
+
       if (igBuffer) {
-        await sendWAFile(waClient, igBuffer, ig.filename, wa, "text/plain");
+        const filePath = join(dirPath, ig.filename);
+        await writeFile(filePath, igBuffer);
       }
       if (ttBuffer) {
-        await sendWAFile(waClient, ttBuffer, tt.filename, wa, "text/plain");
+        const filePath = join(dirPath, tt.filename);
+        await writeFile(filePath, ttBuffer);
       }
-      if (igRecapBuffer) {
-        await sendWAFile(
-          waClient,
-          igRecapBuffer,
-          igRecapName,
-          wa,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-      }
-      if (ttRecapBuffer) {
-        await sendWAFile(
-          waClient,
-          ttRecapBuffer,
-          ttRecapName,
-          wa,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-      }
-    }
 
-    if (igRecapPath) {
-      await unlink(igRecapPath);
-    }
-    if (ttRecapPath) {
-      await unlink(ttRecapPath);
-    }
+      for (const wa of recipients) {
+        if (narrative) {
+          await safeSendMessage(waClient, wa, narrative.trim());
+        }
+        if (igBuffer) {
+          await sendWAFile(waClient, igBuffer, ig.filename, wa, "text/plain");
+        }
+        if (ttBuffer) {
+          await sendWAFile(waClient, ttBuffer, tt.filename, wa, "text/plain");
+        }
+        if (igRecapBuffer) {
+          await sendWAFile(
+            waClient,
+            igRecapBuffer,
+            igRecapName,
+            wa,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+        }
+        if (ttRecapBuffer) {
+          await sendWAFile(
+            waClient,
+            ttRecapBuffer,
+            ttRecapName,
+            wa,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+        }
+      }
 
-    sendDebug({
-      tag: "CRON DIRREQ ALL SOCMED",
-      msg: `Laporan dikirim ke ${recipients.size} penerima`,
-    });
+      sendDebug({
+        tag: "CRON DIRREQ ALL SOCMED",
+        msg: `Laporan dikirim ke ${recipients.size} penerima`,
+      });
+    } finally {
+      if (igRecapPath) {
+        await unlink(igRecapPath).catch(() => {});
+      }
+      if (ttRecapPath) {
+        await unlink(ttRecapPath).catch(() => {});
+      }
+    }
   } catch (err) {
     sendDebug({
       tag: "CRON DIRREQ ALL SOCMED",
