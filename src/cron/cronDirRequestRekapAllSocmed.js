@@ -23,15 +23,15 @@ const DIRREQUEST_GROUP = "120363419830216549@g.us";
 const REKAP_RECIPIENT = "6281234560377@c.us";
 const CLIENT_ID = "DITBINMAS";
 
-function getRecipients(includeRekap = false) {
+function getRecipients(sendToRekapRecipient = false) {
   const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
-  if (includeRekap) {
+  if (sendToRekapRecipient) {
     recipients.add(REKAP_RECIPIENT);
   }
   return recipients;
 }
 
-export async function runCron(includeRekap = false) {
+export async function runCron(sendToRekapRecipient = false) {
   const shouldArchive = process.env.LAPHAR_ARCHIVE === "true";
   sendDebug({
     tag: "CRON DIRREQ ALL SOCMED",
@@ -43,7 +43,7 @@ export async function runCron(includeRekap = false) {
   let ttPath = null;
   try {
     try {
-      const recipients = getRecipients(includeRekap);
+      const recipients = getRecipients(sendToRekapRecipient);
       const dirPath = "laphar";
       if (shouldArchive) {
         await mkdir(dirPath, { recursive: true });
@@ -147,6 +147,7 @@ export async function runCron(includeRekap = false) {
 cron.schedule(
   "0 0 15,18 * * *",
   async () => {
+    // Send recap to admin and group only
     await runCron(false);
   },
   { timezone: "Asia/Jakarta" }
@@ -154,6 +155,7 @@ cron.schedule(
 cron.schedule(
   "0 30 20 * * *",
   async () => {
+    // Send recap to admin, group, and rekap recipient
     await runCron(true);
   },
   { timezone: "Asia/Jakarta" }
