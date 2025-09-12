@@ -114,3 +114,17 @@ test('runCron with rekap sends to all recipients', async () => {
     'text/plain'
   );
 });
+
+test('runCron archives files when LAPHAR_ARCHIVE is true', async () => {
+  process.env.LAPHAR_ARCHIVE = 'true';
+  await runCron(true);
+
+  expect(mockMkdir).toHaveBeenCalledWith('laphar', { recursive: true });
+  expect(mockWriteFile).toHaveBeenCalledWith('laphar/ig.txt', expect.any(Buffer));
+  expect(mockWriteFile).toHaveBeenCalledWith('laphar/tt.txt', expect.any(Buffer));
+  const unlinkArgs = mockUnlink.mock.calls.map((c) => c[0]);
+  expect(unlinkArgs).toEqual(
+    expect.arrayContaining(['igrecap.xlsx', 'ttrecap.xlsx', 'laphar/ig.txt', 'laphar/tt.txt'])
+  );
+  delete process.env.LAPHAR_ARCHIVE;
+});
