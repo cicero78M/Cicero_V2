@@ -78,7 +78,7 @@ test('collectLikesRecap selfOnly limits to given client', async () => {
   const result = await collectLikesRecap('DITBINMAS', { selfOnly: true });
 
   expect(mockGetClientsByRole).not.toHaveBeenCalled();
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('DITBINMAS', ['DITBINMAS']);
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', ['DITBINMAS']);
   expect(result.recap['DITBINMAS']).toEqual([
     {
       pangkat: 'AKP',
