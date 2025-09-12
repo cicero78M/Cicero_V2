@@ -6,8 +6,10 @@ import { findClientById } from "../../service/clientService.js";
 import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
 import { handleFetchKomentarTiktokBatch } from "../fetchengagement/fetchCommentTiktok.js";
 
-export async function generateSosmedTaskMessage() {
-  const clientId = "DITBINMAS";
+export async function generateSosmedTaskMessage(
+  clientId = "DITBINMAS",
+  skipTiktokFetch = false
+) {
 
   let clientName = clientId;
   let tiktokUsername = "";
@@ -44,7 +46,9 @@ export async function generateSosmedTaskMessage() {
   let tiktokPosts = [];
   try {
     tiktokPosts = await getTiktokPostsToday(clientId);
-    await handleFetchKomentarTiktokBatch(null, null, clientId);
+    if (!skipTiktokFetch) {
+      await handleFetchKomentarTiktokBatch(null, null, clientId);
+    }
   } catch {
     tiktokPosts = [];
   }

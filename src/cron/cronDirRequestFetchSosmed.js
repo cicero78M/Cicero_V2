@@ -6,7 +6,6 @@ import waClient from "../service/waService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
-import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
@@ -28,7 +27,6 @@ export async function runCron() {
     );
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
     await fetchAndStoreTiktokContent("DITBINMAS");
-    await handleFetchKomentarTiktokBatch(null, null, "DITBINMAS");
     const msg = await generateSosmedTaskMessage();
     const recipients = getRecipients();
     for (const wa of recipients) {
