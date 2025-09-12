@@ -16,9 +16,7 @@ import { startOtpWorker } from './src/service/otpQueue.js';
 // Import semua cron jobs setelah WhatsApp siap
 const cronModules = [
   './src/cron/cronInstaService.js',
-  './src/cron/cronTiktokService.js',
   './src/cron/cronInstaLaphar.js',
-  './src/cron/cronTiktokLaphar.js',
   './src/cron/cronRekapLink.js',
   './src/cron/cronAmplifyLinkMonthly.js',
   './src/cron/cronDirRequestFetchSosmed.js',

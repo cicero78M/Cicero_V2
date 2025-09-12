@@ -33,12 +33,12 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
 ## 3. Process Flow
 
 1. **Data Collection**
-   - Cron jobs (`cronInstaService.js`, `cronTiktokService.js`) fetch posts and comments every hour. Results are saved to the database and cached in Redis.
+   - Cron job (`cronInstaService.js`) fetches posts and comments every hour. Results are saved to the database and cached in Redis.
 2. **Analytics & Attendance**
    - The backend matches likes or comments with registered users to compute attendance statistics.
    - Summaries can be retrieved via dashboard endpoints under `/dashboard`.
 3. **Reporting**
-   - Additional cron tasks (`cronInstaLaphar.js`, `cronTiktokLaphar.js`) send daily recap reports to admins through WhatsApp using `waService.js`.
+   - Additional cron task (`cronInstaLaphar.js`) sends daily recap reports to admins through WhatsApp using `waService.js`.
 4. **Queue Processing (Optional)**
    - Heavy operations can publish tasks to RabbitMQ with `rabbitMQService.js` and are processed asynchronously.
 
