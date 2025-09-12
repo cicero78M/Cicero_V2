@@ -7,8 +7,9 @@ jest.unstable_mockModule('../src/repository/db.js', () => ({
 
 let findByClientId;
 let getShortcodesTodayByClient;
+let getShortcodesYesterdayByClient;
 beforeAll(async () => {
-  ({ findByClientId, getShortcodesTodayByClient } = await import('../src/model/instaPostModel.js'));
+  ({ findByClientId, getShortcodesTodayByClient, getShortcodesYesterdayByClient } = await import('../src/model/instaPostModel.js'));
 });
 
 beforeEach(() => {
@@ -59,6 +60,26 @@ test('getShortcodesTodayByClient falls back to role when client not found', asyn
     .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] });
   await getShortcodesTodayByClient('unknown');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('insta_post_roles');
+  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
+});
+
+test('getShortcodesYesterdayByClient filters by client for non-direktorat', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getShortcodesYesterdayByClient('C1');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('LOWER(client_id) = LOWER($1)');
+  expect(sql).not.toContain('insta_post_roles');
+});
+
+test('getShortcodesYesterdayByClient uses role filter for directorate', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getShortcodesYesterdayByClient('DITA');
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('insta_post_roles');
   expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');

@@ -77,6 +77,45 @@ export async function getShortcodesTodayByClient(identifier) {
   return res.rows.map((r) => r.shortcode);
 }
 
+export async function getShortcodesYesterdayByClient(identifier) {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  const yesterday = date.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+
+  const typeRes = await query(
+    'SELECT client_type FROM clients WHERE LOWER(client_id) = LOWER($1)',
+    [identifier]
+  );
+
+  const isDitbinmas = identifier.toLowerCase() === 'ditbinmas';
+  const clientType = typeRes.rows[0]?.client_type?.toLowerCase();
+
+  let sql;
+  let params;
+
+  if (
+    typeRes.rows.length === 0 ||
+    (clientType === 'direktorat' && !isDitbinmas)
+  ) {
+    sql =
+      `SELECT p.shortcode FROM insta_post p\n` +
+      `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
+      `WHERE LOWER(pr.role_name) = LOWER($1)\n` +
+      `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+    params = [identifier, yesterday];
+  } else {
+    sql =
+      `SELECT shortcode FROM insta_post\n` +
+      `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+    params = [identifier, yesterday];
+  }
+
+  const res = await query(sql, params);
+  return res.rows.map((r) => r.shortcode);
+}
+
 export async function getShortcodesTodayByUsername(username) {
   if (!username) return [];
   const today = new Date();

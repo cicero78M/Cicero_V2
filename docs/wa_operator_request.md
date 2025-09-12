@@ -15,13 +15,14 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
    - 4️⃣ Cek data user berdasarkan NRP/NIP
    - 5️⃣ Update tugas Instagram
    - 6️⃣ Rekap link harian
-   - 7️⃣ Rekap link per post
-   - 8️⃣ Absensi Amplifikasi User
-   - 9️⃣ Absensi Registrasi User
-   - 🔟 Tugas Khusus
-   - 1️⃣1️⃣ Rekap link tugas khusus
-   - 1️⃣2️⃣ Rekap per post khusus
-   - 1️⃣3️⃣ Absensi Amplifikasi Khusus
+   - 7️⃣ Rekap link harian kemarin
+   - 8️⃣ Rekap link per post
+   - 9️⃣ Absensi Amplifikasi User
+   - 1️⃣0️⃣ Absensi Registrasi User
+   - 1️⃣1️⃣ Tugas Khusus
+   - 1️⃣2️⃣ Rekap link tugas khusus
+   - 1️⃣3️⃣ Rekap per post khusus
+   - 1️⃣4️⃣ Absensi Amplifikasi Khusus
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
 
 ## Alur Singkat Setiap Menu
@@ -40,6 +41,8 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
   2. Bot menampilkan detail user beserta statusnya jika ditemukan pada client yang sama.
 - **Rekap Link Harian**
   1. Bot menampilkan rangkuman link konten yang dikumpulkan hari ini dari semua pengguna di client.
+- **Rekap Link Harian Kemarin**
+  1. Bot menampilkan rangkuman link konten yang dikumpulkan kemarin dari semua pengguna di client.
 - **Update Tugas Instagram**
   1. Bot menjalankan proses pengambilan tugas terbaru untuk client terkait.
 
