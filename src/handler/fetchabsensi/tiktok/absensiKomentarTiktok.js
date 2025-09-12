@@ -48,7 +48,7 @@ function normalizeUsername(username) {
     .toLowerCase();
 }
 
-export async function collectKomentarRecap(clientId) {
+export async function collectKomentarRecap(clientId, opts = {}) {
   const posts = await getPostsTodayByClient(clientId);
   const videoIds = posts.map((p) => p.video_id);
   const commentSets = [];
@@ -56,7 +56,12 @@ export async function collectKomentarRecap(clientId) {
     const { comments } = await getCommentsByVideoId(vid);
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
-  const polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+  let polresIds;
+  if (opts.selfOnly) {
+    polresIds = [clientId.toUpperCase()];
+  } else {
+    polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+  }
   const allUsers = (
     await getUsersByDirektorat(clientId, polresIds)
   ).filter((u) => u.status === true);

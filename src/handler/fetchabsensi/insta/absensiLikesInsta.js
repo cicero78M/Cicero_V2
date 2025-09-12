@@ -29,14 +29,19 @@ async function getClientInfo(client_id) {
   };
 }
 
-export async function collectLikesRecap(clientId) {
+export async function collectLikesRecap(clientId, opts = {}) {
   const shortcodes = await getShortcodesTodayByClient(clientId);
   const likesSets = [];
   for (const sc of shortcodes) {
     const likes = await getLikesByShortcode(sc);
     likesSets.push(new Set((likes || []).map(normalizeUsername)));
   }
-  const polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+  let polresIds;
+  if (opts.selfOnly) {
+    polresIds = [clientId.toUpperCase()];
+  } else {
+    polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+  }
   const allUsers = (
     await getUsersByDirektorat(clientId, polresIds)
   ).filter((u) => u.status === true);
