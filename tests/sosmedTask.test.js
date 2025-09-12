@@ -35,6 +35,10 @@ beforeAll(async () => {
   ({ generateSosmedTaskMessage } = await import('../src/handler/fetchabsensi/sosmedTask.js'));
 });
 
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 test('generateSosmedTaskMessage formats message correctly', async () => {
   mockFindClientById.mockResolvedValue({ nama: 'Dit Binmas', client_tiktok: '' });
   mockGetShortcodesTodayByClient.mockResolvedValue(['abc']);
@@ -53,4 +57,15 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   expect(msg).toContain('2 likes');
   expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+});
+
+test('generateSosmedTaskMessage can skip tiktok fetch', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'Dit Binmas', client_tiktok: '' });
+  mockGetShortcodesTodayByClient.mockResolvedValue([]);
+  mockGetTiktokPostsToday.mockResolvedValue([]);
+  mockHandleFetchLikesInstagram.mockResolvedValue();
+
+  await generateSosmedTaskMessage('DITBINMAS', true);
+
+  expect(mockHandleFetchKomentarTiktokBatch).not.toHaveBeenCalled();
 });

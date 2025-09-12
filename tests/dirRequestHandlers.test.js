@@ -387,8 +387,8 @@ test('choose_menu option 12 fetch sosial media sends combined task', async () =>
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockFetchAndStoreTiktokContent.mockResolvedValue();
-  mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
-  mockGenerateSosmedTaskMessage.mockResolvedValue('tugas sosmed');
+      mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
+      mockGenerateSosmedTaskMessage.mockResolvedValue('tugas sosmed');
   mockSafeSendMessage.mockResolvedValue(true);
   mockFindClientById.mockResolvedValue({ client_type: 'direktorat', nama: 'DITBINMAS' });
 
@@ -416,7 +416,7 @@ test('choose_menu option 12 fetch sosial media sends combined task', async () =>
     chatId
   );
   expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
-  expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS', true);
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'tugas sosmed');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     waClient,

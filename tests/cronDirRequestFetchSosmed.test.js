@@ -3,7 +3,6 @@ import { jest } from '@jest/globals';
 const mockFetchInsta = jest.fn();
 const mockFetchLikes = jest.fn();
 const mockFetchTiktok = jest.fn();
-const mockFetchComments = jest.fn();
 const mockGenerateMsg = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
@@ -17,9 +16,6 @@ jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js'
 }));
 jest.unstable_mockModule('../src/handler/fetchpost/tiktokFetchPost.js', () => ({
   fetchAndStoreTiktokContent: mockFetchTiktok,
-}));
-jest.unstable_mockModule('../src/handler/fetchengagement/fetchCommentTiktok.js', () => ({
-  handleFetchKomentarTiktokBatch: mockFetchComments,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/sosmedTask.js', () => ({
   generateSosmedTaskMessage: mockGenerateMsg,
@@ -54,7 +50,6 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
   );
   expect(mockFetchLikes).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockFetchTiktok).toHaveBeenCalledWith('DITBINMAS');
-  expect(mockFetchComments).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockGenerateMsg).toHaveBeenCalled();
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'msg');
   expect(mockSafeSend).toHaveBeenCalledWith(

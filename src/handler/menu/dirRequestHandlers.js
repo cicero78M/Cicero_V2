@@ -634,7 +634,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       await handleFetchLikesInstagram(null, null, targetId);
       await fetchAndStoreTiktokContent(targetId, waClient, chatId);
       await handleFetchKomentarTiktokBatch(null, null, targetId);
-      msg = await generateSosmedTaskMessage(targetId);
+      msg = await generateSosmedTaskMessage(targetId, true);
       break;
     }
     case "13": {
