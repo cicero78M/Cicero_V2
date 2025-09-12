@@ -19,7 +19,6 @@ const cronModules = [
   './src/cron/cronTiktokService.js',
   './src/cron/cronInstaLaphar.js',
   './src/cron/cronTiktokLaphar.js',
-  './src/cron/cronInstaDataMining.js',
   './src/cron/cronRekapLink.js',
   './src/cron/cronAmplifyLinkMonthly.js',
   './src/cron/cronDirRequestFetchSosmed.js',
