@@ -93,6 +93,13 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
       [normalizedId, `${yyyy}-${mm}-${dd}`]
     );
     const videoIds = rows.map((r) => r.video_id);
+    const excRes = await query(
+      `SELECT tiktok FROM "user" WHERE exception = true AND LOWER(TRIM(client_id)) = $1 AND tiktok IS NOT NULL`,
+      [normalizedId]
+    );
+    const exceptionUsernames = excRes.rows
+      .map((r) => normalizeUsername(r.tiktok))
+      .filter(Boolean);
     sendDebug({
       tag: "TTK COMMENT",
       msg: `Client ${client_id}: Jumlah video hari ini: ${videoIds.length}`,
@@ -118,9 +125,12 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
         try {
           const commentsToday = await fetchAllTiktokComments(video_id);
           const uniqueUsernames = extractUniqueUsernamesFromComments(commentsToday);
+          const allUsernames = [
+            ...new Set([...uniqueUsernames, ...exceptionUsernames]),
+          ];
           const mergedUsernames = await upsertTiktokUserComments(
             video_id,
-            uniqueUsernames
+            allUsernames
           );
           sukses++;
           sendDebug({
