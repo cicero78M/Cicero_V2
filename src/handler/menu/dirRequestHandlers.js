@@ -8,6 +8,7 @@ import {
 import {
   lapharTiktokDitbinmas,
   collectKomentarRecap,
+  absensiKomentar,
   absensiKomentarDitbinmasReport,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
@@ -750,6 +751,16 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       }
       return;
     }
+    case "16": {
+      const normalizedId = (clientId || "").toUpperCase();
+      if (normalizedId !== "DITBINMAS") {
+        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
+        break;
+      }
+      const opts = { mode: "all", roleFlag: "ditbinmas" };
+      msg = await absensiKomentar("DITBINMAS", opts);
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -859,6 +870,7 @@ export const dirRequestHandlers = {
         "1️⃣3️⃣ Laphar TikTok Ditbinmas\n" +
         "1️⃣4️⃣ Rekap Likes Instagram (Excel)\n" +
         "1️⃣5️⃣ Rekap All Sosmed\n" +
+        "1️⃣6️⃣ Absensi Komentar Tiktok\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -899,6 +911,7 @@ export const dirRequestHandlers = {
       "13",
       "14",
       "15",
+      "16",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
