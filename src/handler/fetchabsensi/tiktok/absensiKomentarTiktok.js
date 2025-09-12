@@ -316,122 +316,115 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
   if (!posts.length)
     return "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
 
-  const { tiktok: mainUsername } = await getClientInfo(roleName);
+  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
   const kontenLinks = posts.map(
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
+
   const commentSets = [];
   for (const p of posts) {
     const { comments } = await getCommentsByVideoId(p.video_id);
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
 
-  let users = (
-    await getUsersByDirektorat(roleName, "DITBINMAS")
-  ).filter((u) => u.status === true);
+  let polresIds;
+  let allUsers;
   if (clientFilter) {
-    const cid = clientFilter.toUpperCase();
-    users = users.filter(
-      (u) => (u.client_id || "").toUpperCase() === cid
-    );
+    polresIds = [clientFilter.toUpperCase()];
+    allUsers = (
+      await getUsersByDirektorat(roleName, clientFilter)
+    ).filter((u) => u.status === true);
+  } else {
+    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+    allUsers = (
+      await getUsersByDirektorat(roleName, polresIds)
+    ).filter((u) => u.status === true);
   }
 
-  const already = [];
-  const partial = [];
-  const none = [];
-  const noUsername = [];
-
-  users.forEach((u) => {
-    if (!u.tiktok || u.tiktok.trim() === "") {
-      noUsername.push(u);
-      return;
-    }
-    const uname = normalizeUsername(u.tiktok);
-    let count = 0;
-    commentSets.forEach((set) => {
-      if (set.has(uname)) count += 1;
-    });
-    if (count === posts.length) already.push({ ...u, count });
-    else if (count > 0) partial.push({ ...u, count });
-    else none.push({ ...u, count });
+  const usersByClient = {};
+  allUsers.forEach((u) => {
+    const cid = u.client_id?.toUpperCase() || "";
+    if (!usersByClient[cid]) usersByClient[cid] = [];
+    usersByClient[cid].push(u);
   });
 
-  const totals = {
-    total: users.length,
-    sudah: already.length + partial.length,
-    kurang: partial.length,
-    belum: none.length + noUsername.length,
-    noUsername: noUsername.length,
-  };
+  const totalKonten = posts.length;
+  const reportEntries = [];
+  const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 };
 
-  const pangkatOrder = [
-    "KOMISARIS BESAR POLISI",
-    "AKBP",
-    "KOMPOL",
-    "AKP",
-    "IPTU",
-    "IPDA",
-    "AIPTU",
-    "AIPDA",
-    "BRIPKA",
-    "BRIGADIR",
-    "BRIPTU",
-    "BRIPDA",
-  ];
-  const rankIdx = (t) => {
-    const i = pangkatOrder.indexOf((t || "").toUpperCase());
-    return i === -1 ? pangkatOrder.length : i;
-  };
-  const sortUsers = (arr) =>
-    arr.sort(
-      (a, b) =>
-        rankIdx(a.title) - rankIdx(b.title) ||
-        formatNama(a).localeCompare(formatNama(b))
-    );
+  for (const cid of polresIds) {
+    const users = usersByClient[cid] || [];
+    const { nama: clientName } = await getClientInfo(cid);
+    const sudah = [];
+    const kurang = [];
+    const belum = [];
+    const tanpaUsername = [];
 
-  sortUsers(already);
-  sortUsers(partial);
-  sortUsers(none);
-  sortUsers(noUsername);
+    users.forEach((u) => {
+      if (!u.tiktok || u.tiktok.trim() === "") {
+        tanpaUsername.push(u);
+        return;
+      }
+      const uname = normalizeUsername(u.tiktok);
+      let count = 0;
+      commentSets.forEach((set) => {
+        if (set.has(uname)) count += 1;
+      });
+      const percentage = totalKonten ? (count / totalKonten) * 100 : 0;
+      if (percentage >= 50) sudah.push(u);
+      else if (percentage > 0) kurang.push(u);
+      else belum.push(u);
+    });
+
+    const belumCount = belum.length + tanpaUsername.length;
+    totals.total += users.length;
+    totals.sudah += sudah.length;
+    totals.kurang += kurang.length;
+    totals.belum += belumCount;
+    totals.noUsername += tanpaUsername.length;
+
+    reportEntries.push({
+      clientName,
+      usersCount: users.length,
+      sudahCount: sudah.length,
+      kurangCount: kurang.length,
+      belumCount,
+      noUsernameCount: tanpaUsername.length,
+    });
+  }
+
+  reportEntries.sort((a, b) => {
+    const aBinmas = a.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+    const bBinmas = b.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+    if (aBinmas && !bBinmas) return -1;
+    if (bBinmas && !aBinmas) return 1;
+    if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
+    if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
+    return a.clientName.localeCompare(b.clientName);
+  });
+
+  const reports = reportEntries.map(
+    (r, idx) =>
+      `${idx + 1}. ${r.clientName}\n\n` +
+      `Jumlah Personil : ${r.usersCount} pers\n` +
+      `Sudah melaksanakan : ${r.sudahCount} pers\n` +
+      `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
+      `Belum melaksanakan : ${r.belumCount} pers\n` +
+      `Belum Update Username TikTok : ${r.noUsernameCount} pers`
+  );
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Komentar TikTok\n` +
-    `DIREKTORAT BINMAS\n` +
-    `${hari}, ${tanggal}\n` +
-    `Jam: ${jam}\n\n` +
-    `Jumlah Konten: ${posts.length}\n` +
-    `Daftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
+    `Polres: ${dirName}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `Jumlah Konten: ${totalKonten}\n` +
+    `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
     `Jumlah Total Personil : ${totals.total} pers\n` +
     `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
     `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
     `❌ Belum melaksanakan : ${totals.belum} pers\n` +
-    `⚠️⚠️ Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
-    `✅Sudah Komentar : ${already.length}\n` +
-    (already.length
-      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
-      : "-\n\n") +
-    `⚠️Kurang komentar : ${partial.length}\n` +
-    (partial.length
-      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
-      : "-\n\n") +
-    `❌Belum Komentar : ${none.length}\n` +
-    (none.length
-      ? none
-          .map((u) => `- ${formatNama(u)}, ${u.tiktok || "-"}`)
-          .join("\n") + "\n\n"
-      : "-\n\n") +
-    `⚠️⚠️Belum Input Sosial media : ${noUsername.length}\n` +
-    (noUsername.length
-      ? noUsername
-          .map(
-            (u) =>
-              `- ${formatNama(u)}, IG ${u.insta ? u.insta : "Kosong"}, Tiktok ${
-                u.tiktok ? u.tiktok : "Kosong"
-              }`
-          )
-          .join("\n")
-      : "-");
+    `Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
+    reports.join("\n\n");
 
   return msg.trim();
 }
