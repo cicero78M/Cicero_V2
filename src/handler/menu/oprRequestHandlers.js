@@ -37,7 +37,7 @@ export const oprRequestHandlers = {
         pool
       );
     }
-    let msg =
+ let msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
 
@@ -47,13 +47,14 @@ export const oprRequestHandlers = {
 4️⃣ Cek data user (NRP/NIP)
 5️⃣ Update Tugas
 6️⃣ Rekap link harian
-7️⃣ Rekap link per post
-8️⃣ Absensi Amplifikasi User
-9️⃣ Absensi Registrasi User
-🔟 Tugas Khusus
-1️⃣1️⃣ Rekap link tugas khusus
-1️⃣2️⃣ Rekap per post khusus
-1️⃣3️⃣ Absensi Amplifikasi Khusus
+7️⃣ Rekap link harian kemarin
+8️⃣ Rekap link per post
+9️⃣ Absensi Amplifikasi User
+1️⃣0️⃣ Absensi Registrasi User
+1️⃣1️⃣ Tugas Khusus
+1️⃣2️⃣ Rekap link tugas khusus
+1️⃣3️⃣ Rekap per post khusus
+1️⃣4️⃣ Absensi Amplifikasi Khusus
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -150,6 +151,22 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     if (/^7$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
+        session.step = "rekapLinkKemarin_chooseClient";
+        return oprRequestHandlers.rekapLinkKemarin_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool,
+          userModel
+        );
+      }
+      session.step = "rekapLinkKemarin";
+      return oprRequestHandlers.rekapLinkKemarin(session, chatId, text, waClient, pool, userModel);
+    }
+    if (/^8$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkPerPost_chooseClient";
         return oprRequestHandlers.rekapLinkPerPost_chooseClient(
           session,
@@ -162,7 +179,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "rekapLinkPerPost";
       return oprRequestHandlers.rekapLinkPerPost(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^8$/i.test(text.trim())) {
+    if (/^9$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLink_chooseClient";
@@ -178,7 +195,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_client_id = null;
       return oprRequestHandlers.absensiLink_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^9$/i.test(text.trim())) {
+    if (/^10$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiReg_chooseClient";
@@ -194,13 +211,13 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_reg_client_id = null;
       return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^10$/i.test(text.trim())) {
+    if (/^11$/i.test(text.trim())) {
       clean();
       session.step = "tugasKhusus_link";
       await waClient.sendMessage(chatId, "Kirim link Instagram tugas khusus:");
       return;
     }
-    if (/^11$/i.test(text.trim())) {
+    if (/^12$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhusus_chooseClient";
@@ -222,7 +239,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^12$/i.test(text.trim())) {
+    if (/^13$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhususPerPost_chooseClient";
@@ -244,7 +261,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^13$/i.test(text.trim())) {
+    if (/^14$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLinkKhusus_chooseClient";
@@ -276,7 +293,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-13 atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-14 atau ketik *batal* untuk keluar."
     );
   },
 
@@ -553,6 +570,102 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `Pukul : ${jam}\n\n`;
 
     msg += `Jumlah Konten Resmi Hari ini : ${shortcodes.length}\n`;
+    if (kontenLinks.length > 0) {
+      msg += `${kontenLinks.join("\n")}\n\n`;
+    } else {
+      msg += "-\n\n";
+    }
+
+    msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+    msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
+
+    msg += `Link Sebagai Berikut :\n`;
+    msg += `Facebook (${list.facebook.length}):\n${list.facebook.join("\n") || "-"}`;
+    msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join("\n") || "-"}`;
+    msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
+    msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
+    msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  rekapLinkKemarin: async (session, chatId, text, waClient, pool, userModel) => {
+    let clientId = session.selected_client_id || null;
+    if (!clientId) {
+      const waNum = chatId.replace(/[^0-9]/g, "");
+      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
+      try {
+        const res = await pool.query(q, [waNum]);
+        clientId = res.rows[0]?.client_id || null;
+      } catch (e) { console.error(e); }
+      if (isAdminWhatsApp(chatId) && !clientId) {
+        session.step = "rekapLinkKemarin_chooseClient";
+        return oprRequestHandlers.rekapLinkKemarin_chooseClient(session, chatId, text, waClient, pool, userModel);
+      }
+      if (!clientId) {
+        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+    }
+    const { getReportsYesterdayByClient } = await import("../../model/linkReportModel.js");
+    const { getShortcodesYesterdayByClient } = await import("../../model/instaPostModel.js");
+    const reports = await getReportsYesterdayByClient(clientId);
+    if (!reports || reports.length === 0) {
+      await waClient.sendMessage(chatId, `Tidak ada laporan link kemarin untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const shortcodes = await getShortcodesYesterdayByClient(clientId);
+    const list = {
+      facebook: [],
+      instagram: [],
+      twitter: [],
+      tiktok: [],
+      youtube: []
+    };
+    const users = new Set();
+    reports.forEach((r) => {
+      users.add(r.user_id);
+      if (r.facebook_link) list.facebook.push(r.facebook_link);
+      if (r.instagram_link) list.instagram.push(r.instagram_link);
+      if (r.twitter_link) list.twitter.push(r.twitter_link);
+      if (r.tiktok_link) list.tiktok.push(r.tiktok_link);
+      if (r.youtube_link) list.youtube.push(r.youtube_link);
+    });
+    const totalLinks =
+      list.facebook.length +
+      list.instagram.length +
+      list.twitter.length +
+      list.tiktok.length +
+      list.youtube.length;
+
+    const now = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    const hari = hariIndo[yesterday.getDay()];
+    const tanggal = yesterday.toLocaleDateString("id-ID");
+    const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+    const salam = getGreeting();
+
+    const { rows: nameRows } = await pool.query(
+      "SELECT nama FROM clients WHERE client_id=$1 LIMIT 1",
+      [clientId]
+    );
+    const clientName = nameRows[0]?.nama || clientId;
+
+    const kontenLinks = shortcodes.map(
+      sc => `https://www.instagram.com/p/${sc}`
+    );
+
+    let msg = `${salam}\n\n`;
+    msg += `Mohon Ijin Melaporkan Pelaksanaan Tugas Amplifikasi *${clientName}* pada hari :\n`;
+    msg += `Hari : ${hari}\n`;
+    msg += `Tanggal : ${tanggal}\n`;
+    msg += `Pukul : ${jam}\n\n`;
+
+    msg += `Jumlah Konten Resmi Kemarin : ${shortcodes.length}\n`;
     if (kontenLinks.length > 0) {
       msg += `${kontenLinks.join("\n")}\n\n`;
     } else {
@@ -1245,6 +1358,44 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     session.selected_client_id = clients[idx].client_id;
     session.step = "rekapLink";
     return oprRequestHandlers.rekapLink(session, chatId, "", waClient, pool, userModel);
+  },
+
+  rekapLinkKemarin_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, msg.trim());
+    session.step = "rekapLinkKemarin_chooseClient_action";
+  },
+
+  rekapLinkKemarin_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.selected_client_id = clients[idx].client_id;
+    session.step = "rekapLinkKemarin";
+    return oprRequestHandlers.rekapLinkKemarin(session, chatId, "", waClient, pool, userModel);
   },
 
   rekapLinkPerPost_chooseClient: async (session, chatId, text, waClient, pool) => {

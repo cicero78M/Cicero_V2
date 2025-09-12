@@ -136,6 +136,30 @@ export async function getReportsTodayByClient(client_id) {
   return res.rows;
 }
 
+export async function getReportsYesterdayByClient(client_id) {
+  const typeRes = await query(
+    'SELECT client_type FROM clients WHERE client_id = $1',
+    [client_id]
+  );
+  const clientType = typeRes.rows[0]?.client_type;
+  let joinClause =
+    'JOIN insta_post p ON p.shortcode = r.shortcode JOIN "user" u ON u.user_id = r.user_id';
+  let whereClause = 'u.client_id = $1';
+  if (clientType === 'direktorat') {
+    joinClause +=
+      ' JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles ro ON ur.role_id = ro.role_id';
+    whereClause = 'ro.role_name = $1';
+  }
+  const res = await query(
+    `SELECT r.* FROM link_report r ${joinClause}
+     WHERE ${whereClause} AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta' - INTERVAL '1 day')::date
+       AND p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta' - INTERVAL '1 day')::date
+     ORDER BY r.created_at ASC`,
+    [client_id]
+  );
+  return res.rows;
+}
+
 export async function getReportsTodayByShortcode(client_id, shortcode) {
   const typeRes = await query(
     'SELECT client_type FROM clients WHERE client_id = $1',

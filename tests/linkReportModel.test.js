@@ -10,6 +10,7 @@ let createLinkReport;
 let getLinkReports;
 let findLinkReportByShortcode;
 let getReportsTodayByClient;
+let getReportsYesterdayByClient;
 let getReportsTodayByShortcode;
 let getReportsThisMonthByClient;
 let getReportsPrevMonthByClient;
@@ -21,6 +22,7 @@ beforeAll(async () => {
   getLinkReports = mod.getLinkReports;
   findLinkReportByShortcode = mod.findLinkReportByShortcode;
   getReportsTodayByClient = mod.getReportsTodayByClient;
+  getReportsYesterdayByClient = mod.getReportsYesterdayByClient;
   getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
   getReportsThisMonthByClient = mod.getReportsThisMonthByClient;
   getReportsPrevMonthByClient = mod.getReportsPrevMonthByClient;
@@ -112,6 +114,24 @@ test('getReportsTodayByClient joins insta_post and filters by date', async () =>
   expect(sql).toContain('JOIN "user" u ON u.user_id = r.user_id');
   expect(sql).toContain("p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date");
   expect(sql).toContain("r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date");
+});
+
+test('getReportsYesterdayByClient joins insta_post and filters by date', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ shortcode: 'y' }] });
+  const rows = await getReportsYesterdayByClient('POLRES');
+  expect(rows).toEqual([{ shortcode: 'y' }]);
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('SELECT client_type FROM clients'),
+    ['POLRES']
+  );
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('JOIN insta_post p ON p.shortcode = r.shortcode');
+  expect(sql).toContain('JOIN "user" u ON u.user_id = r.user_id');
+  expect(sql).toContain("p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta' - INTERVAL '1 day')::date");
+  expect(sql).toContain("r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta' - INTERVAL '1 day')::date");
 });
 
 test('getReportsTodayByShortcode filters by client and shortcode', async () => {
