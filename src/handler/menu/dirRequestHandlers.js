@@ -855,22 +855,26 @@ export const dirRequestHandlers = {
       const menu =
         `Client: *${clientName}*\n` +
         "┏━━━ *MENU DIRREQUEST* ━━━\n" +
-        "1️⃣ Rekap user belum lengkapi data\n" +
-        "2️⃣ Executive summary input data personil\n" +
-        "3️⃣ Absensi Likes Ditbinmas\n" +
-        "4️⃣ Absensi Likes Instagram\n" +
-        "5️⃣ Absensi Komentar Ditbinmas\n" +
-        "6️⃣ Fetch Insta\n" +
-        "7️⃣ Fetch Likes Insta\n" +
-        "8️⃣ Fetch TikTok (Laporan)\n" +
-        "9️⃣ Fetch Komentar TikTok\n" +
-        "🔟 Laphar Instagram Ditbinmas\n" +
-        "1️⃣1️⃣ Rekap user belum lengkapi data DITBINMAS\n" +
-        "1️⃣2️⃣ Fetch Sosial Media\n" +
-        "1️⃣3️⃣ Laphar TikTok Ditbinmas\n" +
-        "1️⃣4️⃣ Rekap Likes Instagram (Excel)\n" +
-        "1️⃣5️⃣ Rekap All Sosmed\n" +
-        "1️⃣6️⃣ Absensi Komentar Tiktok\n" +
+        "📊 *Rekap Data*\n" +
+        "1️⃣ Rekap personel belum lengkapi data\n" +
+        "2️⃣ Ringkasan pengisian data personel\n" +
+        "1️⃣1️⃣ Rekap data belum lengkap Ditbinmas\n\n" +
+        "📅 *Absensi*\n" +
+        "3️⃣ Absensi like Ditbinmas\n" +
+        "4️⃣ Absensi like Instagram\n" +
+        "5️⃣ Absensi komentar Ditbinmas\n" +
+        "1️⃣6️⃣ Absensi komentar TikTok\n\n" +
+        "📥 *Pengambilan Data*\n" +
+        "6️⃣ Ambil konten & like Instagram\n" +
+        "7️⃣ Ambil like Instagram saja\n" +
+        "8️⃣ Ambil konten & komentar TikTok\n" +
+        "9️⃣ Ambil komentar TikTok saja\n" +
+        "1️⃣2️⃣ Ambil semua sosmed & buat tugas\n\n" +
+        "📝 *Laporan*\n" +
+        "🔟 Laporan harian Instagram Ditbinmas\n" +
+        "1️⃣3️⃣ Laporan harian TikTok Ditbinmas\n" +
+        "1️⃣4️⃣ Rekap like Instagram (Excel)\n" +
+        "1️⃣5️⃣ Rekap gabungan semua sosmed\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -898,20 +902,20 @@ export const dirRequestHandlers = {
     if (![
       "1",
       "2",
+      "11",
       "3",
       "4",
       "5",
+      "16",
       "6",
       "7",
       "8",
       "9",
-      "10",
-      "11",
       "12",
+      "10",
       "13",
       "14",
       "15",
-      "16",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
