@@ -32,17 +32,22 @@ function getRecipients(includeRekap = false) {
 }
 
 export async function runCron(includeRekap = false) {
+  const shouldArchive = process.env.LAPHAR_ARCHIVE === "true";
   sendDebug({
     tag: "CRON DIRREQ ALL SOCMED",
     msg: "Mulai cron dirrequest rekap all socmed",
   });
   let igRecapPath = null;
   let ttRecapPath = null;
+  let igPath = null;
+  let ttPath = null;
   try {
     try {
       const recipients = getRecipients(includeRekap);
       const dirPath = "laphar";
-      await mkdir(dirPath, { recursive: true });
+      if (shouldArchive) {
+        await mkdir(dirPath, { recursive: true });
+      }
 
       const [ig, tt, igRecap, ttRecap] = await Promise.all([
         lapharDitbinmas(),
@@ -74,13 +79,13 @@ export async function runCron(includeRekap = false) {
         ttRecapName = basename(ttRecapPath);
       }
 
-      if (igBuffer) {
-        const filePath = join(dirPath, ig.filename);
-        await writeFile(filePath, igBuffer);
+      if (shouldArchive && igBuffer) {
+        igPath = join(dirPath, ig.filename);
+        await writeFile(igPath, igBuffer);
       }
-      if (ttBuffer) {
-        const filePath = join(dirPath, tt.filename);
-        await writeFile(filePath, ttBuffer);
+      if (shouldArchive && ttBuffer) {
+        ttPath = join(dirPath, tt.filename);
+        await writeFile(ttPath, ttBuffer);
       }
 
       for (const wa of recipients) {
@@ -123,6 +128,12 @@ export async function runCron(includeRekap = false) {
       }
       if (ttRecapPath) {
         await unlink(ttRecapPath).catch(() => {});
+      }
+      if (igPath) {
+        await unlink(igPath).catch(() => {});
+      }
+      if (ttPath) {
+        await unlink(ttPath).catch(() => {});
       }
     }
   } catch (err) {
