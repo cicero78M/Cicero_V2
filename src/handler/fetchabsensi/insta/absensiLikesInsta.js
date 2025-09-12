@@ -30,6 +30,7 @@ async function getClientInfo(client_id) {
 }
 
 export async function collectLikesRecap(clientId, opts = {}) {
+  const roleName = String(clientId || "").toLowerCase();
   const shortcodes = await getShortcodesTodayByClient(clientId);
   const likesSets = [];
   for (const sc of shortcodes) {
@@ -38,12 +39,12 @@ export async function collectLikesRecap(clientId, opts = {}) {
   }
   let polresIds;
   if (opts.selfOnly) {
-    polresIds = [clientId.toUpperCase()];
+    polresIds = [String(clientId).toUpperCase()];
   } else {
-    polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
   }
   const allUsers = (
-    await getUsersByDirektorat(clientId, polresIds)
+    await getUsersByDirektorat(roleName, polresIds)
   ).filter((u) => u.status === true);
   const usersByClient = {};
   allUsers.forEach((u) => {

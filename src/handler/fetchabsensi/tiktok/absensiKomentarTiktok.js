@@ -56,14 +56,15 @@ export async function collectKomentarRecap(clientId, opts = {}) {
     const { comments } = await getCommentsByVideoId(vid);
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
+  const roleName = String(clientId || "").toLowerCase();
   let polresIds;
   if (opts.selfOnly) {
-    polresIds = [clientId.toUpperCase()];
+    polresIds = [String(clientId).toUpperCase()];
   } else {
-    polresIds = (await getClientsByRole(clientId)).map((c) => c.toUpperCase());
+    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
   }
   const allUsers = (
-    await getUsersByDirektorat(clientId, polresIds)
+    await getUsersByDirektorat(roleName, polresIds)
   ).filter((u) => u.status === true);
   const usersByClient = {};
   allUsers.forEach((u) => {
