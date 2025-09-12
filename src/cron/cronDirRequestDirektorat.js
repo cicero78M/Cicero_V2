@@ -3,10 +3,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import waClient from "../service/waService.js";
-import {
-  absensiLikesDitbinmas,
-  formatRekapBelumLengkapDitbinmas,
-} from "../handler/menu/dirRequestHandlers.js";
+import { absensiLikesDitbinmas } from "../handler/menu/dirRequestHandlers.js";
+import { absensiKomentarDitbinmasReport } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
@@ -20,11 +18,11 @@ export async function runCron() {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
     const likesMsg = await absensiLikesDitbinmas();
-    const rekapMsg = await formatRekapBelumLengkapDitbinmas();
+    const komentarMsg = await absensiKomentarDitbinmasReport();
     const recipients = getRecipients();
     for (const wa of recipients) {
       await safeSendMessage(waClient, wa, likesMsg.trim());
-      await safeSendMessage(waClient, wa, rekapMsg.trim());
+      await safeSendMessage(waClient, wa, komentarMsg.trim());
     }
     sendDebug({
       tag: "CRON DIRREQ DIREKTORAT",
