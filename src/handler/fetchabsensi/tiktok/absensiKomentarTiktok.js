@@ -145,14 +145,20 @@ export async function absensiKomentar(client_id, opts = {}) {
     userStats[u.user_id] = { ...u, count: 0 };
   });
 
-  for (const post of posts) {
-    const { comments } = await getCommentsByVideoId(post.video_id);
-    const commentSet = new Set(extractUsernamesFromComments(comments));
-    sendDebug({
-      tag: "ABSEN TTK",
-      msg: `Post ${post.video_id} comments=${commentSet.size}`,
-      client_id,
-    });
+  const commentSets = await Promise.all(
+    posts.map(async (post) => {
+      const { comments } = await getCommentsByVideoId(post.video_id);
+      const commentSet = new Set(extractUsernamesFromComments(comments));
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: `Post ${post.video_id} comments=${commentSet.size}`,
+        client_id,
+      });
+      return commentSet;
+    })
+  );
+
+  commentSets.forEach((commentSet) => {
     users.forEach((u) => {
       if (
         u.tiktok &&
@@ -162,7 +168,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         userStats[u.user_id].count += 1;
       }
     });
-  }
+  });
 
   const totalKonten = posts.length;
 
