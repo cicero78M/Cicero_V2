@@ -170,14 +170,26 @@ export async function absensiKomentar(client_id, opts = {}) {
     const groups = {};
     Object.values(userStats).forEach((u) => {
       const cid = u.client_id?.toUpperCase() || "";
-      if (!groups[cid]) groups[cid] = { total: 0, updated: 0, noUsername: 0 };
-      groups[cid].total++;
+      if (!groups[cid])
+        groups[cid] = {
+          total: 0,
+          sudah: 0,
+          kurang: 0,
+          belum: 0,
+          noUsername: 0,
+        };
+      const g = groups[cid];
+      g.total++;
       if (u.exception === true) {
-        groups[cid].updated++;
+        g.sudah++;
       } else if (!u.tiktok || u.tiktok.trim() === "") {
-        groups[cid].noUsername++;
+        g.noUsername++;
       } else if (u.count >= Math.ceil(totalKonten / 2)) {
-        groups[cid].updated++;
+        g.sudah++;
+      } else if (u.count > 0) {
+        g.kurang++;
+      } else {
+        g.belum++;
       }
     });
     const kontenLinks = posts.map(
@@ -187,22 +199,40 @@ export async function absensiKomentar(client_id, opts = {}) {
       Object.keys(groups).map(async (cid) => {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
-        const belum = g.total - g.updated - g.noUsername;
         return (
           `*Polres*: *${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
-          `✅ *Sudah melaksanakan* : *${g.updated} user*\n` +
-          `❌ *Belum melaksanakan* : *${belum} user*\n` +
+          `✅ *Sudah melaksanakan* : *${g.sudah} user*\n` +
+          `⚠️ *Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
+          `❌ *Belum melaksanakan* : *${g.belum} user*\n` +
           `⚠️ *Belum input username* : *${g.noUsername} user*`
         );
       })
     );
+
+    const totals = Object.values(groups).reduce(
+      (acc, g) => {
+        acc.total += g.total;
+        acc.sudah += g.sudah;
+        acc.kurang += g.kurang;
+        acc.belum += g.belum;
+        acc.noUsername += g.noUsername;
+        return acc;
+      },
+      { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 }
+    );
+
     let msg =
       `Mohon ijin Komandan,\n\n` +
       `📋 *Rekap Akumulasi Komentar TikTok*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
       `*Jumlah Konten:* ${totalKonten}\n` +
       `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
       reports.join("\n\n") +
+      `\n\n*Total Personel:* ${totals.total}\n` +
+      `✅ *Sudah melaksanakan* : *${totals.sudah} user*\n` +
+      `⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} user*\n` +
+      `❌ *Belum melaksanakan* : *${totals.belum} user*\n` +
+      `⚠️ *Belum input username* : *${totals.noUsername} user*` +
       `\n\nTerimakasih.`;
     return msg.trim();
   }
