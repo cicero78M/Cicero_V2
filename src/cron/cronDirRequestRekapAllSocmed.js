@@ -56,7 +56,7 @@ export async function runCron(includeRekap = false) {
     let igRecapPath = null;
     let igRecapBuffer = null;
     let igRecapName = null;
-    if (igRecap.shortcodes.length) {
+    if (igRecap?.shortcodes?.length) {
       igRecapPath = await saveLikesRecapExcel(igRecap, CLIENT_ID);
       igRecapBuffer = await readFile(igRecapPath);
       igRecapName = basename(igRecapPath);
@@ -65,7 +65,7 @@ export async function runCron(includeRekap = false) {
     let ttRecapPath = null;
     let ttRecapBuffer = null;
     let ttRecapName = null;
-    if (ttRecap.videoIds.length) {
+    if (ttRecap?.videoIds?.length) {
       ttRecapPath = await saveCommentRecapExcel(ttRecap, CLIENT_ID);
       ttRecapBuffer = await readFile(ttRecapPath);
       ttRecapName = basename(ttRecapPath);
