@@ -8,7 +8,6 @@ import {
 import {
   lapharTiktokDitbinmas,
   collectKomentarRecap,
-  absensiKomentar,
   absensiKomentarDitbinmasReport,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
@@ -754,16 +753,6 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       }
       return;
     }
-    case "16": {
-      const normalizedId = (clientId || "").toUpperCase();
-      if (normalizedId !== "DITBINMAS") {
-        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
-        break;
-      }
-      const opts = { mode: "all", roleFlag: "ditbinmas" };
-      msg = await absensiKomentar("DITBINMAS", opts);
-      break;
-    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -865,8 +854,7 @@ export const dirRequestHandlers = {
         "📅 *Absensi*\n" +
         "3️⃣ Absensi like Ditbinmas\n" +
         "4️⃣ Absensi like Instagram\n" +
-        "5️⃣ Absensi komentar Ditbinmas\n" +
-        "1️⃣6️⃣ Absensi komentar TikTok\n\n" +
+        "5️⃣ Absensi komentar TikTok\n\n" +
         "📥 *Pengambilan Data*\n" +
         "6️⃣ Ambil konten & like Instagram\n" +
         "7️⃣ Ambil like Instagram saja\n" +
@@ -909,7 +897,6 @@ export const dirRequestHandlers = {
       "3",
       "4",
       "5",
-      "16",
       "6",
       "7",
       "8",
