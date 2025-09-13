@@ -319,3 +319,12 @@ test('getClientsByRole returns lowercase client ids', async () => {
     ['operator']
   );
 });
+
+test('getClientsByRole filters by client id', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ client_id: 'c1' }] });
+  const clients = await getClientsByRole('operator', 'c1');
+  expect(clients).toEqual(['c1']);
+  const [sql, params] = mockQuery.mock.calls[0];
+  expect(sql).toContain('LOWER(duc.client_id) = LOWER($2)');
+  expect(params).toEqual(['operator', 'c1']);
+});
