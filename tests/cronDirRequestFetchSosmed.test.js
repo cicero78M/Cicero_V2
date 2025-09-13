@@ -30,13 +30,11 @@ jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
 
 let runCron;
 
-beforeAll(async () => {
-  ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
-});
-
-beforeEach(() => {
+beforeEach(async () => {
+  jest.resetModules();
   jest.clearAllMocks();
-  mockGenerateMsg.mockResolvedValue('msg');
+  mockGenerateMsg.mockResolvedValue({ text: 'msg', igCount: 1, tiktokCount: 1 });
+  ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
 });
 
 test('runCron fetches sosmed and sends message to recipients', async () => {
@@ -57,4 +55,11 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
     '120363419830216549@g.us',
     'msg'
   );
+});
+
+test('runCron skips sending when counts unchanged', async () => {
+  await runCron();
+  mockSafeSend.mockClear();
+  await runCron();
+  expect(mockSafeSend).not.toHaveBeenCalled();
 });

@@ -12,6 +12,9 @@ import { sendDebug } from "../middleware/debugHandler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
+let lastIgCount = null;
+let lastTiktokCount = null;
+
 function getRecipients() {
   return new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
 }
@@ -27,15 +30,19 @@ export async function runCron() {
     );
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
     await fetchAndStoreTiktokContent("DITBINMAS");
-    const msg = await generateSosmedTaskMessage();
-    const recipients = getRecipients();
-    for (const wa of recipients) {
-      await safeSendMessage(waGatewayClient, wa, msg.trim());
+    const { text, igCount, tiktokCount } = await generateSosmedTaskMessage();
+    if (igCount !== lastIgCount || tiktokCount !== lastTiktokCount) {
+      const recipients = getRecipients();
+      for (const wa of recipients) {
+        await safeSendMessage(waGatewayClient, wa, text.trim());
+      }
+      sendDebug({
+        tag: "CRON DIRFETCH SOSMED",
+        msg: `Laporan dikirim ke ${recipients.size} penerima`,
+      });
+      lastIgCount = igCount;
+      lastTiktokCount = tiktokCount;
     }
-    sendDebug({
-      tag: "CRON DIRFETCH SOSMED",
-      msg: `Laporan dikirim ke ${recipients.size} penerima`,
-    });
   } catch (err) {
     sendDebug({
       tag: "CRON DIRFETCH SOSMED",
