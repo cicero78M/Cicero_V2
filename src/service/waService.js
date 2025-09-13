@@ -291,6 +291,19 @@ waUserClient.on("change_state", (state) => {
   console.log(`[WA-USER] Client state changed: ${state}`);
 });
 
+waGatewayClient.on("qr", (qr) => {
+  qrcode.generate(qr, { small: true });
+  console.log("[WA-GATEWAY] Scan QR dengan WhatsApp Anda!");
+});
+
+waGatewayClient.once("ready", () => {
+  console.log("[WA-GATEWAY] READY");
+});
+
+waGatewayClient.on("change_state", (state) => {
+  console.log(`[WA-GATEWAY] Client state changed: ${state}`);
+});
+
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
