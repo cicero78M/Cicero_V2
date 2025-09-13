@@ -453,11 +453,11 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
       : "-";
     return (
       `${idx + 1}. ${r.clientName}\n\n` +
-      `Jumlah Personil : ${r.usersCount} pers\n` +
-      `Sudah melaksanakan : ${r.sudahCount} pers\n` +
-      `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
-      `Belum melaksanakan : ${r.belumCount} pers\n` +
-      `Belum Update Username TikTok : ${r.noUsernameCount} pers\n\n` +
+      `*Jumlah Personil* : ${r.usersCount} pers\n` +
+      `✅ *Sudah melaksanakan* : ${r.sudahCount} pers\n` +
+      `⚠️ *Melaksanakan kurang lengkap* : ${r.kurangCount} pers\n` +
+      `❌ *Belum melaksanakan* : ${r.belumCount} pers\n` +
+      `⚠️ *Belum Update Username TikTok* : ${r.noUsernameCount} pers\n\n` +
       `✅ Sudah melaksanakan (${r.sudahCount} pers):\n${sudahList}\n\n` +
       `⚠️ Melaksanakan kurang lengkap (${r.kurangCount} pers):\n${kurangList}\n\n` +
       `❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}\n\n` +
@@ -467,16 +467,17 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 Rekap Akumulasi Komentar TikTok\n` +
-    `Polres: ${dirName}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
-    `Jumlah Konten: ${totalKonten}\n` +
-    `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-    `Jumlah Total Personil : ${totals.total} pers\n` +
-    `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
-    `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
-    `❌ Belum melaksanakan : ${totals.belum} pers\n` +
-    `Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
-    reports.join("\n\n");
+    `📋 *Rekap Akumulasi Komentar TikTok*\n` +
+    `*Polres*: *${dirName}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `*Jumlah Konten:* ${totalKonten}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+    `*Jumlah Total Personil:* ${totals.total} pers\n` +
+    `✅ *Sudah melaksanakan* : *${totals.sudah} pers*\n` +
+    `⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} pers*\n` +
+    `❌ *Belum melaksanakan* : *${totals.belum} pers*\n` +
+    `⚠️ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
+    reports.join("\n\n") +
+    "\n\nTerimakasih.";
 
   return msg.trim();
 }
