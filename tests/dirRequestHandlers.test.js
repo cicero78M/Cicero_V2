@@ -254,6 +254,20 @@ test('choose_menu option 3 absensi likes ditbinmas', async () => {
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
 });
 
+test('choose_menu option 5 absensi komentar ditbinmas', async () => {
+  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan komentar');
+
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '333';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
+
+  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
+  expect(mockAbsensiKomentar).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan komentar');
+});
+
 test('choose_menu option 4 absensi likes uses ditbinmas data for all users', async () => {
   mockAbsensiLikes.mockResolvedValue('laporan');
   mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
