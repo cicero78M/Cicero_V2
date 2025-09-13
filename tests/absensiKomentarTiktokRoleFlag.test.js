@@ -33,13 +33,13 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test('filters users by roleFlag when provided', async () => {
+test('uses getUsersByDirektorat when roleFlag is a directorate', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'POLRES ABC', client_tiktok: '@abc', client_type: 'org' }] });
-  mockGetUsersByClient.mockResolvedValueOnce([]);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([]);
   mockGetPostsTodayByClient.mockResolvedValueOnce([]);
 
   await absensiKomentar('POLRES', { roleFlag: 'ditbinmas' });
 
-  expect(mockGetUsersByClient).toHaveBeenCalledWith('POLRES', 'ditbinmas');
-  expect(mockGetUsersByDirektorat).not.toHaveBeenCalled();
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
+  expect(mockGetUsersByClient).not.toHaveBeenCalled();
 });

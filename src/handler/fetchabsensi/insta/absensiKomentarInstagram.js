@@ -44,11 +44,7 @@ export async function absensiKomentarInstagram(client_id, opts = {}) {
   const clientNama = await getClientNama(targetClient);
   const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
-  if (
-    roleFlag &&
-    allowedRoles.includes(roleFlag.toLowerCase()) &&
-    roleFlag.toUpperCase() === targetClient.toUpperCase()
-  ) {
+  if (roleFlag && allowedRoles.includes(roleFlag.toLowerCase())) {
     users = (await getUsersByDirektorat(roleFlag.toLowerCase())).filter(
       (u) => u.status === true
     );
