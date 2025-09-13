@@ -427,6 +427,10 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
       kurangCount: kurang.length,
       belumCount,
       noUsernameCount: tanpaUsername.length,
+      sudahList: sudah.map((u) => `- ${formatNama(u)}`),
+      kurangList: kurang.map((u) => `- ${formatNama(u)}`),
+      belumList: belum.map((u) => `- ${formatNama(u)}`),
+      noUsernameList: tanpaUsername.map((u) => `- ${formatNama(u)}`),
     });
   }
 
@@ -440,15 +444,26 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
     return a.clientName.localeCompare(b.clientName);
   });
 
-  const reports = reportEntries.map(
-    (r, idx) =>
+  const reports = reportEntries.map((r, idx) => {
+    const sudahList = r.sudahList.length ? r.sudahList.join("\n") : "-";
+    const kurangList = r.kurangList.length ? r.kurangList.join("\n") : "-";
+    const belumList = r.belumList.length ? r.belumList.join("\n") : "-";
+    const noUsernameList = r.noUsernameList.length
+      ? r.noUsernameList.join("\n")
+      : "-";
+    return (
       `${idx + 1}. ${r.clientName}\n\n` +
       `Jumlah Personil : ${r.usersCount} pers\n` +
       `Sudah melaksanakan : ${r.sudahCount} pers\n` +
       `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
       `Belum melaksanakan : ${r.belumCount} pers\n` +
-      `Belum Update Username TikTok : ${r.noUsernameCount} pers`
-  );
+      `Belum Update Username TikTok : ${r.noUsernameCount} pers\n\n` +
+      `✅ Sudah melaksanakan (${r.sudahCount} pers):\n${sudahList}\n\n` +
+      `⚠️ Melaksanakan kurang lengkap (${r.kurangCount} pers):\n${kurangList}\n\n` +
+      `❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}\n\n` +
+      `⚠️ Belum Update Username TikTok (${r.noUsernameCount} pers):\n${noUsernameList}`
+    );
+  });
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
