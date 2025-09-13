@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import waClient from "../service/waService.js";
+import { waGatewayClient } from "../service/waService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
@@ -30,7 +30,7 @@ export async function runCron() {
     const msg = await generateSosmedTaskMessage();
     const recipients = getRecipients();
     for (const wa of recipients) {
-      await safeSendMessage(waClient, wa, msg.trim());
+      await safeSendMessage(waGatewayClient, wa, msg.trim());
     }
     sendDebug({
       tag: "CRON DIRFETCH SOSMED",

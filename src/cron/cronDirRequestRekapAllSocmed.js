@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import waClient from "../service/waService.js";
+import { waGatewayClient } from "../service/waService.js";
 import {
   lapharDitbinmas,
   collectLikesRecap,
@@ -90,17 +90,17 @@ export async function runCron(sendToRekapRecipient = false) {
 
       for (const wa of recipients) {
         if (narrative) {
-          await safeSendMessage(waClient, wa, narrative.trim());
+          await safeSendMessage(waGatewayClient, wa, narrative.trim());
         }
         if (igBuffer) {
-          await sendWAFile(waClient, igBuffer, ig.filename, wa, "text/plain");
+          await sendWAFile(waGatewayClient, igBuffer, ig.filename, wa, "text/plain");
         }
         if (ttBuffer) {
-          await sendWAFile(waClient, ttBuffer, tt.filename, wa, "text/plain");
+          await sendWAFile(waGatewayClient, ttBuffer, tt.filename, wa, "text/plain");
         }
         if (igRecapBuffer) {
           await sendWAFile(
-            waClient,
+            waGatewayClient,
             igRecapBuffer,
             igRecapName,
             wa,
@@ -109,7 +109,7 @@ export async function runCron(sendToRekapRecipient = false) {
         }
         if (ttRecapBuffer) {
           await sendWAFile(
-            waClient,
+            waGatewayClient,
             ttRecapBuffer,
             ttRecapName,
             wa,

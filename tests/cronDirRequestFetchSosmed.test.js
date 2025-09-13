@@ -7,7 +7,7 @@ const mockGenerateMsg = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
 
-jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {} }));
+jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
   fetchAndStoreInstaContent: mockFetchInsta,
 }));

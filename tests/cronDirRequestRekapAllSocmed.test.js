@@ -16,7 +16,7 @@ const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
 const mockUnlink = jest.fn();
 
-jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {} }));
+jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
   lapharDitbinmas: mockLapharDitbinmas,
   collectLikesRecap: mockCollectLikesRecap,
