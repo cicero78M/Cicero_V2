@@ -254,7 +254,7 @@ test('choose_menu option 3 absensi likes ditbinmas', async () => {
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
 });
 
-test('choose_menu option 5 absensi komentar ditbinmas', async () => {
+test('choose_menu option 5 absensi komentar tiktok', async () => {
   mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan komentar');
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
@@ -309,50 +309,6 @@ test('choose_menu option 4 skips ketika client bukan ditbinmas', async () => {
   );
 });
 
-
-test('choose_menu option 16 absensi komentar tiktok uses ditbinmas data for all users', async () => {
-  mockAbsensiKomentar.mockResolvedValue('laporan komentar tiktok');
-
-  const session = {
-    role: 'ditbinmas',
-    selectedClientId: 'polres_a',
-    clientName: 'POLRES A',
-    dir_client_id: 'ditbinmas',
-  };
-  const chatId = '765';
-  const waClient = { sendMessage: jest.fn() };
-
-  await dirRequestHandlers.choose_menu(session, chatId, '16', waClient);
-
-  expect(mockAbsensiKomentar).toHaveBeenCalledWith('DITBINMAS', {
-    mode: 'all',
-    roleFlag: 'ditbinmas',
-  });
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    'laporan komentar tiktok'
-  );
-});
-
-test('choose_menu option 16 skips ketika client bukan ditbinmas', async () => {
-  mockAbsensiKomentar.mockResolvedValue('laporan komentar tiktok');
-
-  const session = {
-    role: 'polres',
-    selectedClientId: 'polres_a',
-    clientName: 'POLRES A',
-  };
-  const chatId = '766';
-  const waClient = { sendMessage: jest.fn() };
-
-  await dirRequestHandlers.choose_menu(session, chatId, '16', waClient);
-
-  expect(mockAbsensiKomentar).not.toHaveBeenCalled();
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    expect.stringContaining('DITBINMAS')
-  );
-});
 
 test('choose_menu option 6 fetch insta returns rekap likes report', async () => {
   mockFetchAndStoreInstaContent.mockResolvedValue();
