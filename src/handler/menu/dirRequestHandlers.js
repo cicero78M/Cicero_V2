@@ -9,6 +9,7 @@ import {
   lapharTiktokDitbinmas,
   collectKomentarRecap,
   absensiKomentarDitbinmasReport,
+  absensiKomentar,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
@@ -233,6 +234,9 @@ async function absensiLikesDitbinmas() {
 }
 async function anbsensiKomentarTiktok() {
   return await absensiKomentarDitbinmasReport();
+}
+async function absensiKomentarDitbinmas() {
+  return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
 }
 async function formatRekapBelumLengkapDitbinmas() {
   const users = await getUsersSocialByClient("DITBINMAS", "ditbinmas");
@@ -753,6 +757,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       }
       return;
     }
+    case "16":
+      msg = await absensiKomentarDitbinmas();
+      break;
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -866,6 +873,7 @@ export const dirRequestHandlers = {
         "1️⃣3️⃣ Laporan harian TikTok Ditbinmas\n" +
         "1️⃣4️⃣ Rekap like Instagram (Excel)\n" +
         "1️⃣5️⃣ Rekap gabungan semua sosmed\n" +
+        "1️⃣6️⃣ Absensi komentar TikTok\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -906,6 +914,7 @@ export const dirRequestHandlers = {
       "13",
       "14",
       "15",
+      "16",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
@@ -935,6 +944,7 @@ export {
   formatRekapUserData,
   absensiLikesDitbinmas,
   anbsensiKomentarTiktok,
+  absensiKomentarDitbinmas,
   formatExecutiveSummary,
   formatRekapBelumLengkapDitbinmas,
   formatRekapAllSosmed,
