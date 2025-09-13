@@ -112,13 +112,9 @@ export async function absensiKomentar(client_id, opts = {}) {
   const tiktokUsername = clientInfo.tiktok;
   const allowedRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   let users;
-  if (
-    roleFlag &&
-    allowedRoles.includes(roleFlag.toLowerCase()) &&
-    roleFlag.toUpperCase() === client_id.toUpperCase()
-  ) {
+  if (roleFlag && allowedRoles.includes(roleFlag.toLowerCase())) {
     users = (
-      await getUsersByDirektorat(roleFlag.toLowerCase(), clientFilter || client_id)
+      await getUsersByDirektorat(roleFlag.toLowerCase())
     ).filter((u) => u.status === true);
   } else {
     users = await getUsersByClient(clientFilter || client_id, roleFlag);
@@ -137,22 +133,33 @@ export async function absensiKomentar(client_id, opts = {}) {
     client_id,
   });
 
+  const clientLabel =
+    clientInfo.clientType && clientInfo.clientType.toLowerCase() === "direktorat"
+      ? "Direktorat"
+      : "Polres";
+
   if (!posts.length)
-    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten TikTok untuk *${clientLabel}*: *${clientNama}* hari ini.`;
 
   const userStats = {};
   users.forEach((u) => {
     userStats[u.user_id] = { ...u, count: 0 };
   });
 
-  for (const post of posts) {
-    const { comments } = await getCommentsByVideoId(post.video_id);
-    const commentSet = new Set(extractUsernamesFromComments(comments));
-    sendDebug({
-      tag: "ABSEN TTK",
-      msg: `Post ${post.video_id} comments=${commentSet.size}`,
-      client_id,
-    });
+  const commentSets = await Promise.all(
+    posts.map(async (post) => {
+      const { comments } = await getCommentsByVideoId(post.video_id);
+      const commentSet = new Set(extractUsernamesFromComments(comments));
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: `Post ${post.video_id} comments=${commentSet.size}`,
+        client_id,
+      });
+      return commentSet;
+    })
+  );
+
+  commentSets.forEach((commentSet) => {
     users.forEach((u) => {
       if (
         u.tiktok &&
@@ -162,7 +169,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         userStats[u.user_id].count += 1;
       }
     });
-  }
+  });
 
   const totalKonten = posts.length;
 
@@ -170,14 +177,26 @@ export async function absensiKomentar(client_id, opts = {}) {
     const groups = {};
     Object.values(userStats).forEach((u) => {
       const cid = u.client_id?.toUpperCase() || "";
-      if (!groups[cid]) groups[cid] = { total: 0, updated: 0, noUsername: 0 };
-      groups[cid].total++;
+      if (!groups[cid])
+        groups[cid] = {
+          total: 0,
+          sudah: 0,
+          kurang: 0,
+          belum: 0,
+          noUsername: 0,
+        };
+      const g = groups[cid];
+      g.total++;
       if (u.exception === true) {
-        groups[cid].updated++;
+        g.sudah++;
       } else if (!u.tiktok || u.tiktok.trim() === "") {
-        groups[cid].noUsername++;
+        g.noUsername++;
       } else if (u.count >= Math.ceil(totalKonten / 2)) {
-        groups[cid].updated++;
+        g.sudah++;
+      } else if (u.count > 0) {
+        g.kurang++;
+      } else {
+        g.belum++;
       }
     });
     const kontenLinks = posts.map(
@@ -187,22 +206,40 @@ export async function absensiKomentar(client_id, opts = {}) {
       Object.keys(groups).map(async (cid) => {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
-        const belum = g.total - g.updated - g.noUsername;
         return (
           `*Polres*: *${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
-          `✅ *Sudah melaksanakan* : *${g.updated} user*\n` +
-          `❌ *Belum melaksanakan* : *${belum} user*\n` +
+          `✅ *Sudah melaksanakan* : *${g.sudah} user*\n` +
+          `⚠️ *Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
+          `❌ *Belum melaksanakan* : *${g.belum} user*\n` +
           `⚠️ *Belum input username* : *${g.noUsername} user*`
         );
       })
     );
+
+    const totals = Object.values(groups).reduce(
+      (acc, g) => {
+        acc.total += g.total;
+        acc.sudah += g.sudah;
+        acc.kurang += g.kurang;
+        acc.belum += g.belum;
+        acc.noUsername += g.noUsername;
+        return acc;
+      },
+      { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 }
+    );
+
     let msg =
       `Mohon ijin Komandan,\n\n` +
       `📋 *Rekap Akumulasi Komentar TikTok*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
       `*Jumlah Konten:* ${totalKonten}\n` +
       `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
       reports.join("\n\n") +
+      `\n\n*Total Personel:* ${totals.total}\n` +
+      `✅ *Sudah melaksanakan* : *${totals.sudah} user*\n` +
+      `⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} user*\n` +
+      `❌ *Belum melaksanakan* : *${totals.belum} user*\n` +
+      `⚠️ *Belum input username* : *${totals.noUsername} user*` +
       `\n\nTerimakasih.`;
     return msg.trim();
   }
@@ -316,122 +353,115 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
   if (!posts.length)
     return "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
 
-  const { tiktok: mainUsername } = await getClientInfo(roleName);
+  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
   const kontenLinks = posts.map(
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
+
   const commentSets = [];
   for (const p of posts) {
     const { comments } = await getCommentsByVideoId(p.video_id);
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
 
-  let users = (
-    await getUsersByDirektorat(roleName, "DITBINMAS")
-  ).filter((u) => u.status === true);
+  let polresIds;
+  let allUsers;
   if (clientFilter) {
-    const cid = clientFilter.toUpperCase();
-    users = users.filter(
-      (u) => (u.client_id || "").toUpperCase() === cid
-    );
+    polresIds = [clientFilter.toUpperCase()];
+    allUsers = (
+      await getUsersByDirektorat(roleName, clientFilter)
+    ).filter((u) => u.status === true);
+  } else {
+    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+    allUsers = (
+      await getUsersByDirektorat(roleName, polresIds)
+    ).filter((u) => u.status === true);
   }
 
-  const already = [];
-  const partial = [];
-  const none = [];
-  const noUsername = [];
-
-  users.forEach((u) => {
-    if (!u.tiktok || u.tiktok.trim() === "") {
-      noUsername.push(u);
-      return;
-    }
-    const uname = normalizeUsername(u.tiktok);
-    let count = 0;
-    commentSets.forEach((set) => {
-      if (set.has(uname)) count += 1;
-    });
-    if (count === posts.length) already.push({ ...u, count });
-    else if (count > 0) partial.push({ ...u, count });
-    else none.push({ ...u, count });
+  const usersByClient = {};
+  allUsers.forEach((u) => {
+    const cid = u.client_id?.toUpperCase() || "";
+    if (!usersByClient[cid]) usersByClient[cid] = [];
+    usersByClient[cid].push(u);
   });
 
-  const totals = {
-    total: users.length,
-    sudah: already.length + partial.length,
-    kurang: partial.length,
-    belum: none.length + noUsername.length,
-    noUsername: noUsername.length,
-  };
+  const totalKonten = posts.length;
+  const reportEntries = [];
+  const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 };
 
-  const pangkatOrder = [
-    "KOMISARIS BESAR POLISI",
-    "AKBP",
-    "KOMPOL",
-    "AKP",
-    "IPTU",
-    "IPDA",
-    "AIPTU",
-    "AIPDA",
-    "BRIPKA",
-    "BRIGADIR",
-    "BRIPTU",
-    "BRIPDA",
-  ];
-  const rankIdx = (t) => {
-    const i = pangkatOrder.indexOf((t || "").toUpperCase());
-    return i === -1 ? pangkatOrder.length : i;
-  };
-  const sortUsers = (arr) =>
-    arr.sort(
-      (a, b) =>
-        rankIdx(a.title) - rankIdx(b.title) ||
-        formatNama(a).localeCompare(formatNama(b))
-    );
+  for (const cid of polresIds) {
+    const users = usersByClient[cid] || [];
+    const { nama: clientName } = await getClientInfo(cid);
+    const sudah = [];
+    const kurang = [];
+    const belum = [];
+    const tanpaUsername = [];
 
-  sortUsers(already);
-  sortUsers(partial);
-  sortUsers(none);
-  sortUsers(noUsername);
+    users.forEach((u) => {
+      if (!u.tiktok || u.tiktok.trim() === "") {
+        tanpaUsername.push(u);
+        return;
+      }
+      const uname = normalizeUsername(u.tiktok);
+      let count = 0;
+      commentSets.forEach((set) => {
+        if (set.has(uname)) count += 1;
+      });
+      const percentage = totalKonten ? (count / totalKonten) * 100 : 0;
+      if (percentage >= 50) sudah.push(u);
+      else if (percentage > 0) kurang.push(u);
+      else belum.push(u);
+    });
+
+    const belumCount = belum.length + tanpaUsername.length;
+    totals.total += users.length;
+    totals.sudah += sudah.length;
+    totals.kurang += kurang.length;
+    totals.belum += belumCount;
+    totals.noUsername += tanpaUsername.length;
+
+    reportEntries.push({
+      clientName,
+      usersCount: users.length,
+      sudahCount: sudah.length,
+      kurangCount: kurang.length,
+      belumCount,
+      noUsernameCount: tanpaUsername.length,
+    });
+  }
+
+  reportEntries.sort((a, b) => {
+    const aBinmas = a.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+    const bBinmas = b.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+    if (aBinmas && !bBinmas) return -1;
+    if (bBinmas && !aBinmas) return 1;
+    if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
+    if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
+    return a.clientName.localeCompare(b.clientName);
+  });
+
+  const reports = reportEntries.map(
+    (r, idx) =>
+      `${idx + 1}. ${r.clientName}\n\n` +
+      `Jumlah Personil : ${r.usersCount} pers\n` +
+      `Sudah melaksanakan : ${r.sudahCount} pers\n` +
+      `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
+      `Belum melaksanakan : ${r.belumCount} pers\n` +
+      `Belum Update Username TikTok : ${r.noUsernameCount} pers`
+  );
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Komentar TikTok\n` +
-    `DIREKTORAT BINMAS\n` +
-    `${hari}, ${tanggal}\n` +
-    `Jam: ${jam}\n\n` +
-    `Jumlah Konten: ${posts.length}\n` +
-    `Daftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
+    `Polres: ${dirName}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `Jumlah Konten: ${totalKonten}\n` +
+    `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
     `Jumlah Total Personil : ${totals.total} pers\n` +
     `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
     `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
     `❌ Belum melaksanakan : ${totals.belum} pers\n` +
-    `⚠️⚠️ Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
-    `✅Sudah Komentar : ${already.length}\n` +
-    (already.length
-      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
-      : "-\n\n") +
-    `⚠️Kurang komentar : ${partial.length}\n` +
-    (partial.length
-      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
-      : "-\n\n") +
-    `❌Belum Komentar : ${none.length}\n` +
-    (none.length
-      ? none
-          .map((u) => `- ${formatNama(u)}, ${u.tiktok || "-"}`)
-          .join("\n") + "\n\n"
-      : "-\n\n") +
-    `⚠️⚠️Belum Input Sosial media : ${noUsername.length}\n` +
-    (noUsername.length
-      ? noUsername
-          .map(
-            (u) =>
-              `- ${formatNama(u)}, IG ${u.insta ? u.insta : "Kosong"}, Tiktok ${
-                u.tiktok ? u.tiktok : "Kosong"
-              }`
-          )
-          .join("\n")
-      : "-");
+    `Belum Update Username TikTok : ${totals.noUsername} pers\n\n` +
+    reports.join("\n\n");
 
   return msg.trim();
 }
@@ -891,6 +921,10 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   const clientInfo = await getClientInfo(client_id);
   const clientNama = clientInfo.nama;
   const tiktokUsername = clientInfo.tiktok;
+  const clientLabel =
+    clientInfo.clientType && clientInfo.clientType.toLowerCase() === "direktorat"
+      ? "Direktorat"
+      : "Polres";
   const users = await getUsersByClient(client_id);
   const posts = await getPostsTodayByClient(client_id);
   sendDebug({
@@ -900,12 +934,12 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
   });
 
   if (!posts.length)
-    return `Tidak ada konten TikTok untuk *Polres*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten TikTok untuk *${clientLabel}*: *${clientNama}* hari ini.`;
 
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Per Konten Komentar TikTok*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `📋 *Rekap Per Konten Komentar TikTok*\n*${clientLabel}*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${posts.length}\n`;
 
   for (const p of posts) {

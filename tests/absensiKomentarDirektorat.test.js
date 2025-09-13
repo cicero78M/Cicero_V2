@@ -43,10 +43,11 @@ test('aggregates directorate data per client', async () => {
 
   const msg = await absensiKomentar('ditbinmas', { roleFlag: 'ditbinmas' });
 
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'ditbinmas');
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
 
   expect(msg).toContain('POLRES A');
   expect(msg).toContain('✅ *Sudah melaksanakan* : *1 user*');
+  expect(msg).toContain('⚠️ *Melaksanakan kurang lengkap* : *0 user*');
   expect(msg).toContain('POLRES B');
   expect(msg).toContain('❌ *Belum melaksanakan* : *1 user*');
   expect(msg).not.toMatch(/usera/i);
