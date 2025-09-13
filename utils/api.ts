@@ -8,7 +8,7 @@ export async function getClientNamesBatch(clientIds, authHeader = '') {
       'Content-Type': 'application/json',
       Authorization: authHeader,
     },
-    body: JSON.stringify({ client_id: uniqueIds }),
+    body: JSON.stringify({ client_ids: uniqueIds }),
   });
 
   if (!response.ok) {
