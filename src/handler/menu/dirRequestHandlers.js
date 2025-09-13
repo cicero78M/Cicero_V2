@@ -236,6 +236,7 @@ async function anbsensiKomentarTiktok() {
   return await absensiKomentarDitbinmasReport();
 }
 async function absensiKomentarDitbinmas() {
+  // Generate TikTok comment attendance report for Ditbinmas
   return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
 }
 async function formatRekapBelumLengkapDitbinmas() {
@@ -943,8 +944,8 @@ export const dirRequestHandlers = {
 export {
   formatRekapUserData,
   absensiLikesDitbinmas,
-  anbsensiKomentarTiktok,
   absensiKomentarDitbinmas,
+  anbsensiKomentarTiktok,
   formatExecutiveSummary,
   formatRekapBelumLengkapDitbinmas,
   formatRekapAllSosmed,
