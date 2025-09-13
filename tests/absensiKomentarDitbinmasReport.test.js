@@ -57,7 +57,7 @@ test('aggregates komentar report per satker with Direktorat Binmas on top', asyn
 
   const msg = await absensiKomentarDitbinmasReport();
 
-  expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
+  expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas', undefined);
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', ['DITBINMAS', 'POLRESA']);
   expect(msg).toContain('*Jumlah Total Personil:* 4 pers');
   expect(msg).toContain('✅ *Sudah melaksanakan* : *1 pers*');
@@ -80,4 +80,23 @@ test('aggregates komentar report per satker with Direktorat Binmas on top', asyn
     "❌ *Belum melaksanakan* : 1 pers\n" +
     "⚠️ *Belum Update Username TikTok* : 0 pers";
   expect(msg).toContain(expectedPolres);
+});
+
+test('filters polres and users when clientFilter is provided', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ nama: 'DIREKTORAT BINMAS', client_tiktok: 'ditbinmastiktok' }] })
+    .mockResolvedValueOnce({ rows: [{ nama: 'POLRES A' }] });
+
+  mockGetClientsByRole.mockResolvedValueOnce(['polresa']);
+  mockGetPostsTodayByClient.mockResolvedValueOnce([{ video_id: 'vid1' }]);
+  mockGetCommentsByVideoId.mockResolvedValueOnce({ comments: [] });
+  mockGetUsersByDirektorat.mockResolvedValueOnce([
+    { user_id: 'u1', nama: 'User1', tiktok: '', client_id: 'POLRESA', status: true },
+  ]);
+
+  const msg = await absensiKomentarDitbinmasReport({ clientFilter: 'POLRESA' });
+
+  expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas', 'POLRESA');
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'POLRESA');
+  expect(msg).toContain('POLRES A');
 });

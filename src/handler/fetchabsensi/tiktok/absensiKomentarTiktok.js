@@ -49,6 +49,7 @@ function normalizeUsername(username) {
 }
 
 export async function collectKomentarRecap(clientId, opts = {}) {
+  const { selfOnly, clientFilter } = opts;
   const posts = await getPostsTodayByClient(clientId);
   const videoIds = posts.map((p) => p.video_id);
   const commentSets = [];
@@ -58,14 +59,17 @@ export async function collectKomentarRecap(clientId, opts = {}) {
   }
   const roleName = String(clientId || "").toLowerCase();
   let polresIds;
-  if (opts.selfOnly) {
+  if (selfOnly) {
     polresIds = [String(clientId).toUpperCase()];
   } else {
-    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
+    polresIds = (await getClientsByRole(roleName, clientFilter)).map((c) => c.toUpperCase());
   }
-  const allUsers = (
-    await getUsersByDirektorat(roleName, polresIds)
-  ).filter((u) => u.status === true);
+  const filterForUsers = selfOnly ? polresIds : clientFilter || polresIds;
+  const allUsers = polresIds.length
+    ? (await getUsersByDirektorat(roleName, filterForUsers)).filter(
+        (u) => u.status === true
+      )
+    : [];
   const usersByClient = {};
   allUsers.forEach((u) => {
     const cid = u.client_id?.toUpperCase() || "";
@@ -364,19 +368,15 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
 
-  let polresIds;
-  let allUsers;
-  if (clientFilter) {
-    polresIds = [clientFilter.toUpperCase()];
-    allUsers = (
-      await getUsersByDirektorat(roleName, clientFilter)
-    ).filter((u) => u.status === true);
-  } else {
-    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
-    allUsers = (
-      await getUsersByDirektorat(roleName, polresIds)
-    ).filter((u) => u.status === true);
-  }
+  const polresIds = (await getClientsByRole(roleName, clientFilter)).map(
+    (c) => c.toUpperCase()
+  );
+  const userFilter = clientFilter || polresIds;
+  const allUsers = polresIds.length
+    ? (await getUsersByDirektorat(roleName, userFilter)).filter(
+        (u) => u.status === true
+      )
+    : [];
 
   const usersByClient = {};
   allUsers.forEach((u) => {
