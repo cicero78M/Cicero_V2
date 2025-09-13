@@ -224,8 +224,49 @@ export function waitForWaReady(timeout = 30000) {
   });
 }
 
+export function waitUntilClientReady(client, timeout = 30000) {
+  if (client?.isReady?.()) return Promise.resolve();
+
+  return new Promise(async (resolve, reject) => {
+    let timer;
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      clearTimeout(timer);
+      client?.off?.("ready", onReady);
+    };
+
+    client?.on?.("ready", onReady);
+
+    try {
+      if (client?.isReady?.()) {
+        cleanup();
+        resolve();
+        return;
+      }
+      if (client?.getState) {
+        const state = await client.getState().catch(() => undefined);
+        if (state === "CONNECTED" || state === "open") {
+          cleanup();
+          resolve();
+          return;
+        }
+      }
+    } catch (_) {}
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("WhatsApp client not ready"));
+    }, timeout);
+  });
+}
+
 // Expose readiness helper for consumers like safeSendMessage
 waClient.waitForWaReady = waitForWaReady;
+waUserClient.waitForWaReady = () => waitUntilClientReady(waUserClient);
+waGatewayClient.waitForWaReady = () => waitUntilClientReady(waGatewayClient);
 
 // Pastikan semua pengiriman pesan menunggu hingga client siap
 function wrapSendMessage(client) {
@@ -233,7 +274,12 @@ function wrapSendMessage(client) {
   client._originalSendMessage = original;
 
   async function sendWithRetry(args, attempt = 0) {
-    await waitForWaReady().catch(() => {
+    const waitFn =
+      typeof client.waitForWaReady === "function"
+        ? client.waitForWaReady
+        : () => waitUntilClientReady(client);
+
+    await waitFn().catch(() => {
       console.warn("[WA] sendMessage called before ready");
       throw new Error("WhatsApp client not ready");
     });
