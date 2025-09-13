@@ -295,23 +295,6 @@ test('choose_menu option 4 skips ketika client bukan ditbinmas', async () => {
   );
 });
 
-test('choose_menu option 5 absensi komentar uses ditbinmas report', async () => {
-  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan komentar');
-
-  const session = {
-    role: 'ditbinmas',
-    selectedClientId: 'polres_a',
-    clientName: 'POLRES A',
-    dir_client_id: 'ditbinmas',
-  };
-  const chatId = '4321';
-  const waClient = { sendMessage: jest.fn() };
-
-  await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
-
-  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
-  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan komentar');
-});
 
 test('choose_menu option 16 absensi komentar tiktok uses ditbinmas data for all users', async () => {
   mockAbsensiKomentar.mockResolvedValue('laporan komentar tiktok');
