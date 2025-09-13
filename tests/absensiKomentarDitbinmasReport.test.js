@@ -59,15 +59,25 @@ test('aggregates komentar report per satker with Direktorat Binmas on top', asyn
 
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', ['DITBINMAS', 'POLRESA']);
-  expect(msg).toMatch(/Jumlah Total Personil : 4 pers/);
-  expect(msg).toMatch(/✅ Sudah melaksanakan : 1 pers/);
-  expect(msg).toMatch(/Melaksanakan kurang lengkap : 1 pers/);
-  expect(msg).toMatch(/❌ Belum melaksanakan : 2 pers/);
-  expect(msg).toMatch(/Belum Update Username TikTok : 1 pers/);
-  expect(msg).toMatch(
-    /1\. DIREKTORAT BINMAS\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 1 pers\nMelaksanakan kurang lengkap : 0 pers\nBelum melaksanakan : 1 pers\nBelum Update Username TikTok : 1 pers/
-  );
-  expect(msg).toMatch(
-    /2\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 1 pers\nBelum Update Username TikTok : 0 pers/
-  );
+  expect(msg).toContain('*Jumlah Total Personil:* 4 pers');
+  expect(msg).toContain('✅ *Sudah melaksanakan* : *1 pers*');
+  expect(msg).toContain('⚠️ *Melaksanakan kurang lengkap* : *1 pers*');
+  expect(msg).toContain('❌ *Belum melaksanakan* : *2 pers*');
+  expect(msg).toContain('⚠️ *Belum Update Username TikTok* : *1 pers*');
+  const expectedDir =
+    "1. DIREKTORAT BINMAS\n\n" +
+    "*Jumlah Personil* : 2 pers\n" +
+    "✅ *Sudah melaksanakan* : 1 pers\n" +
+    "⚠️ *Melaksanakan kurang lengkap* : 0 pers\n" +
+    "❌ *Belum melaksanakan* : 1 pers\n" +
+    "⚠️ *Belum Update Username TikTok* : 1 pers";
+  expect(msg).toContain(expectedDir);
+  const expectedPolres =
+    "2. POLRES A\n\n" +
+    "*Jumlah Personil* : 2 pers\n" +
+    "✅ *Sudah melaksanakan* : 0 pers\n" +
+    "⚠️ *Melaksanakan kurang lengkap* : 1 pers\n" +
+    "❌ *Belum melaksanakan* : 1 pers\n" +
+    "⚠️ *Belum Update Username TikTok* : 0 pers";
+  expect(msg).toContain(expectedPolres);
 });
