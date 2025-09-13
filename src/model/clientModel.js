@@ -158,15 +158,3 @@ export async function getAllClientIds() {
     status: r.client_status,
   }));
 }
-
-export async function findNamesByIds(clientIds) {
-  const res = await query(
-    'SELECT client_id, nama FROM clients WHERE client_id = ANY($1)',
-    [clientIds]
-  );
-  const map = {};
-  for (const row of res.rows) {
-    map[row.client_id] = row.nama;
-  }
-  return map;
-}
