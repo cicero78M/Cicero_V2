@@ -10,7 +10,7 @@ import claimRoutes from './src/routes/claimRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
-import { waClient } from './src/service/waService.js';
+import { waClient, waGatewayClient } from './src/service/waService.js';
 import { startOtpWorker } from './src/service/otpQueue.js';
 
 // Import semua cron jobs setelah WhatsApp siap
@@ -25,10 +25,15 @@ const cronModules = [
   './src/cron/cronDirRequestDirektorat.js',
   './src/cron/cronDbBackup.js',
 ];
-
-waClient.on('ready', async () => {
+let cronInitialized = false;
+async function initCrons() {
+  if (cronInitialized) return;
+  cronInitialized = true;
   await Promise.all(cronModules.map(m => import(m)));
-});
+  console.log('[CRON] Cron jobs initialized');
+}
+waClient.once('ready', initCrons);
+waGatewayClient.once('ready', initCrons);
 
 startOtpWorker().catch(err => console.error('[OTP] worker error', err));
 
