@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { client_ids, clientIds } = await req.json();
-    const ids = client_ids || clientIds;
+    const { client_id: clientIds } = await req.json();
 
     const authHeader = req.headers.get('authorization') || '';
 
@@ -14,7 +13,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         Authorization: authHeader,
       },
-      body: JSON.stringify({ client_ids: ids }),
+      body: JSON.stringify({ client_id: clientIds }),
     });
 
     const data = await response.json();
