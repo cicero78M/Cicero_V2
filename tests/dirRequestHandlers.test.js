@@ -431,8 +431,12 @@ test('choose_menu option 12 fetch sosial media sends combined task', async () =>
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockFetchAndStoreTiktokContent.mockResolvedValue();
-      mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
-      mockGenerateSosmedTaskMessage.mockResolvedValue('tugas sosmed');
+        mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
+        mockGenerateSosmedTaskMessage.mockResolvedValue({
+          text: 'tugas sosmed',
+          igCount: 0,
+          tiktokCount: 0,
+        });
   mockSafeSendMessage.mockResolvedValue(true);
   mockFindClientById.mockResolvedValue({ client_type: 'direktorat', nama: 'DITBINMAS' });
 

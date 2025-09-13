@@ -84,7 +84,11 @@ export async function generateSosmedTaskMessage(
     "Rincian:\n";
   msg += tiktokDetails.length ? tiktokDetails.join("\n") : "-";
   msg += "\n\nSilahkan Melaksanakan Likes, Komentar dan Share.";
-  return msg.trim();
+  return {
+    text: msg.trim(),
+    igCount: shortcodes.length,
+    tiktokCount: tiktokPosts.length,
+  };
 }
 
 export default generateSosmedTaskMessage;

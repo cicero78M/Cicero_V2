@@ -633,11 +633,11 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         targetId
       );
       await handleFetchLikesInstagram(null, null, targetId);
-      await fetchAndStoreTiktokContent(targetId, waClient, chatId);
-      await handleFetchKomentarTiktokBatch(null, null, targetId);
-      msg = await generateSosmedTaskMessage(targetId, true);
-      break;
-    }
+        await fetchAndStoreTiktokContent(targetId, waClient, chatId);
+        await handleFetchKomentarTiktokBatch(null, null, targetId);
+        ({ text: msg } = await generateSosmedTaskMessage(targetId, true));
+        break;
+      }
     case "13": {
       const { text, filename, narrative, textBelum, filenameBelum } =
         await lapharTiktokDitbinmas();

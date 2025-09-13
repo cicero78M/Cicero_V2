@@ -48,13 +48,15 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
 
-  const msg = await generateSosmedTaskMessage();
+  const { text, igCount, tiktokCount } = await generateSosmedTaskMessage();
 
   expect(mockFindClientById).toHaveBeenCalledWith('DITBINMAS');
-  expect(msg).toContain('Total likes semua konten: 2');
-  expect(msg).toContain('Total komentar semua konten: 1');
-  expect(msg).toContain('https://www.tiktok.com/video/123');
-  expect(msg).toContain('2 likes');
+  expect(text).toContain('Total likes semua konten: 2');
+  expect(text).toContain('Total komentar semua konten: 1');
+  expect(text).toContain('https://www.tiktok.com/video/123');
+  expect(text).toContain('2 likes');
+  expect(igCount).toBe(1);
+  expect(tiktokCount).toBe(1);
   expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
 });
