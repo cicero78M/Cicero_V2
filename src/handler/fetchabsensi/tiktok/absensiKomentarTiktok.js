@@ -114,7 +114,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   let users;
   if (roleFlag && allowedRoles.includes(roleFlag.toLowerCase())) {
     users = (
-      await getUsersByDirektorat(roleFlag.toLowerCase())
+      await getUsersByDirektorat(roleFlag.toLowerCase(), clientFilter || client_id)
     ).filter((u) => u.status === true);
   } else {
     users = await getUsersByClient(clientFilter || client_id, roleFlag);
