@@ -145,7 +145,7 @@ export async function runCron(sendToRekapRecipient = false) {
 }
 
 cron.schedule(
-  "0 35 15,18 * * *",
+  "0 0 35 15,18 * * *",
   async () => {
     // Send recap to admin and group only
     await runCron(false);
