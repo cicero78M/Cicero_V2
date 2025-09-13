@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         Authorization: authHeader,
       },
-      body: JSON.stringify({ client_id: clientIds, Authorization: authHeader }),
+      body: JSON.stringify({ client_id: clientIds }),
     });
 
     const data = await response.json();
