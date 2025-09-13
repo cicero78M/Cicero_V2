@@ -35,9 +35,11 @@ export const getActiveClients = async (req, res, next) => {
 // Ambil nama-nama client secara batch
 export const getClientNamesBatch = async (req, res, next) => {
   try {
-    const { client_ids: clientIds } = req.body;
+    const clientIds = req.body.clientIds || req.body.client_ids;
     if (!Array.isArray(clientIds) || clientIds.length === 0) {
-      return res.status(400).json({ error: 'client_ids must be a non-empty array' });
+      return res
+        .status(400)
+        .json({ error: 'clientIds must be a non-empty array' });
     }
     const names = await clientService.findClientNamesByIds(clientIds);
     sendSuccess(res, names);
