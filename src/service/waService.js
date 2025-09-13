@@ -130,6 +130,7 @@ function formatUserSummary(user) {
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
+export let waGatewayClient = await createWwebjsClient(env.GATEWAY_WA_CLIENT_ID);
 
 function handleDisconnect(reason) {
   waReady = false;
@@ -153,6 +154,17 @@ function handleUserDisconnect(reason) {
 }
 
 waUserClient.onDisconnect(handleUserDisconnect);
+
+function handleGatewayDisconnect(reason) {
+  console.warn("[WA-GATEWAY] Client disconnected:", reason);
+  setTimeout(() => {
+    waGatewayClient.connect().catch((err) => {
+      console.error("[WA-GATEWAY] Reconnect failed:", err.message);
+    });
+  }, 5000);
+}
+
+waGatewayClient.onDisconnect(handleGatewayDisconnect);
 
 let waReady = false;
 const pendingMessages = [];
@@ -243,6 +255,11 @@ function wrapSendMessage(client) {
 }
 wrapSendMessage(waClient);
 wrapSendMessage(waUserClient);
+wrapSendMessage(waGatewayClient);
+
+export function sendGatewayMessage(jid, text) {
+  return waGatewayClient.sendMessage(jid, text);
+}
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
@@ -2251,6 +2268,13 @@ try {
   await waUserClient.connect();
 } catch (err) {
   console.error("[WA-USER] Initialization failed:", err.message);
+}
+
+console.log("[WA-GATEWAY] Starting WhatsApp client initialization");
+try {
+  await waGatewayClient.connect();
+} catch (err) {
+  console.error("[WA-GATEWAY] Initialization failed:", err.message);
 }
 
 // Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
