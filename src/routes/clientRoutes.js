@@ -6,6 +6,7 @@ import { authRequired } from "../middleware/authMiddleware.js"; // pastikan puny
 const router = express.Router();
 // Routes untuk client
 router.get("/", clientController.getAllClients);
+router.post("/names", clientController.getClientNamesBatch);
 // routes profile client
 router.get("/profile", clientController.getClientProfile);
 router.get("/active", clientController.getActiveClients);
