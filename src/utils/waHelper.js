@@ -61,6 +61,19 @@ export async function sendWAFile(
       ? chatIds
       : [chatIds]
     : getAdminWhatsAppList();
+  if (typeof waClient?.waitForWaReady === 'function') {
+    await waClient.waitForWaReady();
+  } else if (
+    typeof waClient?.isReady === 'function' ||
+    typeof waClient?.getState === 'function' ||
+    typeof waClient?.once === 'function'
+  ) {
+    const ready = await waitUntilReady(waClient);
+    if (!ready) {
+      console.warn(`[WA] Client not ready, cannot send file: ${filename}`);
+      return;
+    }
+  }
   const ext = path.extname(filename).toLowerCase();
   const resolvedMimeType =
     mimeType || spreadsheetMimeTypes[ext] || mime.lookup(filename) || defaultMimeType;
