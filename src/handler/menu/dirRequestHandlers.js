@@ -232,6 +232,9 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 async function absensiLikesDitbinmas() {
   return await absensiLikesDitbinmasReport();
 }
+async function absensiKomentarDitbinmas() {
+  return await absensiKomentarDitbinmasReport();
+}
 async function formatRekapBelumLengkapDitbinmas() {
   const users = await getUsersSocialByClient("DITBINMAS", "ditbinmas");
   const ditbinmasUsers = users.filter(
@@ -491,7 +494,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     case "3":
       msg = await absensiLikesDitbinmas();
       break;
-    case "4": {
+    case "4": { 
       const normalizedId = (clientId || "").toUpperCase();
       if (normalizedId !== "DITBINMAS") {
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
@@ -501,7 +504,10 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await absensiLikes("DITBINMAS", opts);
       break;
     }
-    case "6": {
+    case "5":
+      msg = await absensiKomentarDitbinmas();
+      break;
+    case "6": { 
       const { fetchAndStoreInstaContent } = await import(
         "../fetchpost/instaFetchPost.js"
       );
@@ -859,6 +865,7 @@ export const dirRequestHandlers = {
         "📅 *Absensi*\n" +
         "3️⃣ Absensi like Ditbinmas\n" +
         "4️⃣ Absensi like Instagram\n" +
+        "5️⃣ Absensi komentar Ditbinmas\n" +
         "1️⃣6️⃣ Absensi komentar TikTok\n\n" +
         "📥 *Pengambilan Data*\n" +
         "6️⃣ Ambil konten & like Instagram\n" +
@@ -901,6 +908,7 @@ export const dirRequestHandlers = {
       "11",
       "3",
       "4",
+      "5",
       "16",
       "6",
       "7",
@@ -939,6 +947,7 @@ export const dirRequestHandlers = {
 export {
   formatRekapUserData,
   absensiLikesDitbinmas,
+  absensiKomentarDitbinmas,
   formatExecutiveSummary,
   formatRekapBelumLengkapDitbinmas,
   formatRekapAllSosmed,
