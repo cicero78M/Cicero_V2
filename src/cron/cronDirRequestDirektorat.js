@@ -2,7 +2,7 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import waClient from "../service/waService.js";
+import { waGatewayClient } from "../service/waService.js";
 import { absensiLikesDitbinmas } from "../handler/menu/dirRequestHandlers.js";
 import { absensiKomentarDitbinmasReport } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
@@ -21,8 +21,8 @@ export async function runCron() {
     const komentarMsg = await absensiKomentarDitbinmasReport();
     const recipients = getRecipients();
     for (const wa of recipients) {
-      await safeSendMessage(waClient, wa, likesMsg.trim());
-      await safeSendMessage(waClient, wa, komentarMsg.trim());
+      await safeSendMessage(waGatewayClient, wa, likesMsg.trim());
+      await safeSendMessage(waGatewayClient, wa, komentarMsg.trim());
     }
     sendDebug({
       tag: "CRON DIRREQ DIREKTORAT",
