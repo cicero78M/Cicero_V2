@@ -72,7 +72,7 @@ export async function absensiLikes(client_id, opts = {}) {
       : normalizedClient;
     const shortcodes = await getShortcodesTodayByClient(roleName);
     if (!shortcodes.length)
-      return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
+      return `Tidak ada konten pada akun Official Instagram *${clientNama}* hari ini.`;
 
     const kontenLinks = shortcodes.map(
       (sc) => `https://www.instagram.com/p/${sc}`
@@ -139,25 +139,27 @@ export async function absensiLikes(client_id, opts = {}) {
     const reports = reportEntries.map(
       (r, idx) =>
         `${idx + 1}. ${r.clientName}\n\n` +
-        `Jumlah Personil : ${r.usersCount} pers\n` +
-        `Sudah melaksanakan : ${r.sudahCount} pers\n` +
-        `Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
-        `Belum melaksanakan : ${r.belumCount} pers\n` +
-        `Belum Update Username Instagram : ${r.noUsernameCount} pers`
+        `*Jumlah Personil :* ${r.usersCount} pers\n` +
+        `*Sudah Melaksanakan :* ${r.sudahCount} pers\n` +
+        `- Melaksanakan lengkap : ${r.sudahCount} pers\n` +
+        `- Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
+        `*Belum melaksanakan :* ${r.belumCount} pers\n` +
+        `*Belum Update Username Instagram :* ${r.noUsernameCount} pers`
     );
 
     let msg =
       `Mohon ijin Komandan,\n\n` +
       `📋 Rekap Akumulasi Likes Instagram\n` +
-      `Polres: ${clientNama}\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
-      `Jumlah Konten: ${totalKonten}\n` +
-      `Daftar Link Konten:\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-      `Jumlah Total Personil : ${totals.total} pers\n` +
-      `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
-      `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
-      `❌ Belum melaksanakan : ${totals.belum} pers\n` +
-      `Belum Update Username Instagram : ${totals.noUsername} pers\n\n` +
-      reports.join("\n\n");
+      `*${clientNama}\n${hari}*, ${tanggal}\nJam: ${jam}\n\n` +
+      `*Jumlah Konten :* ${totalKonten}\n` +
+      `*Daftar Link Konten :*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+      `*Jumlah Total Personil :* ${totals.total} pers\n` +
+      `✅ *Sudah melaksanakan :* ${totals.sudah+totals.kurang} pers\n` +
+      `- ✅ Melaksanakan lengkap : ${totals.sudah} pers\n` +
+      `- ⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+      `❌ *Belum melaksanakan :* ${totals.belum} pers\n` +
+      `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
+      reports.join("\n");
     return msg.trim();
   }
 
@@ -166,7 +168,7 @@ export async function absensiLikes(client_id, opts = {}) {
   const shortcodes = await getShortcodesTodayByClient(targetClient);
 
   if (!shortcodes.length)
-    return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten pada akun Official Instagram  *${clientNama}* hari ini.`;
 
   const userStats = {};
   users.forEach((u) => {
@@ -297,7 +299,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `📋 *Rekap Per Konten Likes Instagram*\n *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
   const likesSets = await getLikesSets(shortcodes);
 
@@ -393,10 +395,10 @@ export async function rekapLikesIG(client_id) {
 
   let msg =
     "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media Ditbinmas.\n\n" +
-    "Tugas Likes dan Komentar Konten IG\n" +
+    "Tugas Likes dan Komentar Konten Instagram dari akun official Instagram Ditbinmas\n" +
     `${polresNama.toUpperCase()}\n` +
-    `Jumlah konten hari ini: ${shortcodes.length}\n` +
-    `Total likes semua konten: ${totalLikes}\n\n` +
+    `*Jumlah konten hari ini:* ${shortcodes.length}\n` +
+    `*Total likes semua konten:* ${totalLikes}\n\n` +
     "Rincian:\n";
 
   detailLikes.forEach((d) => {
@@ -417,7 +419,7 @@ export async function absensiLikesDitbinmasReport() {
 
   const shortcodes = await getShortcodesTodayByClient(roleName);
   if (!shortcodes.length)
-    return "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
+    return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -489,31 +491,31 @@ export async function absensiLikesDitbinmasReport() {
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Likes Instagram\n` +
-    `DIREKTORAT BINMAS\n` +
+    `*DIREKTORAT BINMAS*\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
-    `Jumlah Konten: ${shortcodes.length}\n` +
-    `Daftar Link Konten:\n${kontenLinks.join("\n")}\n\n` +
-    `Jumlah Total Personil : ${totals.total} pers\n` +
-    `✅ Sudah melaksanakan : ${totals.sudah} pers\n` +
-    `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
-    `❌ Belum melaksanakan : ${totals.belum} pers\n` +
-    `❌❌Belum Update Username Instagram : ${totals.noUsername} pers\n\n` +
-    `✅Likes Lengkap: ${already.length}\n` +
+    `*Jumlah Konten:* ${shortcodes.length}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
+    `*Jumlah Total Personil :* ${totals.total} pers\n` +
+    `✅ *Melaksanakan Lengkap :* ${totals.sudah} pers\n` +
+    `⚠️ *Melaksanakan kurang lengkap :* ${totals.kurang} pers\n` +
+    `❌ *Belum melaksanakan :* ${totals.belum} pers\n` +
+    `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
+    `✅ *Likes Lengkap:* ${already.length}\n` +
     (already.length
       ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
-      : "-\n\n") +
-    `⚠️Likes Kurang: ${partial.length}\n` +
+      : "-\n") +
+    `⚠️ *Likes Kurang Lengkap:* ${partial.length}\n` +
     (partial.length
       ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
       : "-\n\n") +
-    `❌Belum Likes : ${none.length}\n` +
+    `❌ *Belum Likes :* ${none.length}\n` +
     (none.length
       ? none
           .map((u) => `- ${formatNama(u)}, ${u.insta || "-"}`)
           .join("\n") + "\n"
       : "-\n\n") +
-    `❌❌Belum Input Sosial media : ${noUsername.length}\n` +
+    `⚠️❌ *Belum Input Sosial media :* ${noUsername.length}\n` +
     (noUsername.length
       ? noUsername
           .map(
