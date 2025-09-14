@@ -309,7 +309,7 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Akumulasi Komentar TikTok*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `📋 *Rekap Akumulasi Komentar TikTok*\n*${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${totalKonten}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
     `*Jumlah user:* ${users.length}\n` +
