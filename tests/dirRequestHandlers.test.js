@@ -255,7 +255,7 @@ test('choose_menu option 3 absensi likes ditbinmas', async () => {
 });
 
 test('choose_menu option 5 absensi komentar tiktok', async () => {
-  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('laporan komentar');
+  mockAbsensiKomentar.mockResolvedValue('laporan komentar');
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '333';
@@ -263,13 +263,12 @@ test('choose_menu option 5 absensi komentar tiktok', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '5', waClient);
 
-  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
-  expect(mockAbsensiKomentar).not.toHaveBeenCalled();
+  expect(mockAbsensiKomentar).toHaveBeenCalledWith('DITBINMAS', { roleFlag: 'ditbinmas' });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan komentar');
 });
 
 test('choose_menu option 16 absensi komentar ditbinmas detail', async () => {
-  mockAbsensiKomentar.mockResolvedValue('detail komentar');
+  mockAbsensiKomentarDitbinmasReport.mockResolvedValue('detail komentar');
 
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '444';
@@ -277,7 +276,7 @@ test('choose_menu option 16 absensi komentar ditbinmas detail', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '16', waClient);
 
-  expect(mockAbsensiKomentar).toHaveBeenCalledWith('DITBINMAS', { roleFlag: 'ditbinmas' });
+  expect(mockAbsensiKomentarDitbinmasReport).toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'detail komentar');
 });
 
