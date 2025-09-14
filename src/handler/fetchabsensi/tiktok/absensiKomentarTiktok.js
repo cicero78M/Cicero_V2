@@ -480,7 +480,7 @@ export async function absensiKomentarDitbinmasReport() {
       : "-";
 
     let entry =
-      `${idx + 1}. ${r.clientName}\n\n` +
+      `${idx + 1}. ${r.clientName}\n` +
       `*Jumlah Personil* : ${r.usersCount} pers\n` +
       `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
 
@@ -511,7 +511,7 @@ export async function absensiKomentarDitbinmasReport() {
     `- ⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} pers*\n` +
     `❌ *Belum melaksanakan* : *${totals.belum} pers*\n` +
     `⚠️ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
-    reports.join("\n\n") +
+    reports.join("\n") +
     "\n\nTerimakasih.";
 
   return msg.trim();
