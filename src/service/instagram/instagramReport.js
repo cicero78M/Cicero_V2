@@ -8,15 +8,25 @@ import {
   groupUsersByClientDivision,
 } from "../../utils/likesHelper.js";
 
-async function getClientInfo(clientId) {
+const clientInfoCache = new Map();
+
+export async function getClientInfo(clientId) {
+  const key = String(clientId || "").toLowerCase();
+  if (process.env.NODE_ENV !== "test" && clientInfoCache.has(key)) {
+    return clientInfoCache.get(key);
+  }
   const res = await query(
     "SELECT nama, client_type FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
     [clientId]
   );
-  return {
+  const info = {
     nama: res.rows[0]?.nama || clientId,
     clientType: res.rows[0]?.client_type || null,
   };
+  if (process.env.NODE_ENV !== "test") {
+    clientInfoCache.set(key, info);
+  }
+  return info;
 }
 
 export async function fetchDitbinmasData() {
