@@ -1,22 +1,18 @@
 import { query } from "../../../db/index.js";
-import {
-  getUsersByClient,
-  getUsersByDirektorat,
-  getClientsByRole,
-} from "../../../model/userModel.js";
+import { getUsersByClient } from "../../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../../model/instaPostModel.js";
-import { getLikesByShortcode } from "../../../model/instaLikeModel.js";
 import { hariIndo } from "../../../utils/constants.js";
-import { groupByDivision, sortDivisionKeys, formatNama } from "../../../utils/utilsHelper.js";
+import {
+  groupByDivision,
+  sortDivisionKeys,
+  formatNama,
+} from "../../../utils/utilsHelper.js";
 import { findClientById } from "../../../service/clientService.js";
-
-function normalizeUsername(username) {
-  return (username || "")
-    .toString()
-    .trim()
-    .replace(/^@/, "")
-    .toLowerCase();
-}
+import {
+  normalizeUsername,
+  getLikesSets,
+  groupUsersByClientDivision,
+} from "../../../utils/likesHelper.js";
 
 async function getClientInfo(client_id) {
   const res = await query(
@@ -32,27 +28,11 @@ async function getClientInfo(client_id) {
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
   const shortcodes = await getShortcodesTodayByClient(clientId);
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
+  const likesSets = await getLikesSets(shortcodes);
+  const { polresIds, usersByClient } = await groupUsersByClientDivision(
+    roleName,
+    { selfOnly: opts.selfOnly }
   );
-  const likesSets = likesLists.map(
-    (likes) => new Set((likes || []).map(normalizeUsername))
-  );
-  let polresIds;
-  if (opts.selfOnly) {
-    polresIds = [String(clientId).toUpperCase()];
-  } else {
-    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
-  }
-  const allUsers = (
-    await getUsersByDirektorat(roleName, polresIds)
-  ).filter((u) => u.status === true);
-  const usersByClient = {};
-  allUsers.forEach((u) => {
-    const cid = u.client_id?.toUpperCase() || "";
-    if (!usersByClient[cid]) usersByClient[cid] = [];
-    usersByClient[cid].push(u);
-  });
   const recap = {};
   for (const cid of polresIds) {
     const { nama: clientName } = await getClientInfo(cid);
@@ -107,32 +87,11 @@ export async function absensiLikes(client_id, opts = {}) {
     const kontenLinks = shortcodes.map(
       (sc) => `https://www.instagram.com/p/${sc}`
     );
-    const likesLists = await Promise.all(
-      shortcodes.map((sc) => getLikesByShortcode(sc))
+    const likesSets = await getLikesSets(shortcodes);
+    const { polresIds, usersByClient } = await groupUsersByClientDivision(
+      roleName,
+      { clientFilter }
     );
-    const likesSets = likesLists.map(
-      (likes) => new Set((likes || []).map(normalizeUsername))
-    );
-
-    let polresIds;
-    let allUsers;
-    if (clientFilter) {
-      polresIds = [clientFilter.toUpperCase()];
-      allUsers = (
-        await getUsersByDirektorat(roleName, clientFilter)
-      ).filter((u) => u.status === true);
-    } else {
-      polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
-    allUsers = (
-        await getUsersByDirektorat(roleName, polresIds)
-      ).filter((u) => u.status === true);
-    }
-    const usersByClient = {};
-    allUsers.forEach((u) => {
-      const cid = u.client_id?.toUpperCase() || "";
-      if (!usersByClient[cid]) usersByClient[cid] = [];
-      usersByClient[cid].push(u);
-    });
 
 
     const totalKonten = shortcodes.length;
@@ -224,11 +183,8 @@ export async function absensiLikes(client_id, opts = {}) {
     userStats[u.user_id] = { ...u, count: 0 };
   });
 
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
-  );
-  likesLists.forEach((likes) => {
-    const likesSet = new Set((likes || []).map(normalizeUsername));
+  const likesSets = await getLikesSets(shortcodes);
+  likesSets.forEach((likesSet) => {
     users.forEach((u) => {
       if (
         u.insta &&
@@ -353,13 +309,10 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     `Mohon ijin Komandan,\n\n` +
     `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
-  );
+  const likesSets = await getLikesSets(shortcodes);
 
   shortcodes.forEach((sc, idx) => {
-    const likes = likesLists[idx];
-    const likesSet = new Set((likes || []).map(normalizeUsername));
+    const likesSet = likesSets[idx];
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
@@ -435,13 +388,10 @@ export async function rekapLikesIG(client_id) {
 
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length) return null;
-
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
-  );
+  const likesSets = await getLikesSets(shortcodes);
   let totalLikes = 0;
-  const detailLikes = likesLists.map((likes, idx) => {
-    const jumlahLikes = (likes || []).length;
+  const detailLikes = likesSets.map((set, idx) => {
+    const jumlahLikes = set.size;
     totalLikes += jumlahLikes;
     const sc = shortcodes[idx];
     return {
@@ -482,16 +432,11 @@ export async function absensiLikesDitbinmasReport() {
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
-  );
-  const likesSets = likesLists.map(
-    (likes) => new Set((likes || []).map(normalizeUsername))
-  );
-
-  const allUsers = (
-    await getUsersByDirektorat(roleName, "DITBINMAS")
-  ).filter((u) => u.status === true);
+  const likesSets = await getLikesSets(shortcodes);
+  const { usersByClient } = await groupUsersByClientDivision(roleName, {
+    clientFilter: "DITBINMAS",
+  });
+  const allUsers = usersByClient["DITBINMAS"] || [];
 
   const already = [];
   const partial = [];
@@ -609,31 +554,14 @@ export async function lapharDitbinmas() {
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
-  const likesLists = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc))
-  );
-  const likesSets = likesLists.map(
-    (likes) => new Set((likes || []).map(normalizeUsername))
-  );
+  const likesSets = await getLikesSets(shortcodes);
   const likesCounts = likesSets.map((set) => set.size);
 
-  const polresIds = (
-    await getClientsByRole(roleName)
-  )
-    .map((c) => c.toUpperCase())
-    .filter((cid) => cid !== "DITBINMAS");
+  const { polresIds: allIds, usersByClient } = await groupUsersByClientDivision(
+    roleName
+  );
+  const polresIds = allIds.filter((cid) => cid !== "DITBINMAS");
   const clientIds = ["DITBINMAS", ...polresIds];
-  const allUsers = (
-    await getUsersByDirektorat(roleName, clientIds)
-  ).filter((u) => u.status === true);
-
-  const usersByClient = {};
-  clientIds.forEach((cid) => (usersByClient[cid] = []));
-  allUsers.forEach((u) => {
-    const cid = (u.client_id || "").toUpperCase();
-    if (!usersByClient[cid]) usersByClient[cid] = [];
-    usersByClient[cid].push(u);
-  });
 
   const kontenLinkLikes = kontenLinks.map(
     (link, idx) => `${link} : ${likesCounts[idx]}`
