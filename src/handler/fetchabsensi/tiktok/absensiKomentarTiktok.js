@@ -431,7 +431,15 @@ export async function absensiKomentarDitbinmasReport() {
   }
 
   reportEntries.sort((a, b) => {
-    if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
+    const aBinmas = a.clientName.toUpperCase() === "DITBINMAS";
+    const bBinmas = b.clientName.toUpperCase() === "DITBINMAS";
+    if (aBinmas && !bBinmas) return -1;
+    if (bBinmas && !aBinmas) return 1;
+
+    const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
+    const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
+    if (aPct !== bPct) return bPct - aPct;
+
     if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
     return a.clientName.localeCompare(b.clientName);
   });
