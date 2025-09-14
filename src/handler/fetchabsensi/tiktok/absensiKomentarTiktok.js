@@ -211,7 +211,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
         return (
-          `${idx + 1}. *${nama}*\n` +
+          `*${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
           `*Sudah melaksanakan* : *${g.sudah} user*\n` +
           `*Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
