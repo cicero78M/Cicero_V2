@@ -550,17 +550,17 @@ export async function absensiLikesDitbinmasReport() {
     `❌❌Belum Update Username Instagram : ${totals.noUsername} pers\n\n` +
     `✅Sudah Likes : ${already.length}\n` +
     (already.length
-      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
+      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
       : "-\n\n") +
     `⚠️Kurang likes : ${partial.length}\n` +
     (partial.length
-      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n\n"
+      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
       : "-\n\n") +
     `❌Belum Likes : ${none.length}\n` +
     (none.length
       ? none
           .map((u) => `- ${formatNama(u)}, ${u.insta || "-"}`)
-          .join("\n") + "\n\n"
+          .join("\n") + "\n"
       : "-\n\n") +
     `❌❌Belum Input Sosial media : ${noUsername.length}\n` +
     (noUsername.length
