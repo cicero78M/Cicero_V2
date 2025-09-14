@@ -485,15 +485,15 @@ export async function absensiKomentarDitbinmasReport() {
       `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
 
     if (r.kurangCount > 0) {
-      entry += `\n\n⚠️ Melaksanakan Kurang Lengkap (${r.kurangCount} pers):\n${kurangList}`;
+      entry += `\n⚠️ Melaksanakan Kurang Lengkap (${r.kurangCount} pers):\n${kurangList}`;
     }
 
     if (r.belumList.length > 0) {
-      entry += `\n\n❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}`;
+      entry += `\n❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}`;
     }
 
     if (r.noUsernameCount > 0) {
-      entry += `\n\n⚠️ Belum Update Username TikTok (${r.noUsernameCount} pers):\n${noUsernameList}`;
+      entry += `\n⚠️ Belum Update Username TikTok (${r.noUsernameCount} pers):\n${noUsernameList}`;
     }
 
     return entry;
@@ -656,12 +656,12 @@ export async function lapharTiktokDitbinmas() {
       `*${clientName.toUpperCase()}* : ${users.length} / ${already.length} / ${partial.length} / ${
         none.length + noUname.length
       } / ${noUname.length} / ${noTiktok}`,
-      `Sudah Komentar : ${already.length}`,
+      `Komentar lengkap : ${already.length}`,
       ...already.map((u) => `- ${formatNama(u)}, ${u.count}`),
     ];
 
     blockLines.push("");
-    blockLines.push(`Kurang komentar : ${partial.length}`);
+    blockLines.push(`Komentar Kurang : ${partial.length}`);
     if (partial.length) {
       blockLines.push(...partial.map((u) => `- ${formatNama(u)}, ${u.count}`));
     }
@@ -909,8 +909,9 @@ export async function lapharTiktokDitbinmas() {
     `Jumlah Konten: ${posts.length}\n` +
     `Daftar Link Konten:\n${kontenLinks.map((l) => `- ${l}`).join("\n")}\n\n` +
     `Jumlah Total Personil : ${totals.total} pers\n` +
-    `Sudah melaksanakan : ${totals.sudah} pers\n` +
-    `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
+    `Sudah Melaksanakan : ${totals.sudah+totals.kurang} pers\n` +
+    `- Melaksanakan lengkap : ${totals.sudah} pers\n` +
+    `- Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
     `Belum melaksanakan : ${totals.belum} pers\n` +
     `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
     `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
