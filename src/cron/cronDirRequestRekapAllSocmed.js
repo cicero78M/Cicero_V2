@@ -52,8 +52,8 @@ export async function runCron(sendToRekapRecipient = false) {
       const [ig, tt, igRecap, ttRecap] = await Promise.all([
         lapharDitbinmas(),
         lapharTiktokDitbinmas(),
-        collectLikesRecap(CLIENT_ID, { selfOnly: true }),
-        collectKomentarRecap(CLIENT_ID, { selfOnly: true }),
+        collectLikesRecap(CLIENT_ID, { selfOnly: false }),
+        collectKomentarRecap(CLIENT_ID, { selfOnly: false }),
       ]);
 
       const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
