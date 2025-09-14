@@ -145,7 +145,7 @@ export async function runCron(sendToRekapRecipient = false) {
 }
 
 cron.schedule(
-  "0 5 15,18 * * *",
+  "0 4 15,18 * * *",
   async () => {
     // Send recap to admin and group only
     await runCron(false);
@@ -153,7 +153,7 @@ cron.schedule(
   { timezone: "Asia/Jakarta" }
 );
 cron.schedule(
-  "0 35 20 * * *",
+  "0 34 20 * * *",
   async () => {
     // Send recap to admin, group, and rekap recipient
     await runCron(true);
