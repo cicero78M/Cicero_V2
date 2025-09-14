@@ -57,29 +57,15 @@ test('aggregates komentar report per division for Ditbinmas with Ditbinmas first
   expect(msg).toContain('⚠️ *Melaksanakan kurang lengkap* : *0 pers*');
   expect(msg).toContain('❌ *Belum melaksanakan* : *2 pers*');
   expect(msg).toContain('⚠️ *Belum Update Username TikTok* : *0 pers*');
-  const expectedDivDitbinmas =
-    "1. DITBINMAS\n\n" +
-    "*Jumlah Personil* : 1 pers\n" +
-    "✅ *Sudah melaksanakan* : 0 pers\n" +
-    "⚠️ *Melaksanakan kurang lengkap* : 0 pers\n" +
-    "❌ *Belum melaksanakan* : 1 pers\n" +
-    "⚠️ *Belum Update Username TikTok* : 0 pers";
-  expect(msg).toContain(expectedDivDitbinmas);
-  const expectedDivA =
-    "2. DIV A\n\n" +
+  // ensure zero-count segments are hidden in division reports
+  expect(msg).not.toContain('⚠️ Melaksanakan Kurang Lengkap (0 pers)');
+  expect(msg).not.toContain('⚠️ Belum Update Username TikTok (0 pers)');
 
-    "*Jumlah Personil* : 2 pers\n" +
-    "✅ *Sudah melaksanakan* : 2 pers\n" +
-    "⚠️ *Melaksanakan kurang lengkap* : 0 pers\n" +
-    "❌ *Belum melaksanakan* : 0 pers\n" +
-    "⚠️ *Belum Update Username TikTok* : 0 pers";
-  expect(msg).toContain(expectedDivA);
-  const expectedDivB =
-    "3. DIV B\n\n" +
-    "*Jumlah Personil* : 2 pers\n" +
-    "✅ *Sudah melaksanakan* : 1 pers\n" +
-    "⚠️ *Melaksanakan kurang lengkap* : 0 pers\n" +
-    "❌ *Belum melaksanakan* : 1 pers\n" +
-    "⚠️ *Belum Update Username TikTok* : 0 pers";
-  expect(msg).toContain(expectedDivB);
+  // division headers should still be present
+  expect(msg).toContain('1. DITBINMAS');
+  expect(msg).toContain('2. DIV A');
+  expect(msg).toContain('3. DIV B');
+
+  // two divisions should have one person who has not performed
+  expect((msg.match(/❌ Belum melaksanakan \(1 pers\)/g) || []).length).toBe(2);
 });

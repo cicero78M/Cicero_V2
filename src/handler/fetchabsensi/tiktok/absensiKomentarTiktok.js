@@ -478,14 +478,25 @@ export async function absensiKomentarDitbinmasReport() {
     const noUsernameList = r.noUsernameList.length
       ? r.noUsernameList.join("\n")
       : "-";
-    return (
+
+    let entry =
       `${idx + 1}. ${r.clientName}\n\n` +
       `*Jumlah Personil* : ${r.usersCount} pers\n` +
-      `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}\n\n` +
-      `⚠️ Melaksanakan Kurang Lengkap (${r.kurangCount} pers):\n${kurangList}\n\n` +
-      `❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}\n\n` +
-      `⚠️ Belum Update Username TikTok (${r.noUsernameCount} pers):\n${noUsernameList}`
-    );
+      `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
+
+    if (r.kurangCount > 0) {
+      entry += `\n\n⚠️ Melaksanakan Kurang Lengkap (${r.kurangCount} pers):\n${kurangList}`;
+    }
+
+    if (r.belumList.length > 0) {
+      entry += `\n\n❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}`;
+    }
+
+    if (r.noUsernameCount > 0) {
+      entry += `\n\n⚠️ Belum Update Username TikTok (${r.noUsernameCount} pers):\n${noUsernameList}`;
+    }
+
+    return entry;
   });
 
   let msg =
