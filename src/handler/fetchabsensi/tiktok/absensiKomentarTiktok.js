@@ -211,7 +211,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
         return (
-          `*Polres*: *${nama}*\n` +
+          `${idx + 1}. *${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
           `*Sudah melaksanakan* : *${g.sudah} user*\n` +
           `*Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
@@ -456,10 +456,6 @@ export async function absensiKomentarDitbinmasReport() {
     return (
       `${idx + 1}. ${r.clientName}\n\n` +
       `*Jumlah Personil* : ${r.usersCount} pers\n` +
-      `✅ *Sudah melaksanakan* : ${r.sudahCount} pers\n` +
-      `⚠️ *Melaksanakan kurang lengkap* : ${r.kurangCount} pers\n` +
-      `❌ *Belum melaksanakan* : ${r.belumCount} pers\n` +
-      `⚠️ *Belum Update Username TikTok* : ${r.noUsernameCount} pers\n\n` +
       `✅ Sudah melaksanakan (${r.sudahCount} pers):\n${sudahList}\n\n` +
       `⚠️ Melaksanakan kurang lengkap (${r.kurangCount} pers):\n${kurangList}\n\n` +
       `❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}\n\n` +
