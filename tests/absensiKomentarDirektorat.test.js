@@ -45,11 +45,12 @@ test('aggregates directorate data per client', async () => {
 
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
 
-  expect(msg).toContain('POLRES A');
-  expect(msg).toContain('✅ *Sudah melaksanakan* : *1 user*');
-  expect(msg).toContain('⚠️ *Melaksanakan kurang lengkap* : *0 user*');
+  expect(msg).toContain(
+    '*1. POLRES A*\n*Jumlah user:* 1\n*Melaksanakan Lengkap* : *1 user*'
+  );
+  expect(msg).toContain('⚠️ *Melaksanakan Kurang Lengkap* : *0 user*');
   expect(msg).toContain('POLRES B');
-  expect(msg).toContain('❌ *Belum melaksanakan* : *1 user*');
+  expect(msg).toContain('❌ *Belum Melaksanakan* : *1 user*');
   expect(msg).not.toMatch(/usera/i);
 });
 

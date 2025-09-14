@@ -228,14 +228,21 @@ export async function absensiKomentar(client_id, opts = {}) {
       sortedCids.map(async (cid, index) => {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
-        return (
-          `*${index + 1}. ${nama}*\n` +
-          `*Jumlah user:* ${g.total}\n` +
-          `*Melaksanakan Lengkap* : *${g.sudah} user*\n` +
-          `*Melaksanakan Kurang Lengkap* : *${g.kurang} user*\n` +
-          `*Belum Melaksanakan* : *${g.belum} user*\n` +
-          `*Belum Input Username Tiktok* : *${g.noUsername} user*`
-        );
+        const lines = [
+          `*${index + 1}. ${nama}*`,
+          `*Jumlah user:* ${g.total}`,
+          `*Melaksanakan Lengkap* : *${g.sudah} user*`,
+        ];
+        if (g.kurang) {
+          lines.push(`*Melaksanakan Kurang Lengkap* : *${g.kurang} user*`);
+        }
+        if (g.belum) {
+          lines.push(`*Belum Melaksanakan* : *${g.belum} user*`);
+        }
+        if (g.noUsername) {
+          lines.push(`*Belum Input Username Tiktok* : *${g.noUsername} user*`);
+        }
+        return lines.join("\n");
       })
     );
 
