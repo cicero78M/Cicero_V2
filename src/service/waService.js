@@ -1216,8 +1216,10 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       userStats[u.user_id] = { ...u, count: 0 };
     });
 
-    for (const shortcode of shortcodes) {
-      const likes = await getLikesByShortcode(shortcode);
+    const likesLists = await Promise.all(
+      shortcodes.map((sc) => getLikesByShortcode(sc))
+    );
+    likesLists.forEach((likes) => {
       const likesSet = new Set(
         (likes || []).map((l) => (l || "").toLowerCase())
       );
@@ -1226,7 +1228,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
           userStats[u.user_id].count += 1;
         }
       });
-    }
+    });
 
     let sudah = [],
       belum = [];
