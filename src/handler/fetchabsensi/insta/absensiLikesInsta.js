@@ -548,11 +548,11 @@ export async function absensiLikesDitbinmasReport() {
     `⚠️ Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
     `❌ Belum melaksanakan : ${totals.belum} pers\n` +
     `❌❌Belum Update Username Instagram : ${totals.noUsername} pers\n\n` +
-    `✅Sudah Likes : ${already.length}\n` +
+    `✅Likes Lengkap: ${already.length}\n` +
     (already.length
       ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
       : "-\n\n") +
-    `⚠️Kurang likes : ${partial.length}\n` +
+    `⚠️Likes Kurang: ${partial.length}\n` +
     (partial.length
       ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
       : "-\n\n") +
@@ -962,12 +962,12 @@ export async function lapharDitbinmas() {
     `Jumlah Konten: ${shortcodes.length}\n` +
     `Daftar Link Konten:\n${kontenLinks.map((l) => `- ${l}`).join("\n")}\n\n` +
     `Jumlah Total Personil : ${totals.total} pers\n` +
-    `Sudah melaksanakan : ${totals.sudah} pers\n` +
-    `Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
-    `Belum melaksanakan : ${totals.belum} pers\n` +
+    `Total Sudah Melaksanakan Likes : ${totals.sudah+totals.kurang} pers\n` +
+    `- Melaksanakan Likes Lengkap : ${totals.sudah} pers\n` +
+    `- Melaksanakan Likes Kurang lengkap : ${totals.kurang} pers\n` +
+    `Belum Melaksanakan : ${totals.belum} pers\n` +
     `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
-    `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
-    `_Kesatuan  :  Jumlah user / Sudah likes / Likes kurang/ Belum likes/ Belum input IG / Belum input TikTok_\n` +
+    `_Kesatuan  :  Jumlah user / Sudah likes / Likes kurang/ Belum likes/ Belum input IG _\n` +
     `${perClientBlocks.join("\n\n")}`;
 
   const narrative =
