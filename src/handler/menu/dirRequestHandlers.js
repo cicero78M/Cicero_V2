@@ -862,8 +862,8 @@ export const dirRequestHandlers = {
         "📅 *Absensi*\n" +
         "3️⃣ Absensi like Ditbinmas\n" +
         "4️⃣ Absensi like Instagram\n" +
-        "5️⃣ Absensi komentar TikTok\n\n" +
-        "1️⃣6️⃣ Absensi komentar Ditbinmas\n" +
+        "5️⃣ Absensi komentar TikTok\n" +
+        "1️⃣6️⃣ Absensi komentar Ditbinmas\n\n" +
         "📥 *Pengambilan Data*\n" +
         "6️⃣ Ambil konten & like Instagram\n" +
         "7️⃣ Ambil like Instagram saja\n" +
@@ -874,7 +874,7 @@ export const dirRequestHandlers = {
         "🔟 Laporan harian Instagram Ditbinmas\n" +
         "1️⃣3️⃣ Laporan harian TikTok Ditbinmas\n" +
         "1️⃣4️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣5️⃣ Rekap gabungan semua sosmed\n" +
+        "1️⃣5️⃣ Rekap gabungan semua sosmed\n\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
