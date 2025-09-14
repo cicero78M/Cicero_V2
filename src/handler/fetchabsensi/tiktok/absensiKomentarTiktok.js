@@ -213,10 +213,10 @@ export async function absensiKomentar(client_id, opts = {}) {
         return (
           `*Polres*: *${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
-          `✅ *Sudah melaksanakan* : *${g.sudah} user*\n` +
-          `⚠️ *Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
-          `❌ *Belum melaksanakan* : *${g.belum} user*\n` +
-          `⚠️ *Belum input username* : *${g.noUsername} user*`
+          `*Sudah melaksanakan* : *${g.sudah} user*\n` +
+          `*Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +
+          `*Belum melaksanakan* : *${g.belum} user*\n` +
+          `*Belum input username* : *${g.noUsername} user*`
         );
       })
     );
@@ -237,13 +237,15 @@ export async function absensiKomentar(client_id, opts = {}) {
       `Mohon ijin Komandan,\n\n` +
       `📋 *Rekap Akumulasi Komentar TikTok*\n*Direktorat*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
       `*Jumlah Konten:* ${totalKonten}\n` +
-      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-      reports.join("\n\n") +
+      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}` +
       `\n\n*Total Personel:* ${totals.total}\n` +
       `✅ *Sudah melaksanakan* : *${totals.sudah} user*\n` +
       `⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} user*\n` +
       `❌ *Belum melaksanakan* : *${totals.belum} user*\n` +
-      `⚠️ *Belum input username* : *${totals.noUsername} user*` +
+      `⚠️ *Belum input username* : *${totals.noUsername} user*\n\n` +
+        
+      reports.join("\n\n") +
+
       `\n\nTerimakasih.`;
     return msg.trim();
   }
