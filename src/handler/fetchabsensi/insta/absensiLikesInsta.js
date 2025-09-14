@@ -140,7 +140,7 @@ export async function absensiLikes(client_id, opts = {}) {
       (r, idx) =>
         `${idx + 1}. ${r.clientName}\n` +
         `*Jumlah Personil :* ${r.usersCount} pers\n` +
-        `*Sudah Melaksanakan :* ${r.sudahCount} pers\n` +
+        `*Sudah Melaksanakan :* ${r.sudahCount+r.kurangCount} pers\n` +
         `- Melaksanakan lengkap : ${r.sudahCount} pers\n` +
         `- Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
         `*Belum melaksanakan :* ${r.belumCount} pers\n` +
@@ -497,8 +497,9 @@ export async function absensiLikesDitbinmasReport() {
     `*Jumlah Konten:* ${shortcodes.length}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
     `*Jumlah Total Personil :* ${totals.total} pers\n` +
-    `✅ *Melaksanakan Lengkap :* ${totals.sudah} pers\n` +
-    `⚠️ *Melaksanakan kurang lengkap :* ${totals.kurang} pers\n` +
+    `✅ *Sudah Melaksanakan :* ${totals.sudah+totals.kurang} pers\n` +
+    `- ✅ *Melaksanakan Lengkap :* ${totals.sudah} pers\n` +
+    `- ⚠️ *Melaksanakan kurang lengkap :* ${totals.kurang} pers\n` +
     `❌ *Belum melaksanakan :* ${totals.belum} pers\n` +
     `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
     `✅ *Likes Lengkap:* ${already.length}\n` +
