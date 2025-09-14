@@ -162,17 +162,47 @@ test('directorate summarizes across clients', async () => {
     'POLRESA',
     'POLRESB',
   ]);
-  expect(msg).toMatch(/Jumlah Total Personil : 4 pers/);
-  expect(msg).toMatch(/✅ Sudah melaksanakan : 1 pers/);
-  expect(msg).toMatch(/Melaksanakan kurang lengkap : 1 pers/);
-  expect(msg).toMatch(/❌ Belum melaksanakan : 2 pers/);
-  expect(msg).toMatch(/Belum Update Username Instagram : 1 pers/);
+  expect(msg).toContain('*Jumlah Total Personil :* 4 pers');
+  expect(msg).toContain('✅ *Sudah melaksanakan :* 2 pers');
+  expect(msg).toContain('- ⚠️ Melaksanakan kurang lengkap : 1 pers');
+  expect(msg).toContain('❌ *Belum melaksanakan :* 2 pers');
+  expect(msg).toContain('⚠️❌ *Belum Update Username Instagram :* 1 pers');
   expect(msg).toMatch(
-    /1\. POLRES B\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 1 pers\nMelaksanakan kurang lengkap : 0 pers\nBelum melaksanakan : 1 pers\nBelum Update Username Instagram : 0 pers/
+    /1\. POLRES B\n\*Jumlah Personil :\* 2 pers\n\*Sudah Melaksanakan :\* 1 pers\n- Melaksanakan lengkap : 1 pers\n- Melaksanakan kurang lengkap : 0 pers\n\*Belum melaksanakan :\* 1 pers\n\*Belum Update Username Instagram :\* 0 pers/
   );
   expect(msg).toMatch(
-    /2\. POLRES A\n\nJumlah Personil : 2 pers\nSudah melaksanakan : 0 pers\nMelaksanakan kurang lengkap : 1 pers\nBelum melaksanakan : 1 pers\nBelum Update Username Instagram : 1 pers/
+    /2\. POLRES A\n\*Jumlah Personil :\* 2 pers\n\*Sudah Melaksanakan :\* 1 pers\n- Melaksanakan lengkap : 0 pers\n- Melaksanakan kurang lengkap : 1 pers\n\*Belum melaksanakan :\* 1 pers\n\*Belum Update Username Instagram :\* 1 pers/
   );
+});
+
+test('aggregates likes report per division for Ditbinmas with Ditbinmas first', async () => {
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['sc1', 'sc2']);
+  mockGetLikesByShortcode
+    .mockResolvedValueOnce(['user2', 'user3', 'user4'])
+    .mockResolvedValueOnce(['user2', 'user3']);
+  mockGetUsersByDirektorat.mockResolvedValueOnce([
+    { user_id: 'u1', nama: 'User1', insta: 'user1', divisi: 'DITBINMAS', client_id: 'DITBINMAS', status: true },
+    { user_id: 'u2', nama: 'User2', insta: 'user2', divisi: 'DIV A', client_id: 'DITBINMAS', status: true },
+    { user_id: 'u3', nama: 'User3', insta: 'user3', divisi: 'DIV A', client_id: 'DITBINMAS', status: true },
+    { user_id: 'u4', nama: 'User4', insta: 'user4', divisi: 'DIV B', client_id: 'DITBINMAS', status: true },
+    { user_id: 'u5', nama: 'User5', insta: 'user5', divisi: 'DIV B', client_id: 'DITBINMAS', status: true },
+  ]);
+
+  const msg = await absensiLikesDitbinmasReport();
+
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'DITBINMAS');
+  expect(msg).toContain('*Jumlah Total Personil :* 5 pers');
+  expect(msg).toContain('✅ *Sudah Melaksanakan :* 3 pers');
+  expect(msg).toContain('- ✅ *Melaksanakan Lengkap :* 2 pers');
+  expect(msg).toContain('- ⚠️ *Melaksanakan kurang lengkap :* 1 pers');
+  expect(msg).toContain('❌ *Belum melaksanakan :* 2 pers');
+  expect(msg).toContain('⚠️❌ *Belum Update Username Instagram :* 0 pers');
+
+  expect(msg).toContain('1. DITBINMAS');
+  expect(msg).toContain('2. DIV A');
+  expect(msg).toContain('3. DIV B');
+
+  expect((msg.match(/❌ Belum melaksanakan \(1 pers\)/g) || []).length).toBe(2);
 });
 
 test('DIREKTORAT BINMAS is placed first regardless of counts', async () => {
