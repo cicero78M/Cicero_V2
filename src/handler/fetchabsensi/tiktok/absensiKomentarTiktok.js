@@ -225,11 +225,11 @@ export async function absensiKomentar(client_id, opts = {}) {
       return gb.sudah - ga.sudah;
     });
     const reports = await Promise.all(
-      sortedCids.map(async (cid) => {
+      sortedCids.map(async (cid, index) => {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
         return (
-          `*${nama}*\n` +
+          `*${index + 1}. ${nama}*\n` +
           `*Jumlah user:* ${g.total}\n` +
           `*Sudah melaksanakan* : *${g.sudah} user*\n` +
           `*Melaksanakan kurang lengkap* : *${g.kurang} user*\n` +

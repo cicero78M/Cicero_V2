@@ -82,11 +82,11 @@ test('sorts satker reports with Ditbinmas first and by percentage and count', as
 
   const msg = await absensiKomentar('DITBINMAS', { roleFlag: 'ditbinmas' });
 
-  const idxDitbinmas = msg.indexOf('*DITBINMAS*');
-  const idxA = msg.indexOf('*POLRES_A*');
-  const idxB = msg.indexOf('*POLRES_B*');
-  const idxD = msg.indexOf('*POLRES_D*');
-  const idxC = msg.indexOf('*POLRES_C*');
+  const idxDitbinmas = msg.indexOf('DITBINMAS');
+  const idxA = msg.indexOf('POLRES_A');
+  const idxB = msg.indexOf('POLRES_B');
+  const idxD = msg.indexOf('POLRES_D');
+  const idxC = msg.indexOf('POLRES_C');
   expect(idxDitbinmas).toBeLessThan(idxA);
   expect(idxA).toBeLessThan(idxB);
   expect(idxB).toBeLessThan(idxD);
