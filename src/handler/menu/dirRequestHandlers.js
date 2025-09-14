@@ -232,7 +232,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 async function absensiLikesDitbinmas() {
   return await absensiLikesDitbinmasReport();
 }
-async function anbsensiKomentarTiktok() {
+async function absensiKomentarTiktok() {
   return await absensiKomentarDitbinmasReport();
 }
 async function absensiKomentarDitbinmas() {
@@ -509,7 +509,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "5":
-      msg = await anbsensiKomentarTiktok();
+      msg = await absensiKomentarTiktok();
       break;
     case "6": { 
       const { fetchAndStoreInstaContent } = await import(
@@ -945,7 +945,7 @@ export {
   formatRekapUserData,
   absensiLikesDitbinmas,
   absensiKomentarDitbinmas,
-  anbsensiKomentarTiktok,
+  absensiKomentarTiktok,
   formatExecutiveSummary,
   formatRekapBelumLengkapDitbinmas,
   formatRekapAllSosmed,
