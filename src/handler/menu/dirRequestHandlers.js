@@ -233,11 +233,11 @@ async function absensiLikesDitbinmas() {
   return await absensiLikesDitbinmasReport();
 }
 async function absensiKomentarTiktok() {
-  return await absensiKomentarDitbinmasReport();
+  return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
+
 }
 async function absensiKomentarDitbinmas() {
-  // Generate TikTok comment attendance report for Ditbinmas
-  return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
+  return await absensiKomentarDitbinmasReport();
 }
 async function formatRekapBelumLengkapDitbinmas() {
   const users = await getUsersSocialByClient("DITBINMAS", "ditbinmas");
