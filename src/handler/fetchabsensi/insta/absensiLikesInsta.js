@@ -13,17 +13,7 @@ import {
   getLikesSets,
   groupUsersByClientDivision,
 } from "../../../utils/likesHelper.js";
-
-async function getClientInfo(client_id) {
-  const res = await query(
-    "SELECT nama, client_type FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
-    [client_id]
-  );
-  return {
-    nama: res.rows[0]?.nama || client_id,
-    clientType: res.rows[0]?.client_type || null,
-  };
-}
+import { getClientInfo } from "../../../service/instagram/instagramReport.js";
 
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
