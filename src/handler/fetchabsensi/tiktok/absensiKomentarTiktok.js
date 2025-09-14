@@ -233,14 +233,13 @@ export async function absensiKomentar(client_id, opts = {}) {
           `*Jumlah user:* ${g.total}`,
           `*Melaksanakan Lengkap* : *${g.sudah} user*`,
         ];
-        
-        if (g.kurang) {
+        if (g.kurang > 0) {
           lines.push(`*Melaksanakan Kurang Lengkap* : *${g.kurang} user*`);
         }
-        if (g.belum) {
+        if (g.belum > 0) {
           lines.push(`*Belum Melaksanakan* : *${g.belum} user*`);
         }
-        if (g.noUsername) {
+        if (g.noUsername > 0) {
           lines.push(`*Belum Input Username Tiktok* : *${g.noUsername} user*`);
         }
         return lines.join("\n");
