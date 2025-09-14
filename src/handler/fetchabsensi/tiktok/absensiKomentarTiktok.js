@@ -137,13 +137,9 @@ export async function absensiKomentar(client_id, opts = {}) {
     client_id,
   });
 
-  const clientLabel =
-    clientInfo.clientType && clientInfo.clientType.toLowerCase() === "direktorat"
-      ? "Direktorat"
-      : "Polres";
 
   if (!posts.length)
-    return `Tidak ada konten TikTok untuk *${clientLabel}*: *${clientNama}* hari ini.`;
+    return `Tidak ada konten pada akun Official Tiktok *${clientNama}* hari ini.`;
 
   const userStats = {};
   users.forEach((u) => {
@@ -231,6 +227,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         const lines = [
           `*${index + 1}. ${nama}*`,
           `*Jumlah user:* ${g.total}`,
+          `*Sudah Melaksanakan* : *${g.sudah+g.kurang} user*`,
           `*Melaksanakan Lengkap* : *${g.sudah} user*`,
         ];
         if (g.kurang > 0) {
@@ -264,10 +261,11 @@ export async function absensiKomentar(client_id, opts = {}) {
       `*Jumlah Konten:* ${totalKonten}\n` +
       `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}` +
       `\n\n*Total Personel:* ${totals.total}\n` +
-      `✅ *Melaksanakan Lengkap* : *${totals.sudah} user*\n` +
-      `⚠️ *Melaksanakan Kurang Lengkap* : *${totals.kurang} user*\n` +
+      `✅ *Sudah Melaksanakan* : *${totals.sudah+totals.kurang} user*\n` +
+      `- ✅ *Melaksanakan Lengkap* : *${totals.sudah} user*\n` +
+      `- ⚠️ *Melaksanakan Kurang Lengkap* : *${totals.kurang} user*\n` +
       `❌ *Belum Melaksanakan* : *${totals.belum} user*\n` +
-      `⚠️ *Belum Input Username Tiktok* : *${totals.noUsername} user*\n\n` +
+      `⚠️❌ *Belum Input Username Tiktok* : *${totals.noUsername} user*\n\n` +
         
       reports.join("\n\n") +
 
@@ -381,7 +379,7 @@ export async function absensiKomentarDitbinmasReport() {
 
   const posts = await getPostsTodayByClient(roleName);
   if (!posts.length)
-    return "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
+    return "Tidak ada konten TikTok pada akun Official DIREKTORAT BINMAS hari ini.";
 
   const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
   const kontenLinks = posts.map(
@@ -510,7 +508,7 @@ export async function absensiKomentarDitbinmasReport() {
     `- ✅ *Melaksanakan Lengkap* : *${totals.sudah} pers*\n` +
     `- ⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} pers*\n` +
     `❌ *Belum melaksanakan* : *${totals.belum} pers*\n` +
-    `⚠️ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
+    `⚠️❌ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
     reports.join("\n") +
     "\n\nTerimakasih.";
 
@@ -903,25 +901,24 @@ export async function lapharTiktokDitbinmas() {
   const text =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Komentar TikTok\n` +
-    `Polres: DIREKTORAT BINMAS\n` +
+    `*DIREKTORAT BINMAS*\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `Jumlah Konten: ${posts.length}\n` +
-    `Daftar Link Konten:\n${kontenLinks.map((l) => `- ${l}`).join("\n")}\n\n` +
+    `Daftar Link Konten Tiktok:\n${kontenLinks.map((l) => `- ${l}`).join("\n")}\n\n` +
     `Jumlah Total Personil : ${totals.total} pers\n` +
     `Sudah Melaksanakan : ${totals.sudah+totals.kurang} pers\n` +
     `- Melaksanakan lengkap : ${totals.sudah} pers\n` +
     `- Melaksanakan kurang lengkap : ${totals.kurang} pers\n` +
     `Belum melaksanakan : ${totals.belum} pers\n` +
-    `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
     `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
-    `_Kesatuan  :  Jumlah user / Sudah komentar / Komentar kurang/ Belum komentar/ Belum input IG / Belum input TikTok_\n` +
+    `_Kesatuan  :  Jumlah user / Sudah komentar / Komentar kurang/ Belum komentar/ Belum input TikTok_\n` +
     `${perClientBlocks.join("\n\n")}`;
 
   const narrative =
     `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi komentar oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
     `DIREKTORAT BINMAS\n\n` +
-    `Konten hari ini: ${posts.length} link: ${kontenLinkComments.join(", ")}\n\n` +
+    `Konten Tiktok hari ini: ${posts.length} link: ${kontenLinkComments.join(", ")}\n\n` +
     `Kinerja Komentar konten: ${totalComments}/${totalPossibleComments} (${commentPercent.toFixed(2)}%)\n` +
     `Target harian ≥95% = ${targetComments} komentar${deficit > 0 ? ` → kekurangan ${deficit}` : ""}\n\n` +
     `Kontributor komentar terbesar (konten hari ini):\n${topContrib ? `${topContrib} → menyumbang ${topContribPercent}% dari total komentar saat ini.` : "-"}\n\n` +
