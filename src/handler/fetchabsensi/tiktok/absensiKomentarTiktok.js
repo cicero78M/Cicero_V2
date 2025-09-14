@@ -206,8 +206,26 @@ export async function absensiKomentar(client_id, opts = {}) {
     const kontenLinks = posts.map(
       (p) => `https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}`
     );
+    const sortedCids = Object.keys(groups).sort((a, b) => {
+      if (a === "DITBINMAS") return -1;
+      if (b === "DITBINMAS") return 1;
+      const ga = groups[a];
+      const gb = groups[b];
+      const aEligible = ga.total >= 100;
+      const bEligible = gb.total >= 100;
+      if (aEligible && bEligible) {
+        const pa = ga.sudah / ga.total;
+        const pb = gb.sudah / gb.total;
+        if (pb !== pa) return pb - pa;
+      } else if (aEligible) {
+        return -1;
+      } else if (bEligible) {
+        return 1;
+      }
+      return gb.sudah - ga.sudah;
+    });
     const reports = await Promise.all(
-      Object.keys(groups).map(async (cid) => {
+      sortedCids.map(async (cid) => {
         const { nama } = await getClientInfo(cid);
         const g = groups[cid];
         return (

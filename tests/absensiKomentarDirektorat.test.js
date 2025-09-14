@@ -52,3 +52,43 @@ test('aggregates directorate data per client', async () => {
   expect(msg).toContain('❌ *Belum melaksanakan* : *1 user*');
   expect(msg).not.toMatch(/usera/i);
 });
+
+test('sorts satker reports with Ditbinmas first and by percentage and count', async () => {
+  mockQuery.mockImplementation(async (sql, params) => {
+    const cid = (params[0] || '').toString().toUpperCase();
+    return { rows: [{ nama: cid, client_tiktok: '', client_type: 'org' }] };
+  });
+  mockGetPostsTodayByClient.mockResolvedValueOnce([{ video_id: 'v1' }]);
+  mockGetCommentsByVideoId.mockResolvedValueOnce({ comments: [] });
+
+  function createUsers(clientId, total, sudah) {
+    return Array.from({ length: total }, (_, i) => ({
+      user_id: `${clientId}-${i}`,
+      client_id: clientId,
+      tiktok: `user${clientId}${i}`,
+      status: true,
+      exception: i < sudah,
+    }));
+  }
+
+  const users = [
+    ...createUsers('DITBINMAS', 2, 1),
+    ...createUsers('POLRES_A', 100, 80),
+    ...createUsers('POLRES_B', 100, 50),
+    ...createUsers('POLRES_C', 99, 70),
+    ...createUsers('POLRES_D', 99, 75),
+  ];
+  mockGetUsersByDirektorat.mockResolvedValueOnce(users);
+
+  const msg = await absensiKomentar('DITBINMAS', { roleFlag: 'ditbinmas' });
+
+  const idxDitbinmas = msg.indexOf('*DITBINMAS*');
+  const idxA = msg.indexOf('*POLRES_A*');
+  const idxB = msg.indexOf('*POLRES_B*');
+  const idxD = msg.indexOf('*POLRES_D*');
+  const idxC = msg.indexOf('*POLRES_C*');
+  expect(idxDitbinmas).toBeLessThan(idxA);
+  expect(idxA).toBeLessThan(idxB);
+  expect(idxB).toBeLessThan(idxD);
+  expect(idxD).toBeLessThan(idxC);
+});
