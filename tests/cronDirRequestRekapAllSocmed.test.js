@@ -86,8 +86,8 @@ beforeEach(() => {
 test('runCron without rekap sends to admin and group only', async () => {
   await runCron(false);
 
-  expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: true });
-  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: true });
+  expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
+  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar ig + nar tt');
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'nar ig + nar tt');
@@ -105,8 +105,8 @@ test('runCron without rekap sends to admin and group only', async () => {
 test('runCron with rekap sends to all recipients', async () => {
   await runCron(true);
 
-  expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: true });
-  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: true });
+  expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
+  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar ig + nar tt');
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'nar ig + nar tt');

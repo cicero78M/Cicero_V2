@@ -430,63 +430,104 @@ export async function absensiLikesDitbinmasReport() {
   });
   const allUsers = usersByClient["DITBINMAS"] || [];
 
-  const already = [];
-  const partial = [];
-  const none = [];
-  const noUsername = [];
+  const usersByDiv = groupByDivision(allUsers);
+  const divisions = sortDivisionKeys(Object.keys(usersByDiv));
 
-  allUsers.forEach((u) => {
-    if (!u.insta || u.insta.trim() === "") {
-      noUsername.push(u);
-      return;
-    }
-    const uname = normalizeUsername(u.insta);
-    let count = 0;
-    likesSets.forEach((set) => {
-      if (set.has(uname)) count += 1;
+  const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 };
+  const reportEntries = [];
+
+  divisions.forEach((div) => {
+    const users = usersByDiv[div] || [];
+    const sudah = [];
+    const kurang = [];
+    const belum = [];
+    const tanpaUsername = [];
+
+    users.forEach((u) => {
+      if (!u.insta || u.insta.trim() === "") {
+        tanpaUsername.push(u);
+        return;
+      }
+      const uname = normalizeUsername(u.insta);
+      let count = 0;
+      likesSets.forEach((set) => {
+        if (set.has(uname)) count += 1;
+      });
+      if (count === shortcodes.length) sudah.push({ ...u, count });
+      else if (count > 0) kurang.push({ ...u, count });
+      else belum.push({ ...u, count });
     });
-    if (count === shortcodes.length) already.push({ ...u, count });
-    else if (count > 0) partial.push({ ...u, count });
-    else none.push({ ...u, count });
+
+    const belumCount = belum.length + tanpaUsername.length;
+
+    totals.total += users.length;
+    totals.sudah += sudah.length;
+    totals.kurang += kurang.length;
+    totals.belum += belumCount;
+    totals.noUsername += tanpaUsername.length;
+
+    reportEntries.push({
+      clientName: div,
+      usersCount: users.length,
+      sudahCount: sudah.length,
+      kurangCount: kurang.length,
+      belumCount,
+      noUsernameCount: tanpaUsername.length,
+      sudahList: sudah.map((u) => `- ${formatNama(u)}, ${u.count}`),
+      kurangList: kurang.map((u) => `- ${formatNama(u)}, ${u.count}`),
+      belumList: belum.map(
+        (u) => `- ${formatNama(u)}, ${u.insta ? u.insta : "-"}`
+      ),
+      noUsernameList: tanpaUsername.map(
+        (u) =>
+          `- ${formatNama(u)}, IG Kosong${!u.tiktok ? ", Tiktok Kosong" : ""}`
+      ),
+    });
   });
 
-  const totals = {
-    total: allUsers.length,
-    sudah: already.length + partial.length,
-    kurang: partial.length,
-    belum: none.length + noUsername.length,
-    noUsername: noUsername.length,
-  };
+  reportEntries.sort((a, b) => {
+    const aBinmas = a.clientName.toUpperCase() === "DITBINMAS";
+    const bBinmas = b.clientName.toUpperCase() === "DITBINMAS";
+    if (aBinmas && !bBinmas) return -1;
+    if (bBinmas && !aBinmas) return 1;
 
-  const pangkatOrder = [
-    "KOMISARIS BESAR POLISI",
-    "AKBP",
-    "KOMPOL",
-    "AKP",
-    "IPTU",
-    "IPDA",
-    "AIPTU",
-    "AIPDA",
-    "BRIPKA",
-    "BRIGADIR",
-    "BRIPTU",
-    "BRIPDA",
-  ];
-  const rankIdx = (t) => {
-    const i = pangkatOrder.indexOf((t || "").toUpperCase());
-    return i === -1 ? pangkatOrder.length : i;
-  };
-  const sortUsers = (arr) =>
-    arr.sort(
-      (a, b) =>
-        rankIdx(a.title) - rankIdx(b.title) ||
-        formatNama(a).localeCompare(formatNama(b))
-    );
+    const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
+    const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
+    if (aPct !== bPct) return bPct - aPct;
 
-  sortUsers(already);
-  sortUsers(partial);
-  sortUsers(none);
-  sortUsers(noUsername);
+    if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
+    return a.clientName.localeCompare(b.clientName);
+  });
+
+  const reports = reportEntries.map((r, idx) => {
+    const sudahList = r.sudahList.length ? r.sudahList.join("\n") : "-";
+    const kurangList = r.kurangList.length
+      ? r.kurangList.join("\n")
+      : "-";
+    const belumList = r.belumList.length ? r.belumList.join("\n") : "-";
+    const noUsernameList = r.noUsernameList.length
+      ? r.noUsernameList.join("\n")
+      : "-";
+
+    let entry =
+      `${idx + 1}. ${r.clientName}\n` +
+      `*Jumlah Personil* : ${r.usersCount} pers\n` +
+      `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
+
+    if (r.kurangCount > 0) {
+      entry += `\n⚠️ Melaksanakan Kurang Lengkap (${r.kurangCount} pers):\n${kurangList}`;
+    }
+
+    if (r.belumList.length > 0) {
+      entry += `\n❌ Belum melaksanakan (${r.belumList.length} pers):\n${belumList}`;
+    }
+
+    if (r.noUsernameCount > 0) {
+      entry += `\n⚠️ Belum Update Username Instagram (${r.noUsernameCount} pers):\n${noUsernameList}`;
+    }
+
+    return entry;
+  });
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
@@ -497,34 +538,13 @@ export async function absensiLikesDitbinmasReport() {
     `*Jumlah Konten:* ${shortcodes.length}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
     `*Jumlah Total Personil :* ${totals.total} pers\n` +
-    `✅ *Sudah Melaksanakan :* ${totals.sudah+totals.kurang} pers\n` +
+    `✅ *Sudah Melaksanakan :* ${totals.sudah + totals.kurang} pers\n` +
     `- ✅ *Melaksanakan Lengkap :* ${totals.sudah} pers\n` +
     `- ⚠️ *Melaksanakan kurang lengkap :* ${totals.kurang} pers\n` +
     `❌ *Belum melaksanakan :* ${totals.belum} pers\n` +
     `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
-    `✅ *Likes Lengkap:* ${already.length}\n` +
-    (already.length
-      ? already.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
-      : "-\n") +
-    `⚠️ *Likes Kurang Lengkap:* ${partial.length}\n` +
-    (partial.length
-      ? partial.map((u) => `- ${formatNama(u)}, ${u.count}`).join("\n") + "\n"
-      : "-\n\n") +
-    `❌ *Belum Likes :* ${none.length}\n` +
-    (none.length
-      ? none
-          .map((u) => `- ${formatNama(u)}, ${u.insta || "-"}`)
-          .join("\n") + "\n"
-      : "-\n\n") +
-    `⚠️❌ *Belum Input Sosial media :* ${noUsername.length}\n` +
-    (noUsername.length
-      ? noUsername
-          .map(
-            (u) =>
-              `- ${formatNama(u)}, IG Kosong${!u.tiktok ? ", Tiktok Kosong" : ""}`
-          )
-          .join("\n")
-      : "-");
+    reports.join("\n") +
+    "\n\nTerimakasih.";
 
   return msg.trim();
 }
