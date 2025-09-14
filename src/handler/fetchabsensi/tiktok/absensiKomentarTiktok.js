@@ -345,9 +345,8 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
-export async function absensiKomentarDitbinmasReport(opts = {}) {
+export async function absensiKomentarDitbinmasReport() {
   const roleName = "ditbinmas";
-  const { clientFilter } = opts;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -368,30 +367,27 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
     commentSets.push(new Set(extractUsernamesFromComments(comments)));
   }
 
-  const polresIds = (await getClientsByRole(roleName, clientFilter)).map(
-    (c) => c.toUpperCase()
+  const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
+  const allUsers = allUsersRaw.filter(
+    (u) =>
+      u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
   );
-  const userFilter = clientFilter || polresIds;
-  const allUsers = polresIds.length
-    ? (await getUsersByDirektorat(roleName, userFilter)).filter(
-        (u) => u.status === true
-      )
-    : [];
 
-  const usersByClient = {};
+  const usersByDiv = {};
   allUsers.forEach((u) => {
-    const cid = u.client_id?.toUpperCase() || "";
-    if (!usersByClient[cid]) usersByClient[cid] = [];
-    usersByClient[cid].push(u);
+    const div = u.divisi?.toUpperCase() || "-";
+    if (!usersByDiv[div]) usersByDiv[div] = [];
+    usersByDiv[div].push(u);
   });
 
   const totalKonten = posts.length;
   const reportEntries = [];
   const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 };
 
-  for (const cid of polresIds) {
-    const users = usersByClient[cid] || [];
-    const { nama: clientName } = await getClientInfo(cid);
+  const divisions = sortDivisionKeys(Object.keys(usersByDiv));
+
+  for (const div of divisions) {
+    const users = usersByDiv[div] || [];
     const sudah = [];
     const kurang = [];
     const belum = [];
@@ -421,7 +417,7 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
     totals.noUsername += tanpaUsername.length;
 
     reportEntries.push({
-      clientName,
+      clientName: div,
       usersCount: users.length,
       sudahCount: sudah.length,
       kurangCount: kurang.length,
@@ -435,11 +431,14 @@ export async function absensiKomentarDitbinmasReport(opts = {}) {
   }
 
   reportEntries.sort((a, b) => {
-    const aBinmas = a.clientName.toUpperCase() === "DIREKTORAT BINMAS";
-    const bBinmas = b.clientName.toUpperCase() === "DIREKTORAT BINMAS";
+    const aBinmas = a.clientName.toUpperCase() === "DITBINMAS";
+    const bBinmas = b.clientName.toUpperCase() === "DITBINMAS";
     if (aBinmas && !bBinmas) return -1;
     if (bBinmas && !aBinmas) return 1;
-    if (a.sudahCount !== b.sudahCount) return b.sudahCount - a.sudahCount;
+
+    const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
+    const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
+    if (aPct !== bPct) return bPct - aPct;
     if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
     return a.clientName.localeCompare(b.clientName);
   });
