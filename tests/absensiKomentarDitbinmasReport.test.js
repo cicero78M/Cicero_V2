@@ -30,6 +30,7 @@ beforeEach(() => {
 });
 
 test('aggregates komentar report per division for Ditbinmas with Ditbinmas first', async () => {
+
   mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'DIREKTORAT BINMAS', client_tiktok: 'ditbinmastiktok' }] });
 
   mockGetPostsTodayByClient.mockResolvedValueOnce([
@@ -45,6 +46,7 @@ test('aggregates komentar report per division for Ditbinmas with Ditbinmas first
     { user_id: 'u3', nama: 'User3', tiktok: 'user3', divisi: 'DIV A', client_id: 'DITBINMAS', status: true },
     { user_id: 'u4', nama: 'User4', tiktok: 'user4', divisi: 'DIV B', client_id: 'DITBINMAS', status: true },
     { user_id: 'u5', nama: 'User5', tiktok: 'user5', divisi: 'DIV B', client_id: 'DITBINMAS', status: true },
+
   ]);
 
   const msg = await absensiKomentarDitbinmasReport();
@@ -65,6 +67,7 @@ test('aggregates komentar report per division for Ditbinmas with Ditbinmas first
   expect(msg).toContain(expectedDivDitbinmas);
   const expectedDivA =
     "2. DIV A\n\n" +
+
     "*Jumlah Personil* : 2 pers\n" +
     "✅ *Sudah melaksanakan* : 2 pers\n" +
     "⚠️ *Melaksanakan kurang lengkap* : 0 pers\n" +

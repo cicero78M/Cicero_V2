@@ -439,6 +439,7 @@ export async function absensiKomentarDitbinmasReport() {
     const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
     const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
     if (aPct !== bPct) return bPct - aPct;
+
     if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
     return a.clientName.localeCompare(b.clientName);
   });
