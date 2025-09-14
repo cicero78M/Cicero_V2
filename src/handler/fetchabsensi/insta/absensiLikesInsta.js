@@ -138,13 +138,13 @@ export async function absensiLikes(client_id, opts = {}) {
 
     const reports = reportEntries.map(
       (r, idx) =>
-        `${idx + 1}. ${r.clientName}\n\n` +
+        `${idx + 1}. ${r.clientName}\n` +
         `*Jumlah Personil :* ${r.usersCount} pers\n` +
         `*Sudah Melaksanakan :* ${r.sudahCount} pers\n` +
         `- Melaksanakan lengkap : ${r.sudahCount} pers\n` +
         `- Melaksanakan kurang lengkap : ${r.kurangCount} pers\n` +
         `*Belum melaksanakan :* ${r.belumCount} pers\n` +
-        `*Belum Update Username Instagram :* ${r.noUsernameCount} pers`
+        `*Belum Update Username Instagram :* ${r.noUsernameCount} pers\n`
     );
 
     let msg =
