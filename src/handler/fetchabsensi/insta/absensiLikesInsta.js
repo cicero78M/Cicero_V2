@@ -32,11 +32,12 @@ async function getClientInfo(client_id) {
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
   const shortcodes = await getShortcodesTodayByClient(clientId);
-  const likesSets = [];
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
-    likesSets.push(new Set((likes || []).map(normalizeUsername)));
-  }
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
+  const likesSets = likesLists.map(
+    (likes) => new Set((likes || []).map(normalizeUsername))
+  );
   let polresIds;
   if (opts.selfOnly) {
     polresIds = [String(clientId).toUpperCase()];
@@ -103,12 +104,15 @@ export async function absensiLikes(client_id, opts = {}) {
     if (!shortcodes.length)
       return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
-    const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
-    const likesSets = [];
-    for (const sc of shortcodes) {
-      const likes = await getLikesByShortcode(sc);
-      likesSets.push(new Set((likes || []).map(normalizeUsername)));
-    }
+    const kontenLinks = shortcodes.map(
+      (sc) => `https://www.instagram.com/p/${sc}`
+    );
+    const likesLists = await Promise.all(
+      shortcodes.map((sc) => getLikesByShortcode(sc))
+    );
+    const likesSets = likesLists.map(
+      (likes) => new Set((likes || []).map(normalizeUsername))
+    );
 
     let polresIds;
     let allUsers;
@@ -220,8 +224,10 @@ export async function absensiLikes(client_id, opts = {}) {
     userStats[u.user_id] = { ...u, count: 0 };
   });
 
-  for (const shortcode of shortcodes) {
-    const likes = await getLikesByShortcode(shortcode);
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
+  likesLists.forEach((likes) => {
     const likesSet = new Set((likes || []).map(normalizeUsername));
     users.forEach((u) => {
       if (
@@ -232,7 +238,7 @@ export async function absensiLikes(client_id, opts = {}) {
         userStats[u.user_id].count += 1;
       }
     });
-  }
+  });
 
   const totalKonten = shortcodes.length;
   // User must like at least 50% of content to be considered complete
@@ -347,14 +353,21 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     `Mohon ijin Komandan,\n\n` +
     `📋 *Rekap Per Konten Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
 
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
+  shortcodes.forEach((sc, idx) => {
+    const likes = likesLists[idx];
     const likesSet = new Set((likes || []).map(normalizeUsername));
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
-      if (u.insta && u.insta.trim() !== "" && likesSet.has(normalizeUsername(u.insta))) {
+      if (
+        u.insta &&
+        u.insta.trim() !== "" &&
+        likesSet.has(normalizeUsername(u.insta))
+      ) {
         userSudah.push(u);
       } else {
         userBelum.push(u);
@@ -399,7 +412,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
       if (Object.keys(belumDiv).length === 0) msg += "-\n";
       msg += "\n";
     }
-  }
+  });
   msg += `Terimakasih.`;
   return msg.trim();
 }
@@ -423,18 +436,20 @@ export async function rekapLikesIG(client_id) {
   const shortcodes = await getShortcodesTodayByClient(client_id);
   if (!shortcodes.length) return null;
 
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
   let totalLikes = 0;
-  const detailLikes = [];
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
+  const detailLikes = likesLists.map((likes, idx) => {
     const jumlahLikes = (likes || []).length;
     totalLikes += jumlahLikes;
-    detailLikes.push({
+    const sc = shortcodes[idx];
+    return {
       shortcode: sc,
       link: `https://www.instagram.com/p/${sc}`,
       jumlahLikes,
-    });
-  }
+    };
+  });
 
   let msg =
     "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media Ditbinmas.\n\n" +
@@ -467,11 +482,12 @@ export async function absensiLikesDitbinmasReport() {
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
-  const likesSets = [];
-  for (const sc of shortcodes) {
-    const likes = await getLikesByShortcode(sc);
-    likesSets.push(new Set((likes || []).map(normalizeUsername)));
-  }
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
+  const likesSets = likesLists.map(
+    (likes) => new Set((likes || []).map(normalizeUsername))
+  );
 
   const allUsers = (
     await getUsersByDirektorat(roleName, "DITBINMAS")
@@ -590,17 +606,16 @@ export async function lapharDitbinmas() {
   if (!shortcodes.length)
     return { filename, text: "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini." };
 
-  const kontenLinks = [];
-  const likesSets = [];
-  const likesCounts = [];
-  for (const sc of shortcodes) {
-    const link = `https://www.instagram.com/p/${sc}`;
-    kontenLinks.push(link);
-    const likes = await getLikesByShortcode(sc);
-    const likeSet = new Set((likes || []).map(normalizeUsername));
-    likesSets.push(likeSet);
-    likesCounts.push(likeSet.size);
-  }
+  const kontenLinks = shortcodes.map(
+    (sc) => `https://www.instagram.com/p/${sc}`
+  );
+  const likesLists = await Promise.all(
+    shortcodes.map((sc) => getLikesByShortcode(sc))
+  );
+  const likesSets = likesLists.map(
+    (likes) => new Set((likes || []).map(normalizeUsername))
+  );
+  const likesCounts = likesSets.map((set) => set.size);
 
   const polresIds = (
     await getClientsByRole(roleName)
@@ -620,9 +635,6 @@ export async function lapharDitbinmas() {
     usersByClient[cid].push(u);
   });
 
-  likesSets.forEach((set, idx) => {
-    likesCounts[idx] = set.size;
-  });
   const kontenLinkLikes = kontenLinks.map(
     (link, idx) => `${link} : ${likesCounts[idx]}`
   );
