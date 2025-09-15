@@ -386,11 +386,12 @@ export async function absensiKomentarDitbinmasSimple() {
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
 
-  const commentSets = [];
-  for (const p of posts) {
-    const { comments } = await getCommentsByVideoId(p.video_id);
-    commentSets.push(new Set(extractUsernamesFromComments(comments)));
-  }
+  const commentSets = await Promise.all(
+    posts.map(async (p) => {
+      const { comments } = await getCommentsByVideoId(p.video_id);
+      return new Set(extractUsernamesFromComments(comments));
+    })
+  );
 
   const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
   const allUsers = allUsersRaw.filter(
@@ -444,11 +445,12 @@ export async function absensiKomentarDitbinmasReport() {
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
 
-  const commentSets = [];
-  for (const p of posts) {
-    const { comments } = await getCommentsByVideoId(p.video_id);
-    commentSets.push(new Set(extractUsernamesFromComments(comments)));
-  }
+  const commentSets = await Promise.all(
+    posts.map(async (p) => {
+      const { comments } = await getCommentsByVideoId(p.video_id);
+      return new Set(extractUsernamesFromComments(comments));
+    })
+  );
 
   const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
   const allUsers = allUsersRaw.filter(
