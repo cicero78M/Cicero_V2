@@ -518,10 +518,16 @@ export async function absensiLikesDitbinmasSimple() {
     return "Maaf, gagal mengelompokkan pengguna.";
   }
   const allUsers = usersByClient["DITBINMAS"] || [];
-  const totals = { total: allUsers.length, lengkap: 0, kurang: 0, belum: 0 };
+  const totals = {
+    total: allUsers.length,
+    lengkap: 0,
+    kurang: 0,
+    belum: 0,
+    noUsername: 0,
+  };
   allUsers.forEach((u) => {
     if (!u.insta || u.insta.trim() === "") {
-      totals.belum++;
+      totals.noUsername++;
       return;
     }
     const uname = normalizeUsername(u.insta);
@@ -545,7 +551,8 @@ export async function absensiLikesDitbinmasSimple() {
     `*Jumlah Total Personil:* ${totals.total} pers\n` +
     `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
     `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
-    `❌ *Belum :* ${totals.belum} pers`;
+    `❌ *Belum :* ${totals.belum} pers\n` +
+    `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers`;
 
   return msg.trim();
 }
