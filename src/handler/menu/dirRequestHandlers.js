@@ -18,6 +18,7 @@ import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
 import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
+import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -761,6 +762,20 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     case "16":
       msg = await absensiKomentarDitbinmas();
       break;
+    case "17": {
+      const filePath = await saveWeeklyLikesRecapExcel(clientId);
+      const buffer = await readFile(filePath);
+      await sendWAFile(
+        waClient,
+        buffer,
+        basename(filePath),
+        chatId,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      await unlink(filePath);
+      msg = "✅ File Excel dikirim.";
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -875,6 +890,8 @@ export const dirRequestHandlers = {
         "1️⃣3️⃣ Laporan harian TikTok Ditbinmas\n" +
         "1️⃣4️⃣ Rekap like Instagram (Excel)\n" +
         "1️⃣5️⃣ Rekap gabungan semua sosmed\n\n" +
+        "📆 *Laporan Mingguan*\n" +
+        "1️⃣7️⃣ Rekap file Instagram mingguan\n\n" +
         "┗━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -916,6 +933,7 @@ export const dirRequestHandlers = {
       "14",
       "15",
       "16",
+      "17",
     ].includes(choice)) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
