@@ -6,29 +6,44 @@ import { hariIndo } from '../utils/constants.js';
 export async function saveLikesRecapExcel(data, clientId) {
   const { shortcodes, recap } = data;
   const wb = XLSX.utils.book_new();
+  const recapDate = new Date().toLocaleDateString('id-ID');
+
   Object.entries(recap).forEach(([polres, users]) => {
-    const header = ['Pangkat Nama', 'Satfung', ...shortcodes];
+    const header = [
+      'Pangkat Nama',
+      'Divisi / Satfung',
+      `${recapDate} Jumlah Post`,
+      `${recapDate} Sudah Likes`,
+      `${recapDate} Belum Likes`,
+    ];
+
     const rows = users.map((u) => {
-      const row = {
+      const totalPost = shortcodes.length;
+      const likedCount = shortcodes.reduce(
+        (sum, sc) => sum + (u[sc] ?? 0),
+        0
+      );
+      return {
         'Pangkat Nama': `${u.pangkat ? u.pangkat + ' ' : ''}${u.nama}`.trim(),
-        Satfung: u.satfung || '',
+        'Divisi / Satfung': u.satfung || '',
+        [`${recapDate} Jumlah Post`]: totalPost,
+        [`${recapDate} Sudah Likes`]: likedCount,
+        [`${recapDate} Belum Likes`]: totalPost - likedCount,
       };
-      shortcodes.forEach((sc) => {
-        row[sc] = u[sc] ?? 0;
-      });
-      return row;
     });
+
     const ws = XLSX.utils.json_to_sheet(rows, { header });
     XLSX.utils.book_append_sheet(wb, ws, polres);
   });
+
   const exportDir = path.resolve('export_data/likes_recap');
   await mkdir(exportDir, { recursive: true });
 
   const now = new Date();
   const hari = hariIndo[now.getDay()];
-  const tanggal = now.toLocaleDateString('id-ID');
+  const tanggalStr = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
-  const dateSafe = tanggal.replace(/\//g, '-');
+  const dateSafe = tanggalStr.replace(/\//g, '-');
   const timeSafe = jam.replace(/[:.]/g, '-');
   const formattedClient = (clientId || '')
     .toLowerCase()
