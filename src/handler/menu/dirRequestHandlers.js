@@ -19,6 +19,7 @@ import { join, basename } from "path";
 import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
+import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -497,9 +498,12 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "3":
+      msg = await formatRekapBelumLengkapDitbinmas();
+      break;
+    case "4":
       msg = await absensiLikesDitbinmas();
       break;
-    case "4": { 
+    case "5": {
       const normalizedId = (clientId || "").toUpperCase();
       if (normalizedId !== "DITBINMAS") {
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
@@ -509,139 +513,58 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = await absensiLikes("DITBINMAS", opts);
       break;
     }
-    case "5":
+    case "6":
       msg = await absensiKomentarTiktok();
       break;
-    case "6": { 
-      const { fetchAndStoreInstaContent } = await import(
-        "../fetchpost/instaFetchPost.js"
-      );
-      const { handleFetchLikesInstagram } = await import(
-        "../fetchengagement/fetchLikesInstagram.js"
-      );
-      const { rekapLikesIG } = await import(
-        "../fetchabsensi/insta/absensiLikesInsta.js"
-      );
-      await fetchAndStoreInstaContent(
-        ["shortcode", "caption", "like_count", "timestamp"],
-        waClient,
-        chatId,
-        "DITBINMAS"
-      );
+    case "7":
+      msg = await absensiKomentarDitbinmas();
+      break;
+    case "8": {
+      const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
+      const { rekapLikesIG } = await import("../fetchabsensi/insta/absensiLikesInsta.js");
+      await fetchAndStoreInstaContent(["shortcode", "caption", "like_count", "timestamp"], waClient, chatId, "DITBINMAS");
       await handleFetchLikesInstagram(null, null, "DITBINMAS");
       const rekapMsg = await rekapLikesIG("DITBINMAS");
-      msg =
-        rekapMsg ||
-        "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
+      msg = rekapMsg || "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
-    case "7": {
-      const { handleFetchLikesInstagram } = await import(
-        "../fetchengagement/fetchLikesInstagram.js"
-      );
+    case "9": {
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
       await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
       msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
       break;
     }
-    case "8": {
+    case "10": {
       const normalizedId = (clientId || "").toUpperCase();
       if (normalizedId !== "DITBINMAS") {
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
         break;
       }
-      const { fetchAndStoreTiktokContent } = await import(
-        "../fetchpost/tiktokFetchPost.js"
-      );
-      const { handleFetchKomentarTiktokBatch } = await import(
-        "../fetchengagement/fetchCommentTiktok.js"
-      );
+      const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
       await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
       await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
-      const rekapTiktok = await absensiKomentarDitbinmasReport(
-        userType === "org" ? { clientFilter: userClientId } : {}
-      );
-      msg =
-        rekapTiktok ||
-        "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
+      const rekapTiktok = await absensiKomentarDitbinmasReport(userType === "org" ? { clientFilter: userClientId } : {});
+      msg = rekapTiktok || "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
-    case "9": {
-      const { handleFetchKomentarTiktokBatch } = await import(
-        "../fetchengagement/fetchCommentTiktok.js"
-      );
+    case "11": {
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
       await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
       msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
       break;
     }
-    case "10": {
-        const { text, filename, narrative, textBelum, filenameBelum } =
-          await lapharDitbinmas();
-        const dirPath = "laphar";
-        await mkdir(dirPath, { recursive: true });
-        if (narrative) {
-          await waClient.sendMessage(chatId, narrative.trim());
-        }
-        if (text && filename) {
-          const buffer = Buffer.from(text, "utf-8");
-          const filePath = join(dirPath, filename);
-          await writeFile(filePath, buffer);
-          await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
-        }
-        if (textBelum && filenameBelum) {
-          const bufferBelum = Buffer.from(textBelum, "utf-8");
-          const filePathBelum = join(dirPath, filenameBelum);
-          await writeFile(filePathBelum, bufferBelum);
-          await sendWAFile(
-            waClient,
-            bufferBelum,
-            filenameBelum,
-            chatId,
-            "text/plain"
-          );
-        }
-        const recapData = await collectLikesRecap(clientId);
-        if (recapData.shortcodes.length) {
-          const excelPath = await saveLikesRecapExcel(recapData, clientId);
-          const bufferExcel = await readFile(excelPath);
-          await sendWAFile(
-            waClient,
-            bufferExcel,
-            basename(excelPath),
-            chatId,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          );
-          await unlink(excelPath);
-        }
-        return;
-      }
-    case "11":
-      msg = await formatRekapBelumLengkapDitbinmas();
-      break;
     case "12": {
-      const { fetchAndStoreInstaContent } = await import(
-        "../fetchpost/instaFetchPost.js"
-      );
-      const { handleFetchLikesInstagram } = await import(
-        "../fetchengagement/fetchLikesInstagram.js"
-      );
-      const { fetchAndStoreTiktokContent } = await import(
-        "../fetchpost/tiktokFetchPost.js"
-      );
-      const { handleFetchKomentarTiktokBatch } = await import(
-        "../fetchengagement/fetchCommentTiktok.js"
-      );
-      const { generateSosmedTaskMessage } = await import(
-        "../fetchabsensi/sosmedTask.js"
-      );
+      const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
+      const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
+      const { generateSosmedTaskMessage } = await import("../fetchabsensi/sosmedTask.js");
       const targetId = (clientId || "").toUpperCase();
       const fetchErrors = [];
       try {
-        await fetchAndStoreInstaContent(
-          ["shortcode", "caption", "like_count", "timestamp"],
-          waClient,
-          chatId,
-          targetId
-        );
+        await fetchAndStoreInstaContent(["shortcode", "caption", "like_count", "timestamp"], waClient, chatId, targetId);
       } catch (err) {
         console.error("Error fetching Instagram content:", err);
         fetchErrors.push("Instagram content");
@@ -665,10 +588,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         fetchErrors.push("TikTok comments");
       }
       try {
-        ({ text: msg } = await generateSosmedTaskMessage(targetId, {
-          skipTiktokFetch: true,
-          skipLikesFetch: true,
-        }));
+        ({ text: msg } = await generateSosmedTaskMessage(targetId, { skipTiktokFetch: true, skipLikesFetch: true }));
       } catch (err) {
         console.error("Error generating sosmed task message:", err);
         msg = "Gagal membuat pesan tugas.";
@@ -680,8 +600,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "13": {
-      const { text, filename, narrative, textBelum, filenameBelum } =
-        await lapharTiktokDitbinmas();
+      const { text, filename, narrative, textBelum, filenameBelum } = await lapharDitbinmas();
       const dirPath = "laphar";
       await mkdir(dirPath, { recursive: true });
       if (narrative) {
@@ -697,30 +616,46 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         const bufferBelum = Buffer.from(textBelum, "utf-8");
         const filePathBelum = join(dirPath, filenameBelum);
         await writeFile(filePathBelum, bufferBelum);
-        await sendWAFile(
-          waClient,
-          bufferBelum,
-          filenameBelum,
-          chatId,
-          "text/plain"
-        );
+        await sendWAFile(waClient, bufferBelum, filenameBelum, chatId, "text/plain");
       }
-      const recapData = await collectKomentarRecap(clientId);
-      if (recapData.videoIds.length) {
-        const excelPath = await saveCommentRecapExcel(recapData, clientId);
+      const recapData = await collectLikesRecap(clientId);
+      if (recapData.shortcodes.length) {
+        const excelPath = await saveLikesRecapExcel(recapData, clientId);
         const bufferExcel = await readFile(excelPath);
-        await sendWAFile(
-          waClient,
-          bufferExcel,
-          basename(excelPath),
-          chatId,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
+        await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         await unlink(excelPath);
       }
       return;
     }
     case "14": {
+      const { text, filename, narrative, textBelum, filenameBelum } = await lapharTiktokDitbinmas();
+      const dirPath = "laphar";
+      await mkdir(dirPath, { recursive: true });
+      if (narrative) {
+        await waClient.sendMessage(chatId, narrative.trim());
+      }
+      if (text && filename) {
+        const buffer = Buffer.from(text, "utf-8");
+        const filePath = join(dirPath, filename);
+        await writeFile(filePath, buffer);
+        await sendWAFile(waClient, buffer, filename, chatId, "text/plain");
+      }
+      if (textBelum && filenameBelum) {
+        const bufferBelum = Buffer.from(textBelum, "utf-8");
+        const filePathBelum = join(dirPath, filenameBelum);
+        await writeFile(filePathBelum, bufferBelum);
+        await sendWAFile(waClient, bufferBelum, filenameBelum, chatId, "text/plain");
+      }
+      const recapData = await collectKomentarRecap(clientId);
+      if (recapData.videoIds.length) {
+        const excelPath = await saveCommentRecapExcel(recapData, clientId);
+        const bufferExcel = await readFile(excelPath);
+        await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        await unlink(excelPath);
+      }
+      return;
+    }
+    case "15": {
       const data = await collectLikesRecap(clientId);
       if (!data.shortcodes.length) {
         msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
@@ -728,29 +663,19 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       }
       const filePath = await saveLikesRecapExcel(data, clientId);
       const buffer = await readFile(filePath);
-      await sendWAFile(
-        waClient,
-        buffer,
-        basename(filePath),
-        chatId,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
+      await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       await unlink(filePath);
       msg = "✅ File Excel dikirim.";
       break;
     }
-    case "15": {
+    case "16": {
       const dirPath = "laphar";
       await mkdir(dirPath, { recursive: true });
-      const [ig, tt] = await Promise.all([
-        lapharDitbinmas(),
-        lapharTiktokDitbinmas(),
-      ]);
+      const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
       const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
       if (narrative) {
         await waClient.sendMessage(chatId, narrative);
       }
-
       if (ig.text && ig.filename) {
         const buffer = Buffer.from(ig.text, "utf-8");
         const filePath = join(dirPath, ig.filename);
@@ -761,16 +686,9 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       if (igRecap.shortcodes.length) {
         const excelPath = await saveLikesRecapExcel(igRecap, clientId);
         const bufferExcel = await readFile(excelPath);
-        await sendWAFile(
-          waClient,
-          bufferExcel,
-          basename(excelPath),
-          chatId,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
+        await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         await unlink(excelPath);
       }
-
       if (tt.text && tt.filename) {
         const buffer = Buffer.from(tt.text, "utf-8");
         const filePath = join(dirPath, tt.filename);
@@ -781,30 +699,40 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       if (ttRecap.videoIds.length) {
         const excelPath = await saveCommentRecapExcel(ttRecap, clientId);
         const bufferExcel = await readFile(excelPath);
-        await sendWAFile(
-          waClient,
-          bufferExcel,
-          basename(excelPath),
-          chatId,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
+        await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         await unlink(excelPath);
       }
       return;
     }
-    case "16":
-      msg = await absensiKomentarDitbinmas();
-      break;
     case "17": {
-      const filePath = await saveWeeklyLikesRecapExcel(clientId);
+      let filePath;
+      try {
+        filePath = await saveWeeklyLikesRecapExcel(clientId);
+        if (!filePath) {
+          msg = "Tidak ada data.";
+          break;
+        }
+        const buffer = await readFile(filePath);
+        await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        msg = "✅ File Excel dikirim.";
+      } catch (error) {
+        console.error("Gagal mengirim file Excel:", error);
+        msg = "❌ Gagal mengirim file Excel.";
+      } finally {
+        if (filePath) {
+          try {
+            await unlink(filePath);
+          } catch (err) {
+            console.error("Gagal menghapus file sementara:", err);
+          }
+        }
+      }
+      break;
+    }
+    case "18": {
+      const filePath = await saveWeeklyCommentRecapExcel(clientId);
       const buffer = await readFile(filePath);
-      await sendWAFile(
-        waClient,
-        buffer,
-        basename(filePath),
-        chatId,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
+      await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       await unlink(filePath);
       msg = "✅ File Excel dikirim.";
       break;
@@ -813,7 +741,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       msg = "Menu tidak dikenal.";
   }
   await waClient.sendMessage(chatId, msg.trim());
-  if (action === "6" || action === "8" || action === "12") {
+  if (action === "8" || action === "10" || action === "12") {
     await safeSendMessage(waClient, dirRequestGroup, msg.trim());
   }
 }
@@ -902,30 +830,31 @@ export const dirRequestHandlers = {
     const clientName = session.clientName;
       const menu =
         `Client: *${clientName}*\n` +
-        "┏━━━ *MENU DIRREQUEST* ━━━\n" +
+        "┏━━━━━━━━━━━━ *MENU DIRREQUEST* ━━━━━━━━━━━━\n" +
         "📊 *Rekap Data*\n" +
         "1️⃣ Rekap personel belum lengkapi data\n" +
         "2️⃣ Ringkasan pengisian data personel\n" +
-        "1️⃣1️⃣ Rekap data belum lengkap Ditbinmas\n\n" +
+        "3️⃣ Rekap data belum lengkap Ditbinmas\n\n" +
         "📅 *Absensi*\n" +
-        "3️⃣ Absensi like Ditbinmas\n" +
-        "4️⃣ Absensi like Instagram\n" +
-        "5️⃣ Absensi komentar TikTok\n" +
-        "1️⃣6️⃣ Absensi komentar Ditbinmas\n\n" +
+        "4️⃣ Absensi like Ditbinmas\n" +
+        "5️⃣ Absensi like Instagram\n" +
+        "6️⃣ Absensi komentar TikTok\n" +
+        "7️⃣ Absensi komentar Ditbinmas\n\n" +
         "📥 *Pengambilan Data*\n" +
-        "6️⃣ Ambil konten & like Instagram\n" +
-        "7️⃣ Ambil like Instagram saja\n" +
-        "8️⃣ Ambil konten & komentar TikTok\n" +
-        "9️⃣ Ambil komentar TikTok saja\n" +
+        "8️⃣ Ambil konten & like Instagram\n" +
+        "9️⃣ Ambil like Instagram saja\n" +
+        "🔟 Ambil konten & komentar TikTok\n" +
+        "1️⃣1️⃣ Ambil komentar TikTok saja\n" +
         "1️⃣2️⃣ Ambil semua sosmed & buat tugas\n\n" +
         "📝 *Laporan*\n" +
-        "🔟 Laporan harian Instagram Ditbinmas\n" +
-        "1️⃣3️⃣ Laporan harian TikTok Ditbinmas\n" +
-        "1️⃣4️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣5️⃣ Rekap gabungan semua sosmed\n\n" +
+        "1️⃣3️⃣ Laporan harian Instagram Ditbinmas\n" +
+        "1️⃣4️⃣ Laporan harian TikTok Ditbinmas\n" +
+        "1️⃣5️⃣ Rekap like Instagram (Excel)\n" +
+        "1️⃣6️⃣ Rekap gabungan semua sosmed\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "1️⃣7️⃣ Rekap file Instagram mingguan\n\n" +
-        "┗━━━━━━━━━━━━━━━━━┛\n" +
+        "1️⃣7️⃣ Rekap file Instagram mingguan\n" +
+        "1️⃣8️⃣ Rekap file Tiktok mingguan\n\n" +
+        "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
     session.step = "choose_menu";
@@ -949,25 +878,28 @@ export const dirRequestHandlers = {
 
   async choose_menu(session, chatId, text, waClient) {
     const choice = text.trim();
-    if (![
-      "1",
-      "2",
-      "11",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "12",
-      "10",
-      "13",
-      "14",
-      "15",
-      "16",
-      "17",
-    ].includes(choice)) {
+    if (
+      ![
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+      ].includes(choice)
+    ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }

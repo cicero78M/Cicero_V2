@@ -16,7 +16,7 @@ const { saveWeeklyLikesRecapExcel } = await import(
 
 test('saveWeeklyLikesRecapExcel creates formatted weekly recap', async () => {
   jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
-
+  mockGetRekapLikesByClient.mockReset();
   mockGetRekapLikesByClient.mockImplementation(async (clientId, periode, tanggal) => {
     if (tanggal === '2024-04-07') {
       return {
@@ -60,6 +60,16 @@ test('saveWeeklyLikesRecapExcel creates formatted weekly recap', async () => {
   expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([3, 2, 1]);
 
   await unlink(filePath);
+  jest.useRealTimers();
+});
+
+test('saveWeeklyLikesRecapExcel returns null when no data', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+  mockGetRekapLikesByClient.mockReset();
+  mockGetRekapLikesByClient.mockResolvedValue({ rows: [], totalKonten: 0 });
+
+  const filePath = await saveWeeklyLikesRecapExcel('DITBINMAS');
+  expect(filePath).toBeNull();
   jest.useRealTimers();
 });
 

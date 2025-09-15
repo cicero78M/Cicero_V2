@@ -2,7 +2,8 @@ import { mkdir } from 'fs/promises';
 import path from 'path';
 import XLSX from 'xlsx';
 import { hariIndo } from '../utils/constants.js';
-import { getRekapLikesByClient } from '../model/instaLikeModel.js';
+import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
+import { countPostsByClient } from '../model/tiktokPostModel.js';
 
 const RANK_ORDER = [
   'KOMISARIS BESAR POLISI',
@@ -26,22 +27,10 @@ function rankWeight(rank) {
   return idx === -1 ? RANK_ORDER.length : idx;
 }
 
-export async function saveWeeklyLikesRecapExcel(clientId) {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  let weekStart;
-  let weekEnd;
-
-  if (dayOfWeek === 0) {
-    weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - 6);
-    weekEnd = today;
-  } else {
-    weekEnd = new Date(today);
-    weekEnd.setDate(today.getDate() - dayOfWeek);
-    weekStart = new Date(weekEnd);
-    weekStart.setDate(weekEnd.getDate() - 6);
-  }
+export async function saveWeeklyCommentRecapExcel(clientId) {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 6);
 
   const formatIso = (d) => d.toISOString().slice(0, 10);
   const formatDisplay = (d) =>
@@ -52,35 +41,28 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     });
 
   const dateList = [];
-  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     dateList.push(formatIso(d));
   }
 
   const grouped = {};
   const dailyPosts = {};
 
-  const results = await Promise.all(
-    dateList.map(async (dateStr) => {
-      const { rows, totalKonten } = await getRekapLikesByClient(
-        clientId,
-        'harian',
-        dateStr,
-        undefined,
-        undefined,
-        'ditbinmas'
-      );
-      return { dateStr, rows, totalKonten };
-    })
-  );
-
-  const resultMap = results.reduce((acc, { dateStr, rows, totalKonten }) => {
-    acc[dateStr] = { rows, totalKonten };
-    return acc;
-  }, {});
-
-  dateList.forEach((dateStr) => {
-    const { rows = [], totalKonten = 0 } = resultMap[dateStr] || {};
-    dailyPosts[dateStr] = totalKonten;
+  for (const dateStr of dateList) {
+    const rows = await getRekapKomentarByClient(
+      clientId,
+      'harian',
+      dateStr,
+      undefined,
+      undefined,
+      'ditbinmas'
+    );
+    const totalPosts = await countPostsByClient(
+      clientId,
+      'harian',
+      dateStr
+    );
+    dailyPosts[dateStr] = totalPosts;
     for (const u of rows) {
       const satker = u.client_name || '';
       if (!grouped[satker]) grouped[satker] = {};
@@ -91,23 +73,22 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
           nama: u.nama || '',
           satfung: u.divisi || '',
           perDate: {},
-          totalLikes: 0,
+          totalKomentar: 0,
         };
       }
-      grouped[satker][key].perDate[dateStr] = { likes: u.jumlah_like || 0 };
-      grouped[satker][key].totalLikes += u.jumlah_like || 0;
+      grouped[satker][key].perDate[dateStr] = {
+        komentar: u.jumlah_komentar || 0,
+      };
+      grouped[satker][key].totalKomentar += u.jumlah_komentar || 0;
     }
-  });
-
-  if (Object.keys(grouped).length === 0) {
-    return null;
   }
 
   const wb = XLSX.utils.book_new();
   Object.entries(grouped).forEach(([satker, usersMap]) => {
     const users = Object.values(usersMap);
     users.sort((a, b) => {
-      if (b.totalLikes !== a.totalLikes) return b.totalLikes - a.totalLikes;
+      if (b.totalKomentar !== a.totalKomentar)
+        return b.totalKomentar - a.totalKomentar;
       const rankA = rankWeight(a.pangkat);
       const rankB = rankWeight(b.pangkat);
       if (rankA !== rankB) return rankA - rankB;
@@ -116,9 +97,9 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
 
     const aoa = [];
     const colCount = 4 + dateList.length * 3;
-    const title = `${satker} – Rekap Engagement Instagram`;
-    const periodStr = `${formatDisplay(weekStart)} - ${formatDisplay(weekEnd)}`;
-    const subtitle = `Rekap Likes Instagram Periode ${periodStr}`;
+    const title = `${satker} – Rekap Engagement Tiktok`;
+    const periodStr = `${formatDisplay(startDate)} - ${formatDisplay(endDate)}`;
+    const subtitle = `Rekap Komentar Tiktok Periode ${periodStr}`;
     aoa.push([title]);
     aoa.push([subtitle]);
 
@@ -127,7 +108,7 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     dateList.forEach((d) => {
       const disp = formatDisplay(d);
       headerDates.push(disp, '', '');
-      subHeader.push('Jumlah Post', 'Sudah Likes', 'Belum Likes');
+      subHeader.push('Jumlah Post', 'Sudah Komentar', 'Belum Komentar');
     });
     aoa.push(headerDates);
     aoa.push(subHeader);
@@ -135,9 +116,9 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     users.forEach((u, idx) => {
       const row = [idx + 1, u.pangkat || '', u.nama || '', u.satfung || ''];
       dateList.forEach((d) => {
-        const likes = u.perDate[d]?.likes || 0;
+        const komentar = u.perDate[d]?.komentar || 0;
         const posts = dailyPosts[d] || 0;
-        row.push(posts, likes, Math.max(posts - likes, 0));
+        row.push(posts, komentar, Math.max(posts - komentar, 0));
       });
       aoa.push(row);
     });
@@ -192,13 +173,12 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     XLSX.utils.book_append_sheet(wb, ws, satker);
   });
 
-  const exportDir = path.resolve('export_data/weekly_likes');
+  const exportDir = path.resolve('export_data/weekly_comment');
   await mkdir(exportDir, { recursive: true });
 
-  const fileDate = new Date(dateList[dateList.length - 1]);
   const now = new Date();
-  const hari = hariIndo[fileDate.getDay()];
-  const tanggal = fileDate.toLocaleDateString('id-ID');
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
   const dateSafe = tanggal.replace(/\//g, '-');
   const timeSafe = jam.replace(/[:.]/g, '-');
@@ -207,9 +187,10 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     .replace(/^./, (c) => c.toUpperCase());
   const filePath = path.join(
     exportDir,
-    `Rekap_Mingguan_Instagram_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
+    `Rekap_Mingguan_Tiktok_${formattedClient}_${hari}_${dateSafe}_${timeSafe}.xlsx`
   );
   XLSX.writeFile(wb, filePath, { cellStyles: true });
   return filePath;
 }
 
+export default saveWeeklyCommentRecapExcel;
