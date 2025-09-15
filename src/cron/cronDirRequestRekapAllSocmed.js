@@ -156,7 +156,7 @@ cron.schedule(
   "0 34 20 * * *",
   async () => {
     // Send recap to admin, group, and rekap recipient
-    await runCron(true);
+    await runCron(false);
   },
   { timezone: "Asia/Jakarta" }
 );
