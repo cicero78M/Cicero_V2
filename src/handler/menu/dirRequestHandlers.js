@@ -514,10 +514,10 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       break;
     }
     case "6":
-      msg = await absensiKomentarTiktok();
+      msg = await absensiKomentarDitbinmas();
       break;
     case "7":
-      msg = await absensiKomentarDitbinmas();
+      msg = await absensiKomentarTiktok();
       break;
     case "8": {
       const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
@@ -838,8 +838,8 @@ export const dirRequestHandlers = {
         "📅 *Absensi*\n" +
         "4️⃣ Absensi like Ditbinmas\n" +
         "5️⃣ Absensi like Instagram\n" +
-        "6️⃣ Absensi komentar TikTok\n" +
-        "7️⃣ Absensi komentar Ditbinmas\n\n" +
+        "6️⃣ Absensi komentar Ditbinmas\n" +
+        "7️⃣ Absensi komentar TikTok\n\n" +
         "📥 *Pengambilan Data*\n" +
         "8️⃣ Ambil konten & like Instagram\n" +
         "9️⃣ Ambil like Instagram saja\n" +
