@@ -16,6 +16,38 @@ import {
 import { getClientInfo } from "../../../service/instagram/instagramReport.js";
 import { computeDitbinmasLikesStats } from "./ditbinmasLikesUtils.js";
 
+const pangkatOrder = [
+  "KOMISARIS BESAR POLISI",
+  "AKBP",
+  "KOMPOL",
+  "AKP",
+  "IPTU",
+  "IPDA",
+  "AIPTU",
+  "AIPDA",
+  "BRIPKA",
+  "BRIGADIR",
+  "BRIPTU",
+  "BRIPDA",
+];
+
+const rankIdx = (title) => {
+  const normalized = (title || "").toUpperCase();
+  const index = pangkatOrder.indexOf(normalized);
+  return index === -1 ? pangkatOrder.length : index;
+};
+
+const sortUsersByRankAndName = (users = []) =>
+  users
+    .slice()
+    .sort((a, b) => {
+      const rankDiff = rankIdx(a.title) - rankIdx(b.title);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
+        sensitivity: "base",
+      });
+    });
+
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
   let shortcodes;
@@ -519,12 +551,65 @@ export async function absensiLikesDitbinmasSimple() {
     return "Maaf, gagal mengelompokkan pengguna.";
   }
   const allUsers = usersByClient["DITBINMAS"] || [];
-  const { summary } = computeDitbinmasLikesStats(
+  const { summary, userStats } = computeDitbinmasLikesStats(
     allUsers,
     likesSets,
     shortcodes.length
   );
-  const totals = { ...summary };
+  const totals = {
+    total: summary.total,
+    lengkap: summary.lengkap,
+    kurang: summary.kurang,
+    belum: summary.belum,
+    noUsername: summary.noUsername,
+  };
+
+  const lengkapUsers = sortUsersByRankAndName(
+    userStats.filter((u) => u?.status === "lengkap")
+  );
+  const kurangUsers = sortUsersByRankAndName(
+    userStats.filter((u) => u?.status === "kurang")
+  );
+  const belumUsers = sortUsersByRankAndName(
+    userStats.filter((u) => u?.status === "belum")
+  );
+  const noUsernameUsers = sortUsersByRankAndName(
+    userStats.filter((u) => u?.status === "noUsername")
+  );
+
+  const detailSections = [
+    {
+      icon: "✅",
+      title: "Melaksanakan Lengkap",
+      users: lengkapUsers,
+    },
+    {
+      icon: "⚠️",
+      title: "Melaksanakan Kurang",
+      users: kurangUsers,
+    },
+    {
+      icon: "❌",
+      title: "Belum Melaksanakan",
+      users: belumUsers,
+    },
+    {
+      icon: "⚠️❌",
+      title: "Belum Update Username Instagram",
+      users: noUsernameUsers,
+    },
+  ];
+
+  const detailText = detailSections
+    .map(({ icon, title, users }) => {
+      const header = `${icon} *${title} (${users.length} pers):*`;
+      if (!users.length) {
+        return `${header}\n-`;
+      }
+      const list = users.map((u) => `- ${formatNama(u)}`).join("\n");
+      return `${header}\n${list}`;
+    })
+    .join("\n\n");
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
@@ -537,8 +622,9 @@ export async function absensiLikesDitbinmasSimple() {
     `*Jumlah Total Personil:* ${totals.total} pers\n` +
     `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
     `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
-    `❌ *Belum :* ${totals.belum} pers\n` +
-    `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers`;
+    `❌ *Belum Melaksanakan :* ${totals.belum} pers\n` +
+    `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
+    detailText;
 
   return msg.trim();
 }
