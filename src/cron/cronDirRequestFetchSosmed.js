@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { waGatewayClient } from "../service/waService.js";
+import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
@@ -15,6 +16,15 @@ const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
 let lastIgCount = null;
 let lastTiktokCount = null;
+
+async function initializeLastCounts() {
+  lastIgCount = await getInstaPostCount("DITBINMAS");
+  lastTiktokCount = await getTiktokPostCount("DITBINMAS");
+}
+
+if (process.env.JEST_WORKER_ID === undefined) {
+  await initializeLastCounts();
+}
 
 function getRecipients() {
   return new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
