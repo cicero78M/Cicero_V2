@@ -800,6 +800,10 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
       let filePath;
       try {
         filePath = await saveWeeklyLikesRecapExcel(clientId);
+        if (!filePath) {
+          msg = "Tidak ada data.";
+          break;
+        }
         const buffer = await readFile(filePath);
         await sendWAFile(
           waClient,
