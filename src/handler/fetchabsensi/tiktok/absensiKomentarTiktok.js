@@ -472,10 +472,16 @@ export async function absensiKomentarDitbinmasSimple() {
     (u) => u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
   );
 
-  const totals = { total: allUsers.length, lengkap: 0, kurang: 0, belum: 0 };
+  const totals = {
+    total: allUsers.length,
+    lengkap: 0,
+    kurang: 0,
+    belum: 0,
+    tanpaUsername: 0,
+  };
   allUsers.forEach((u) => {
     if (!u.tiktok || u.tiktok.trim() === "") {
-      totals.belum++;
+      totals.tanpaUsername++;
       return;
     }
     const uname = normalizeUsername(u.tiktok);
@@ -498,7 +504,8 @@ export async function absensiKomentarDitbinmasSimple() {
     `*Jumlah Total Personil:* ${totals.total} pers\n` +
     `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
     `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
-    `❌ *Belum :* ${totals.belum} pers`;
+    `❌ *Belum :* ${totals.belum} pers\n` +
+    `⚠️❌ *Belum Input Username TikTok :* ${totals.tanpaUsername} pers`;
 
   if (failedVideoIds.length) {
     msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
