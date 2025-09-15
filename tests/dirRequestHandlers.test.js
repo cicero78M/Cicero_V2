@@ -20,6 +20,7 @@ const mockSaveLikesRecapExcel = jest.fn();
 const mockSaveWeeklyLikesRecapExcel = jest.fn();
 const mockCollectKomentarRecap = jest.fn();
 const mockSaveCommentRecapExcel = jest.fn();
+const mockSaveWeeklyCommentRecapExcel = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -84,6 +85,12 @@ jest.unstable_mockModule('../src/service/commentRecapExcelService.js', () => ({
 jest.unstable_mockModule('../src/service/weeklyLikesRecapExcelService.js', () => ({
   saveWeeklyLikesRecapExcel: mockSaveWeeklyLikesRecapExcel,
 }));
+jest.unstable_mockModule(
+  '../src/service/weeklyCommentRecapExcelService.js',
+  () => ({
+    saveWeeklyCommentRecapExcel: mockSaveWeeklyCommentRecapExcel,
+  })
+);
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
@@ -629,6 +636,31 @@ test('choose_menu option 17 generates weekly likes recap excel and sends file', 
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
   expect(mockUnlink).toHaveBeenCalledWith('/tmp/weekly.xlsx');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('File Excel dikirim')
+  );
+});
+
+test('choose_menu option 18 generates weekly tiktok recap excel and sends file', async () => {
+  mockSaveWeeklyCommentRecapExcel.mockResolvedValue('/tmp/weekly-tt.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '790';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '18', waClient);
+
+  expect(mockSaveWeeklyCommentRecapExcel).toHaveBeenCalledWith('ditbinmas');
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/weekly-tt.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/weekly-tt.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/weekly-tt.xlsx');
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
     expect.stringContaining('File Excel dikirim')
