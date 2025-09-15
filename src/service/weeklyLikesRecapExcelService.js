@@ -47,15 +47,27 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
   const grouped = {};
   const dailyPosts = {};
 
-  for (const dateStr of dateList) {
-    const { rows, totalKonten } = await getRekapLikesByClient(
-      clientId,
-      'harian',
-      dateStr,
-      undefined,
-      undefined,
-      'ditbinmas'
-    );
+  const results = await Promise.all(
+    dateList.map(async (dateStr) => {
+      const { rows, totalKonten } = await getRekapLikesByClient(
+        clientId,
+        'harian',
+        dateStr,
+        undefined,
+        undefined,
+        'ditbinmas'
+      );
+      return { dateStr, rows, totalKonten };
+    })
+  );
+
+  const resultMap = results.reduce((acc, { dateStr, rows, totalKonten }) => {
+    acc[dateStr] = { rows, totalKonten };
+    return acc;
+  }, {});
+
+  dateList.forEach((dateStr) => {
+    const { rows = [], totalKonten = 0 } = resultMap[dateStr] || {};
     dailyPosts[dateStr] = totalKonten;
     for (const u of rows) {
       const satker = u.client_name || '';
@@ -73,7 +85,7 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
       grouped[satker][key].perDate[dateStr] = { likes: u.jumlah_like || 0 };
       grouped[satker][key].totalLikes += u.jumlah_like || 0;
     }
-  }
+  });
 
   const wb = XLSX.utils.book_new();
   Object.entries(grouped).forEach(([satker, usersMap]) => {
