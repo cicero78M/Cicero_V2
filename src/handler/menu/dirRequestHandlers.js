@@ -634,19 +634,49 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         "../fetchabsensi/sosmedTask.js"
       );
       const targetId = (clientId || "").toUpperCase();
-      await fetchAndStoreInstaContent(
-        ["shortcode", "caption", "like_count", "timestamp"],
-        waClient,
-        chatId,
-        targetId
-      );
-      await handleFetchLikesInstagram(null, null, targetId);
-      await fetchAndStoreTiktokContent(targetId, waClient, chatId);
-      await handleFetchKomentarTiktokBatch(null, null, targetId);
-      ({ text: msg } = await generateSosmedTaskMessage(targetId, {
-        skipTiktokFetch: true,
-        skipLikesFetch: true,
-      }));
+      const fetchErrors = [];
+      try {
+        await fetchAndStoreInstaContent(
+          ["shortcode", "caption", "like_count", "timestamp"],
+          waClient,
+          chatId,
+          targetId
+        );
+      } catch (err) {
+        console.error("Error fetching Instagram content:", err);
+        fetchErrors.push("Instagram content");
+      }
+      try {
+        await handleFetchLikesInstagram(null, null, targetId);
+      } catch (err) {
+        console.error("Error fetching Instagram likes:", err);
+        fetchErrors.push("Instagram likes");
+      }
+      try {
+        await fetchAndStoreTiktokContent(targetId, waClient, chatId);
+      } catch (err) {
+        console.error("Error fetching TikTok content:", err);
+        fetchErrors.push("TikTok content");
+      }
+      try {
+        await handleFetchKomentarTiktokBatch(null, null, targetId);
+      } catch (err) {
+        console.error("Error fetching TikTok comments:", err);
+        fetchErrors.push("TikTok comments");
+      }
+      try {
+        ({ text: msg } = await generateSosmedTaskMessage(targetId, {
+          skipTiktokFetch: true,
+          skipLikesFetch: true,
+        }));
+      } catch (err) {
+        console.error("Error generating sosmed task message:", err);
+        msg = "Gagal membuat pesan tugas.";
+        fetchErrors.push("task message");
+      }
+      if (fetchErrors.length) {
+        msg = `${msg}\n\n⚠️ Sebagian data gagal diambil.`.trim();
+      }
       break;
     }
     case "13": {
