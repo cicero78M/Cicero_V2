@@ -410,6 +410,55 @@ export async function rekapLikesIG(client_id) {
   return msg.trim();
 }
 
+export async function absensiLikesDitbinmasSimple() {
+  const roleName = "ditbinmas";
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const shortcodes = await getShortcodesTodayByClient(roleName);
+  if (!shortcodes.length)
+    return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
+
+  const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
+  const likesSets = await getLikesSets(shortcodes);
+  const { usersByClient } = await groupUsersByClientDivision(roleName, {
+    clientFilter: "DITBINMAS",
+  });
+  const allUsers = usersByClient["DITBINMAS"] || [];
+  const totals = { total: allUsers.length, lengkap: 0, kurang: 0, belum: 0 };
+  allUsers.forEach((u) => {
+    if (!u.insta || u.insta.trim() === "") {
+      totals.belum++;
+      return;
+    }
+    const uname = normalizeUsername(u.insta);
+    let count = 0;
+    likesSets.forEach((set) => {
+      if (set.has(uname)) count += 1;
+    });
+    if (count === shortcodes.length) totals.lengkap++;
+    else if (count > 0) totals.kurang++;
+    else totals.belum++;
+  });
+
+  let msg =
+    `Mohon ijin Komandan,\n\n` +
+    `📋 Rekap Akumulasi Likes Instagram (Simple)\n` +
+    `*DIREKTORAT BINMAS*\n` +
+    `${hari}, ${tanggal}\n` +
+    `Jam: ${jam}\n\n` +
+    `*Jumlah Konten:* ${shortcodes.length}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
+    `*Jumlah Total Personil:* ${totals.total} pers\n` +
+    `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
+    `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
+    `❌ *Belum :* ${totals.belum} pers`;
+
+  return msg.trim();
+}
+
 export async function absensiLikesDitbinmasReport() {
   const roleName = "ditbinmas";
   const now = new Date();

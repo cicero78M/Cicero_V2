@@ -370,6 +370,64 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
+export async function absensiKomentarDitbinmasSimple() {
+  const roleName = "ditbinmas";
+  const now = new Date();
+  const hari = hariIndo[now.getDay()];
+  const tanggal = now.toLocaleDateString("id-ID");
+  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+
+  const posts = await getPostsTodayByClient(roleName);
+  if (!posts.length)
+    return "Tidak ada konten TikTok pada akun Official DIREKTORAT BINMAS hari ini.";
+
+  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
+  const kontenLinks = posts.map(
+    (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
+  );
+
+  const commentSets = [];
+  for (const p of posts) {
+    const { comments } = await getCommentsByVideoId(p.video_id);
+    commentSets.push(new Set(extractUsernamesFromComments(comments)));
+  }
+
+  const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
+  const allUsers = allUsersRaw.filter(
+    (u) => u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
+  );
+
+  const totals = { total: allUsers.length, lengkap: 0, kurang: 0, belum: 0 };
+  allUsers.forEach((u) => {
+    if (!u.tiktok || u.tiktok.trim() === "") {
+      totals.belum++;
+      return;
+    }
+    const uname = normalizeUsername(u.tiktok);
+    let count = 0;
+    commentSets.forEach((set) => {
+      if (set.has(uname)) count += 1;
+    });
+    if (count === posts.length) totals.lengkap++;
+    else if (count > 0) totals.kurang++;
+    else totals.belum++;
+  });
+
+  let msg =
+    `Mohon ijin Komandan,\n\n` +
+    `📋 Rekap Komentar TikTok (Simple)\n` +
+    `*${dirName.toUpperCase()}*\n` +
+    `${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    `*Jumlah Konten:* ${posts.length}\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
+    `*Jumlah Total Personil:* ${totals.total} pers\n` +
+    `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
+    `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
+    `❌ *Belum :* ${totals.belum} pers`;
+
+  return msg.trim();
+}
+
 export async function absensiKomentarDitbinmasReport() {
   const roleName = "ditbinmas";
   const now = new Date();
