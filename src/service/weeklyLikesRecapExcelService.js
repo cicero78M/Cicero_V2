@@ -80,21 +80,21 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
       if (rankA !== rankB) return rankA - rankB;
       return a.nama.localeCompare(b.nama);
     });
-    const header = ['Pangkat Nama', 'Satfung'];
+    const header = ['Pangkat Nama', 'Divisi / Satfung'];
     dateList.forEach((d) => {
-      header.push(`${d} Jumlah Post Tugas`);
+      header.push(`${d} Jumlah Post`);
       header.push(`${d} Sudah Likes`);
       header.push(`${d} Belum Likes`);
     });
     const rowsData = users.map((u) => {
       const row = {
         'Pangkat Nama': `${u.pangkat ? u.pangkat + ' ' : ''}${u.nama}`.trim(),
-        Satfung: u.satfung || '',
+        'Divisi / Satfung': u.satfung || '',
       };
       dateList.forEach((d) => {
         const likes = u.perDate[d]?.likes || 0;
         const posts = dailyPosts[d] || 0;
-        row[`${d} Jumlah Post Tugas`] = posts;
+        row[`${d} Jumlah Post`] = posts;
         row[`${d} Sudah Likes`] = likes;
         row[`${d} Belum Likes`] = Math.max(posts - likes, 0);
       });
