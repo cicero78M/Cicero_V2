@@ -53,9 +53,31 @@ export async function collectKomentarRecap(clientId, opts = {}) {
   const posts = await getPostsTodayByClient(clientId);
   const videoIds = posts.map((p) => p.video_id);
   const commentSets = [];
+  const failedVideoIds = [];
   for (const vid of videoIds) {
-    const { comments } = await getCommentsByVideoId(vid);
-    commentSets.push(new Set(extractUsernamesFromComments(comments)));
+    try {
+      const { comments } = await getCommentsByVideoId(vid);
+      commentSets.push(new Set(extractUsernamesFromComments(comments)));
+    } catch (error) {
+      failedVideoIds.push(vid);
+      commentSets.push(new Set());
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: {
+          event: "comment_fetch_failed",
+          videoId: vid,
+          error: error?.message || error,
+        },
+        client_id: clientId,
+      });
+    }
+  }
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id: clientId,
+    });
   }
   const roleName = String(clientId || "").toLowerCase();
   let polresIds;
@@ -99,7 +121,7 @@ export async function collectKomentarRecap(clientId, opts = {}) {
     });
     recap[clientName] = rows;
   }
-  return { videoIds, recap };
+  return { videoIds, recap, failedVideoIds };
 }
 
 // === AKUMULASI (min 50%) ===
@@ -146,18 +168,40 @@ export async function absensiKomentar(client_id, opts = {}) {
     userStats[u.user_id] = { ...u, count: 0 };
   });
 
+  const failedVideoIds = [];
   const commentSets = await Promise.all(
     posts.map(async (post) => {
-      const { comments } = await getCommentsByVideoId(post.video_id);
-      const commentSet = new Set(extractUsernamesFromComments(comments));
-      sendDebug({
-        tag: "ABSEN TTK",
-        msg: `Post ${post.video_id} comments=${commentSet.size}`,
-        client_id,
-      });
-      return commentSet;
+      try {
+        const { comments } = await getCommentsByVideoId(post.video_id);
+        const commentSet = new Set(extractUsernamesFromComments(comments));
+        sendDebug({
+          tag: "ABSEN TTK",
+          msg: `Post ${post.video_id} comments=${commentSet.size}`,
+          client_id,
+        });
+        return commentSet;
+      } catch (error) {
+        failedVideoIds.push(post.video_id);
+        sendDebug({
+          tag: "ABSEN TTK",
+          msg: {
+            event: "comment_fetch_failed",
+            videoId: post.video_id,
+            error: error?.message || error,
+          },
+          client_id,
+        });
+        return new Set();
+      }
     })
   );
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id,
+    });
+  }
 
   commentSets.forEach((commentSet) => {
     users.forEach((u) => {
@@ -266,10 +310,14 @@ export async function absensiKomentar(client_id, opts = {}) {
       `- ⚠️ *Melaksanakan Kurang Lengkap* : *${totals.kurang} user*\n` +
       `❌ *Belum Melaksanakan* : *${totals.belum} user*\n` +
       `⚠️❌ *Belum Input Username Tiktok* : *${totals.noUsername} user*\n\n` +
-        
-      reports.join("\n\n") +
 
-      `\n\nTerimakasih.`;
+      reports.join("\n\n");
+
+    if (failedVideoIds.length) {
+      msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
+    }
+
+    msg += `\n\nTerimakasih.`;
     return msg.trim();
   }
 
@@ -366,6 +414,10 @@ export async function absensiKomentar(client_id, opts = {}) {
     msg += "\n";
   }
 
+  if (failedVideoIds.length) {
+    msg += `⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}.\n\n`;
+  }
+
   msg += `Terimakasih.`;
   return msg.trim();
 }
@@ -386,12 +438,34 @@ export async function absensiKomentarDitbinmasSimple() {
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
 
+  const failedVideoIds = [];
   const commentSets = await Promise.all(
     posts.map(async (p) => {
-      const { comments } = await getCommentsByVideoId(p.video_id);
-      return new Set(extractUsernamesFromComments(comments));
+      try {
+        const { comments } = await getCommentsByVideoId(p.video_id);
+        return new Set(extractUsernamesFromComments(comments));
+      } catch (error) {
+        failedVideoIds.push(p.video_id);
+        sendDebug({
+          tag: "ABSEN TTK",
+          msg: {
+            event: "comment_fetch_failed",
+            videoId: p.video_id,
+            error: error?.message || error,
+          },
+          client_id: roleName,
+        });
+        return new Set();
+      }
     })
   );
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id: roleName,
+    });
+  }
 
   const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
   const allUsers = allUsersRaw.filter(
@@ -426,6 +500,10 @@ export async function absensiKomentarDitbinmasSimple() {
     `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
     `❌ *Belum :* ${totals.belum} pers`;
 
+  if (failedVideoIds.length) {
+    msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
+  }
+
   return msg.trim();
 }
 
@@ -445,12 +523,34 @@ export async function absensiKomentarDitbinmasReport() {
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
 
+  const failedVideoIds = [];
   const commentSets = await Promise.all(
     posts.map(async (p) => {
-      const { comments } = await getCommentsByVideoId(p.video_id);
-      return new Set(extractUsernamesFromComments(comments));
+      try {
+        const { comments } = await getCommentsByVideoId(p.video_id);
+        return new Set(extractUsernamesFromComments(comments));
+      } catch (error) {
+        failedVideoIds.push(p.video_id);
+        sendDebug({
+          tag: "ABSEN TTK",
+          msg: {
+            event: "comment_fetch_failed",
+            videoId: p.video_id,
+            error: error?.message || error,
+          },
+          client_id: roleName,
+        });
+        return new Set();
+      }
     })
   );
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id: roleName,
+    });
+  }
 
   const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
   const allUsers = allUsersRaw.filter(
@@ -569,8 +669,13 @@ export async function absensiKomentarDitbinmasReport() {
     `- ⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} pers*\n` +
     `❌ *Belum melaksanakan* : *${totals.belum} pers*\n` +
     `⚠️❌ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
-    reports.join("\n") +
-    "\n\nTerimakasih.";
+    reports.join("\n");
+
+  if (failedVideoIds.length) {
+    msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
+  }
+
+  msg += "\n\nTerimakasih.";
 
   return msg.trim();
 }
@@ -594,13 +699,37 @@ export async function lapharTiktokDitbinmas() {
   const kontenLinks = [];
   const commentSets = [];
   const commentCounts = [];
+  const failedVideoIds = [];
   for (const p of posts) {
     const link = `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`;
     kontenLinks.push(link);
-    const { comments } = await getCommentsByVideoId(p.video_id);
-    const cSet = new Set(extractUsernamesFromComments(comments));
-    commentSets.push(cSet);
-    commentCounts.push(cSet.size);
+    try {
+      const { comments } = await getCommentsByVideoId(p.video_id);
+      const cSet = new Set(extractUsernamesFromComments(comments));
+      commentSets.push(cSet);
+      commentCounts.push(cSet.size);
+    } catch (error) {
+      failedVideoIds.push(p.video_id);
+      commentSets.push(new Set());
+      commentCounts.push(0);
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: {
+          event: "comment_fetch_failed",
+          videoId: p.video_id,
+          error: error?.message || error,
+        },
+        client_id: roleName,
+      });
+    }
+  }
+
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id: roleName,
+    });
   }
 
   const { getClientsByRole } = await import("../../../model/userModel.js");
@@ -625,9 +754,14 @@ export async function lapharTiktokDitbinmas() {
   commentSets.forEach((set, idx) => {
     commentCounts[idx] = set.size;
   });
-  const kontenLinkComments = kontenLinks.map(
-    (link, idx) => `${link} : ${commentCounts[idx]}`
-  );
+  const failedVideoSet = new Set(failedVideoIds);
+  const kontenLinkComments = kontenLinks.map((link, idx) => {
+    const videoId = posts[idx]?.video_id;
+    if (videoId && failedVideoSet.has(videoId)) {
+      return `${link} : GAGAL`;
+    }
+    return `${link} : ${commentCounts[idx]}`;
+  });
 
   const pangkatOrder = [
     "KOMISARIS BESAR POLISI",
@@ -958,7 +1092,7 @@ export async function lapharTiktokDitbinmas() {
     );
   const notesSection = notesLines.join("\n");
 
-  const text =
+  let text =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Komentar TikTok\n` +
     `*DIREKTORAT BINMAS*\n` +
@@ -975,7 +1109,7 @@ export async function lapharTiktokDitbinmas() {
     `_Kesatuan  :  Jumlah user / Sudah komentar / Komentar kurang/ Belum komentar/ Belum input TikTok_\n` +
     `${perClientBlocks.join("\n\n")}`;
 
-  const narrative =
+  let narrative =
     `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi komentar oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
     `DIREKTORAT BINMAS\n\n` +
     `Konten Tiktok hari ini: ${posts.length} link: ${kontenLinkComments.join(", ")}\n\n` +
@@ -1004,12 +1138,19 @@ export async function lapharTiktokDitbinmas() {
     `${notesSection}\n\n` +
     `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
 
-  const textBelum =
+  let textBelum =
     `Belum melaksanakan Komentar atau belum input username IG/Tiktok\n` +
     `Polres: DIREKTORAT BINMAS\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `${perClientBelumBlocks.join("\n\n")}`;
+
+  if (failedVideoIds.length) {
+    const failureNote = `⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
+    text += `\n\n${failureNote}`;
+    narrative += `\n\n${failureNote}`;
+    textBelum += `\n\n${failureNote}`;
+  }
 
   return {
     filename,
@@ -1051,14 +1192,31 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     `📋 *Rekap Per Konten Komentar TikTok*\n*${clientLabel}*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${posts.length}\n`;
 
+  const failedVideoIds = [];
   for (const p of posts) {
-    const { comments } = await getCommentsByVideoId(p.video_id);
-    const commentSet = new Set(extractUsernamesFromComments(comments));
-    sendDebug({
-      tag: "ABSEN TTK",
-      msg: `Per konten ${p.video_id} comments=${commentSet.size}`,
-      client_id,
-    });
+    let commentSet = new Set();
+    let fetchFailed = false;
+    try {
+      const { comments } = await getCommentsByVideoId(p.video_id);
+      commentSet = new Set(extractUsernamesFromComments(comments));
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: `Per konten ${p.video_id} comments=${commentSet.size}`,
+        client_id,
+      });
+    } catch (error) {
+      fetchFailed = true;
+      failedVideoIds.push(p.video_id);
+      sendDebug({
+        tag: "ABSEN TTK",
+        msg: {
+          event: "comment_fetch_failed",
+          videoId: p.video_id,
+          error: error?.message || error,
+        },
+        client_id,
+      });
+    }
     let userSudah = [];
     let userBelum = [];
     users.forEach((u) => {
@@ -1080,6 +1238,10 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
     msg += `\nKonten: https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}\n`;
     msg += `✅ *Sudah melaksanakan* : *${userSudah.length} user*\n`;
     msg += `❌ *Belum melaksanakan* : *${userBelum.length} user*\n`;
+
+    if (fetchFailed) {
+      msg += `⚠️ Data komentar gagal diambil untuk konten ini.\n`;
+    }
 
     if (mode === "all" || mode === "sudah") {
       msg += `✅ *Sudah melaksanakan* (${userSudah.length} user):\n`;
@@ -1114,6 +1276,14 @@ export async function absensiKomentarTiktokPerKonten(client_id, opts = {}) {
       if (Object.keys(belumDiv).length === 0) msg += "-\n";
       msg += "\n";
     }
+  }
+  if (failedVideoIds.length) {
+    sendDebug({
+      tag: "ABSEN TTK",
+      msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
+      client_id,
+    });
+    msg += `\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}.\n`;
   }
   msg += `Terimakasih.`;
   return msg.trim();
