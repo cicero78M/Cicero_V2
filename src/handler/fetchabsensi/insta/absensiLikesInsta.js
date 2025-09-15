@@ -14,6 +14,7 @@ import {
   groupUsersByClientDivision,
 } from "../../../utils/likesHelper.js";
 import { getClientInfo } from "../../../service/instagram/instagramReport.js";
+import { computeDitbinmasLikesStats } from "./ditbinmasLikesUtils.js";
 
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
@@ -518,27 +519,12 @@ export async function absensiLikesDitbinmasSimple() {
     return "Maaf, gagal mengelompokkan pengguna.";
   }
   const allUsers = usersByClient["DITBINMAS"] || [];
-  const totals = {
-    total: allUsers.length,
-    lengkap: 0,
-    kurang: 0,
-    belum: 0,
-    noUsername: 0,
-  };
-  allUsers.forEach((u) => {
-    if (!u.insta || u.insta.trim() === "") {
-      totals.noUsername++;
-      return;
-    }
-    const uname = normalizeUsername(u.insta);
-    let count = 0;
-    likesSets.forEach((set) => {
-      if (set.has(uname)) count += 1;
-    });
-    if (count === shortcodes.length) totals.lengkap++;
-    else if (count > 0) totals.kurang++;
-    else totals.belum++;
-  });
+  const { summary } = computeDitbinmasLikesStats(
+    allUsers,
+    likesSets,
+    shortcodes.length
+  );
+  const totals = { ...summary };
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
@@ -594,11 +580,23 @@ export async function absensiLikesDitbinmasReport() {
     return "Maaf, gagal mengelompokkan pengguna.";
   }
   const allUsers = usersByClient["DITBINMAS"] || [];
+  const { summary: summaryTotals, userStats } = computeDitbinmasLikesStats(
+    allUsers,
+    likesSets,
+    shortcodes.length
+  );
 
-  const usersByDiv = groupByDivision(allUsers);
+  const totals = {
+    total: summaryTotals.total,
+    sudah: summaryTotals.lengkap,
+    kurang: summaryTotals.kurang,
+    belum: summaryTotals.belum + summaryTotals.noUsername,
+    noUsername: summaryTotals.noUsername,
+  };
+
+  const usersByDiv = groupByDivision(userStats);
   const divisions = sortDivisionKeys(Object.keys(usersByDiv));
 
-  const totals = { total: 0, sudah: 0, kurang: 0, belum: 0, noUsername: 0 };
   const reportEntries = [];
 
   divisions.forEach((div) => {
@@ -609,27 +607,23 @@ export async function absensiLikesDitbinmasReport() {
     const tanpaUsername = [];
 
     users.forEach((u) => {
-      if (!u.insta || u.insta.trim() === "") {
-        tanpaUsername.push(u);
-        return;
+      switch (u.status) {
+        case "lengkap":
+          sudah.push(u);
+          break;
+        case "kurang":
+          kurang.push(u);
+          break;
+        case "noUsername":
+          tanpaUsername.push(u);
+          break;
+        default:
+          belum.push(u);
+          break;
       }
-      const uname = normalizeUsername(u.insta);
-      let count = 0;
-      likesSets.forEach((set) => {
-        if (set.has(uname)) count += 1;
-      });
-      if (count === shortcodes.length) sudah.push({ ...u, count });
-      else if (count > 0) kurang.push({ ...u, count });
-      else belum.push({ ...u, count });
     });
 
     const belumCount = belum.length + tanpaUsername.length;
-
-    totals.total += users.length;
-    totals.sudah += sudah.length;
-    totals.kurang += kurang.length;
-    totals.belum += belumCount;
-    totals.noUsername += tanpaUsername.length;
 
     reportEntries.push({
       clientName: div,
