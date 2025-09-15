@@ -17,12 +17,32 @@ import { getClientInfo } from "../../../service/instagram/instagramReport.js";
 
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
-  const shortcodes = await getShortcodesTodayByClient(clientId);
-  const likesSets = await getLikesSets(shortcodes);
-  const { polresIds, usersByClient } = await groupUsersByClientDivision(
-    roleName,
-    { selfOnly: opts.selfOnly }
-  );
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(clientId);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
+
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
+
+  let polresIds, usersByClient;
+  try {
+    ({ polresIds, usersByClient } = await groupUsersByClientDivision(
+      roleName,
+      { selfOnly: opts.selfOnly }
+    ));
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengelompokkan pengguna.";
+  }
   const recap = {};
   for (const cid of polresIds) {
     const { nama: clientName } = await getClientInfo(cid);
@@ -70,18 +90,36 @@ export async function absensiLikes(client_id, opts = {}) {
     const roleName = allowedRoles.includes(normalizedRole)
       ? normalizedRole
       : normalizedClient;
-    const shortcodes = await getShortcodesTodayByClient(roleName);
+    let shortcodes;
+    try {
+      shortcodes = await getShortcodesTodayByClient(roleName);
+    } catch (error) {
+      console.error(error);
+      return "Maaf, gagal mengambil data konten Instagram.";
+    }
     if (!shortcodes.length)
       return `Tidak ada konten pada akun Official Instagram *${clientNama}* hari ini.`;
 
     const kontenLinks = shortcodes.map(
       (sc) => `https://www.instagram.com/p/${sc}`
     );
-    const likesSets = await getLikesSets(shortcodes);
-    const { polresIds, usersByClient } = await groupUsersByClientDivision(
-      roleName,
-      { clientFilter }
-    );
+    let likesSets;
+    try {
+      likesSets = await getLikesSets(shortcodes);
+    } catch (error) {
+      console.error(error);
+      return "Maaf, gagal mengambil data likes Instagram.";
+    }
+    let polresIds, usersByClient;
+    try {
+      ({ polresIds, usersByClient } = await groupUsersByClientDivision(
+        roleName,
+        { clientFilter }
+      ));
+    } catch (error) {
+      console.error(error);
+      return "Maaf, gagal mengelompokkan pengguna.";
+    }
 
 
     const totalKonten = shortcodes.length;
@@ -165,7 +203,13 @@ export async function absensiLikes(client_id, opts = {}) {
 
   const users = await getUsersByClient(clientFilter || client_id, roleFlag);
   const targetClient = roleFlag || client_id;
-  const shortcodes = await getShortcodesTodayByClient(targetClient);
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(targetClient);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
 
   if (!shortcodes.length)
     return `Tidak ada konten pada akun Official Instagram  *${clientNama}* hari ini.`;
@@ -174,8 +218,13 @@ export async function absensiLikes(client_id, opts = {}) {
   users.forEach((u) => {
     userStats[u.user_id] = { ...u, count: 0 };
   });
-
-  const likesSets = await getLikesSets(shortcodes);
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
   likesSets.forEach((likesSet) => {
     users.forEach((u) => {
       if (
@@ -291,7 +340,13 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
   const users = await getUsersByClient(client_id);
   const roleFlag = opts.roleFlag;
   const targetClient = roleFlag || client_id;
-  const shortcodes = await getShortcodesTodayByClient(targetClient);
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(targetClient);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
 
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *Polres*: *${clientNama}* hari ini.`;
@@ -301,7 +356,13 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
     `Mohon ijin Komandan,\n\n` +
     `📋 *Rekap Per Konten Likes Instagram*\n *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n`;
-  const likesSets = await getLikesSets(shortcodes);
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
 
   shortcodes.forEach((sc, idx) => {
     const likesSet = likesSets[idx];
@@ -378,9 +439,21 @@ export async function rekapLikesIG(client_id) {
   const client = await findClientById(client_id);
   const polresNama = client?.nama || client_id;
 
-  const shortcodes = await getShortcodesTodayByClient(client_id);
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(client_id);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
   if (!shortcodes.length) return null;
-  const likesSets = await getLikesSets(shortcodes);
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
   let totalLikes = 0;
   const detailLikes = likesSets.map((set, idx) => {
     const jumlahLikes = set.size;
@@ -417,15 +490,33 @@ export async function absensiLikesDitbinmasSimple() {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const shortcodes = await getShortcodesTodayByClient(roleName);
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(roleName);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
   if (!shortcodes.length)
     return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
 
   const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
-  const likesSets = await getLikesSets(shortcodes);
-  const { usersByClient } = await groupUsersByClientDivision(roleName, {
-    clientFilter: "DITBINMAS",
-  });
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
+  let usersByClient;
+  try {
+    ({ usersByClient } = await groupUsersByClientDivision(roleName, {
+      clientFilter: "DITBINMAS",
+    }));
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengelompokkan pengguna.";
+  }
   const allUsers = usersByClient["DITBINMAS"] || [];
   const totals = { total: allUsers.length, lengkap: 0, kurang: 0, belum: 0 };
   allUsers.forEach((u) => {
@@ -466,17 +557,35 @@ export async function absensiLikesDitbinmasReport() {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const shortcodes = await getShortcodesTodayByClient(roleName);
+  let shortcodes;
+  try {
+    shortcodes = await getShortcodesTodayByClient(roleName);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data konten Instagram.";
+  }
   if (!shortcodes.length)
     return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
   );
-  const likesSets = await getLikesSets(shortcodes);
-  const { usersByClient } = await groupUsersByClientDivision(roleName, {
-    clientFilter: "DITBINMAS",
-  });
+  let likesSets;
+  try {
+    likesSets = await getLikesSets(shortcodes);
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengambil data likes Instagram.";
+  }
+  let usersByClient;
+  try {
+    ({ usersByClient } = await groupUsersByClientDivision(roleName, {
+      clientFilter: "DITBINMAS",
+    }));
+  } catch (error) {
+    console.error(error);
+    return "Maaf, gagal mengelompokkan pengguna.";
+  }
   const allUsers = usersByClient["DITBINMAS"] || [];
 
   const usersByDiv = groupByDivision(allUsers);
