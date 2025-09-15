@@ -14,7 +14,7 @@ const { saveWeeklyLikesRecapExcel } = await import(
   '../src/service/weeklyLikesRecapExcelService.js'
 );
 
-test('saveWeeklyLikesRecapExcel creates recap with per-date columns', async () => {
+test('saveWeeklyLikesRecapExcel creates formatted weekly recap', async () => {
   jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
 
   mockGetRekapLikesByClient.mockImplementation(async (clientId, periode, tanggal) => {
@@ -38,15 +38,26 @@ test('saveWeeklyLikesRecapExcel creates recap with per-date columns', async () =
   const filePath = await saveWeeklyLikesRecapExcel('DITBINMAS');
   const wb = XLSX.readFile(filePath);
   const sheet = wb.Sheets['POLRES A'];
-  const rows = XLSX.utils.sheet_to_json(sheet);
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  expect(rows[0]).toMatchObject({
-    'Pangkat Nama': 'AKP Budi',
-    'Divisi / Satfung': 'Sat A',
-    '2024-04-07 Jumlah Post': 3,
-    '2024-04-07 Sudah Likes': 2,
-    '2024-04-07 Belum Likes': 1,
-  });
+  expect(aoa[0][0]).toBe('POLRES A – Rekap Engagement Instagram');
+  expect(aoa[1][0]).toBe(
+    'Rekap Likes Instagram Periode 01/04/2024 - 07/04/2024'
+  );
+  expect(aoa[2].slice(0, 4)).toEqual([
+    'No',
+    'Pangkat',
+    'Nama',
+    'Divisi / Satfung',
+  ]);
+  expect(aoa[3].slice(4, 7)).toEqual([
+    'Jumlah Post',
+    'Sudah Likes',
+    'Belum Likes',
+  ]);
+  const lastIdx = aoa[2].length - 3;
+  expect(aoa[4].slice(0, 4)).toEqual([1, 'AKP', 'Budi', 'Sat A']);
+  expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([3, 2, 1]);
 
   await unlink(filePath);
   jest.useRealTimers();
