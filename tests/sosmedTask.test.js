@@ -61,13 +61,17 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
 });
 
-test('generateSosmedTaskMessage can skip tiktok fetch', async () => {
+test('generateSosmedTaskMessage can skip internal fetches', async () => {
   mockFindClientById.mockResolvedValue({ nama: 'Dit Binmas', client_tiktok: '' });
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
   mockGetTiktokPostsToday.mockResolvedValue([]);
   mockHandleFetchLikesInstagram.mockResolvedValue();
 
-  await generateSosmedTaskMessage('DITBINMAS', true);
+  await generateSosmedTaskMessage('DITBINMAS', {
+    skipTiktokFetch: true,
+    skipLikesFetch: true,
+  });
 
   expect(mockHandleFetchKomentarTiktokBatch).not.toHaveBeenCalled();
+  expect(mockHandleFetchLikesInstagram).not.toHaveBeenCalled();
 });

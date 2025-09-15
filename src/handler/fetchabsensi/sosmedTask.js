@@ -8,8 +8,13 @@ import { handleFetchKomentarTiktokBatch } from "../fetchengagement/fetchCommentT
 
 export async function generateSosmedTaskMessage(
   clientId = "DITBINMAS",
-  skipTiktokFetch = false
+  options = {}
 ) {
+
+  if (typeof options === "boolean") {
+    options = { skipTiktokFetch: options };
+  }
+  const { skipTiktokFetch = false, skipLikesFetch = false } = options;
 
   let clientName = clientId;
   let tiktokUsername = "";
@@ -25,7 +30,9 @@ export async function generateSosmedTaskMessage(
   let shortcodes = [];
   try {
     shortcodes = await getShortcodesTodayByClient(clientId);
-    await handleFetchLikesInstagram(null, null, clientId);
+    if (!skipLikesFetch) {
+      await handleFetchLikesInstagram(null, null, clientId);
+    }
   } catch {
     shortcodes = [];
   }

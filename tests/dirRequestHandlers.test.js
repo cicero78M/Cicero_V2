@@ -432,8 +432,11 @@ test('choose_menu option 12 fetch sosial media sends combined task', async () =>
     waClient,
     chatId
   );
-  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
-  expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS', true);
+    expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+    expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS', {
+      skipTiktokFetch: true,
+      skipLikesFetch: true,
+    });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'tugas sosmed');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     waClient,
