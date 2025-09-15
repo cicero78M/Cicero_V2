@@ -642,6 +642,23 @@ test('choose_menu option 17 generates weekly likes recap excel and sends file', 
   );
 });
 
+test('choose_menu option 17 sends no data message when service returns null', async () => {
+  mockSaveWeeklyLikesRecapExcel.mockResolvedValue(null);
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '791';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '17', waClient);
+
+  expect(mockReadFile).not.toHaveBeenCalled();
+  expect(mockSendWAFile).not.toHaveBeenCalled();
+  expect(mockUnlink).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringMatching(/tidak ada data/i)
+  );
+});
+
 test('choose_menu option 18 generates weekly tiktok recap excel and sends file', async () => {
   mockSaveWeeklyCommentRecapExcel.mockResolvedValue('/tmp/weekly-tt.xlsx');
   mockReadFile.mockResolvedValue(Buffer.from('excel'));
