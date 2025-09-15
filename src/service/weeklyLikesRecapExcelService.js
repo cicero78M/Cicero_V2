@@ -27,9 +27,21 @@ function rankWeight(rank) {
 }
 
 export async function saveWeeklyLikesRecapExcel(clientId) {
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - 6);
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  let weekStart;
+  let weekEnd;
+
+  if (dayOfWeek === 0) {
+    weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - 6);
+    weekEnd = today;
+  } else {
+    weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() - dayOfWeek);
+    weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+  }
 
   const formatIso = (d) => d.toISOString().slice(0, 10);
   const formatDisplay = (d) =>
@@ -40,7 +52,7 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     });
 
   const dateList = [];
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
     dateList.push(formatIso(d));
   }
 
@@ -101,7 +113,7 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
     const aoa = [];
     const colCount = 4 + dateList.length * 3;
     const title = `${satker} – Rekap Engagement Instagram`;
-    const periodStr = `${formatDisplay(startDate)} - ${formatDisplay(endDate)}`;
+    const periodStr = `${formatDisplay(weekStart)} - ${formatDisplay(weekEnd)}`;
     const subtitle = `Rekap Likes Instagram Periode ${periodStr}`;
     aoa.push([title]);
     aoa.push([subtitle]);
@@ -179,9 +191,10 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
   const exportDir = path.resolve('export_data/weekly_likes');
   await mkdir(exportDir, { recursive: true });
 
+  const fileDate = new Date(dateList[dateList.length - 1]);
   const now = new Date();
-  const hari = hariIndo[now.getDay()];
-  const tanggal = now.toLocaleDateString('id-ID');
+  const hari = hariIndo[fileDate.getDay()];
+  const tanggal = fileDate.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
   const dateSafe = tanggal.replace(/\//g, '-');
   const timeSafe = jam.replace(/[:.]/g, '-');
