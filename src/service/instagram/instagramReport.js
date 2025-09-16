@@ -560,7 +560,7 @@ export async function lapharDitbinmas() {
   if (!data.shortcodes.length)
     return {
       filename,
-      text: "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.",
+      text: "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini",
     };
 
   const stats = await calculateDitbinmasStats(data);

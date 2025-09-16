@@ -541,7 +541,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         await fetchAndStoreInstaContent(["shortcode", "caption", "like_count", "timestamp"], waClient, chatId, "DITBINMAS");
         await handleFetchLikesInstagram(null, null, "DITBINMAS");
         const rekapMsg = await rekapLikesIG("DITBINMAS");
-        msg = rekapMsg || "Tidak ada konten IG untuk DIREKTORAT BINMAS hari ini.";
+        msg = rekapMsg || "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini";
         break;
       }
       case "11": {
