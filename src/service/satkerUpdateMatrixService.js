@@ -188,8 +188,7 @@ export async function saveSatkerUpdateMatrixExcel({
 
   const now = new Date();
   const dateLabel = now.toISOString().slice(0, 10);
-  const safeUsername = sanitizeFilename(username) || "User";
-  const fileName = `Satker_${safeUsername}_Update_Rank_${dateLabel}.xlsx`;
+  const fileName = `Ditbinmas_Satker_Update_Rank_${dateLabel}.xlsx`;
   const filePath = path.join(exportDir, fileName);
 
   XLSX.writeFile(workbook, filePath);
