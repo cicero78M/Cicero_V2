@@ -6,6 +6,8 @@ const mockFetchTiktok = jest.fn();
 const mockGenerateMsg = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
+const mockGetInstaPostCount = jest.fn();
+const mockGetTiktokPostCount = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
@@ -27,13 +29,20 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
 }));
+jest.unstable_mockModule('../src/service/postCountService.js', () => ({
+  getInstaPostCount: mockGetInstaPostCount,
+  getTiktokPostCount: mockGetTiktokPostCount,
+}));
 
 let runCron;
 
 beforeEach(async () => {
   jest.resetModules();
   jest.clearAllMocks();
+  process.env.JWT_SECRET = 'test-secret';
   mockGenerateMsg.mockResolvedValue({ text: 'msg', igCount: 1, tiktokCount: 1 });
+  mockGetInstaPostCount.mockResolvedValue(0);
+  mockGetTiktokPostCount.mockResolvedValue(0);
   ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
 });
 

@@ -22,6 +22,8 @@ import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
+import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
+import { saveMonthlyCommentRecapExcel } from "../../service/monthlyCommentRecapExcelService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -750,6 +752,56 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "✅ File Excel dikirim.";
         break;
       }
+      case "21": {
+        let filePath;
+        try {
+          filePath = await saveMonthlyLikesRecapExcel(clientId);
+          if (!filePath) {
+            msg = "Tidak ada data.";
+            break;
+          }
+          const buffer = await readFile(filePath);
+          await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+          msg = "✅ File Excel dikirim.";
+        } catch (error) {
+          console.error("Gagal mengirim file Excel:", error);
+          msg = "❌ Gagal mengirim file Excel.";
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
+        }
+        break;
+      }
+      case "22": {
+        let filePath;
+        try {
+          filePath = await saveMonthlyCommentRecapExcel(clientId);
+          if (!filePath) {
+            msg = "Tidak ada data.";
+            break;
+          }
+          const buffer = await readFile(filePath);
+          await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+          msg = "✅ File Excel dikirim.";
+        } catch (error) {
+          console.error("Gagal mengirim file Excel:", error);
+          msg = "❌ Gagal mengirim file Excel.";
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
+        }
+        break;
+      }
       default:
         msg = "Menu tidak dikenal.";
     }
@@ -869,6 +921,9 @@ export const dirRequestHandlers = {
         "📆 *Laporan Mingguan*\n" +
         "1️⃣9️⃣ Rekap file Instagram mingguan\n" +
         "2️⃣0️⃣ Rekap file Tiktok mingguan\n\n" +
+        "🗓️ *Laporan Bulanan*\n" +
+        "2️⃣1️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣2️⃣ Rekap file Tiktok bulanan\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -915,6 +970,8 @@ export const dirRequestHandlers = {
           "18",
           "19",
           "20",
+          "21",
+          "22",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
