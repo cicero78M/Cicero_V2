@@ -3,6 +3,7 @@ import path from "path";
 import XLSX from "xlsx";
 import { getUsersSocialByClient, getClientsByRole } from "../model/userModel.js";
 import { findClientById } from "./clientService.js";
+import { getSatkerDspCount } from "../data/satkerDspMap.js";
 
 const DIRECTORATE_ROLES = ["ditbinmas", "ditlantas", "bidhumas"];
 
@@ -73,6 +74,7 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
       const stat = groups.get(cid) || { total: 0, insta: 0, tiktok: 0 };
       const clientInfo = await findClientById(cid);
       const displayName = (clientInfo?.nama || cid || "-").toUpperCase();
+      const jumlahDsp = getSatkerDspCount(clientInfo?.nama, cid);
       const total = stat.total;
       const instaFilled = stat.insta;
       const tiktokFilled = stat.tiktok;
@@ -81,6 +83,7 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
       return {
         cid,
         name: displayName,
+        jumlahDsp,
         total,
         instaFilled,
         instaEmpty,
@@ -134,19 +137,32 @@ export async function saveSatkerUpdateMatrixExcel({
     throw new Error("Tidak ada data satker untuk direkap.");
   }
 
-  const header = [
+  const headerRow1 = [
     "Satker",
+    "Jumlah DSP",
     "Jumlah Personil",
-    "Sudah Update Instagram",
-    "Belum Update Instagram",
-    "Prosentase Sudah Update Instagram",
-    "Sudah Update Tiktok",
-    "Belum Update Tiktok",
-    "Prosentase Sudah Update Tiktok",
+    "Data Update Instagram",
+    null,
+    null,
+    "Data Update Tiktok",
+    null,
+    null,
+  ];
+  const headerRow2 = [
+    null,
+    null,
+    null,
+    "Sudah",
+    "Belum",
+    "Prosentase",
+    "Sudah",
+    "Belum",
+    "Prosentase",
   ];
 
   const rows = stats.map((item) => [
     item.name,
+    item.jumlahDsp ?? null,
     item.total,
     item.instaFilled,
     item.instaEmpty,
@@ -156,7 +172,14 @@ export async function saveSatkerUpdateMatrixExcel({
     item.tiktokPercent,
   ]);
 
-  const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const worksheet = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...rows]);
+  worksheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+    { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+    { s: { r: 0, c: 3 }, e: { r: 0, c: 5 } },
+    { s: { r: 0, c: 6 }, e: { r: 0, c: 8 } },
+  ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap");
 

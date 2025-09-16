@@ -75,13 +75,18 @@ describe('satkerUpdateMatrixService', () => {
     const result = await collectSatkerUpdateMatrix('DITBINMAS', 'ditbinmas');
 
     expect(result.stats).toHaveLength(3);
-    expect(result.stats[0].cid).toBe('ditbinmas');
-    expect(result.stats[0].instaPercent).toBe(100);
-    expect(result.stats[1].cid).toBe('polres_b');
-    expect(result.stats[1].instaPercent).toBe(100);
-    expect(result.stats[1].tiktokPercent).toBe(50);
-    expect(result.stats[2].cid).toBe('polres_a');
-    expect(result.stats[2].instaPercent).toBe(50);
+    expect(result.stats[0]).toMatchObject({
+      cid: 'ditbinmas',
+      instaPercent: 100,
+      jumlahDsp: 102,
+    });
+    expect(result.stats[1]).toMatchObject({
+      cid: 'polres_b',
+      instaPercent: 100,
+      tiktokPercent: 50,
+      jumlahDsp: null,
+    });
+    expect(result.stats[2]).toMatchObject({ cid: 'polres_a', instaPercent: 50, jumlahDsp: null });
     expect(result.totals).toMatchObject({ total: 5, instaFilled: 4, tiktokFilled: 3 });
   });
 
@@ -113,26 +118,30 @@ describe('satkerUpdateMatrixService', () => {
     const aoa = mockAoAToSheet.mock.calls[0][0];
     expect(aoa[0]).toEqual([
       'Satker',
+      'Jumlah DSP',
       'Jumlah Personil',
-      'Sudah Update Instagram',
-      'Belum Update Instagram',
-      'Prosentase Sudah Update Instagram',
-      'Sudah Update Tiktok',
-      'Belum Update Tiktok',
-      'Prosentase Sudah Update Tiktok',
+      'Data Update Instagram',
+      null,
+      null,
+      'Data Update Tiktok',
+      null,
+      null,
     ]);
-    expect(aoa[1]).toEqual([
-      'DIREKTORAT BINMAS',
-      1,
-      1,
-      0,
-      100,
-      1,
-      0,
-      100,
-    ]);
+    expect(aoa[1]).toEqual([null, null, null, 'Sudah', 'Belum', 'Prosentase', 'Sudah', 'Belum', 'Prosentase']);
     expect(aoa[2]).toEqual([
+      'DIREKTORAT BINMAS',
+      102,
+      1,
+      1,
+      0,
+      100,
+      1,
+      0,
+      100,
+    ]);
+    expect(aoa[3]).toEqual([
       'POLRES A',
+      null,
       1,
       0,
       1,
@@ -140,6 +149,15 @@ describe('satkerUpdateMatrixService', () => {
       0,
       1,
       0,
+    ]);
+
+    const worksheet = mockAoAToSheet.mock.results[0].value;
+    expect(worksheet['!merges']).toEqual([
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+      { s: { r: 0, c: 3 }, e: { r: 0, c: 5 } },
+      { s: { r: 0, c: 6 }, e: { r: 0, c: 8 } },
     ]);
 
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
