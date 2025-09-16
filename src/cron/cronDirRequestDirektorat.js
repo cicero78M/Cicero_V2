@@ -3,8 +3,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { waGatewayClient } from "../service/waService.js";
-import { absensiLikesDitbinmas } from "../handler/menu/dirRequestHandlers.js";
-import { absensiKomentarDitbinmasReport } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import {
+  absensiLikesDitbinmasSimple,
+  absensiKomentarDitbinmasSimple,
+} from "../handler/menu/dirRequestHandlers.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
@@ -17,8 +19,8 @@ function getRecipients() {
 export async function runCron() {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
-    const likesMsg = await absensiLikesDitbinmas();
-    const komentarMsg = await absensiKomentarDitbinmasReport();
+    const likesMsg = await absensiLikesDitbinmasSimple();
+    const komentarMsg = await absensiKomentarDitbinmasSimple();
     const recipients = getRecipients();
     for (const wa of recipients) {
       await safeSendMessage(waGatewayClient, wa, likesMsg.trim());

@@ -7,14 +7,9 @@ const mockSendDebug = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/menu/dirRequestHandlers.js', () => ({
-  absensiLikesDitbinmas: mockAbsensi,
+  absensiLikesDitbinmasSimple: mockAbsensi,
+  absensiKomentarDitbinmasSimple: mockKomentar,
 }));
-jest.unstable_mockModule(
-  '../src/handler/fetchabsensi/tiktok/absensiKomentarTiktok.js',
-  () => ({
-    absensiKomentarDitbinmasReport: mockKomentar,
-  })
-);
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   safeSendMessage: mockSafeSend,
   getAdminWAIds: () => ['123@c.us'],
