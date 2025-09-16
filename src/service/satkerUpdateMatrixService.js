@@ -143,9 +143,7 @@ export async function saveSatkerUpdateMatrixExcel({
     "Jumlah Personil",
     "Data Update Instagram",
     null,
-    null,
     "Data Update Tiktok",
-    null,
     null,
   ];
   const headerRow2 = [
@@ -154,10 +152,8 @@ export async function saveSatkerUpdateMatrixExcel({
     null,
     "Sudah",
     "Belum",
-    "Prosentase",
     "Sudah",
     "Belum",
-    "Prosentase",
   ];
 
   const rows = stats.map((item) => [
@@ -166,10 +162,8 @@ export async function saveSatkerUpdateMatrixExcel({
     item.total,
     item.instaFilled,
     item.instaEmpty,
-    item.instaPercent,
     item.tiktokFilled,
     item.tiktokEmpty,
-    item.tiktokPercent,
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...rows]);
@@ -177,8 +171,8 @@ export async function saveSatkerUpdateMatrixExcel({
     { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
     { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
     { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
-    { s: { r: 0, c: 3 }, e: { r: 0, c: 5 } },
-    { s: { r: 0, c: 6 }, e: { r: 0, c: 8 } },
+    { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
+    { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
   ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap");

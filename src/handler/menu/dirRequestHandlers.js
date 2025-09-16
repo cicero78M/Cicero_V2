@@ -793,11 +793,34 @@ async function performAction(
         break;
       }
       case "21": {
-        const filePath = await saveWeeklyCommentRecapExcel(clientId);
-        const buffer = await readFile(filePath);
-        await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        await unlink(filePath);
-        msg = "✅ File Excel dikirim.";
+        let filePath;
+        try {
+          filePath = await saveWeeklyCommentRecapExcel(clientId);
+          if (!filePath) {
+            msg = "Tidak ada data.";
+            break;
+          }
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          msg = "✅ File Excel dikirim.";
+        } catch (error) {
+          console.error("Gagal mengirim file Excel:", error);
+          msg = "❌ Gagal mengirim file Excel.";
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
+        }
         break;
       }
       case "22": {
