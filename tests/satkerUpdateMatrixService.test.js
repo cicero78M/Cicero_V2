@@ -122,22 +122,18 @@ describe('satkerUpdateMatrixService', () => {
       'Jumlah Personil',
       'Data Update Instagram',
       null,
-      null,
       'Data Update Tiktok',
       null,
-      null,
     ]);
-    expect(aoa[1]).toEqual([null, null, null, 'Sudah', 'Belum', 'Prosentase', 'Sudah', 'Belum', 'Prosentase']);
+    expect(aoa[1]).toEqual([null, null, null, 'Sudah', 'Belum', 'Sudah', 'Belum']);
     expect(aoa[2]).toEqual([
       'DIREKTORAT BINMAS',
       102,
       1,
       1,
       0,
-      100,
       1,
       0,
-      100,
     ]);
     expect(aoa[3]).toEqual([
       'POLRES A',
@@ -146,9 +142,7 @@ describe('satkerUpdateMatrixService', () => {
       0,
       1,
       0,
-      0,
       1,
-      0,
     ]);
 
     const worksheet = mockAoAToSheet.mock.results[0].value;
@@ -156,13 +150,13 @@ describe('satkerUpdateMatrixService', () => {
       { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
       { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
       { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
-      { s: { r: 0, c: 3 }, e: { r: 0, c: 5 } },
-      { s: { r: 0, c: 6 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
+      { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
     ]);
 
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
     const savedPath = mockWriteFile.mock.calls[0][1];
-    expect(savedPath).toContain('Satker_Admin_01_Update_Rank_');
+    expect(savedPath).toContain('Satker_Update_Rank_');
     expect(filePath).toBe(savedPath);
   });
 });
