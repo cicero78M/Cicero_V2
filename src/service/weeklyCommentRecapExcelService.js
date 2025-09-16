@@ -49,19 +49,33 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   const dailyPosts = {};
 
   for (const dateStr of dateList) {
-    const rows = await getRekapKomentarByClient(
-      clientId,
-      'harian',
-      dateStr,
-      undefined,
-      undefined,
-      'ditbinmas'
-    );
-    const totalPosts = await countPostsByClient(
-      clientId,
-      'harian',
-      dateStr
-    );
+    let rows;
+    let totalPosts;
+    try {
+      [rows, totalPosts] = await Promise.all([
+        getRekapKomentarByClient(
+          clientId,
+          'harian',
+          dateStr,
+          undefined,
+          undefined,
+          'ditbinmas'
+        ),
+        countPostsByClient(clientId, 'harian', dateStr),
+      ]);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (error instanceof Error) {
+        throw new Error(
+          `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`,
+          { cause: error }
+        );
+      }
+      throw new Error(
+        `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`
+      );
+    }
     dailyPosts[dateStr] = totalPosts;
     for (const u of rows) {
       const satker = u.client_name || '';
