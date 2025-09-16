@@ -676,6 +676,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         role: du.role,
         client_ids: du.client_ids,
         dir_client_id: dirClientId,
+        username: du.username,
       });
       await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;

@@ -24,6 +24,7 @@ import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelSe
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
 import { saveMonthlyCommentRecapExcel } from "../../service/monthlyCommentRecapExcelService.js";
+import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -493,7 +494,15 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
     .trim();
 }
 
-async function performAction(action, clientId, waClient, chatId, roleFlag, userClientId) {
+async function performAction(
+  action,
+  clientId,
+  waClient,
+  chatId,
+  roleFlag,
+  userClientId,
+  context = {}
+) {
   let msg = "";
   const userClient = userClientId ? await findClientById(userClientId) : null;
   const userType = userClient?.client_type?.toLowerCase();
@@ -509,73 +518,112 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
     case "3":
       msg = await formatRekapBelumLengkapDitbinmas();
       break;
-      case "4":
-        msg = await absensiLikesDitbinmas();
-        break;
-      case "5":
-        msg = await absensiLikesDitbinmasSimple();
-        break;
-      case "6": {
-        const normalizedId = (clientId || "").toUpperCase();
-        if (normalizedId !== "DITBINMAS") {
-          msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
-          break;
-        }
-        const opts = { mode: "all", roleFlag: "ditbinmas" };
-        msg = await absensiLikes("DITBINMAS", opts);
+    case "4": {
+      try {
+        const { filePath } = await saveSatkerUpdateMatrixExcel({
+          clientId,
+          roleFlag,
+          username: context.username,
+        });
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
+      } catch (error) {
+        console.error("Gagal membuat rekap matriks update satker:", error);
+        msg =
+          error?.message &&
+          (error.message.includes("direktorat") ||
+            error.message.includes("Client tidak ditemukan"))
+            ? error.message
+            : "❌ Gagal membuat rekap matriks update satker.";
+      }
+      break;
+    }
+    case "5":
+      msg = await absensiLikesDitbinmas();
+      break;
+    case "6":
+      msg = await absensiLikesDitbinmasSimple();
+      break;
+    case "7": {
+      const normalizedId = (clientId || "").toUpperCase();
+      if (normalizedId !== "DITBINMAS") {
+        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
         break;
       }
-      case "7":
-        msg = await absensiKomentarTiktok();
-        break;
-      case "8":
-        msg = await absensiKomentarDitbinmasSimple();
-        break;
-      case "9":
-        msg = await absensiKomentarDitbinmas();
-        break;
-      case "10": {
-        const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
-        const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
-        const { rekapLikesIG } = await import("../fetchabsensi/insta/absensiLikesInsta.js");
-        await fetchAndStoreInstaContent(["shortcode", "caption", "like_count", "timestamp"], waClient, chatId, "DITBINMAS");
-        await handleFetchLikesInstagram(null, null, "DITBINMAS");
-        const rekapMsg = await rekapLikesIG("DITBINMAS");
-        msg = rekapMsg || "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini";
-        break;
-      }
-      case "11": {
-        const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
-        await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
-        msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
-        break;
-      }
-      case "12": {
-        const normalizedId = (clientId || "").toUpperCase();
-        if (normalizedId !== "DITBINMAS") {
-          msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
-          break;
-        }
-        const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
-        const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
-        await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
-        await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
-        const rekapTiktok = await absensiKomentarDitbinmasReport(userType === "org" ? { clientFilter: userClientId } : {});
-        msg = rekapTiktok || "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
-        break;
-      }
-      case "13": {
-        const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
-        await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
-        msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
+      const opts = { mode: "all", roleFlag: "ditbinmas" };
+      msg = await absensiLikes("DITBINMAS", opts);
+      break;
+    }
+    case "8":
+      msg = await absensiKomentarTiktok();
+      break;
+    case "9":
+      msg = await absensiKomentarDitbinmasSimple();
+      break;
+    case "10":
+      msg = await absensiKomentarDitbinmas();
+      break;
+    case "11": {
+      const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
+      const { rekapLikesIG } = await import("../fetchabsensi/insta/absensiLikesInsta.js");
+      await fetchAndStoreInstaContent([
+        "shortcode",
+        "caption",
+        "like_count",
+        "timestamp",
+      ], waClient, chatId, "DITBINMAS");
+      await handleFetchLikesInstagram(null, null, "DITBINMAS");
+      const rekapMsg = await rekapLikesIG("DITBINMAS");
+      msg =
+        rekapMsg ||
+        "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini";
+      break;
+    }
+    case "12": {
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
+      await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
+      msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
+      break;
+    }
+    case "13": {
+      const normalizedId = (clientId || "").toUpperCase();
+      if (normalizedId !== "DITBINMAS") {
+        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
         break;
       }
-      case "14": {
-        const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
-        const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
-        const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
-        const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
-        const { generateSosmedTaskMessage } = await import("../fetchabsensi/sosmedTask.js");
+      const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
+      await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
+      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
+      const rekapTiktok = await absensiKomentarDitbinmasReport(
+        userType === "org" ? { clientFilter: userClientId } : {}
+      );
+      msg =
+        rekapTiktok ||
+        "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
+      break;
+    }
+    case "14": {
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
+      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
+      msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
+      break;
+    }
+    case "15": {
+      const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
+      const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
+      const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
+      const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
+      const { generateSosmedTaskMessage } = await import("../fetchabsensi/sosmedTask.js");
         const targetId = (clientId || "").toUpperCase();
         const fetchErrors = [];
         try {
@@ -614,7 +662,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         break;
       }
-      case "15": {
+      case "16": {
         const { text, filename, narrative, textBelum, filenameBelum } = await lapharDitbinmas();
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
@@ -642,7 +690,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         return;
       }
-      case "16": {
+      case "17": {
         const { text, filename, narrative, textBelum, filenameBelum } = await lapharTiktokDitbinmas();
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
@@ -670,7 +718,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         return;
       }
-      case "17": {
+      case "18": {
         const data = await collectLikesRecap(clientId);
         if (!data.shortcodes.length) {
           msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
@@ -683,7 +731,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "18": {
+      case "19": {
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
@@ -719,7 +767,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         return;
       }
-      case "19": {
+      case "20": {
         let filePath;
         try {
           filePath = await saveWeeklyLikesRecapExcel(clientId);
@@ -744,7 +792,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         break;
       }
-      case "20": {
+      case "21": {
         const filePath = await saveWeeklyCommentRecapExcel(clientId);
         const buffer = await readFile(filePath);
         await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -752,7 +800,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "21": {
+      case "22": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -777,7 +825,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         }
         break;
       }
-      case "22": {
+      case "23": {
         let filePath;
         try {
           filePath = await saveMonthlyCommentRecapExcel(clientId);
@@ -806,7 +854,7 @@ async function performAction(action, clientId, waClient, chatId, roleFlag, userC
         msg = "Menu tidak dikenal.";
     }
     await waClient.sendMessage(chatId, msg.trim());
-    if (action === "10" || action === "12" || action === "14") {
+    if (action === "11" || action === "13" || action === "15") {
       await safeSendMessage(waClient, dirRequestGroup, msg.trim());
     }
   }
@@ -847,6 +895,7 @@ export const dirRequestHandlers = {
     session.client_ids = chosen.client_ids;
     session.dir_client_id =
       dir?.client_type?.toLowerCase() === "direktorat" ? chosen.role : null;
+    session.username = chosen.username || session.username;
     delete session.dash_users;
     session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
@@ -899,31 +948,32 @@ export const dirRequestHandlers = {
         "📊 *Rekap Data*\n" +
         "1️⃣ Rekap personel belum lengkapi data\n" +
         "2️⃣ Ringkasan pengisian data personel\n" +
-        "3️⃣ Rekap data belum lengkap Ditbinmas\n\n" +
+        "3️⃣ Rekap data belum lengkap Ditbinmas\n" +
+        "4️⃣ Rekap Matriks Update Satker\n\n" +
         "📅 *Absensi*\n" +
-        "4️⃣ Absensi like Ditbinmas\n" +
-        "5️⃣ Absensi like Ditbinmas Simple\n" +
-        "6️⃣ Absensi like Instagram\n" +
-        "7️⃣ Absensi komentar TikTok\n" +
-        "8️⃣ Absensi komentar Ditbinmas Simple\n" +
-        "9️⃣ Absensi komentar Ditbinmas\n\n" +
+        "5️⃣ Absensi like Ditbinmas\n" +
+        "6️⃣ Absensi like Ditbinmas Simple\n" +
+        "7️⃣ Absensi like Instagram\n" +
+        "8️⃣ Absensi komentar TikTok\n" +
+        "9️⃣ Absensi komentar Ditbinmas Simple\n" +
+        "1️⃣0️⃣ Absensi komentar Ditbinmas\n\n" +
         "📥 *Pengambilan Data*\n" +
-        "1️⃣0️⃣ Ambil konten & like Instagram\n" +
-        "1️⃣1️⃣ Ambil like Instagram saja\n" +
-        "1️⃣2️⃣ Ambil konten & komentar TikTok\n" +
-        "1️⃣3️⃣ Ambil komentar TikTok saja\n" +
-        "1️⃣4️⃣ Ambil semua sosmed & buat tugas\n\n" +
+        "1️⃣1️⃣ Ambil konten & like Instagram\n" +
+        "1️⃣2️⃣ Ambil like Instagram saja\n" +
+        "1️⃣3️⃣ Ambil konten & komentar TikTok\n" +
+        "1️⃣4️⃣ Ambil komentar TikTok saja\n" +
+        "1️⃣5️⃣ Ambil semua sosmed & buat tugas\n\n" +
         "📝 *Laporan*\n" +
-        "1️⃣5️⃣ Laporan harian Instagram Ditbinmas\n" +
-        "1️⃣6️⃣ Laporan harian TikTok Ditbinmas\n" +
-        "1️⃣7️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣8️⃣ Rekap gabungan semua sosmed\n\n" +
+        "1️⃣6️⃣ Laporan harian Instagram Ditbinmas\n" +
+        "1️⃣7️⃣ Laporan harian TikTok Ditbinmas\n" +
+        "1️⃣8️⃣ Rekap like Instagram (Excel)\n" +
+        "1️⃣9️⃣ Rekap gabungan semua sosmed\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "1️⃣9️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣0️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣0️⃣ Rekap file Instagram mingguan\n" +
+        "2️⃣1️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣1️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣2️⃣ Rekap file Tiktok bulanan\n\n" +
+        "2️⃣2️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣3️⃣ Rekap file Tiktok bulanan\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -972,6 +1022,7 @@ export const dirRequestHandlers = {
           "20",
           "21",
           "22",
+          "23",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -991,7 +1042,8 @@ export const dirRequestHandlers = {
       waClient,
       chatId,
       session.role,
-      userClientId
+      userClientId,
+      { username: session.username || session.user?.username }
     );
     session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
