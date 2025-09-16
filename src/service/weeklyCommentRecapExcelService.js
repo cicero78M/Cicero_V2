@@ -83,6 +83,10 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     }
   }
 
+  if (Object.keys(grouped).length === 0) {
+    return null;
+  }
+
   const wb = XLSX.utils.book_new();
   Object.entries(grouped).forEach(([satker, usersMap]) => {
     const users = Object.values(usersMap);
