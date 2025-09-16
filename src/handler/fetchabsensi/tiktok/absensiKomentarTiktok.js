@@ -48,6 +48,38 @@ function normalizeUsername(username) {
     .toLowerCase();
 }
 
+const pangkatOrderPriority = [
+  "KOMISARIS BESAR POLISI",
+  "AKBP",
+  "KOMPOL",
+  "AKP",
+  "IPTU",
+  "IPDA",
+  "AIPTU",
+  "AIPDA",
+  "BRIPKA",
+  "BRIGADIR",
+  "BRIPTU",
+  "BRIPDA",
+];
+
+const getRankIndex = (title) => {
+  const normalized = (title || "").toUpperCase();
+  const index = pangkatOrderPriority.indexOf(normalized);
+  return index === -1 ? pangkatOrderPriority.length : index;
+};
+
+const sortUsersByRankAndName = (users = []) =>
+  users
+    .slice()
+    .sort((a, b) => {
+      const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
+        sensitivity: "base",
+      });
+    });
+
 export async function collectKomentarRecap(clientId, opts = {}) {
   const { selfOnly, clientFilter } = opts;
   const posts = await getPostsTodayByClient(clientId);
@@ -472,16 +504,16 @@ export async function absensiKomentarDitbinmasSimple() {
     (u) => u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
   );
 
-  const totals = {
-    total: allUsers.length,
-    lengkap: 0,
-    kurang: 0,
-    belum: 0,
-    tanpaUsername: 0,
+  const categorizedUsers = {
+    lengkap: [],
+    kurang: [],
+    belum: [],
+    tanpaUsername: [],
   };
+
   allUsers.forEach((u) => {
     if (!u.tiktok || u.tiktok.trim() === "") {
-      totals.tanpaUsername++;
+      categorizedUsers.tanpaUsername.push(u);
       return;
     }
     const uname = normalizeUsername(u.tiktok);
@@ -489,10 +521,56 @@ export async function absensiKomentarDitbinmasSimple() {
     commentSets.forEach((set) => {
       if (set.has(uname)) count += 1;
     });
-    if (count === posts.length) totals.lengkap++;
-    else if (count > 0) totals.kurang++;
-    else totals.belum++;
+    if (count === posts.length) {
+      categorizedUsers.lengkap.push(u);
+    } else if (count > 0) {
+      categorizedUsers.kurang.push(u);
+    } else {
+      categorizedUsers.belum.push(u);
+    }
   });
+
+  const totals = {
+    total: allUsers.length,
+    lengkap: categorizedUsers.lengkap.length,
+    kurang: categorizedUsers.kurang.length,
+    belum: categorizedUsers.belum.length,
+    tanpaUsername: categorizedUsers.tanpaUsername.length,
+  };
+
+  const detailSections = [
+    {
+      icon: "✅",
+      title: "Melaksanakan Lengkap",
+      users: sortUsersByRankAndName(categorizedUsers.lengkap),
+    },
+    {
+      icon: "⚠️",
+      title: "Melaksanakan Kurang",
+      users: sortUsersByRankAndName(categorizedUsers.kurang),
+    },
+    {
+      icon: "❌",
+      title: "Belum Melaksanakan",
+      users: sortUsersByRankAndName(categorizedUsers.belum),
+    },
+    {
+      icon: "⚠️❌",
+      title: "Belum Input Username TikTok",
+      users: sortUsersByRankAndName(categorizedUsers.tanpaUsername),
+    },
+  ];
+
+  const detailText = detailSections
+    .map(({ icon, title, users }) => {
+      const header = `${icon} *${title} (${users.length} pers):*`;
+      if (!users.length) {
+        return `${header}\n-`;
+      }
+      const list = users.map((u) => `- ${formatNama(u)}`).join("\n");
+      return `${header}\n${list}`;
+    })
+    .join("\n\n");
 
   let msg =
     `Mohon ijin Komandan,\n\n` +
@@ -505,7 +583,8 @@ export async function absensiKomentarDitbinmasSimple() {
     `✅ *Melaksanakan Lengkap :* ${totals.lengkap} pers\n` +
     `⚠️ *Melaksanakan Kurang :* ${totals.kurang} pers\n` +
     `❌ *Belum :* ${totals.belum} pers\n` +
-    `⚠️❌ *Belum Input Username TikTok :* ${totals.tanpaUsername} pers`;
+    `⚠️❌ *Belum Input Username TikTok :* ${totals.tanpaUsername} pers\n\n` +
+    detailText;
 
   if (failedVideoIds.length) {
     msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
