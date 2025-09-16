@@ -28,9 +28,21 @@ function rankWeight(rank) {
 }
 
 export async function saveWeeklyCommentRecapExcel(clientId) {
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - 6);
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  let weekStart;
+  let weekEnd;
+
+  if (dayOfWeek === 0) {
+    weekEnd = new Date(today);
+    weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - 6);
+  } else {
+    weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() - dayOfWeek);
+    weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+  }
 
   const formatIso = (d) => d.toISOString().slice(0, 10);
   const formatDisplay = (d) =>
@@ -39,43 +51,54 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
       month: '2-digit',
       year: 'numeric',
     });
+  const formatHeaderDate = (d) => {
+    const dateObj = new Date(d);
+    const hari =
+      hariIndo[dateObj.getDay()] ||
+      dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+    return `${hari}, ${formatDisplay(dateObj)}`;
+  };
 
   const dateList = [];
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
     dateList.push(formatIso(d));
   }
 
   const grouped = {};
   const dailyPosts = {};
 
-  for (const dateStr of dateList) {
-    let rows;
-    let totalPosts;
-    try {
-      [rows, totalPosts] = await Promise.all([
-        getRekapKomentarByClient(
-          clientId,
-          'harian',
-          dateStr,
-          undefined,
-          undefined,
-          'ditbinmas'
-        ),
-        countPostsByClient(clientId, 'harian', dateStr),
-      ]);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      if (error instanceof Error) {
+  const fetchResults = await Promise.all(
+    dateList.map(async (dateStr) => {
+      try {
+        const [rows, totalPosts] = await Promise.all([
+          getRekapKomentarByClient(
+            clientId,
+            'harian',
+            dateStr,
+            undefined,
+            undefined,
+            'ditbinmas'
+          ),
+          countPostsByClient(clientId, 'harian', dateStr),
+        ]);
+        return { dateStr, rows, totalPosts };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (error instanceof Error) {
+          throw new Error(
+            `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`,
+            { cause: error }
+          );
+        }
         throw new Error(
-          `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`,
-          { cause: error }
+          `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`
         );
       }
-      throw new Error(
-        `Gagal mengambil data rekap mingguan untuk tanggal ${dateStr}: ${errorMessage}`
-      );
-    }
+    })
+  );
+
+  fetchResults.forEach(({ dateStr, rows = [], totalPosts = 0 }) => {
     dailyPosts[dateStr] = totalPosts;
     for (const u of rows) {
       const satker = u.client_name || '';
@@ -95,7 +118,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
       };
       grouped[satker][key].totalKomentar += u.jumlah_komentar || 0;
     }
-  }
+  });
 
   if (Object.keys(grouped).length === 0) {
     return null;
@@ -116,7 +139,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     const aoa = [];
     const colCount = 4 + dateList.length * 3;
     const title = `${satker} – Rekap Engagement Tiktok`;
-    const periodStr = `${formatDisplay(startDate)} - ${formatDisplay(endDate)}`;
+    const periodStr = `${formatDisplay(weekStart)} - ${formatDisplay(weekEnd)}`;
     const subtitle = `Rekap Komentar Tiktok Periode ${periodStr}`;
     aoa.push([title]);
     aoa.push([subtitle]);
@@ -124,7 +147,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     const headerDates = ['No', 'Pangkat', 'Nama', 'Divisi / Satfung'];
     const subHeader = ['', '', '', ''];
     dateList.forEach((d) => {
-      const disp = formatDisplay(d);
+      const disp = formatHeaderDate(d);
       headerDates.push(disp, '', '');
       subHeader.push('Jumlah Post', 'Sudah Komentar', 'Belum Komentar');
     });
@@ -194,9 +217,12 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   const exportDir = path.resolve('export_data/weekly_comment');
   await mkdir(exportDir, { recursive: true });
 
+  const fileDate = dateList.length
+    ? new Date(dateList[dateList.length - 1])
+    : new Date(weekEnd);
   const now = new Date();
-  const hari = hariIndo[now.getDay()];
-  const tanggal = now.toLocaleDateString('id-ID');
+  const hari = hariIndo[fileDate.getDay()];
+  const tanggal = fileDate.toLocaleDateString('id-ID');
   const jam = now.toLocaleTimeString('id-ID', { hour12: false });
   const dateSafe = tanggal.replace(/\//g, '-');
   const timeSafe = jam.replace(/[:.]/g, '-');
