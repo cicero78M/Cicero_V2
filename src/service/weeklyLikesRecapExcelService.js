@@ -21,6 +21,25 @@ const RANK_ORDER = [
   'BRIPDA',
 ];
 
+const JAKARTA_TZ = 'Asia/Jakarta';
+const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const jakartaIsoFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: JAKARTA_TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+const jakartaDisplayFormatter = new Intl.DateTimeFormat('id-ID', {
+  timeZone: JAKARTA_TZ,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+const jakartaWeekdayFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: JAKARTA_TZ,
+  weekday: 'short',
+});
+
 function rankWeight(rank) {
   const idx = RANK_ORDER.indexOf(String(rank || '').toUpperCase());
   return idx === -1 ? RANK_ORDER.length : idx;
@@ -28,31 +47,31 @@ function rankWeight(rank) {
 
 export async function saveWeeklyLikesRecapExcel(clientId) {
   const today = new Date();
-  const dayOfWeek = today.getDay();
+  const isoToday = jakartaIsoFormatter.format(today);
+  const weekdayIdx = WEEKDAY_ABBR.indexOf(jakartaWeekdayFormatter.format(today));
+  const dayOfWeek = weekdayIdx === -1 ? today.getUTCDay() : weekdayIdx;
+  const todayJakarta = new Date(isoToday + 'T00:00:00Z');
   let weekStart;
   let weekEnd;
 
   if (dayOfWeek === 0) {
-    weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - 6);
-    weekEnd = today;
-  } else {
-    weekEnd = new Date(today);
-    weekEnd.setDate(today.getDate() - dayOfWeek);
+    weekEnd = new Date(todayJakarta);
     weekStart = new Date(weekEnd);
-    weekStart.setDate(weekEnd.getDate() - 6);
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+  } else {
+    weekEnd = new Date(todayJakarta);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() - dayOfWeek);
+    weekStart = new Date(weekEnd);
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
   }
 
-  const formatIso = (d) => d.toISOString().slice(0, 10);
-  const formatDisplay = (d) =>
-    new Date(d).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  const ensureDate = (value) => (value instanceof Date ? value : new Date(value));
+
+  const formatIso = (d) => jakartaIsoFormatter.format(ensureDate(d));
+  const formatDisplay = (d) => jakartaDisplayFormatter.format(ensureDate(d));
 
   const dateList = [];
-  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(weekStart); d <= weekEnd; d.setUTCDate(d.getUTCDate() + 1)) {
     dateList.push(formatIso(d));
   }
 

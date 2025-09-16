@@ -15,7 +15,8 @@ const { saveWeeklyLikesRecapExcel } = await import(
 );
 
 test('saveWeeklyLikesRecapExcel creates formatted weekly recap', async () => {
-  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+  // Simulate early morning execution in Asia/Jakarta (00:30 local time)
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-06T17:30:00Z'));
   mockGetRekapLikesByClient.mockReset();
   mockGetRekapLikesByClient.mockImplementation(async (clientId, periode, tanggal) => {
     if (tanggal === '2024-04-07') {
@@ -36,6 +37,18 @@ test('saveWeeklyLikesRecapExcel creates formatted weekly recap', async () => {
   });
 
   const filePath = await saveWeeklyLikesRecapExcel('DITBINMAS');
+  const requestedDates = mockGetRekapLikesByClient.mock.calls.map((call) => call[2]);
+  expect(requestedDates).toEqual([
+    '2024-04-01',
+    '2024-04-02',
+    '2024-04-03',
+    '2024-04-04',
+    '2024-04-05',
+    '2024-04-06',
+    '2024-04-07',
+  ]);
+
+  expect(filePath).not.toBeNull();
   const wb = XLSX.readFile(filePath);
   const sheet = wb.Sheets['POLRES A'];
   const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
