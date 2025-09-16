@@ -304,10 +304,10 @@ export async function absensiKomentar(client_id, opts = {}) {
           `*${index + 1}. ${nama}*`,
           `*Jumlah user:* ${g.total}`,
           `*Sudah Melaksanakan* : *${g.sudah+g.kurang} user*`,
-          `*Melaksanakan Lengkap* : *${g.sudah} user*`,
+          `- Melaksanakan Lengkap : ${g.sudah} user`,
         ];
         if (g.kurang > 0) {
-          lines.push(`*Melaksanakan Kurang Lengkap* : *${g.kurang} user*`);
+          lines.push(`- Melaksanakan Kurang Lengkap : ${g.kurang} user`);
         }
         if (g.belum > 0) {
           lines.push(`*Belum Melaksanakan* : *${g.belum} user*`);
@@ -338,8 +338,8 @@ export async function absensiKomentar(client_id, opts = {}) {
       `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}` +
       `\n\n*Total Personel:* ${totals.total}\n` +
       `✅ *Sudah Melaksanakan* : *${totals.sudah+totals.kurang} user*\n` +
-      `- ✅ *Melaksanakan Lengkap* : *${totals.sudah} user*\n` +
-      `- ⚠️ *Melaksanakan Kurang Lengkap* : *${totals.kurang} user*\n` +
+      `- ✅ Melaksanakan Lengkap : ${totals.sudah} user\n` +
+      `- ⚠️ Melaksanakan Kurang Lengkap : ${totals.kurang} user\n` +
       `❌ *Belum Melaksanakan* : *${totals.belum} user*\n` +
       `⚠️❌ *Belum Input Username Tiktok* : *${totals.noUsername} user*\n\n` +
 
