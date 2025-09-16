@@ -7,7 +7,7 @@ const rawSatkerDspEntries = [
   ["POLRES MADIUN", 193],
   ["POLRES PACITAN", 117],
   ["POLRES BONDOWOSO", 85],
-  ["POLRES SITUBONDO", null],
+  ["POLRES SITUBONDO", 80],
   ["POLRES MOJOKERTO", 248],
   ["POLRES KEDIRI", 241],
   ["POLRES KEDIRI KOTA", 120],
