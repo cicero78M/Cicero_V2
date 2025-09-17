@@ -67,6 +67,9 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
 
   const grouped = {};
   const dailyPosts = {};
+  const normalizedClientId =
+    typeof clientId === 'string' ? clientId.toLowerCase() : '';
+  const roleFilter = normalizedClientId === 'ditbinmas' ? 'ditbinmas' : undefined;
 
   const fetchResults = await Promise.all(
     dateList.map(async (dateStr) => {
@@ -78,7 +81,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
             dateStr,
             undefined,
             undefined,
-            'ditbinmas'
+            roleFilter
           ),
           countPostsByClient(clientId, 'harian', dateStr),
         ]);
