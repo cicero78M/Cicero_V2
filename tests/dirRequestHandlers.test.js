@@ -736,20 +736,45 @@ test('choose_menu option 20 sends no data message when service returns null', as
   );
 });
 
-test('choose_menu option 21 is no longer available', async () => {
+test('choose_menu option 21 generates weekly comment recap excel and sends file', async () => {
+  mockSaveWeeklyCommentRecapExcel.mockResolvedValue('/tmp/weekly-comments.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '790';
   const waClient = { sendMessage: jest.fn() };
 
   await dirRequestHandlers.choose_menu(session, chatId, '21', waClient);
 
-  expect(mockSaveWeeklyCommentRecapExcel).not.toHaveBeenCalled();
+  expect(mockSaveWeeklyCommentRecapExcel).toHaveBeenCalledWith('ditbinmas');
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/weekly-comments.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/weekly-comments.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/weekly-comments.xlsx');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('File Excel dikirim')
+  );
+});
+
+test('choose_menu option 21 sends no data message when service returns null', async () => {
+  mockSaveWeeklyCommentRecapExcel.mockResolvedValue(null);
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '792';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '21', waClient);
+
   expect(mockReadFile).not.toHaveBeenCalled();
   expect(mockSendWAFile).not.toHaveBeenCalled();
   expect(mockUnlink).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
-    expect.stringMatching(/Pilihan tidak valid/i)
+    expect.stringMatching(/tidak ada data/i)
   );
 });
 
