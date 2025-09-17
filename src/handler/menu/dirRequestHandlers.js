@@ -21,9 +21,7 @@ import { join, basename } from "path";
 import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
-import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
-import { saveMonthlyCommentRecapExcel } from "../../service/monthlyCommentRecapExcelService.js";
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
 import { hariIndo } from "../../utils/constants.js";
 
@@ -792,66 +790,10 @@ async function performAction(
         }
         break;
       }
-      case "21": {
-        let filePath;
-        try {
-          filePath = await saveWeeklyCommentRecapExcel(clientId);
-          if (!filePath) {
-            msg = "Tidak ada data.";
-            break;
-          }
-          const buffer = await readFile(filePath);
-          await sendWAFile(
-            waClient,
-            buffer,
-            basename(filePath),
-            chatId,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          );
-          msg = "✅ File Excel dikirim.";
-        } catch (error) {
-          console.error("Gagal mengirim file Excel:", error);
-          msg = "❌ Gagal mengirim file Excel.";
-        } finally {
-          if (filePath) {
-            try {
-              await unlink(filePath);
-            } catch (err) {
-              console.error("Gagal menghapus file sementara:", err);
-            }
-          }
-        }
-        break;
-      }
       case "22": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
-          if (!filePath) {
-            msg = "Tidak ada data.";
-            break;
-          }
-          const buffer = await readFile(filePath);
-          await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-          msg = "✅ File Excel dikirim.";
-        } catch (error) {
-          console.error("Gagal mengirim file Excel:", error);
-          msg = "❌ Gagal mengirim file Excel.";
-        } finally {
-          if (filePath) {
-            try {
-              await unlink(filePath);
-            } catch (err) {
-              console.error("Gagal menghapus file sementara:", err);
-            }
-          }
-        }
-        break;
-      }
-      case "23": {
-        let filePath;
-        try {
-          filePath = await saveMonthlyCommentRecapExcel(clientId);
           if (!filePath) {
             msg = "Tidak ada data.";
             break;
@@ -992,11 +934,9 @@ export const dirRequestHandlers = {
         "1️⃣8️⃣ Rekap like Instagram (Excel)\n" +
         "1️⃣9️⃣ Rekap gabungan semua sosmed\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "2️⃣0️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣1️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣0️⃣ Rekap file Instagram mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣2️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣3️⃣ Rekap file Tiktok bulanan\n\n" +
+        "2️⃣2️⃣ Rekap file Instagram bulanan\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1043,9 +983,7 @@ export const dirRequestHandlers = {
           "18",
           "19",
           "20",
-          "21",
           "22",
-          "23",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
