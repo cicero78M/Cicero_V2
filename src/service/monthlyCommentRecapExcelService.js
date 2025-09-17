@@ -48,11 +48,28 @@ export async function saveMonthlyCommentRecapExcel(clientId) {
 
   const grouped = {};
   const dailyPosts = {};
+  const normalizedClientId =
+    typeof clientId === 'string' ? clientId.toLowerCase() : '';
+  const roleFilter = normalizedClientId === 'ditbinmas' ? 'ditbinmas' : undefined;
 
   for (const dateStr of dateList) {
     const [rows, totalPosts] = await Promise.all([
-      getRekapKomentarByClient(clientId, 'harian', dateStr, undefined, undefined, 'ditbinmas'),
-      countPostsByClient(clientId, 'harian', dateStr),
+      getRekapKomentarByClient(
+        clientId,
+        'harian',
+        dateStr,
+        undefined,
+        undefined,
+        roleFilter
+      ),
+      countPostsByClient(
+        clientId,
+        'harian',
+        dateStr,
+        undefined,
+        undefined,
+        roleFilter
+      ),
     ]);
     dailyPosts[dateStr] = totalPosts;
     for (const u of rows) {

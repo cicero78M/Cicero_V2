@@ -168,39 +168,76 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     return null;
   }
 
-  const postCountTasks = [];
-  satkerMeta.forEach(({ clientId: satkerClientId }, satkerKey) => {
-    dateList.forEach((dateStr) => {
-      const targetClientId = satkerClientId || clientId;
-      postCountTasks.push(
-        (async () => {
-          try {
-            const count = await countPostsByClient(
-              targetClientId,
-              'harian',
-              dateStr
-            );
-            return { satkerKey, dateStr, count };
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            throw new Error(
-              `Gagal menghitung jumlah post untuk ${targetClientId} pada ${dateStr}: ${errorMessage}`,
-              { cause: error instanceof Error ? error : undefined }
-            );
-          }
-        })()
-      );
+  const aggregatedPostCounts = new Map();
+  if (roleFilter) {
+    const aggregateTasks = dateList.map(async (dateStr) => {
+      try {
+        const count = await countPostsByClient(
+          clientId,
+          'harian',
+          dateStr,
+          undefined,
+          undefined,
+          roleFilter
+        );
+        return { dateStr, count };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `Gagal menghitung jumlah post untuk ${clientId} pada ${dateStr}: ${errorMessage}`,
+          { cause: error instanceof Error ? error : undefined }
+        );
+      }
     });
-  });
+    const aggregateResults = await Promise.all(aggregateTasks);
+    aggregateResults.forEach(({ dateStr, count }) => {
+      aggregatedPostCounts.set(dateStr, count);
+    });
+  }
 
-  const postCounts = await Promise.all(postCountTasks);
-  postCounts.forEach(({ satkerKey, dateStr, count }) => {
-    if (!dailyPosts.has(satkerKey)) {
-      dailyPosts.set(satkerKey, {});
-    }
-    dailyPosts.get(satkerKey)[dateStr] = count;
-  });
+  if (aggregatedPostCounts.size > 0) {
+    satkerMeta.forEach((_, satkerKey) => {
+      const perSatker = {};
+      dateList.forEach((dateStr) => {
+        perSatker[dateStr] = aggregatedPostCounts.get(dateStr) || 0;
+      });
+      dailyPosts.set(satkerKey, perSatker);
+    });
+  } else {
+    const postCountTasks = [];
+    satkerMeta.forEach(({ clientId: satkerClientId }, satkerKey) => {
+      dateList.forEach((dateStr) => {
+        const targetClientId = satkerClientId || clientId;
+        postCountTasks.push(
+          (async () => {
+            try {
+              const count = await countPostsByClient(
+                targetClientId,
+                'harian',
+                dateStr
+              );
+              return { satkerKey, dateStr, count };
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              throw new Error(
+                `Gagal menghitung jumlah post untuk ${targetClientId} pada ${dateStr}: ${errorMessage}`,
+                { cause: error instanceof Error ? error : undefined }
+              );
+            }
+          })()
+        );
+      });
+    });
+
+    const postCounts = await Promise.all(postCountTasks);
+    postCounts.forEach(({ satkerKey, dateStr, count }) => {
+      if (!dailyPosts.has(satkerKey)) {
+        dailyPosts.set(satkerKey, {});
+      }
+      dailyPosts.get(satkerKey)[dateStr] = count;
+    });
+  }
 
   const wb = XLSX.utils.book_new();
   const usedSheetNames = new Set();

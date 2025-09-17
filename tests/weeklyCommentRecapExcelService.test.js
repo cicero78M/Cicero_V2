@@ -56,8 +56,7 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (clientId === 'POLRESA' && tanggal === '2024-04-07') return 4;
-    if (clientId === 'POLRESB' && tanggal === '2024-04-07') return 3;
+    if (clientId === 'DITBINMAS' && tanggal === '2024-04-07') return 4;
     return 0;
   });
 
@@ -94,8 +93,10 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
     expect(call[5]).toBe('ditbinmas');
   });
 
-  const calledIds = new Set(mockCountPostsByClient.mock.calls.map((call) => call[0]));
-  expect(calledIds).toEqual(new Set(['POLRESA', 'POLRESB']));
+  mockCountPostsByClient.mock.calls.forEach((call) => {
+    expect(call[0]).toBe('DITBINMAS');
+    expect(call[5]).toBe('ditbinmas');
+  });
 
   await unlink(filePath);
 });
@@ -135,11 +136,7 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (tanggal === '2024-04-07') {
-      if (clientId === 'POLRESA') return 5;
-      if (clientId === 'POLRESB') return 4;
-      if (clientId === 'POLRESC') return 6;
-    }
+    if (clientId === 'DITBINMAS' && tanggal === '2024-04-07') return 6;
     return 0;
   });
 
@@ -182,7 +179,7 @@ test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok us
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (clientId === 'POLRESTH' && tanggal === '2024-04-07') return 4;
+    if (clientId === 'DITBINMAS' && tanggal === '2024-04-07') return 4;
     return 0;
   });
 
@@ -197,6 +194,70 @@ test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok us
   expect(aoa[4].slice(0, 4)).toEqual([1, 'AKP', 'Anonim', 'Sat Tanpa']);
 
   mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
+    expect(call[5]).toBe('ditbinmas');
+  });
+
+  await unlink(filePath);
+});
+
+test('saveWeeklyCommentRecapExcel aggregates Ditbinmas posts across satker', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+
+  const dates = [
+    '2024-04-01',
+    '2024-04-02',
+    '2024-04-03',
+    '2024-04-04',
+    '2024-04-05',
+    '2024-04-06',
+    '2024-04-07',
+  ];
+
+  mockGetRekapKomentarByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (!dates.includes(tanggal)) return [];
+    return [
+      {
+        client_name: 'POLRES A',
+        client_id: 'POLRESA',
+        title: 'AKP',
+        nama: 'Budi',
+        divisi: 'Sat A',
+        jumlah_komentar: tanggal === '2024-04-07' ? 5 : 2,
+      },
+      {
+        client_name: 'POLRES B',
+        client_id: 'POLRESB',
+        title: 'IPTU',
+        nama: 'Siti',
+        divisi: 'Sat B',
+        jumlah_komentar: tanggal === '2024-04-07' ? 3 : 1,
+      },
+    ];
+  });
+
+  const postSeed = {
+    '2024-04-07': { POLRESA: 4, POLRESB: 3 },
+  };
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal, _s, _e, role) => {
+    expect(role).toBe('ditbinmas');
+    if (clientId !== 'DITBINMAS') return 0;
+    const daySeed = postSeed[tanggal];
+    if (!daySeed) return 0;
+    return Object.values(daySeed).reduce((sum, value) => sum + value, 0);
+  });
+
+  const filePath = await saveWeeklyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES A'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  const lastIdx = aoa[2].length - 3;
+  expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([7, 5, 2]);
+  const satkerB = XLSX.utils.sheet_to_json(wb.Sheets['POLRES B'], { header: 1 });
+  expect(satkerB[4].slice(lastIdx, lastIdx + 3)).toEqual([7, 3, 4]);
+
+  mockCountPostsByClient.mock.calls.forEach((call) => {
+    expect(call[0]).toBe('DITBINMAS');
     expect(call[5]).toBe('ditbinmas');
   });
 
