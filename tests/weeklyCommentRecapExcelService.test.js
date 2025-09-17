@@ -19,6 +19,16 @@ const { saveWeeklyCommentRecapExcel } = await import(
   '../src/service/weeklyCommentRecapExcelService.js'
 );
 
+beforeEach(() => {
+  jest.useRealTimers();
+  mockGetRekapKomentarByClient.mockReset();
+  mockCountPostsByClient.mockReset();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
   jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
 
@@ -65,6 +75,48 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
   expect(aoa[4].slice(0, 4)).toEqual([1, 'AKP', 'Budi', 'Sat A']);
   expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([3, 2, 1]);
 
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalled();
+  mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
+    expect(call[5]).toBe('ditbinmas');
+  });
+
   await unlink(filePath);
-  jest.useRealTimers();
+});
+
+test('saveWeeklyCommentRecapExcel includes non-ditbinmas clients without role filter', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+
+  mockGetRekapKomentarByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-05') {
+      return [
+        {
+          client_name: 'POLRES B',
+          title: 'IPTU',
+          nama: 'Siti',
+          divisi: 'Sat B',
+          jumlah_komentar: 1,
+        },
+      ];
+    }
+    return [];
+  });
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-05') return 2;
+    return 0;
+  });
+
+  const filePath = await saveWeeklyCommentRecapExcel('POLRES123');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES B'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  expect(sheet).toBeDefined();
+  expect(aoa[4].slice(0, 4)).toEqual([1, 'IPTU', 'Siti', 'Sat B']);
+
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalled();
+  mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
+    expect(call[5]).toBeUndefined();
+  });
+
+  await unlink(filePath);
 });
