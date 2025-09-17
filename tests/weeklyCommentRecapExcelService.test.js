@@ -42,6 +42,13 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
           divisi: 'Sat A',
           jumlah_komentar: 2,
         },
+        {
+          client_name: 'POLRES B',
+          title: 'IPTU',
+          nama: 'Siti',
+          divisi: 'Sat B',
+          jumlah_komentar: 1,
+        },
       ];
     }
     return [];
@@ -56,6 +63,10 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
   const sheet = wb.Sheets['POLRES A'];
   const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
+  expect(wb.SheetNames.length).toBeGreaterThan(1);
+  expect(wb.SheetNames).toEqual(
+    expect.arrayContaining(['POLRES A', 'POLRES B'])
+  );
   expect(aoa[0][0]).toBe('POLRES A – Rekap Engagement Tiktok');
   expect(aoa[1][0]).toBe(
     'Rekap Komentar Tiktok Periode 01/04/2024 - 07/04/2024'
@@ -76,6 +87,61 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
   expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([3, 2, 1]);
 
   expect(mockGetRekapKomentarByClient).toHaveBeenCalled();
+  mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
+    expect(call[5]).toBe('ditbinmas');
+  });
+
+  await unlink(filePath);
+});
+
+test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+
+  const recapRows = [
+    {
+      client_name: 'POLRES A',
+      title: 'AKP',
+      nama: 'Budi',
+      divisi: 'Sat A',
+      jumlah_komentar: 2,
+    },
+    {
+      client_name: 'POLRES B',
+      title: 'IPTU',
+      nama: 'Siti',
+      divisi: 'Sat B',
+      jumlah_komentar: 1,
+    },
+    {
+      client_name: 'POLRES C',
+      title: 'IPDA',
+      nama: 'Tono',
+      divisi: 'Sat C',
+      jumlah_komentar: 3,
+    },
+  ];
+
+  mockGetRekapKomentarByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') return recapRows;
+    return [];
+  });
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') return 5;
+    return 0;
+  });
+
+  const filePath = await saveWeeklyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheetNames = [...wb.SheetNames].sort();
+  const expectedNames = ['POLRES A', 'POLRES B', 'POLRES C'];
+  expect(sheetNames).toEqual(expectedNames);
+
+  expectedNames.forEach((name) => {
+    const sheet = wb.Sheets[name];
+    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    expect(aoa[0][0]).toContain(name);
+  });
+
   mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
     expect(call[5]).toBe('ditbinmas');
   });

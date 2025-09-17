@@ -32,10 +32,15 @@ test('getRekapKomentarByClient uses updated_at BETWEEN for date range', async ()
 
 test('getRekapKomentarByClient includes directorate role filter for ditbinmas', async () => {
   mockClientType('direktorat');
+  mockQuery.mockResolvedValueOnce({ rows: [{ client_id: 'polresa' }] });
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapKomentarByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
-  const sql = mockQuery.mock.calls[1][0];
+  expect(mockQuery.mock.calls[1][0]).toContain('dashboard_user_clients');
+  const sql = mockQuery.mock.calls[2][0];
   expect(sql).not.toContain('tiktok_post_roles');
-  expect(sql).toContain('user_roles');
+  expect(sql).toContain('LOWER(u.client_id) = ANY');
+  expect(sql).toContain('LOWER(r.role_name) = ANY');
+  const params = mockQuery.mock.calls[2][1];
+  expect(params.at(-1)).toEqual(['ditbinmas', 'polresa']);
 });
