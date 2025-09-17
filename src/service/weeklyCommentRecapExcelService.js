@@ -4,6 +4,7 @@ import XLSX from 'xlsx';
 import { hariIndo } from '../utils/constants.js';
 import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
 import { countPostsByClient } from '../model/tiktokPostModel.js';
+import { generateSheetName } from '../utils/excelHelper.js';
 
 const RANK_ORDER = [
   'KOMISARIS BESAR POLISI',
@@ -101,7 +102,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   fetchResults.forEach(({ dateStr, rows = [], totalPosts = 0 }) => {
     dailyPosts[dateStr] = totalPosts;
     for (const u of rows) {
-      const satker = u.client_name || '';
+      const satker = u.client_name || u.client_id || 'Tanpa Nama';
       if (!grouped[satker]) grouped[satker] = {};
       const key = `${u.title || ''}|${u.nama || ''}`;
       if (!grouped[satker][key]) {
@@ -125,6 +126,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   }
 
   const wb = XLSX.utils.book_new();
+  const usedSheetNames = new Set();
   Object.entries(grouped).forEach(([satker, usersMap]) => {
     const users = Object.values(usersMap);
     users.sort((a, b) => {
@@ -211,7 +213,8 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
       });
     }
 
-    XLSX.utils.book_append_sheet(wb, ws, satker);
+    const sheetName = generateSheetName(satker, usedSheetNames);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 
   const exportDir = path.resolve('export_data/weekly_comment');
