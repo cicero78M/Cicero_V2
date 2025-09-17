@@ -149,6 +149,46 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
   await unlink(filePath);
 });
 
+test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok usernames', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+
+  const recapRows = [
+    {
+      client_name: 'POLRES TANPA HANDLE',
+      title: 'AKP',
+      nama: 'Anonim',
+      divisi: 'Sat Tanpa',
+      jumlah_komentar: 0,
+      username: null,
+    },
+  ];
+
+  mockGetRekapKomentarByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') return recapRows;
+    return [];
+  });
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') return 4;
+    return 0;
+  });
+
+  const filePath = await saveWeeklyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+
+  expect(wb.SheetNames).toContain('POLRES TANPA HANDLE');
+  const sheet = wb.Sheets['POLRES TANPA HANDLE'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  expect(aoa[0][0]).toContain('POLRES TANPA HANDLE');
+  expect(aoa[4].slice(0, 4)).toEqual([1, 'AKP', 'Anonim', 'Sat Tanpa']);
+
+  mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
+    expect(call[5]).toBe('ditbinmas');
+  });
+
+  await unlink(filePath);
+});
+
 test('saveWeeklyCommentRecapExcel includes non-ditbinmas clients without role filter', async () => {
   jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
 
