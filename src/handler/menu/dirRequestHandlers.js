@@ -24,6 +24,7 @@ import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelSe
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
+import { saveEngagementRankingExcel } from "../../service/engagementRankingExcelService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -769,6 +770,46 @@ async function performAction(
       case "20": {
         let filePath;
         try {
+          const { filePath: generatedPath } = await saveEngagementRankingExcel({
+            clientId,
+            roleFlag,
+          });
+          filePath = generatedPath;
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          msg = "✅ File Excel dikirim.";
+        } catch (error) {
+          console.error("Gagal membuat rekap ranking engagement:", error);
+          if (
+            error?.message &&
+            (error.message.includes("direktorat") ||
+              error.message.includes("Client tidak ditemukan") ||
+              error.message.includes("Tidak ada data"))
+          ) {
+            msg = error.message;
+          } else {
+            msg = "❌ Gagal membuat rekap ranking engagement.";
+          }
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
+        }
+        break;
+      }
+      case "21": {
+        let filePath;
+        try {
           filePath = await saveWeeklyLikesRecapExcel(clientId);
           if (!filePath) {
             msg = "Tidak ada data.";
@@ -791,7 +832,7 @@ async function performAction(
         }
         break;
       }
-      case "21": {
+      case "22": {
         let filePath;
         try {
           filePath = await saveWeeklyCommentRecapExcel(clientId);
@@ -816,7 +857,7 @@ async function performAction(
         }
         break;
       }
-      case "22": {
+      case "23": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -958,12 +999,13 @@ export const dirRequestHandlers = {
         "1️⃣6️⃣ Laporan harian Instagram Ditbinmas\n" +
         "1️⃣7️⃣ Laporan harian TikTok Ditbinmas\n" +
         "1️⃣8️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣9️⃣ Rekap gabungan semua sosmed\n\n" +
+        "1️⃣9️⃣ Rekap gabungan semua sosmed\n" +
+        "2️⃣0️⃣ Rekap ranking engagement jajaran\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "2️⃣0️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣1️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣1️⃣ Rekap file Instagram mingguan\n" +
+        "2️⃣2️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣2️⃣ Rekap file Instagram bulanan\n\n" +
+        "2️⃣3️⃣ Rekap file Instagram bulanan\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1012,6 +1054,7 @@ export const dirRequestHandlers = {
           "20",
           "21",
           "22",
+          "23",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
