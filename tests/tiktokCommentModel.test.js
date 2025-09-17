@@ -30,17 +30,16 @@ test('getRekapKomentarByClient uses updated_at BETWEEN for date range', async ()
   expect(mockQuery.mock.calls[1][1]).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
 });
 
-test('getRekapKomentarByClient includes directorate role filter for ditbinmas', async () => {
+test('getRekapKomentarByClient filters directorate users by ditbinmas role only', async () => {
   mockClientType('direktorat');
-  mockQuery.mockResolvedValueOnce({ rows: [{ client_id: 'polresa' }] });
   mockQuery.mockResolvedValueOnce({ rows: [] });
   await getRekapKomentarByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  expect(mockQuery).toHaveBeenCalledTimes(2);
   expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
-  expect(mockQuery.mock.calls[1][0]).toContain('dashboard_user_clients');
-  const sql = mockQuery.mock.calls[2][0];
-  expect(sql).not.toContain('tiktok_post_roles');
-  expect(sql).toContain('LOWER(u.client_id) = ANY');
-  expect(sql).toContain('LOWER(r.role_name) = ANY');
-  const params = mockQuery.mock.calls[2][1];
-  expect(params.at(-1)).toEqual(['ditbinmas', 'polresa']);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('EXISTS (');
+  expect(sql).toContain('LOWER(r.role_name) = LOWER(');
+  expect(sql).not.toContain('LOWER(u.client_id) = ANY');
+  const params = mockQuery.mock.calls[1][1];
+  expect(params).toEqual(['ditbinmas']);
 });
