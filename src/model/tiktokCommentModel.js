@@ -151,8 +151,10 @@ export async function getRekapKomentarByClient(
       u.nama,
       u.tiktok AS username,
       u.divisi,
+      cl.nama AS client_name,
       COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar
     FROM "user" u
+    JOIN clients cl ON cl.client_id = u.client_id
     LEFT JOIN comment_counts cc
       ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
     WHERE u.status = true
