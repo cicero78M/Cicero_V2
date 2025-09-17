@@ -9,7 +9,8 @@ import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
-const RANK_RECIPIENT = "628127309190@c.us";
+const RANK_RECIPIENT =
+  process.env.DIRREQUEST_RANK_RECIPIENT || "6281234560377@c.us";
 
 function getRecipients(includeRankRecipient = false) {
   const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);

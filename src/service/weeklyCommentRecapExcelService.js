@@ -89,8 +89,9 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     dateList.push(formatIso(d));
   }
 
-  const grouped = {};
-  const dailyPosts = {};
+  const grouped = new Map();
+  const satkerMeta = new Map();
+  const dailyPosts = new Map();
   const normalizedClientId =
     typeof clientId === 'string' ? clientId.toLowerCase() : '';
   const roleFilter = normalizedClientId === 'ditbinmas' ? 'ditbinmas' : undefined;
@@ -98,18 +99,15 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   const fetchResults = await Promise.all(
     dateList.map(async (dateStr) => {
       try {
-        const [rows, totalPosts] = await Promise.all([
-          getRekapKomentarByClient(
-            clientId,
-            'harian',
-            dateStr,
-            undefined,
-            undefined,
-            roleFilter
-          ),
-          countPostsByClient(clientId, 'harian', dateStr),
-        ]);
-        return { dateStr, rows, totalPosts };
+        const rows = await getRekapKomentarByClient(
+          clientId,
+          'harian',
+          dateStr,
+          undefined,
+          undefined,
+          roleFilter
+        );
+        return { dateStr, rows };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -126,14 +124,32 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     })
   );
 
-  fetchResults.forEach(({ dateStr, rows = [], totalPosts = 0 }) => {
-    dailyPosts[dateStr] = totalPosts;
+  fetchResults.forEach(({ dateStr, rows = [] }) => {
     for (const u of rows) {
-      const satker = u.client_name || u.client_id || 'Tanpa Nama';
-      if (!grouped[satker]) grouped[satker] = {};
+      const satkerName = u.client_name || u.client_id || 'Tanpa Nama';
+      const satkerKeySource = u.client_id || satkerName;
+      const satkerKey = String(satkerKeySource || '').toLowerCase() || satkerName;
+
+      if (!satkerMeta.has(satkerKey)) {
+        satkerMeta.set(satkerKey, {
+          clientId: u.client_id || null,
+          name: satkerName,
+        });
+      }
+
+      if (!grouped.has(satkerKey)) {
+        grouped.set(satkerKey, {
+          key: satkerKey,
+          clientId: u.client_id || null,
+          name: satkerName,
+          users: {},
+        });
+      }
+
+      const entry = grouped.get(satkerKey);
       const key = `${u.title || ''}|${u.nama || ''}`;
-      if (!grouped[satker][key]) {
-        grouped[satker][key] = {
+      if (!entry.users[key]) {
+        entry.users[key] = {
           pangkat: u.title || '',
           nama: u.nama || '',
           satfung: u.divisi || '',
@@ -141,20 +157,59 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
           totalKomentar: 0,
         };
       }
-      grouped[satker][key].perDate[dateStr] = {
+      entry.users[key].perDate[dateStr] = {
         komentar: u.jumlah_komentar || 0,
       };
-      grouped[satker][key].totalKomentar += u.jumlah_komentar || 0;
+      entry.users[key].totalKomentar += u.jumlah_komentar || 0;
     }
   });
 
-  if (Object.keys(grouped).length === 0) {
+  if (grouped.size === 0) {
     return null;
   }
 
+  const postCountTasks = [];
+  satkerMeta.forEach(({ clientId: satkerClientId }, satkerKey) => {
+    dateList.forEach((dateStr) => {
+      const targetClientId = satkerClientId || clientId;
+      postCountTasks.push(
+        (async () => {
+          try {
+            const count = await countPostsByClient(
+              targetClientId,
+              'harian',
+              dateStr
+            );
+            return { satkerKey, dateStr, count };
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            throw new Error(
+              `Gagal menghitung jumlah post untuk ${targetClientId} pada ${dateStr}: ${errorMessage}`,
+              { cause: error instanceof Error ? error : undefined }
+            );
+          }
+        })()
+      );
+    });
+  });
+
+  const postCounts = await Promise.all(postCountTasks);
+  postCounts.forEach(({ satkerKey, dateStr, count }) => {
+    if (!dailyPosts.has(satkerKey)) {
+      dailyPosts.set(satkerKey, {});
+    }
+    dailyPosts.get(satkerKey)[dateStr] = count;
+  });
+
   const wb = XLSX.utils.book_new();
   const usedSheetNames = new Set();
-  Object.entries(grouped).forEach(([satker, usersMap]) => {
+  const satkerEntries = Array.from(grouped.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  satkerEntries.forEach((satkerEntry) => {
+    const { name: satkerName, key: satkerKey, users: usersMap } = satkerEntry;
     const users = Object.values(usersMap);
     users.sort((a, b) => {
       if (b.totalKomentar !== a.totalKomentar)
@@ -167,7 +222,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
 
     const aoa = [];
     const colCount = 4 + dateList.length * 3;
-    const title = `${satker} – Rekap Engagement Tiktok`;
+    const title = `${satkerName} – Rekap Engagement Tiktok`;
     const periodStr = `${formatDisplay(weekStart)} - ${formatDisplay(weekEnd)}`;
     const subtitle = `Rekap Komentar Tiktok Periode ${periodStr}`;
     aoa.push([title]);
@@ -178,7 +233,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     dateList.forEach((d) => {
       const disp = formatHeaderDate(d);
       headerDates.push(disp, '', '');
-      subHeader.push('Jumlah Post', 'Sudah Komentar', 'Belum Komentar');
+      subHeader.push('Jumlah Post', 'Sudah Likes', 'Belum Likes');
     });
     aoa.push(headerDates);
     aoa.push(subHeader);
@@ -187,7 +242,8 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
       const row = [idx + 1, u.pangkat || '', u.nama || '', u.satfung || ''];
       dateList.forEach((d) => {
         const komentar = u.perDate[d]?.komentar || 0;
-        const posts = dailyPosts[d] || 0;
+        const postsBySatker = dailyPosts.get(satkerKey) || {};
+        const posts = postsBySatker[d] || 0;
         row.push(posts, komentar, Math.max(posts - komentar, 0));
       });
       aoa.push(row);
@@ -240,7 +296,7 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
       });
     }
 
-    const sheetName = generateSheetName(satker, usedSheetNames);
+    const sheetName = generateSheetName(satkerName, usedSheetNames);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 

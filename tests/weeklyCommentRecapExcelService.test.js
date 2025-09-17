@@ -37,6 +37,7 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
       return [
         {
           client_name: 'POLRES A',
+          client_id: 'POLRESA',
           title: 'AKP',
           nama: 'Budi',
           divisi: 'Sat A',
@@ -44,6 +45,7 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
         },
         {
           client_name: 'POLRES B',
+          client_id: 'POLRESB',
           title: 'IPTU',
           nama: 'Siti',
           divisi: 'Sat B',
@@ -54,7 +56,8 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (tanggal === '2024-04-07') return 3;
+    if (clientId === 'POLRESA' && tanggal === '2024-04-07') return 4;
+    if (clientId === 'POLRESB' && tanggal === '2024-04-07') return 3;
     return 0;
   });
 
@@ -79,17 +82,20 @@ test('saveWeeklyCommentRecapExcel creates formatted weekly recap', async () => {
   ]);
   expect(aoa[3].slice(4, 7)).toEqual([
     'Jumlah Post',
-    'Sudah Komentar',
-    'Belum Komentar',
+    'Sudah Likes',
+    'Belum Likes',
   ]);
   const lastIdx = aoa[2].length - 3;
   expect(aoa[4].slice(0, 4)).toEqual([1, 'AKP', 'Budi', 'Sat A']);
-  expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([3, 2, 1]);
+  expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([4, 2, 2]);
 
   expect(mockGetRekapKomentarByClient).toHaveBeenCalled();
   mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
     expect(call[5]).toBe('ditbinmas');
   });
+
+  const calledIds = new Set(mockCountPostsByClient.mock.calls.map((call) => call[0]));
+  expect(calledIds).toEqual(new Set(['POLRESA', 'POLRESB']));
 
   await unlink(filePath);
 });
@@ -100,6 +106,7 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
   const recapRows = [
     {
       client_name: 'POLRES A',
+      client_id: 'POLRESA',
       title: 'AKP',
       nama: 'Budi',
       divisi: 'Sat A',
@@ -107,6 +114,7 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
     },
     {
       client_name: 'POLRES B',
+      client_id: 'POLRESB',
       title: 'IPTU',
       nama: 'Siti',
       divisi: 'Sat B',
@@ -114,6 +122,7 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
     },
     {
       client_name: 'POLRES C',
+      client_id: 'POLRESC',
       title: 'IPDA',
       nama: 'Tono',
       divisi: 'Sat C',
@@ -126,7 +135,11 @@ test('saveWeeklyCommentRecapExcel splits Ditbinmas recap per satker sheet', asyn
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (tanggal === '2024-04-07') return 5;
+    if (tanggal === '2024-04-07') {
+      if (clientId === 'POLRESA') return 5;
+      if (clientId === 'POLRESB') return 4;
+      if (clientId === 'POLRESC') return 6;
+    }
     return 0;
   });
 
@@ -155,6 +168,7 @@ test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok us
   const recapRows = [
     {
       client_name: 'POLRES TANPA HANDLE',
+      client_id: 'POLRESTH',
       title: 'AKP',
       nama: 'Anonim',
       divisi: 'Sat Tanpa',
@@ -168,7 +182,7 @@ test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok us
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (tanggal === '2024-04-07') return 4;
+    if (clientId === 'POLRESTH' && tanggal === '2024-04-07') return 4;
     return 0;
   });
 
@@ -197,6 +211,7 @@ test('saveWeeklyCommentRecapExcel includes non-ditbinmas clients without role fi
       return [
         {
           client_name: 'POLRES B',
+          client_id: 'POLRESB',
           title: 'IPTU',
           nama: 'Siti',
           divisi: 'Sat B',
@@ -207,7 +222,7 @@ test('saveWeeklyCommentRecapExcel includes non-ditbinmas clients without role fi
     return [];
   });
   mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
-    if (tanggal === '2024-04-05') return 2;
+    if (clientId === 'POLRESB' && tanggal === '2024-04-05') return 2;
     return 0;
   });
 
