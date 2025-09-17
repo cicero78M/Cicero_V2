@@ -33,7 +33,14 @@ test('saveMonthlyCommentRecapExcel creates formatted monthly recap', async () =>
       jumlah_komentar: 2,
     },
   ]);
-  mockCountPostsByClient.mockResolvedValue(3);
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal, _s, _e, role) => {
+    expect(clientId).toBe('DITBINMAS');
+    expect(role).toBe('ditbinmas');
+    if (tanggal === '2024-04-15') {
+      return 3;
+    }
+    return 0;
+  });
 
   const filePath = await saveMonthlyCommentRecapExcel('DITBINMAS');
   expect(filePath).toBeTruthy();
@@ -73,5 +80,78 @@ test('saveMonthlyCommentRecapExcel returns null when no data', async () => {
 
   const filePath = await saveMonthlyCommentRecapExcel('DITBINMAS');
   expect(filePath).toBeNull();
+  jest.useRealTimers();
+});
+
+test('saveMonthlyCommentRecapExcel aggregates Ditbinmas posts for backlog', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-15T00:00:00Z'));
+
+  mockGetRekapKomentarByClient.mockReset();
+  mockCountPostsByClient.mockReset();
+
+  const recapMap = {
+    '2024-04-14': [
+      {
+        client_name: 'POLRES A',
+        title: 'AKP',
+        nama: 'Budi',
+        divisi: 'Sat A',
+        jumlah_komentar: 4,
+      },
+      {
+        client_name: 'POLRES B',
+        title: 'IPTU',
+        nama: 'Siti',
+        divisi: 'Sat B',
+        jumlah_komentar: 3,
+      },
+    ],
+    '2024-04-15': [
+      {
+        client_name: 'POLRES A',
+        title: 'AKP',
+        nama: 'Budi',
+        divisi: 'Sat A',
+        jumlah_komentar: 5,
+      },
+      {
+        client_name: 'POLRES B',
+        title: 'IPTU',
+        nama: 'Siti',
+        divisi: 'Sat B',
+        jumlah_komentar: 2,
+      },
+    ],
+  };
+
+  mockGetRekapKomentarByClient.mockImplementation(async (_clientId, _periode, tanggal) => {
+    return recapMap[tanggal] || [];
+  });
+
+  const postSeed = {
+    '2024-04-14': 6,
+    '2024-04-15': 8,
+  };
+  mockCountPostsByClient.mockImplementation(async (clientId, _periode, tanggal, _s, _e, role) => {
+    expect(clientId).toBe('DITBINMAS');
+    expect(role).toBe('ditbinmas');
+    return postSeed[tanggal] || 0;
+  });
+
+  const filePath = await saveMonthlyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES A'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  const lastIdx = aoa[2].length - 3;
+  expect(aoa[4].slice(lastIdx - 3, lastIdx)).toEqual([6, 4, 2]);
+  expect(aoa[4].slice(lastIdx, lastIdx + 3)).toEqual([8, 5, 3]);
+
+  mockCountPostsByClient.mock.calls.forEach((call) => {
+    expect(call[0]).toBe('DITBINMAS');
+    expect(call[5]).toBe('ditbinmas');
+  });
+
+  await unlink(filePath);
   jest.useRealTimers();
 });
