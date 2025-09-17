@@ -9,7 +9,7 @@ import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
-const RANK_RECIPIENT = "6281234560377@c.us";
+const RANK_RECIPIENT = "628127309190@c.us";
 
 function getRecipients(includeRankRecipient = false) {
   const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
@@ -41,6 +41,6 @@ export async function runCron(includeRankRecipient = false) {
 
 cron.schedule("7 15 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
 cron.schedule("7 18 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("32 20 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
+cron.schedule("32 20 * * *", () => runCron(true), { timezone: "Asia/Jakarta" });
 
 export default null;
