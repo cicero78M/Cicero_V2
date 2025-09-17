@@ -1,4 +1,5 @@
 import { query } from '../repository/db.js';
+import { getClientsByRole } from './userModel.js';
 
 function normalizeUsername(uname) {
   if (typeof uname !== 'string' || uname.length === 0) return null;
@@ -78,7 +79,7 @@ export async function getRekapKomentarByClient(
     [client_id]
   );
   const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
-  const roleLower = role ? role.toLowerCase() : null;
+  const roleLower = typeof role === 'string' ? role.toLowerCase() : null;
 
   const params = clientType === "direktorat" ? [] : [client_id];
   let tanggalFilter =
@@ -114,11 +115,52 @@ export async function getRekapKomentarByClient(
   let userWhere = "LOWER(u.client_id) = LOWER($1)";
   if (clientType === "direktorat") {
     postClientFilter = "1=1";
-    const roleIdx = params.push(roleLower || client_id);
-    userWhere = `EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    const filterValues = Array.isArray(role)
+      ? role
+      : role
+        ? [role]
+        : [client_id];
+    const normalizedFilters = filterValues
+      .map((value) =>
+        typeof value === "string" ? value.trim().toLowerCase() : null
+      )
+      .filter(Boolean);
+
+    const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
+    const filterSet = new Set(normalizedFilters);
+
+    const rolesToExpand = normalizedFilters.filter((value) =>
+      directorateRoles.includes(value)
+    );
+
+    if (rolesToExpand.length === 0 && !filterSet.size) {
+      filterSet.add(String(client_id || "").toLowerCase());
+      if (directorateRoles.includes(String(client_id || "").toLowerCase())) {
+        rolesToExpand.push(String(client_id || "").toLowerCase());
+      }
+    }
+
+    const subordinateLists = await Promise.all(
+      rolesToExpand.map((roleName) => getClientsByRole(roleName))
+    );
+    subordinateLists
+      .flat()
+      .filter(Boolean)
+      .forEach((clientId) => filterSet.add(clientId.toLowerCase()));
+
+    if (!filterSet.size) {
+      filterSet.add(String(client_id || "").toLowerCase());
+    }
+
+    const filterIdx = params.push(Array.from(filterSet));
+    const placeholder = `$${filterIdx}::text[]`;
+    userWhere = `(
+      LOWER(u.client_id) = ANY(${placeholder})
+      OR EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = ANY(${placeholder})
+      )
     )`;
   } else if (roleLower && roleLower !== "operator") {
     const roleIdx = params.push(roleLower);
