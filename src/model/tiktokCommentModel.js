@@ -157,9 +157,8 @@ export async function getRekapKomentarByClient(
     FROM "user" u
     JOIN clients cl ON cl.client_id = u.client_id
     LEFT JOIN comment_counts cc
-      ON lower(replace(trim(u.tiktok), '@', '')) = cc.username
+      ON lower(replace(trim(coalesce(u.tiktok, '')), '@', '')) = cc.username
     WHERE u.status = true
-      AND u.tiktok IS NOT NULL
       AND ${userWhere}
     ORDER BY jumlah_komentar DESC, u.nama ASC`,
     params
