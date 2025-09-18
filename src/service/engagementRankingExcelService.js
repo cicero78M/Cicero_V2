@@ -305,6 +305,93 @@ export async function saveEngagementRankingExcel({
   ];
   worksheet["!freeze"] = { xSplit: 0, ySplit: 7 };
 
+  const columnCount = 8;
+  const tableHeaderRows = [5, 6];
+  const dataStartRow = 7;
+  const totalRow = dataStartRow + entries.length;
+  const tableEndRow = totalRow;
+
+  function columnToLetters(col) {
+    let dividend = col + 1;
+    let columnName = "";
+    while (dividend > 0) {
+      const modulo = (dividend - 1) % 26;
+      columnName = String.fromCharCode(65 + modulo) + columnName;
+      dividend = Math.floor((dividend - modulo) / 26);
+    }
+    return columnName;
+  }
+
+  function cellAddress(row, col) {
+    return `${columnToLetters(col)}${row + 1}`;
+  }
+
+  function ensureCell(sheet, row, col) {
+    const address = cellAddress(row, col);
+    if (!sheet[address]) {
+      sheet[address] = { t: "s", v: "" };
+    }
+    return sheet[address];
+  }
+
+  const mediumBorder = { style: "medium", color: { rgb: "000000" } };
+  const thinBorder = { style: "thin", color: { rgb: "000000" } };
+  const headerFill = { patternType: "solid", fgColor: { rgb: "D9D9D9" } };
+  const zebraFill = { patternType: "solid", fgColor: { rgb: "F5F5F5" } };
+
+  const headerBottomRow = tableHeaderRows[tableHeaderRows.length - 1];
+
+  for (let row = 5; row <= tableEndRow; row += 1) {
+    for (let col = 0; col < columnCount; col += 1) {
+      const cell = ensureCell(worksheet, row, col);
+      const style = { ...(cell.s || {}) };
+      style.border = {
+        top: row === tableHeaderRows[0] ? mediumBorder : thinBorder,
+        bottom:
+          row === tableEndRow || row === headerBottomRow ? mediumBorder : thinBorder,
+        left: col === 0 ? mediumBorder : thinBorder,
+        right: col === columnCount - 1 ? mediumBorder : thinBorder,
+      };
+
+      if (tableHeaderRows.includes(row)) {
+        style.font = { ...(style.font || {}), bold: true };
+        style.alignment = {
+          horizontal: "center",
+          vertical: "center",
+          wrapText: true,
+        };
+        style.fill = headerFill;
+      } else if (row >= dataStartRow && row < totalRow && (row - dataStartRow) % 2 === 1) {
+        style.fill = zebraFill;
+      }
+
+      cell.s = style;
+    }
+  }
+
+  const columnWidths = Array.from({ length: columnCount }, () => 10);
+  aoa.forEach((row) => {
+    row.forEach((value, colIdx) => {
+      if (colIdx >= columnCount) return;
+      let cellText = "";
+      if (value === null || typeof value === "undefined") {
+        cellText = "";
+      } else if (typeof value === "object") {
+        if (value && typeof value.v !== "undefined") {
+          cellText = String(value.v ?? "");
+        } else if (value && typeof value.f !== "undefined") {
+          cellText = String(value.f ?? "");
+        } else if (value && typeof value.w !== "undefined") {
+          cellText = String(value.w ?? "");
+        }
+      } else {
+        cellText = String(value);
+      }
+      columnWidths[colIdx] = Math.max(columnWidths[colIdx], cellText.length + 2);
+    });
+  });
+  worksheet["!cols"] = columnWidths.map((width) => ({ wch: Math.min(Math.max(width, 12), 40) }));
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Ranking Engagement");
 
@@ -314,7 +401,7 @@ export async function saveEngagementRankingExcel({
   const fileName = `${clientSlug}_Rekap_Ranking_Engagement_${dateLabel}.xlsx`;
   const filePath = path.join(EXPORT_DIR, fileName);
 
-  XLSX.writeFile(workbook, filePath);
+  XLSX.writeFile(workbook, filePath, { cellStyles: true });
   return { filePath, fileName };
 }
 
