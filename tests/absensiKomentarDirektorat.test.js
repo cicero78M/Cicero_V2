@@ -59,26 +59,45 @@ test('sorts satker reports with Ditbinmas first and by percentage and count', as
     return { rows: [{ nama: cid, client_tiktok: '', client_type: 'org' }] };
   });
   mockGetPostsTodayByClient.mockResolvedValueOnce([{ video_id: 'v1' }]);
-  mockGetCommentsByVideoId.mockResolvedValueOnce({ comments: [] });
 
-  function createUsers(clientId, total, sudah) {
-    return Array.from({ length: total }, (_, i) => ({
-      user_id: `${clientId}-${i}`,
-      client_id: clientId,
-      tiktok: `user${clientId}${i}`,
-      status: true,
-      exception: i < sudah,
-    }));
+  function createUsers(clientId, total) {
+    const normalizedId = clientId.toLowerCase();
+    return Array.from({ length: total }, (_, i) => {
+      const username = `user${normalizedId}${i}`;
+      return {
+        user_id: `${clientId}-${i}`,
+        client_id: clientId,
+        tiktok: username,
+        status: true,
+        exception: false,
+      };
+    });
   }
 
   const users = [
-    ...createUsers('DITBINMAS', 2, 1),
-    ...createUsers('POLRES_A', 100, 80),
-    ...createUsers('POLRES_B', 100, 50),
-    ...createUsers('POLRES_C', 99, 70),
-    ...createUsers('POLRES_D', 99, 75),
+    ...createUsers('DITBINMAS', 2),
+    ...createUsers('POLRES_A', 100),
+    ...createUsers('POLRES_B', 100),
+    ...createUsers('POLRES_C', 99),
+    ...createUsers('POLRES_D', 99),
   ];
   mockGetUsersByDirektorat.mockResolvedValueOnce(users);
+
+  const commentUsernames = [];
+  function addComments(clientId, sudah) {
+    const normalizedId = clientId.toLowerCase();
+    for (let i = 0; i < sudah; i += 1) {
+      commentUsernames.push({ username: `user${normalizedId}${i}` });
+    }
+  }
+
+  addComments('DITBINMAS', 1);
+  addComments('POLRES_A', 80);
+  addComments('POLRES_B', 50);
+  addComments('POLRES_C', 70);
+  addComments('POLRES_D', 75);
+
+  mockGetCommentsByVideoId.mockResolvedValueOnce({ comments: commentUsernames });
 
   const msg = await absensiKomentar('DITBINMAS', { roleFlag: 'ditbinmas' });
 

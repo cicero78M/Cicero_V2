@@ -263,9 +263,7 @@ export async function absensiKomentar(client_id, opts = {}) {
         };
       const g = groups[cid];
       g.total++;
-      if (u.exception === true) {
-        g.sudah++;
-      } else if (!u.tiktok || u.tiktok.trim() === "") {
+      if (!u.tiktok || u.tiktok.trim() === "") {
         g.noUsername++;
       } else if (u.count >= Math.ceil(totalKonten / 2)) {
         g.sudah++;
@@ -356,9 +354,7 @@ export async function absensiKomentar(client_id, opts = {}) {
   let sudah = [], belum = [];
 
   Object.values(userStats).forEach((u) => {
-    if (u.exception === true) {
-      sudah.push(u);
-    } else if (
+    if (
       u.tiktok &&
       u.tiktok.trim() !== "" &&
       u.count >= Math.ceil(totalKonten / 2)
@@ -368,9 +364,6 @@ export async function absensiKomentar(client_id, opts = {}) {
       belum.push(u);
     }
   });
-
-  // Hapus user exception dari list belum!
-  belum = belum.filter(u => !u.exception);
 
   sendDebug({
     tag: "ABSEN TTK",
