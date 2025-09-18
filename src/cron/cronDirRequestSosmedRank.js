@@ -41,7 +41,6 @@ export async function runCron(includeRankRecipient = false) {
 }
 
 cron.schedule("7 15 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("7 18 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("32 20 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
+cron.schedule("45 20 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
 
 export default null;
