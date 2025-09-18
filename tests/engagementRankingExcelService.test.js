@@ -153,24 +153,24 @@ describe('engagementRankingExcelService', () => {
     const aoa = mockAoAToSheet.mock.calls[0][0];
     expect(aoa[0][0]).toMatch(/Rekap Ranking Engagement/i);
     expect(aoa[5]).toEqual([
-      'Nama Satker',
-      'Jumlah Personil',
-      'Instagram',
+      'NAMA SATKER',
+      'JUMLAH PERSONIL',
+      'INSTAGRAM',
       null,
       null,
-      'TikTok',
+      'TIKTOK',
       null,
       null,
     ]);
     expect(aoa[6]).toEqual([
       null,
       null,
-      'Sudah',
-      'Belum',
-      'Username Kosong',
-      'Sudah',
-      'Belum',
-      'Username Kosong',
+      'SUDAH',
+      'BELUM',
+      'USERNAME KOSONG',
+      'SUDAH',
+      'BELUM',
+      'USERNAME KOSONG',
     ]);
     expect(aoa[aoa.length - 1][0]).toBe('TOTAL');
 
