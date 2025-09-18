@@ -129,12 +129,31 @@ describe('engagementRankingExcelService', () => {
 
     expect(mockGroupUsersByClientDivision).toHaveBeenCalledWith('ditbinmas');
     expect(result.entries).toHaveLength(3);
+    expect(result.entries.map((entry) => entry.name)).toEqual([
+      'DIREKTORAT BINMAS',
+      'POLRES A',
+      'POLRES B',
+    ]);
+
     const first = result.entries[0];
     expect(first.name).toBe('DIREKTORAT BINMAS');
     expect(first.igSudah).toBe(1);
     expect(first.igBelum).toBe(0);
     expect(first.ttSudah).toBe(0);
     expect(first.ttKosong).toBe(1);
+    expect(first.igLikeCount).toBe(1);
+    expect(first.ttCommentCount).toBe(0);
+    expect(first.engagementTotal).toBe(1);
+
+    const second = result.entries[1];
+    expect(second.name).toBe('POLRES A');
+    expect(second.engagementTotal).toBeGreaterThan(first.engagementTotal);
+    expect(second.igLikeCount).toBe(2);
+    expect(second.ttCommentCount).toBe(2);
+
+    const third = result.entries[2];
+    expect(third.name).toBe('POLRES B');
+    expect(third.engagementTotal).toBe(3);
 
     const totals = result.totals;
     expect(totals.totalPersonil).toBe(5);
