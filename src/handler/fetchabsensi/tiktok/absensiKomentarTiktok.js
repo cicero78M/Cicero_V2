@@ -181,12 +181,6 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   sendDebug({
     tag: "ABSEN TTK",
-    msg: `Start per-konten absensi. Posts=${posts.length} users=${users.length}`,
-    client_id,
-  });
-
-  sendDebug({
-    tag: "ABSEN TTK",
     msg: `Start absensi komentar. Posts=${posts.length} users=${users.length}`,
     client_id,
   });
