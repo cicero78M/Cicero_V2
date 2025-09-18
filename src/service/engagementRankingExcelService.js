@@ -240,9 +240,14 @@ export async function saveEngagementRankingExcel({
     year: "numeric",
   });
 
+  const jam = String(now.getHours()).padStart(2, "0");
+  const menit = String(now.getMinutes()).padStart(2, "0");
+  const waktuPengambilan = `${jam}.${menit}`;
+
   const aoa = [
     [`Rekap Ranking Engagement ${(clientName || "").toUpperCase()}`],
     [`Hari, Tanggal: ${hari}, ${tanggal}`],
+    [`Jam Pengambilan Data: ${waktuPengambilan}`],
     [`Jumlah Post Instagram: ${igPostsCount}`],
     [`Jumlah Post TikTok: ${ttPostsCount}`],
     [],
@@ -298,16 +303,17 @@ export async function saveEngagementRankingExcel({
     { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
     { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } },
-    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },
-    { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
-    { s: { r: 5, c: 2 }, e: { r: 5, c: 4 } },
-    { s: { r: 5, c: 5 }, e: { r: 5, c: 7 } },
+    { s: { r: 4, c: 0 }, e: { r: 4, c: 7 } },
+    { s: { r: 6, c: 0 }, e: { r: 7, c: 0 } },
+    { s: { r: 6, c: 1 }, e: { r: 7, c: 1 } },
+    { s: { r: 6, c: 2 }, e: { r: 6, c: 4 } },
+    { s: { r: 6, c: 5 }, e: { r: 6, c: 7 } },
   ];
-  worksheet["!freeze"] = { xSplit: 0, ySplit: 7 };
+  worksheet["!freeze"] = { xSplit: 0, ySplit: 8 };
 
   const columnCount = 8;
-  const tableHeaderRows = [5, 6];
-  const dataStartRow = 7;
+  const tableHeaderRows = [6, 7];
+  const dataStartRow = 8;
   const totalRow = dataStartRow + entries.length;
   const tableEndRow = totalRow;
 
@@ -341,7 +347,7 @@ export async function saveEngagementRankingExcel({
 
   const headerBottomRow = tableHeaderRows[tableHeaderRows.length - 1];
 
-  for (let row = 5; row <= tableEndRow; row += 1) {
+  for (let row = 6; row <= tableEndRow; row += 1) {
     for (let col = 0; col < columnCount; col += 1) {
       const cell = ensureCell(worksheet, row, col);
       const style = { ...(cell.s || {}) };
@@ -397,8 +403,9 @@ export async function saveEngagementRankingExcel({
 
   await mkdir(EXPORT_DIR, { recursive: true });
   const dateLabel = now.toISOString().slice(0, 10);
+  const timeLabel = `${jam}${menit}`;
   const clientSlug = sanitizeFilename(clientName || clientId || "Direktorat");
-  const fileName = `${clientSlug}_Rekap_Ranking_Engagement_${dateLabel}.xlsx`;
+  const fileName = `${clientSlug}_Rekap_Ranking_Engagement_${dateLabel}_${timeLabel}.xlsx`;
   const filePath = path.join(EXPORT_DIR, fileName);
 
   XLSX.writeFile(workbook, filePath, { cellStyles: true });

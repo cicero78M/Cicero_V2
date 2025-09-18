@@ -152,7 +152,8 @@ describe('engagementRankingExcelService', () => {
     expect(mockAoAToSheet).toHaveBeenCalled();
     const aoa = mockAoAToSheet.mock.calls[0][0];
     expect(aoa[0][0]).toMatch(/Rekap Ranking Engagement/i);
-    expect(aoa[5]).toEqual([
+    expect(aoa[2][0]).toMatch(/Jam Pengambilan Data:/);
+    expect(aoa[6]).toEqual([
       'NAMA SATKER',
       'JUMLAH PERSONIL',
       'INSTAGRAM',
@@ -162,7 +163,7 @@ describe('engagementRankingExcelService', () => {
       null,
       null,
     ]);
-    expect(aoa[6]).toEqual([
+    expect(aoa[7]).toEqual([
       null,
       null,
       'SUDAH',
@@ -179,7 +180,7 @@ describe('engagementRankingExcelService', () => {
     expect(mockMkdir).toHaveBeenCalled();
     expect(mockWriteFile).toHaveBeenCalled();
     expect(filePath).toBeTruthy();
-    expect(fileName).toMatch(/Rekap_Ranking_Engagement/);
+    expect(fileName).toMatch(/Rekap_Ranking_Engagement_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx$/);
   });
 
   test('collectEngagementRanking rejects for non directorate client', async () => {
