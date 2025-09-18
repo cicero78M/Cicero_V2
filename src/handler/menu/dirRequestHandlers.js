@@ -28,6 +28,7 @@ import { saveEngagementRankingExcel } from "../../service/engagementRankingExcel
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
+const DITBINMAS_CLIENT_ID = "DITBINMAS";
 
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
@@ -923,60 +924,42 @@ export const dirRequestHandlers = {
     }
     const chosen = dashUsers[idx];
     session.role = chosen.role;
-    const dir = await findClientById(chosen.role);
-    session.client_ids = chosen.client_ids;
-    session.dir_client_id =
-      dir?.client_type?.toLowerCase() === "direktorat" ? chosen.role : null;
+    session.client_ids = [DITBINMAS_CLIENT_ID];
+    session.dir_client_id = DITBINMAS_CLIENT_ID;
     session.username = chosen.username || session.username;
+    session.selectedClientId = DITBINMAS_CLIENT_ID;
+    try {
+      const ditClient = await findClientById(DITBINMAS_CLIENT_ID);
+      session.clientName = ditClient?.nama || DITBINMAS_CLIENT_ID;
+    } catch {
+      session.clientName = DITBINMAS_CLIENT_ID;
+    }
     delete session.dash_users;
     session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
 
   async main(session, chatId, _text, waClient) {
-    const originalIds = session.client_ids || [];
-    const ids = [];
-    for (const id of originalIds) {
-      try {
-        const client = await findClientById(id);
-        if (client?.client_type?.toLowerCase() === "direktorat") {
-          ids.push(id);
-        }
-      } catch {
-        // ignore lookup errors
-      }
+    session.client_ids = [DITBINMAS_CLIENT_ID];
+    if ((session.selectedClientId || "").toUpperCase() !== DITBINMAS_CLIENT_ID) {
+      session.selectedClientId = DITBINMAS_CLIENT_ID;
     }
-    session.client_ids = ids;
-
-    if (!session.selectedClientId) {
-      if (ids.length === 1) {
-        session.selectedClientId = ids[0];
-        const client = await findClientById(ids[0]);
-        session.clientName = client?.nama || ids[0];
-      } else if (ids.length > 1) {
-        const list = await Promise.all(
-          ids.map(async (id, idx) => {
-            const c = await findClientById(id);
-            const name = (c?.nama || id).toUpperCase();
-            return `${idx + 1}. ${name} (${id.toUpperCase()})`;
-          })
-        );
-        await waClient.sendMessage(
-          chatId,
-          `Pilih Client:\n\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
-        );
-        session.step = "choose_client";
-        return;
-      } else {
-        await waClient.sendMessage(chatId, "Tidak ada client terkait.");
-        return;
+    if (!session.dir_client_id) {
+      session.dir_client_id = DITBINMAS_CLIENT_ID;
+    }
+    if (!session.clientName || session.selectedClientId !== DITBINMAS_CLIENT_ID) {
+      try {
+        const client = await findClientById(DITBINMAS_CLIENT_ID);
+        session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+      } catch {
+        session.clientName = DITBINMAS_CLIENT_ID;
       }
     }
 
     const clientName = session.clientName;
-      const menu =
-        `Client: *${clientName}*\n` +
-        "┏━━━━━━━━━━━━ *MENU DIRREQUEST* ━━━━━━━━━━━━\n" +
+    const menu =
+      `Client: *${clientName}*\n` +
+      "┏━━━━━━━━━━━━ *MENU DIRREQUEST* ━━━━━━━━━━━━\n" +
         "📊 *Rekap Data*\n" +
         "1️⃣ Rekap personel belum lengkapi data\n" +
         "2️⃣ Ringkasan pengisian data personel\n" +
@@ -1013,18 +996,13 @@ export const dirRequestHandlers = {
   },
 
   async choose_client(session, chatId, text, waClient) {
-    const idx = parseInt(text.trim(), 10) - 1;
-    const ids = session.client_ids || [];
-    if (isNaN(idx) || idx < 0 || idx >= ids.length) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan client tidak valid. Balas angka yang tersedia."
-      );
-      return;
+    session.selectedClientId = DITBINMAS_CLIENT_ID;
+    try {
+      const client = await findClientById(DITBINMAS_CLIENT_ID);
+      session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+    } catch {
+      session.clientName = DITBINMAS_CLIENT_ID;
     }
-    session.selectedClientId = ids[idx];
-    const client = await findClientById(session.selectedClientId);
-    session.clientName = client?.nama || session.selectedClientId;
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
 

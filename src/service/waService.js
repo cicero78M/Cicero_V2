@@ -670,13 +670,25 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       } catch (e) {
         // ignore lookup errors and fallback to dashboard user client_ids
       }
+      const defaultClientId = "DITBINMAS";
+      let defaultClientName = defaultClientId;
+      try {
+        const ditClient = await clientService.findClientById(defaultClientId);
+        if (ditClient?.nama) {
+          defaultClientName = ditClient.nama;
+        }
+      } catch (e) {
+        // ignore lookup errors and fallback to default label
+      }
       setSession(chatId, {
         menu: "dirrequest",
         step: "main",
         role: du.role,
-        client_ids: du.client_ids,
-        dir_client_id: dirClientId,
+        client_ids: [defaultClientId],
+        dir_client_id: defaultClientId,
         username: du.username,
+        selectedClientId: defaultClientId,
+        clientName: defaultClientName,
       });
       await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
