@@ -10,7 +10,11 @@ import { saveEngagementRankingExcel } from "../service/engagementRankingExcelSer
 import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "6281234560377@c.us";
+const RECIPIENT =
+  process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "6281234560377@c.us";
+const GROUP_RECIPIENT = "120363419830216549@g.us";
+const DEFAULT_RECIPIENTS = [RECIPIENT];
+const GROUP_RECIPIENTS = [RECIPIENT, GROUP_RECIPIENT];
 const CLIENT_ID = "DITBINMAS";
 const ROLE_FLAG = "ditbinmas";
 
@@ -57,10 +61,17 @@ function buildNarrative(now = getJakartaDate()) {
   );
 }
 
-export async function runCron() {
+export async function runCron({ recipients = DEFAULT_RECIPIENTS } = {}) {
+  const requestedTargets = Array.isArray(recipients)
+    ? recipients.filter(Boolean)
+    : [recipients].filter(Boolean);
+  const targets = requestedTargets.length ? requestedTargets : DEFAULT_RECIPIENTS;
+
   sendDebug({
     tag: "CRON DIRREQ ENGAGE RANK",
-    msg: "Mulai cron dirrequest engage rank",
+    msg:
+      "Mulai cron dirrequest engage rank" +
+      (targets.length ? ` untuk ${targets.join(", ")}` : ""),
   });
 
   let filePath = null;
@@ -75,18 +86,22 @@ export async function runCron() {
     const buffer = await readFile(filePath);
     const narrative = buildNarrative();
 
-    await safeSendMessage(waGatewayClient, RECIPIENT, narrative.trim());
+    for (const target of targets) {
+      await safeSendMessage(waGatewayClient, target, narrative.trim());
+    }
     await sendWAFile(
       waGatewayClient,
       buffer,
       basename(filePath),
-      RECIPIENT,
+      targets,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     sendDebug({
       tag: "CRON DIRREQ ENGAGE RANK",
-      msg: "Laporan ranking engagement dikirim",
+      msg:
+        "Laporan ranking engagement dikirim" +
+        (targets.length ? ` ke ${targets.join(", ")}` : ""),
     });
   } catch (err) {
     sendDebug({
@@ -102,5 +117,8 @@ export async function runCron() {
 
 cron.schedule("7 15 * * *", runCron, { timezone: "Asia/Jakarta" });
 cron.schedule("40 20 * * *", runCron, { timezone: "Asia/Jakarta" });
+cron.schedule("45 20 * * *", () => runCron({ recipients: GROUP_RECIPIENTS }), {
+  timezone: "Asia/Jakarta",
+});
 
 export default null;
