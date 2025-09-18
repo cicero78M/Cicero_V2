@@ -347,14 +347,26 @@ export async function saveEngagementRankingExcel({
 
   const headerBottomRow = tableHeaderRows[tableHeaderRows.length - 1];
 
+  for (let row = 0; row <= 4; row += 1) {
+    const cell = ensureCell(worksheet, row, 0);
+    const style = { ...(cell.s || {}) };
+    style.font = { ...(style.font || {}), bold: true };
+    style.alignment = {
+      ...(style.alignment || {}),
+      horizontal: "center",
+      vertical: "center",
+      wrapText: true,
+    };
+    cell.s = style;
+  }
+
   for (let row = 6; row <= tableEndRow; row += 1) {
     for (let col = 0; col < columnCount; col += 1) {
       const cell = ensureCell(worksheet, row, col);
       const style = { ...(cell.s || {}) };
       style.border = {
-        top: row === tableHeaderRows[0] ? mediumBorder : thinBorder,
-        bottom:
-          row === tableEndRow || row === headerBottomRow ? mediumBorder : thinBorder,
+        top: mediumBorder,
+        bottom: mediumBorder,
         left: mediumBorder,
         right: mediumBorder,
       };
