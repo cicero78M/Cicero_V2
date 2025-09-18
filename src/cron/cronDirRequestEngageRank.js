@@ -11,11 +11,6 @@ import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "628127309190@c.us";
-const RECIPIENT =
-  process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "6281234560377@c.us";
-const GROUP_RECIPIENT = "120363419830216549@g.us";
-const DEFAULT_RECIPIENTS = [RECIPIENT];
-const GROUP_RECIPIENTS = [RECIPIENT, GROUP_RECIPIENT];
 const CLIENT_ID = "DITBINMAS";
 const ROLE_FLAG = "ditbinmas";
 
@@ -106,7 +101,6 @@ export async function runCron() {
 }
 
 cron.schedule("7 15 * * *", runCron, { timezone: "Asia/Jakarta" });
-cron.schedule("7 18 * * *", runCron, { timezone: "Asia/Jakarta" });
 cron.schedule("40 20 * * *", runCron, { timezone: "Asia/Jakarta" });
 
 export default null;
