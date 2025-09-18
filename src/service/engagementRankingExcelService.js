@@ -247,24 +247,24 @@ export async function saveEngagementRankingExcel({
     [`Jumlah Post TikTok: ${ttPostsCount}`],
     [],
     [
-      "Nama Satker",
-      "Jumlah Personil",
-      "Instagram",
+      "NAMA SATKER",
+      "JUMLAH PERSONIL",
+      "INSTAGRAM",
       null,
       null,
-      "TikTok",
+      "TIKTOK",
       null,
       null,
     ],
     [
       null,
       null,
-      "Sudah",
-      "Belum",
-      "Username Kosong",
-      "Sudah",
-      "Belum",
-      "Username Kosong",
+      "SUDAH",
+      "BELUM",
+      "USERNAME KOSONG",
+      "SUDAH",
+      "BELUM",
+      "USERNAME KOSONG",
     ],
   ];
 
@@ -349,8 +349,8 @@ export async function saveEngagementRankingExcel({
         top: row === tableHeaderRows[0] ? mediumBorder : thinBorder,
         bottom:
           row === tableEndRow || row === headerBottomRow ? mediumBorder : thinBorder,
-        left: col === 0 ? mediumBorder : thinBorder,
-        right: col === columnCount - 1 ? mediumBorder : thinBorder,
+        left: mediumBorder,
+        right: mediumBorder,
       };
 
       if (tableHeaderRows.includes(row)) {
