@@ -36,43 +36,65 @@ function extractUsernamesFromComments(comments) {
 
 function computeCommentSummary(users = [], commentSets = [], totalKonten = 0) {
   const sets = Array.isArray(commentSets) ? commentSets : [];
-  return users.reduce(
+  const userStats = (users || []).map((user) => {
+    if (!user || typeof user !== "object") {
+      return user;
+    }
+
+    const base = { ...user, count: 0 };
+
+    if (user.exception === true) {
+      return { ...base, status: "lengkap" };
+    }
+
+    const username = normalizeUsername(user.tiktok);
+    if (!username) {
+      return { ...base, status: "noUsername" };
+    }
+
+    let count = 0;
+    sets.forEach((set) => {
+      if (set && typeof set.has === "function" && set.has(username)) {
+        count += 1;
+      }
+    });
+
+    let status = "belum";
+    if (totalKonten > 0) {
+      if (count >= totalKonten) status = "lengkap";
+      else if (count > 0) status = "kurang";
+    }
+
+    return { ...base, count, status };
+  });
+
+  const summary = userStats.reduce(
     (acc, user) => {
       if (!user || typeof user !== "object") {
         return acc;
       }
 
       acc.total += 1;
-      if (user.exception === true) {
-        acc.lengkap += 1;
-        return acc;
+      switch (user.status) {
+        case "lengkap":
+          acc.lengkap += 1;
+          break;
+        case "kurang":
+          acc.kurang += 1;
+          break;
+        case "noUsername":
+          acc.noUsername += 1;
+          break;
+        default:
+          acc.belum += 1;
+          break;
       }
-
-      const username = normalizeUsername(user.tiktok);
-      if (!username) {
-        acc.noUsername += 1;
-        return acc;
-      }
-
-      let count = 0;
-      sets.forEach((set) => {
-        if (set && typeof set.has === "function" && set.has(username)) {
-          count += 1;
-        }
-      });
-
-      if (totalKonten > 0) {
-        if (count >= totalKonten) acc.lengkap += 1;
-        else if (count > 0) acc.kurang += 1;
-        else acc.belum += 1;
-      } else {
-        acc.belum += 1;
-      }
-
       return acc;
     },
     { total: 0, lengkap: 0, kurang: 0, belum: 0, noUsername: 0 }
   );
+
+  return { summary, userStats };
 }
 
 async function getClientInfoCached(cache, clientId) {
@@ -146,12 +168,16 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
     const cidUpper = String(cidRaw || "").toUpperCase();
     const users = usersByClient?.[cidUpper] || [];
 
-    const { summary: igSummary } = computeDitbinmasLikesStats(
+    const { summary: igSummary, userStats: igUserStats } = computeDitbinmasLikesStats(
       users,
       likesSets,
       totalIgPosts
     );
-    const ttSummary = computeCommentSummary(users, commentSets, totalTtPosts);
+    const { summary: ttSummary, userStats: ttUserStats } = computeCommentSummary(
+      users,
+      commentSets,
+      totalTtPosts
+    );
 
     const totalPersonil = users.length;
     const igSudah = (igSummary.lengkap || 0) + (igSummary.kurang || 0);
@@ -161,12 +187,27 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
     const ttBelum = ttSummary.belum || 0;
     const ttKosong = ttSummary.noUsername || 0;
 
+    const igLikeCount = (igUserStats || []).reduce((acc, user) => {
+      if (!user || typeof user !== "object") {
+        return acc;
+      }
+      return acc + (Number.isFinite(user.count) ? user.count : 0);
+    }, 0);
+
+    const ttCommentCount = (ttUserStats || []).reduce((acc, user) => {
+      if (!user || typeof user !== "object") {
+        return acc;
+      }
+      return acc + (Number.isFinite(user.count) ? user.count : 0);
+    }, 0);
+
     const info = await getClientInfoCached(clientCache, cidUpper);
     const name = (info?.nama || cidUpper).toUpperCase();
 
     const igPct = totalPersonil ? igSudah / totalPersonil : 0;
     const ttPct = totalPersonil ? ttSudah / totalPersonil : 0;
     const score = totalPersonil ? (igPct + ttPct) / 2 : 0;
+    const engagementTotal = igLikeCount + ttCommentCount;
 
     entries.push({
       cid: cidUpper.toLowerCase(),
@@ -181,6 +222,9 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
       igPct,
       ttPct,
       score,
+      igLikeCount,
+      ttCommentCount,
+      engagementTotal,
     });
 
     totals.totalPersonil += totalPersonil;
@@ -200,6 +244,12 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
   entries.sort((a, b) => {
     if (a.cid === primaryCid && b.cid !== primaryCid) return -1;
     if (b.cid === primaryCid && a.cid !== primaryCid) return 1;
+    if (b.engagementTotal !== a.engagementTotal)
+      return b.engagementTotal - a.engagementTotal;
+    if (b.igLikeCount !== a.igLikeCount)
+      return b.igLikeCount - a.igLikeCount;
+    if (b.ttCommentCount !== a.ttCommentCount)
+      return b.ttCommentCount - a.ttCommentCount;
     if (b.score !== a.score) return b.score - a.score;
     if (b.igPct !== a.igPct) return b.igPct - a.igPct;
     if (b.ttPct !== a.ttPct) return b.ttPct - a.ttPct;
