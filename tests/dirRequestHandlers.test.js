@@ -127,6 +127,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFindClientById.mockReset();
   mockMkdir.mockResolvedValue();
   mockWriteFile.mockResolvedValue();
   mockSaveSatkerUpdateMatrixExcel.mockResolvedValue({
@@ -139,24 +140,26 @@ beforeEach(() => {
   });
 });
 
-test('main filters non-direktorat client IDs', async () => {
-  mockFindClientById.mockImplementation(async (cid) => ({
-    a: { nama: 'CLIENT A', client_type: 'direktorat' },
-    b: { nama: 'CLIENT B', client_type: 'org' },
-    c: { nama: 'CLIENT C', client_type: 'direktorat' },
-  })[cid.toLowerCase()]);
-  const session = { client_ids: ['a', 'b', 'c'] };
+test('main always sets session to DITBINMAS client', async () => {
+  mockFindClientById.mockImplementation(async (cid) => {
+    if (cid.toUpperCase() === 'DITBINMAS') {
+      return { nama: 'DIT BINMAS', client_type: 'direktorat' };
+    }
+    return null;
+  });
+  const session = { client_ids: ['a', 'b'] };
   const chatId = '123';
   const waClient = { sendMessage: jest.fn() };
 
   await dirRequestHandlers.main(session, chatId, '', waClient);
 
-  expect(session.client_ids).toEqual(['a', 'c']);
+  expect(session.client_ids).toEqual(['DITBINMAS']);
+  expect(session.selectedClientId).toBe('DITBINMAS');
+  expect(session.dir_client_id).toBe('DITBINMAS');
+  expect(session.clientName).toBe('DIT BINMAS');
+  expect(session.step).toBe('choose_menu');
   const msg = waClient.sendMessage.mock.calls[0][1];
-  expect(msg).toMatch(/1\. CLIENT A \(A\)/);
-  expect(msg).toMatch(/2\. CLIENT C \(C\)/);
-  expect(msg).not.toMatch(/CLIENT B/);
-  expect(session.step).toBe('choose_client');
+  expect(msg).toMatch(/Client: \*DIT BINMAS\*/);
 });
 
 test('choose_menu aggregates directorate data by client_id', async () => {
