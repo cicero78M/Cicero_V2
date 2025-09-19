@@ -55,17 +55,17 @@ export const userMenuHandlers = {
       if (session.identityConfirmed && session.user_id === userByWA.user_id) {
         const msgText = `${salam}, Bapak/Ibu\n${formatUserReport(
           userByWA
-        )}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk keluar.`;
+        )}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, *tidak* untuk keluar, atau *batal* untuk menutup sesi.`;
         session.step = "tanyaUpdateMyData";
         await waClient.sendMessage(chatId, msgText.trim());
         return;
       }
-      const msgText = `
+    const msgText = `
 ${salam}, Bapak/Ibu
 ${formatUserReport(userByWA)}
 
 Apakah data di atas benar milik Anda?
-Balas *ya* jika benar, atau *tidak* jika bukan.
+Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
 `.trim();
       session.step = "confirmUserByWaIdentity";
       session.user_id = userByWA.user_id;
@@ -82,46 +82,61 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
 
   // --- Konfirmasi identitas (lihat data)
   confirmUserByWaIdentity: async (session, chatId, text, waClient, pool, userModel) => {
-    if (text.trim().toLowerCase() === "ya") {
+    const answer = text.trim().toLowerCase();
+    if (answer === "ya") {
       session.identityConfirmed = true;
       session.step = "tanyaUpdateMyData";
       await waClient.sendMessage(
         chatId,
-        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, atau *tidak* untuk keluar."
+        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, *tidak* untuk keluar, atau *batal* untuk menutup sesi."
       );
-    } else if (text.trim().toLowerCase() === "tidak") {
+    } else if (answer === "tidak") {
       session.exit = true;
       await waClient.sendMessage(
         chatId,
-        "Baik, terima kasih. Ketik *userrequest* untuk memulai lagi."
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      );
+    } else if (answer === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(
+        chatId,
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
       );
     } else {
       await waClient.sendMessage(
         chatId,
-        "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
+        "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, *tidak* jika bukan, atau *batal* untuk menutup sesi."
       );
     }
   },
 
   // --- Konfirmasi identitas untuk update data
   confirmUserByWaUpdate: async (session, chatId, text, waClient, pool, userModel) => {
-    if (text.trim().toLowerCase() === "ya") {
+    const answer = text.trim().toLowerCase();
+    if (answer === "ya") {
       session.identityConfirmed = true;
       session.updateUserId = session.user_id;
       session.step = "updateAskField";
       await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
-    } else if (text.trim().toLowerCase() === "tidak") {
+    } else if (answer === "tidak") {
       session.exit = true;
       await waClient.sendMessage(
         chatId,
-        "Baik, terima kasih. Ketik *userrequest* untuk memulai lagi."
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      );
+      return;
+    } else if (answer === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(
+        chatId,
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
       );
       return;
     }
     await waClient.sendMessage(
       chatId,
-      "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, atau *tidak* jika bukan."
+      "Jawaban tidak dikenali. Balas *ya* jika benar data Anda, *tidak* jika bukan, atau *batal* untuk menutup sesi."
     );
   },
 
@@ -457,7 +472,8 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
   },
 
   tanyaUpdateMyData: async (session, chatId, text, waClient, pool, userModel) => {
-    if (text.trim().toLowerCase() === "ya") {
+    const answer = text.trim().toLowerCase();
+    if (answer === "ya") {
       session.step = "confirmUserByWaUpdate";
       await userMenuHandlers.confirmUserByWaUpdate(
         session,
@@ -468,14 +484,24 @@ Balas *ya* jika benar, atau *tidak* jika bukan.
         userModel
       );
       return;
-    } else if (text.trim().toLowerCase() === "tidak") {
+    } else if (answer === "tidak") {
       session.exit = true;
-      await waClient.sendMessage(chatId, "Terima kasih. Ketik *userrequest* bila membutuhkan lagi.");
+      await waClient.sendMessage(
+        chatId,
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      );
+      return;
+    } else if (answer === "batal") {
+      session.exit = true;
+      await waClient.sendMessage(
+        chatId,
+        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      );
       return;
     }
     await waClient.sendMessage(
       chatId,
-      "Balas *ya* jika ingin update data, atau *tidak* untuk kembali."
+      "Balas *ya* jika ingin update data, *tidak* untuk kembali, atau *batal* untuk menutup sesi."
     );
   },
 };
