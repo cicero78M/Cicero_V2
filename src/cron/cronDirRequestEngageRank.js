@@ -10,7 +10,7 @@ import { saveEngagementRankingExcel } from "../service/engagementRankingExcelSer
 import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "628127309190@c.us";
+const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "6281234560377@c.us";
 const CLIENT_ID = "DITBINMAS";
 const ROLE_FLAG = "ditbinmas";
 
@@ -57,10 +57,15 @@ function buildNarrative(now = getJakartaDate()) {
   );
 }
 
-export async function runCron() {
+export async function runCron({ recipients } = {}) {
+  const targetRecipients =
+    Array.isArray(recipients) && recipients.length
+      ? recipients
+      : [RECIPIENT];
+
   sendDebug({
     tag: "CRON DIRREQ ENGAGE RANK",
-    msg: "Mulai cron dirrequest engage rank",
+    msg: `Mulai cron dirrequest engage rank untuk ${targetRecipients.join(", ")}`,
   });
 
   let filePath = null;
@@ -75,18 +80,20 @@ export async function runCron() {
     const buffer = await readFile(filePath);
     const narrative = buildNarrative();
 
-    await safeSendMessage(waGatewayClient, RECIPIENT, narrative.trim());
+    for (const target of targetRecipients) {
+      await safeSendMessage(waGatewayClient, target, narrative.trim());
+    }
     await sendWAFile(
       waGatewayClient,
       buffer,
       basename(filePath),
-      RECIPIENT,
+      targetRecipients,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     sendDebug({
       tag: "CRON DIRREQ ENGAGE RANK",
-      msg: "Laporan ranking engagement dikirim",
+      msg: `Laporan ranking engagement dikirim ke ${targetRecipients.join(", ")}`,
     });
   } catch (err) {
     sendDebug({

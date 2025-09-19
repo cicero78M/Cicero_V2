@@ -1,10 +1,10 @@
 import { jest } from '@jest/globals';
 
 const mockFindClientById = jest.fn();
-const mockGetShortcodesTodayByClient = jest.fn();
+const mockGetShortcodesByDateRange = jest.fn();
 const mockGetLikesSets = jest.fn();
 const mockGroupUsersByClientDivision = jest.fn();
-const mockGetPostsTodayByClient = jest.fn();
+const mockGetPostsByClientAndDateRange = jest.fn();
 const mockGetCommentsByVideoId = jest.fn();
 const mockAoAToSheet = jest.fn();
 const mockBookNew = jest.fn();
@@ -17,7 +17,7 @@ jest.unstable_mockModule('../src/service/clientService.js', () => ({
 }));
 
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
-  getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
+  getShortcodesByDateRange: mockGetShortcodesByDateRange,
 }));
 
 jest.unstable_mockModule('../src/utils/likesHelper.js', () => ({
@@ -32,7 +32,7 @@ jest.unstable_mockModule('../src/utils/likesHelper.js', () => ({
 }));
 
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
-  getPostsTodayByClient: mockGetPostsTodayByClient,
+  getPostsByClientAndDateRange: mockGetPostsByClientAndDateRange,
 }));
 
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
@@ -61,10 +61,10 @@ describe('engagementRankingExcelService', () => {
   beforeEach(async () => {
     jest.resetModules();
     mockFindClientById.mockReset();
-    mockGetShortcodesTodayByClient.mockReset();
+    mockGetShortcodesByDateRange.mockReset();
     mockGetLikesSets.mockReset();
     mockGroupUsersByClientDivision.mockReset();
-    mockGetPostsTodayByClient.mockReset();
+    mockGetPostsByClientAndDateRange.mockReset();
     mockGetCommentsByVideoId.mockReset();
     mockAoAToSheet.mockReset();
     mockBookNew.mockReset();
@@ -102,13 +102,13 @@ describe('engagementRankingExcelService', () => {
       },
     });
 
-    mockGetShortcodesTodayByClient.mockResolvedValue(['sc1', 'sc2']);
+    mockGetShortcodesByDateRange.mockResolvedValue(['sc1', 'sc2']);
     mockGetLikesSets.mockResolvedValue([
       new Set(['dit1', 'usera', 'userc']),
       new Set(['usera']),
     ]);
 
-    mockGetPostsTodayByClient.mockResolvedValue([
+    mockGetPostsByClientAndDateRange.mockResolvedValue([
       { video_id: 'vid1' },
       { video_id: 'vid2' },
     ]);
@@ -128,6 +128,16 @@ describe('engagementRankingExcelService', () => {
     const result = await collectEngagementRanking('DITBINMAS', 'ditbinmas');
 
     expect(mockGroupUsersByClientDivision).toHaveBeenCalledWith('ditbinmas');
+    expect(mockGetShortcodesByDateRange).toHaveBeenCalledWith(
+      'ditbinmas',
+      expect.any(String),
+      expect.any(String)
+    );
+    expect(mockGetPostsByClientAndDateRange).toHaveBeenCalledWith(
+      'ditbinmas',
+      expect.any(String),
+      expect.any(String)
+    );
     expect(result.entries).toHaveLength(3);
     expect(result.entries.map((entry) => entry.name)).toEqual([
       'DIREKTORAT BINMAS',
@@ -160,6 +170,8 @@ describe('engagementRankingExcelService', () => {
     expect(totals.igSudah).toBeGreaterThan(0);
     expect(result.igPostsCount).toBe(2);
     expect(result.ttPostsCount).toBe(2);
+    expect(result.periodInfo.period).toBe('today');
+    expect(result.periodInfo.label).toMatch(/Hari, Tanggal:/);
   });
 
   test('saveEngagementRankingExcel writes workbook and returns file path', async () => {
@@ -171,6 +183,7 @@ describe('engagementRankingExcelService', () => {
     expect(mockAoAToSheet).toHaveBeenCalled();
     const aoa = mockAoAToSheet.mock.calls[0][0];
     expect(aoa[0][0]).toMatch(/Rekap Ranking Engagement/i);
+    expect(aoa[1][0]).toMatch(/Hari, Tanggal:/);
     expect(aoa[2][0]).toMatch(/Jam Pengambilan Data:/);
     expect(aoa[6]).toEqual([
       'NAMA SATKER',
@@ -200,6 +213,32 @@ describe('engagementRankingExcelService', () => {
     expect(mockWriteFile).toHaveBeenCalled();
     expect(filePath).toBeTruthy();
     expect(fileName).toMatch(/Rekap_Ranking_Engagement_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx$/);
+  });
+
+  test('saveEngagementRankingExcel supports weekly period label', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-06-05T03:00:00Z'));
+    try {
+      await saveEngagementRankingExcel({
+        clientId: 'DITBINMAS',
+        roleFlag: 'ditbinmas',
+        period: 'this_week',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+
+    const lastShortcodeCall = mockGetShortcodesByDateRange.mock.calls.at(-1);
+    expect(lastShortcodeCall[0]).toBe('ditbinmas');
+    expect(lastShortcodeCall[1]).toBe('2024-06-03');
+    expect(lastShortcodeCall[2]).toBe('2024-06-09');
+
+    const lastPostCall = mockGetPostsByClientAndDateRange.mock.calls.at(-1);
+    expect(lastPostCall[1]).toBe('2024-06-03');
+    expect(lastPostCall[2]).toBe('2024-06-09');
+
+    const aoa = mockAoAToSheet.mock.calls.at(-1)[0];
+    expect(aoa[1][0]).toMatch(/Periode Data:/);
   });
 
   test('collectEngagementRanking rejects for non directorate client', async () => {

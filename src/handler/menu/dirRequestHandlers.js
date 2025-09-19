@@ -30,6 +30,59 @@ import { hariIndo } from "../../utils/constants.js";
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 
+const ENGAGEMENT_RECAP_PERIOD_MAP = {
+  "1": {
+    period: "today",
+    label: "hari ini",
+    description: "Hari ini (fungsi seperti saat ini)",
+  },
+  "2": {
+    period: "yesterday",
+    label: "hari sebelumnya",
+    description: "Hari sebelumnya",
+  },
+  "3": {
+    period: "this_week",
+    label: "minggu ini",
+    description: "Minggu ini (Senin - Minggu, minggu berjalan)",
+  },
+  "4": {
+    period: "last_week",
+    label: "minggu sebelumnya",
+    description: "Minggu sebelumnya (Senin - Minggu)",
+  },
+  "5": {
+    period: "this_month",
+    label: "bulan ini",
+    description: "Bulan ini (bulan berjalan)",
+  },
+  "6": {
+    period: "last_month",
+    label: "bulan sebelumnya",
+    description: "Bulan sebelumnya",
+  },
+};
+
+const DIGIT_EMOJI = {
+  "0": "0️⃣",
+  "1": "1️⃣",
+  "2": "2️⃣",
+  "3": "3️⃣",
+  "4": "4️⃣",
+  "5": "5️⃣",
+  "6": "6️⃣",
+  "7": "7️⃣",
+  "8": "8️⃣",
+  "9": "9️⃣",
+};
+
+const ENGAGEMENT_RECAP_MENU_TEXT =
+  "Silakan pilih periode rekap ranking engagement jajaran:\n" +
+  Object.entries(ENGAGEMENT_RECAP_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
   "AKBP",
@@ -732,7 +785,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "19": {
+    case "19": {
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
@@ -767,46 +820,6 @@ async function performAction(
           await unlink(excelPath);
         }
         return;
-      }
-      case "20": {
-        let filePath;
-        try {
-          const { filePath: generatedPath } = await saveEngagementRankingExcel({
-            clientId,
-            roleFlag,
-          });
-          filePath = generatedPath;
-          const buffer = await readFile(filePath);
-          await sendWAFile(
-            waClient,
-            buffer,
-            basename(filePath),
-            chatId,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          );
-          msg = "✅ File Excel dikirim.";
-        } catch (error) {
-          console.error("Gagal membuat rekap ranking engagement:", error);
-          if (
-            error?.message &&
-            (error.message.includes("direktorat") ||
-              error.message.includes("Client tidak ditemukan") ||
-              error.message.includes("Tidak ada data"))
-          ) {
-            msg = error.message;
-          } else {
-            msg = "❌ Gagal membuat rekap ranking engagement.";
-          }
-        } finally {
-          if (filePath) {
-            try {
-              await unlink(filePath);
-            } catch (err) {
-              console.error("Gagal menghapus file sementara:", err);
-            }
-          }
-        }
-        break;
       }
       case "21": {
         let filePath;
@@ -1046,6 +1059,13 @@ export const dirRequestHandlers = {
       return;
     }
     const taskClientId = session.dir_client_id || userClientId;
+
+    if (choice === "20") {
+      session.step = "choose_engagement_recap_period";
+      await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
+      return;
+    }
+
     await performAction(
       choice,
       taskClientId,
@@ -1055,6 +1075,80 @@ export const dirRequestHandlers = {
       userClientId,
       { username: session.username || session.user?.username }
     );
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_engagement_recap_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(chatId, "✅ Menu rekap ranking engagement ditutup.");
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = ENGAGEMENT_RECAP_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 6 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
+      return;
+    }
+
+    const targetClientId = session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const roleFlag = session.role;
+    let filePath;
+    try {
+      const { filePath: generatedPath } = await saveEngagementRankingExcel({
+        clientId: targetClientId,
+        roleFlag,
+        period: option.period,
+      });
+      filePath = generatedPath;
+      const buffer = await readFile(filePath);
+      await sendWAFile(
+        waClient,
+        buffer,
+        basename(filePath),
+        chatId,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      await waClient.sendMessage(
+        chatId,
+        `✅ File Excel rekap ranking engagement (${option.label}) dikirim.`
+      );
+    } catch (error) {
+      console.error("Gagal membuat rekap ranking engagement:", error);
+      let msg;
+      if (
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+      ) {
+        msg = error.message;
+      } else {
+        msg = `❌ Gagal membuat rekap ranking engagement (${option.label}).`;
+      }
+      await waClient.sendMessage(chatId, msg);
+    } finally {
+      if (filePath) {
+        try {
+          await unlink(filePath);
+        } catch (err) {
+          console.error("Gagal menghapus file sementara:", err);
+        }
+      }
+    }
+
     session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
