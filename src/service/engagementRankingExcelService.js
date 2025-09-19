@@ -50,6 +50,29 @@ function formatDayDate(date) {
   return `${hari}, ${tanggal}`;
 }
 
+function formatDateOnly(date) {
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatDateRangeText(startDate, endDate) {
+  return `${formatDateOnly(startDate)} - ${formatDateOnly(endDate)}`;
+}
+
+function getIsoWeekNumber(date) {
+  const target = new Date(date.valueOf());
+  target.setHours(0, 0, 0, 0);
+  target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
+  const firstThursday = new Date(target.getFullYear(), 0, 4);
+  firstThursday.setHours(0, 0, 0, 0);
+  firstThursday.setDate(firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7));
+  const diff = target.getTime() - firstThursday.getTime();
+  return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
+}
+
 function resolvePeriodRange(
   period = "today",
   { startDate: customStart, endDate: customEnd } = {},
@@ -65,12 +88,14 @@ function resolvePeriodRange(
     }
     const [startDateObj, endDateObj] =
       start.getTime() <= end.getTime() ? [start, end] : [end, start];
+    const rangeLabel = `${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
     return {
       period: normalizedPeriod,
       startDate: toDateKey(startDateObj),
       endDate: toDateKey(endDateObj),
-      label: `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`,
+      label: `Periode Data: ${rangeLabel}`,
       description: PERIOD_DESCRIPTIONS[normalizedPeriod],
+      fileLabel: `Periode_${toDateKey(startDateObj)}_${toDateKey(endDateObj)}`,
     };
   }
 
@@ -78,12 +103,14 @@ function resolvePeriodRange(
   let startDateObj = new Date(now);
   let endDateObj = new Date(now);
   let label;
+  let fileLabel;
 
   switch (normalizedPeriod) {
     case "yesterday": {
       startDateObj.setDate(now.getDate() - 1);
       endDateObj = new Date(startDateObj);
       label = `Hari, Tanggal: ${formatDayDate(startDateObj)}`;
+      fileLabel = `Tanggal_${toDateKey(startDateObj)}`;
       break;
     }
     case "this_week": {
@@ -92,7 +119,10 @@ function resolvePeriodRange(
       startDateObj.setDate(now.getDate() - diffToMonday);
       endDateObj = new Date(startDateObj);
       endDateObj.setDate(startDateObj.getDate() + 6);
-      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      const weekNumber = getIsoWeekNumber(startDateObj);
+      const rangeText = formatDateRangeText(startDateObj, endDateObj);
+      label = `Minggu ke-${weekNumber} (${rangeText})`;
+      fileLabel = `Minggu_${weekNumber}_${toDateKey(startDateObj)}_${toDateKey(endDateObj)}`;
       break;
     }
     case "last_week": {
@@ -104,24 +134,42 @@ function resolvePeriodRange(
       startDateObj.setDate(thisWeekMonday.getDate() - 7);
       endDateObj = new Date(startDateObj);
       endDateObj.setDate(startDateObj.getDate() + 6);
-      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      const weekNumber = getIsoWeekNumber(startDateObj);
+      const rangeText = formatDateRangeText(startDateObj, endDateObj);
+      label = `Minggu ke-${weekNumber} (${rangeText})`;
+      fileLabel = `Minggu_${weekNumber}_${toDateKey(startDateObj)}_${toDateKey(endDateObj)}`;
       break;
     }
     case "this_month": {
       startDateObj = new Date(now.getFullYear(), now.getMonth(), 1);
       endDateObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      const monthLabel = startDateObj.toLocaleDateString("id-ID", {
+        month: "long",
+        year: "numeric",
+      });
+      label = `Bulan: ${monthLabel}`;
+      fileLabel = `Bulan_${startDateObj.getFullYear()}-${String(
+        startDateObj.getMonth() + 1
+      ).padStart(2, "0")}`;
       break;
     }
     case "last_month": {
       startDateObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       endDateObj = new Date(now.getFullYear(), now.getMonth(), 0);
-      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      const monthLabel = startDateObj.toLocaleDateString("id-ID", {
+        month: "long",
+        year: "numeric",
+      });
+      label = `Bulan: ${monthLabel}`;
+      fileLabel = `Bulan_${startDateObj.getFullYear()}-${String(
+        startDateObj.getMonth() + 1
+      ).padStart(2, "0")}`;
       break;
     }
     case "today":
     default: {
       label = `Hari, Tanggal: ${formatDayDate(startDateObj)}`;
+      fileLabel = `Tanggal_${toDateKey(startDateObj)}`;
       break;
     }
   }
@@ -132,6 +180,7 @@ function resolvePeriodRange(
     endDate: toDateKey(endDateObj),
     label,
     description: PERIOD_DESCRIPTIONS[normalizedPeriod],
+    fileLabel,
   };
 }
 
@@ -613,7 +662,10 @@ export async function saveEngagementRankingExcel({
   const dateLabel = now.toISOString().slice(0, 10);
   const timeLabel = `${jam}${menit}`;
   const clientSlug = sanitizeFilename(clientName || clientId || "Direktorat");
-  const fileName = `${clientSlug}_Rekap_Ranking_Engagement_${dateLabel}_${timeLabel}.xlsx`;
+  const periodSlug = sanitizeFilename(
+    periodInfo.fileLabel || periodInfo.description || periodInfo.period
+  );
+  const fileName = `${clientSlug}_Rekap_Ranking_Engagement_${periodSlug}_${dateLabel}_${timeLabel}.xlsx`;
   const filePath = path.join(EXPORT_DIR, fileName);
 
   XLSX.writeFile(workbook, filePath, { cellStyles: true });
