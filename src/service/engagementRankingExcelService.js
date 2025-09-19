@@ -3,14 +3,137 @@ import path from "path";
 import XLSX from "xlsx";
 
 import { findClientById } from "./clientService.js";
-import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
+import { getShortcodesByDateRange } from "../model/instaPostModel.js";
 import { getLikesSets, groupUsersByClientDivision, normalizeUsername } from "../utils/likesHelper.js";
-import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
+import { getPostsByClientAndDateRange } from "../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 import { computeDitbinmasLikesStats } from "../handler/fetchabsensi/insta/ditbinmasLikesUtils.js";
 import { hariIndo } from "../utils/constants.js";
 
 const EXPORT_DIR = path.resolve("export_data/engagement_ranking");
+const PERIOD_DESCRIPTIONS = {
+  today: "hari ini",
+  yesterday: "hari sebelumnya",
+  this_week: "minggu ini",
+  last_week: "minggu sebelumnya",
+  this_month: "bulan ini",
+  last_month: "bulan sebelumnya",
+};
+
+function getJakartaDate(baseDate = new Date()) {
+  const reference =
+    baseDate instanceof Date ? baseDate : new Date(baseDate ?? Date.now());
+  if (Number.isNaN(reference.getTime())) {
+    return new Date(NaN);
+  }
+  return new Date(
+    reference.toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
+}
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayDate(date) {
+  const hari = hariIndo[date.getDay()] || date.toLocaleDateString("id-ID", {
+    weekday: "long",
+  });
+  const tanggal = date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  return `${hari}, ${tanggal}`;
+}
+
+function resolvePeriodRange(
+  period = "today",
+  { startDate: customStart, endDate: customEnd } = {},
+  referenceDate = getJakartaDate()
+) {
+  const normalizedPeriod = PERIOD_DESCRIPTIONS[period] ? period : "today";
+
+  if (customStart && customEnd) {
+    const start = getJakartaDate(customStart);
+    const end = getJakartaDate(customEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return resolvePeriodRange(normalizedPeriod, {}, referenceDate);
+    }
+    const [startDateObj, endDateObj] =
+      start.getTime() <= end.getTime() ? [start, end] : [end, start];
+    return {
+      period: normalizedPeriod,
+      startDate: toDateKey(startDateObj),
+      endDate: toDateKey(endDateObj),
+      label: `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`,
+      description: PERIOD_DESCRIPTIONS[normalizedPeriod],
+    };
+  }
+
+  const now = getJakartaDate(referenceDate);
+  let startDateObj = new Date(now);
+  let endDateObj = new Date(now);
+  let label;
+
+  switch (normalizedPeriod) {
+    case "yesterday": {
+      startDateObj.setDate(now.getDate() - 1);
+      endDateObj = new Date(startDateObj);
+      label = `Hari, Tanggal: ${formatDayDate(startDateObj)}`;
+      break;
+    }
+    case "this_week": {
+      const day = now.getDay();
+      const diffToMonday = (day + 6) % 7;
+      startDateObj.setDate(now.getDate() - diffToMonday);
+      endDateObj = new Date(startDateObj);
+      endDateObj.setDate(startDateObj.getDate() + 6);
+      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      break;
+    }
+    case "last_week": {
+      const day = now.getDay();
+      const diffToMonday = (day + 6) % 7;
+      const thisWeekMonday = new Date(now);
+      thisWeekMonday.setDate(now.getDate() - diffToMonday);
+      startDateObj = new Date(thisWeekMonday);
+      startDateObj.setDate(thisWeekMonday.getDate() - 7);
+      endDateObj = new Date(startDateObj);
+      endDateObj.setDate(startDateObj.getDate() + 6);
+      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      break;
+    }
+    case "this_month": {
+      startDateObj = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDateObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      break;
+    }
+    case "last_month": {
+      startDateObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      endDateObj = new Date(now.getFullYear(), now.getMonth(), 0);
+      label = `Periode Data: ${formatDayDate(startDateObj)} - ${formatDayDate(endDateObj)}`;
+      break;
+    }
+    case "today":
+    default: {
+      label = `Hari, Tanggal: ${formatDayDate(startDateObj)}`;
+      break;
+    }
+  }
+
+  return {
+    period: normalizedPeriod,
+    startDate: toDateKey(startDateObj),
+    endDate: toDateKey(endDateObj),
+    label,
+    description: PERIOD_DESCRIPTIONS[normalizedPeriod],
+  };
+}
 
 function sanitizeFilename(value) {
   return String(value || "")
@@ -105,7 +228,11 @@ async function getClientInfoCached(cache, clientId) {
   return cache.get(key);
 }
 
-export async function collectEngagementRanking(clientId, roleFlag = null) {
+export async function collectEngagementRanking(
+  clientId,
+  roleFlag = null,
+  options = {}
+) {
   const clientIdStr = String(clientId || "").trim();
   if (!clientIdStr) {
     throw new Error("Client tidak ditemukan.");
@@ -123,6 +250,8 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
   const roleName = (roleFlag || normalizedClientId).toLowerCase();
   const { polresIds, usersByClient } = await groupUsersByClientDivision(roleName);
 
+  const periodInfo = resolvePeriodRange(options.period, options);
+
   const allIds = new Set(
     [
       ...polresIds.map((id) => String(id || "").toUpperCase()),
@@ -131,11 +260,19 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
     ].filter(Boolean)
   );
 
-  const shortcodes = await getShortcodesTodayByClient(roleName);
+  const shortcodes = await getShortcodesByDateRange(
+    roleName,
+    periodInfo.startDate,
+    periodInfo.endDate
+  );
   const likesSets = shortcodes.length ? await getLikesSets(shortcodes) : [];
   const totalIgPosts = shortcodes.length;
 
-  const tiktokPosts = await getPostsTodayByClient(roleName);
+  const tiktokPosts = await getPostsByClientAndDateRange(
+    roleName,
+    periodInfo.startDate,
+    periodInfo.endDate
+  );
   const commentSets = [];
   for (const post of tiktokPosts) {
     try {
@@ -267,12 +404,16 @@ export async function collectEngagementRanking(clientId, roleFlag = null) {
     totals,
     igPostsCount: totalIgPosts,
     ttPostsCount: totalTtPosts,
+    periodInfo,
   };
 }
 
 export async function saveEngagementRankingExcel({
   clientId,
   roleFlag = null,
+  period = "today",
+  startDate: customStart,
+  endDate: customEnd,
 } = {}) {
   const {
     clientName,
@@ -280,7 +421,12 @@ export async function saveEngagementRankingExcel({
     totals,
     igPostsCount,
     ttPostsCount,
-  } = await collectEngagementRanking(clientId, roleFlag);
+    periodInfo,
+  } = await collectEngagementRanking(clientId, roleFlag, {
+    period,
+    startDate: customStart,
+    endDate: customEnd,
+  });
 
   const now = new Date();
   const hari = hariIndo[now.getDay()] || now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -296,7 +442,7 @@ export async function saveEngagementRankingExcel({
 
   const aoa = [
     [`Rekap Ranking Engagement ${(clientName || "").toUpperCase()}`],
-    [`Hari, Tanggal: ${hari}, ${tanggal}`],
+    [periodInfo.label || `Hari, Tanggal: ${hari}, ${tanggal}`],
     [`Jam Pengambilan Data: ${waktuPengambilan}`],
     [`Jumlah Post Instagram: ${igPostsCount}`],
     [`Jumlah Post TikTok: ${ttPostsCount}`],

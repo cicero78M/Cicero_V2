@@ -83,6 +83,37 @@ export async function getPostsByClientId(client_id) {
 
 export const findByClientId = getPostsByClientId;
 
+export async function getPostsByClientAndDateRange(client_id, startDate, endDate) {
+  if (!client_id) return [];
+  if (!startDate || !endDate) return [];
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return [];
+  }
+
+  const [startBound, endBound] =
+    start <= end ? [start, end] : [end, start];
+
+  const startStr = startBound.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+  const endStr = endBound.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+
+  const normalizedId = normalizeClientId(client_id);
+  const res = await query(
+    `SELECT * FROM tiktok_post
+     WHERE LOWER(TRIM(client_id)) = $1
+       AND (created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date
+     ORDER BY created_at DESC`,
+    [normalizedId, startStr, endStr]
+  );
+  return res.rows;
+}
+
 export async function countPostsByClient(
   client_id,
   periode = 'harian',

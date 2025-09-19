@@ -705,8 +705,7 @@ test('choose_menu option 18 generates likes recap excel and sends file', async (
   );
 });
 
-test('choose_menu option 20 generates engagement ranking excel and sends file', async () => {
-  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+test('choose_menu option 20 opens engagement recap submenu', async () => {
   const session = {
     selectedClientId: 'ditbinmas',
     clientName: 'DIT BINMAS',
@@ -717,9 +716,31 @@ test('choose_menu option 20 generates engagement ranking excel and sends file', 
 
   await dirRequestHandlers.choose_menu(session, chatId, '20', waClient);
 
+  expect(session.step).toBe('choose_engagement_recap_period');
+  expect(mockSaveEngagementRankingExcel).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('Silakan pilih periode rekap ranking engagement jajaran:')
+  );
+});
+
+test('choose_engagement_recap_period option 1 sends today recap and returns to main menu', async () => {
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '789';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_engagement_recap_period(session, chatId, '1', waClient);
+
   expect(mockSaveEngagementRankingExcel).toHaveBeenCalledWith({
     clientId: 'ditbinmas',
     roleFlag: 'ditbinmas',
+    period: 'today',
   });
   expect(mockReadFile).toHaveBeenCalledWith('/tmp/ranking.xlsx');
   expect(mockSendWAFile).toHaveBeenCalledWith(
@@ -730,28 +751,79 @@ test('choose_menu option 20 generates engagement ranking excel and sends file', 
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
   expect(mockUnlink).toHaveBeenCalledWith('/tmp/ranking.xlsx');
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    expect.stringContaining('File Excel dikirim')
+  expect(waClient.sendMessage.mock.calls.map((call) => call[1])).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('File Excel rekap ranking engagement (hari ini) dikirim.'),
+    ])
   );
+  expect(session.step).toBe('choose_menu');
 });
 
-test('choose_menu option 20 sends error message when ranking service fails', async () => {
-  mockSaveEngagementRankingExcel.mockRejectedValue(
+test('choose_engagement_recap_period handles service failure gracefully', async () => {
+  mockSaveEngagementRankingExcel.mockRejectedValueOnce(
     new Error('Tidak ada data engagement untuk direkap.')
   );
-  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
-  const chatId = '789';
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '790';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '20', waClient);
+  await dirRequestHandlers.choose_engagement_recap_period(session, chatId, '2', waClient);
 
   expect(mockReadFile).not.toHaveBeenCalled();
   expect(mockSendWAFile).not.toHaveBeenCalled();
   expect(mockUnlink).not.toHaveBeenCalled();
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    expect.stringContaining('Tidak ada data engagement')
+  expect(waClient.sendMessage.mock.calls.map((call) => call[1])).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Tidak ada data engagement'),
+    ])
+  );
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_engagement_recap_period dapat dibatalkan', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '791';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_engagement_recap_period(session, chatId, 'batal', waClient);
+
+  expect(mockSaveEngagementRankingExcel).not.toHaveBeenCalled();
+  expect(session.step).toBe('choose_menu');
+  expect(waClient.sendMessage.mock.calls.map((call) => call[1])).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Menu rekap ranking engagement ditutup.'),
+    ])
+  );
+});
+
+test('choose_engagement_recap_period mengingatkan saat pilihan tidak valid', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '792';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_engagement_recap_period(session, chatId, '9', waClient);
+
+  expect(mockSaveEngagementRankingExcel).not.toHaveBeenCalled();
+  expect(mockReadFile).not.toHaveBeenCalled();
+  expect(session.step).toBeUndefined();
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Pilihan tidak valid'),
+      expect.stringContaining('Silakan pilih periode rekap ranking engagement jajaran:'),
+    ])
   );
 });
 

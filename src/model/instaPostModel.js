@@ -116,6 +116,59 @@ export async function getShortcodesYesterdayByClient(identifier) {
   return res.rows.map((r) => r.shortcode);
 }
 
+export async function getShortcodesByDateRange(identifier, startDate, endDate) {
+  if (!identifier) return [];
+  if (!startDate || !endDate) return [];
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return [];
+  }
+
+  const startStr = start.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+  const endStr = end.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
+  });
+
+  const [startBound, endBound] = startStr <= endStr ? [startStr, endStr] : [endStr, startStr];
+
+  const typeRes = await query(
+    'SELECT client_type FROM clients WHERE LOWER(client_id) = LOWER($1)',
+    [identifier]
+  );
+
+  const isDitbinmas = identifier.toLowerCase() === 'ditbinmas';
+  const clientType = typeRes.rows[0]?.client_type?.toLowerCase();
+
+  let sql;
+  let params;
+
+  if (
+    typeRes.rows.length === 0 ||
+    (clientType === 'direktorat' && !isDitbinmas)
+  ) {
+    sql =
+      `SELECT p.shortcode FROM insta_post p\n` +
+      `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
+      `WHERE LOWER(pr.role_name) = LOWER($1)\n` +
+      `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date`;
+    params = [identifier, startBound, endBound];
+  } else {
+    sql =
+      `SELECT shortcode FROM insta_post\n` +
+      `WHERE LOWER(client_id) = LOWER($1)\n` +
+      `  AND (created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date`;
+    params = [identifier, startBound, endBound];
+  }
+
+  const res = await query(sql, params);
+  return res.rows.map((r) => r.shortcode);
+}
+
 export async function getShortcodesTodayByUsername(username) {
   if (!username) return [];
   const today = new Date();
