@@ -42,7 +42,10 @@ export async function runCron() {
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
     await fetchAndStoreTiktokContent("DITBINMAS");
     await handleFetchKomentarTiktokBatch(null, null, "DITBINMAS");
-    const { text, igCount, tiktokCount } = await generateSosmedTaskMessage();
+    const { text, igCount, tiktokCount } = await generateSosmedTaskMessage("DITBINMAS", {
+      skipTiktokFetch: true,
+      skipLikesFetch: true,
+    });
     if (igCount !== lastIgCount || tiktokCount !== lastTiktokCount) {
       const recipients = getRecipients();
       for (const wa of recipients) {

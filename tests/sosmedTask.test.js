@@ -72,6 +72,8 @@ test('generateSosmedTaskMessage can skip internal fetches', async () => {
     skipLikesFetch: true,
   });
 
+  expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGetTiktokPostsToday).toHaveBeenCalledWith('DITBINMAS');
   expect(mockHandleFetchKomentarTiktokBatch).not.toHaveBeenCalled();
   expect(mockHandleFetchLikesInstagram).not.toHaveBeenCalled();
 });
