@@ -2201,8 +2201,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         const msg =
           `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
           clientInfoText +
-          "\n\nBalas pesan ini dengan memasukan NRP Anda," +
-          "\n\n*Contoh Pesan Balasan : 87020990*";
+          "\n\nUntuk menampilkan data Anda, balas dengan NRP (hanya angka)." +
+          "\nKetik *batal* untuk keluar." +
+          "\n\nContoh:\n87020990";
         await safeSendMessage(waClient, chatId, msg.trim());
         setMenuTimeout(chatId, waClient, true);
       }
