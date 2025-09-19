@@ -364,8 +364,10 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     let extra = "";
     if (field === "pangkat") extra = " (pilih dari daftar pangkat)";
     else if (field === "satfung") extra = " (pilih dari daftar satfung)";
-    else if (field === "insta") extra = " (masukkan link profil Instagram)";
-    else if (field === "tiktok") extra = " (masukkan link profil TikTok)";
+    else if (field === "insta")
+      extra = " (masukkan link profil atau username Instagram)";
+    else if (field === "tiktok")
+      extra = " (masukkan link profil atau username TikTok)";
 
     await waClient.sendMessage(
       chatId,
@@ -439,16 +441,16 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     }
     if (field === "insta") {
       const igMatch = value.match(
-        /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?(\?.*)?$/i
+        /^(?:https?:\/\/(?:www\.)?instagram\.com\/)?@?([A-Za-z0-9._]+)\/?(?:\?.*)?$/i
       );
       if (!igMatch) {
         await waClient.sendMessage(
           chatId,
-          "❌ Link tersebut bukan *link profil Instagram*! Masukkan *link profil Instagram* (contoh: https://www.instagram.com/username)"
+          "❌ Input Instagram tidak valid! Masukkan *link profil* atau *username Instagram* (contoh: https://www.instagram.com/username atau @username)"
         );
         return;
       }
-      value = igMatch[2].toLowerCase();
+      value = igMatch[1].toLowerCase();
       if (value === "cicero_devs") {
         await waClient.sendMessage(
           chatId,
@@ -465,19 +467,19 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         return;
       }
     }
-      if (field === "tiktok") {
-        const ttMatch = value.match(
-          /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
+    if (field === "tiktok") {
+      const ttMatch = value.match(
+        /^(?:https?:\/\/(?:www\.)?tiktok\.com\/@)?@?([A-Za-z0-9._]+)\/?(?:\?.*)?$/i
+      );
+      if (!ttMatch) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Input TikTok tidak valid! Masukkan *link profil* atau *username TikTok* (contoh: https://www.tiktok.com/@username atau @username)"
         );
-        if (!ttMatch) {
-          await waClient.sendMessage(
-            chatId,
-            "❌ Format salah! Masukkan *link profil TikTok* (contoh: https://www.tiktok.com/@username)"
-          );
-          return;
-        }
-        value = "@" + ttMatch[2].toLowerCase();
+        return;
       }
+      value = ttMatch[1].toLowerCase();
+    }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
     if (["nama", "title", "divisi", "jabatan", "desa"].includes(field)) value = value.toUpperCase();
 
@@ -485,6 +487,8 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     if (field === "whatsapp" && value) {
       await saveContactIfNew(formatToWhatsAppId(value));
     }
+    const displayValue =
+      field === "insta" || field === "tiktok" ? `@${value}` : value;
     await waClient.sendMessage(
       chatId,
       `✅ Data *${
@@ -495,7 +499,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
           : field === "desa"
           ? "desa binaan"
           : field
-      }* untuk NRP ${user_id} berhasil diupdate menjadi *${value}*.`
+      }* untuk NRP ${user_id} berhasil diupdate menjadi *${displayValue}*.`
     );
     delete session.availableTitles;
     delete session.availableSatfung;

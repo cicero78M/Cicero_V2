@@ -1,0 +1,82 @@
+import { jest } from "@jest/globals";
+import { userMenuHandlers } from "../src/handler/menu/userMenuHandlers.js";
+
+describe("userMenuHandlers.updateAskValue social media normalization", () => {
+  const chatId = "628111222333@c.us";
+  let waClient;
+  let userModel;
+  const pool = null;
+
+  beforeEach(() => {
+    waClient = { sendMessage: jest.fn().mockResolvedValue() };
+    userModel = {
+      updateUserField: jest.fn().mockResolvedValue(),
+      findUserByInsta: jest.fn().mockResolvedValue(null),
+    };
+    jest.spyOn(userMenuHandlers, "main").mockResolvedValue();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const buildSession = (field) => ({
+    updateUserId: "12345",
+    updateField: field,
+  });
+
+  test.each([
+    ["https://www.instagram.com/User.Name"],
+    ["@User.Name"],
+    ["User.Name"],
+  ])("normalizes Instagram input %s to lowercase username", async (input) => {
+    const session = buildSession("insta");
+
+    await userMenuHandlers.updateAskValue(
+      session,
+      chatId,
+      input,
+      waClient,
+      pool,
+      userModel
+    );
+
+    expect(userModel.findUserByInsta).toHaveBeenCalledWith("user.name");
+    expect(userModel.updateUserField).toHaveBeenCalledWith(
+      "12345",
+      "insta",
+      "user.name"
+    );
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining("*@user.name*.")
+    );
+  });
+
+  test.each([
+    ["https://www.tiktok.com/@Another.User"],
+    ["@Another.User"],
+    ["Another.User"],
+  ])("normalizes TikTok input %s to lowercase username", async (input) => {
+    const session = buildSession("tiktok");
+
+    await userMenuHandlers.updateAskValue(
+      session,
+      chatId,
+      input,
+      waClient,
+      pool,
+      userModel
+    );
+
+    expect(userModel.updateUserField).toHaveBeenCalledWith(
+      "12345",
+      "tiktok",
+      "another.user"
+    );
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining("*@another.user*.")
+    );
+  });
+});
