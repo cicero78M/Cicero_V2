@@ -34,7 +34,7 @@ const ENGAGEMENT_RECAP_PERIOD_MAP = {
   "1": {
     period: "today",
     label: "hari ini",
-    description: "Hari ini (fungsi seperti saat ini)",
+    description: "Hari ini",
   },
   "2": {
     period: "yesterday",
@@ -44,17 +44,17 @@ const ENGAGEMENT_RECAP_PERIOD_MAP = {
   "3": {
     period: "this_week",
     label: "minggu ini",
-    description: "Minggu ini (Senin - Minggu, minggu berjalan)",
+    description: "Minggu ini",
   },
   "4": {
     period: "last_week",
     label: "minggu sebelumnya",
-    description: "Minggu sebelumnya (Senin - Minggu)",
+    description: "Minggu sebelumnya",
   },
   "5": {
     period: "this_month",
     label: "bulan ini",
-    description: "Bulan ini (bulan berjalan)",
+    description: "Bulan ini",
   },
   "6": {
     period: "last_month",

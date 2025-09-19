@@ -212,7 +212,9 @@ describe('engagementRankingExcelService', () => {
     expect(mockMkdir).toHaveBeenCalled();
     expect(mockWriteFile).toHaveBeenCalled();
     expect(filePath).toBeTruthy();
-    expect(fileName).toMatch(/Rekap_Ranking_Engagement_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx$/);
+    expect(fileName).toMatch(
+      /Rekap_Ranking_Engagement_Tanggal_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx$/
+    );
   });
 
   test('saveEngagementRankingExcel supports weekly period label', async () => {
@@ -238,7 +240,10 @@ describe('engagementRankingExcelService', () => {
     expect(lastPostCall[2]).toBe('2024-06-09');
 
     const aoa = mockAoAToSheet.mock.calls.at(-1)[0];
-    expect(aoa[1][0]).toMatch(/Periode Data:/);
+    expect(aoa[1][0]).toMatch(/Minggu ke-/);
+
+    const savedPath = mockWriteFile.mock.calls.at(-1)[1];
+    expect(savedPath).toContain("Minggu_");
   });
 
   test('collectEngagementRanking rejects for non directorate client', async () => {
