@@ -76,7 +76,13 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     session.step = "inputUserId";
     await waClient.sendMessage(
       chatId,
-      "Ketik NRP Anda untuk melihat data. (contoh: 75070206)"
+      [
+        "Untuk menampilkan data Anda, silakan ketik NRP Anda (hanya angka).",
+        "Ketik *batal* untuk keluar.",
+        "",
+        "Contoh:",
+        "87020990",
+      ].join("\n")
     );
   },
 

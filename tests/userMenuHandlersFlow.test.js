@@ -45,6 +45,26 @@ describe("userMenuHandlers conversational flow", () => {
     );
   });
 
+  it("informs unregistered users why NRP is needed and how to exit", async () => {
+    const session = {};
+    const userModel = {
+      findUserByWhatsApp: jest.fn().mockResolvedValue(null),
+    };
+
+    await userMenuHandlers.main(session, chatId, "", waClient, null, userModel);
+
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      [
+        "Untuk menampilkan data Anda, silakan ketik NRP Anda (hanya angka).",
+        "Ketik *batal* untuk keluar.",
+        "",
+        "Contoh:",
+        "87020990",
+      ].join("\n")
+    );
+  });
+
   it("handles batal in confirmUserByWaIdentity", async () => {
     const session = {};
 
