@@ -10,7 +10,7 @@ import { saveEngagementRankingExcel } from "../service/engagementRankingExcelSer
 import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "6281234560377@c.us";
+const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "08127309190@c.us";
 const CLIENT_ID = "DITBINMAS";
 const ROLE_FLAG = "ditbinmas";
 
