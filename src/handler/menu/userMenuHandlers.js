@@ -211,11 +211,17 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       return;
     }
     if (answer === "tidak") {
-      await waClient.sendMessage(chatId, "Baik, nomor tidak dihubungkan.");
+      await waClient.sendMessage(
+        chatId,
+        "Nomor WhatsApp ini tetap tidak terhubung dengan NRP. Jika ingin mencoba lagi, ketik *userrequest* atau hubungi operator bila membutuhkan bantuan."
+      );
       session.exit = true;
       return;
     }
-    await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
+    await waClient.sendMessage(
+      chatId,
+      "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan."
+    );
   },
 
   // --- Update User ID manual
@@ -269,11 +275,17 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       return;
     }
     if (ans === "tidak") {
-      await waClient.sendMessage(chatId, "Proses update dibatalkan.");
+      await waClient.sendMessage(
+        chatId,
+        "Nomor WhatsApp ini tidak dihubungkan ke NRP. Ketik *userrequest* untuk kembali ke menu atau hubungi operator bila membutuhkan bantuan."
+      );
       session.exit = true;
       return;
     }
-    await waClient.sendMessage(chatId, "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan.");
+    await waClient.sendMessage(
+      chatId,
+      "Balas *ya* untuk menghubungkan nomor, atau *tidak* untuk membatalkan."
+    );
   },
 
   // --- Pilih field update
