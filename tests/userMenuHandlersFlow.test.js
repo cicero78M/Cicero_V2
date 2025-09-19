@@ -139,6 +139,64 @@ describe("userMenuHandlers conversational flow", () => {
     );
   });
 
+  it("keeps session active after inputUserId receives unknown NRP", async () => {
+    const session = { step: "inputUserId" };
+    const userModel = {
+      findUserById: jest.fn().mockResolvedValue(null),
+    };
+
+    await userMenuHandlers.inputUserId(
+      session,
+      chatId,
+      "123456",
+      waClient,
+      null,
+      userModel
+    );
+
+    expect(session.exit).toBeUndefined();
+    expect(session.step).toBe("inputUserId");
+    expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+      1,
+      chatId,
+      "❌ NRP *123456* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda."
+    );
+    expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+      2,
+      chatId,
+      "Silakan masukkan NRP lain atau ketik *batal* untuk keluar."
+    );
+  });
+
+  it("keeps session active after updateAskUserId receives unknown NRP", async () => {
+    const session = { step: "updateAskUserId" };
+    const userModel = {
+      findUserById: jest.fn().mockResolvedValue(null),
+    };
+
+    await userMenuHandlers.updateAskUserId(
+      session,
+      chatId,
+      "654321",
+      waClient,
+      null,
+      userModel
+    );
+
+    expect(session.exit).toBeUndefined();
+    expect(session.step).toBe("updateAskUserId");
+    expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+      1,
+      chatId,
+      "❌ NRP *654321* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda."
+    );
+    expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+      2,
+      chatId,
+      "Silakan masukkan NRP lain atau ketik *batal* untuk keluar."
+    );
+  });
+
   it("handles batal in tanyaUpdateMyData", async () => {
     const session = {};
 

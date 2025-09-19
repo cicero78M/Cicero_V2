@@ -169,7 +169,11 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     try {
       const user = await userModel.findUserById(user_id);
       if (!user) {
-        await waClient.sendMessage(chatId, `❌ NRP *${user_id}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
+        await waClient.sendMessage(
+          chatId,
+          `❌ NRP *${user_id}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
+        );
+        await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
       } else {
         session.step = "confirmBindUser";
         session.bindUserId = user_id;
@@ -183,9 +187,8 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       }
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
+      await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
     }
-    session.exit = true;
-    await waClient.sendMessage(chatId, "Ketik *userrequest* untuk memulai lagi.");
   },
 
   confirmBindUser: async (session, chatId, text, waClient, pool, userModel) => {
@@ -233,9 +236,11 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     }
     const user = await userModel.findUserById(nrp);
     if (!user) {
-      await waClient.sendMessage(chatId, `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`);
-      session.exit = true;
-      await waClient.sendMessage(chatId, "Ketik *userrequest* untuk memulai lagi.");
+      await waClient.sendMessage(
+        chatId,
+        `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
+      );
+      await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
       return;
     }
     session.updateUserId = nrp;
