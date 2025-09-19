@@ -333,6 +333,10 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         // Simpan list pangkat di session agar bisa dipakai saat validasi
         session.availableTitles = sorted;
         await waClient.sendMessage(chatId, "Daftar pangkat yang dapat dipilih:\n" + msgList);
+        await waClient.sendMessage(
+          chatId,
+          "Balas dengan angka dari daftar atau ketik nama pangkat persis. Ketik *batal* untuk membatalkan."
+        );
       }
     }
     if (field === "satfung") {
@@ -350,6 +354,10 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
           chatId,
           "Daftar satfung yang dapat dipilih:\n" + msgList
         );
+        await waClient.sendMessage(
+          chatId,
+          "Balas dengan angka dari daftar atau ketik nama satfung persis. Ketik *batal* untuk membatalkan."
+        );
       }
     }
     session.step = "updateAskValue";
@@ -361,7 +369,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
 
     await waClient.sendMessage(
       chatId,
-      `Ketik nilai baru untuk field *${allowedFields[idx].label}*${extra}:`
+      `Ketik nilai baru untuk field *${allowedFields[idx].label}*${extra}. Balas dengan angka atau nama pada daftar, atau ketik *batal* untuk membatalkan:`
     );
   },
 
