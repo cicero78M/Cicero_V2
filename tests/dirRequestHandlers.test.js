@@ -708,6 +708,7 @@ test('choose_menu option 18 generates likes recap excel and sends file', async (
 test('choose_menu option 19 generates TikTok comment recap excel and sends file', async () => {
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
   mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tiktok.xlsx');
+
   mockReadFile.mockResolvedValue(Buffer.from('excel'));
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '778';
@@ -725,15 +726,14 @@ test('choose_menu option 19 generates TikTok comment recap excel and sends file'
     chatId,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
-  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok.xlsx');
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok.xls
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
     expect.stringContaining('File Excel dikirim')
   );
 });
 
-test('choose_menu option 19 reports no TikTok content when recap empty', async () => {
-  mockCollectKomentarRecap.mockResolvedValue({ videoIds: [] });
+test('choose_menu option 19 reports no TikTok content when recap empty', async () => {  mockCollectKomentarRecap.mockResolvedValue({ videoIds: [] });
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '779';
   const waClient = { sendMessage: jest.fn() };
@@ -747,6 +747,7 @@ test('choose_menu option 19 reports no TikTok content when recap empty', async (
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
     expect.stringContaining('Tidak ada konten TikTok')
+
   );
 });
 
@@ -942,7 +943,7 @@ test('choose_menu option 23 generates weekly comment recap excel and sends file'
 test('choose_menu option 23 sends no data message when service returns null', async () => {
   mockSaveWeeklyCommentRecapExcel.mockResolvedValue(null);
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
-  const chatId = '792';
+  const chatId = '793';
   const waClient = { sendMessage: jest.fn() };
 
   await dirRequestHandlers.choose_menu(session, chatId, '23', waClient);

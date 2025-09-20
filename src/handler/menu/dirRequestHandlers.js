@@ -792,6 +792,7 @@ async function performAction(
           break;
         }
         const filePath = await saveCommentRecapExcel(recapData, clientId);
+
         const buffer = await readFile(filePath);
         await sendWAFile(
           waClient,
