@@ -786,12 +786,13 @@ async function performAction(
         break;
       }
       case "19": {
-        const data = await collectKomentarRecap(clientId);
-        if (!data.videoIds.length) {
+        const recapData = await collectKomentarRecap(clientId);
+        if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
           break;
         }
-        const filePath = await saveCommentRecapExcel(data, clientId);
+        const filePath = await saveCommentRecapExcel(recapData, clientId);
+
         const buffer = await readFile(filePath);
         await sendWAFile(
           waClient,

@@ -707,7 +707,8 @@ test('choose_menu option 18 generates likes recap excel and sends file', async (
 
 test('choose_menu option 19 generates TikTok comment recap excel and sends file', async () => {
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
-  mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tt.xlsx');
+  mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tiktok.xlsx');
+
   mockReadFile.mockResolvedValue(Buffer.from('excel'));
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '778';
@@ -717,23 +718,22 @@ test('choose_menu option 19 generates TikTok comment recap excel and sends file'
 
   expect(mockCollectKomentarRecap).toHaveBeenCalledWith('ditbinmas');
   expect(mockSaveCommentRecapExcel).toHaveBeenCalledWith({ videoIds: ['vid1'] }, 'ditbinmas');
-  expect(mockReadFile).toHaveBeenCalledWith('/tmp/tt.xlsx');
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/tiktok.xlsx');
   expect(mockSendWAFile).toHaveBeenCalledWith(
     waClient,
     expect.any(Buffer),
-    path.basename('/tmp/tt.xlsx'),
+    path.basename('/tmp/tiktok.xlsx'),
     chatId,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
-  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tt.xlsx');
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok.xls
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
     expect.stringContaining('File Excel dikirim')
   );
 });
 
-test('choose_menu option 19 reports when no TikTok content is available', async () => {
-  mockCollectKomentarRecap.mockResolvedValue({ videoIds: [] });
+test('choose_menu option 19 reports no TikTok content when recap empty', async () => {  mockCollectKomentarRecap.mockResolvedValue({ videoIds: [] });
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '779';
   const waClient = { sendMessage: jest.fn() };
@@ -746,7 +746,8 @@ test('choose_menu option 19 reports when no TikTok content is available', async 
   expect(mockUnlink).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
-    expect.stringMatching(/Tidak ada konten TikTok/i)
+    expect.stringContaining('Tidak ada konten TikTok')
+
   );
 });
 
