@@ -447,7 +447,7 @@ export async function getUsersByDirektorat(flag, clientId = null) {
 export async function findUserByInsta(insta) {
   if (!insta) return null;
   const { rows } = await query(
-      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.insta) = LOWER($1)\n     GROUP BY u.user_id`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.insta) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
     [insta]
   );
   return rows[0];
@@ -456,7 +456,7 @@ export async function findUserByInsta(insta) {
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const { rows } = await query(
-      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.whatsapp = $1\n     GROUP BY u.user_id`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.whatsapp = $1\n     GROUP BY u.user_id, c.nama`,
     [wa]
   );
   return rows[0];
@@ -466,7 +466,7 @@ export async function findUserByIdAndWhatsApp(userId, wa) {
   if (!userId || !wa) return null;
   const uid = normalizeUserId(userId);
   const { rows } = await query(
-      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id, c.nama`,
     [uid, wa]
   );
   return rows[0];
