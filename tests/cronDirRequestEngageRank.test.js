@@ -3,6 +3,8 @@ import { tmpdir } from 'os';
 import { join, basename } from 'path';
 import { writeFile, access } from 'fs/promises';
 
+process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT = '6281234560377@c.us';
+
 const mockSaveEngagementRankingExcel = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockSendWAFile = jest.fn();
