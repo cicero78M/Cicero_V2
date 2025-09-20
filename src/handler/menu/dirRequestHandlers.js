@@ -785,7 +785,26 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-    case "19": {
+      case "19": {
+        const data = await collectKomentarRecap(clientId);
+        if (!data.videoIds.length) {
+          msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+          break;
+        }
+        const filePath = await saveCommentRecapExcel(data, clientId);
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
+        break;
+      }
+      case "20": {
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
@@ -821,7 +840,7 @@ async function performAction(
         }
         return;
       }
-      case "21": {
+      case "22": {
         let filePath;
         try {
           filePath = await saveWeeklyLikesRecapExcel(clientId);
@@ -846,7 +865,7 @@ async function performAction(
         }
         break;
       }
-      case "22": {
+      case "23": {
         let filePath;
         try {
           filePath = await saveWeeklyCommentRecapExcel(clientId);
@@ -871,7 +890,7 @@ async function performAction(
         }
         break;
       }
-      case "23": {
+      case "24": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -995,13 +1014,14 @@ export const dirRequestHandlers = {
         "1️⃣6️⃣ Laporan harian Instagram Ditbinmas\n" +
         "1️⃣7️⃣ Laporan harian TikTok Ditbinmas\n" +
         "1️⃣8️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣9️⃣ Rekap gabungan semua sosmed\n" +
-        "2️⃣0️⃣ Rekap ranking engagement jajaran\n\n" +
+        "1️⃣9️⃣ Rekap komentar TikTok (Excel)\n" +
+        "2️⃣0️⃣ Rekap gabungan semua sosmed\n" +
+        "2️⃣1️⃣ Rekap ranking engagement jajaran\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "2️⃣1️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣2️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣2️⃣ Rekap file Instagram mingguan\n" +
+        "2️⃣3️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣3️⃣ Rekap file Instagram bulanan\n\n" +
+        "2️⃣4️⃣ Rekap file Instagram bulanan\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1046,6 +1066,7 @@ export const dirRequestHandlers = {
           "21",
           "22",
           "23",
+          "24",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1060,7 +1081,7 @@ export const dirRequestHandlers = {
     }
     const taskClientId = session.dir_client_id || userClientId;
 
-    if (choice === "20") {
+    if (choice === "21") {
       session.step = "choose_engagement_recap_period";
       await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
       return;

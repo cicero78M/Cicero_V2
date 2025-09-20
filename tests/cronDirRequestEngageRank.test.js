@@ -49,7 +49,7 @@ test('runCron generates excel, sends narrative and file, then cleans up', async 
 
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     {},
-    '6281234560377@c.us',
+    '08127309190@c.us',
     expect.stringContaining('Mengirimkan Ranking Jajaran')
   );
 
@@ -57,7 +57,7 @@ test('runCron generates excel, sends narrative and file, then cleans up', async 
     {},
     expect.any(Buffer),
     basename(filePath),
-    ['6281234560377@c.us'],
+    ['08127309190@c.us'],
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
 
@@ -65,11 +65,11 @@ test('runCron generates excel, sends narrative and file, then cleans up', async 
 
   expect(mockSendDebug).toHaveBeenCalledWith({
     tag: 'CRON DIRREQ ENGAGE RANK',
-    msg: 'Mulai cron dirrequest engage rank untuk 6281234560377@c.us',
+    msg: 'Mulai cron dirrequest engage rank untuk 08127309190@c.us',
   });
   expect(mockSendDebug).toHaveBeenCalledWith({
     tag: 'CRON DIRREQ ENGAGE RANK',
-    msg: 'Laporan ranking engagement dikirim ke 6281234560377@c.us',
+    msg: 'Laporan ranking engagement dikirim ke 08127309190@c.us',
   });
 });
 
