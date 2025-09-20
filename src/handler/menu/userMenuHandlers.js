@@ -12,9 +12,11 @@ function ignore(..._args) {}
 
 // --- Helper Format Pesan ---
 function formatUserReport(user) {
+  const polresName = user.client_name || user.client_id || "-";
   return [
     "👤 *Identitas Anda*",
     "",
+    `*Nama Polres*: ${polresName}`,
     `*Nama*     : ${user.nama || "-"}`,
     `*Pangkat*  : ${user.title || "-"}`,
     `*NRP/NIP*  : ${user.user_id || "-"}`,

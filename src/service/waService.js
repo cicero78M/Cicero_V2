@@ -107,8 +107,10 @@ const responseDelayMs = 800;
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
+  const polresName = user.client_name || user.client_id || "-";
   return (
     "👤 *Identitas Anda*\n" +
+    `*Nama Polres*: ${polresName}\n` +
     `*Nama*     : ${user.nama || "-"}\n` +
     `*Pangkat*  : ${user.title || "-"}\n` +
     `*NRP/NIP*  : ${user.user_id || "-"}\n` +
