@@ -661,17 +661,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
-    if (validUsers.length === 1) {
+    if (validUsers.length >= 1) {
       const du = validUsers[0];
-      let dirClientId = null;
-      try {
-        const roleClient = await clientService.findClientById(du.role);
-        if (roleClient?.client_type?.toLowerCase() === "direktorat") {
-          dirClientId = du.role;
-        }
-      } catch (e) {
-        // ignore lookup errors and fallback to dashboard user client_ids
-      }
       const defaultClientId = "DITBINMAS";
       let defaultClientName = defaultClientId;
       try {
@@ -695,18 +686,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
     }
-    setSession(chatId, {
-      menu: "dirrequest",
-      step: "choose_dash_user",
-      dash_users: validUsers,
-    });
-    await dirRequestHandlers.choose_dash_user(
-      getSession(chatId),
-      chatId,
-      "",
-      waClient
-    );
-    return;
   }
 
   // -- Routing semua step session clientrequest ke handler step terkait --

@@ -962,36 +962,16 @@ async function performAction(
   }
 
 export const dirRequestHandlers = {
-  async choose_dash_user(session, chatId, text, waClient) {
+  async choose_dash_user(session, chatId, _text, waClient) {
     const dashUsers = session.dash_users || [];
-    if (!text) {
-      const list = await Promise.all(
-        dashUsers.map(async (u, idx) => {
-          let cid = u.client_ids[0];
-          let c = cid ? await findClientById(cid) : null;
-          if (!cid || c?.client_type?.toLowerCase() === "direktorat") {
-            cid = u.role;
-            c = await findClientById(cid);
-          }
-          const name = (c?.nama || cid).toUpperCase();
-          return `${idx + 1}. ${name} (${cid.toUpperCase()})`;
-        })
-      );
+    const chosen = dashUsers[0];
+    if (!chosen) {
       await waClient.sendMessage(
         chatId,
-        `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        "❌ Data dashboard user tidak ditemukan untuk akses dirrequest."
       );
       return;
     }
-    const idx = parseInt(text.trim(), 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= dashUsers.length) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan client tidak valid. Balas angka yang tersedia."
-      );
-      return;
-    }
-    const chosen = dashUsers[idx];
     session.role = chosen.role;
     session.client_ids = [DITBINMAS_CLIENT_ID];
     session.dir_client_id = DITBINMAS_CLIENT_ID;

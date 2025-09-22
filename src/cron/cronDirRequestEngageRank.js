@@ -10,7 +10,24 @@ import { saveEngagementRankingExcel } from "../service/engagementRankingExcelSer
 import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const RECIPIENT = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT || "08127309190@c.us";
+const DEFAULT_RECIPIENT = "08127309190@c.us";
+const rawRecipient = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT;
+const RECIPIENT = (() => {
+  if (typeof rawRecipient !== "string") {
+    return DEFAULT_RECIPIENT;
+  }
+  const trimmed = rawRecipient.trim();
+  if (!trimmed) {
+    return DEFAULT_RECIPIENT;
+  }
+  if (trimmed.endsWith("@g.us")) {
+    return trimmed;
+  }
+  if (trimmed.endsWith("@c.us") && trimmed.startsWith("081")) {
+    return trimmed;
+  }
+  return DEFAULT_RECIPIENT;
+})();
 const CLIENT_ID = "DITBINMAS";
 const ROLE_FLAG = "ditbinmas";
 
@@ -59,9 +76,7 @@ function buildNarrative(now = getJakartaDate()) {
 
 export async function runCron({ recipients } = {}) {
   const targetRecipients =
-    Array.isArray(recipients) && recipients.length
-      ? recipients
-      : [RECIPIENT];
+    Array.isArray(recipients) && recipients.length ? recipients : [RECIPIENT];
 
   sendDebug({
     tag: "CRON DIRREQ ENGAGE RANK",
