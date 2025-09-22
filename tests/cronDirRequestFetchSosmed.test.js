@@ -40,7 +40,12 @@ beforeEach(async () => {
   jest.resetModules();
   jest.clearAllMocks();
   process.env.JWT_SECRET = 'test-secret';
-  mockGenerateMsg.mockResolvedValue({ text: 'msg', igCount: 1, tiktokCount: 1 });
+  mockGenerateMsg.mockResolvedValue({
+    text: 'msg',
+    igCount: 1,
+    tiktokCount: 1,
+    state: { igShortcodes: ['ig1'], tiktokVideoIds: ['tt1'] },
+  });
   mockGetInstaPostCount.mockResolvedValue(0);
   mockGetTiktokPostCount.mockResolvedValue(0);
   ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
@@ -48,6 +53,12 @@ beforeEach(async () => {
 
 test('runCron fetches sosmed and sends message to recipients', async () => {
   await runCron();
+
+  expect(mockGenerateMsg).toHaveBeenCalledWith('DITBINMAS', {
+    skipLikesFetch: true,
+    skipTiktokFetch: true,
+    previousState: { igShortcodes: [], tiktokVideoIds: [] },
+  });
 
   expect(mockFetchInsta).toHaveBeenCalledWith(
     ['shortcode', 'caption', 'like_count', 'timestamp'],
@@ -70,5 +81,10 @@ test('runCron skips sending when counts unchanged', async () => {
   await runCron();
   mockSafeSend.mockClear();
   await runCron();
+  expect(mockGenerateMsg).toHaveBeenLastCalledWith('DITBINMAS', {
+    skipLikesFetch: true,
+    skipTiktokFetch: true,
+    previousState: { igShortcodes: ['ig1'], tiktokVideoIds: ['tt1'] },
+  });
   expect(mockSafeSend).not.toHaveBeenCalled();
 });
