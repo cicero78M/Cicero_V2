@@ -11,6 +11,8 @@ import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetch
 import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
+import { getVideoIdsTodayByClient } from "../model/tiktokPostModel.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
@@ -35,6 +37,8 @@ function getRecipients() {
 export async function runCron() {
   sendDebug({ tag: "CRON DIRFETCH SOSMED", msg: "Mulai cron dirrequest fetch sosmed" });
   try {
+    const previousIgShortcodes = await getShortcodesTodayByClient("DITBINMAS");
+    const previousTiktokVideoIds = await getVideoIdsTodayByClient("DITBINMAS");
     await fetchAndStoreInstaContent(
       ["shortcode", "caption", "like_count", "timestamp"],
       null,
@@ -48,8 +52,8 @@ export async function runCron() {
       skipTiktokFetch: true,
       skipLikesFetch: true,
       previousState: {
-        igShortcodes: lastIgShortcodes,
-        tiktokVideoIds: lastTiktokVideoIds,
+        igShortcodes: previousIgShortcodes,
+        tiktokVideoIds: previousTiktokVideoIds,
       },
     });
     if (igCount !== lastIgCount || tiktokCount !== lastTiktokCount) {
@@ -63,8 +67,8 @@ export async function runCron() {
       });
       lastIgCount = igCount;
       lastTiktokCount = tiktokCount;
-      lastIgShortcodes = state?.igShortcodes ?? lastIgShortcodes;
-      lastTiktokVideoIds = state?.tiktokVideoIds ?? lastTiktokVideoIds;
+      lastIgShortcodes = state?.igShortcodes ?? previousIgShortcodes ?? lastIgShortcodes;
+      lastTiktokVideoIds = state?.tiktokVideoIds ?? previousTiktokVideoIds ?? lastTiktokVideoIds;
     }
   } catch (err) {
     sendDebug({
