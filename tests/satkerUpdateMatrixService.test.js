@@ -101,6 +101,7 @@ describe('satkerUpdateMatrixService', () => {
   });
 
   test('saveSatkerUpdateMatrixExcel writes workbook with sanitized username', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2024-01-15T08:30:45.000Z'));
     mockGetUsersSocialByClient.mockResolvedValue([
       { client_id: 'DITBINMAS', insta: 'ig', tiktok: 'tt' },
       { client_id: 'POLRES_A', insta: '', tiktok: '' },
@@ -117,6 +118,34 @@ describe('satkerUpdateMatrixService', () => {
     expect(mockAoAToSheet).toHaveBeenCalledTimes(1);
     const aoa = mockAoAToSheet.mock.calls[0][0];
     expect(aoa[0]).toEqual([
+      'Rekap Matriks Update Satker DIREKTORAT BINMAS',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(aoa[1]).toEqual([
+      'Periode: Senin, 15 Januari 2024 pukul 15.30.45',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(aoa[2]).toEqual([
+      'Disusun oleh: Admin 01',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(aoa[3]).toEqual([null, null, null, null, null, null, null]);
+    expect(aoa[4]).toEqual([
       'Satker',
       'Jumlah DSP',
       'Jumlah Personil',
@@ -125,8 +154,8 @@ describe('satkerUpdateMatrixService', () => {
       'Data Update Tiktok',
       null,
     ]);
-    expect(aoa[1]).toEqual([null, null, null, 'Sudah', 'Belum', 'Sudah', 'Belum']);
-    expect(aoa[2]).toEqual([
+    expect(aoa[5]).toEqual([null, null, null, 'Sudah', 'Belum', 'Sudah', 'Belum']);
+    expect(aoa[6]).toEqual([
       'DIREKTORAT BINMAS',
       102,
       1,
@@ -135,7 +164,7 @@ describe('satkerUpdateMatrixService', () => {
       1,
       0,
     ]);
-    expect(aoa[3]).toEqual([
+    expect(aoa[7]).toEqual([
       'POLRES A',
       null,
       1,
@@ -147,16 +176,31 @@ describe('satkerUpdateMatrixService', () => {
 
     const worksheet = mockAoAToSheet.mock.results[0].value;
     expect(worksheet['!merges']).toEqual([
-      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
-      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
-      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
-      { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
-      { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
+      { s: { r: 4, c: 0 }, e: { r: 5, c: 0 } },
+      { s: { r: 4, c: 1 }, e: { r: 5, c: 1 } },
+      { s: { r: 4, c: 2 }, e: { r: 5, c: 2 } },
+      { s: { r: 4, c: 3 }, e: { r: 4, c: 4 } },
+      { s: { r: 4, c: 5 }, e: { r: 4, c: 6 } },
     ]);
+    expect(worksheet['!cols']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ wch: expect.any(Number) }),
+      ])
+    );
+    expect(worksheet['!cols']).toHaveLength(7);
+    worksheet['!cols'].forEach((col) => {
+      expect(col.wch).toBeGreaterThanOrEqual(10);
+      expect(col.wch).toBeLessThanOrEqual(60);
+    });
 
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
     const savedPath = mockWriteFile.mock.calls[0][1];
     expect(savedPath).toContain('Satker_Update_Rank_');
+    expect(savedPath).toContain('_Admin_01');
     expect(filePath).toBe(savedPath);
+    jest.useRealTimers();
   });
 });

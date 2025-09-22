@@ -127,15 +127,48 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
   };
 }
 
+const MIN_COL_WIDTH = 10;
+const MAX_COL_WIDTH = 60;
+const COLUMN_PADDING = 2;
+
+function createRowWithSpan(text, columnCount) {
+  return [text, ...Array(Math.max(columnCount - 1, 0)).fill(null)];
+}
+
+function calculateColumnWidths(matrix) {
+  const maxLengths = new Array(matrix[0]?.length || 0).fill(0);
+  matrix.forEach((row) => {
+    row.forEach((value, columnIndex) => {
+      const cellValue = value == null ? "" : String(value);
+      maxLengths[columnIndex] = Math.max(maxLengths[columnIndex], cellValue.length);
+    });
+  });
+  return maxLengths.map((length) => ({
+    wch: Math.min(
+      Math.max(length + COLUMN_PADDING, MIN_COL_WIDTH),
+      MAX_COL_WIDTH
+    ),
+  }));
+}
+
 export async function saveSatkerUpdateMatrixExcel({
   clientId,
   roleFlag = null,
   username = "",
 } = {}) {
-  const { stats } = await collectSatkerUpdateMatrix(clientId, roleFlag);
+  const { stats, clientName } = await collectSatkerUpdateMatrix(clientId, roleFlag);
   if (!stats.length) {
     throw new Error("Tidak ada data satker untuk direkap.");
   }
+
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "full",
+    timeStyle: "medium",
+    timeZone: "Asia/Jakarta",
+  });
+  const formattedPeriod = formatter.format(now);
+  const trimmedUsername = String(username || "").trim();
 
   const headerRow1 = [
     "Satker",
@@ -166,23 +199,53 @@ export async function saveSatkerUpdateMatrixExcel({
     item.tiktokEmpty,
   ]);
 
-  const worksheet = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...rows]);
-  worksheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
-    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
-    { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
-    { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
-    { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
+  const columnCount = headerRow1.length;
+  const narrativeRows = [
+    createRowWithSpan(
+      `Rekap Matriks Update Satker ${String(clientName || clientId).toUpperCase()}`,
+      columnCount
+    ),
+    createRowWithSpan(`Periode: ${formattedPeriod}`, columnCount),
   ];
+
+  if (trimmedUsername) {
+    narrativeRows.push(
+      createRowWithSpan(`Disusun oleh: ${trimmedUsername}`, columnCount)
+    );
+  }
+
+  const blankRow = Array(columnCount).fill(null);
+  const matrix = [...narrativeRows, blankRow, headerRow1, headerRow2, ...rows];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(matrix);
+  const headerOffset = narrativeRows.length + 1;
+  const merges = narrativeRows.map((_, index) => ({
+    s: { r: index, c: 0 },
+    e: { r: index, c: columnCount - 1 },
+  }));
+
+  merges.push(
+    { s: { r: headerOffset, c: 0 }, e: { r: headerOffset + 1, c: 0 } },
+    { s: { r: headerOffset, c: 1 }, e: { r: headerOffset + 1, c: 1 } },
+    { s: { r: headerOffset, c: 2 }, e: { r: headerOffset + 1, c: 2 } },
+    { s: { r: headerOffset, c: 3 }, e: { r: headerOffset, c: 4 } },
+    { s: { r: headerOffset, c: 5 }, e: { r: headerOffset, c: 6 } }
+  );
+
+  worksheet["!merges"] = merges;
+  worksheet["!cols"] = calculateColumnWidths(matrix);
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap");
 
   const exportDir = path.resolve("export_data/satker_update_matrix");
   await mkdir(exportDir, { recursive: true });
 
-  const now = new Date();
   const dateLabel = now.toISOString().slice(0, 10);
-  const fileName = `Ditbinmas_Satker_Update_Rank_${dateLabel}.xlsx`;
+  const safeUsername = sanitizeFilename(trimmedUsername);
+  const fileName = `Ditbinmas_Satker_Update_Rank_${dateLabel}${
+    safeUsername ? `_${safeUsername}` : ""
+  }.xlsx`;
   const filePath = path.join(exportDir, fileName);
 
   XLSX.writeFile(workbook, filePath);
