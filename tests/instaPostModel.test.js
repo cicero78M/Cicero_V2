@@ -55,6 +55,15 @@ test('getShortcodesTodayByClient uses client filter for Ditbinmas', async () => 
   expect(sql).not.toContain('insta_post_roles');
 });
 
+test('getShortcodesTodayByClient orders by created_at and shortcode for client filter', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getShortcodesTodayByClient('C1');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toMatch(/ORDER BY\s+created_at\s+ASC,\s+shortcode\s+ASC/i);
+});
+
 test('getShortcodesTodayByClient falls back to role when client not found', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [] })
@@ -63,6 +72,15 @@ test('getShortcodesTodayByClient falls back to role when client not found', asyn
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('insta_post_roles');
   expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
+});
+
+test('getShortcodesTodayByClient orders by created_at and shortcode for role filter', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getShortcodesTodayByClient('DITA');
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toMatch(/ORDER BY\s+p\.created_at\s+ASC,\s+p\.shortcode\s+ASC/i);
 });
 
 test('getShortcodesYesterdayByClient filters by client for non-direktorat', async () => {

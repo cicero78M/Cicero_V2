@@ -61,7 +61,7 @@ export async function getVideoIdsTodayByClient(client_id) {
 export async function getPostsTodayByClient(client_id) {
   const normalizedId = normalizeClientId(client_id);
   const res = await query(
-    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND created_at::date = NOW()::date`,
+    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND created_at::date = NOW()::date ORDER BY created_at ASC, video_id ASC`,
     [normalizedId]
   );
   return res.rows;

@@ -726,7 +726,7 @@ test('choose_menu option 19 generates TikTok comment recap excel and sends file'
     chatId,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   );
-  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok.xls
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok.xlsx');
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
     expect.stringContaining('File Excel dikirim')
