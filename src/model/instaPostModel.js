@@ -64,12 +64,14 @@ export async function getShortcodesTodayByClient(identifier) {
       `SELECT p.shortcode FROM insta_post p\n` +
       `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
       `WHERE LOWER(pr.role_name) = LOWER($1)\n` +
-      `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+      `  AND (p.created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date\n` +
+      `ORDER BY p.created_at ASC, p.shortcode ASC`;
     params = [identifier, today];
   } else {
     sql =
       `SELECT shortcode FROM insta_post\n` +
-      `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`;
+      `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date\n` +
+      `ORDER BY created_at ASC, shortcode ASC`;
     params = [identifier, today];
   }
 

@@ -77,3 +77,35 @@ test('generateSosmedTaskMessage can skip internal fetches', async () => {
   expect(mockHandleFetchKomentarTiktokBatch).not.toHaveBeenCalled();
   expect(mockHandleFetchLikesInstagram).not.toHaveBeenCalled();
 });
+
+test('generateSosmedTaskMessage preserves ordering from sources', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'Unit', client_tiktok: '@operator' });
+  mockGetShortcodesTodayByClient.mockResolvedValue(['latest', 'earlier']);
+  mockGetLikesByShortcode
+    .mockResolvedValueOnce([{}])
+    .mockResolvedValueOnce([{}, {}]);
+  mockGetTiktokPostsToday.mockResolvedValue([
+    { video_id: 'vid-b' },
+    { video_id: 'vid-a' },
+  ]);
+  mockGetCommentsByVideoId
+    .mockResolvedValueOnce({ comments: [{}, {}] })
+    .mockResolvedValueOnce({ comments: [{}] });
+
+  const { text } = await generateSosmedTaskMessage('CLIENT', {
+    skipLikesFetch: true,
+    skipTiktokFetch: true,
+  });
+
+  const igFirst = text.indexOf('https://www.instagram.com/p/latest');
+  const igSecond = text.indexOf('https://www.instagram.com/p/earlier');
+  expect(igFirst).toBeGreaterThan(-1);
+  expect(igSecond).toBeGreaterThan(-1);
+  expect(igFirst).toBeLessThan(igSecond);
+
+  const ttFirst = text.indexOf('/@operator/video/vid-b');
+  const ttSecond = text.indexOf('/@operator/video/vid-a');
+  expect(ttFirst).toBeGreaterThan(-1);
+  expect(ttSecond).toBeGreaterThan(-1);
+  expect(ttFirst).toBeLessThan(ttSecond);
+});
