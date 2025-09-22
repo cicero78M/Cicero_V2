@@ -1,4 +1,6 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
+import { getShortcodesTodayByClient } from "../../model/instaPostModel.js";
+import { getVideoIdsTodayByClient } from "../../model/tiktokPostModel.js";
 import {
   absensiLikes,
   lapharDitbinmas,
@@ -678,45 +680,79 @@ async function performAction(
       const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
       const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
       const { generateSosmedTaskMessage } = await import("../fetchabsensi/sosmedTask.js");
-        const targetId = (clientId || "").toUpperCase();
-        const fetchErrors = [];
-        try {
-          await fetchAndStoreInstaContent(["shortcode", "caption", "like_count", "timestamp"], waClient, chatId, targetId);
-        } catch (err) {
-          console.error("Error fetching Instagram content:", err);
-          fetchErrors.push("Instagram content");
-        }
-        try {
-          await handleFetchLikesInstagram(null, null, targetId);
-        } catch (err) {
-          console.error("Error fetching Instagram likes:", err);
-          fetchErrors.push("Instagram likes");
-        }
-        try {
-          await fetchAndStoreTiktokContent(targetId, waClient, chatId);
-        } catch (err) {
-          console.error("Error fetching TikTok content:", err);
-          fetchErrors.push("TikTok content");
-        }
-        try {
-          await handleFetchKomentarTiktokBatch(null, null, targetId);
-        } catch (err) {
-          console.error("Error fetching TikTok comments:", err);
-          fetchErrors.push("TikTok comments");
-        }
-        try {
-          ({ text: msg } = await generateSosmedTaskMessage(targetId, { skipTiktokFetch: true, skipLikesFetch: true }));
-        } catch (err) {
-          console.error("Error generating sosmed task message:", err);
-          msg = "Gagal membuat pesan tugas.";
-          fetchErrors.push("task message");
-        }
-        if (fetchErrors.length) {
-          msg = `${msg}\n\n⚠️ Sebagian data gagal diambil.`.trim();
-        }
-        break;
+
+      const targetId = (clientId || "").toUpperCase();
+      const fetchErrors = [];
+
+      let previousIgShortcodes = [];
+      let previousTiktokVideoIds = [];
+      try {
+        previousIgShortcodes = await getShortcodesTodayByClient(targetId);
+      } catch (err) {
+        console.error("Error reading previous Instagram shortcodes:", err);
+        previousIgShortcodes = [];
       }
-      case "16": {
+      try {
+        previousTiktokVideoIds = await getVideoIdsTodayByClient(targetId);
+      } catch (err) {
+        console.error("Error reading previous TikTok video IDs:", err);
+        previousTiktokVideoIds = [];
+      }
+
+      try {
+        await fetchAndStoreInstaContent(
+          ["shortcode", "caption", "like_count", "timestamp"],
+          waClient,
+          chatId,
+          targetId
+        );
+      } catch (err) {
+        console.error("Error fetching Instagram content:", err);
+        fetchErrors.push("Instagram content");
+      }
+      try {
+        await handleFetchLikesInstagram(null, null, targetId);
+      } catch (err) {
+        console.error("Error fetching Instagram likes:", err);
+        fetchErrors.push("Instagram likes");
+      }
+      try {
+        await fetchAndStoreTiktokContent(targetId, waClient, chatId);
+      } catch (err) {
+        console.error("Error fetching TikTok content:", err);
+        fetchErrors.push("TikTok content");
+      }
+      try {
+        await handleFetchKomentarTiktokBatch(null, null, targetId);
+      } catch (err) {
+        console.error("Error fetching TikTok comments:", err);
+        fetchErrors.push("TikTok comments");
+      }
+      const previousState = {
+        igShortcodes: Array.isArray(previousIgShortcodes)
+          ? previousIgShortcodes
+          : [],
+        tiktokVideoIds: Array.isArray(previousTiktokVideoIds)
+          ? previousTiktokVideoIds
+          : [],
+      };
+      try {
+        ({ text: msg } = await generateSosmedTaskMessage(targetId, {
+          skipTiktokFetch: true,
+          skipLikesFetch: true,
+          previousState,
+        }));
+      } catch (err) {
+        console.error("Error generating sosmed task message:", err);
+        msg = "Gagal membuat pesan tugas.";
+        fetchErrors.push("task message");
+      }
+      if (fetchErrors.length) {
+        msg = `${msg}\n\n⚠️ Sebagian data gagal diambil.`.trim();
+      }
+      break;
+    }
+    case "16": {
         const { text, filename, narrative, textBelum, filenameBelum } = await lapharDitbinmas();
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });

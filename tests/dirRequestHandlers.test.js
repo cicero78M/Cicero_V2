@@ -5,6 +5,8 @@ process.env.TZ = 'Asia/Jakarta';
 
 const mockGetUsersSocialByClient = jest.fn();
 const mockGetClientsByRole = jest.fn();
+const mockGetShortcodesTodayByClient = jest.fn();
+const mockGetVideoIdsTodayByClient = jest.fn();
 const mockAbsensiLikes = jest.fn();
 const mockAbsensiLikesDitbinmasReport = jest.fn();
 const mockAbsensiLikesDitbinmasSimple = jest.fn();
@@ -40,6 +42,12 @@ const mockGenerateSosmedTaskMessage = jest.fn();
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersSocialByClient: mockGetUsersSocialByClient,
   getClientsByRole: mockGetClientsByRole,
+}));
+jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
+  getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
+}));
+jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
+  getVideoIdsTodayByClient: mockGetVideoIdsTodayByClient,
 }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
   absensiLikes: mockAbsensiLikes,
@@ -128,6 +136,8 @@ beforeAll(async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockFindClientById.mockReset();
+  mockGetShortcodesTodayByClient.mockResolvedValue([]);
+  mockGetVideoIdsTodayByClient.mockResolvedValue([]);
   mockMkdir.mockResolvedValue();
   mockWriteFile.mockResolvedValue();
   mockSaveSatkerUpdateMatrixExcel.mockResolvedValue({
@@ -492,15 +502,17 @@ test('choose_menu option 13 fetch tiktok returns komentar report', async () => {
 });
 
 test('choose_menu option 15 fetch sosial media sends combined task', async () => {
+  mockGetShortcodesTodayByClient.mockResolvedValue(['oldSc']);
+  mockGetVideoIdsTodayByClient.mockResolvedValue(['vid123']);
   mockFetchAndStoreInstaContent.mockResolvedValue();
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockFetchAndStoreTiktokContent.mockResolvedValue();
-        mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
-        mockGenerateSosmedTaskMessage.mockResolvedValue({
-          text: 'tugas sosmed',
-          igCount: 0,
-          tiktokCount: 0,
-        });
+  mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
+  mockGenerateSosmedTaskMessage.mockResolvedValue({
+    text: 'tugas sosmed',
+    igCount: 0,
+    tiktokCount: 0,
+  });
   mockSafeSendMessage.mockResolvedValue(true);
   mockFindClientById.mockResolvedValue({ client_type: 'direktorat', nama: 'DITBINMAS' });
 
@@ -527,11 +539,15 @@ test('choose_menu option 15 fetch sosial media sends combined task', async () =>
     waClient,
     chatId
   );
-    expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
-    expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS', {
-      skipTiktokFetch: true,
-      skipLikesFetch: true,
-    });
+  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+  expect(mockGenerateSosmedTaskMessage).toHaveBeenCalledWith('DITBINMAS', {
+    skipTiktokFetch: true,
+    skipLikesFetch: true,
+    previousState: {
+      igShortcodes: ['oldSc'],
+      tiktokVideoIds: ['vid123'],
+    },
+  });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'tugas sosmed');
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     waClient,
