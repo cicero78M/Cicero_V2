@@ -16,6 +16,8 @@ const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
 let lastIgCount = null;
 let lastTiktokCount = null;
+let lastIgShortcodes = [];
+let lastTiktokVideoIds = [];
 
 async function initializeLastCounts() {
   lastIgCount = await getInstaPostCount("DITBINMAS");
@@ -42,9 +44,13 @@ export async function runCron() {
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
     await fetchAndStoreTiktokContent("DITBINMAS");
     await handleFetchKomentarTiktokBatch(null, null, "DITBINMAS");
-    const { text, igCount, tiktokCount } = await generateSosmedTaskMessage("DITBINMAS", {
+    const { text, igCount, tiktokCount, state } = await generateSosmedTaskMessage("DITBINMAS", {
       skipTiktokFetch: true,
       skipLikesFetch: true,
+      previousState: {
+        igShortcodes: lastIgShortcodes,
+        tiktokVideoIds: lastTiktokVideoIds,
+      },
     });
     if (igCount !== lastIgCount || tiktokCount !== lastTiktokCount) {
       const recipients = getRecipients();
@@ -57,6 +63,8 @@ export async function runCron() {
       });
       lastIgCount = igCount;
       lastTiktokCount = tiktokCount;
+      lastIgShortcodes = state?.igShortcodes ?? lastIgShortcodes;
+      lastTiktokVideoIds = state?.tiktokVideoIds ?? lastTiktokVideoIds;
     }
   } catch (err) {
     sendDebug({
