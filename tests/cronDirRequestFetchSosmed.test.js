@@ -8,6 +8,8 @@ const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
 const mockGetInstaPostCount = jest.fn();
 const mockGetTiktokPostCount = jest.fn();
+const mockGetShortcodesTodayByClient = jest.fn();
+const mockGetVideoIdsTodayByClient = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
@@ -33,6 +35,12 @@ jest.unstable_mockModule('../src/service/postCountService.js', () => ({
   getInstaPostCount: mockGetInstaPostCount,
   getTiktokPostCount: mockGetTiktokPostCount,
 }));
+jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
+  getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
+}));
+jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
+  getVideoIdsTodayByClient: mockGetVideoIdsTodayByClient,
+}));
 
 let runCron;
 
@@ -48,6 +56,8 @@ beforeEach(async () => {
   });
   mockGetInstaPostCount.mockResolvedValue(0);
   mockGetTiktokPostCount.mockResolvedValue(0);
+  mockGetShortcodesTodayByClient.mockResolvedValue(['dbIg']);
+  mockGetVideoIdsTodayByClient.mockResolvedValue(['dbTt']);
   ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
 });
 
@@ -57,7 +67,7 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
   expect(mockGenerateMsg).toHaveBeenCalledWith('DITBINMAS', {
     skipLikesFetch: true,
     skipTiktokFetch: true,
-    previousState: { igShortcodes: [], tiktokVideoIds: [] },
+    previousState: { igShortcodes: ['dbIg'], tiktokVideoIds: ['dbTt'] },
   });
 
   expect(mockFetchInsta).toHaveBeenCalledWith(
@@ -78,13 +88,15 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
 });
 
 test('runCron skips sending when counts unchanged', async () => {
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['dbIg1']).mockResolvedValueOnce(['dbIg2']);
+  mockGetVideoIdsTodayByClient.mockResolvedValueOnce(['dbTt1']).mockResolvedValueOnce(['dbTt2']);
   await runCron();
   mockSafeSend.mockClear();
   await runCron();
   expect(mockGenerateMsg).toHaveBeenLastCalledWith('DITBINMAS', {
     skipLikesFetch: true,
     skipTiktokFetch: true,
-    previousState: { igShortcodes: ['ig1'], tiktokVideoIds: ['tt1'] },
+    previousState: { igShortcodes: ['dbIg2'], tiktokVideoIds: ['dbTt2'] },
   });
   expect(mockSafeSend).not.toHaveBeenCalled();
 });
