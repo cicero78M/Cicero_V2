@@ -708,7 +708,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   }
 
   const normalizedWabotCmd = text.toLowerCase().replace(/\s+/g, "");
-  if (normalizedWabotCmd === "wabot" || normalizedWabotCmd === "wabotditbinmas") {
+  if (
+    normalizedWabotCmd === "wabot" ||
+    normalizedWabotCmd === "wabotditbinmas" ||
+    normalizedWabotCmd === "ditbinmas"
+  ) {
     const waId =
       userWaNum.startsWith("62")
         ? userWaNum
