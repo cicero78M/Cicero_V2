@@ -56,6 +56,7 @@ import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js"
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { dashRequestHandlers } from "../handler/menu/dashRequestHandlers.js";
 import { dirRequestHandlers } from "../handler/menu/dirRequestHandlers.js";
+import { wabotDitbinmasHandlers } from "../handler/menu/wabotDitbinmasHandlers.js";
 
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 
@@ -408,9 +409,17 @@ export function createHandleMessage(waClient) {
     await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
     return;
   }
-  if (getSession(chatId) && text.toLowerCase() === "batal") {
+  if (session && text.toLowerCase() === "batal") {
+    const menuLabels = {
+      oprrequest: "Menu Operator",
+      dashrequest: "Menu Dashboard",
+      dirrequest: "Menu Direktorat",
+      clientrequest: "Menu Client",
+      wabotditbinmas: "Menu Wabot Ditbinmas",
+    };
     clearSession(chatId);
-    await waClient.sendMessage(chatId, "✅ Menu Admin Client ditutup.");
+    const label = menuLabels[session.menu] || "Menu";
+    await waClient.sendMessage(chatId, `✅ ${label} ditutup.`);
     return;
   }
 
@@ -543,6 +552,16 @@ export function createHandleMessage(waClient) {
 
   if (session && session.menu === "dirrequest") {
     await dirRequestHandlers[session.step || "main"](
+      session,
+      chatId,
+      text,
+      waClient
+    );
+    return;
+  }
+
+  if (session && session.menu === "wabotditbinmas") {
+    await wabotDitbinmasHandlers[session.step || "main"](
       session,
       chatId,
       text,
@@ -686,6 +705,37 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
       return;
     }
+  }
+
+  const normalizedWabotCmd = text.toLowerCase().replace(/\s+/g, "");
+  if (normalizedWabotCmd === "wabot" || normalizedWabotCmd === "wabotditbinmas") {
+    const waId =
+      userWaNum.startsWith("62")
+        ? userWaNum
+        : "62" + userWaNum.replace(/^0/, "");
+    const dashUsers = await dashboardUserModel.findAllByWhatsApp(waId);
+    const validUsers = dashUsers.filter(
+      (u) => u.status === true && u.role?.toLowerCase() !== "operator"
+    );
+    const ditbinmasUsers = validUsers.filter(
+      (u) => u.role?.toLowerCase() === "ditbinmas"
+    );
+    if (ditbinmasUsers.length === 0) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Nomor Anda tidak terdaftar sebagai pengguna Ditbinmas."
+      );
+      return;
+    }
+    setSession(chatId, {
+      menu: "wabotditbinmas",
+      step: "main",
+      role: ditbinmasUsers[0].role,
+      username: ditbinmasUsers[0].username,
+      time: Date.now(),
+    });
+    await wabotDitbinmasHandlers.main(getSession(chatId), chatId, "", waClient);
+    return;
   }
 
   // -- Routing semua step session clientrequest ke handler step terkait --
