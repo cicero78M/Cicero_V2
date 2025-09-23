@@ -32,6 +32,9 @@ test('returns ditbinmas like summaries', async () => {
   expect(mockGetRekap).toHaveBeenCalledWith('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
   expect(json).toHaveBeenCalledWith(
     expect.objectContaining({
+      success: true,
+      totalPosts: 4,
+      usersCount: 4,
       sudahUsers: ['alice'],
       kurangUsers: ['bob'],
       belumUsers: ['charlie'],
@@ -39,7 +42,22 @@ test('returns ditbinmas like summaries', async () => {
       kurangUsersCount: 1,
       belumUsersCount: 2,
       noUsernameUsersCount: 1,
-      usersCount: 4
+      targetLikesPerUser: 2,
+      summary: expect.objectContaining({
+        distribution: expect.objectContaining({
+          complete: 1,
+          needsAttention: 1,
+          notStarted: 1,
+          noUsername: 1,
+        }),
+      }),
+      data: expect.arrayContaining([
+        expect.objectContaining({ username: 'alice', status: 'complete' }),
+        expect.objectContaining({ username: 'bob', status: 'needs_attention' }),
+        expect.objectContaining({ username: 'charlie', status: 'not_started' }),
+      ]),
+      insights: expect.any(Array),
+      statusLegend: expect.any(Array),
     })
   );
 });

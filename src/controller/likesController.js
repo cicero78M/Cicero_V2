@@ -1,5 +1,6 @@
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
+import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 
 export async function getDitbinmasLikes(req, res) {
   const periode = req.query.periode || "harian";
@@ -17,42 +18,12 @@ export async function getDitbinmasLikes(req, res) {
       endDate,
       "ditbinmas"
     );
-    const length = Array.isArray(rows) ? rows.length : 0;
-    const chartHeight = Math.max(length * 30, 300);
 
-    const threshold = Math.ceil(totalKonten * 0.5);
-    const sudahUsers = [];
-    const kurangUsers = [];
-    const belumUsers = [];
-    const noUsernameUsers = [];
-
-    rows.forEach((u) => {
-      if (!u.username || u.username.trim() === "") {
-        noUsernameUsers.push(u.username);
-      } else if (u.jumlah_like >= threshold) {
-        sudahUsers.push(u.username);
-      } else if (u.jumlah_like > 0) {
-        kurangUsers.push(u.username);
-      } else {
-        belumUsers.push(u.username);
-      }
-    });
-
-    const belumUsersCount = belumUsers.length + noUsernameUsers.length;
+    const payload = formatLikesRecapResponse(rows, totalKonten);
 
     res.json({
       success: true,
-      data: rows,
-      chartHeight,
-      totalPosts: totalKonten,
-      sudahUsers,
-      kurangUsers,
-      belumUsers,
-      sudahUsersCount: sudahUsers.length,
-      kurangUsersCount: kurangUsers.length,
-      belumUsersCount,
-      noUsernameUsersCount: noUsernameUsers.length,
-      usersCount: length,
+      ...payload,
     });
   } catch (err) {
     sendConsoleDebug({ tag: "LIKES", msg: `Error getDitbinmasLikes: ${err.message}` });

@@ -14,6 +14,7 @@ import * as instaPostCacheService from "../service/instaPostCacheService.js";
 import * as profileCache from "../service/profileCacheService.js";
 import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
+import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 
 export async function getInstaRekapLikes(req, res) {
   let client_id = req.query.client_id;
@@ -68,42 +69,12 @@ export async function getInstaRekapLikes(req, res) {
       endDate,
       role
     );
-    const length = Array.isArray(rows) ? rows.length : 0;
-    const chartHeight = Math.max(length * 30, 300);
 
-    const threshold = Math.ceil(totalKonten * 0.5);
-    const sudahUsers = [];
-    const kurangUsers = [];
-    const belumUsers = [];
-    const noUsernameUsers = [];
-
-    rows.forEach((u) => {
-      if (!u.username || u.username.trim() === "") {
-        noUsernameUsers.push(u.username);
-      } else if (u.jumlah_like >= threshold) {
-        sudahUsers.push(u.username);
-      } else if (u.jumlah_like > 0) {
-        kurangUsers.push(u.username);
-      } else {
-        belumUsers.push(u.username);
-      }
-    });
-
-    const belumUsersCount = belumUsers.length + noUsernameUsers.length;
+    const payload = formatLikesRecapResponse(rows, totalKonten);
 
     res.json({
       success: true,
-      data: rows,
-      chartHeight,
-      totalPosts: totalKonten,
-      sudahUsers,
-      kurangUsers,
-      belumUsers,
-      sudahUsersCount: sudahUsers.length,
-      kurangUsersCount: kurangUsers.length,
-      belumUsersCount,
-      noUsernameUsersCount: noUsernameUsers.length,
-      usersCount: length,
+      ...payload,
     });
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaRekapLikes: ${err.message}` });
