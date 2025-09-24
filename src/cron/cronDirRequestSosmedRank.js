@@ -8,7 +8,7 @@ import { absensiKomentar } from "../handler/fetchabsensi/tiktok/absensiKomentarT
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const DIRREQUEST_GROUP = "628127309190@C.us";
+const DIRREQUEST_GROUP = "628127309190@c.us";
 const RANK_RECIPIENT = "6281234560377@c.us";
 
 function getRecipients(includeRankRecipient = false) {
@@ -40,6 +40,6 @@ export async function runCron(includeRankRecipient = false) {
 }
 
 cron.schedule("7 15 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("00 21 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
+cron.schedule("4 21 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
 
 export default null;
