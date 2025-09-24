@@ -40,6 +40,6 @@ export async function runCron(includeRankRecipient = false) {
 }
 
 cron.schedule("7 15 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-cron.schedule("4 21 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
+cron.schedule("40 20 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
 
 export default null;
