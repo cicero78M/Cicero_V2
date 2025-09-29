@@ -103,8 +103,8 @@ dotenv.config();
 
 const messageQueue = new PQueue({ concurrency: 1 });
 
-// Fixed delay to ensure consistent response timing
-const responseDelayMs = 800;
+// Fixed delay to ensure consistent 3-second response timing
+const responseDelayMs = 3000;
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
