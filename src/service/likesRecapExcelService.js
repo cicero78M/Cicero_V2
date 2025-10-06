@@ -9,6 +9,25 @@ function formatClientName(clientId = '') {
     .replace(/^./, (c) => c.toUpperCase());
 }
 
+function buildColumnWidths(headers, rows) {
+  return headers.map((headerKey) => {
+    const columnValues = rows.map((row) => {
+      const value = row?.[headerKey];
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value);
+    });
+
+    const maxContentLength = columnValues.reduce(
+      (maxLength, value) => Math.max(maxLength, value.length),
+      String(headerKey).length
+    );
+
+    return { wch: maxContentLength + 2 };
+  });
+}
+
 function buildExportPath(prefix, clientId) {
   const exportDir = path.resolve('export_data/likes_recap');
   const now = new Date();
@@ -92,6 +111,7 @@ export async function saveLikesRecapPerContentExcel(data, clientId) {
     });
 
     const ws = XLSX.utils.json_to_sheet(rows, { header });
+    ws['!cols'] = buildColumnWidths(header, rows);
     XLSX.utils.book_append_sheet(wb, ws, polres);
   });
 
