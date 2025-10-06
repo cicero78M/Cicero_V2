@@ -26,6 +26,7 @@ const mockSaveWeeklyLikesRecapExcel = jest.fn();
 const mockSaveMonthlyLikesRecapExcel = jest.fn();
 const mockCollectKomentarRecap = jest.fn();
 const mockSaveCommentRecapExcel = jest.fn();
+const mockSaveCommentRecapPerContentExcel = jest.fn();
 const mockSaveWeeklyCommentRecapExcel = jest.fn();
 const mockSaveMonthlyCommentRecapExcel = jest.fn();
 const mockSaveSatkerUpdateMatrixExcel = jest.fn();
@@ -99,6 +100,7 @@ jest.unstable_mockModule('../src/service/likesRecapExcelService.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/commentRecapExcelService.js', () => ({
   saveCommentRecapExcel: mockSaveCommentRecapExcel,
+  saveCommentRecapPerContentExcel: mockSaveCommentRecapPerContentExcel,
 }));
 jest.unstable_mockModule('../src/service/weeklyLikesRecapExcelService.js', () => ({
   saveWeeklyLikesRecapExcel: mockSaveWeeklyLikesRecapExcel,
@@ -757,6 +759,68 @@ test('choose_menu option 25 generates per content likes recap excel and sends fi
   );
 });
 
+test('choose_menu option 26 generates TikTok per content comment recap excel and sends file', async () => {
+  mockCollectKomentarRecap.mockResolvedValue({
+    videoIds: ['vid1'],
+    recap: {
+      POLRES_A: [
+        { pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', vid1: 1 },
+      ],
+    },
+  });
+  mockSaveCommentRecapPerContentExcel.mockResolvedValue('/tmp/tiktok_per_content.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '780';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '26', waClient);
+
+  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('ditbinmas');
+  expect(mockSaveCommentRecapPerContentExcel).toHaveBeenCalledWith(
+    {
+      videoIds: ['vid1'],
+      recap: {
+        POLRES_A: [
+          { pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', vid1: 1 },
+        ],
+      },
+    },
+    'ditbinmas'
+  );
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/tiktok_per_content.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/tiktok_per_content.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok_per_content.xlsx');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('File Excel dikirim')
+  );
+});
+
+test('choose_menu option 26 reports no TikTok content when recap empty', async () => {
+  mockCollectKomentarRecap.mockResolvedValue({ videoIds: [] });
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '781';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '26', waClient);
+
+  expect(mockSaveCommentRecapPerContentExcel).not.toHaveBeenCalled();
+  expect(mockReadFile).not.toHaveBeenCalled();
+  expect(mockSendWAFile).not.toHaveBeenCalled();
+  expect(mockUnlink).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('Tidak ada konten TikTok')
+  );
+});
+
 test('choose_menu option 19 generates TikTok comment recap excel and sends file', async () => {
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
   mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tiktok.xlsx');
@@ -1051,14 +1115,15 @@ test('choose_menu option 24 reports no data when service returns null', async ()
   );
 });
 
-test('choose_menu option 26 is no longer available', async () => {
+test('choose_menu option 27 is no longer available', async () => {
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '993';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '26', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '27', waClient);
 
   expect(mockSaveMonthlyCommentRecapExcel).not.toHaveBeenCalled();
+  expect(mockSaveCommentRecapPerContentExcel).not.toHaveBeenCalled();
   expect(mockReadFile).not.toHaveBeenCalled();
   expect(mockSendWAFile).not.toHaveBeenCalled();
   expect(mockUnlink).not.toHaveBeenCalled();
