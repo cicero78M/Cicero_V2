@@ -20,7 +20,10 @@ import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelp
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
 import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
-import { saveLikesRecapExcel } from "../../service/likesRecapExcelService.js";
+import {
+  saveLikesRecapExcel,
+  saveLikesRecapPerContentExcel,
+} from "../../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
@@ -810,6 +813,10 @@ async function performAction(
       }
       case "18": {
         const data = await collectLikesRecap(clientId);
+        if (typeof data === "string") {
+          msg = data;
+          break;
+        }
         if (!data.shortcodes.length) {
           msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
           break;
@@ -952,6 +959,29 @@ async function performAction(
         }
         break;
       }
+      case "25": {
+        const data = await collectLikesRecap(clientId);
+        if (typeof data === "string") {
+          msg = data;
+          break;
+        }
+        if (!data.shortcodes.length) {
+          msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
+          break;
+        }
+        const filePath = await saveLikesRecapPerContentExcel(data, clientId);
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
+        break;
+      }
       default:
         msg = "Menu tidak dikenal.";
     }
@@ -1038,7 +1068,8 @@ export const dirRequestHandlers = {
         "2️⃣2️⃣ Rekap file Instagram mingguan\n" +
         "2️⃣3️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣4️⃣ Rekap file Instagram bulanan\n\n" +
+        "2️⃣4️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣5️⃣ Rekap like Instagram per konten (Excel)\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1084,6 +1115,7 @@ export const dirRequestHandlers = {
           "22",
           "23",
           "24",
+          "25",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
