@@ -80,11 +80,24 @@ test('createLinkReport throws when recent link report exists', async () => {
 });
 
 test('getLinkReports joins with insta_post', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc', caption: 'c' }] });
-  const rows = await getLinkReports();
-  expect(rows).toEqual([{ shortcode: 'abc', caption: 'c' }]);
-  expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('FROM link_report r')
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ shortcode: 'abc', caption: 'c' }] })
+    .mockResolvedValueOnce({ rows: [{ count: '1' }] });
+  const result = await getLinkReports();
+  expect(result).toEqual({
+    rows: [{ shortcode: 'abc', caption: 'c' }],
+    totalCount: 1,
+    limit: 20,
+    offset: 0
+  });
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    1,
+    expect.stringContaining('FROM link_report r'),
+    [20, 0]
+  );
+  expect(mockQuery).toHaveBeenNthCalledWith(
+    2,
+    expect.stringContaining('SELECT COUNT(*)::int AS count FROM link_report')
   );
 });
 

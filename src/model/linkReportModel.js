@@ -56,14 +56,28 @@ export async function createLinkReport(data) {
   return res.rows[0];
 }
 
-export async function getLinkReports() {
-  const res = await query(
-    `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
-     FROM link_report r
-     LEFT JOIN insta_post p ON p.shortcode = r.shortcode
-     ORDER BY r.created_at DESC`
-  );
-  return res.rows;
+export async function getLinkReports({ limit = 20, offset = 0 } = {}) {
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 20;
+  const safeOffset = Number.isInteger(offset) && offset >= 0 ? offset : 0;
+
+  const [rowsResult, countResult] = await Promise.all([
+    query(
+      `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
+       FROM link_report r
+       LEFT JOIN insta_post p ON p.shortcode = r.shortcode
+       ORDER BY r.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [safeLimit, safeOffset]
+    ),
+    query('SELECT COUNT(*)::int AS count FROM link_report')
+  ]);
+
+  return {
+    rows: rowsResult.rows,
+    totalCount: Number(countResult.rows[0]?.count ?? 0),
+    limit: safeLimit,
+    offset: safeOffset
+  };
 }
 
 export async function findLinkReportByShortcode(shortcode, user_id) {
