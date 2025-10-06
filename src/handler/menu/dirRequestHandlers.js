@@ -24,7 +24,10 @@ import {
   saveLikesRecapExcel,
   saveLikesRecapPerContentExcel,
 } from "../../service/likesRecapExcelService.js";
-import { saveCommentRecapExcel } from "../../service/commentRecapExcelService.js";
+import {
+  saveCommentRecapExcel,
+  saveCommentRecapPerContentExcel,
+} from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
@@ -982,6 +985,25 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
+      case "26": {
+        const recapData = await collectKomentarRecap(clientId);
+        if (!recapData?.videoIds?.length) {
+          msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+          break;
+        }
+        const filePath = await saveCommentRecapPerContentExcel(recapData, clientId);
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
+        break;
+      }
       default:
         msg = "Menu tidak dikenal.";
     }
@@ -1069,7 +1091,8 @@ export const dirRequestHandlers = {
         "2️⃣3️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
         "2️⃣4️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣5️⃣ Rekap like Instagram per konten (Excel)\n\n" +
+        "2️⃣5️⃣ Rekap like Instagram per konten (Excel)\n" +
+        "2️⃣6️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1116,6 +1139,7 @@ export const dirRequestHandlers = {
           "23",
           "24",
           "25",
+          "26",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
