@@ -12,8 +12,43 @@ import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
-    const data = await linkReportModel.getLinkReports();
-    sendSuccess(res, data);
+    const DEFAULT_LIMIT = 20;
+    const DEFAULT_PAGE = 1;
+
+    const requestedLimit = parseInt(req.query.limit, 10);
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? requestedLimit
+        : DEFAULT_LIMIT;
+
+    let offset;
+    if (req.query.offset !== undefined) {
+      const requestedOffset = parseInt(req.query.offset, 10);
+      offset = Number.isFinite(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
+    } else {
+      const requestedPage = parseInt(req.query.page, 10);
+      const page =
+        Number.isFinite(requestedPage) && requestedPage > 0
+          ? requestedPage
+          : DEFAULT_PAGE;
+      offset = (page - 1) * limit;
+    }
+
+    const result = await linkReportModel.getLinkReports({ limit, offset });
+
+    const page = Math.floor(result.offset / result.limit) + 1;
+    const totalPages = result.totalCount > 0 ? Math.ceil(result.totalCount / result.limit) : 0;
+
+    sendSuccess(res, {
+      items: result.rows,
+      pagination: {
+        total: result.totalCount,
+        limit: result.limit,
+        offset: result.offset,
+        page,
+        totalPages
+      }
+    });
   } catch (err) {
     next(err);
   }
