@@ -1,11 +1,13 @@
 import { query } from '../repository/db.js';
 
+const LINK_REPORT_INTERVAL = '2 days';
+
 export async function hasRecentLinkReport(shortcode, user_id) {
   const res = await query(
     `SELECT 1 FROM link_report
      WHERE shortcode = $1
        AND user_id IS NOT DISTINCT FROM $2
-       AND created_at >= NOW() - INTERVAL '2 days'
+       AND created_at >= NOW() - INTERVAL '${LINK_REPORT_INTERVAL}'
      LIMIT 1`,
     [shortcode, user_id]
   );
@@ -27,7 +29,7 @@ export async function createLinkReport(data) {
      SELECT p.shortcode, $2, $3, $4, $5, $6, $7, p.created_at
      FROM insta_post p
      WHERE p.shortcode = $1
-       AND p.created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '2 days'
+       AND p.created_at >= (NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '${LINK_REPORT_INTERVAL}'
      ON CONFLICT (shortcode, user_id) DO UPDATE
      SET instagram_link = EXCLUDED.instagram_link,
          facebook_link = EXCLUDED.facebook_link,
@@ -48,7 +50,7 @@ export async function createLinkReport(data) {
   );
 
   if (res.rows.length === 0) {
-    const err = new Error('shortcode not found or older than 2 days');
+    const err = new Error(`shortcode not found or older than ${LINK_REPORT_INTERVAL}`);
     err.statusCode = 400;
     throw err;
   }
