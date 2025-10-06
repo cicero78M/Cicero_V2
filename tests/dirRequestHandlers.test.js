@@ -21,6 +21,7 @@ const mockLapharDitbinmas = jest.fn();
 const mockLapharTiktokDitbinmas = jest.fn();
 const mockCollectLikesRecap = jest.fn();
 const mockSaveLikesRecapExcel = jest.fn();
+const mockSaveLikesRecapPerContentExcel = jest.fn();
 const mockSaveWeeklyLikesRecapExcel = jest.fn();
 const mockSaveMonthlyLikesRecapExcel = jest.fn();
 const mockCollectKomentarRecap = jest.fn();
@@ -94,6 +95,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/sosmedTask.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/likesRecapExcelService.js', () => ({
   saveLikesRecapExcel: mockSaveLikesRecapExcel,
+  saveLikesRecapPerContentExcel: mockSaveLikesRecapPerContentExcel,
 }));
 jest.unstable_mockModule('../src/service/commentRecapExcelService.js', () => ({
   saveCommentRecapExcel: mockSaveCommentRecapExcel,
@@ -148,6 +150,7 @@ beforeEach(() => {
     filePath: '/tmp/ranking.xlsx',
     fileName: 'Ranking.xlsx',
   });
+  mockSaveLikesRecapPerContentExcel.mockResolvedValue('/tmp/recap_per_content.xlsx');
 });
 
 test('main always sets session to DITBINMAS client', async () => {
@@ -721,6 +724,39 @@ test('choose_menu option 18 generates likes recap excel and sends file', async (
   );
 });
 
+test('choose_menu option 25 generates per content likes recap excel and sends file', async () => {
+  mockCollectLikesRecap.mockResolvedValue({
+    shortcodes: ['sc1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', sc1: 1 }] },
+  });
+  mockSaveLikesRecapPerContentExcel.mockResolvedValue('/tmp/per_content.xlsx');
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+  const chatId = '778';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '25', waClient);
+
+  expect(mockCollectLikesRecap).toHaveBeenCalledWith('ditbinmas');
+  expect(mockSaveLikesRecapPerContentExcel).toHaveBeenCalledWith({
+    shortcodes: ['sc1'],
+    recap: { POLRES_A: [{ pangkat: 'AKP', nama: 'Budi', satfung: 'SAT A', sc1: 1 }] },
+  }, 'ditbinmas');
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/per_content.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/per_content.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/per_content.xlsx');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('File Excel dikirim')
+  );
+});
+
 test('choose_menu option 19 generates TikTok comment recap excel and sends file', async () => {
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
   mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tiktok.xlsx');
@@ -1015,12 +1051,12 @@ test('choose_menu option 24 reports no data when service returns null', async ()
   );
 });
 
-test('choose_menu option 25 is no longer available', async () => {
+test('choose_menu option 26 is no longer available', async () => {
   const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
   const chatId = '993';
   const waClient = { sendMessage: jest.fn() };
 
-  await dirRequestHandlers.choose_menu(session, chatId, '25', waClient);
+  await dirRequestHandlers.choose_menu(session, chatId, '26', waClient);
 
   expect(mockSaveMonthlyCommentRecapExcel).not.toHaveBeenCalled();
   expect(mockReadFile).not.toHaveBeenCalled();
