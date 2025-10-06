@@ -15,6 +15,7 @@ let getReportsTodayByShortcode;
 let getReportsThisMonthByClient;
 let getReportsPrevMonthByClient;
 let getRekapLinkByClient;
+let hasRecentLinkReport;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportModel.js');
@@ -27,6 +28,7 @@ beforeAll(async () => {
   getReportsThisMonthByClient = mod.getReportsThisMonthByClient;
   getReportsPrevMonthByClient = mod.getReportsPrevMonthByClient;
   getRekapLinkByClient = mod.getRekapLinkByClient;
+  hasRecentLinkReport = mod.hasRecentLinkReport;
 });
 
 beforeEach(() => {
@@ -56,6 +58,13 @@ test('createLinkReport inserts row', async () => {
     expect.any(String),
     ['abc', '1', 'a', null, null, null, null]
   );
+});
+
+test('hasRecentLinkReport enforces 2-day interval', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await hasRecentLinkReport('abc', 'user-1');
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain("INTERVAL '2 days'");
 });
 
 test('createLinkReport throws when shortcode missing or older than 2 days', async () => {
