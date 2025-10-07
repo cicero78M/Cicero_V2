@@ -17,13 +17,6 @@ fun env(name: String): String =
     envProps.getProperty(name) ?: System.getenv(name) ?: ""
 
 
-configurations.configureEach {
-    if (name.contains("RuntimeClasspath", ignoreCase = true)) {
-        exclude(group = "com.google.errorprone", module = "error_prone_annotations")
-    }
-}
-
-
 android {
     namespace = "com.cicero.repostapp"
     compileSdk = 35
