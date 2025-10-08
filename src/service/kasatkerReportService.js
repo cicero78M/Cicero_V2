@@ -1,13 +1,13 @@
 import { collectEngagementRanking } from './engagementRankingExcelService.js';
 
 const CATEGORY_RULES = [
-  { key: 'aktif', label: 'Aktif', threshold: 90 },
-  { key: 'sedang', label: 'Sedang', threshold: 50 },
-  { key: 'rendah', label: 'Rendah', threshold: 0 },
+  { key: 'aktif', label: 'KEPATUHAN AKTIF', threshold: 90 },
+  { key: 'sedang', label: 'KEPATUHAN SEDANG', threshold: 50 },
+  { key: 'rendah', label: 'KEPATUHAN RENDAH', threshold: 0 },
 ];
 
 const WA_FOLLOW_UP_LINK =
-  'https://wa.me/?text=Konfirmasi%20tindak%20lanjut%20Laporan%20Kasatker';
+  'https://chat.whatsapp.com/Hga2FkPQOw5BuZW7nSFYV1';
 
 function toPercentLabel(value) {
   const pct = Number.isFinite(value) ? Math.max(0, value) : 0;
