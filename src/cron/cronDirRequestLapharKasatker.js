@@ -98,13 +98,13 @@ export async function runMonthlyReport(date = new Date()) {
 }
 
 if (process.env.JEST_WORKER_ID === undefined) {
-  cron.schedule("34 20 * * *", () => {
+  cron.schedule("42 20 * * *", () => {
     runDailyReport();
   }, {
     timezone: "Asia/Jakarta",
   });
 
-  cron.schedule("45 20 * * 0", () => {
+  cron.schedule("47 20 * * 0", () => {
     runWeeklyReport();
   }, {
     timezone: "Asia/Jakarta",
