@@ -24,6 +24,7 @@ const cronModules = [
   './src/cron/cronDirRequestRekapAllSocmed.js',
   './src/cron/cronDirRequestSosmedRank.js',
   './src/cron/cronDirRequestEngageRank.js',
+  './src/cron/cronDirRequestLapharKasatker.js',
   './src/cron/cronDirRequestDirektorat.js',
   './src/cron/cronDbBackup.js',
 ];
