@@ -1,9 +1,9 @@
 import { collectEngagementRanking } from './engagementRankingExcelService.js';
 
 const CATEGORY_RULES = [
-  { key: 'aktif', label: '\nKEPATUHAN AKTIF', threshold: 90 },
-  { key: 'sedang', label: '\nKEPATUHAN SEDANG', threshold: 50 },
-  { key: 'rendah', label: '\nKEPATUHAN RENDAH', threshold: 0 },
+  { key: 'aktif', label: '\n*KEPATUHAN AKTIF*', threshold: 90 },
+  { key: 'sedang', label: '\n*KEPATUHAN SEDANG*', threshold: 50 },
+  { key: 'rendah', label: '\n*KEPATUHAN RENDAH*', threshold: 0 },
 ];
 
 const WA_FOLLOW_UP_LINK =
@@ -31,7 +31,7 @@ function categorizeCompliance(compliancePct) {
 function buildCategorySections(grouped) {
   return CATEGORY_RULES.map((rule) => {
     const entries = grouped[rule.key] || [];
-    const title = `*${rule.label} (${entries.length} Satker)*`;
+    const title = `${rule.label} (${entries.length} Satker)`;
     if (!entries.length) {
       return `${title}\n-`; // menunjukkan tidak ada satker dalam kategori ini
     }
