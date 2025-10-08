@@ -33,6 +33,7 @@ import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExc
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
 import { saveEngagementRankingExcel } from "../../service/engagementRankingExcelService.js";
+import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -71,6 +72,24 @@ const ENGAGEMENT_RECAP_PERIOD_MAP = {
   },
 };
 
+const KASATKER_REPORT_PERIOD_MAP = {
+  "1": {
+    period: "today",
+    label: "hari ini",
+    description: "Laporan harian (periode hari ini)",
+  },
+  "2": {
+    period: "this_week",
+    label: "minggu ini",
+    description: "Laporan mingguan (periode minggu ini)",
+  },
+  "3": {
+    period: "this_month",
+    label: "bulan ini",
+    description: "Laporan bulanan (periode bulan ini)",
+  },
+};
+
 const DIGIT_EMOJI = {
   "0": "0️⃣",
   "1": "1️⃣",
@@ -87,6 +106,13 @@ const DIGIT_EMOJI = {
 const ENGAGEMENT_RECAP_MENU_TEXT =
   "Silakan pilih periode rekap ranking engagement jajaran:\n" +
   Object.entries(ENGAGEMENT_RECAP_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const KASATKER_REPORT_MENU_TEXT =
+  "Silakan pilih periode Laporan Kasatker:\n" +
+  Object.entries(KASATKER_REPORT_PERIOD_MAP)
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
   "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
@@ -1093,6 +1119,8 @@ export const dirRequestHandlers = {
         "2️⃣4️⃣ Rekap file Instagram bulanan\n" +
         "2️⃣5️⃣ Rekap like Instagram per konten (Excel)\n" +
         "2️⃣6️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "🛡️ *Monitoring Kasatker*\n" +
+        "2️⃣7️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1140,6 +1168,7 @@ export const dirRequestHandlers = {
           "24",
           "25",
           "26",
+          "27",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1157,6 +1186,12 @@ export const dirRequestHandlers = {
     if (choice === "21") {
       session.step = "choose_engagement_recap_period";
       await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "27") {
+      session.step = "choose_kasatker_report_period";
+      await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
     }
 
@@ -1241,6 +1276,61 @@ export const dirRequestHandlers = {
           console.error("Gagal menghapus file sementara:", err);
         }
       }
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_kasatker_report_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(chatId, "✅ Menu Laporan Kasatker ditutup.");
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = KASATKER_REPORT_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
+      return;
+    }
+
+    const targetClientId =
+      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const roleFlag = session.role;
+
+    try {
+      const narrative = await generateKasatkerReport({
+        clientId: targetClientId,
+        roleFlag,
+        period: option.period,
+      });
+      await waClient.sendMessage(chatId, narrative);
+    } catch (error) {
+      console.error("Gagal membuat Laporan Kasatker:", error);
+      let msg;
+      if (
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+      ) {
+        msg = error.message;
+      } else {
+        msg = `❌ Gagal membuat Laporan Kasatker (${option.label}).`;
+      }
+      await waClient.sendMessage(chatId, msg);
     }
 
     session.step = "main";

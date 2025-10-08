@@ -31,6 +31,7 @@ const mockSaveWeeklyCommentRecapExcel = jest.fn();
 const mockSaveMonthlyCommentRecapExcel = jest.fn();
 const mockSaveSatkerUpdateMatrixExcel = jest.fn();
 const mockSaveEngagementRankingExcel = jest.fn();
+const mockGenerateKasatkerReport = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -123,6 +124,9 @@ jest.unstable_mockModule('../src/service/satkerUpdateMatrixService.js', () => ({
 jest.unstable_mockModule('../src/service/engagementRankingExcelService.js', () => ({
   saveEngagementRankingExcel: mockSaveEngagementRankingExcel,
 }));
+jest.unstable_mockModule('../src/service/kasatkerReportService.js', () => ({
+  generateKasatkerReport: mockGenerateKasatkerReport,
+}));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
@@ -152,6 +156,7 @@ beforeEach(() => {
     filePath: '/tmp/ranking.xlsx',
     fileName: 'Ranking.xlsx',
   });
+  mockGenerateKasatkerReport.mockResolvedValue('Narasi Kasatker');
   mockSaveLikesRecapPerContentExcel.mockResolvedValue('/tmp/recap_per_content.xlsx');
 });
 
@@ -1115,21 +1120,113 @@ test('choose_menu option 24 reports no data when service returns null', async ()
   );
 });
 
-test('choose_menu option 27 is no longer available', async () => {
-  const session = { selectedClientId: 'ditbinmas', clientName: 'DIT BINMAS' };
+test('choose_menu option 27 opens Kasatker report submenu', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
   const chatId = '993';
   const waClient = { sendMessage: jest.fn() };
 
   await dirRequestHandlers.choose_menu(session, chatId, '27', waClient);
 
-  expect(mockSaveMonthlyCommentRecapExcel).not.toHaveBeenCalled();
-  expect(mockSaveCommentRecapPerContentExcel).not.toHaveBeenCalled();
-  expect(mockReadFile).not.toHaveBeenCalled();
-  expect(mockSendWAFile).not.toHaveBeenCalled();
-  expect(mockUnlink).not.toHaveBeenCalled();
+  expect(session.step).toBe('choose_kasatker_report_period');
+  expect(mockGenerateKasatkerReport).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(
     chatId,
-    expect.stringMatching(/Pilihan tidak valid/i)
+    expect.stringContaining('Silakan pilih periode Laporan Kasatker:')
+  );
+});
+
+test('choose_kasatker_report_period option 1 mengirim narasi dan kembali ke menu utama', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '994';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_report_period(session, chatId, '1', waClient);
+
+  expect(mockGenerateKasatkerReport).toHaveBeenCalledWith({
+    clientId: 'ditbinmas',
+    roleFlag: 'ditbinmas',
+    period: 'today',
+  });
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages[0]).toBe('Narasi Kasatker');
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Client: *DIT BINMAS*')])
+  );
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_kasatker_report_period menampilkan pesan error ketika layanan gagal', async () => {
+  mockGenerateKasatkerReport.mockRejectedValueOnce(
+    new Error('Tidak ada data satker untuk disusun.')
+  );
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '995';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_report_period(session, chatId, '2', waClient);
+
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Tidak ada data satker')])
+  );
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_kasatker_report_period dapat dibatalkan', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '996';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_report_period(session, chatId, 'batal', waClient);
+
+  expect(mockGenerateKasatkerReport).not.toHaveBeenCalled();
+  expect(session.step).toBe('choose_menu');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Menu Laporan Kasatker ditutup.')])
+  );
+});
+
+test('choose_kasatker_report_period mengingatkan saat pilihan tidak valid', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '997';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_report_period(session, chatId, '7', waClient);
+
+  expect(mockGenerateKasatkerReport).not.toHaveBeenCalled();
+  expect(session.step).toBeUndefined();
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Pilihan tidak valid'),
+      expect.stringContaining('Silakan pilih periode Laporan Kasatker:'),
+    ])
   );
 });
 
