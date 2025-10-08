@@ -119,8 +119,9 @@ export async function generateKasatkerReport({
   });
 
   const headerLines = [
-    `*KEPADA YTH*
-    *KASAT BINMAS POLRES JAJARAN POLDA JAWA TIMUR`,
+    '*KEPADA YTH*',
+    'KASAT BINMAS POLRES JAJARAN POLDA JAWA TIMUR',
+    '',
     '*DARI :*',
     'KASUBDIT BHABINKAMTIBMAS',
     '',
@@ -128,11 +129,12 @@ export async function generateKasatkerReport({
     '• DIR BINMAS',
     '• PJU DIT BINMAS',
     '',
-    `Laporan kepatuhan pelaksanaan _Likes_ dan _Komentar_ media sosial periode ${periodLabel}.`,
+    '*Laporan kepatuhan pelaksanaan _Likes_ dan _Komentar_ Media Sosial.*',
+    `Periode ${periodLabel}.`,
     '',
     'Dalam rangka monitoring kepatuhan pelaksanaan tugas likes dan komentar terhadap konten akun resmi Direktorat Binmas Polda Jawa Timur melalui aplikasi Cicero, berikut disampaikan hasil rekapitulasi tingkat kepatuhan personel per Polres.',
     '',
-    '*KRITERIA KEPATUHAN - Persentase personel yang melaksanakan tugas likes dan komentar (Jumlah Personil Sudah Melaksanakan / Jumlah Personil pada Satker x 100)*',
+    '*KRITERIA KEPATUHAN - Persentase personel yang melaksanakan tugas _Likes_ dan _Komentar_ (Jumlah Personil Sudah Melaksanakan / Jumlah Personil pada Satker x 100)*',
     '• Aktif : ≥ 90%',
     '• Sedang : 50% - 89.9%',
     '• Rendah : < 50%',
