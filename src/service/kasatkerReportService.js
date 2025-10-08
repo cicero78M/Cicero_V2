@@ -153,7 +153,7 @@ export async function generateKasatkerReport({
     'Diharapkan segera melakukan langkah-langkah perbaikan sebagai berikut:',
     '- Memanggil operator atau staf pengelola media sosial untuk aktif mengikuti arahan dari sistem Cicero melalui grup WhatsApp Manajemen Sosmed Ditbinmas, tautan: https://chat.whatsapp.com/Hga2FkPQOw5BuZW7nSFYV1',
     '- Menginstruksikan operator agar setiap hari membagikan (share) daftar konten yang wajib di-like dan di-comment oleh jajaran Binmas.',
-    '- Mendorong seluruh personel Bhabinkamtibmas untuk aktif berinteraksi (like dan comment) pada setiap konten resmi yang diunggah oleh Direktorat Binmas.',
+    '- Mendorong seluruh staf Binmas, jajaran Binmas dan personel Bhabinkamtibmas untuk aktif berinteraksi (like dan comment) pada setiap konten resmi yang diunggah oleh Direktorat Binmas.',
     '',
     'Terima kasih atas perhatian dan kerja samanya.',
   ];
