@@ -38,7 +38,7 @@ function buildCategorySections(grouped) {
 
     const lines = entries.map((entry, idx) => {
       const note = entry.hasNoActivity ? ' (Belum ada pelaksanaan)' : '';
-      return `${idx + 1}. ${entry.name} — ${entry.complianceLabel}${note}`;
+      return `${idx + 1}. ${entry.name} : ${entry.complianceLabel}${note}`;
     });
 
     return `${title}\n${lines.join('\n')}`;
@@ -135,9 +135,9 @@ export async function generateKasatkerReport({
     'Dalam rangka monitoring kepatuhan pelaksanaan tugas likes dan komentar terhadap konten akun resmi Direktorat Binmas Polda Jawa Timur melalui aplikasi Cicero, berikut disampaikan hasil rekapitulasi tingkat kepatuhan personel per Polres.',
     '',
     '*KRITERIA KEPATUHAN - Persentase personel yang melaksanakan tugas _Likes_ dan _Komentar_ (Jumlah Personil Sudah Melaksanakan / Jumlah Personil pada Satker x 100)*',
-    '• Aktif : ≥ 90%',
-    '• Sedang : 50% - 89.9%',
-    '• Rendah : < 50%',
+    '• *AKTIF* : Personil yang sudah melaksanakan ≥ 90%',
+    '• *SEDANG* : Personil yang sudah melaksanakan 50% - 89.9%',
+    '• *RENDAH* : Personil yang sudah melaksanakan < 50%',
     '',
     '*REKAP KEPATUHAN PER KATEGORI*',
   ];
