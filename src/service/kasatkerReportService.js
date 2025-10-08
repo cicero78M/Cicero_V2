@@ -1,9 +1,9 @@
 import { collectEngagementRanking } from './engagementRankingExcelService.js';
 
 const CATEGORY_RULES = [
-  { key: 'aktif', label: 'KEPATUHAN AKTIF', threshold: 90 },
-  { key: 'sedang', label: 'KEPATUHAN SEDANG', threshold: 50 },
-  { key: 'rendah', label: 'KEPATUHAN RENDAH', threshold: 0 },
+  { key: 'aktif', label: '\nKEPATUHAN AKTIF', threshold: 90 },
+  { key: 'sedang', label: '\nKEPATUHAN SEDANG', threshold: 50 },
+  { key: 'rendah', label: '\nKEPATUHAN RENDAH', threshold: 0 },
 ];
 
 const WA_FOLLOW_UP_LINK =
