@@ -11,7 +11,7 @@ import {
   lapharTiktokDitbinmas,
   collectKomentarRecap,
 } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
-import { saveLikesRecapExcel } from "../service/likesRecapExcelService.js";
+import { saveLikesRecapPerContentExcel } from "../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../service/commentRecapExcelService.js";
 import { formatRekapAllSosmed } from "../handler/menu/dirRequestHandlers.js";
 import { sendWAFile, safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
@@ -66,7 +66,7 @@ export async function runCron(sendToRekapRecipient = false) {
       let igRecapBuffer = null;
       let igRecapName = null;
       if (igRecap?.shortcodes?.length) {
-        igRecapPath = await saveLikesRecapExcel(igRecap, CLIENT_ID);
+        igRecapPath = await saveLikesRecapPerContentExcel(igRecap, CLIENT_ID);
         igRecapBuffer = await readFile(igRecapPath);
         igRecapName = basename(igRecapPath);
       }

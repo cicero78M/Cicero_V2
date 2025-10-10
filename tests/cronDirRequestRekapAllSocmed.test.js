@@ -4,7 +4,7 @@ const mockLapharDitbinmas = jest.fn();
 const mockLapharTiktokDitbinmas = jest.fn();
 const mockCollectLikesRecap = jest.fn();
 const mockCollectKomentarRecap = jest.fn();
-const mockSaveLikesRecapExcel = jest.fn();
+const mockSaveLikesRecapPerContentExcel = jest.fn();
 const mockSaveCommentRecapExcel = jest.fn();
 const mockFormatRekapAllSosmed = jest.fn();
 const mockSendWAFile = jest.fn();
@@ -26,7 +26,7 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
   collectKomentarRecap: mockCollectKomentarRecap,
 }));
 jest.unstable_mockModule('../src/service/likesRecapExcelService.js', () => ({
-  saveLikesRecapExcel: mockSaveLikesRecapExcel,
+  saveLikesRecapPerContentExcel: mockSaveLikesRecapPerContentExcel,
 }));
 jest.unstable_mockModule('../src/service/commentRecapExcelService.js', () => ({
   saveCommentRecapExcel: mockSaveCommentRecapExcel,
@@ -75,7 +75,7 @@ beforeEach(() => {
   mockFormatRekapAllSosmed.mockReturnValue('nar ig + nar tt');
   mockCollectLikesRecap.mockResolvedValue({ shortcodes: [1] });
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: [1] });
-  mockSaveLikesRecapExcel.mockResolvedValue('igrecap.xlsx');
+  mockSaveLikesRecapPerContentExcel.mockResolvedValue('igrecap.xlsx');
   mockSaveCommentRecapExcel.mockResolvedValue('ttrecap.xlsx');
   mockReadFile.mockResolvedValue(Buffer.from('excel'));
   mockMkdir.mockResolvedValue();
