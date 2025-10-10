@@ -6,7 +6,7 @@ This document explains how clients, regular users and dashboard operators authen
 - `/api/auth/login` for client operators,
 - `/api/auth/user-login` and `/api/auth/user-register` for regular users,
 - `/api/auth/dashboard-register` and `/api/auth/dashboard-login` for the web dashboard,
-- `/api/auth/dashboard-password-reset/request` and `/api/auth/dashboard-password-reset/confirm` for dashboard password recovery.
+- `/api/auth/dashboard-password-reset/request` and `/api/auth/dashboard-password-reset/confirm` for dashboard password recovery (aliases available at `/api/auth/password-reset/request` and `/api/auth/password-reset/confirm`).
 
 All return a JSON Web Token (JWT) that must be included in subsequent requests unless noted otherwise.
 
@@ -69,7 +69,7 @@ The `whatsapp` field should contain digits only; any non-numeric characters will
 Every new dashboard account is created with `status` set to `false` and an approval request containing the username, ID, role, WhatsApp number, and client ID is sent to the WhatsApp administrators. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
 
 ### Dashboard Password Reset Request
-`POST /api/auth/dashboard-password-reset/request`
+`POST /api/auth/dashboard-password-reset/request` *(alias: `/api/auth/password-reset/request`)*
 ```json
 {
   "username": "admin",
@@ -90,7 +90,7 @@ Successful response:
 If WhatsApp delivery fails, administrators are alerted and the API responds with a message instructing the operator to contact the admin for manual assistance.
 
 ### Dashboard Password Reset Confirmation
-`POST /api/auth/dashboard-password-reset/confirm`
+`POST /api/auth/dashboard-password-reset/confirm` *(alias: `/api/auth/password-reset/confirm`)*
 ```json
 {
   "token": "63e80f9a-3e63-4ad4-8a69-7c7f4d92721e",
