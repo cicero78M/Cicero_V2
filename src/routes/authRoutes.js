@@ -41,17 +41,18 @@ const RESET_TOKEN_EXPIRY_MINUTES = Number(
   process.env.DASHBOARD_RESET_TOKEN_EXPIRY_MINUTES || 15,
 );
 
+const DEFAULT_RESET_BASE_URL = "https://papiqo.com/";
+
 function buildResetMessage({ username, token }) {
-  const resetBaseUrl =
+  const configuredBaseUrl =
     process.env.DASHBOARD_PASSWORD_RESET_URL || process.env.DASHBOARD_URL;
+  const resetBaseUrl = configuredBaseUrl || DEFAULT_RESET_BASE_URL;
   const header = "\uD83D\uDD10 Reset Password Dashboard";
+  const baseUrlForLink = resetBaseUrl.replace(/\/$/, "");
+  const url = `${baseUrlForLink}?token=${token}`;
   const instruction =
-    `Username: ${username}\nToken: ${token}\nToken berlaku selama ${RESET_TOKEN_EXPIRY_MINUTES} menit.`;
-  if (!resetBaseUrl) {
-    return `${header}\n\n${instruction}`;
-  }
-  const url = `${resetBaseUrl.replace(/\/$/, '')}?token=${token}`;
-  return `${header}\n\nSilakan buka tautan berikut untuk mengatur ulang password Anda:\n${url}\n\n${instruction}`;
+    `Username: ${username}\nToken: ${token}\nToken berlaku selama ${RESET_TOKEN_EXPIRY_MINUTES} menit. Dengan url ${resetBaseUrl}`;
+  return `${header}\n\nSilakan buka tautan berikut untuk mengatur ulang password Anda:\n${url}\n\n${instruction}\nCopy`;
 }
 
 async function clearDashboardSessions(dashboardUserId) {

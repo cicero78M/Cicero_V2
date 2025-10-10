@@ -680,11 +680,13 @@ describe('POST /dashboard-password-reset/request', () => {
         expect.any(Date),
       ],
     );
-    expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
-      '628123456789@c.us',
-      expect.stringContaining('Reset Password Dashboard'),
-      {},
-    );
+    expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(1);
+    const [wid, message, options] = mockWAClient.sendMessage.mock.calls[0];
+    expect(wid).toBe('628123456789@c.us');
+    expect(options).toEqual({});
+    expect(message).toContain('Reset Password Dashboard');
+    expect(message).toContain('Dengan url https://papiqo.com/');
+    expect(message).toContain('Copy');
     expect(mockQueueAdminNotification).not.toHaveBeenCalled();
   });
 
