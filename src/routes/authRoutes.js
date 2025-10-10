@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import * as penmasUserModel from "../model/penmasUserModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
+import * as dashboardPasswordResetModel from "../model/dashboardPasswordResetModel.js";
 import * as userModel from "../model/userModel.js";
 import {
   isAdminWhatsApp,
@@ -33,6 +34,52 @@ async function notifyAdmin(message) {
   }
   for (const wa of getAdminWAIds()) {
     safeSendMessage(waClient, wa, message);
+  }
+}
+
+const RESET_TOKEN_EXPIRY_MINUTES = Number(
+  process.env.DASHBOARD_RESET_TOKEN_EXPIRY_MINUTES || 15,
+);
+
+function buildResetMessage({ username, token }) {
+  const resetBaseUrl =
+    process.env.DASHBOARD_PASSWORD_RESET_URL || process.env.DASHBOARD_URL;
+  const header = "\uD83D\uDD10 Reset Password Dashboard";
+  const instruction =
+    `Username: ${username}\nToken: ${token}\nToken berlaku selama ${RESET_TOKEN_EXPIRY_MINUTES} menit.`;
+  if (!resetBaseUrl) {
+    return `${header}\n\n${instruction}`;
+  }
+  const url = `${resetBaseUrl.replace(/\/$/, '')}?token=${token}`;
+  return `${header}\n\nSilakan buka tautan berikut untuk mengatur ulang password Anda:\n${url}\n\n${instruction}`;
+}
+
+async function clearDashboardSessions(dashboardUserId) {
+  const sessionKey = `dashboard_login:${dashboardUserId}`;
+  try {
+    if (typeof redis.sMembers === "function") {
+      const tokens = await redis.sMembers(sessionKey);
+      if (Array.isArray(tokens) && tokens.length > 0) {
+        await Promise.all(
+          tokens.map((token) =>
+            redis
+              .del(`login_token:${token}`)
+              .catch((err) =>
+                console.error(
+                  `[AUTH] Gagal menghapus token login ${token}: ${err.message}`,
+                ),
+              ),
+          ),
+        );
+      }
+    }
+    if (typeof redis.del === "function") {
+      await redis.del(sessionKey);
+    }
+  } catch (err) {
+    console.error(
+      `[AUTH] Gagal menghapus sesi dashboard ${dashboardUserId}: ${err.message}`,
+    );
   }
 }
 
@@ -285,6 +332,153 @@ router.post('/dashboard-login', async (req, res) => {
     `\uD83D\uDD11 Login dashboard: ${user.username} (${user.role})\nWaktu: ${time}`
   );
   return res.json({ success: true, token, user: payload });
+});
+
+router.post('/dashboard-password-reset/request', async (req, res) => {
+  const { username, contact } = req.body;
+  if (!username || !contact) {
+    return res.status(400).json({
+      success: false,
+      message: 'username dan kontak wajib diisi',
+    });
+  }
+  const normalizedContact = normalizeWhatsappNumber(contact);
+  if (!normalizedContact || normalizedContact.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: 'kontak whatsapp tidak valid',
+    });
+  }
+  try {
+    const user = await dashboardUserModel.findByUsername(username);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'pengguna dashboard tidak ditemukan',
+      });
+    }
+
+    let matchesWhatsapp = false;
+    if (user.whatsapp) {
+      matchesWhatsapp =
+        normalizeWhatsappNumber(user.whatsapp) === normalizedContact;
+    }
+    if (!matchesWhatsapp) {
+      const candidates = await dashboardUserModel.findAllByNormalizedWhatsApp(
+        normalizedContact,
+      );
+      matchesWhatsapp = candidates.some(
+        (candidate) => candidate.dashboard_user_id === user.dashboard_user_id,
+      );
+    }
+    if (!matchesWhatsapp) {
+      return res.status(400).json({
+        success: false,
+        message: 'kontak tidak sesuai dengan data pengguna',
+      });
+    }
+
+    const resetToken = uuidv4();
+    const expiresAt = new Date(
+      Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000,
+    );
+    await dashboardPasswordResetModel.createResetRequest({
+      dashboardUserId: user.dashboard_user_id,
+      deliveryTarget: contact,
+      resetToken,
+      expiresAt,
+    });
+
+    try {
+      await waitForWaReady();
+      const wid = formatToWhatsAppId(normalizedContact);
+      const message = buildResetMessage({ username: user.username, token: resetToken });
+      const sent = await safeSendMessage(waClient, wid, message);
+      if (!sent) {
+        throw new Error('WA send returned false');
+      }
+    } catch (err) {
+      console.warn(
+        `[WA] Gagal mengirim reset password dashboard untuk ${username}: ${err.message}`,
+      );
+      queueAdminNotification(
+        `⚠️ Reset password dashboard gagal dikirim. Username: ${username}. Kontak: ${contact}. Token: ${resetToken}`,
+      );
+      return res.status(500).json({
+        success: false,
+        message:
+          'Instruksi reset tidak dapat dikirim. Silakan hubungi admin untuk bantuan.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Instruksi reset password telah dikirim melalui WhatsApp.',
+    });
+  } catch (err) {
+    console.error('[AUTH] Gagal membuat permintaan reset password dashboard:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan pada server. Silakan hubungi admin.',
+    });
+  }
+});
+
+router.post('/dashboard-password-reset/confirm', async (req, res) => {
+  const { token, password, confirmPassword, password_confirmation: passwordConfirmation } =
+    req.body;
+  const confirmation = confirmPassword ?? passwordConfirmation;
+  if (!token || !password || !confirmation) {
+    return res.status(400).json({
+      success: false,
+      message: 'token, password, dan konfirmasi wajib diisi',
+    });
+  }
+  if (password !== confirmation) {
+    return res.status(400).json({
+      success: false,
+      message: 'konfirmasi password tidak cocok',
+    });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: 'password minimal 8 karakter',
+    });
+  }
+
+  try {
+    const resetRecord = await dashboardPasswordResetModel.findActiveByToken(token);
+    if (!resetRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'token reset tidak valid atau sudah kedaluwarsa',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const updatedUser = await dashboardUserModel.updatePasswordHash(
+      resetRecord.dashboard_user_id,
+      passwordHash,
+    );
+    if (!updatedUser) {
+      throw new Error('dashboard user not found when updating password');
+    }
+
+    await dashboardPasswordResetModel.markTokenUsed(token);
+    await clearDashboardSessions(resetRecord.dashboard_user_id);
+
+    return res.json({
+      success: true,
+      message: 'Password berhasil diperbarui. Silakan login kembali.',
+    });
+  } catch (err) {
+    console.error('[AUTH] Gagal mengonfirmasi reset password dashboard:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat memperbarui password. Silakan hubungi admin.',
+    });
+  }
 });
 
 router.post("/login", async (req, res) => {
