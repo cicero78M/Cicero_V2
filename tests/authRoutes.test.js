@@ -43,14 +43,18 @@ jest.unstable_mockModule('../src/service/waService.js', () => ({
 
 let app;
 let authRoutes;
+let passwordResetRoutes;
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'testsecret';
   const mod = await import('../src/routes/authRoutes.js');
   authRoutes = mod.default;
+  const passwordResetMod = await import('../src/routes/passwordResetAliasRoutes.js');
+  passwordResetRoutes = passwordResetMod.default;
   app = express();
   app.use(express.json());
   app.use('/api/auth', authRoutes);
+  app.use('/api/password-reset', passwordResetRoutes);
 });
 
 beforeEach(() => {
@@ -710,7 +714,10 @@ describe('POST /dashboard-password-reset/request', () => {
     expect(mockWAClient.sendMessage).not.toHaveBeenCalled();
   });
 
-  test('alias route returns the same response as dashboard endpoint', async () => {
+  test.each([
+    ['/api/auth/password-reset/request'],
+    ['/api/password-reset/request'],
+  ])('alias route %s returns the same response as dashboard endpoint', async (aliasPath) => {
     mockWAClient.sendMessage.mockResolvedValue(true);
     const userRow = {
       dashboard_user_id: 'du1',
@@ -738,7 +745,7 @@ describe('POST /dashboard-password-reset/request', () => {
       .send(payload);
 
     const aliasResponse = await request(app)
-      .post('/api/auth/password-reset/request')
+      .post(aliasPath)
       .send(payload);
 
     expect(aliasResponse.status).toBe(dashboardResponse.status);
@@ -820,7 +827,10 @@ describe('POST /dashboard-password-reset/confirm', () => {
     expect(mockRedis.del).toHaveBeenCalledWith('dashboard_login:du1');
   });
 
-  test('alias confirm route mirrors dashboard response', async () => {
+  test.each([
+    ['/api/auth/password-reset/confirm'],
+    ['/api/password-reset/confirm'],
+  ])('alias confirm route %s mirrors dashboard response', async (aliasPath) => {
     const resetRecord = {
       reset_token: 'alias-token',
       dashboard_user_id: 'du1',
@@ -856,7 +866,7 @@ describe('POST /dashboard-password-reset/confirm', () => {
       .send(payload);
 
     const aliasResponse = await request(app)
-      .post('/api/auth/password-reset/confirm')
+      .post(aliasPath)
       .send(payload);
 
     expect(aliasResponse.status).toBe(dashboardResponse.status);
