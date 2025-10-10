@@ -4,7 +4,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 
 const mockQuery = jest.fn();
-const mockRedis = { sAdd: jest.fn(), set: jest.fn() };
+const mockRedis = { sAdd: jest.fn(), set: jest.fn(), sMembers: jest.fn(), del: jest.fn() };
 const mockInsertLoginLog = jest.fn();
 const mockWAClient = {
   info: {},
@@ -57,6 +57,10 @@ beforeEach(() => {
   mockQuery.mockReset();
   mockRedis.sAdd.mockReset();
   mockRedis.set.mockReset();
+  mockRedis.sMembers.mockReset();
+  mockRedis.del.mockReset();
+  mockRedis.sMembers.mockResolvedValue([]);
+  mockRedis.del.mockResolvedValue(1);
   mockInsertLoginLog.mockReset();
   mockWAClient.sendMessage.mockReset();
   mockQueueAdminNotification.mockReset();
@@ -621,5 +625,162 @@ describe('POST /user-login', () => {
     expect(mockQueueAdminNotification).toHaveBeenCalledWith(
       expect.stringContaining('Login user: u2 - User2')
     );
+  });
+});
+
+describe('POST /dashboard-password-reset/request', () => {
+  test('creates reset request and sends WhatsApp message', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'du1',
+            username: 'operator',
+            whatsapp: '628123456789',
+            role: 'operator',
+            client_ids: ['c1'],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            reset_id: 'reset-1',
+            dashboard_user_id: 'du1',
+            reset_token: 'token-1',
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-password-reset/request')
+      .send({ username: 'operator', contact: '08123456789' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      message: 'Instruksi reset password telah dikirim melalui WhatsApp.',
+    });
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('FROM dashboard_user du'),
+      ['operator'],
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO dashboard_password_resets'),
+      [
+        'du1',
+        '08123456789',
+        expect.any(String),
+        expect.any(Date),
+      ],
+    );
+    expect(mockWAClient.sendMessage).toHaveBeenCalledWith(
+      '628123456789@c.us',
+      expect.stringContaining('Reset Password Dashboard'),
+      {},
+    );
+    expect(mockQueueAdminNotification).not.toHaveBeenCalled();
+  });
+
+  test('rejects when contact does not match stored whatsapp', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'du1',
+            username: 'operator',
+            whatsapp: '628111111111',
+            role: 'operator',
+            client_ids: ['c1'],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-password-reset/request')
+      .send({ username: 'operator', contact: '082233344455' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toBe('kontak tidak sesuai dengan data pengguna');
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    expect(mockWAClient.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /dashboard-password-reset/confirm', () => {
+  test('returns error for unknown or expired token', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-password-reset/confirm')
+      .send({ token: 'bad-token', password: 'Newpass123', confirmPassword: 'Newpass123' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      message: 'token reset tidak valid atau sudah kedaluwarsa',
+    });
+    expect(mockRedis.sMembers).not.toHaveBeenCalled();
+  });
+
+  test('updates password and clears sessions on success', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            reset_token: 'good-token',
+            dashboard_user_id: 'du1',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'du1',
+            username: 'operator',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            reset_token: 'good-token',
+            used_at: new Date().toISOString(),
+          },
+        ],
+      });
+    mockRedis.sMembers.mockResolvedValueOnce(['old-token']);
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-password-reset/confirm')
+      .send({ token: 'good-token', password: 'Newpass123', confirmPassword: 'Newpass123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      message: 'Password berhasil diperbarui. Silakan login kembali.',
+    });
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('FROM dashboard_password_resets'),
+      ['good-token'],
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('UPDATE dashboard_user SET password_hash'),
+      ['du1', expect.any(String)],
+    );
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('UPDATE dashboard_password_resets'),
+      ['good-token'],
+    );
+    expect(mockRedis.sMembers).toHaveBeenCalledWith('dashboard_login:du1');
+    expect(mockRedis.del).toHaveBeenCalledWith('login_token:old-token');
+    expect(mockRedis.del).toHaveBeenCalledWith('dashboard_login:du1');
   });
 });
