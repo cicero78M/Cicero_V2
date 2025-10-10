@@ -85,7 +85,7 @@ async function clearDashboardSessions(dashboardUserId) {
 
 const router = express.Router();
 
-async function handleDashboardPasswordResetRequest(req, res) {
+export async function handleDashboardPasswordResetRequest(req, res) {
   const { username, contact } = req.body;
   if (!username || !contact) {
     return res.status(400).json({
@@ -175,7 +175,7 @@ async function handleDashboardPasswordResetRequest(req, res) {
   }
 }
 
-async function handleDashboardPasswordResetConfirm(req, res) {
+export async function handleDashboardPasswordResetConfirm(req, res) {
   const { token, password, confirmPassword, password_confirmation: passwordConfirmation } =
     req.body;
   const confirmation = confirmPassword ?? passwordConfirmation;
