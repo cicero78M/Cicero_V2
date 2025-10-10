@@ -709,6 +709,42 @@ describe('POST /dashboard-password-reset/request', () => {
     expect(mockQuery).toHaveBeenCalledTimes(2);
     expect(mockWAClient.sendMessage).not.toHaveBeenCalled();
   });
+
+  test('alias route returns the same response as dashboard endpoint', async () => {
+    mockWAClient.sendMessage.mockResolvedValue(true);
+    const userRow = {
+      dashboard_user_id: 'du1',
+      username: 'operator',
+      whatsapp: '628123456789',
+      role: 'operator',
+      client_ids: ['c1'],
+    };
+    const resetRow = {
+      reset_id: 'reset-1',
+      dashboard_user_id: 'du1',
+      reset_token: 'token-1',
+    };
+
+    mockQuery
+      .mockResolvedValueOnce({ rows: [userRow] })
+      .mockResolvedValueOnce({ rows: [resetRow] })
+      .mockResolvedValueOnce({ rows: [userRow] })
+      .mockResolvedValueOnce({ rows: [resetRow] });
+
+    const payload = { username: 'operator', contact: '08123456789' };
+
+    const dashboardResponse = await request(app)
+      .post('/api/auth/dashboard-password-reset/request')
+      .send(payload);
+
+    const aliasResponse = await request(app)
+      .post('/api/auth/password-reset/request')
+      .send(payload);
+
+    expect(aliasResponse.status).toBe(dashboardResponse.status);
+    expect(aliasResponse.body).toEqual(dashboardResponse.body);
+    expect(mockWAClient.sendMessage).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('POST /dashboard-password-reset/confirm', () => {
@@ -781,6 +817,50 @@ describe('POST /dashboard-password-reset/confirm', () => {
     );
     expect(mockRedis.sMembers).toHaveBeenCalledWith('dashboard_login:du1');
     expect(mockRedis.del).toHaveBeenCalledWith('login_token:old-token');
+    expect(mockRedis.del).toHaveBeenCalledWith('dashboard_login:du1');
+  });
+
+  test('alias confirm route mirrors dashboard response', async () => {
+    const resetRecord = {
+      reset_token: 'alias-token',
+      dashboard_user_id: 'du1',
+    };
+    const updatedUser = {
+      dashboard_user_id: 'du1',
+      username: 'operator',
+    };
+    const usedRecord = {
+      reset_token: 'alias-token',
+      used_at: new Date().toISOString(),
+    };
+
+    mockQuery
+      .mockResolvedValueOnce({ rows: [resetRecord] })
+      .mockResolvedValueOnce({ rows: [updatedUser] })
+      .mockResolvedValueOnce({ rows: [usedRecord] })
+      .mockResolvedValueOnce({ rows: [resetRecord] })
+      .mockResolvedValueOnce({ rows: [updatedUser] })
+      .mockResolvedValueOnce({ rows: [usedRecord] });
+    mockRedis.sMembers
+      .mockResolvedValueOnce(['old-token'])
+      .mockResolvedValueOnce(['old-token-2']);
+
+    const payload = {
+      token: 'alias-token',
+      password: 'Newpass123',
+      confirmPassword: 'Newpass123',
+    };
+
+    const dashboardResponse = await request(app)
+      .post('/api/auth/dashboard-password-reset/confirm')
+      .send(payload);
+
+    const aliasResponse = await request(app)
+      .post('/api/auth/password-reset/confirm')
+      .send(payload);
+
+    expect(aliasResponse.status).toBe(dashboardResponse.status);
+    expect(aliasResponse.body).toEqual(dashboardResponse.body);
     expect(mockRedis.del).toHaveBeenCalledWith('dashboard_login:du1');
   });
 });
