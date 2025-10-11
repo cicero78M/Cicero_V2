@@ -41,7 +41,7 @@ const RESET_TOKEN_EXPIRY_MINUTES = Number(
   process.env.DASHBOARD_RESET_TOKEN_EXPIRY_MINUTES || 15,
 );
 
-const DEFAULT_RESET_BASE_URL = "https://papiqo.com/dashboard";
+const DEFAULT_RESET_BASE_URL = "https://papiqo.com";
 
 function buildResetMessage({ username, token }) {
   const configuredBaseUrl =

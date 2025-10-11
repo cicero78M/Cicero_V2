@@ -685,8 +685,8 @@ describe('POST /dashboard-password-reset/request', () => {
     expect(wid).toBe('628123456789@c.us');
     expect(options).toEqual({});
     expect(message).toContain('Reset Password Dashboard');
-    expect(message).toContain('https://papiqo.com/dashboard/reset-password?token=');
-    expect(message).toContain('Dengan url https://papiqo.com/dashboard/reset-password');
+    expect(message).toContain('https://papiqo.com/reset-password?token=');
+    expect(message).toContain('Dengan url https://papiqo.com/reset-password');
     expect(message).toContain('Copy');
     expect(mockQueueAdminNotification).not.toHaveBeenCalled();
   });
