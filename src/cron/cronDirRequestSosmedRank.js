@@ -1,4 +1,3 @@
-import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
