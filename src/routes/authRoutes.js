@@ -479,8 +479,10 @@ router.post('/dashboard-login', async (req, res) => {
     loginSource: 'web'
   });
   const time = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+  const clientInfoLabel = user.client_ids.length === 1 ? 'Client ID' : 'Client IDs';
+  const clientInfo = user.client_ids.length === 1 ? user.client_ids[0] : user.client_ids.join(', ');
   notifyAdmin(
-    `\uD83D\uDD11 Login dashboard: ${user.username} (${user.role})\nWaktu: ${time}`
+    `\uD83D\uDD11 Login dashboard: ${user.username} (${user.role})\n${clientInfoLabel}: ${clientInfo}\nWaktu: ${time}`
   );
   return res.json({ success: true, token, user: payload });
 });
