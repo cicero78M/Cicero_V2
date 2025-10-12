@@ -89,6 +89,9 @@ export async function verifyOtpController(req, res, next) {
       }
       throw err;
     }
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+    }
     if (user && !user.email) {
       await userModel.updateUserField(nrp, 'email', em);
     }

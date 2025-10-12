@@ -38,3 +38,13 @@ test('returns 503 when findUserById throws connection error', async () => {
   expect(res.status).toHaveBeenCalledWith(503);
   expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Database tidak tersedia' });
 });
+
+test('returns 404 when user not found after OTP verification', async () => {
+  userModel.findUserById.mockResolvedValue(null);
+  const req = { body: { nrp: '1', email: 'user@example.com', otp: '123456' } };
+  const res = createRes();
+  await verifyOtpController(req, res, () => {});
+  expect(res.status).toHaveBeenCalledWith(404);
+  expect(res.json).toHaveBeenCalledWith({ success: false, message: 'User tidak ditemukan' });
+  expect(userModel.updateUserField).not.toHaveBeenCalled();
+});
