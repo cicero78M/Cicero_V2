@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 let updateUserData;
 let userModel;
+let otpService;
 
 describe('updateUserData', () => {
   beforeEach(async () => {
@@ -22,6 +23,7 @@ describe('updateUserData', () => {
     }));
     ({ updateUserData } = await import('../src/controller/claimController.js'));
     userModel = await import('../src/model/userModel.js');
+    otpService = await import('../src/service/otpService.js');
   });
 
   function createRes() {
@@ -94,6 +96,25 @@ describe('updateUserData', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 
+  test('returns 404 when user to update is not found', async () => {
+    userModel.updateUser.mockResolvedValue(null);
+    const req = {
+      body: {
+        nrp: '999999',
+        email: 'missing@example.com',
+        nama: 'Ghost User'
+      }
+    };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'User tidak ditemukan'
+    });
+    expect(otpService.clearVerification).not.toHaveBeenCalled();
+  });
+
   test('verifies otp when provided', async () => {
     jest.resetModules();
     jest.unstable_mockModule('../src/model/userModel.js', () => ({
@@ -112,7 +133,7 @@ describe('updateUserData', () => {
     }));
     ({ updateUserData } = await import('../src/controller/claimController.js'));
     userModel = await import('../src/model/userModel.js');
-    const otpService = await import('../src/service/otpService.js');
+    otpService = await import('../src/service/otpService.js');
     const req = { body: { nrp: '1', email: 'user@example.com', otp: '123456' } };
     const res = createRes();
     await updateUserData(req, res, () => {});
