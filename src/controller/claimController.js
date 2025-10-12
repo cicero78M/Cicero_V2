@@ -220,7 +220,13 @@ export async function updateUserData(req, res, next) {
         .status(404)
         .json({ success: false, message: 'User tidak ditemukan' });
     }
-    await clearVerification(nrp);
+    try {
+      await clearVerification(nrp);
+    } catch (err) {
+      console.warn(
+        `[OTP] Failed to clear verification for ${nrp}: ${err?.message ?? err}`
+      );
+    }
     sendSuccess(res, updated);
   } catch (err) {
     next(err);
