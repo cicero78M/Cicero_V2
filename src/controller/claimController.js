@@ -10,20 +10,30 @@ function isConnectionError(err) {
 
 function extractInstagramUsername(value) {
   if (!value) return undefined;
-  const match = value.match(
+  const trimmed = value.trim();
+  const match = trimmed.match(
     /^https?:\/\/(www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?(\?.*)?$/i
   );
-  const username = match ? match[2] : value.replace(/^@/, '');
-  return username.toLowerCase();
+  const username = match ? match[2] : trimmed.replace(/^@/, '');
+  const normalized = username?.toLowerCase();
+  if (!normalized || !/^[a-z0-9._]{1,30}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
 }
 
 function extractTiktokUsername(value) {
   if (!value) return undefined;
-  const match = value.match(
+  const trimmed = value.trim();
+  const match = trimmed.match(
     /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i
   );
-  const username = match ? match[2] : value.replace(/^@/, '');
-  return username ? `@${username.toLowerCase()}` : undefined;
+  const username = match ? match[2] : trimmed.replace(/^@/, '');
+  const normalized = username?.toLowerCase();
+  if (!normalized || !/^[a-z0-9._]{1,24}$/.test(normalized)) {
+    return null;
+  }
+  return `@${normalized}`;
 }
 
 export async function requestOtp(req, res, next) {
@@ -157,6 +167,28 @@ export async function updateUserData(req, res, next) {
       return res.status(400).json({ success: false, message: 'nrp dan email wajib diisi' });
     }
     const em = normalizeEmail(email);
+    let igUsername;
+    if (insta !== undefined) {
+      igUsername = extractInstagramUsername(insta);
+      if (igUsername === null) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Format username Instagram tidak valid. Gunakan tautan profil atau username seperti instagram.com/username atau @username.',
+        });
+      }
+    }
+    let ttUsername;
+    if (tiktok !== undefined) {
+      ttUsername = extractTiktokUsername(tiktok);
+      if (ttUsername === null) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Format username TikTok tidak valid. Gunakan tautan profil atau username seperti tiktok.com/@username atau @username.',
+        });
+      }
+    }
     let verified = await isVerified(nrp, em);
     if (!verified && otp) {
       verified = await verifyOtp(nrp, em, otp);
@@ -166,7 +198,6 @@ export async function updateUserData(req, res, next) {
     }
     const data = { nama, title, divisi, jabatan, desa };
     if (insta !== undefined) {
-      const igUsername = extractInstagramUsername(insta);
       if (igUsername === 'cicero_devs') {
         return res
           .status(400)
@@ -175,7 +206,6 @@ export async function updateUserData(req, res, next) {
       data.insta = igUsername;
     }
     if (tiktok !== undefined) {
-      const ttUsername = extractTiktokUsername(tiktok);
       if (ttUsername && ttUsername.replace(/^@/, '') === 'cicero_devs') {
         return res
           .status(400)
