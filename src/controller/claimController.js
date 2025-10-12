@@ -53,9 +53,15 @@ export async function requestOtp(req, res, next) {
       }
     }
     const otp = await generateOtp(nrp, em);
-    enqueueOtp(em, otp).catch((err) =>
-      console.warn(`[OTP] Failed to enqueue OTP for ${em}: ${err.message}`)
-    );
+    try {
+      await enqueueOtp(em, otp);
+    } catch (err) {
+      console.warn(`[OTP] Failed to enqueue OTP for ${em}: ${err.message}`);
+      const status = isConnectionError(err) ? 503 : 502;
+      return res
+        .status(status)
+        .json({ success: false, message: 'Gagal mengirim OTP' });
+    }
     sendSuccess(res, { message: 'OTP akan dikirim sesaat lagi' }, 202);
   } catch (err) {
     next(err);
