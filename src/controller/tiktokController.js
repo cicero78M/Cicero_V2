@@ -10,6 +10,26 @@ import {
 } from '../service/tiktokApi.js';
 import * as profileCache from '../service/profileCacheService.js';
 
+const TIKTOK_PROFILE_URL_REGEX =
+  /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i;
+
+export function normalizeTikTokUsername(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const match = trimmed.match(TIKTOK_PROFILE_URL_REGEX);
+  const username = match ? match[2] : trimmed.replace(/^@/, '');
+  const normalized = username?.toLowerCase();
+  if (!normalized || !/^[a-z0-9._]{1,24}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
 export async function getTiktokComments(req, res, next) {
   try {
     const client_id =
@@ -107,11 +127,19 @@ export async function getRapidTiktokProfile(req, res) {
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
-    let profile = await profileCache.getProfile('tiktok', username);
+    const normalizedUsername = normalizeTikTokUsername(username);
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Format username TikTok tidak valid. Gunakan tautan profil atau username seperti tiktok.com/@username atau @username.'
+      });
+    }
+    let profile = await profileCache.getProfile('tiktok', normalizedUsername);
     if (!profile) {
-      profile = await fetchTiktokProfile(username);
+      profile = await fetchTiktokProfile(normalizedUsername);
       if (profile) {
-        await profileCache.setProfile('tiktok', username, profile);
+        await profileCache.setProfile('tiktok', normalizedUsername, profile);
       }
     }
     sendSuccess(res, profile);
@@ -165,6 +193,18 @@ export async function getRapidTiktokPosts(req, res) {
       const client = await clientService.findClientById(client_id);
       username = client?.client_tiktok;
       secUid = client?.tiktok_secuid || secUid;
+    }
+
+    if (username) {
+      const normalizedUsername = normalizeTikTokUsername(username);
+      if (!normalizedUsername) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Format username TikTok tidak valid. Gunakan tautan profil atau username seperti tiktok.com/@username atau @username.'
+        });
+      }
+      username = normalizedUsername;
     }
 
     if (!username && !secUid) {
