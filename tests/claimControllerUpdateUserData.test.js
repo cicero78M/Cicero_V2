@@ -141,4 +141,23 @@ describe('updateUserData', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
+
+  test('returns success when clearing verification fails', async () => {
+    const req = {
+      body: {
+        nrp: '1',
+        email: 'user@example.com'
+      }
+    };
+    const res = createRes();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    otpService.clearVerification.mockRejectedValueOnce(new Error('Redis down'));
+
+    await updateUserData(req, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });
