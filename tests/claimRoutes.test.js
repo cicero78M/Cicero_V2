@@ -28,6 +28,7 @@ describe('claim routes access', () => {
         generateOtp: jest.fn().mockResolvedValue('123456'),
         verifyOtp: jest.fn().mockResolvedValue(true),
         isVerified: jest.fn().mockResolvedValue(true),
+        refreshVerification: jest.fn().mockResolvedValue(),
         clearVerification: jest.fn().mockResolvedValue(),
       }));
       jest.unstable_mockModule('../src/model/userModel.js', () => ({
@@ -82,7 +83,7 @@ describe('claim update validation', () => {
     serviceMocks = {
       isVerified: jest.fn().mockResolvedValue(false),
       verifyOtp: jest.fn().mockResolvedValue(false),
-      clearVerification: jest.fn().mockResolvedValue(),
+      refreshVerification: jest.fn().mockResolvedValue(),
     };
     await jest.isolateModulesAsync(async () => {
       jest.unstable_mockModule('../src/config/redis.js', () => ({
@@ -92,7 +93,7 @@ describe('claim update validation', () => {
         generateOtp: jest.fn(),
         verifyOtp: serviceMocks.verifyOtp,
         isVerified: serviceMocks.isVerified,
-        clearVerification: serviceMocks.clearVerification,
+        refreshVerification: serviceMocks.refreshVerification,
       }));
       jest.unstable_mockModule('../src/model/userModel.js', () => ({
         findUserById: jest.fn(),
@@ -140,5 +141,134 @@ describe('claim update validation', () => {
     });
     expect(serviceMocks.isVerified).not.toHaveBeenCalled();
     expect(serviceMocks.verifyOtp).not.toHaveBeenCalled();
+  });
+});
+
+describe('claim update verification ttl', () => {
+  let app;
+  let redisStore;
+  let serviceMocks;
+  let ttlMs;
+  const VERIFY_TTL_MS = 10 * 60 * 1000;
+
+  const normalizeId = (nrp) => String(nrp ?? '').trim().replace(/[^0-9]/g, '');
+  const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
+
+  beforeEach(async () => {
+    jest.resetModules();
+    jest.useFakeTimers({ now: new Date('2024-01-01T00:00:00Z') });
+    redisStore = new Map();
+    serviceMocks = {
+      generateOtp: jest.fn(),
+      verifyOtp: jest.fn(async (nrp, email) => {
+        const key = normalizeId(nrp);
+        const normalizedEmail = normalizeEmail(email);
+        if (!key || !normalizedEmail) return false;
+        redisStore.set(`verified:${key}`, {
+          value: normalizedEmail,
+          expiresAt: Date.now() + VERIFY_TTL_MS,
+        });
+        return true;
+      }),
+      isVerified: jest.fn(async (nrp, email) => {
+        const key = normalizeId(nrp);
+        const entry = redisStore.get(`verified:${key}`);
+        if (!entry) return false;
+        if (entry.expiresAt && entry.expiresAt <= Date.now()) {
+          redisStore.delete(`verified:${key}`);
+          return false;
+        }
+        return entry.value === normalizeEmail(email);
+      }),
+      refreshVerification: jest.fn(async (nrp, email) => {
+        const key = normalizeId(nrp);
+        const current = redisStore.get(`verified:${key}`);
+        const normalizedEmail =
+          email && String(email).trim() !== ''
+            ? normalizeEmail(email)
+            : current?.value;
+        if (!key || !normalizedEmail) return;
+        redisStore.set(`verified:${key}`, {
+          value: normalizedEmail,
+          expiresAt: Date.now() + VERIFY_TTL_MS,
+        });
+      }),
+      clearVerification: jest.fn(async (nrp) => {
+        const key = normalizeId(nrp);
+        redisStore.delete(`verified:${key}`);
+      }),
+    };
+
+    await jest.isolateModulesAsync(async () => {
+      jest.unstable_mockModule('../src/service/otpService.js', () => serviceMocks);
+      jest.unstable_mockModule('../src/model/userModel.js', () => ({
+        findUserById: jest.fn().mockResolvedValue({ email: 'a@a.com' }),
+        updateUserField: jest.fn(),
+        updateUser: jest.fn().mockResolvedValue({ success: true }),
+      }));
+      jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
+        enqueueOtp: jest.fn(),
+      }));
+      const claimMod = await import('../src/routes/claimRoutes.js');
+      app = express();
+      app.use(express.json());
+      app.use('/api/claim', claimMod.default);
+    });
+
+    await serviceMocks.refreshVerification('1', 'a@a.com');
+    const seeded = redisStore.get('verified:1');
+    if (!seeded) {
+      throw new Error('Failed to seed verification state');
+    }
+    ttlMs = VERIFY_TTL_MS;
+    redisStore.set('verified:1', {
+      value: seeded.value,
+      expiresAt: Date.now() + Math.floor(ttlMs / 2),
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
+
+  test('allows repeated updates within verification ttl and expires afterwards', async () => {
+    const firstEntry = redisStore.get('verified:1');
+    const firstExpiry = firstEntry?.expiresAt ?? 0;
+
+    const firstRes = await request(app)
+      .put('/api/claim/update')
+      .send({ nrp: '1', email: 'a@a.com' });
+    expect(firstRes.status).toBe(200);
+    const afterFirst = redisStore.get('verified:1');
+    expect(afterFirst?.expiresAt).toBeGreaterThan(firstExpiry);
+
+    jest.advanceTimersByTime(Math.floor(ttlMs / 2));
+    const secondRes = await request(app)
+      .put('/api/claim/update')
+      .send({ nrp: '1', email: 'a@a.com' });
+    expect(secondRes.status).toBe(200);
+    const afterSecond = redisStore.get('verified:1');
+    expect(afterSecond?.expiresAt).toBeGreaterThan(afterFirst?.expiresAt ?? 0);
+
+    jest.advanceTimersByTime(ttlMs + 1000);
+    const thirdRes = await request(app)
+      .put('/api/claim/update')
+      .send({ nrp: '1', email: 'a@a.com' });
+    expect(thirdRes.status).toBe(403);
+    expect(thirdRes.body).toEqual({ success: false, message: 'OTP belum diverifikasi' });
+
+    await serviceMocks.refreshVerification('1', 'a@a.com');
+    const fourthRes = await request(app)
+      .put('/api/claim/update')
+      .send({ nrp: '1', email: 'a@a.com' });
+    expect(fourthRes.status).toBe(200);
+
+    await serviceMocks.clearVerification('1');
+    const fifthRes = await request(app)
+      .put('/api/claim/update')
+      .send({ nrp: '1', email: 'a@a.com' });
+    expect(fifthRes.status).toBe(403);
+    expect(fifthRes.body).toEqual({ success: false, message: 'OTP belum diverifikasi' });
   });
 });

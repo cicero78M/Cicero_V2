@@ -25,7 +25,13 @@ jest.unstable_mockModule('../src/config/redis.js', () => ({
   default: mockRedis,
 }));
 
-const { generateOtp, verifyOtp, isVerified, clearVerification } = await import('../src/service/otpService.js');
+const {
+  generateOtp,
+  verifyOtp,
+  isVerified,
+  clearVerification,
+  refreshVerification,
+} = await import('../src/service/otpService.js');
 
 describe('otpService', () => {
   beforeEach(() => {
@@ -41,6 +47,22 @@ describe('otpService', () => {
     expect(await isVerified('u1', 'user@example.com')).toBe(true);
     await clearVerification('u1');
     expect(await isVerified('u1', 'user@example.com')).toBe(false);
+  });
+
+  test('refreshVerification keeps verification alive', async () => {
+    await refreshVerification('u1', 'user@example.com');
+    const first = store.get('verified:1');
+    expect(first).toBeDefined();
+    expect(first.value).toBe('user@example.com');
+    const shortenedExpiry = Date.now() + 1000;
+    store.set('verified:1', {
+      value: first.value,
+      expiresAt: shortenedExpiry,
+    });
+    await refreshVerification('u1');
+    const refreshed = store.get('verified:1');
+    expect(refreshed?.value).toBe('user@example.com');
+    expect(refreshed?.expiresAt).toBeGreaterThan(shortenedExpiry);
   });
 
   test('nrp handled consistently for strings and numbers', async () => {

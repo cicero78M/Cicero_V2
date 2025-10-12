@@ -14,6 +14,7 @@ describe('updateUserData', () => {
     }));
     jest.unstable_mockModule('../src/service/otpService.js', () => ({
       isVerified: () => true,
+      refreshVerification: jest.fn(),
       clearVerification: jest.fn(),
       generateOtp: jest.fn(),
       verifyOtp: jest.fn()
@@ -48,6 +49,7 @@ describe('updateUserData', () => {
       insta: 'de_saputra88',
       tiktok: '@sidik.prayitno37'
     }));
+    expect(otpService.refreshVerification).toHaveBeenCalledWith('1', 'user@example.com');
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
@@ -94,6 +96,7 @@ describe('updateUserData', () => {
     expect(data.tiktok).toBeUndefined();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(otpService.refreshVerification).toHaveBeenCalledWith('1', 'user@example.com');
   });
 
   test('returns 404 when user to update is not found', async () => {
@@ -112,7 +115,7 @@ describe('updateUserData', () => {
       success: false,
       message: 'User tidak ditemukan'
     });
-    expect(otpService.clearVerification).not.toHaveBeenCalled();
+    expect(otpService.refreshVerification).not.toHaveBeenCalled();
   });
 
   test('verifies otp when provided', async () => {
@@ -124,7 +127,7 @@ describe('updateUserData', () => {
     }));
     jest.unstable_mockModule('../src/service/otpService.js', () => ({
       isVerified: jest.fn().mockResolvedValue(false),
-      clearVerification: jest.fn(),
+      refreshVerification: jest.fn(),
       generateOtp: jest.fn(),
       verifyOtp: jest.fn().mockResolvedValue(true)
     }));
@@ -140,9 +143,10 @@ describe('updateUserData', () => {
     expect(otpService.verifyOtp).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(otpService.refreshVerification).toHaveBeenCalledWith('1', 'user@example.com');
   });
 
-  test('returns success when clearing verification fails', async () => {
+  test('returns success when refreshing verification fails', async () => {
     const req = {
       body: {
         nrp: '1',
@@ -151,7 +155,7 @@ describe('updateUserData', () => {
     };
     const res = createRes();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    otpService.clearVerification.mockRejectedValueOnce(new Error('Redis down'));
+    otpService.refreshVerification.mockRejectedValueOnce(new Error('Redis down'));
 
     await updateUserData(req, res, () => {});
 

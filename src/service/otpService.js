@@ -41,6 +41,18 @@ export async function verifyOtp(nrp, email, code) {
   return true;
 }
 
+export async function refreshVerification(nrp, email) {
+  const key = normalizeUserId(nrp);
+  let normalizedEmail;
+  if (email !== undefined && email !== null && String(email).trim() !== '') {
+    normalizedEmail = normalizeEmail(email);
+  } else {
+    normalizedEmail = await redis.get(`verified:${key}`);
+    if (!normalizedEmail) return;
+  }
+  await redis.set(`verified:${key}`, normalizedEmail, { EX: VERIFY_TTL_SEC });
+}
+
 export async function isVerified(nrp, email) {
   const key = normalizeUserId(nrp);
   const em = normalizeEmail(email);

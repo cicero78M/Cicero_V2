@@ -2,7 +2,12 @@ import * as userModel from '../model/userModel.js';
 import { sendSuccess } from '../utils/response.js';
 import { normalizeUserId, normalizeEmail } from '../utils/utilsHelper.js';
 import { enqueueOtp } from '../service/otpQueue.js';
-import { generateOtp, verifyOtp, isVerified, clearVerification } from '../service/otpService.js';
+import {
+  generateOtp,
+  verifyOtp,
+  isVerified,
+  refreshVerification,
+} from '../service/otpService.js';
 
 function isConnectionError(err) {
   return err && err.code === 'ECONNREFUSED';
@@ -221,10 +226,10 @@ export async function updateUserData(req, res, next) {
         .json({ success: false, message: 'User tidak ditemukan' });
     }
     try {
-      await clearVerification(nrp);
+      await refreshVerification(nrp, em);
     } catch (err) {
       console.warn(
-        `[OTP] Failed to clear verification for ${nrp}: ${err?.message ?? err}`
+        `[OTP] Failed to refresh verification for ${nrp}: ${err?.message ?? err}`
       );
     }
     sendSuccess(res, updated);
