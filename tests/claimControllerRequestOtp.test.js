@@ -44,14 +44,33 @@ test('rejects request when stored email differs', async () => {
   expect(res.status).toHaveBeenCalledWith(400);
 });
 
-test('continues request even if enqueueOtp fails', async () => {
+test('returns 502 when enqueueOtp fails', async () => {
   userModel.findUserById.mockResolvedValue({ user_id: '1', email: 'user@example.com' });
   const req = { body: { nrp: '1', email: 'user@example.com' } };
   const res = createRes();
   const { enqueueOtp } = await import('../src/service/otpQueue.js');
   enqueueOtp.mockRejectedValue(new Error('queue fail'));
   await requestOtp(req, res, () => {});
-  expect(res.status).toHaveBeenCalledWith(202);
+  expect(res.status).toHaveBeenCalledWith(502);
+  expect(res.json).toHaveBeenCalledWith({
+    success: false,
+    message: 'Gagal mengirim OTP',
+  });
+});
+
+test('returns 503 when enqueueOtp fails with connection error', async () => {
+  userModel.findUserById.mockResolvedValue({ user_id: '1', email: 'user@example.com' });
+  const req = { body: { nrp: '1', email: 'user@example.com' } };
+  const res = createRes();
+  const { enqueueOtp } = await import('../src/service/otpQueue.js');
+  const err = Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
+  enqueueOtp.mockRejectedValue(err);
+  await requestOtp(req, res, () => {});
+  expect(res.status).toHaveBeenCalledWith(503);
+  expect(res.json).toHaveBeenCalledWith({
+    success: false,
+    message: 'Gagal mengirim OTP',
+  });
 });
 
 test('returns 503 when findUserById throws connection error', async () => {
