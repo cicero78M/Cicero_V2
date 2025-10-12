@@ -170,7 +170,7 @@ A cron job (`src/cron/cronDbBackup.js`) runs daily at **02:00** (Asia/Jakarta), 
 
 ## Request Deduplication
 
-The middleware in [`src/middleware/dedupRequestMiddleware.js`](src/middleware/dedupRequestMiddleware.js) hashes non-GET requests and caches them in Redis for five minutes. Identical requests sent again within that window receive an HTTP 429 response. Set `ALLOW_DUPLICATE_REQUESTS=true` to bypass this protection during development.
+The middleware in [`src/middleware/dedupRequestMiddleware.js`](src/middleware/dedupRequestMiddleware.js) hashes non-GET requests and caches them in Redis for five minutes. Identical requests sent again within that window receive an HTTP 429 response. Claim endpoints under `/api/claim` are exempt so that the OTP flow can be retried without delay. Set `ALLOW_DUPLICATE_REQUESTS=true` to bypass this protection during development.
 
 ---
 
