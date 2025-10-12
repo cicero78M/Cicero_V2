@@ -10,6 +10,17 @@ export async function dedupRequest(req, res, next) {
     return next();
   }
 
+  const urlCandidates = [req.originalUrl, req.baseUrl].filter(Boolean);
+
+  // Skip deduplication entirely for claim flow endpoints
+  if (
+    urlCandidates.some(
+      (url) => url === '/api/claim' || url.startsWith('/api/claim/')
+    )
+  ) {
+    return next();
+  }
+
   // Allow duplicate requests for the root path or for all GET requests
   if (req.path === '/' || req.method === 'GET') {
     return next();
