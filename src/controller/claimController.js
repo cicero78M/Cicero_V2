@@ -185,6 +185,11 @@ export async function updateUserData(req, res, next) {
     }
     Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
     const updated = await userModel.updateUser(nrp, data);
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'User tidak ditemukan' });
+    }
     await clearVerification(nrp);
     sendSuccess(res, updated);
   } catch (err) {
