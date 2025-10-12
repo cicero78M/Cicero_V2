@@ -20,6 +20,7 @@ beforeEach(async () => {
     generateOtp: jest.fn(),
     verifyOtp: jest.fn(),
     isVerified: jest.fn(),
+    refreshVerification: jest.fn(),
     clearVerification: jest.fn(),
   }));
   jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
