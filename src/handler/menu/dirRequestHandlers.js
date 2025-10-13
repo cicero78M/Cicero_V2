@@ -15,6 +15,7 @@ import {
   absensiKomentar,
   absensiKomentarDitbinmasSimple as absensiKomentarDitbinmasSimpleReport,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
@@ -660,6 +661,10 @@ async function performAction(
       msg = await absensiKomentarDitbinmas();
       break;
     case "11": {
+      msg = await absensiRegistrasiDashboardDitbinmas();
+      break;
+    }
+    case "12": {
       const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
       const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
       const { rekapLikesIG } = await import("../fetchabsensi/insta/absensiLikesInsta.js");
@@ -676,13 +681,13 @@ async function performAction(
         "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini";
       break;
     }
-    case "12": {
+    case "13": {
       const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
       await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
       msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
       break;
     }
-    case "13": {
+    case "14": {
       const normalizedId = (clientId || "").toUpperCase();
       if (normalizedId !== "DITBINMAS") {
         msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
@@ -700,13 +705,13 @@ async function performAction(
         "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
       break;
     }
-    case "14": {
+    case "15": {
       const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
       await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
       msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
       break;
     }
-    case "15": {
+    case "16": {
       const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
       const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
       const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
@@ -784,7 +789,7 @@ async function performAction(
       }
       break;
     }
-    case "16": {
+    case "17": {
         const { text, filename, narrative, textBelum, filenameBelum } = await lapharDitbinmas();
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
@@ -812,7 +817,7 @@ async function performAction(
         }
         return;
       }
-      case "17": {
+      case "18": {
         const { text, filename, narrative, textBelum, filenameBelum } = await lapharTiktokDitbinmas();
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
@@ -840,7 +845,7 @@ async function performAction(
         }
         return;
       }
-      case "18": {
+      case "19": {
         const data = await collectLikesRecap(clientId);
         if (typeof data === "string") {
           msg = data;
@@ -857,7 +862,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "19": {
+      case "20": {
         const recapData = await collectKomentarRecap(clientId);
         if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
@@ -877,7 +882,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "20": {
+      case "21": {
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
@@ -913,7 +918,7 @@ async function performAction(
         }
         return;
       }
-      case "22": {
+      case "23": {
         let filePath;
         try {
           filePath = await saveWeeklyLikesRecapExcel(clientId);
@@ -938,7 +943,7 @@ async function performAction(
         }
         break;
       }
-      case "23": {
+      case "24": {
         let filePath;
         try {
           filePath = await saveWeeklyCommentRecapExcel(clientId);
@@ -963,7 +968,7 @@ async function performAction(
         }
         break;
       }
-      case "24": {
+      case "25": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -988,7 +993,7 @@ async function performAction(
         }
         break;
       }
-      case "25": {
+      case "26": {
         const data = await collectLikesRecap(clientId);
         if (typeof data === "string") {
           msg = data;
@@ -1011,7 +1016,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "26": {
+      case "27": {
         const recapData = await collectKomentarRecap(clientId);
         if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
@@ -1034,7 +1039,7 @@ async function performAction(
         msg = "Menu tidak dikenal.";
     }
     await waClient.sendMessage(chatId, msg.trim());
-    if (action === "11" || action === "13" || action === "15") {
+    if (action === "12" || action === "14" || action === "16") {
       await safeSendMessage(waClient, dirRequestGroup, msg.trim());
     }
   }
@@ -1098,29 +1103,30 @@ export const dirRequestHandlers = {
         "7️⃣ Absensi like Instagram\n" +
         "8️⃣ Absensi komentar TikTok\n" +
         "9️⃣ Absensi komentar Ditbinmas Simple\n" +
-        "1️⃣0️⃣ Absensi komentar Ditbinmas\n\n" +
+        "1️⃣0️⃣ Absensi komentar Ditbinmas\n" +
+        "1️⃣1️⃣ Absensi user web dashboard Ditbinmas\n\n" +
         "📥 *Pengambilan Data*\n" +
-        "1️⃣1️⃣ Ambil konten & like Instagram\n" +
-        "1️⃣2️⃣ Ambil like Instagram saja\n" +
-        "1️⃣3️⃣ Ambil konten & komentar TikTok\n" +
-        "1️⃣4️⃣ Ambil komentar TikTok saja\n" +
-        "1️⃣5️⃣ Ambil semua sosmed & buat tugas\n\n" +
+        "1️⃣2️⃣ Ambil konten & like Instagram\n" +
+        "1️⃣3️⃣ Ambil like Instagram saja\n" +
+        "1️⃣4️⃣ Ambil konten & komentar TikTok\n" +
+        "1️⃣5️⃣ Ambil komentar TikTok saja\n" +
+        "1️⃣6️⃣ Ambil semua sosmed & buat tugas\n\n" +
         "📝 *Laporan*\n" +
-        "1️⃣6️⃣ Laporan harian Instagram Ditbinmas\n" +
-        "1️⃣7️⃣ Laporan harian TikTok Ditbinmas\n" +
-        "1️⃣8️⃣ Rekap like Instagram (Excel)\n" +
-        "1️⃣9️⃣ Rekap komentar TikTok (Excel)\n" +
-        "2️⃣0️⃣ Rekap gabungan semua sosmed\n" +
-        "2️⃣1️⃣ Rekap ranking engagement jajaran\n\n" +
+        "1️⃣7️⃣ Laporan harian Instagram Ditbinmas\n" +
+        "1️⃣8️⃣ Laporan harian TikTok Ditbinmas\n" +
+        "1️⃣9️⃣ Rekap like Instagram (Excel)\n" +
+        "2️⃣0️⃣ Rekap komentar TikTok (Excel)\n" +
+        "2️⃣1️⃣ Rekap gabungan semua sosmed\n" +
+        "2️⃣2️⃣ Rekap ranking engagement jajaran\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "2️⃣2️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣3️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣3️⃣ Rekap file Instagram mingguan\n" +
+        "2️⃣4️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣4️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣5️⃣ Rekap like Instagram per konten (Excel)\n" +
-        "2️⃣6️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "2️⃣5️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣6️⃣ Rekap like Instagram per konten (Excel)\n" +
+        "2️⃣7️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
-        "2️⃣7️⃣ Laporan Kasatker\n\n" +
+        "2️⃣8️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1169,6 +1175,7 @@ export const dirRequestHandlers = {
           "25",
           "26",
           "27",
+          "28",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1183,13 +1190,13 @@ export const dirRequestHandlers = {
     }
     const taskClientId = session.dir_client_id || userClientId;
 
-    if (choice === "21") {
+    if (choice === "22") {
       session.step = "choose_engagement_recap_period";
       await waClient.sendMessage(chatId, ENGAGEMENT_RECAP_MENU_TEXT);
       return;
     }
 
-    if (choice === "27") {
+    if (choice === "28") {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
