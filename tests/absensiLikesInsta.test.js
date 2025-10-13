@@ -93,7 +93,7 @@ test('roleFlag uses directorate logic even if client is not directorate', async 
 
   await absensiLikes('DITBINMAS', { roleFlag: 'ditbinmas' });
 
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', []);
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
   expect(mockGetUsersByClient).not.toHaveBeenCalled();
 });
 
@@ -158,10 +158,7 @@ test('directorate summarizes across clients', async () => {
 
   expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas');
   expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('ditbinmas');
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', [
-    'POLRESA',
-    'POLRESB',
-  ]);
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
   expect(msg).toContain('*Jumlah Total Personil :* 4 pers');
   expect(msg).toContain('✅ *Sudah melaksanakan :* 2 pers');
   expect(msg).toContain('- ⚠️ Melaksanakan kurang lengkap : 1 pers');
