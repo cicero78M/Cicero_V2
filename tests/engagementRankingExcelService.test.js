@@ -174,6 +174,27 @@ describe('engagementRankingExcelService', () => {
     expect(result.periodInfo.label).toMatch(/Hari, Tanggal:/);
   });
 
+  test('collectEngagementRanking menyertakan satker yang hanya muncul pada data user', async () => {
+    mockGroupUsersByClientDivision.mockResolvedValueOnce({
+      polresIds: ['DITBINMAS'],
+      usersByClient: {
+        DITBINMAS: [],
+        POLRES_SHADOW: [
+          { insta: '@shadow', tiktok: '@shadow', exception: false },
+        ],
+      },
+    });
+    mockGetShortcodesByDateRange.mockResolvedValueOnce([]);
+    mockGetPostsByClientAndDateRange.mockResolvedValueOnce([]);
+
+    const result = await collectEngagementRanking('DITBINMAS', 'ditbinmas');
+
+    const satkerCids = result.entries.map((entry) => entry.cid);
+    expect(satkerCids).toContain('polres_shadow');
+    const shadowEntry = result.entries.find((entry) => entry.cid === 'polres_shadow');
+    expect(shadowEntry.name).toBe('POLRES_SHADOW');
+  });
+
   test('saveEngagementRankingExcel writes workbook and returns file path', async () => {
     const { filePath, fileName } = await saveEngagementRankingExcel({
       clientId: 'DITBINMAS',

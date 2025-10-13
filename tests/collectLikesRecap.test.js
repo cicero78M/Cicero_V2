@@ -49,7 +49,7 @@ test('collectLikesRecap normalizes client IDs', async () => {
 
   const result = await collectLikesRecap('ditbinmas');
 
-  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', ['POLRES_A']);
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas');
   expect(result.recap['POLRES A']).toEqual([
     {
       pangkat: 'AKP',

@@ -36,10 +36,20 @@ export async function groupUsersByClientDivision(roleName, opts = {}) {
       await getUsersByDirektorat(roleName, clientFilter)
     ).filter((u) => u.status === true);
   } else {
-    polresIds = (await getClientsByRole(roleName)).map((c) => c.toUpperCase());
-    allUsers = (
-      await getUsersByDirektorat(roleName, polresIds)
-    ).filter((u) => u.status === true);
+    const dashboardPolres = await getClientsByRole(roleName);
+    const polresSet = new Set(
+      dashboardPolres.map((c) => String(c || "").toUpperCase()).filter(Boolean)
+    );
+    allUsers = (await getUsersByDirektorat(roleName)).filter(
+      (u) => u.status === true
+    );
+    allUsers.forEach((u) => {
+      const cid = String(u.client_id || "").toUpperCase();
+      if (cid) {
+        polresSet.add(cid);
+      }
+    });
+    polresIds = Array.from(polresSet);
   }
 
   const usersByClient = {};
