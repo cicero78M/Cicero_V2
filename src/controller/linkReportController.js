@@ -103,6 +103,7 @@ export async function createLinkReport(req, res) {
             `Anda sudah melaksanakan Tugas Amplifikasi Konten:\n` +
             `- https://www.instagram.com/p/${data.shortcode}\n\n` +
             `Link Amplifikasi Anda :\n` +
+            `Jangan lupa simpan nomor WA Bot ini agar tetap menerima notifikasi tugas berikutnya.\n` +
             links;
           await safeSendMessage(waClient, wid, msg);
         }
