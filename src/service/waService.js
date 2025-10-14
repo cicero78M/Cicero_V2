@@ -356,157 +356,109 @@ waGatewayClient.on("change_state", (state) => {
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
-export function createHandleMessage(waClient) {
+export function createHandleMessage(waClient, options = {}) {
+  const { allowUserMenu = true, clientLabel = "[WA]" } = options;
+  const userMenuRedirectMessage =
+    "Menu pengguna hanya tersedia melalui nomor *WA-USER*. Silakan hubungi nomor tersebut dan ketik *userrequest* untuk melanjutkan.";
+
   return async function handleMessage(msg) {
     const chatId = msg.from;
     const text = (msg.body || "").trim();
-  console.log(`[WA] Incoming message from ${chatId}: ${text}`);
-  if (msg.isStatus || chatId === "status@broadcast") {
-    console.log(`[WA] Ignored status message from ${chatId}`);
-    return;
-  }
-  if (chatId?.endsWith("@g.us")) {
-    console.log(`[WA] Ignored group message from ${chatId}`);
-    return;
-  }
-  if (!waReady) {
-    console.warn(
-      `[WA] Client not ready, message from ${msg.from} deferred`
-    );
-    pendingMessages.push(msg);
-    waClient
-      .sendMessage(msg.from, "🤖 Bot sedang memuat, silakan tunggu")
-      .catch(() => {
-        console.warn(
-          `[WA] Failed to notify ${msg.from} about loading state`
-        );
-      });
-    return;
-  }
-
-  // ===== Deklarasi State dan Konstanta =====
-  const session = getSession(chatId);
-  // Hindari query ke tabel saved_contact saat menangani dashrequest
-  if (
-    !(
-      ["dashrequest", "dirrequest"].includes(text.toLowerCase()) ||
-      (session && ["dashrequest", "dirrequest"].includes(session.menu))
-    ) &&
-    !chatId.endsWith("@g.us")
-  ) {
-    await saveContactIfNew(chatId);
-  }
-  const userWaNum = chatId.replace(/[^0-9]/g, "");
-  const isAdminCommand = adminCommands.some((cmd) =>
-    text.toLowerCase().startsWith(cmd)
-  );
-  const senderId = msg.author || chatId;
-  const isAdmin = isAdminWhatsApp(senderId);
-
-  // =========== Menu User Interaktif ===========
-  if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
-    delete userMenuContext[chatId];
-    await waClient.sendMessage(chatId, "✅ Menu User ditutup. Terima kasih.");
-    return;
-  }
-  if (session && text.toLowerCase() === "batal") {
-    const menuLabels = {
-      oprrequest: "Menu Operator",
-      dashrequest: "Menu Dashboard",
-      dirrequest: "Menu Direktorat",
-      clientrequest: "Menu Client",
-      wabotditbinmas: "Menu Wabot Ditbinmas",
-    };
-    clearSession(chatId);
-    const label = menuLabels[session.menu] || "Menu";
-    await waClient.sendMessage(chatId, `✅ ${label} ditutup.`);
-    return;
-  }
-
-  // ===== Pilihan awal untuk nomor operator =====
-  if (operatorOptionSessions[chatId]) {
-    if (/^1$/.test(text.trim())) {
-      delete operatorOptionSessions[chatId];
-      setSession(chatId, { menu: "oprrequest", step: "main" });
-      await oprRequestHandlers.main(
-        getSession(chatId),
-        chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
-        waClient,
-        pool,
-        userModel
-      );
+    console.log(`${clientLabel} Incoming message from ${chatId}: ${text}`);
+    if (msg.isStatus || chatId === "status@broadcast") {
+      console.log(`${clientLabel} Ignored status message from ${chatId}`);
       return;
     }
-    if (/^2$/.test(text.trim())) {
-      delete operatorOptionSessions[chatId];
-      const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = await userModel.findUserByWhatsApp(pengirim);
-      const salam = getGreeting();
-        if (userByWA) {
-          userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-          const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
-          await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
-        } else {
-          userMenuContext[chatId] = { step: "inputUserId" };
-          const msg =
-            `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
-            "\n\nBalas pesan ini dengan memasukan NRP Anda," +
-            "\n\n*Contoh Pesan Balasan : 87020990*";
-          await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
-        }
-        return;
-      }
-    await waClient.sendMessage(chatId, "Balas *1* untuk Menu Operator atau *2* untuk perubahan data username.");
-    setOperatorOptionTimeout(chatId);
-    return;
-  }
+    if (chatId?.endsWith("@g.us")) {
+      console.log(`${clientLabel} Ignored group message from ${chatId}`);
+      return;
+    }
+    if (!waReady) {
+      console.warn(
+        `${clientLabel} Client not ready, message from ${msg.from} deferred`
+      );
+      pendingMessages.push(msg);
+      waClient
+        .sendMessage(msg.from, "🤖 Bot sedang memuat, silakan tunggu")
+        .catch(() => {
+          console.warn(
+            `${clientLabel} Failed to notify ${msg.from} about loading state`
+          );
+        });
+      return;
+    }
 
-  // ===== Pilihan awal untuk nomor admin =====
-  if (adminOptionSessions[chatId]) {
-    if (/^1$/.test(text.trim())) {
-      delete adminOptionSessions[chatId];
-      setSession(chatId, { menu: "clientrequest", step: "main" });
+    // ===== Deklarasi State dan Konstanta =====
+    const session = getSession(chatId);
+    // Hindari query ke tabel saved_contact saat menangani dashrequest
+    if (
+      !(
+        ["dashrequest", "dirrequest"].includes(text.toLowerCase()) ||
+        (session && ["dashrequest", "dirrequest"].includes(session.menu))
+      ) &&
+      !chatId.endsWith("@g.us")
+    ) {
+      await saveContactIfNew(chatId);
+    }
+    const userWaNum = chatId.replace(/[^0-9]/g, "");
+    const isAdminCommand = adminCommands.some((cmd) =>
+      text.toLowerCase().startsWith(cmd)
+    );
+    const senderId = msg.author || chatId;
+    const isAdmin = isAdminWhatsApp(senderId);
+
+    // =========== Menu User Interaktif ===========
+    if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
+      delete userMenuContext[chatId];
       await waClient.sendMessage(
         chatId,
-        `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+        allowUserMenu ? "✅ Menu User ditutup. Terima kasih." : userMenuRedirectMessage
       );
       return;
     }
-    if (/^2$/.test(text.trim())) {
-      delete adminOptionSessions[chatId];
-      const waId = userWaNum.startsWith("62")
-        ? userWaNum
-        : "62" + userWaNum.replace(/^0/, "");
-      const operator = await findByOperator(waId);
-      const superAdmin = await findBySuperAdmin(waId);
-      if (!operator && !superAdmin && !isAdmin) {
-        await waClient.sendMessage(
+    if (session && text.toLowerCase() === "batal") {
+      const menuLabels = {
+        oprrequest: "Menu Operator",
+        dashrequest: "Menu Dashboard",
+        dirrequest: "Menu Direktorat",
+        clientrequest: "Menu Client",
+        wabotditbinmas: "Menu Wabot Ditbinmas",
+      };
+      clearSession(chatId);
+      const label = menuLabels[session.menu] || "Menu";
+      await waClient.sendMessage(chatId, `✅ ${label} ditutup.`);
+      return;
+    }
+
+    // ===== Pilihan awal untuk nomor operator =====
+    if (operatorOptionSessions[chatId]) {
+      if (/^1$/.test(text.trim())) {
+        delete operatorOptionSessions[chatId];
+        setSession(chatId, { menu: "oprrequest", step: "main" });
+        await oprRequestHandlers.main(
+          getSession(chatId),
           chatId,
-          "❌ Nomor Anda bukan operator atau super admin yang terdaftar."
+          `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          waClient,
+          pool,
+          userModel
         );
         return;
       }
-      setSession(chatId, { menu: "oprrequest", step: "main" });
-      await oprRequestHandlers.main(
-        getSession(chatId),
-        chatId,
-        `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
-        waClient,
-        pool,
-        userModel
-      );
-      return;
-    }
-    if (/^3$/.test(text.trim())) {
-      delete adminOptionSessions[chatId];
-      const pengirim = chatId.replace(/[^0-9]/g, "");
-      const userByWA = await userModel.findUserByWhatsApp(pengirim);
-      const salam = getGreeting();
+      if (/^2$/.test(text.trim())) {
+        delete operatorOptionSessions[chatId];
+        if (!allowUserMenu) {
+          await waClient.sendMessage(chatId, userMenuRedirectMessage);
+          return;
+        }
+        const pengirim = chatId.replace(/[^0-9]/g, "");
+        const userByWA = await userModel.findUserByWhatsApp(pengirim);
+        const salam = getGreeting();
         if (userByWA) {
-          userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
+          userMenuContext[chatId] = {
+            step: "confirmUserByWaUpdate",
+            user_id: userByWA.user_id,
+          };
           const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
           await waClient.sendMessage(chatId, msg.trim());
           setMenuTimeout(chatId, waClient, true);
@@ -521,10 +473,85 @@ export function createHandleMessage(waClient) {
         }
         return;
       }
-    await waClient.sendMessage(chatId, "Balas *1* untuk Menu Client, *2* untuk Menu Operator, atau *3* untuk perubahan data username.");
-    setAdminOptionTimeout(chatId);
-    return;
-  }
+      await waClient.sendMessage(
+        chatId,
+        "Balas *1* untuk Menu Operator atau *2* untuk perubahan data username."
+      );
+      setOperatorOptionTimeout(chatId);
+      return;
+    }
+
+    // ===== Pilihan awal untuk nomor admin =====
+    if (adminOptionSessions[chatId]) {
+      if (/^1$/.test(text.trim())) {
+        delete adminOptionSessions[chatId];
+        setSession(chatId, { menu: "clientrequest", step: "main" });
+        await waClient.sendMessage(
+          chatId,
+          `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+        );
+        return;
+      }
+      if (/^2$/.test(text.trim())) {
+        delete adminOptionSessions[chatId];
+        const waId = userWaNum.startsWith("62")
+          ? userWaNum
+          : "62" + userWaNum.replace(/^0/, "");
+        const operator = await findByOperator(waId);
+        const superAdmin = await findBySuperAdmin(waId);
+        if (!operator && !superAdmin && !isAdmin) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Nomor Anda bukan operator atau super admin yang terdaftar."
+          );
+          return;
+        }
+        setSession(chatId, { menu: "oprrequest", step: "main" });
+        await oprRequestHandlers.main(
+          getSession(chatId),
+          chatId,
+          `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          waClient,
+          pool,
+          userModel
+        );
+        return;
+      }
+      if (/^3$/.test(text.trim())) {
+        delete adminOptionSessions[chatId];
+        if (!allowUserMenu) {
+          await waClient.sendMessage(chatId, userMenuRedirectMessage);
+          return;
+        }
+        const pengirim = chatId.replace(/[^0-9]/g, "");
+        const userByWA = await userModel.findUserByWhatsApp(pengirim);
+        const salam = getGreeting();
+        if (userByWA) {
+          userMenuContext[chatId] = {
+            step: "confirmUserByWaUpdate",
+            user_id: userByWA.user_id,
+          };
+          const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+          await waClient.sendMessage(chatId, msg.trim());
+          setMenuTimeout(chatId, waClient, true);
+        } else {
+          userMenuContext[chatId] = { step: "inputUserId" };
+          const msg =
+            `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+            "\n\nBalas pesan ini dengan memasukan NRP Anda," +
+            "\n\n*Contoh Pesan Balasan : 87020990*";
+          await waClient.sendMessage(chatId, msg.trim());
+          setMenuTimeout(chatId, waClient, true);
+        }
+        return;
+      }
+      await waClient.sendMessage(
+        chatId,
+        "Balas *1* untuk Menu Client, *2* untuk Menu Operator, atau *3* untuk perubahan data user."
+      );
+      setAdminOptionTimeout(chatId);
+      return;
+    }
 
   // ===== Handler Menu Operator =====
   if (session && session.menu === "oprrequest") {
@@ -783,60 +810,69 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   }
 
 
-  // ===== Handler Menu User Interaktif Step Lanjut =====
-  if (userMenuContext[chatId]) {
-    setMenuTimeout(chatId, waClient);
-    const session = userMenuContext[chatId];
-    const handler = userMenuHandlers[session.step];
-    if (handler) {
-      await handler(session, chatId, text, waClient, pool, userModel);
-      if (session.exit) {
+    // ===== Handler Menu User Interaktif Step Lanjut =====
+    if (userMenuContext[chatId]) {
+      if (!allowUserMenu) {
+        delete userMenuContext[chatId];
+        await waClient.sendMessage(chatId, userMenuRedirectMessage);
+        return;
+      }
+      setMenuTimeout(chatId, waClient);
+      const session = userMenuContext[chatId];
+      const handler = userMenuHandlers[session.step];
+      if (handler) {
+        await handler(session, chatId, text, waClient, pool, userModel);
+        if (session.exit) {
+          clearTimeout(session.timeout);
+          clearTimeout(session.warningTimeout);
+          clearTimeout(session.noReplyTimeout);
+          delete userMenuContext[chatId];
+        } else {
+          setMenuTimeout(chatId, waClient, true);
+        }
+      } else {
+        await waClient.sendMessage(
+          chatId,
+          "⚠️ Sesi menu user tidak dikenal, silakan ketik *userrequest* ulang atau *batal*."
+        );
         clearTimeout(session.timeout);
         clearTimeout(session.warningTimeout);
         clearTimeout(session.noReplyTimeout);
         delete userMenuContext[chatId];
-      } else {
-        setMenuTimeout(chatId, waClient, true);
       }
-    } else {
-      await waClient.sendMessage(
-        chatId,
-        "⚠️ Sesi menu user tidak dikenal, silakan ketik *userrequest* ulang atau *batal*."
-      );
-      clearTimeout(session.timeout);
-      clearTimeout(session.warningTimeout);
-      clearTimeout(session.noReplyTimeout);
-      delete userMenuContext[chatId];
+      return;
     }
-    return;
-  }
 
-  // ========== Mulai Menu Interaktif User ==========
-  if (text.toLowerCase() === "userrequest") {
-    userMenuContext[chatId] = {};
-    try {
-      await userMenuHandlers.main(
-        userMenuContext[chatId],
-        chatId,
-        "",
-        waClient,
-        pool,
-        userModel
-      );
-      setMenuTimeout(chatId, waClient, true);
-    } catch (err) {
-      if (isUnsupportedVersionError(err)) {
-        await safeSendMessage(
-          waClient,
-          chatId,
-          "Versi WhatsApp Anda tidak mendukung menu ini. Silakan update aplikasi melalui Play Store:\nhttps://play.google.com/store/apps/details?id=com.whatsapp"
-        );
-      } else {
-        console.error(`[WA] userrequest menu error: ${err.message}`);
+    // ========== Mulai Menu Interaktif User ==========
+    if (text.toLowerCase() === "userrequest") {
+      if (!allowUserMenu) {
+        await waClient.sendMessage(chatId, userMenuRedirectMessage);
+        return;
       }
+      userMenuContext[chatId] = {};
+      try {
+        await userMenuHandlers.main(
+          userMenuContext[chatId],
+          chatId,
+          "",
+          waClient,
+          pool,
+          userModel
+        );
+        setMenuTimeout(chatId, waClient, true);
+      } catch (err) {
+        if (isUnsupportedVersionError(err)) {
+          await safeSendMessage(
+            waClient,
+            chatId,
+            "Versi WhatsApp Anda tidak mendukung menu ini. Silakan update aplikasi melalui Play Store:\nhttps://play.google.com/store/apps/details?id=com.whatsapp"
+          );
+        } else {
+          console.error(`${clientLabel} userrequest menu error: ${err.message}`);
+        }
+      }
+      return;
     }
-    return;
-  }
 
   // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
@@ -2223,25 +2259,32 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         );
       return;
     }
+    if (!allowUserMenu) {
+      await safeSendMessage(waClient, chatId, userMenuRedirectMessage);
+      return;
+    }
     const pengirim = chatId.replace(/[^0-9]/g, "");
     const userByWA = await userModel.findUserByWhatsApp(pengirim);
     const salam = getGreeting();
-      if (userByWA) {
-        userMenuContext[chatId] = { step: "confirmUserByWaUpdate", user_id: userByWA.user_id };
-        const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
-        await safeSendMessage(waClient, chatId, msg.trim());
-        setMenuTimeout(chatId, waClient, true);
-      } else {
-        userMenuContext[chatId] = { step: "inputUserId" };
-        const msg =
-          `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
-          clientInfoText +
-          "\n\nUntuk menampilkan data Anda, balas dengan NRP (hanya angka)." +
-          "\nKetik *batal* untuk keluar." +
-          "\n\nContoh:\n87020990";
-        await safeSendMessage(waClient, chatId, msg.trim());
-        setMenuTimeout(chatId, waClient, true);
-      }
+    if (userByWA) {
+      userMenuContext[chatId] = {
+        step: "confirmUserByWaUpdate",
+        user_id: userByWA.user_id,
+      };
+      const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
+      await safeSendMessage(waClient, chatId, msg.trim());
+      setMenuTimeout(chatId, waClient, true);
+    } else {
+      userMenuContext[chatId] = { step: "inputUserId" };
+      const msg =
+        `${salam}! Nomor WhatsApp Anda belum terdaftar.` +
+        clientInfoText +
+        "\n\nUntuk menampilkan data Anda, balas dengan NRP (hanya angka)." +
+        "\nKetik *batal* untuk keluar." +
+        "\n\nContoh:\n87020990";
+      await safeSendMessage(waClient, chatId, msg.trim());
+      setMenuTimeout(chatId, waClient, true);
+    }
     return;
   }
 
@@ -2250,6 +2293,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   const userByWAExist = await userModel.findUserByWhatsApp(senderWa);
 
   if (!userByWAExist) {
+    if (!allowUserMenu) {
+      delete waBindSessions[chatId];
+      await waClient.sendMessage(chatId, userMenuRedirectMessage);
+      return;
+    }
     if (waBindSessions[chatId]) {
       const session = waBindSessions[chatId];
       if (session.step === "ask_nrp") {
@@ -2328,19 +2376,28 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   }
 
   // Untuk user lama (pesan tidak dikenal)
+  const helpInstruction = allowUserMenu
+    ? "Untuk melihat daftar perintah dan bantuan penggunaan, silakan ketik *userrequest*."
+    : "Untuk melihat daftar perintah dan bantuan penggunaan, silakan hubungi nomor *WA-USER* dan ketik *userrequest*.";
   await waClient.sendMessage(
     chatId,
     "🤖 Maaf, perintah yang Anda kirim belum dikenali oleh sistem.\n\n" +
-      "Untuk melihat daftar perintah dan bantuan penggunaan, silakan ketik *userrequest*." +
+      helpInstruction +
       clientInfoText
   );
-  console.log(`[WA] Message from ${chatId} processed with fallback handler`);
+  console.log(`${clientLabel} Message from ${chatId} processed with fallback handler`);
   return;
   };
 }
 
-const handleMessage = createHandleMessage(waClient);
-const handleUserMessage = createHandleMessage(waUserClient);
+const handleMessage = createHandleMessage(waClient, {
+  allowUserMenu: false,
+  clientLabel: "[WA]",
+});
+const handleUserMessage = createHandleMessage(waUserClient, {
+  allowUserMenu: true,
+  clientLabel: "[WA-USER]",
+});
 
 waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
