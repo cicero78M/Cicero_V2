@@ -27,6 +27,8 @@ import { mdToPdf } from "md-to-pdf";
 import { query } from "../../db/index.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
+import { fetchInstagramInfo } from "../../service/instaRapidService.js";
+import { fetchTiktokProfile } from "../../service/tiktokRapidService.js";
 
 function ignore(..._args) {}
 
@@ -55,6 +57,457 @@ async function sendComplaintResponse(session, waClient) {
 
   await safeSendMessage(waClient, target, message);
   return { reporterName, nrp };
+}
+
+const numberFormatter = new Intl.NumberFormat("id-ID");
+const UPDATE_DATA_LINK = "https://papiqo.com/claim";
+
+function formatNumber(value) {
+  if (value === null || value === undefined) return "-";
+  const num = Number(value);
+  if (Number.isNaN(num)) return String(value);
+  return numberFormatter.format(num);
+}
+
+function ensureHandle(value) {
+  if (!value) return "";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+}
+
+function pickPrimaryRole(user) {
+  if (!user) return null;
+  if (user.ditbinmas) return "ditbinmas";
+  if (user.ditlantas) return "ditlantas";
+  if (user.bidhumas) return "bidhumas";
+  if (user.operator) return "operator";
+  return null;
+}
+
+function shortenCaption(text, max = 120) {
+  if (!text) return "(tanpa caption)";
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1)}…`;
+}
+
+function buildPlatformSummary(platformLabel, status) {
+  if (!status) return `${platformLabel}: Data tidak tersedia.`;
+  if (status.error) {
+    return `${platformLabel}: Gagal mengambil data (${status.error}).`;
+  }
+  if (!status.found) {
+    return `${platformLabel}: Username belum tercatat di database.`;
+  }
+  const metrics = [];
+  if (status.posts !== null) metrics.push(`Postingan ${formatNumber(status.posts)}`);
+  if (status.followers !== null) metrics.push(`Followers ${formatNumber(status.followers)}`);
+  if (status.following !== null) metrics.push(`Following ${formatNumber(status.following)}`);
+  if (status.likes !== null) metrics.push(`Likes ${formatNumber(status.likes)}`);
+  const detail = metrics.length ? metrics.join(" | ") : "Belum ada statistik terbaru";
+  return `${platformLabel}: ${status.state || "Aktif"}${detail ? ` – ${detail}` : ""}`;
+}
+
+async function buildAccountStatus(user) {
+  const result = {
+    adminMessage: "",
+    instagram: {
+      username: "",
+      found: false,
+      posts: null,
+      followers: null,
+      following: null,
+      state: "",
+      error: "",
+      summaryForSolution: "",
+    },
+    tiktok: {
+      username: "",
+      found: false,
+      posts: null,
+      followers: null,
+      following: null,
+      likes: null,
+      state: "",
+      error: "",
+      summaryForSolution: "",
+    },
+  };
+
+  const lines = ["📱 *Status Akun Sosial Media*"];
+
+  const instaUsernameRaw =
+    typeof user?.insta === "string" ? user.insta.trim() : user?.insta || "";
+  const instaHandle = ensureHandle(instaUsernameRaw);
+  result.instagram.username = instaHandle;
+  if (!instaHandle) {
+    lines.push("", "📸 Instagram: Belum diisi di profil Cicero.");
+    result.instagram.summaryForSolution =
+      "Instagram: Username belum tercatat, mohon perbarui melalui tautan data personel.";
+  } else {
+    try {
+      const profile = await fetchInstagramInfo(instaHandle.replace(/^@/, ""));
+      const data = profile || {};
+      const followerCount =
+        data.followers_count ?? data.follower_count ?? data.edge_followed_by?.count ?? null;
+      const followingCount =
+        data.following_count ?? data.following ?? data.edge_follow?.count ?? null;
+      const mediaCount =
+        data.media_count ?? data.posts_count ?? data.edge_owner_to_timeline_media?.count ?? null;
+      const state = data.is_private === true ? "Aktif (Privat)" : "Aktif";
+
+      Object.assign(result.instagram, {
+        found: true,
+        posts: mediaCount,
+        followers: followerCount,
+        following: followingCount,
+        state,
+        summaryForSolution: buildPlatformSummary(
+          `Instagram (${instaHandle})`,
+          {
+            found: true,
+            posts: mediaCount,
+            followers: followerCount,
+            following: followingCount,
+            state,
+          }
+        ),
+      });
+
+      lines.push(
+        "",
+        `📸 Instagram *${instaHandle}*`,
+        `Status: ${state}`,
+        `Postingan: ${formatNumber(mediaCount)}`,
+        `Followers: ${formatNumber(followerCount)}`,
+        `Following: ${formatNumber(followingCount)}`
+      );
+    } catch (err) {
+      const errorMsg = err?.message || "tidak diketahui";
+      result.instagram.error = errorMsg;
+      result.instagram.summaryForSolution = buildPlatformSummary("Instagram", {
+        error: errorMsg,
+      });
+      lines.push(
+        "",
+        `📸 Instagram *${instaHandle}*`,
+        `Status: Gagal mengambil data (${errorMsg}).`
+      );
+    }
+  }
+
+  const tiktokUsernameRaw =
+    typeof user?.tiktok === "string" ? user.tiktok.trim() : user?.tiktok || "";
+  const tiktokHandle = ensureHandle(tiktokUsernameRaw);
+  result.tiktok.username = tiktokHandle;
+  if (!tiktokHandle) {
+    lines.push("", "🎵 TikTok: Belum diisi di profil Cicero.");
+    result.tiktok.summaryForSolution =
+      "TikTok: Username belum tercatat, mohon perbarui melalui tautan data personel.";
+  } else {
+    try {
+      const profile = await fetchTiktokProfile(tiktokHandle.replace(/^@/, ""));
+      const data = profile || {};
+      const followerCount = data.follower_count ?? data.stats?.followerCount ?? null;
+      const followingCount = data.following_count ?? data.stats?.followingCount ?? null;
+      const likeCount = data.like_count ?? data.stats?.heart ?? null;
+      const videoCount = data.video_count ?? data.stats?.videoCount ?? null;
+      const state = data.username || data.nickname ? "Aktif" : "";
+
+      Object.assign(result.tiktok, {
+        found: Boolean(data.username || data.nickname || data.stats),
+        posts: videoCount,
+        followers: followerCount,
+        following: followingCount,
+        likes: likeCount,
+        state: state || "Aktif",
+        summaryForSolution: buildPlatformSummary(
+          `TikTok (${tiktokHandle})`,
+          {
+            found: Boolean(data.username || data.nickname || data.stats),
+            posts: videoCount,
+            followers: followerCount,
+            following: followingCount,
+            likes: likeCount,
+            state: state || "Aktif",
+          }
+        ),
+      });
+
+      lines.push(
+        "",
+        `🎵 TikTok *${tiktokHandle}*`,
+        `Status: ${state || "Aktif"}`,
+        `Video: ${formatNumber(videoCount)}`,
+        `Followers: ${formatNumber(followerCount)}`,
+        `Following: ${formatNumber(followingCount)}`,
+        `Likes: ${formatNumber(likeCount)}`
+      );
+    } catch (err) {
+      const errorMsg = err?.message || "tidak diketahui";
+      result.tiktok.error = errorMsg;
+      result.tiktok.summaryForSolution = buildPlatformSummary("TikTok", {
+        error: errorMsg,
+      });
+      lines.push(
+        "",
+        `🎵 TikTok *${tiktokHandle}*`,
+        `Status: Gagal mengambil data (${errorMsg}).`
+      );
+    }
+  }
+
+  result.adminMessage = lines.join("\n").trim();
+  return result;
+}
+
+async function fetchPendingTasksForToday(user) {
+  if (!user?.user_id || !user?.client_id) {
+    return { posts: [], pending: [], error: null };
+  }
+
+  try {
+    const clientRes = await query(
+      "SELECT LOWER(client_type) AS client_type FROM clients WHERE LOWER(client_id) = LOWER($1)",
+      [user.client_id]
+    );
+    const clientType = clientRes.rows[0]?.client_type;
+    const params = [];
+    let joinClause = "";
+    const conditions = [
+      "(p.created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date",
+    ];
+
+    if (clientType === "direktorat") {
+      const roleName = pickPrimaryRole(user) || user.client_id;
+      if (!roleName) {
+        return { posts: [], pending: [], error: null };
+      }
+      joinClause =
+        "JOIN insta_post_roles pr ON pr.shortcode = p.shortcode JOIN roles r ON pr.role_id = r.role_id";
+      params.push(roleName);
+      conditions.unshift("LOWER(r.role_name) = LOWER($1)");
+    } else {
+      params.push(user.client_id);
+      conditions.unshift("LOWER(p.client_id) = LOWER($1)");
+    }
+
+    const postsRes = await query(
+      `SELECT p.shortcode, COALESCE(p.caption, '') AS caption
+       FROM insta_post p
+       ${joinClause}
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY p.created_at ASC`,
+      params
+    );
+    const posts = postsRes.rows || [];
+
+    if (!posts.length) {
+      return { posts: [], pending: [], error: null };
+    }
+
+    const reportRes = await query(
+      `SELECT shortcode,
+              instagram_link,
+              facebook_link,
+              twitter_link,
+              tiktok_link,
+              youtube_link
+         FROM link_report
+        WHERE user_id = $1
+          AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date`,
+      [user.user_id]
+    );
+
+    const completed = new Set(
+      reportRes.rows
+        .filter((row) =>
+          [
+            row.instagram_link,
+            row.facebook_link,
+            row.twitter_link,
+            row.tiktok_link,
+            row.youtube_link,
+          ].some((value) => typeof value === "string" && value.trim() !== "")
+        )
+        .map((row) => row.shortcode)
+    );
+
+    const pending = posts.filter((post) => !completed.has(post.shortcode));
+
+    return { posts, pending, error: null };
+  } catch (err) {
+    return { posts: [], pending: [], error: err };
+  }
+}
+
+function detectKnownIssueKey(issueText) {
+  if (!issueText) return null;
+  const normalized = issueText
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return null;
+
+  const hasInstagram = /instagram|ig/.test(normalized);
+  const hasTiktok = /tiktok|tt/.test(normalized);
+  const mentionsExecuted = /sudah\s+melaksanakan/.test(normalized);
+  const mentionsNotRecorded = /(belum|blm|tidak)\s+terdata/.test(normalized);
+  const mentionsLessAttendance = /terabsen\s+kurang|absen\s+kurang/.test(normalized);
+
+  if (mentionsExecuted && hasInstagram && mentionsNotRecorded) {
+    return "instagram_not_recorded";
+  }
+  if (mentionsExecuted && hasTiktok && mentionsNotRecorded) {
+    return "tiktok_not_recorded";
+  }
+  if (mentionsExecuted && mentionsLessAttendance) {
+    return "attendance_less";
+  }
+  return null;
+}
+
+function buildUpdateDataInstructions(platformLabel) {
+  const steps = [
+    `1. Buka tautan berikut: ${UPDATE_DATA_LINK}`,
+    "2. Login menggunakan NRP/NIP dan kata sandi aplikasi Cicero.",
+    `3. Pilih menu *Update Data Personil* kemudian perbarui username ${platformLabel}.`,
+    "4. Pastikan username sesuai dengan akun aktif yang dipakai saat tugas, lalu simpan perubahan.",
+    "5. Konfirmasi kepada admin setelah data diperbarui agar dapat sinkron otomatis.",
+  ];
+  return steps.join("\n");
+}
+
+async function processComplaintResolution(session, chatId, waClient) {
+  const data = session.respondComplaint || {};
+  const { nrp, user, issue, solution } = data;
+  if (!nrp || !user || !issue || !solution) {
+    delete session.respondComplaint;
+    session.step = "main";
+    await waClient.sendMessage(
+      chatId,
+      "Data komplain tidak lengkap. Silakan mulai ulang proses respon komplain."
+    );
+    return false;
+  }
+
+  try {
+    const { reporterName, nrp: reporterNrp } = await sendComplaintResponse(session, waClient);
+    const adminSummary = [
+      "📨 *Ringkasan Respon Komplain*",
+      "Respon telah disampaikan kepada pelapor. Mohon catat tindak lanjut berikut sebagai arsip:",
+      "",
+      "👤 *Identitas Pelapor*",
+      formatUserData(user),
+      "",
+      "🛑 *Kendala yang dicatat*",
+      issue,
+      "",
+      "✅ *Solusi/Tindak Lanjut yang dikirim*",
+      solution,
+    ]
+      .join("\n")
+      .trim();
+
+    await safeSendMessage(waClient, chatId, adminSummary);
+    await waClient.sendMessage(
+      chatId,
+      `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
+    );
+    delete session.respondComplaint;
+    session.step = "main";
+    return true;
+  } catch (err) {
+    const reporterName = formatNama(user) || user.nama || nrp;
+    await waClient.sendMessage(
+      chatId,
+      `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
+    );
+    delete session.respondComplaint;
+    session.step = "main";
+    return false;
+  }
+}
+
+async function maybeHandleAutoSolution(session, chatId, waClient) {
+  const data = session.respondComplaint || {};
+  const issueKey = detectKnownIssueKey(data.issue);
+  if (!issueKey) return false;
+
+  try {
+    if (issueKey === "instagram_not_recorded") {
+      const summary =
+        data.accountStatus?.instagram?.summaryForSolution ||
+        "Data Instagram belum tersedia.";
+      const solution = [
+        summary,
+        "",
+        "Langkah tindak lanjut:",
+        buildUpdateDataInstructions("Instagram"),
+        "",
+        `Tautan update data personel: ${UPDATE_DATA_LINK}`,
+      ].join("\n");
+      session.respondComplaint.solution = solution;
+      return await processComplaintResolution(session, chatId, waClient);
+    }
+
+    if (issueKey === "tiktok_not_recorded") {
+      const summary =
+        data.accountStatus?.tiktok?.summaryForSolution ||
+        "Data TikTok belum tersedia.";
+      const solution = [
+        summary,
+        "",
+        "Langkah tindak lanjut:",
+        buildUpdateDataInstructions("TikTok"),
+        "",
+        `Tautan update data personel: ${UPDATE_DATA_LINK}`,
+      ].join("\n");
+      session.respondComplaint.solution = solution;
+      return await processComplaintResolution(session, chatId, waClient);
+    }
+
+    if (issueKey === "attendance_less") {
+      const { pending, error } = await fetchPendingTasksForToday(data.user);
+      let summary;
+      if (error) {
+        summary = `Gagal mengambil data tugas: ${error.message}`;
+      } else if (!pending.length) {
+        summary =
+          "Semua link tugas hari ini sudah tercatat di sistem. Jika masih terdapat perbedaan, mohon kirim bukti pengiriman link.";
+      } else {
+        const taskLines = pending.map((post, idx) => {
+          const link = `https://www.instagram.com/p/${post.shortcode}/`;
+          return `${idx + 1}. ${shortenCaption(post.caption)}\n   ${link}`;
+        });
+        summary = [
+          "Berikut daftar link tugas yang belum tercatat pada sistem hari ini:",
+          ...taskLines,
+        ].join("\n");
+      }
+
+      const solution = [
+        summary,
+        "",
+        "Silakan lakukan update link melalui menu *Update Tugas* pada aplikasi Cicero setelah melaksanakan tugas.",
+        "Jika seluruh tugas sudah dikerjakan, mohon kirimkan bukti screenshot update link kepada admin untuk verifikasi.",
+      ].join("\n");
+
+      session.respondComplaint.solution = solution;
+      return await processComplaintResolution(session, chatId, waClient);
+    }
+  } catch (err) {
+    console.error(`[RESPOND COMPLAINT] Auto-solution error: ${err.message}`);
+    await waClient.sendMessage(
+      chatId,
+      "⚠️ Gagal menyiapkan solusi otomatis. Silakan tuliskan solusi secara manual."
+    );
+    return false;
+  }
+
+  return false;
 }
 
 async function collectMarkdownFiles(dir, files = []) {
@@ -1768,38 +2221,34 @@ export const clientRequestHandlers = {
     const hasInsta = Boolean(instaUsername);
     const hasTiktok = Boolean(tiktokUsername);
 
+    const accountStatus = await buildAccountStatus(user);
+    if (accountStatus.adminMessage) {
+      await waClient.sendMessage(chatId, accountStatus.adminMessage);
+    }
+
     if (!hasInsta && !hasTiktok) {
       session.respondComplaint = {
         nrp,
         user,
+        accountStatus,
         issue: "Akun sosial media masih belum terisi",
-        solution: "Silakan update username melalui https://papiqo.com/claim",
+        solution: [
+          "Belum terdapat username Instagram maupun TikTok pada data personel.",
+          "",
+          "Langkah tindak lanjut:",
+          buildUpdateDataInstructions("Instagram dan TikTok"),
+          "",
+          `Tautan update data personel: ${UPDATE_DATA_LINK}`,
+        ].join("\n"),
       };
 
-      try {
-        const { reporterName, nrp: reporterNrp } = await sendComplaintResponse(
-          session,
-          waClient
-        );
-        await waClient.sendMessage(
-          chatId,
-          `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
-        );
-      } catch (err) {
-        const reporterName = formatNama(user) || user.nama || nrp;
-        await waClient.sendMessage(
-          chatId,
-          `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
-        );
-      }
-
-      delete session.respondComplaint;
-      session.step = "main";
+      await processComplaintResolution(session, chatId, waClient);
       return;
     }
     session.respondComplaint = {
       nrp,
       user,
+      accountStatus,
     };
     session.step = "respondComplaint_issue";
     await waClient.sendMessage(
@@ -1822,10 +2271,16 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(chatId, "Respon komplain dibatalkan.");
       return;
     }
+    const formattedIssue = formatComplaintIssue(input);
     session.respondComplaint = {
       ...(session.respondComplaint || {}),
-      issue: formatComplaintIssue(input),
+      issue: formattedIssue,
     };
+
+    if (await maybeHandleAutoSolution(session, chatId, waClient)) {
+      return;
+    }
+
     session.step = "respondComplaint_solution";
     await waClient.sendMessage(
       chatId,
@@ -1868,42 +2323,7 @@ export const clientRequestHandlers = {
       ...data,
       solution,
     };
-    try {
-      const { reporterName, nrp: reporterNrp } = await sendComplaintResponse(
-        session,
-        waClient
-      );
-      const adminSummary = [
-        "📨 *Ringkasan Respon Komplain*",
-        "Respon telah disampaikan kepada pelapor. Mohon catat tindak lanjut berikut sebagai arsip:",
-        "",
-        "👤 *Identitas Pelapor*",
-        formatUserData(user),
-        "",
-        "🛑 *Kendala yang dicatat*",
-        issue,
-        "",
-        "✅ *Solusi/Tindak Lanjut yang dikirim*",
-        solution,
-      ]
-        .join("\n")
-        .trim();
-
-      await safeSendMessage(waClient, chatId, adminSummary);
-      await waClient.sendMessage(
-        chatId,
-        `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
-      );
-    } catch (err) {
-      const reporterName = formatNama(user) || user.nama || nrp;
-      await waClient.sendMessage(
-        chatId,
-        `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
-      );
-    }
-
-    delete session.respondComplaint;
-    session.step = "main";
+    await processComplaintResolution(session, chatId, waClient);
   },
 
   // ================== ABSENSI OPERATOR DITBINMAS ==================

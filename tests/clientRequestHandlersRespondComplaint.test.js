@@ -8,6 +8,8 @@ const mockGetGreeting = jest.fn();
 const mockFormatToWhatsAppId = jest.fn();
 const mockFormatUserData = jest.fn();
 const mockFormatComplaintIssue = jest.fn();
+const mockFetchInstagramInfo = jest.fn();
+const mockFetchTiktokProfile = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -48,6 +50,12 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
   absensiKomentarTiktokPerKonten: jest.fn(),
   absensiKomentarDitbinmasReport: jest.fn(),
 }));
+jest.unstable_mockModule('../src/service/instaRapidService.js', () => ({
+  fetchInstagramInfo: mockFetchInstagramInfo,
+}));
+jest.unstable_mockModule('../src/service/tiktokRapidService.js', () => ({
+  fetchTiktokProfile: mockFetchTiktokProfile,
+}));
 
 process.env.JWT_SECRET = 'test';
 
@@ -65,6 +73,19 @@ beforeEach(() => {
   mockFormatToWhatsAppId.mockImplementation((value) => `${value}@wa`);
   mockFormatUserData.mockReturnValue('```\nMock User\n```');
   mockFormatComplaintIssue.mockImplementation((value) => value.trim());
+  mockFetchInstagramInfo.mockResolvedValue({
+    follower_count: 1234,
+    following_count: 321,
+    media_count: 45,
+    is_private: false,
+  });
+  mockFetchTiktokProfile.mockResolvedValue({
+    follower_count: 5678,
+    following_count: 89,
+    like_count: 1011,
+    video_count: 12,
+    username: 'username',
+  });
 });
 
 test('respondComplaint_nrp automatically sends default response when social usernames are empty', async () => {
@@ -90,12 +111,30 @@ test('respondComplaint_nrp automatically sends default response when social user
   );
 
   expect(mockNormalizeUserId).toHaveBeenCalledWith('12345');
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(
+    1,
     waClient,
     '08123@wa',
-    expect.stringContaining('Akun sosial media masih belum terisi')
+    expect.stringContaining('Tautan update data personel')
   );
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(
+    2,
+    waClient,
+    chatId,
+    expect.stringContaining('Ringkasan Respon Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    1,
+    chatId,
+    expect.stringContaining('Data Pelapor')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    2,
+    chatId,
+    expect.stringContaining('Status Akun Sosial Media')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    3,
     chatId,
     '✅ Respon komplain telah dikirim ke Pelapor (12345).'
   );
@@ -126,12 +165,29 @@ test('respondComplaint_nrp continues manual flow when social username exists', a
   );
 
   expect(mockSafeSendMessage).not.toHaveBeenCalled();
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    1,
+    chatId,
+    expect.stringContaining('Data Pelapor')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    2,
+    chatId,
+    expect.stringContaining('Status Akun Sosial Media')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    3,
     chatId,
     'Tuliskan ringkasan *kendala* dari pelapor (atau ketik *batal* untuk keluar):'
   );
   expect(session.step).toBe('respondComplaint_issue');
-  expect(session.respondComplaint).toEqual({ nrp: '12345', user: expect.any(Object) });
+  expect(session.respondComplaint).toMatchObject({
+    nrp: '12345',
+    user: expect.any(Object),
+    accountStatus: expect.objectContaining({ adminMessage: expect.any(String) }),
+  });
+  expect(mockFetchInstagramInfo).toHaveBeenCalledWith('username');
+  expect(mockFetchTiktokProfile).not.toHaveBeenCalled();
 });
 
 test('respondComplaint_solution uses helper to send message and reset session', async () => {
