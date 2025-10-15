@@ -7,6 +7,7 @@ const mockNormalizeUserId = jest.fn();
 const mockGetGreeting = jest.fn();
 const mockFormatToWhatsAppId = jest.fn();
 const mockFormatUserData = jest.fn();
+const mockFormatComplaintIssue = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -20,6 +21,7 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   normalizeUserId: mockNormalizeUserId,
   getGreeting: mockGetGreeting,
   formatUserData: mockFormatUserData,
+  formatComplaintIssue: mockFormatComplaintIssue,
 }));
 
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
@@ -62,6 +64,7 @@ beforeEach(() => {
   mockNormalizeUserId.mockImplementation((value) => value.trim());
   mockFormatToWhatsAppId.mockImplementation((value) => `${value}@wa`);
   mockFormatUserData.mockReturnValue('```\nMock User\n```');
+  mockFormatComplaintIssue.mockImplementation((value) => value.trim());
 });
 
 test('respondComplaint_nrp automatically sends default response when social usernames are empty', async () => {
@@ -160,5 +163,32 @@ test('respondComplaint_solution uses helper to send message and reset session', 
   );
   expect(session.respondComplaint).toBeUndefined();
   expect(session.step).toBe('main');
+});
+
+test('respondComplaint_issue stores formatted complaint issue and prompts for solution', async () => {
+  const session = {
+    respondComplaint: {
+      nrp: '12345',
+      user: { nama: 'Nama Lengkap' },
+    },
+  };
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  mockFormatComplaintIssue.mockReturnValue('Formatted Kendala');
+
+  await clientRequestHandlers.respondComplaint_issue(
+    session,
+    chatId,
+    '  Pesan Komplain ...  ',
+    waClient
+  );
+
+  expect(mockFormatComplaintIssue).toHaveBeenCalledWith('Pesan Komplain ...');
+  expect(session.respondComplaint.issue).toBe('Formatted Kendala');
+  expect(session.step).toBe('respondComplaint_solution');
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    'Tuliskan *solusi/tindak lanjut* yang akan dikirim ke pelapor (atau ketik *batal* untuk keluar):'
+  );
 });
 

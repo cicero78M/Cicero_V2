@@ -151,6 +151,167 @@ export function formatUserData(user) {
 }
 
 
+function toTitleCase(value) {
+  return value
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (match, p1) => p1.toUpperCase());
+}
+
+function normalizeHandle(value) {
+  const cleaned = value.replace(/\s+/g, "").replace(/^@+/, "");
+  if (!cleaned) return "";
+  return "@" + cleaned.toLowerCase();
+}
+
+function normalizeSentence(value) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return /[.!?]$/.test(capitalized) ? capitalized : `${capitalized}.`;
+}
+
+export function formatComplaintIssue(rawText) {
+  if (!rawText) return "";
+  const normalized = String(rawText).replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return "";
+  if (!/pesan\s+komplain/i.test(normalized)) {
+    return normalized;
+  }
+
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line, idx, arr) => line !== "" || (idx > 0 && arr[idx - 1] !== ""));
+
+  const headerIndex = lines.findIndex((line) => /pesan\s+komplain/i.test(line));
+  const startIndex = headerIndex === -1 ? 0 : headerIndex + 1;
+  const kendalaIndex = lines.findIndex((line) =>
+    /^kendala\b/i.test(line.replace(/[:：]/g, "").trim())
+  );
+
+  const infoLines = [];
+  const issueLines = [];
+
+  const fieldHandlers = {
+    nrp: {
+      label: "NRP/NIP",
+      transform: (value) => value.replace(/\s+/g, "").trim(),
+    },
+    nama: {
+      label: "Nama",
+      transform: (value) => toTitleCase(value),
+    },
+    polres: {
+      label: "Polres",
+      transform: (value) => toTitleCase(value),
+    },
+    "username ig": {
+      label: "Instagram",
+      transform: (value) => normalizeHandle(value),
+    },
+    "username instagram": {
+      label: "Instagram",
+      transform: (value) => normalizeHandle(value),
+    },
+    "username tiktok": {
+      label: "TikTok",
+      transform: (value) => normalizeHandle(value),
+    },
+  };
+
+  const infoOrder = [
+    "nrp",
+    "nama",
+    "polres",
+    "username ig",
+    "username instagram",
+    "username tiktok",
+  ];
+
+  const collectedInfo = new Map();
+
+  const endInfoIndex =
+    kendalaIndex === -1 ? lines.length : Math.max(startIndex, kendalaIndex);
+  for (let i = startIndex; i < endInfoIndex; i += 1) {
+    const line = lines[i];
+    if (!line) continue;
+    const match = line.match(/^([^:：]+)[:：]\s*(.+)$/);
+    if (!match) continue;
+    const [, rawKey, rawValue] = match;
+    const key = rawKey.replace(/\s+/g, " ").trim().toLowerCase();
+    const value = rawValue.trim();
+    if (!fieldHandlers[key]) continue;
+    const transformed = fieldHandlers[key].transform(value).trim();
+    if (!transformed) continue;
+    collectedInfo.set(fieldHandlers[key].label, transformed);
+  }
+
+  const usedLabels = new Set();
+  infoOrder.forEach((key) => {
+    const handler = fieldHandlers[key];
+    if (!handler) return;
+    if (usedLabels.has(handler.label)) return;
+    const value = collectedInfo.get(handler.label);
+    if (value) {
+      infoLines.push(`• ${handler.label}: ${value}`);
+      usedLabels.add(handler.label);
+    }
+  });
+
+  const issuesStart = kendalaIndex === -1 ? lines.length : kendalaIndex + 1;
+  let currentIssue = "";
+  for (let i = issuesStart; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line) {
+      if (currentIssue) {
+        issueLines.push(currentIssue);
+        currentIssue = "";
+      }
+      continue;
+    }
+    const bulletMatch = line.match(/^[-•●]+\s*(.+)$/);
+    const numberMatch = line.match(/^\d+[).]\s*(.+)$/);
+    const content = bulletMatch
+      ? bulletMatch[1]
+      : numberMatch
+      ? numberMatch[1]
+      : null;
+    if (content !== null) {
+      if (currentIssue) {
+        issueLines.push(currentIssue);
+      }
+      currentIssue = content.trim();
+      continue;
+    }
+    currentIssue = currentIssue
+      ? `${currentIssue} ${line}`
+      : line;
+  }
+  if (currentIssue) {
+    issueLines.push(currentIssue);
+  }
+
+  const normalizedIssues = issueLines
+    .map((issue) => normalizeSentence(issue))
+    .filter(Boolean);
+
+  if (!infoLines.length && !normalizedIssues.length) {
+    return normalized;
+  }
+
+  const blocks = [];
+  if (infoLines.length) {
+    blocks.push(["*Informasi Tambahan Pelapor*", ...infoLines].join("\n"));
+  }
+  if (normalizedIssues.length) {
+    const numbered = normalizedIssues.map((issue, idx) => `${idx + 1}. ${issue}`);
+    blocks.push(["*Rincian Kendala*", ...numbered].join("\n"));
+  }
+
+  return blocks.join("\n\n").trim();
+}
+
+
 export function extractFirstUrl(text) {
   if (!text) return null;
   const match = String(text).match(/https?:\/\/\S+/);
