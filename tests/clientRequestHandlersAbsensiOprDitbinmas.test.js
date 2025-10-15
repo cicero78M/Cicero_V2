@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 
 const mockAbsensiRegistrasiDashboardDitbinmas = jest.fn();
+const mockSafeSendMessage = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -18,6 +19,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   getAdminWAIds: jest.fn(),
   sendWAFile: jest.fn(),
   formatToWhatsAppId: jest.fn(),
+  safeSendMessage: mockSafeSendMessage,
 }));
 jest.unstable_mockModule('../src/model/linkReportModel.js', () => ({}));
 jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
