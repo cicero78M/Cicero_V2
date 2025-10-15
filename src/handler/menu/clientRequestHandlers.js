@@ -1872,6 +1872,23 @@ export const clientRequestHandlers = {
         session,
         waClient
       );
+      const adminSummary = [
+        "📨 *Ringkasan Respon Komplain*",
+        "Respon telah disampaikan kepada pelapor. Mohon catat tindak lanjut berikut sebagai arsip:",
+        "",
+        "👤 *Identitas Pelapor*",
+        formatUserData(user),
+        "",
+        "🛑 *Kendala yang dicatat*",
+        issue,
+        "",
+        "✅ *Solusi/Tindak Lanjut yang dikirim*",
+        solution,
+      ]
+        .join("\n")
+        .trim();
+
+      await safeSendMessage(waClient, chatId, adminSummary);
       await waClient.sendMessage(
         chatId,
         `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
