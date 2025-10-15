@@ -28,6 +28,33 @@ import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
 function ignore(..._args) {}
 
+async function sendComplaintResponse(session, waClient) {
+  const data = session.respondComplaint || {};
+  const { nrp, user, issue, solution } = data;
+
+  if (!nrp || !user || !issue || !solution) {
+    throw new Error("Data komplain tidak lengkap.");
+  }
+
+  const salam = getGreeting();
+  const reporterName = formatNama(user) || user.nama || nrp;
+  const target = formatToWhatsAppId(user.whatsapp);
+  const message = [
+    `${salam}! Kami menindaklanjuti laporan yang Anda sampaikan.`,
+    `\n*Pelapor*: ${reporterName}`,
+    `\n*NRP/NIP*: ${nrp}`,
+    `\n*Kendala*:`,
+    issue,
+    `\n\n*Solusi/Tindak Lanjut*:`,
+    solution,
+  ]
+    .join("\n")
+    .trim();
+
+  await safeSendMessage(waClient, target, message);
+  return { reporterName, nrp };
+}
+
 async function collectMarkdownFiles(dir, files = []) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -1725,6 +1752,42 @@ export const clientRequestHandlers = {
       );
       return;
     }
+    const instaUsername =
+      typeof user.insta === "string" ? user.insta.trim() : user.insta || "";
+    const tiktokUsername =
+      typeof user.tiktok === "string" ? user.tiktok.trim() : user.tiktok || "";
+    const hasInsta = Boolean(instaUsername);
+    const hasTiktok = Boolean(tiktokUsername);
+
+    if (!hasInsta && !hasTiktok) {
+      session.respondComplaint = {
+        nrp,
+        user,
+        issue: "Akun sosial media masih belum terisi",
+        solution: "Silakan update username melalui https://papiqo.com/claim",
+      };
+
+      try {
+        const { reporterName, nrp: reporterNrp } = await sendComplaintResponse(
+          session,
+          waClient
+        );
+        await waClient.sendMessage(
+          chatId,
+          `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
+        );
+      } catch (err) {
+        const reporterName = formatNama(user) || user.nama || nrp;
+        await waClient.sendMessage(
+          chatId,
+          `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
+        );
+      }
+
+      delete session.respondComplaint;
+      session.step = "main";
+      return;
+    }
     session.respondComplaint = {
       nrp,
       user,
@@ -1796,28 +1859,17 @@ export const clientRequestHandlers = {
       ...data,
       solution,
     };
-    const salam = getGreeting();
-    const reporterName = formatNama(user) || user.nama || nrp;
-    const target = formatToWhatsAppId(user.whatsapp);
-    const message = [
-      `${salam}! Kami menindaklanjuti laporan yang Anda sampaikan.`,
-      `\n*Pelapor*: ${reporterName}`,
-      `\n*NRP/NIP*: ${nrp}`,
-      `\n*Kendala*:`,
-      issue,
-      `\n\n*Solusi/Tindak Lanjut*:`,
-      solution,
-    ]
-      .join("\n")
-      .trim();
-
     try {
-      await safeSendMessage(waClient, target, message);
+      const { reporterName, nrp: reporterNrp } = await sendComplaintResponse(
+        session,
+        waClient
+      );
       await waClient.sendMessage(
         chatId,
-        `✅ Respon komplain telah dikirim ke ${reporterName} (${nrp}).`
+        `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
       );
     } catch (err) {
+      const reporterName = formatNama(user) || user.nama || nrp;
       await waClient.sendMessage(
         chatId,
         `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
