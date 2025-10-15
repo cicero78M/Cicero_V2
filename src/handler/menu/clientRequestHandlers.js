@@ -9,6 +9,7 @@ import {
   normalizeUserId,
   getGreeting,
   formatUserData,
+  formatComplaintIssue,
 } from "../../utils/utilsHelper.js";
 import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
 import {
@@ -1823,7 +1824,7 @@ export const clientRequestHandlers = {
     }
     session.respondComplaint = {
       ...(session.respondComplaint || {}),
-      issue: input,
+      issue: formatComplaintIssue(input),
     };
     session.step = "respondComplaint_solution";
     await waClient.sendMessage(
