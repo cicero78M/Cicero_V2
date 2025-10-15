@@ -380,6 +380,286 @@ function buildUpdateDataInstructions(platformLabel) {
   return steps.join("\n");
 }
 
+function normalizeComplaintHandle(value) {
+  if (!value) return "";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "";
+  const withoutLabel = trimmed.replace(/@\s+/g, "@");
+  const collapsed = withoutLabel.replace(/\s+/g, "");
+  if (!collapsed) return "";
+  return collapsed.startsWith("@") ? collapsed.toLowerCase() : `@${collapsed.toLowerCase()}`;
+}
+
+function parseComplaintMessage(message) {
+  const lines = String(message || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim());
+  const data = {
+    raw: String(message || ""),
+    nrp: "",
+    name: "",
+    polres: "",
+    instagram: "",
+    tiktok: "",
+    issues: [],
+  };
+
+  const extractField = (line) => {
+    const [, ...rest] = line.split(/[:：]/);
+    return rest.join(":").trim();
+  };
+
+  let inIssues = false;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+    const normalized = line.toLowerCase();
+    if (/^pesan\s+komplain/.test(normalized)) {
+      continue;
+    }
+    if (/^kendala\b/.test(normalized.replace(/[:：]/g, ""))) {
+      inIssues = true;
+      continue;
+    }
+
+    if (inIssues) {
+      const issueContent = line.replace(/^[-•●]+\s*/, "").trim();
+      if (issueContent) {
+        data.issues.push(issueContent);
+      }
+      continue;
+    }
+
+    if (normalized.startsWith("nrp")) {
+      data.nrp = extractField(line);
+      continue;
+    }
+    if (normalized.startsWith("nama")) {
+      data.name = extractField(line);
+      continue;
+    }
+    if (normalized.startsWith("polres")) {
+      data.polres = extractField(line);
+      continue;
+    }
+    if (normalized.startsWith("username ig") || normalized.startsWith("username instagram")) {
+      data.instagram = normalizeComplaintHandle(extractField(line));
+      continue;
+    }
+    if (normalized.startsWith("username tiktok")) {
+      data.tiktok = normalizeComplaintHandle(extractField(line));
+      continue;
+    }
+  }
+
+  return data;
+}
+
+function handlesEqual(a, b) {
+  if (!a || !b) return false;
+  return a.replace(/^@/, "").toLowerCase() === b.replace(/^@/, "").toLowerCase();
+}
+
+async function verifyInstagramHandle(handle) {
+  const normalized = normalizeComplaintHandle(handle);
+  if (!normalized) {
+    return { summary: "", error: null };
+  }
+  try {
+    const profile = await fetchInstagramInfo(normalized.replace(/^@/, ""));
+    const data = profile || {};
+    const followerCount =
+      data.followers_count ??
+      data.follower_count ??
+      data.edge_followed_by?.count ??
+      null;
+    const followingCount =
+      data.following_count ?? data.following ?? data.edge_follow?.count ?? null;
+    const mediaCount =
+      data.media_count ?? data.posts_count ?? data.edge_owner_to_timeline_media?.count ?? null;
+    const state = data.is_private === true ? "Aktif (Privat)" : "Aktif";
+
+    return {
+      summary: buildPlatformSummary(`Instagram (${normalized})`, {
+        found: true,
+        posts: mediaCount,
+        followers: followerCount,
+        following: followingCount,
+        state,
+      }),
+      error: null,
+    };
+  } catch (err) {
+    const message = err?.message || "tidak diketahui";
+    return {
+      summary: buildPlatformSummary(`Instagram (${normalized})`, {
+        error: message,
+      }),
+      error: message,
+    };
+  }
+}
+
+async function verifyTiktokHandle(handle) {
+  const normalized = normalizeComplaintHandle(handle);
+  if (!normalized) {
+    return { summary: "", error: null };
+  }
+  try {
+    const profile = await fetchTiktokProfile(normalized.replace(/^@/, ""));
+    const data = profile || {};
+    const followerCount = data.follower_count ?? data.stats?.followerCount ?? null;
+    const followingCount = data.following_count ?? data.stats?.followingCount ?? null;
+    const likeCount = data.like_count ?? data.stats?.heart ?? null;
+    const videoCount = data.video_count ?? data.stats?.videoCount ?? null;
+    const state = data.username || data.nickname ? "Aktif" : "";
+
+    return {
+      summary: buildPlatformSummary(`TikTok (${normalized})`, {
+        found: Boolean(data.username || data.nickname || data.stats),
+        posts: videoCount,
+        followers: followerCount,
+        following: followingCount,
+        likes: likeCount,
+        state: state || "Aktif",
+      }),
+      error: null,
+    };
+  } catch (err) {
+    const message = err?.message || "tidak diketahui";
+    return {
+      summary: buildPlatformSummary(`TikTok (${normalized})`, {
+        error: message,
+      }),
+      error: message,
+    };
+  }
+}
+
+async function buildInstagramIssueSolution(issueText, parsed, user, accountStatus) {
+  const dbHandle = ensureHandle(user?.insta);
+  const complaintHandle = normalizeComplaintHandle(parsed.instagram);
+  const lines = [`• Kendala: ${issueText}`];
+
+  if (accountStatus?.instagram?.summaryForSolution) {
+    lines.push(accountStatus.instagram.summaryForSolution);
+  } else {
+    lines.push("Instagram: Data belum tersedia di sistem.");
+  }
+
+  lines.push("", "Perbandingan data:");
+  lines.push(`- Username pada database Cicero: ${dbHandle || "Belum tercatat."}`);
+  lines.push(
+    `- Username pada pesan komplain: ${complaintHandle || "Tidak dicantumkan."}`
+  );
+
+  if (complaintHandle && !handlesEqual(complaintHandle, dbHandle)) {
+    const verification = await verifyInstagramHandle(complaintHandle);
+    if (verification.summary) {
+      lines.push("", "Hasil pengecekan RapidAPI untuk username komplain:");
+      lines.push(verification.summary);
+    }
+  }
+
+  lines.push("", "Langkah tindak lanjut:");
+  lines.push(buildUpdateDataInstructions("Instagram"));
+  lines.push("", `Tautan update data personel: ${UPDATE_DATA_LINK}`);
+
+  return lines.join("\n").trim();
+}
+
+async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) {
+  const dbHandle = ensureHandle(user?.tiktok);
+  const complaintHandle = normalizeComplaintHandle(parsed.tiktok);
+  const lines = [`• Kendala: ${issueText}`];
+
+  if (accountStatus?.tiktok?.summaryForSolution) {
+    lines.push(accountStatus.tiktok.summaryForSolution);
+  } else {
+    lines.push("TikTok: Data belum tersedia di sistem.");
+  }
+
+  lines.push("", "Perbandingan data:");
+  lines.push(`- Username pada database Cicero: ${dbHandle || "Belum tercatat."}`);
+  lines.push(
+    `- Username pada pesan komplain: ${complaintHandle || "Tidak dicantumkan."}`
+  );
+
+  if (complaintHandle && !handlesEqual(complaintHandle, dbHandle)) {
+    const verification = await verifyTiktokHandle(complaintHandle);
+    if (verification.summary) {
+      lines.push("", "Hasil pengecekan RapidAPI untuk username komplain:");
+      lines.push(verification.summary);
+    }
+  }
+
+  lines.push("", "Langkah tindak lanjut:");
+  lines.push(buildUpdateDataInstructions("TikTok"));
+  lines.push("", `Tautan update data personel: ${UPDATE_DATA_LINK}`);
+
+  return lines.join("\n").trim();
+}
+
+async function buildAttendanceIssueSolution(issueText, user) {
+  const lines = [`• Kendala: ${issueText}`];
+  const { pending, error } = await fetchPendingTasksForToday(user);
+  if (error) {
+    lines.push(`Gagal mengambil data tugas: ${error.message}`);
+  } else if (!pending.length) {
+    lines.push(
+      "Semua link tugas hari ini sudah tercatat di sistem. Jika masih terdapat perbedaan, mohon kirim bukti pengiriman link."
+    );
+  } else {
+    lines.push("Berikut daftar link tugas yang belum tercatat pada sistem hari ini:");
+    pending.forEach((post, idx) => {
+      const link = `https://www.instagram.com/p/${post.shortcode}/`;
+      lines.push(`${idx + 1}. ${shortenCaption(post.caption)}`);
+      lines.push(`   ${link}`);
+    });
+  }
+  lines.push("", "Silakan lakukan update link melalui menu *Update Tugas* pada aplikasi Cicero setelah melaksanakan tugas.");
+  lines.push(
+    "Jika seluruh tugas sudah dikerjakan, mohon kirimkan bukti screenshot update link kepada admin untuk verifikasi."
+  );
+  return lines.join("\n").trim();
+}
+
+async function buildComplaintSolutionsFromIssues(parsed, user, accountStatus) {
+  const issues = Array.isArray(parsed.issues)
+    ? parsed.issues.map((issue) => issue.trim()).filter(Boolean)
+    : [];
+  if (!issues.length) {
+    return { solutionText: "", handledKeys: new Set() };
+  }
+
+  const handledKeys = new Set();
+  const solutions = [];
+
+  for (const issueText of issues) {
+    const key = detectKnownIssueKey(issueText);
+    if (!key || handledKeys.has(key)) {
+      continue;
+    }
+    handledKeys.add(key);
+
+    if (key === "instagram_not_recorded") {
+      solutions.push(await buildInstagramIssueSolution(issueText, parsed, user, accountStatus));
+      continue;
+    }
+    if (key === "tiktok_not_recorded") {
+      solutions.push(await buildTiktokIssueSolution(issueText, parsed, user, accountStatus));
+      continue;
+    }
+    if (key === "attendance_less") {
+      solutions.push(await buildAttendanceIssueSolution(issueText, user));
+    }
+  }
+
+  return { solutionText: solutions.join("\n\n"), handledKeys };
+}
+
 async function processComplaintResolution(session, chatId, waClient) {
   const data = session.respondComplaint || {};
   const { nrp, user, issue, solution } = data;
@@ -2156,13 +2436,28 @@ export const clientRequestHandlers = {
   // ================== RESPONSE KOMPLAIN ==================
   respondComplaint_start: async (session, chatId, _text, waClient) => {
     session.respondComplaint = {};
-    session.step = "respondComplaint_nrp";
+    session.step = "respondComplaint_message";
     await waClient.sendMessage(
       chatId,
-      "Masukkan *NRP/NIP* pelapor yang akan dihubungi (atau ketik *batal* untuk keluar):"
+      [
+        "Kirimkan *pesan komplain lengkap* dari pelapor dengan format seperti di bawah ini:",
+        "",
+        "Pesan Komplain",
+        "NRP    : 75020201",
+        "Nama   : Nama Pelapor",
+        "Polres : Satuan",
+        "Username IG : @username",
+        "Username TikTok : @username",
+        "",
+        "Kendala",
+        "- Sudah melaksanakan Instagram belum terdata.",
+        "- Sudah melaksanakan TikTok belum terdata.",
+        "",
+        "Atau ketik *batal* untuk keluar."
+      ].join("\n")
     );
   },
-  respondComplaint_nrp: async (
+  respondComplaint_message: async (
     session,
     chatId,
     text,
@@ -2174,7 +2469,7 @@ export const clientRequestHandlers = {
     if (!input) {
       await waClient.sendMessage(
         chatId,
-        "NRP/NIP tidak boleh kosong. Masukkan NRP pelapor atau ketik *batal* untuk keluar."
+        "Pesan komplain tidak boleh kosong. Kirimkan pesan komplain atau ketik *batal* untuk keluar."
       );
       return;
     }
@@ -2184,11 +2479,12 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(chatId, "Respon komplain dibatalkan.");
       return;
     }
-    const nrp = normalizeUserId(input);
+    const parsedComplaint = parseComplaintMessage(text);
+    const nrp = normalizeUserId(parsedComplaint.nrp || "");
     if (!nrp) {
       await waClient.sendMessage(
         chatId,
-        "Format NRP/NIP tidak valid. Masukkan angka yang benar atau ketik *batal* untuk keluar."
+        "Format NRP/NIP tidak ditemukan atau tidak valid pada pesan komplain. Mohon periksa kembali dan kirim ulang."
       );
       return;
     }
@@ -2226,6 +2522,11 @@ export const clientRequestHandlers = {
       await waClient.sendMessage(chatId, accountStatus.adminMessage);
     }
 
+    const formattedComplaint = formatComplaintIssue(parsedComplaint.raw);
+    if (formattedComplaint) {
+      await waClient.sendMessage(chatId, formattedComplaint);
+    }
+
     if (!hasInsta && !hasTiktok) {
       session.respondComplaint = {
         nrp,
@@ -2245,16 +2546,54 @@ export const clientRequestHandlers = {
       await processComplaintResolution(session, chatId, waClient);
       return;
     }
+    const complaintIssues = Array.isArray(parsedComplaint.issues)
+      ? parsedComplaint.issues.filter((issue) => issue && issue.trim())
+      : [];
+    const formattedIssues = complaintIssues.length
+      ? formatComplaintIssue(
+          [
+            "Pesan Komplain",
+            `NRP/NIP: ${nrp}`,
+            parsedComplaint.name ? `Nama: ${parsedComplaint.name}` : "",
+            parsedComplaint.polres ? `Polres: ${parsedComplaint.polres}` : "",
+            parsedComplaint.instagram
+              ? `Instagram: ${parsedComplaint.instagram}`
+              : "",
+            parsedComplaint.tiktok ? `TikTok: ${parsedComplaint.tiktok}` : "",
+            "",
+            "Kendala",
+            ...complaintIssues.map((issue) => `- ${issue}`),
+          ]
+            .filter(Boolean)
+            .join("\n")
+        )
+      : formatComplaintIssue(parsedComplaint.raw);
+
     session.respondComplaint = {
       nrp,
       user,
       accountStatus,
+      issue: formattedIssues,
+      parsedComplaint,
     };
-    session.step = "respondComplaint_issue";
+
+    const { solutionText } = await buildComplaintSolutionsFromIssues(
+      parsedComplaint,
+      user,
+      accountStatus
+    );
+
+    if (solutionText) {
+      session.respondComplaint.solution = solutionText;
+      await processComplaintResolution(session, chatId, waClient);
+      return;
+    }
+
     await waClient.sendMessage(
       chatId,
-      "Tuliskan ringkasan *kendala* dari pelapor (atau ketik *batal* untuk keluar):"
+      "Kendala belum memiliki solusi otomatis. Tuliskan *solusi/tindak lanjut* yang akan dikirim ke pelapor (atau ketik *batal* untuk keluar):"
     );
+    session.step = "respondComplaint_solution";
   },
   respondComplaint_issue: async (session, chatId, text, waClient) => {
     const input = text.trim();

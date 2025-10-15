@@ -88,7 +88,7 @@ beforeEach(() => {
   });
 });
 
-test('respondComplaint_nrp automatically sends default response when social usernames are empty', async () => {
+test('respondComplaint_message automatically sends default response when social usernames are empty', async () => {
   const session = {};
   const chatId = 'admin-chat';
   const waClient = { sendMessage: jest.fn() };
@@ -101,10 +101,12 @@ test('respondComplaint_nrp automatically sends default response when social user
     }),
   };
 
-  await clientRequestHandlers.respondComplaint_nrp(
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\n\nKendala\n- Sudah melaksanakan Instagram belum terdata.`;
+
+  await clientRequestHandlers.respondComplaint_message(
     session,
     chatId,
-    ' 12345 ',
+    complaintMessage,
     waClient,
     null,
     userModel
@@ -136,13 +138,18 @@ test('respondComplaint_nrp automatically sends default response when social user
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     3,
     chatId,
+    expect.stringContaining('Pesan Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    4,
+    chatId,
     '✅ Respon komplain telah dikirim ke Pelapor (12345).'
   );
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
 });
 
-test('respondComplaint_nrp continues manual flow when social username exists', async () => {
+test('respondComplaint_message asks for manual solution when kendala tidak dikenali', async () => {
   const session = {};
   const chatId = 'admin-chat';
   const waClient = { sendMessage: jest.fn() };
@@ -155,10 +162,12 @@ test('respondComplaint_nrp continues manual flow when social username exists', a
     }),
   };
 
-  await clientRequestHandlers.respondComplaint_nrp(
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\nNama   : Nama Lengkap\nUsername IG : @username\n\nKendala\n- Mohon bantuan pengecekan data lainnya.`;
+
+  await clientRequestHandlers.respondComplaint_message(
     session,
     chatId,
-    ' 12345 ',
+    complaintMessage,
     waClient,
     null,
     userModel
@@ -178,13 +187,19 @@ test('respondComplaint_nrp continues manual flow when social username exists', a
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     3,
     chatId,
-    'Tuliskan ringkasan *kendala* dari pelapor (atau ketik *batal* untuk keluar):'
+    expect.stringContaining('Pesan Komplain')
   );
-  expect(session.step).toBe('respondComplaint_issue');
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    4,
+    chatId,
+    'Kendala belum memiliki solusi otomatis. Tuliskan *solusi/tindak lanjut* yang akan dikirim ke pelapor (atau ketik *batal* untuk keluar):'
+  );
+  expect(session.step).toBe('respondComplaint_solution');
   expect(session.respondComplaint).toMatchObject({
     nrp: '12345',
     user: expect.any(Object),
     accountStatus: expect.objectContaining({ adminMessage: expect.any(String) }),
+    issue: expect.stringContaining('Pesan Komplain'),
   });
   expect(mockFetchInstagramInfo).toHaveBeenCalledWith('username');
   expect(mockFetchTiktokProfile).not.toHaveBeenCalled();
