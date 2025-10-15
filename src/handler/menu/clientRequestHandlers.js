@@ -69,6 +69,29 @@ function formatNumber(value) {
   return numberFormatter.format(num);
 }
 
+function isZeroMetric(value) {
+  if (value === null || value === undefined) return false;
+  const num = Number(value);
+  if (Number.isNaN(num)) return false;
+  return num === 0;
+}
+
+function buildSuspiciousAccountNote(platform, handle) {
+  const decoratedHandle = handle ? `*${handle}*` : "tersebut";
+  if (platform === "instagram") {
+    return [
+      "⚠️ Catatan Instagram",
+      `Akun ${decoratedHandle} terlihat tanpa aktivitas (posting, pengikut, dan mengikuti semuanya 0).`,
+      "Mohon periksa langsung di aplikasi Instagram untuk memastikan username benar dan akun masih aktif.",
+    ].join("\n");
+  }
+  return [
+    "⚠️ Catatan TikTok",
+    `Akun ${decoratedHandle} terlihat tanpa aktivitas (video, pengikut, dan mengikuti semuanya 0 dengan jumlah likes tidak tersedia).`,
+    "Mohon cek ulang di aplikasi TikTok guna memastikan username valid atau akun tidak sedang dibatasi.",
+  ].join("\n");
+}
+
 function ensureHandle(value) {
   if (!value) return "";
   const trimmed = String(value).trim();
@@ -121,6 +144,7 @@ async function buildAccountStatus(user) {
       state: "",
       error: "",
       summaryForSolution: "",
+      reviewNote: "",
     },
     tiktok: {
       username: "",
@@ -132,6 +156,7 @@ async function buildAccountStatus(user) {
       state: "",
       error: "",
       summaryForSolution: "",
+      reviewNote: "",
     },
   };
 
@@ -183,6 +208,19 @@ async function buildAccountStatus(user) {
         `Followers: ${formatNumber(followerCount)}`,
         `Following: ${formatNumber(followingCount)}`
       );
+
+      if (
+        isZeroMetric(mediaCount) &&
+        isZeroMetric(followerCount) &&
+        isZeroMetric(followingCount)
+      ) {
+        const note = buildSuspiciousAccountNote("instagram", instaHandle);
+        result.instagram.reviewNote = note;
+        result.instagram.summaryForSolution = result.instagram.summaryForSolution
+          ? `${result.instagram.summaryForSolution}\n\n${note}`
+          : note;
+        lines.push("", note);
+      }
     } catch (err) {
       const errorMsg = err?.message || "tidak diketahui";
       result.instagram.error = errorMsg;
@@ -244,6 +282,21 @@ async function buildAccountStatus(user) {
         `Following: ${formatNumber(followingCount)}`,
         `Likes: ${formatNumber(likeCount)}`
       );
+
+      const likesUnavailable = likeCount === null || likeCount === undefined;
+      if (
+        isZeroMetric(videoCount) &&
+        isZeroMetric(followerCount) &&
+        isZeroMetric(followingCount) &&
+        (likesUnavailable || isZeroMetric(likeCount))
+      ) {
+        const note = buildSuspiciousAccountNote("tiktok", tiktokHandle);
+        result.tiktok.reviewNote = note;
+        result.tiktok.summaryForSolution = result.tiktok.summaryForSolution
+          ? `${result.tiktok.summaryForSolution}\n\n${note}`
+          : note;
+        lines.push("", note);
+      }
     } catch (err) {
       const errorMsg = err?.message || "tidak diketahui";
       result.tiktok.error = errorMsg;
