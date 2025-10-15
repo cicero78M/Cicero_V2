@@ -1,14 +1,21 @@
 // src/handler/menu/clientRequestHandlers.js
 
 import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
-import { formatClientInfo } from "../../utils/utilsHelper.js";
 import {
+  formatClientInfo,
   groupByDivision,
   sortDivisionKeys,
   formatNama,
+  normalizeUserId,
+  getGreeting,
 } from "../../utils/utilsHelper.js";
 import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
-import { getAdminWANumbers, getAdminWAIds, sendWAFile } from "../../utils/waHelper.js";
+import {
+  getAdminWANumbers,
+  getAdminWAIds,
+  sendWAFile,
+  safeSendMessage,
+} from "../../utils/waHelper.js";
 import * as linkReportModel from "../../model/linkReportModel.js";
 import { saveLinkReportExcel } from "../../service/linkReportExcelService.js";
 import fs from "fs/promises";
@@ -205,10 +212,11 @@ export const clientRequestHandlers = {
 1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
+1️⃣7️⃣ Response Komplain
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-6])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-7])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -230,6 +238,7 @@ export const clientRequestHandlers = {
       14: "downloadSheetPrev_choose",
       15: "downloadDocs_choose",
       16: "absensiOprDitbinmas",
+      17: "respondComplaint_start",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -1659,6 +1668,163 @@ export const clientRequestHandlers = {
         `❌ Gagal menghapus WA admin: ${err.message}`
       );
     }
+    session.step = "main";
+  },
+
+  // ================== RESPONSE KOMPLAIN ==================
+  respondComplaint_start: async (session, chatId, _text, waClient) => {
+    session.respondComplaint = {};
+    session.step = "respondComplaint_nrp";
+    await waClient.sendMessage(
+      chatId,
+      "Masukkan *NRP/NIP* pelapor yang akan dihubungi (atau ketik *batal* untuk keluar):"
+    );
+  },
+  respondComplaint_nrp: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    _pool,
+    userModel
+  ) => {
+    const input = text.trim();
+    if (!input) {
+      await waClient.sendMessage(
+        chatId,
+        "NRP/NIP tidak boleh kosong. Masukkan NRP pelapor atau ketik *batal* untuk keluar."
+      );
+      return;
+    }
+    if (input.toLowerCase() === "batal") {
+      delete session.respondComplaint;
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Respon komplain dibatalkan.");
+      return;
+    }
+    const nrp = normalizeUserId(input);
+    if (!nrp) {
+      await waClient.sendMessage(
+        chatId,
+        "Format NRP/NIP tidak valid. Masukkan angka yang benar atau ketik *batal* untuk keluar."
+      );
+      return;
+    }
+    const user = await userModel.findUserById(nrp);
+    if (!user) {
+      await waClient.sendMessage(
+        chatId,
+        `User dengan NRP ${nrp} tidak ditemukan. Coba lagi atau ketik *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (!user.whatsapp) {
+      await waClient.sendMessage(
+        chatId,
+        `User *${nrp}* (${formatNama(user) || user.nama || "-"}) belum memiliki nomor WhatsApp terdaftar. Masukkan NRP lain atau ketik *batal* untuk keluar.`
+      );
+      return;
+    }
+    session.respondComplaint = {
+      nrp,
+      user,
+    };
+    session.step = "respondComplaint_issue";
+    await waClient.sendMessage(
+      chatId,
+      "Tuliskan ringkasan *kendala* dari pelapor (atau ketik *batal* untuk keluar):"
+    );
+  },
+  respondComplaint_issue: async (session, chatId, text, waClient) => {
+    const input = text.trim();
+    if (!input) {
+      await waClient.sendMessage(
+        chatId,
+        "Pesan kendala tidak boleh kosong. Tuliskan kendala atau ketik *batal* untuk keluar."
+      );
+      return;
+    }
+    if (input.toLowerCase() === "batal") {
+      delete session.respondComplaint;
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Respon komplain dibatalkan.");
+      return;
+    }
+    session.respondComplaint = {
+      ...(session.respondComplaint || {}),
+      issue: input,
+    };
+    session.step = "respondComplaint_solution";
+    await waClient.sendMessage(
+      chatId,
+      "Tuliskan *solusi/tindak lanjut* yang akan dikirim ke pelapor (atau ketik *batal* untuk keluar):"
+    );
+  },
+  respondComplaint_solution: async (
+    session,
+    chatId,
+    text,
+    waClient
+  ) => {
+    const input = text.trim();
+    if (!input) {
+      await waClient.sendMessage(
+        chatId,
+        "Solusi tidak boleh kosong. Tuliskan solusi atau ketik *batal* untuk keluar."
+      );
+      return;
+    }
+    if (input.toLowerCase() === "batal") {
+      delete session.respondComplaint;
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Respon komplain dibatalkan.");
+      return;
+    }
+    const data = session.respondComplaint || {};
+    const { nrp, user, issue } = data;
+    if (!nrp || !user || !issue) {
+      delete session.respondComplaint;
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Data komplain tidak lengkap. Silakan mulai ulang proses respon komplain."
+      );
+      return;
+    }
+    const solution = input;
+    session.respondComplaint = {
+      ...data,
+      solution,
+    };
+    const salam = getGreeting();
+    const reporterName = formatNama(user) || user.nama || nrp;
+    const target = formatToWhatsAppId(user.whatsapp);
+    const message = [
+      `${salam}! Kami menindaklanjuti laporan yang Anda sampaikan.`,
+      `\n*Pelapor*: ${reporterName}`,
+      `\n*NRP/NIP*: ${nrp}`,
+      `\n*Kendala*:`,
+      issue,
+      `\n\n*Solusi/Tindak Lanjut*:`,
+      solution,
+    ]
+      .join("\n")
+      .trim();
+
+    try {
+      await safeSendMessage(waClient, target, message);
+      await waClient.sendMessage(
+        chatId,
+        `✅ Respon komplain telah dikirim ke ${reporterName} (${nrp}).`
+      );
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`
+      );
+    }
+
+    delete session.respondComplaint;
     session.step = "main";
   },
 

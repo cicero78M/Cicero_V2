@@ -488,7 +488,7 @@ export function createHandleMessage(waClient, options = {}) {
         setSession(chatId, { menu: "clientrequest", step: "main" });
         await waClient.sendMessage(
           chatId,
-          `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
+          `┏━━━ *MENU CLIENT CICERO* ━━━\n1️⃣ Tambah client baru\n2️⃣ Kelola client (update/hapus/info)\n3️⃣ Kelola user (update/exception/status)\n4️⃣ Proses Instagram\n5️⃣ Proses TikTok\n6️⃣ Absensi Username Instagram\n7️⃣ Absensi Username TikTok\n8️⃣ Transfer User\n9️⃣ Exception Info\n🔟 Hapus WA Admin\n1️⃣1️⃣ Hapus WA User\n1️⃣2️⃣ Transfer User Sheet\n1️⃣3️⃣ Download Sheet Amplifikasi\n1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya\n1️⃣5️⃣ Download Docs\n1️⃣6️⃣ Absensi Operator Ditbinmas\n1️⃣7️⃣ Response Komplain\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━\nKetik *angka* menu, atau *batal* untuk keluar.`
         );
         return;
       }
@@ -877,9 +877,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
- await waClient.sendMessage(
+    await waClient.sendMessage(
       chatId,
-  `
+      `
 ┏━━━ *MENU CLIENT CICERO* ━━━
 1️⃣ Tambah client baru
 2️⃣ Kelola client (update/hapus/info)
@@ -897,6 +897,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
+1️⃣7️⃣ Response Komplain
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
