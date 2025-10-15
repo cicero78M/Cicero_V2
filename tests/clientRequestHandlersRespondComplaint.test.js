@@ -6,6 +6,7 @@ const mockFormatNama = jest.fn();
 const mockNormalizeUserId = jest.fn();
 const mockGetGreeting = jest.fn();
 const mockFormatToWhatsAppId = jest.fn();
+const mockFormatUserData = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -18,6 +19,7 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   formatNama: mockFormatNama,
   normalizeUserId: mockNormalizeUserId,
   getGreeting: mockGetGreeting,
+  formatUserData: mockFormatUserData,
 }));
 
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
@@ -59,6 +61,7 @@ beforeEach(() => {
   mockFormatNama.mockReturnValue('Pelapor');
   mockNormalizeUserId.mockImplementation((value) => value.trim());
   mockFormatToWhatsAppId.mockImplementation((value) => `${value}@wa`);
+  mockFormatUserData.mockReturnValue('```\nMock User\n```');
 });
 
 test('respondComplaint_nrp automatically sends default response when social usernames are empty', async () => {

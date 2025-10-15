@@ -23,6 +23,7 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat pagi',
   groupByDivision: jest.fn(),
   sortDivisionKeys: jest.fn(),
+  formatUserData: jest.fn(),
 }));
 
 let absensiLink;

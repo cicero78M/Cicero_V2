@@ -8,6 +8,7 @@ import {
   formatNama,
   normalizeUserId,
   getGreeting,
+  formatUserData,
 } from "../../utils/utilsHelper.js";
 import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
 import {
@@ -1745,6 +1746,13 @@ export const clientRequestHandlers = {
       );
       return;
     }
+
+    const userSummary = [
+      "👤 *Data Pelapor*",
+      formatUserData(user),
+    ].join("\n");
+    await waClient.sendMessage(chatId, userSummary);
+
     if (!user.whatsapp) {
       await waClient.sendMessage(
         chatId,

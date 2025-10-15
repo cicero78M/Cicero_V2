@@ -131,6 +131,7 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
   formatNama: (u) => `${u.title || ''} ${u.nama || ''}`.trim(),
+  formatUserData: jest.fn(),
 }));
 
 let dirRequestHandlers;
