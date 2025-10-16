@@ -48,18 +48,25 @@ export async function getClientSummary(client_id) {
   const users = await userModel.findUsersByClientId(client_id);
 
   const instaPosts = await instaPostService.findByClientId(client_id);
-  let instaLikes = 0;
-  for (const post of instaPosts) {
-    const like = await instaLikeService.findByShortcode(post.shortcode);
-    instaLikes += Array.isArray(like?.likes) ? like.likes.length : 0;
-  }
+  const instaLikesCounts = await Promise.all(
+    instaPosts.map(async (post) => {
+      const like = await instaLikeService.findByShortcode(post.shortcode);
+      return Array.isArray(like?.likes) ? like.likes.length : 0;
+    })
+  );
+  const instaLikes = instaLikesCounts.reduce((total, count) => total + count, 0);
 
   const tiktokPosts = await tiktokPostService.findByClientId(client_id);
-  let tiktokComments = 0;
-  for (const post of tiktokPosts) {
-    const comm = await tiktokCommentService.findByVideoId(post.video_id);
-    tiktokComments += Array.isArray(comm?.comments) ? comm.comments.length : 0;
-  }
+  const tiktokCommentsCounts = await Promise.all(
+    tiktokPosts.map(async (post) => {
+      const comm = await tiktokCommentService.findByVideoId(post.video_id);
+      return Array.isArray(comm?.comments) ? comm.comments.length : 0;
+    })
+  );
+  const tiktokComments = tiktokCommentsCounts.reduce(
+    (total, count) => total + count,
+    0
+  );
 
   return {
     client,
