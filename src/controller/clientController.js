@@ -89,15 +89,16 @@ export const getInstagramPosts = async (req, res, next) => {
 export const getInstagramLikes = async (req, res, next) => {
   try {
     const posts = await instaPostService.findByClientId(req.params.client_id);
-    let likesData = [];
-    for (const post of posts) {
-      const like = await instaLikeService.findByShortcode(post.shortcode);
-      likesData.push({
-        shortcode: post.shortcode,
-        like_count: Array.isArray(like?.likes) ? like.likes.length : 0,
-        likes: like?.likes || [],
-      });
-    }
+    const likesData = await Promise.all(
+      posts.map(async (post) => {
+        const like = await instaLikeService.findByShortcode(post.shortcode);
+        return {
+          shortcode: post.shortcode,
+          like_count: Array.isArray(like?.likes) ? like.likes.length : 0,
+          likes: like?.likes || [],
+        };
+      })
+    );
     sendSuccess(res, likesData);
   } catch (err) {
     next(err);
@@ -118,15 +119,18 @@ export const getTiktokPosts = async (req, res, next) => {
 export const getTiktokComments = async (req, res, next) => {
   try {
     const posts = await tiktokPostService.findByClientId(req.params.client_id);
-    let commentsData = [];
-    for (const post of posts) {
-      const comm = await tiktokCommentService.findByVideoId(post.video_id);
-      commentsData.push({
-        video_id: post.video_id,
-        comment_count: Array.isArray(comm?.comments) ? comm.comments.length : 0,
-        comments: comm?.comments || [],
-      });
-    }
+    const commentsData = await Promise.all(
+      posts.map(async (post) => {
+        const comm = await tiktokCommentService.findByVideoId(post.video_id);
+        return {
+          video_id: post.video_id,
+          comment_count: Array.isArray(comm?.comments)
+            ? comm.comments.length
+            : 0,
+          comments: comm?.comments || [],
+        };
+      })
+    );
     sendSuccess(res, commentsData);
   } catch (err) {
     next(err);
