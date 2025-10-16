@@ -98,6 +98,7 @@ test('respondComplaint_message automatically sends default response when social 
       insta: '   ',
       tiktok: null,
       nama: 'Nama Lengkap',
+      status: true,
     }),
   };
 
@@ -133,15 +134,73 @@ test('respondComplaint_message automatically sends default response when social 
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     2,
     chatId,
-    expect.stringContaining('Status Akun Sosial Media')
+    expect.stringContaining('Pesan Komplain')
   );
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     3,
     chatId,
-    expect.stringContaining('Pesan Komplain')
+    expect.stringContaining('Status Akun Sosial Media')
   );
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     4,
+    chatId,
+    '✅ Respon komplain telah dikirim ke Pelapor (12345).'
+  );
+  expect(session.step).toBe('main');
+  expect(session.respondComplaint).toBeUndefined();
+});
+
+test('respondComplaint_message sends activation guidance when akun tidak aktif', async () => {
+  const session = {};
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  const userModel = {
+    findUserById: jest.fn().mockResolvedValue({
+      whatsapp: '08123',
+      insta: 'username',
+      tiktok: 'tiktokuser',
+      nama: 'Nama Lengkap',
+      status: false,
+    }),
+  };
+
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\n\nKendala\n- Sudah melaksanakan Instagram belum terdata.`;
+
+  await clientRequestHandlers.respondComplaint_message(
+    session,
+    chatId,
+    complaintMessage,
+    waClient,
+    null,
+    userModel
+  );
+
+  expect(mockFetchInstagramInfo).not.toHaveBeenCalled();
+  expect(mockFetchTiktokProfile).not.toHaveBeenCalled();
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(
+    1,
+    waClient,
+    '08123@wa',
+    expect.stringContaining('tidak aktif')
+  );
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(
+    2,
+    waClient,
+    chatId,
+    expect.stringContaining('Ringkasan Respon Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    1,
+    chatId,
+    expect.stringContaining('Data Pelapor')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    2,
+    chatId,
+    expect.stringContaining('Pesan Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    3,
     chatId,
     '✅ Respon komplain telah dikirim ke Pelapor (12345).'
   );
@@ -159,6 +218,7 @@ test('respondComplaint_message asks for manual solution when kendala tidak diken
       insta: 'username',
       tiktok: '',
       nama: 'Nama Lengkap',
+      status: true,
     }),
   };
 
@@ -182,12 +242,12 @@ test('respondComplaint_message asks for manual solution when kendala tidak diken
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     2,
     chatId,
-    expect.stringContaining('Status Akun Sosial Media')
+    expect.stringContaining('Pesan Komplain')
   );
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     3,
     chatId,
-    expect.stringContaining('Pesan Komplain')
+    expect.stringContaining('Status Akun Sosial Media')
   );
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     4,
