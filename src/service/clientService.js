@@ -12,6 +12,8 @@ const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 
 export const findAllClients = async () => await clientModel.findAll();
 
+export const findAllActiveClients = async () => await clientModel.findAllActive();
+
 export const findClientById = async (client_id) => await clientModel.findById(client_id);
 
 export const findClientsByGroup = async (group) => await clientModel.findByGroup(group);

@@ -8,6 +8,12 @@ export const findAll = async () => {
   return res.rows;
 };
 
+// Ambil semua client dengan status aktif
+export const findAllActive = async () => {
+  const res = await query('SELECT * FROM clients WHERE client_status = true');
+  return res.rows;
+};
+
 // Ambil client by client_id (case-insensitive)
 export const findById = async (client_id) => {
   const res = await query(
