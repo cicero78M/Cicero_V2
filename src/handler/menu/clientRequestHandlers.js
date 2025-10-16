@@ -709,7 +709,7 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
   if (treatAsSameHandle) {
     if (dbActive) {
       actions.push(
-        "Akun Instagram pada database sudah aktif. Pastikan pelaksanaan tugas menggunakan akun ini dan laporkan link tugas melalui menu *Update Tugas* jika belum tercatat."
+        "Akun Instagram pada database sudah aktif. Pastikan pelaksanaan tugas menggunakan akun ini dan cek kembali pelaksanaan likes dan komentar Anda apakah sudah menggunakan username yang sama dengan yang terdaftar pada database."
       );
     } else if (dbFound) {
       actions.push(
