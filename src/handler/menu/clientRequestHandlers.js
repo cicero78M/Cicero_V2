@@ -99,6 +99,39 @@ function ensureHandle(value) {
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
 }
 
+function isUserActive(user) {
+  if (!user) return false;
+  const { status } = user;
+  if (status === null || status === undefined) {
+    return true;
+  }
+  if (typeof status === "string") {
+    const normalized = status.trim().toLowerCase();
+    return ["true", "1", "aktif"].includes(normalized);
+  }
+  if (typeof status === "number") {
+    return status === 1;
+  }
+  return Boolean(status);
+}
+
+function toPositiveNumber(value) {
+  if (value === null || value === undefined) return null;
+  const num = Number(value);
+  if (Number.isNaN(num) || !Number.isFinite(num)) return null;
+  return num > 0 ? num : null;
+}
+
+function hasFullMetrics(status, keys = ["posts", "followers", "following"]) {
+  if (!status) return false;
+  return keys.every((key) => toPositiveNumber(status[key]) !== null);
+}
+
+function appendUpdateInstructions(target, platformLabel) {
+  target.push(buildUpdateDataInstructions(platformLabel));
+  target.push(`Tautan update data personel: ${UPDATE_DATA_LINK}`);
+}
+
 function pickPrimaryRole(user) {
   if (!user) return null;
   if (user.ditbinmas) return "ditbinmas";
@@ -518,7 +551,7 @@ function handlesEqual(a, b) {
 async function verifyInstagramHandle(handle) {
   const normalized = normalizeComplaintHandle(handle);
   if (!normalized) {
-    return { summary: "", error: null };
+    return { summary: "", error: null, status: null };
   }
   try {
     const profile = await fetchInstagramInfo(normalized.replace(/^@/, ""));
@@ -534,23 +567,33 @@ async function verifyInstagramHandle(handle) {
       data.media_count ?? data.posts_count ?? data.edge_owner_to_timeline_media?.count ?? null;
     const state = data.is_private === true ? "Aktif (Privat)" : "Aktif";
 
+    const status = {
+      found: Boolean(data),
+      posts: mediaCount,
+      followers: followerCount,
+      following: followingCount,
+      state,
+    };
+
     return {
-      summary: buildPlatformSummary(`Instagram (${normalized})`, {
-        found: true,
-        posts: mediaCount,
-        followers: followerCount,
-        following: followingCount,
-        state,
-      }),
+      summary: buildPlatformSummary(`Instagram (${normalized})`, status),
       error: null,
+      status,
     };
   } catch (err) {
     const message = err?.message || "tidak diketahui";
-    return {
-      summary: buildPlatformSummary(`Instagram (${normalized})`, {
-        error: message,
-      }),
+    const status = {
+      found: false,
+      posts: null,
+      followers: null,
+      following: null,
+      state: "",
       error: message,
+    };
+    return {
+      summary: buildPlatformSummary(`Instagram (${normalized})`, status),
+      error: message,
+      status,
     };
   }
 }
@@ -558,7 +601,7 @@ async function verifyInstagramHandle(handle) {
 async function verifyTiktokHandle(handle) {
   const normalized = normalizeComplaintHandle(handle);
   if (!normalized) {
-    return { summary: "", error: null };
+    return { summary: "", error: null, status: null };
   }
   try {
     const profile = await fetchTiktokProfile(normalized.replace(/^@/, ""));
@@ -569,24 +612,35 @@ async function verifyTiktokHandle(handle) {
     const videoCount = data.video_count ?? data.stats?.videoCount ?? null;
     const state = data.username || data.nickname ? "Aktif" : "";
 
+    const status = {
+      found: Boolean(data.username || data.nickname || data.stats),
+      posts: videoCount,
+      followers: followerCount,
+      following: followingCount,
+      likes: likeCount,
+      state: state || "Aktif",
+    };
+
     return {
-      summary: buildPlatformSummary(`TikTok (${normalized})`, {
-        found: Boolean(data.username || data.nickname || data.stats),
-        posts: videoCount,
-        followers: followerCount,
-        following: followingCount,
-        likes: likeCount,
-        state: state || "Aktif",
-      }),
+      summary: buildPlatformSummary(`TikTok (${normalized})`, status),
       error: null,
+      status,
     };
   } catch (err) {
     const message = err?.message || "tidak diketahui";
-    return {
-      summary: buildPlatformSummary(`TikTok (${normalized})`, {
-        error: message,
-      }),
+    const status = {
+      found: false,
+      posts: null,
+      followers: null,
+      following: null,
+      likes: null,
+      state: "",
       error: message,
+    };
+    return {
+      summary: buildPlatformSummary(`TikTok (${normalized})`, status),
+      error: message,
+      status,
     };
   }
 }
@@ -595,12 +649,13 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
   const dbHandle = ensureHandle(user?.insta);
   const complaintHandle = normalizeComplaintHandle(parsed.instagram);
   const lines = [`• Kendala: ${issueText}`];
-
-  if (accountStatus?.instagram?.summaryForSolution) {
-    lines.push(accountStatus.instagram.summaryForSolution);
-  } else {
-    lines.push("Instagram: Data belum tersedia di sistem.");
-  }
+  const dbStatus = accountStatus?.instagram || {};
+  const handlesMatch =
+    complaintHandle && dbHandle ? handlesEqual(complaintHandle, dbHandle) : false;
+  const treatAsSameHandle = handlesMatch || !complaintHandle;
+  const complaintCheck = complaintHandle
+    ? await verifyInstagramHandle(complaintHandle)
+    : { summary: "", error: null, status: null };
 
   lines.push("", "Perbandingan data:");
   lines.push(`- Username pada database Cicero: ${dbHandle || "Belum tercatat."}`);
@@ -608,17 +663,90 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
     `- Username pada pesan komplain: ${complaintHandle || "Tidak dicantumkan."}`
   );
 
-  if (complaintHandle && !handlesEqual(complaintHandle, dbHandle)) {
-    const verification = await verifyInstagramHandle(complaintHandle);
-    if (verification.summary) {
-      lines.push("", "Hasil pengecekan RapidAPI untuk username komplain:");
-      lines.push(verification.summary);
+  const rapidLines = [];
+  if (dbStatus.summaryForSolution) {
+    if (treatAsSameHandle) {
+      rapidLines.push(dbStatus.summaryForSolution);
+    } else {
+      rapidLines.push(`- Database: ${dbStatus.summaryForSolution}`);
+    }
+  } else if (dbHandle) {
+    const fallbackStatus = dbStatus.error
+      ? { error: dbStatus.error }
+      : { found: false };
+    const fallbackLabel = dbHandle ? `Instagram (${dbHandle})` : "Instagram";
+    const fallbackSummary = buildPlatformSummary(
+      fallbackLabel,
+      fallbackStatus
+    );
+    if (treatAsSameHandle) rapidLines.push(fallbackSummary);
+    else rapidLines.push(`- Database: ${fallbackSummary}`);
+  }
+
+  if (!treatAsSameHandle && complaintHandle) {
+    if (complaintCheck.summary) {
+      rapidLines.push(`- Komplain: ${complaintCheck.summary}`);
+    } else if (complaintCheck.error) {
+      rapidLines.push(`- Komplain: Gagal diperiksa (${complaintCheck.error}).`);
+    } else {
+      rapidLines.push(
+        `- Komplain: Username ${complaintHandle} belum terbaca di RapidAPI.`
+      );
     }
   }
 
-  lines.push("", "Langkah tindak lanjut:");
-  lines.push(buildUpdateDataInstructions("Instagram"));
-  lines.push("", `Tautan update data personel: ${UPDATE_DATA_LINK}`);
+  if (rapidLines.length) {
+    lines.push("", "Hasil pengecekan RapidAPI:");
+    lines.push(...rapidLines);
+  }
+
+  const dbFound = Boolean(dbStatus?.found);
+  const dbActive = dbFound && hasFullMetrics(dbStatus);
+  const complaintFound = Boolean(complaintCheck.status?.found);
+  const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
+  const actions = [];
+
+  if (treatAsSameHandle) {
+    if (dbActive) {
+      actions.push(
+        "Akun Instagram pada database sudah aktif. Pastikan pelaksanaan tugas menggunakan akun ini dan laporkan link tugas melalui menu *Update Tugas* jika belum tercatat."
+      );
+    } else if (dbFound) {
+      actions.push(
+        "Akun Instagram terdeteksi namun belum menunjukkan aktivitas. Mohon konfirmasi kembali keaktifan akun dan perbarui data bila ada perubahan."
+      );
+      appendUpdateInstructions(actions, "Instagram");
+    } else {
+      actions.push(
+        "Username Instagram belum tercatat atau tidak terbaca. Mohon perbarui data personel agar sesuai dengan akun yang digunakan."
+      );
+      appendUpdateInstructions(actions, "Instagram");
+    }
+  } else if (dbActive && !complaintFound) {
+    actions.push(
+      "Akun Instagram yang tersimpan di database sudah benar dan aktif. Mohon pastikan pelaksanaan tugas menggunakan akun tersebut."
+    );
+  } else if (complaintActive && !dbFound) {
+    actions.push(
+      "Username Instagram pada pesan komplain terbaca aktif, sedangkan data di database belum sesuai. Pandu personel untuk memperbarui data menggunakan username tersebut."
+    );
+    appendUpdateInstructions(actions, "Instagram");
+  } else if (!dbActive && !complaintActive) {
+    actions.push(
+      "Kedua username belum terbaca aktif. Mohon pastikan personel menggunakan akun yang benar dan segera lakukan update data."
+    );
+    appendUpdateInstructions(actions, "Instagram");
+  } else {
+    actions.push(
+      "Kedua username berbeda namun sama-sama terbaca. Mohon konfirmasi akun mana yang digunakan saat tugas dan perbarui data Cicero agar sesuai."
+    );
+    appendUpdateInstructions(actions, "Instagram");
+  }
+
+  if (actions.length) {
+    lines.push("", "Langkah tindak lanjut:");
+    lines.push(...actions);
+  }
 
   return lines.join("\n").trim();
 }
@@ -627,12 +755,13 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
   const dbHandle = ensureHandle(user?.tiktok);
   const complaintHandle = normalizeComplaintHandle(parsed.tiktok);
   const lines = [`• Kendala: ${issueText}`];
-
-  if (accountStatus?.tiktok?.summaryForSolution) {
-    lines.push(accountStatus.tiktok.summaryForSolution);
-  } else {
-    lines.push("TikTok: Data belum tersedia di sistem.");
-  }
+  const dbStatus = accountStatus?.tiktok || {};
+  const handlesMatch =
+    complaintHandle && dbHandle ? handlesEqual(complaintHandle, dbHandle) : false;
+  const treatAsSameHandle = handlesMatch || !complaintHandle;
+  const complaintCheck = complaintHandle
+    ? await verifyTiktokHandle(complaintHandle)
+    : { summary: "", error: null, status: null };
 
   lines.push("", "Perbandingan data:");
   lines.push(`- Username pada database Cicero: ${dbHandle || "Belum tercatat."}`);
@@ -640,17 +769,90 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
     `- Username pada pesan komplain: ${complaintHandle || "Tidak dicantumkan."}`
   );
 
-  if (complaintHandle && !handlesEqual(complaintHandle, dbHandle)) {
-    const verification = await verifyTiktokHandle(complaintHandle);
-    if (verification.summary) {
-      lines.push("", "Hasil pengecekan RapidAPI untuk username komplain:");
-      lines.push(verification.summary);
+  const rapidLines = [];
+  if (dbStatus.summaryForSolution) {
+    if (treatAsSameHandle) {
+      rapidLines.push(dbStatus.summaryForSolution);
+    } else {
+      rapidLines.push(`- Database: ${dbStatus.summaryForSolution}`);
+    }
+  } else if (dbHandle) {
+    const fallbackStatus = dbStatus.error
+      ? { error: dbStatus.error }
+      : { found: false };
+    const fallbackLabel = dbHandle ? `TikTok (${dbHandle})` : "TikTok";
+    const fallbackSummary = buildPlatformSummary(
+      fallbackLabel,
+      fallbackStatus
+    );
+    if (treatAsSameHandle) rapidLines.push(fallbackSummary);
+    else rapidLines.push(`- Database: ${fallbackSummary}`);
+  }
+
+  if (!treatAsSameHandle && complaintHandle) {
+    if (complaintCheck.summary) {
+      rapidLines.push(`- Komplain: ${complaintCheck.summary}`);
+    } else if (complaintCheck.error) {
+      rapidLines.push(`- Komplain: Gagal diperiksa (${complaintCheck.error}).`);
+    } else {
+      rapidLines.push(
+        `- Komplain: Username ${complaintHandle} belum terbaca di RapidAPI.`
+      );
     }
   }
 
-  lines.push("", "Langkah tindak lanjut:");
-  lines.push(buildUpdateDataInstructions("TikTok"));
-  lines.push("", `Tautan update data personel: ${UPDATE_DATA_LINK}`);
+  if (rapidLines.length) {
+    lines.push("", "Hasil pengecekan RapidAPI:");
+    lines.push(...rapidLines);
+  }
+
+  const dbFound = Boolean(dbStatus?.found);
+  const dbActive = dbFound && hasFullMetrics(dbStatus);
+  const complaintFound = Boolean(complaintCheck.status?.found);
+  const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
+  const actions = [];
+
+  if (treatAsSameHandle) {
+    if (dbActive) {
+      actions.push(
+        "Akun TikTok pada database sudah aktif. Pastikan pelaksanaan tugas menggunakan akun ini dan kirim bukti link/video melalui menu *Update Tugas* bila belum tercatat."
+      );
+    } else if (dbFound) {
+      actions.push(
+        "Akun TikTok terdeteksi namun belum menunjukkan aktivitas. Mohon konfirmasi kembali keaktifan akun dan perbarui data bila ada perubahan."
+      );
+      appendUpdateInstructions(actions, "TikTok");
+    } else {
+      actions.push(
+        "Username TikTok belum tercatat atau tidak terbaca. Mohon perbarui data personel agar sesuai dengan akun yang digunakan."
+      );
+      appendUpdateInstructions(actions, "TikTok");
+    }
+  } else if (dbActive && !complaintFound) {
+    actions.push(
+      "Akun TikTok yang tersimpan di database sudah benar dan aktif. Mohon pastikan pelaksanaan tugas menggunakan akun tersebut."
+    );
+  } else if (complaintActive && !dbFound) {
+    actions.push(
+      "Username TikTok pada pesan komplain terbaca aktif, sedangkan data di database belum sesuai. Pandu personel untuk memperbarui data menggunakan username tersebut."
+    );
+    appendUpdateInstructions(actions, "TikTok");
+  } else if (!dbActive && !complaintActive) {
+    actions.push(
+      "Kedua username TikTok belum terbaca aktif. Mohon pastikan personel menggunakan akun yang benar dan segera lakukan update data."
+    );
+    appendUpdateInstructions(actions, "TikTok");
+  } else {
+    actions.push(
+      "Kedua username TikTok berbeda namun sama-sama terbaca. Mohon konfirmasi akun mana yang digunakan saat tugas dan perbarui data Cicero agar sesuai."
+    );
+    appendUpdateInstructions(actions, "TikTok");
+  }
+
+  if (actions.length) {
+    lines.push("", "Langkah tindak lanjut:");
+    lines.push(...actions);
+  }
 
   return lines.join("\n").trim();
 }
@@ -2570,14 +2772,34 @@ export const clientRequestHandlers = {
     const hasInsta = Boolean(instaUsername);
     const hasTiktok = Boolean(tiktokUsername);
 
-    const accountStatus = await buildAccountStatus(user);
-    if (accountStatus.adminMessage) {
-      await waClient.sendMessage(chatId, accountStatus.adminMessage);
-    }
-
     const formattedComplaint = formatComplaintIssue(parsedComplaint.raw);
     if (formattedComplaint) {
       await waClient.sendMessage(chatId, formattedComplaint);
+    }
+
+    if (!isUserActive(user)) {
+      const solution = [
+        "Akun Cicero personel saat ini *tidak aktif*.",
+        "Mohon hubungi operator satker untuk melakukan aktivasi akun sebelum melanjutkan pelaporan tugas atau komplain.",
+        "Setelah akun aktif, silakan informasikan kembali melalui menu *Client Request* bila kendala masih terjadi.",
+      ].join("\n");
+
+      session.respondComplaint = {
+        nrp,
+        user,
+        accountStatus: null,
+        issue: formattedComplaint || "Akun personel tidak aktif.",
+        solution,
+        parsedComplaint,
+      };
+
+      await processComplaintResolution(session, chatId, waClient);
+      return;
+    }
+
+    const accountStatus = await buildAccountStatus(user);
+    if (accountStatus.adminMessage) {
+      await waClient.sendMessage(chatId, accountStatus.adminMessage);
     }
 
     if (!hasInsta && !hasTiktok) {
