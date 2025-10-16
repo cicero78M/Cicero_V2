@@ -17,6 +17,15 @@ export const findById = async (client_id) => {
   return res.rows[0] || null;
 };
 
+// Ambil client berdasarkan group (case-insensitive)
+export const findByGroup = async (group) => {
+  const res = await query(
+    'SELECT * FROM clients WHERE LOWER(client_group) = LOWER($1)',
+    [group]
+  );
+  return res.rows;
+};
+
 // Ambil client berdasarkan nomor WhatsApp operator
 export const findByOperator = async (waNumber) => {
   if (!waNumber) return null;
