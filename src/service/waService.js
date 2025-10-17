@@ -28,6 +28,8 @@ import {
   getTiktokSecUid,
   fetchAndStoreTiktokContent,
 } from "../handler/fetchpost/tiktokFetchPost.js";
+import { fetchInstagramProfile } from "./instagramApi.js";
+import { fetchTiktokProfile } from "./tiktokRapidService.js";
 import {
   saveContactIfNew,
   authorize,
@@ -64,6 +66,7 @@ import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetch
 import {
   userMenuContext,
   updateUsernameSession,
+  userRequestLinkSessions,
   knownUserSet,
   setMenuTimeout,
   waBindSessions,
@@ -72,6 +75,7 @@ import {
   setOperatorOptionTimeout,
   adminOptionSessions,
   setAdminOptionTimeout,
+  setUserRequestLinkTimeout,
   setSession,
   getSession,
   clearSession,
@@ -124,6 +128,169 @@ function formatUserSummary(user) {
       user.status === true || user.status === "true" ? "🟢 AKTIF" : "🔴 NONAKTIF"
     }`
   ).trim();
+}
+
+const numberFormatter = new Intl.NumberFormat("id-ID");
+
+function formatCount(value) {
+  return numberFormatter.format(Math.max(0, Math.floor(Number(value) || 0)));
+}
+
+function normalizeInstagramUsername(value) {
+  if (!value) return null;
+  const normalized = String(value).trim().replace(/^@+/, "").toLowerCase();
+  return normalized && /^[a-z0-9._]{1,30}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeTiktokUsername(value) {
+  if (!value) return null;
+  const normalized = String(value).trim().replace(/^@+/, "").toLowerCase();
+  return normalized && /^[a-z0-9._]{1,24}$/.test(normalized) ? normalized : null;
+}
+
+function formatSocialUsername(platform, username) {
+  const normalized =
+    platform === "instagram"
+      ? normalizeInstagramUsername(username)
+      : normalizeTiktokUsername(username);
+  return normalized ? `@${normalized}` : "-";
+}
+
+function extractProfileUsername(text) {
+  if (!text) return null;
+  const trimmed = text.trim();
+  let match = trimmed.match(IG_PROFILE_REGEX);
+  if (match) {
+    const username = normalizeInstagramUsername(match[2]);
+    if (!username) return null;
+    return {
+      platform: "instagram",
+      normalized: username,
+      storeValue: username,
+      display: formatSocialUsername("instagram", username),
+    };
+  }
+  match = trimmed.match(TT_PROFILE_REGEX);
+  if (match) {
+    const username = normalizeTiktokUsername(match[2]);
+    if (!username) return null;
+    return {
+      platform: "tiktok",
+      normalized: username,
+      storeValue: `@${username}`,
+      display: formatSocialUsername("tiktok", username),
+    };
+  }
+  return null;
+}
+
+function toNumeric(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    const num = Number(cleaned);
+    if (Number.isFinite(num)) return num;
+  }
+  return 0;
+}
+
+function getPlatformLabel(platform) {
+  return platform === "instagram" ? "Instagram" : "TikTok";
+}
+
+async function verifyInstagramAccount(username) {
+  try {
+    const profile = await fetchInstagramProfile(username);
+    if (!profile) {
+      return { active: false };
+    }
+    const followerCount = toNumeric(
+      profile.followers_count ??
+        profile.follower_count ??
+        profile.followers ??
+        profile.followersCount ??
+        profile.edge_followed_by?.count
+    );
+    const followingCount = toNumeric(
+      profile.following_count ??
+        profile.following ??
+        profile.followingCount ??
+        profile.edge_follow?.count
+    );
+    const postCount = toNumeric(
+      profile.media_count ??
+        profile.posts_count ??
+        profile.post_count ??
+        profile.edge_owner_to_timeline_media?.count
+    );
+    const active = followerCount > 0 && followingCount > 0 && postCount > 0;
+    return { active, followerCount, followingCount, postCount, profile };
+  } catch (error) {
+    return { active: false, error };
+  }
+}
+
+async function verifyTiktokAccount(username) {
+  try {
+    const profile = await fetchTiktokProfile(username);
+    if (!profile) {
+      return { active: false };
+    }
+    const followerCount = toNumeric(
+      profile.follower_count ??
+        profile.followerCount ??
+        profile.stats?.followerCount
+    );
+    const followingCount = toNumeric(
+      profile.following_count ??
+        profile.followingCount ??
+        profile.stats?.followingCount
+    );
+    const postCount = toNumeric(
+      profile.video_count ??
+        profile.videoCount ??
+        profile.stats?.videoCount
+    );
+    const active = followerCount > 0 && followingCount > 0 && postCount > 0;
+    return { active, followerCount, followingCount, postCount, profile };
+  } catch (error) {
+    return { active: false, error };
+  }
+}
+
+async function verifySocialAccount(platform, username) {
+  if (!username) return { active: false };
+  if (platform === "instagram") {
+    return verifyInstagramAccount(username);
+  }
+  return verifyTiktokAccount(username);
+}
+
+function formatVerificationSummary(
+  context,
+  platform,
+  displayUsername,
+  verification
+) {
+  if (!displayUsername) {
+    return `• ${context}: belum ada username ${getPlatformLabel(platform)} yang tersimpan.`;
+  }
+  if (!verification) {
+    return `• ${context}: ${displayUsername} → belum diperiksa.`;
+  }
+  if (verification.error) {
+    const reason = verification.error?.message || String(verification.error);
+    return `• ${context}: ${displayUsername} → gagal diperiksa (${reason}).`;
+  }
+  if (!verification.active) {
+    return `• ${context}: ${displayUsername} → belum terbaca aktif.`;
+  }
+  return (
+    `• ${context}: ${displayUsername} → aktif ` +
+    `(Postingan: ${formatCount(verification.postCount)}, ` +
+    `Follower: ${formatCount(verification.followerCount)}, ` +
+    `Following: ${formatCount(verification.followingCount)})`
+  );
 }
 
 // =======================
@@ -401,14 +568,274 @@ export function createHandleMessage(waClient, options = {}) {
       await saveContactIfNew(chatId);
     }
     const userWaNum = chatId.replace(/[^0-9]/g, "");
+    const lowerText = text.toLowerCase();
     const isAdminCommand = adminCommands.some((cmd) =>
-      text.toLowerCase().startsWith(cmd)
+      lowerText.startsWith(cmd)
     );
     const senderId = msg.author || chatId;
     const isAdmin = isAdminWhatsApp(senderId);
 
+    let cachedUserByWa = null;
+    let userByWaError = null;
+    let userByWaFetched = false;
+
+    const getUserByWa = async () => {
+      if (userByWaFetched) {
+        return cachedUserByWa;
+      }
+      userByWaFetched = true;
+      if (!userWaNum) return null;
+      try {
+        cachedUserByWa = await userModel.findUserByWhatsApp(userWaNum);
+      } catch (err) {
+        userByWaError = err;
+        console.error(
+          `${clientLabel} failed to load user by WhatsApp ${userWaNum}: ${err.message}`
+        );
+      }
+      return cachedUserByWa;
+    };
+
+    const clearUserRequestLinkSession = (id = chatId) => {
+      const sessionRef = userRequestLinkSessions[id];
+      if (sessionRef?.timeout) {
+        clearTimeout(sessionRef.timeout);
+      }
+      delete userRequestLinkSessions[id];
+    };
+
+    const startUserMenuSession = async () => {
+      if (!allowUserMenu) {
+        return false;
+      }
+      if (!userMenuContext[chatId]) {
+        userMenuContext[chatId] = {};
+      }
+      try {
+        await userMenuHandlers.main(
+          userMenuContext[chatId],
+          chatId,
+          "",
+          waClient,
+          pool,
+          userModel
+        );
+        setMenuTimeout(chatId, waClient, true);
+        return true;
+      } catch (err) {
+        console.error(`${clientLabel} user menu start error: ${err.message}`);
+        await safeSendMessage(
+          waClient,
+          chatId,
+          "❌ Gagal memulai menu pengguna. Silakan coba lagi nanti."
+        );
+        return true;
+      }
+    };
+
+    const handleProfileLinkForUserRequest = async () => {
+      if (!allowUserMenu) return false;
+      const extracted = extractProfileUsername(text);
+      if (!extracted) return false;
+
+      if (userByWaError) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Sistem gagal memeriksa data WhatsApp Anda. Silakan coba kembali nanti."
+        );
+        return true;
+      }
+
+      const user = await getUserByWa();
+      if (!user) {
+        const started = await startUserMenuSession();
+        if (!started) {
+          await waClient.sendMessage(
+            chatId,
+            "Nomor WhatsApp Anda belum terdaftar. Silakan kirimkan NRP Anda untuk melanjutkan."
+          );
+        }
+        return true;
+      }
+
+      const field = extracted.platform === "instagram" ? "insta" : "tiktok";
+      const storedRaw = user[field];
+      const storedNormalized =
+        extracted.platform === "instagram"
+          ? normalizeInstagramUsername(storedRaw)
+          : normalizeTiktokUsername(storedRaw);
+      const storedDisplay = storedNormalized
+        ? formatSocialUsername(extracted.platform, storedNormalized)
+        : null;
+
+      if (storedNormalized && storedNormalized === extracted.normalized) {
+        const verification = await verifySocialAccount(
+          extracted.platform,
+          extracted.normalized
+        );
+        if (verification.error) {
+          await waClient.sendMessage(
+            chatId,
+            `⚠️ Gagal memeriksa akun ${getPlatformLabel(
+              extracted.platform
+            )} ${extracted.display}: ${
+              verification.error?.message || String(verification.error)
+            }`
+          );
+          return true;
+        }
+        if (verification.active) {
+          await waClient.sendMessage(
+            chatId,
+            [
+              `✅ Akun ${getPlatformLabel(extracted.platform)} ${extracted.display} aktif dan terbaca sistem.`,
+              `Postingan: ${formatCount(verification.postCount)}`,
+              `Follower: ${formatCount(verification.followerCount)}`,
+              `Following: ${formatCount(verification.followingCount)}`,
+            ].join("\n")
+          );
+        } else {
+          await waClient.sendMessage(
+            chatId,
+            `⚠️ Akun ${getPlatformLabel(
+              extracted.platform
+            )} ${extracted.display} belum terbaca aktif oleh sistem. Pastikan akun tidak private dan memiliki konten.`
+          );
+        }
+        return true;
+      }
+
+      const linkVerification = await verifySocialAccount(
+        extracted.platform,
+        extracted.normalized
+      );
+      let storedVerification = null;
+      if (storedNormalized) {
+        storedVerification =
+          storedNormalized === extracted.normalized
+            ? linkVerification
+            : await verifySocialAccount(extracted.platform, storedNormalized);
+      }
+
+      if (linkVerification.error && (!storedVerification || storedVerification.error)) {
+        const errMsg = linkVerification.error || storedVerification?.error;
+        await waClient.sendMessage(
+          chatId,
+          `⚠️ Gagal memeriksa akun ${getPlatformLabel(
+            extracted.platform
+          )}: ${errMsg?.message || String(errMsg)}`
+        );
+        return true;
+      }
+
+      const linkActive = linkVerification.active;
+      const storedActive = storedVerification?.active || false;
+      const lines = [
+        `Perbandingan akun ${getPlatformLabel(extracted.platform)}:`,
+        formatVerificationSummary(
+          "Data sistem",
+          extracted.platform,
+          storedDisplay,
+          storedVerification
+        ),
+        formatVerificationSummary(
+          "Link Anda",
+          extracted.platform,
+          extracted.display,
+          linkVerification
+        ),
+      ];
+
+      if (storedActive && linkActive && storedNormalized) {
+        lines.push(
+          "",
+          `Keduanya aktif. Balas *1* untuk mempertahankan ${storedDisplay} atau *2* untuk mengganti ke ${extracted.display}.`,
+          "Balas *batal* untuk membatalkan pilihan."
+        );
+        userRequestLinkSessions[chatId] = {
+          platform: extracted.platform,
+          field,
+          userId: user.user_id,
+          newValue: extracted.storeValue,
+          newDisplay: extracted.display,
+          previousDisplay: storedDisplay,
+        };
+        setUserRequestLinkTimeout(chatId);
+        await waClient.sendMessage(chatId, lines.join("\n"));
+        return true;
+      }
+
+      if (storedActive || linkActive) {
+        lines.push(
+          "",
+          storedActive
+            ? `✅ Akun ${getPlatformLabel(extracted.platform)} ${storedDisplay} di database adalah akun aktif dan terbaca sistem.`
+            : `✅ Akun ${getPlatformLabel(extracted.platform)} ${extracted.display} dari link Anda aktif dan terbaca sistem.`
+        );
+        await waClient.sendMessage(chatId, lines.join("\n"));
+        return true;
+      }
+
+      lines.push(
+        "",
+        `⚠️ Belum ada akun ${getPlatformLabel(
+          extracted.platform
+        )} yang terbaca aktif. Pastikan akun tidak private dan memiliki konten.`
+      );
+      await waClient.sendMessage(chatId, lines.join("\n"));
+      return true;
+    };
+
+    if (allowUserMenu && userRequestLinkSessions[chatId]) {
+      const selection = userRequestLinkSessions[chatId];
+      if (lowerText === "batal") {
+        await waClient.sendMessage(
+          chatId,
+          "Perubahan dibatalkan. Username tetap menggunakan data sebelumnya."
+        );
+        clearUserRequestLinkSession();
+        return;
+      }
+      if (lowerText === "1") {
+        await waClient.sendMessage(
+          chatId,
+          selection.previousDisplay
+            ? `Data username tetap menggunakan ${selection.previousDisplay}.`
+            : "Belum ada perubahan username yang disimpan."
+        );
+        clearUserRequestLinkSession();
+        return;
+      }
+      if (lowerText === "2") {
+        try {
+          await userModel.updateUserField(
+            selection.userId,
+            selection.field,
+            selection.newValue
+          );
+          await waClient.sendMessage(
+            chatId,
+            `✅ Username ${getPlatformLabel(selection.platform)} berhasil diupdate menjadi ${selection.newDisplay}.`
+          );
+        } catch (err) {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Gagal menyimpan perubahan username: ${err.message}`
+          );
+        }
+        clearUserRequestLinkSession();
+        return;
+      }
+      await waClient.sendMessage(
+        chatId,
+        "Balas *1* untuk mempertahankan data lama, *2* untuk mengganti ke username baru, atau *batal* untuk membatalkan."
+      );
+      setUserRequestLinkTimeout(chatId);
+      return;
+    }
+
     // =========== Menu User Interaktif ===========
-    if (userMenuContext[chatId] && text.toLowerCase() === "batal") {
+    if (userMenuContext[chatId] && lowerText === "batal") {
       delete userMenuContext[chatId];
       await waClient.sendMessage(
         chatId,
@@ -416,7 +843,7 @@ export function createHandleMessage(waClient, options = {}) {
       );
       return;
     }
-    if (session && text.toLowerCase() === "batal") {
+    if (session && lowerText === "batal") {
       const menuLabels = {
         oprrequest: "Menu Operator",
         dashrequest: "Menu Dashboard",
@@ -844,34 +1271,20 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
 
     // ========== Mulai Menu Interaktif User ==========
-    if (text.toLowerCase() === "userrequest") {
+    if (lowerText === "userrequest") {
       if (!allowUserMenu) {
         await waClient.sendMessage(chatId, userMenuRedirectMessage);
         return;
       }
-      userMenuContext[chatId] = {};
-      try {
-        await userMenuHandlers.main(
-          userMenuContext[chatId],
-          chatId,
-          "",
-          waClient,
-          pool,
-          userModel
-        );
-        setMenuTimeout(chatId, waClient, true);
-      } catch (err) {
-        if (isUnsupportedVersionError(err)) {
-          await safeSendMessage(
-            waClient,
-            chatId,
-            "Versi WhatsApp Anda tidak mendukung menu ini. Silakan update aplikasi melalui Play Store:\nhttps://play.google.com/store/apps/details?id=com.whatsapp"
-          );
-        } else {
-          console.error(`${clientLabel} userrequest menu error: ${err.message}`);
-        }
-      }
+      await startUserMenuSession();
       return;
+    }
+
+    if (allowUserMenu && !userMenuContext[chatId]) {
+      const started = await startUserMenuSession();
+      if (started) {
+        return;
+      }
     }
 
   // ===== Handler Menu Client =====
@@ -949,6 +1362,9 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     !text.includes("#") &&
     (IG_PROFILE_REGEX.test(text.trim()) || TT_PROFILE_REGEX.test(text.trim()))
   ) {
+    if (await handleProfileLinkForUserRequest()) {
+      return;
+    }
     updateUsernameSession[chatId] = {
       link: text.trim(),
       step: "confirm",
@@ -2407,16 +2823,7 @@ waUserClient.on('message', (msg) => {
   if (from.endsWith('@g.us') || from === 'status@broadcast') {
     return;
   }
-  const text = (msg.body || '').trim().toLowerCase();
-  if (text === 'userrequest' || userMenuContext[msg.from]) {
-    handleIncoming('wwebjs-user', msg, handleUserMessage);
-  } else {
-    safeSendMessage(
-      waUserClient,
-      msg.from,
-      '🤖 Untuk memulai menu pengguna, silakan ketik *userrequest*.'
-    );
-  }
+  handleIncoming('wwebjs-user', msg, handleUserMessage);
 });
 
 // Fallback handler for environments that emit `message_create` instead of `message`
