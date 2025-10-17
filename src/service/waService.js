@@ -110,6 +110,11 @@ const messageQueue = new PQueue({ concurrency: 1 });
 // Fixed delay to ensure consistent 3-second response timing
 const responseDelayMs = 3000;
 
+const sleep = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
   const polresName = user.client_name || user.client_id || "-";
@@ -531,6 +536,9 @@ export function createHandleMessage(waClient, options = {}) {
   return async function handleMessage(msg) {
     const chatId = msg.from;
     const text = (msg.body || "").trim();
+    const userWaNum = chatId.replace(/[^0-9]/g, "");
+    const initialIsMyContact =
+      typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
     console.log(`${clientLabel} Incoming message from ${chatId}: ${text}`);
     if (msg.isStatus || chatId === "status@broadcast") {
       console.log(`${clientLabel} Ignored status message from ${chatId}`);
@@ -555,8 +563,36 @@ export function createHandleMessage(waClient, options = {}) {
       return;
     }
 
+    if (allowUserMenu && typeof waClient.sendSeen === "function") {
+      await sleep(1000);
+      try {
+        await waClient.sendSeen(chatId);
+      } catch (err) {
+        console.warn(
+          `${clientLabel} Failed to mark ${chatId} as read: ${err?.message || err}`
+        );
+      }
+    }
+
     // ===== Deklarasi State dan Konstanta =====
     const session = getSession(chatId);
+    const hasAnySession = () =>
+      Boolean(getSession(chatId)) ||
+      Boolean(userMenuContext[chatId]) ||
+      Boolean(waBindSessions[chatId]) ||
+      Boolean(updateUsernameSession[chatId]) ||
+      Boolean(userRequestLinkSessions[chatId]) ||
+      Boolean(operatorOptionSessions[chatId]) ||
+      Boolean(adminOptionSessions[chatId]);
+    const hadSessionAtStart = allowUserMenu ? hasAnySession() : false;
+    let mutualReminderComputed = false;
+    let mutualReminderResult = {
+      shouldRemind: false,
+      message: null,
+      savedInDb: false,
+      savedInWhatsapp: false,
+      user: null,
+    };
     // Hindari query ke tabel saved_contact saat menangani dashrequest
     if (
       !(
@@ -567,7 +603,6 @@ export function createHandleMessage(waClient, options = {}) {
     ) {
       await saveContactIfNew(chatId);
     }
-    const userWaNum = chatId.replace(/[^0-9]/g, "");
     const lowerText = text.toLowerCase();
     const isAdminCommand = adminCommands.some((cmd) =>
       lowerText.startsWith(cmd)
@@ -596,20 +631,109 @@ export function createHandleMessage(waClient, options = {}) {
       return cachedUserByWa;
     };
 
-    const clearUserRequestLinkSession = (id = chatId) => {
-      const sessionRef = userRequestLinkSessions[id];
-      if (sessionRef?.timeout) {
-        clearTimeout(sessionRef.timeout);
+    const computeMutualReminder = async () => {
+      if (!allowUserMenu) {
+        mutualReminderComputed = true;
+        return mutualReminderResult;
       }
-      delete userRequestLinkSessions[id];
+      if (mutualReminderComputed) {
+        return mutualReminderResult;
+      }
+
+      const result = {
+        shouldRemind: false,
+        message: null,
+        savedInDb: false,
+        savedInWhatsapp: false,
+        user: null,
+      };
+
+      let savedInDb = false;
+      if (userWaNum) {
+        try {
+          const lookup = await query(
+            "SELECT 1 FROM saved_contact WHERE phone_number = $1 LIMIT 1",
+            [userWaNum]
+          );
+          savedInDb = lookup.rowCount > 0;
+        } catch (err) {
+          console.error(
+            `${clientLabel} failed to check saved_contact for ${chatId}: ${err.message}`
+          );
+        }
+      }
+
+      const user = await getUserByWa();
+      result.user = user || null;
+
+      if (user && !savedInDb) {
+        try {
+          await saveContactIfNew(chatId);
+          savedInDb = true;
+        } catch (err) {
+          console.error(
+            `${clientLabel} failed to persist contact for ${chatId}: ${err.message}`
+          );
+        }
+      }
+
+      let savedInWhatsapp =
+        typeof initialIsMyContact === "boolean" ? initialIsMyContact : null;
+
+      const refreshContactState = async () => {
+        if (typeof waClient.getContact !== "function") {
+          return savedInWhatsapp;
+        }
+        try {
+          const contact = await waClient.getContact(chatId);
+          return contact?.isMyContact ?? savedInWhatsapp;
+        } catch (err) {
+          console.warn(
+            `${clientLabel} failed to refresh contact info for ${chatId}: ${err?.message || err}`
+          );
+          return savedInWhatsapp;
+        }
+      };
+
+      if (savedInWhatsapp === null) {
+        savedInWhatsapp = await refreshContactState();
+      }
+
+      if (user && savedInDb && savedInWhatsapp !== true) {
+        savedInWhatsapp = await refreshContactState();
+      }
+
+      const isMutual = Boolean(savedInWhatsapp) && savedInDb;
+
+      if (!isMutual) {
+        result.shouldRemind = true;
+        result.message =
+          "📌 Mohon simpan nomor ini sebagai *WA Center CICERO* agar pemberitahuan dan layanan dapat diterima tanpa hambatan.";
+      }
+
+      result.savedInDb = savedInDb;
+      result.savedInWhatsapp = Boolean(savedInWhatsapp);
+
+      mutualReminderResult = result;
+      mutualReminderComputed = true;
+      return mutualReminderResult;
     };
 
-    const startUserMenuSession = async () => {
-      if (!allowUserMenu) {
-        return false;
-      }
-      if (!userMenuContext[chatId]) {
-        userMenuContext[chatId] = {};
+    const processMessage = async () => {
+      const clearUserRequestLinkSession = (id = chatId) => {
+        const sessionRef = userRequestLinkSessions[id];
+        if (sessionRef?.timeout) {
+          clearTimeout(sessionRef.timeout);
+        }
+        delete userRequestLinkSessions[id];
+      };
+
+      const startUserMenuSession = async () => {
+        if (!allowUserMenu) {
+          return false;
+        }
+        if (!userMenuContext[chatId]) {
+          userMenuContext[chatId] = {};
       }
       try {
         await userMenuHandlers.main(
@@ -633,12 +757,12 @@ export function createHandleMessage(waClient, options = {}) {
       }
     };
 
-    const handleProfileLinkForUserRequest = async () => {
-      if (!allowUserMenu) return false;
-      const extracted = extractProfileUsername(text);
-      if (!extracted) return false;
+      const handleProfileLinkForUserRequest = async () => {
+        if (!allowUserMenu) return false;
+        const extracted = extractProfileUsername(text);
+        if (!extracted) return false;
 
-      if (userByWaError) {
+        if (userByWaError) {
         await waClient.sendMessage(
           chatId,
           "❌ Sistem gagal memeriksa data WhatsApp Anda. Silakan coba kembali nanti."
@@ -2804,6 +2928,30 @@ Ketik *angka* menu, atau *batal* untuk keluar.
   );
   console.log(`${clientLabel} Message from ${chatId} processed with fallback handler`);
   return;
+    };
+
+    try {
+      await processMessage();
+    } finally {
+      if (allowUserMenu) {
+        const reminder = await computeMutualReminder();
+        const hasSessionNow = hasAnySession();
+        if (
+          reminder.shouldRemind &&
+          reminder.message &&
+          hadSessionAtStart &&
+          !hasSessionNow
+        ) {
+          try {
+            await waClient.sendMessage(chatId, reminder.message);
+          } catch (err) {
+            console.warn(
+              `${clientLabel} failed to send mutual reminder to ${chatId}: ${err?.message || err}`
+            );
+          }
+        }
+      }
+    }
   };
 }
 
