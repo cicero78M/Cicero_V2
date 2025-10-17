@@ -10,9 +10,11 @@ const MENU_WARNING = 1 * 60 * 1000; // 1 menit sebelum berakhir
 const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit
 const BIND_TIMEOUT = 2 * 60 * 1000; // 2 menit
 const NO_REPLY_TIMEOUT = 30 * 1000; // 30 detik
+const USER_REQUEST_LINK_TIMEOUT = 2 * 60 * 1000; // 2 menit
 
 export const userMenuContext = {};         // { chatId: {step, ...} }
 export const updateUsernameSession = {};   // { chatId: {step, ...} }
+export const userRequestLinkSessions = {}; // { chatId: { ... } }
 export const knownUserSet = new Set();     // Set of WA number or chatId (untuk first time/fallback)
 export const waBindSessions = {};          // { chatId: {step, ...} }
 export const operatorOptionSessions = {};  // { chatId: {timeout} }
@@ -99,6 +101,19 @@ export function setAdminOptionTimeout(chatId) {
   adminOptionSessions[chatId].timeout = setTimeout(() => {
     delete adminOptionSessions[chatId];
   }, MENU_TIMEOUT);
+}
+
+export function setUserRequestLinkTimeout(chatId) {
+  const session = userRequestLinkSessions[chatId];
+  if (!session) {
+    return;
+  }
+  if (session.timeout) {
+    clearTimeout(session.timeout);
+  }
+  session.timeout = setTimeout(() => {
+    delete userRequestLinkSessions[chatId];
+  }, USER_REQUEST_LINK_TIMEOUT);
 }
 
 // =======================
