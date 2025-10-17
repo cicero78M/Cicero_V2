@@ -42,6 +42,20 @@ Balas angka field di atas atau *batal* untuk keluar.
 }
 
 
+export const SESSION_CLOSED_MESSAGE =
+  "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi.";
+
+export const closeSession = async (
+  session,
+  chatId,
+  waClient,
+  message = SESSION_CLOSED_MESSAGE
+) => {
+  session.exit = true;
+  await waClient.sendMessage(chatId, message);
+};
+
+
 
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
@@ -97,17 +111,9 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, *tidak* untuk keluar, atau *batal* untuk menutup sesi."
       );
     } else if (answer === "tidak") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
     } else if (answer === "batal") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
     } else {
       await waClient.sendMessage(
         chatId,
@@ -126,18 +132,10 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       await waClient.sendMessage(chatId, formatFieldList(session.isDitbinmas));
       return;
     } else if (answer === "tidak") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
       return;
     } else if (answer === "batal") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
       return;
     }
     await waClient.sendMessage(
@@ -484,18 +482,10 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       );
       return;
     } else if (answer === "tidak") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
       return;
     } else if (answer === "batal") {
-      session.exit = true;
-      await waClient.sendMessage(
-        chatId,
-        "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
-      );
+      await closeSession(session, chatId, waClient);
       return;
     }
     await waClient.sendMessage(
