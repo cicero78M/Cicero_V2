@@ -1,5 +1,8 @@
 import { jest } from "@jest/globals";
-import { userMenuHandlers } from "../src/handler/menu/userMenuHandlers.js";
+import {
+  SESSION_CLOSED_MESSAGE,
+  userMenuHandlers,
+} from "../src/handler/menu/userMenuHandlers.js";
 
 describe("userMenuHandlers conversational flow", () => {
   const chatId = "628111222333@c.us";
@@ -80,7 +83,7 @@ describe("userMenuHandlers conversational flow", () => {
     expect(session.exit).toBe(true);
     expect(waClient.sendMessage).toHaveBeenCalledWith(
       chatId,
-      "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      SESSION_CLOSED_MESSAGE
     );
   });
 
@@ -117,7 +120,7 @@ describe("userMenuHandlers conversational flow", () => {
     expect(session.exit).toBe(true);
     expect(waClient.sendMessage).toHaveBeenCalledWith(
       chatId,
-      "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      SESSION_CLOSED_MESSAGE
     );
   });
 
@@ -183,7 +186,7 @@ describe("userMenuHandlers conversational flow", () => {
     expect(session.exit).toBe(true);
     expect(waClient.sendMessage).toHaveBeenCalledWith(
       chatId,
-      "Terima kasih. Sesi ditutup. Ketik *userrequest* untuk memulai lagi."
+      SESSION_CLOSED_MESSAGE
     );
   });
 
