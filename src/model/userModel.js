@@ -453,6 +453,15 @@ export async function findUserByInsta(insta) {
   return rows[0];
 }
 
+export async function findUserByTiktok(tiktok) {
+  if (!tiktok) return null;
+  const { rows } = await query(
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.tiktok) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
+    [tiktok]
+  );
+  return rows[0];
+}
+
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const { rows } = await query(
