@@ -12,6 +12,7 @@ describe("userMenuHandlers.updateAskValue social media normalization", () => {
     userModel = {
       updateUserField: jest.fn().mockResolvedValue(),
       findUserByInsta: jest.fn().mockResolvedValue(null),
+      findUserByTiktok: jest.fn().mockResolvedValue(null),
     };
     jest.spyOn(userMenuHandlers, "main").mockResolvedValue();
   });
@@ -69,6 +70,7 @@ describe("userMenuHandlers.updateAskValue social media normalization", () => {
       userModel
     );
 
+    expect(userModel.findUserByTiktok).toHaveBeenCalledWith("another.user");
     expect(userModel.updateUserField).toHaveBeenCalledWith(
       "12345",
       "tiktok",
@@ -77,6 +79,27 @@ describe("userMenuHandlers.updateAskValue social media normalization", () => {
     expect(waClient.sendMessage).toHaveBeenCalledWith(
       chatId,
       expect.stringContaining("*@another.user*.")
+    );
+  });
+
+  it("rejects TikTok update when username already used by different user", async () => {
+    const session = buildSession("tiktok");
+    userModel.findUserByTiktok.mockResolvedValue({ user_id: "99999" });
+
+    await userMenuHandlers.updateAskValue(
+      session,
+      chatId,
+      "https://www.tiktok.com/@duplicate.user",
+      waClient,
+      pool,
+      userModel
+    );
+
+    expect(userModel.findUserByTiktok).toHaveBeenCalledWith("duplicate.user");
+    expect(userModel.updateUserField).not.toHaveBeenCalled();
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      "❌ Akun TikTok tersebut sudah terdaftar pada pengguna lain."
     );
   });
 });

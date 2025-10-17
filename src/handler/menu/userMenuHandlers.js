@@ -450,6 +450,14 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         return;
       }
       value = ttMatch[1].toLowerCase();
+      const existing = await userModel.findUserByTiktok(value);
+      if (existing && existing.user_id !== user_id) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Akun TikTok tersebut sudah terdaftar pada pengguna lain."
+        );
+        return;
+      }
     }
     if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
     if (["nama", "title", "divisi", "jabatan", "desa"].includes(field)) value = value.toUpperCase();
