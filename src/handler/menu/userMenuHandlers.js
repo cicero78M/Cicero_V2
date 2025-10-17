@@ -8,8 +8,6 @@ import {
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
 
-function ignore(..._args) {}
-
 // --- Helper Format Pesan ---
 function formatUserReport(user) {
   const polresName = user.client_name || user.client_id || "-";
