@@ -9,7 +9,7 @@ const USER_MENU_TIMEOUT = 5 * 60 * 1000; // 5 menit
 const MENU_WARNING = 1 * 60 * 1000; // 1 menit sebelum berakhir
 const MENU_TIMEOUT = 2 * 60 * 1000; // 2 menit
 const BIND_TIMEOUT = 2 * 60 * 1000; // 2 menit
-const NO_REPLY_TIMEOUT = 30 * 1000; // 30 detik
+const NO_REPLY_TIMEOUT = 90 * 1000; // 90 detik
 const USER_REQUEST_LINK_TIMEOUT = 2 * 60 * 1000; // 2 menit
 
 export const userMenuContext = {};         // { chatId: {step, ...} }
@@ -65,7 +65,7 @@ export function setMenuTimeout(chatId, waClient, expectReply = false) {
         waClient
           .sendMessage(
             chatId,
-            "maaf, sistem belum membaca pesan balasan anda, kirim ulang pesan anda."
+            "🤖 Kami masih menunggu balasan Anda. Silakan jawab jika sudah siap agar sesi dapat berlanjut."
           )
           .catch((e) => console.error(e));
       }

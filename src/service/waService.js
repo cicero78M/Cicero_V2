@@ -189,6 +189,21 @@ function extractProfileUsername(text) {
   return null;
 }
 
+const QUICK_REPLY_STEPS = new Set([
+  "inputUserId",
+  "confirmBindUser",
+  "confirmBindUpdate",
+  "updateAskField",
+  "updateAskValue",
+]);
+
+function shouldExpectQuickReply(session) {
+  if (!session || session.exit) {
+    return false;
+  }
+  return session.step ? QUICK_REPLY_STEPS.has(session.step) : false;
+}
+
 function toNumeric(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
@@ -744,7 +759,8 @@ export function createHandleMessage(waClient, options = {}) {
           pool,
           userModel
         );
-        setMenuTimeout(chatId, waClient, true);
+        const expectReply = shouldExpectQuickReply(userMenuContext[chatId]);
+        setMenuTimeout(chatId, waClient, expectReply);
         return true;
       } catch (err) {
         console.error(`${clientLabel} user menu start error: ${err.message}`);
@@ -1012,7 +1028,11 @@ export function createHandleMessage(waClient, options = {}) {
           };
           const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
           await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
+          setMenuTimeout(
+            chatId,
+            waClient,
+            shouldExpectQuickReply(userMenuContext[chatId])
+          );
         } else {
           userMenuContext[chatId] = { step: "inputUserId" };
           const msg =
@@ -1020,7 +1040,11 @@ export function createHandleMessage(waClient, options = {}) {
             "\n\nBalas pesan ini dengan memasukan NRP Anda," +
             "\n\n*Contoh Pesan Balasan : 87020990*";
           await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
+          setMenuTimeout(
+            chatId,
+            waClient,
+            shouldExpectQuickReply(userMenuContext[chatId])
+          );
         }
         return;
       }
@@ -1084,7 +1108,11 @@ export function createHandleMessage(waClient, options = {}) {
           };
           const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
           await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
+          setMenuTimeout(
+            chatId,
+            waClient,
+            shouldExpectQuickReply(userMenuContext[chatId])
+          );
         } else {
           userMenuContext[chatId] = { step: "inputUserId" };
           const msg =
@@ -1092,7 +1120,11 @@ export function createHandleMessage(waClient, options = {}) {
             "\n\nBalas pesan ini dengan memasukan NRP Anda," +
             "\n\n*Contoh Pesan Balasan : 87020990*";
           await waClient.sendMessage(chatId, msg.trim());
-          setMenuTimeout(chatId, waClient, true);
+          setMenuTimeout(
+            chatId,
+            waClient,
+            shouldExpectQuickReply(userMenuContext[chatId])
+          );
         }
         return;
       }
@@ -1379,7 +1411,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
           clearTimeout(session.noReplyTimeout);
           delete userMenuContext[chatId];
         } else {
-          setMenuTimeout(chatId, waClient, true);
+          const expectReply = shouldExpectQuickReply(session);
+          setMenuTimeout(chatId, waClient, expectReply);
         }
       } else {
         await waClient.sendMessage(
@@ -2814,7 +2847,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       };
       const msg = `${salam}, Bapak/Ibu\n${formatUserSummary(userByWA)}\n\nApakah Anda ingin melakukan perubahan data?\nBalas *ya* untuk memulai update atau *tidak* untuk melewati.`;
       await safeSendMessage(waClient, chatId, msg.trim());
-      setMenuTimeout(chatId, waClient, true);
+      setMenuTimeout(
+        chatId,
+        waClient,
+        shouldExpectQuickReply(userMenuContext[chatId])
+      );
     } else {
       userMenuContext[chatId] = { step: "inputUserId" };
       const msg =
@@ -2824,7 +2861,11 @@ Ketik *angka* menu, atau *batal* untuk keluar.
         "\nKetik *batal* untuk keluar." +
         "\n\nContoh:\n87020990";
       await safeSendMessage(waClient, chatId, msg.trim());
-      setMenuTimeout(chatId, waClient, true);
+      setMenuTimeout(
+        chatId,
+        waClient,
+        shouldExpectQuickReply(userMenuContext[chatId])
+      );
     }
     return;
   }
