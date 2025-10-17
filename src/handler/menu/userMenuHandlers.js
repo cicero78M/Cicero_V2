@@ -224,42 +224,6 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     );
   },
 
-  // --- Update User ID manual
-  updateAskUserId: async (session, chatId, text, waClient, pool, userModel) => {
-    const lower = text.trim().toLowerCase();
-    if (lower === "batal") {
-      session.exit = true;
-      await waClient.sendMessage(chatId, "✅ Menu ditutup. Terima kasih.");
-      return;
-    }
-    const nrp = text.trim();
-    if (!/^\d+$/.test(nrp)) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ NRP hanya boleh berisi angka.\nContoh: 87020990\nKetik *batal* untuk keluar."
-      );
-      return;
-    }
-    const user = await userModel.findUserById(nrp);
-    if (!user) {
-      await waClient.sendMessage(
-        chatId,
-        `❌ NRP *${nrp}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
-      );
-      await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
-      return;
-    }
-    session.updateUserId = nrp;
-    session.isDitbinmas = !!user.ditbinmas;
-    session.step = "confirmBindUpdate";
-    await waClient.sendMessage(
-      chatId,
-      `NRP *${nrp}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
-        "Apakah Anda ingin menghubungkannya dan melanjutkan update?\n" +
-        "Balas *ya* untuk menghubungkan atau *tidak* untuk membatalkan."
-    );
-  },
-
   confirmBindUpdate: async (session, chatId, text, waClient, pool, userModel) => {
     const ans = text.trim().toLowerCase();
     const waNum = chatId.replace(/[^0-9]/g, "");
