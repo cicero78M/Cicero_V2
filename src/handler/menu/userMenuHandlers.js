@@ -156,28 +156,37 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
       return;
     }
-    const user_id = text.trim();
-    if (!/^\d+$/.test(user_id)) {
+    const digits = text.replace(/\D/g, "");
+    if (!digits) {
       await waClient.sendMessage(
         chatId,
-        "❌ NRP hanya boleh berisi angka.\nContoh: 87020990\nKetik *batal* untuk keluar."
+        "❌ NRP harus berupa angka. Sistem otomatis menghapus karakter non-angka sehingga pastikan angka yang tersisa membentuk NRP yang benar.\nContoh: 87020990\nKetik *batal* untuk keluar."
+      );
+      return;
+    }
+    const minLength = 6;
+    const maxLength = 12;
+    if (digits.length < minLength || digits.length > maxLength) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ NRP harus terdiri dari ${minLength}-${maxLength} digit angka setelah karakter non-angka dibuang.\nContoh: 87020990\nKetik *batal* untuk keluar.`
       );
       return;
     }
     try {
-      const user = await userModel.findUserById(user_id);
+      const user = await userModel.findUserById(digits);
       if (!user) {
         await waClient.sendMessage(
           chatId,
-          `❌ NRP *${user_id}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
+          `❌ NRP *${digits}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
         );
         await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
       } else {
         session.step = "confirmBindUser";
-        session.bindUserId = user_id;
+        session.bindUserId = digits;
         await waClient.sendMessage(
           chatId,
-          `NRP *${user_id}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
+          `NRP *${digits}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
             "Apakah Anda ingin menghubungkannya dengan akun tersebut?\n" +
             "Balas *ya* untuk menghubungkan atau *tidak* untuk membatalkan."
         );
