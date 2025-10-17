@@ -35,7 +35,7 @@ test('wwebjs adapter relays messages', async () => {
   await client.connect();
   const incoming = { from: '123', body: 'hi', id: { id: 'm1', _serialized: 'm1' } };
   listeners['message'](incoming);
-  expect(onMessage).toHaveBeenCalledWith(incoming);
+  expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming));
   const id = await client.sendMessage('123', 'hello');
   expect(id).toBe('abc');
   expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {});

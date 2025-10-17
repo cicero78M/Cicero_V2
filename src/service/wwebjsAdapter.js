@@ -31,12 +31,25 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     emitter.emit('ready');
   });
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
-  client.on('message', (msg) => {
+  client.on('message', async (msg) => {
+    let contactMeta = {};
+    try {
+      const contact = await msg.getContact();
+      contactMeta = {
+        contactName: contact?.name || null,
+        contactPushname: contact?.pushname || null,
+        isMyContact: contact?.isMyContact ?? null,
+      };
+    } catch (err) {
+      contactMeta = { error: err?.message || 'contact_fetch_failed' };
+    }
     emitter.emit('message', {
       from: msg.from,
       body: msg.body,
       id: msg.id,
       author: msg.author,
+      timestamp: msg.timestamp,
+      ...contactMeta,
     });
   });
 
@@ -79,6 +92,25 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return await client.getState();
     } catch {
       return 'close';
+    }
+  };
+
+  emitter.sendSeen = async (jid) => {
+    try {
+      return await client.sendSeen(jid);
+    } catch (err) {
+      console.warn('[WWEBJS] sendSeen failed:', err?.message || err);
+      return false;
+    }
+  };
+
+  emitter.getContact = async (jid) => {
+    try {
+      const contact = await client.getContactById(jid);
+      return contact;
+    } catch (err) {
+      console.warn('[WWEBJS] getContact failed:', err?.message || err);
+      return null;
     }
   };
 
