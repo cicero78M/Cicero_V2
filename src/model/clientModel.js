@@ -49,14 +49,47 @@ export const findByOperator = async (waNumber) => {
 // Ambil client berdasarkan nomor WhatsApp super admin
 export const findBySuperAdmin = async (waNumber) => {
   if (!waNumber) return null;
-  const normalized = String(waNumber).replace(/\D/g, "");
-  const waId = normalized.startsWith("62")
-    ? normalized
-    : "62" + normalized.replace(/^0/, "");
-  const { rows } = await query(
-    "SELECT * FROM clients WHERE client_super = $1 LIMIT 1",
-    [waId]
-  );
+
+  const digitsOnly = String(waNumber).replace(/\D/g, "");
+  if (!digitsOnly) return null;
+
+  let waId = digitsOnly;
+  if (waId.startsWith("0")) {
+    waId = "62" + waId.slice(1);
+  } else if (!waId.startsWith("62")) {
+    waId = "62" + waId;
+  }
+
+  let params = [waId];
+  let queryText = `
+    SELECT *
+    FROM clients
+    WHERE client_super IS NOT NULL
+      AND client_super <> ''
+      AND client_super ~ ('(^|\\D)' || $1 || '(\\D|$)')
+    LIMIT 1
+  `;
+
+  if (waId.startsWith("62") && waId.length > 2) {
+    const localDigits = waId.slice(2).replace(/^0+/, "");
+    if (localDigits) {
+      const localFormat = "0" + localDigits;
+      params = [waId, localFormat];
+      queryText = `
+        SELECT *
+        FROM clients
+        WHERE client_super IS NOT NULL
+          AND client_super <> ''
+          AND (
+            client_super ~ ('(^|\\D)' || $1 || '(\\D|$)')
+            OR client_super ~ ('(^|\\D)' || $2 || '(\\D|$)')
+          )
+        LIMIT 1
+      `;
+    }
+  }
+
+  const { rows } = await query(queryText, params);
   return rows[0] || null;
 };
 
