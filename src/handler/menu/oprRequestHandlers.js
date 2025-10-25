@@ -1,5 +1,6 @@
 // src/handler/menu/oprRequestHandlers.js
 import { isAdminWhatsApp, formatToWhatsAppId } from "../../utils/waHelper.js";
+import { findBySuperAdmin } from "../../model/clientModel.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { hariIndo } from "../../utils/constants.js";
 import {
@@ -9,6 +10,64 @@ import {
 } from "../../utils/utilsHelper.js";
 
 function ignore(..._args) {}
+
+function normalizeOperatorNumbers(rawNumber) {
+  const digitsOnly = String(rawNumber || "").replace(/\D/g, "");
+  if (!digitsOnly) return [];
+
+  let waId = digitsOnly;
+  if (waId.startsWith("0")) {
+    waId = "62" + waId.slice(1);
+  } else if (!waId.startsWith("62")) {
+    waId = "62" + waId;
+  }
+
+  const variants = new Set([waId]);
+  const localDigits = waId.slice(2).replace(/^0+/, "");
+  if (localDigits) {
+    variants.add("0" + localDigits);
+  }
+
+  return Array.from(variants);
+}
+
+async function resolveClientId(session, chatId, pool) {
+  if (session.selected_client_id) {
+    return session.selected_client_id;
+  }
+
+  const candidates = normalizeOperatorNumbers(chatId);
+  if (!candidates.length) {
+    return null;
+  }
+
+  try {
+    const { rows } = await pool.query(
+      "SELECT client_id FROM clients WHERE client_operator = ANY($1::text[]) LIMIT 1",
+      [candidates]
+    );
+    const clientId = rows[0]?.client_id;
+    if (clientId) {
+      session.selected_client_id = clientId;
+      return clientId;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  try {
+    const superAdmin = await findBySuperAdmin(chatId);
+    const clientId = superAdmin?.client_id;
+    if (clientId) {
+      session.selected_client_id = clientId;
+      return clientId;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  return null;
+}
 
 function formatUpdateFieldList() {
   return `
@@ -352,17 +411,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     session.addUser.title = pangkat;
     session.step = "addUser_satfung";
     // List satfung khusus client ini
-    let clientId = session.selected_client_id || null;
-    if (!clientId) {
-      try {
-        const waNum = chatId.replace(/[^0-9]/g, "");
-        const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
       await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
       session.step = "main";
@@ -452,17 +501,7 @@ Status: 🟢 AKTIF, Exception: False
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    let clientId = session.selected_client_id || null;
-    if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const clientId = await resolveClientId(session, chatId, pool);
     const user = clientId
       ? await userModel.findUserByIdAndClient(nrp, clientId)
       : await userModel.findUserById(nrp);
@@ -497,23 +536,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLink: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLink_chooseClient";
         return oprRequestHandlers.rekapLink_chooseClient(session, chatId, text, waClient, pool);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { getReportsTodayByClient } = await import("../../model/linkReportModel.js");
     const { getShortcodesTodayByClient } = await import("../../model/instaPostModel.js");
@@ -591,23 +622,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLinkKemarin: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKemarin_chooseClient";
         return oprRequestHandlers.rekapLinkKemarin_chooseClient(session, chatId, text, waClient, pool, userModel);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { getReportsYesterdayByClient } = await import("../../model/linkReportModel.js");
     const { getShortcodesYesterdayByClient } = await import("../../model/instaPostModel.js");
@@ -687,19 +710,11 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLinkKhusus: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { getReportsTodayByClient } = await import("../../model/linkReportKhususModel.js");
     const { getShortcodesTodayByClient } = await import("../../model/instaPostKhususModel.js");
@@ -755,15 +770,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLinkPerPost: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkPerPost_chooseClient";
         return oprRequestHandlers.rekapLinkPerPost_chooseClient(
           session,
@@ -773,11 +782,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
           pool
         );
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { getShortcodesTodayByClient } = await import("../../model/instaPostModel.js");
     const shortcodes = await getShortcodesTodayByClient(clientId);
@@ -877,15 +884,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   rekapLinkKhususPerPost: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhususPerPost_chooseClient";
         return oprRequestHandlers.rekapLinkKhususPerPost_chooseClient(
           session,
@@ -895,11 +896,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
           pool
         );
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { getShortcodesTodayByClient } = await import("../../model/instaPostKhususModel.js");
     const shortcodes = await getShortcodesTodayByClient(clientId);
@@ -993,23 +992,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   updateTugas: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "updateTugas_chooseClient";
         return oprRequestHandlers.updateTugas_chooseClient(session, chatId, text, waClient, pool);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
     try {
@@ -1061,17 +1052,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    let clientId = session.selected_client_id || null;
-    if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const clientId = await resolveClientId(session, chatId, pool);
     const user = clientId
       ? await userModel.findUserByIdAndClient(nrp, clientId)
       : await userModel.findUserById(nrp);
@@ -1627,23 +1608,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   absensiLink_submenu: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.absensi_client_id || null;
+    let clientId = session.absensi_client_id || (await resolveClientId(session, chatId, pool));
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLink_chooseClient";
         return oprRequestHandlers.absensiLink_chooseClient(session, chatId, text, waClient, pool);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_client_id = clientId;
     let msg = `Pilih tipe laporan absensi link:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
@@ -1686,19 +1659,11 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   absensiLinkKhusus_submenu: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.absensi_client_id || null;
+    const clientId = session.absensi_client_id || (await resolveClientId(session, chatId, pool));
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_client_id = clientId;
     let msg = `Pilih tipe laporan absensi link khusus:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
@@ -1779,23 +1744,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
   },
 
   absensiReg_submenu: async (session, chatId, text, waClient, pool, userModel) => {
-    let clientId = session.absensi_reg_client_id || null;
+    const clientId = session.absensi_reg_client_id || (await resolveClientId(session, chatId, pool));
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "absensiReg_chooseClient";
         return oprRequestHandlers.absensiReg_chooseClient(session, chatId, text, waClient, pool);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_reg_client_id = clientId;
     let msg = `Pilih tipe laporan absensi registrasi:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
@@ -1843,19 +1800,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, "❎ Batal tugas khusus.");
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
-    let clientId = session.selected_client_id || null;
-    if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      try {
-        const res = await pool.query(
-          "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1",
-          [waNum]
-        );
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
       await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
       session.step = "main";
@@ -1925,23 +1870,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const nrp = text.trim().replace(/[^0-9a-zA-Z]/g, "");
-    let clientId = session.selected_client_id || null;
+    const clientId = await resolveClientId(session, chatId, pool);
     if (!clientId) {
-      const waNum = chatId.replace(/[^0-9]/g, "");
-      const q = "SELECT client_id FROM clients WHERE client_operator=$1 LIMIT 1";
-      try {
-        const res = await pool.query(q, [waNum]);
-        clientId = res.rows[0]?.client_id || null;
-      } catch (e) { console.error(e); }
-      if (isAdminWhatsApp(chatId) && !clientId) {
+      if (isAdminWhatsApp(chatId)) {
         session.step = "cekUser_chooseClient";
         return oprRequestHandlers.cekUser_chooseClient(session, chatId, text, waClient, pool);
       }
-      if (!clientId) {
-        await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
-        session.step = "main";
-        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
 
     const user = await userModel.findUserByIdAndClient(nrp, clientId);
