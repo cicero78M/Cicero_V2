@@ -2792,7 +2792,21 @@ Ketik *angka* menu, atau *batal* untuk keluar.
     const res = await query(q, [waId]);
     if (res.rows && res.rows[0]) {
       operatorRow = res.rows[0];
-      const waOperator = operatorRow.client_operator.replace(/\D/g, "");
+    } else {
+      const superAdminRow = await findBySuperAdmin(waId);
+      if (superAdminRow) {
+        operatorRow = {
+          client_id: superAdminRow.client_id,
+          nama: superAdminRow.nama,
+          client_operator: superAdminRow.client_super,
+          client_super: superAdminRow.client_super,
+        };
+      }
+    }
+    if (operatorRow) {
+      const operatorContact =
+        operatorRow.client_operator || operatorRow.client_super || waId;
+      const waOperator = String(operatorContact).replace(/\D/g, "");
       clientInfoText =
         `\n\nHubungi operator Anda:\n` +
         `*${operatorRow.nama || operatorRow.client_id}* (WA: https://wa.me/${waOperator})`;
