@@ -392,7 +392,8 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
   const users = await getUsersSocialByClient(clientId, roleFlag);
   const groups = {};
   users.forEach((u) => {
-    const cid = (u.client_id || "").toLowerCase();
+    const cid = String(u.client_id || "").trim().toLowerCase();
+    if (!cid) return;
     if (!groups[cid]) groups[cid] = { total: 0, insta: 0, tiktok: 0 };
     groups[cid].total++;
     if (u.insta) groups[cid].insta++;
@@ -400,11 +401,12 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
   });
   const stats = await Promise.all(
     Object.entries(groups).map(async ([cid, stat]) => {
-      const client = await findClientById(cid);
-      const name = (client?.nama || cid).toUpperCase();
+      const normalizedCid = String(cid || "").trim().toLowerCase();
+      const client = await findClientById(normalizedCid);
+      const name = (client?.nama || normalizedCid).toUpperCase();
       const igPct = stat.total ? (stat.insta / stat.total) * 100 : 0;
       const ttPct = stat.total ? (stat.tiktok / stat.total) * 100 : 0;
-      return { cid, name, ...stat, igPct, ttPct };
+      return { cid: normalizedCid, name, ...stat, igPct, ttPct };
     })
   );
   const totals = stats.reduce(

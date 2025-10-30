@@ -50,7 +50,7 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
   const users = await getUsersSocialByClient(clientIdStr, filterRole);
   const groups = new Map();
   users.forEach((user) => {
-    const cid = String(user.client_id || "").toLowerCase();
+    const cid = String(user.client_id || "").trim().toLowerCase();
     if (!cid) return;
     if (!groups.has(cid)) {
       groups.set(cid, { total: 0, insta: 0, tiktok: 0 });
@@ -63,25 +63,30 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
 
   const roleName = (filterRole || clientIdStr).toLowerCase();
   const clientIdsFromRole = (await getClientsByRole(roleName)) || [];
+  const normalizedRoleClientIds = clientIdsFromRole
+    .map((id) => String(id || "").trim().toLowerCase())
+    .filter(Boolean);
   const allIds = new Set([
     normalizedClientId,
-    ...clientIdsFromRole.map((id) => String(id || "").toLowerCase()).filter(Boolean),
+    ...normalizedRoleClientIds,
     ...groups.keys(),
   ]);
 
   const stats = await Promise.all(
     [...allIds].map(async (cid) => {
-      const stat = groups.get(cid) || { total: 0, insta: 0, tiktok: 0 };
-      const clientInfo = await findClientById(cid);
-      const displayName = (clientInfo?.nama || cid || "-").toUpperCase();
-      const jumlahDsp = getSatkerDspCount(clientInfo?.nama, cid);
+      const normalizedCid = String(cid || "").trim().toLowerCase();
+      const stat =
+        groups.get(normalizedCid) || { total: 0, insta: 0, tiktok: 0 };
+      const clientInfo = await findClientById(normalizedCid);
+      const displayName = (clientInfo?.nama || normalizedCid || "-").toUpperCase();
+      const jumlahDsp = getSatkerDspCount(clientInfo?.nama, normalizedCid);
       const total = stat.total;
       const instaFilled = stat.insta;
       const tiktokFilled = stat.tiktok;
       const instaEmpty = Math.max(total - instaFilled, 0);
       const tiktokEmpty = Math.max(total - tiktokFilled, 0);
       return {
-        cid,
+        cid: normalizedCid,
         name: displayName,
         jumlahDsp,
         total,

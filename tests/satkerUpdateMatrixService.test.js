@@ -90,6 +90,28 @@ describe('satkerUpdateMatrixService', () => {
     expect(result.totals).toMatchObject({ total: 5, instaFilled: 4, tiktokFilled: 3 });
   });
 
+  test('collectSatkerUpdateMatrix normalizes client ids from users and roles', async () => {
+    mockGetUsersSocialByClient.mockResolvedValue([
+      { client_id: '  POLRES_A  ', insta: 'ig', tiktok: '' },
+      { client_id: 'polres_a', insta: '', tiktok: 'tt' },
+      { client_id: '  POLRES_B', insta: '', tiktok: '' },
+    ]);
+    mockGetClientsByRole.mockResolvedValue([' POLRES_A ', 'polres_b  ']);
+
+    const result = await collectSatkerUpdateMatrix('  DITBINMAS  ', 'ditbinmas');
+
+    const uniqueIds = new Set(result.stats.map((s) => s.cid));
+    expect(uniqueIds).toEqual(new Set(['ditbinmas', 'polres_a', 'polres_b']));
+
+    const polresAStat = result.stats.find((s) => s.cid === 'polres_a');
+    expect(polresAStat).toMatchObject({ total: 2, instaFilled: 1, tiktokFilled: 1 });
+
+    const calls = mockFindClientById.mock.calls.map(([arg]) => arg);
+    expect(calls).toEqual(
+      expect.arrayContaining(['ditbinmas', 'polres_a', 'polres_b'])
+    );
+  });
+
   test('collectSatkerUpdateMatrix rejects for non directorate client', async () => {
     mockFindClientById.mockImplementationOnce(async () => ({
       nama: 'Polres A',
