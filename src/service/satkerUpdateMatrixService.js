@@ -7,6 +7,37 @@ import { getSatkerDspCount } from "../data/satkerDspMap.js";
 
 const DIRECTORATE_ROLES = ["ditbinmas", "ditlantas", "bidhumas"];
 
+function normalizeClientId(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function buildUserKey(cid, user) {
+  const normalizedCid = normalizeClientId(cid);
+  const rawUserId = String(user?.user_id ?? "").trim();
+  if (rawUserId) {
+    return `${normalizedCid}#${rawUserId.toLowerCase()}`;
+  }
+
+  const name = String(user?.nama ?? "").trim().toLowerCase();
+  const title = String(user?.title ?? "").trim().toLowerCase();
+  const division = String(user?.divisi ?? "").trim().toLowerCase();
+
+  if (name || title || division) {
+    return `${normalizedCid}#${name}#${title}#${division}`;
+  }
+
+  return null;
+}
+
+function createEmptyGroup() {
+  return {
+    users: new Set(),
+    instaUsers: new Set(),
+    tiktokUsers: new Set(),
+    completeUsers: new Set(),
+  };
+}
+
 function sanitizeFilename(value) {
   return String(value || "")
     .normalize("NFKD")
@@ -27,7 +58,7 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
     throw new Error("Client tidak ditemukan.");
   }
 
-  const normalizedClientId = clientIdStr.toLowerCase();
+  const normalizedClientId = normalizeClientId(clientIdStr);
   const client = await findClientById(normalizedClientId);
   if (!client) {
     throw new Error("Client tidak ditemukan.");
@@ -49,22 +80,31 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
 
   const users = await getUsersSocialByClient(clientIdStr, filterRole);
   const groups = new Map();
+
   users.forEach((user) => {
-    const cid = String(user.client_id || "").trim().toLowerCase();
+    const cid = normalizeClientId(user.client_id);
     if (!cid) return;
+
+    const userKey = buildUserKey(cid, user);
+    if (!userKey) return;
+
     if (!groups.has(cid)) {
-      groups.set(cid, { total: 0, insta: 0, tiktok: 0 });
+      groups.set(cid, createEmptyGroup());
     }
+
     const stat = groups.get(cid);
-    stat.total += 1;
-    if (user.insta) stat.insta += 1;
-    if (user.tiktok) stat.tiktok += 1;
+    stat.users.add(userKey);
+    if (user.insta) stat.instaUsers.add(userKey);
+    if (user.tiktok) stat.tiktokUsers.add(userKey);
+    if (stat.instaUsers.has(userKey) && stat.tiktokUsers.has(userKey)) {
+      stat.completeUsers.add(userKey);
+    }
   });
 
   const roleName = (filterRole || clientIdStr).toLowerCase();
   const clientIdsFromRole = (await getClientsByRole(roleName)) || [];
   const normalizedRoleClientIds = clientIdsFromRole
-    .map((id) => String(id || "").trim().toLowerCase())
+    .map((id) => normalizeClientId(id))
     .filter(Boolean);
   const allIds = new Set([
     normalizedClientId,
@@ -74,15 +114,15 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
 
   const stats = await Promise.all(
     [...allIds].map(async (cid) => {
-      const normalizedCid = String(cid || "").trim().toLowerCase();
-      const stat =
-        groups.get(normalizedCid) || { total: 0, insta: 0, tiktok: 0 };
+      const normalizedCid = normalizeClientId(cid);
+      const statSets = groups.get(normalizedCid) || createEmptyGroup();
       const clientInfo = await findClientById(normalizedCid);
       const displayName = (clientInfo?.nama || normalizedCid || "-").toUpperCase();
       const jumlahDsp = getSatkerDspCount(clientInfo?.nama, normalizedCid);
-      const total = stat.total;
-      const instaFilled = stat.insta;
-      const tiktokFilled = stat.tiktok;
+      const total = statSets.users.size;
+      const instaFilled = statSets.instaUsers.size;
+      const tiktokFilled = statSets.tiktokUsers.size;
+      const completeFilled = statSets.completeUsers.size;
       const instaEmpty = Math.max(total - instaFilled, 0);
       const tiktokEmpty = Math.max(total - tiktokFilled, 0);
       return {
@@ -96,6 +136,9 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
         tiktokFilled,
         tiktokEmpty,
         tiktokPercent: toPercent(tiktokFilled, total),
+        completeFilled,
+        completeEmpty: Math.max(total - completeFilled, 0),
+        completePercent: toPercent(completeFilled, total),
       };
     })
   );
@@ -119,16 +162,50 @@ export async function collectSatkerUpdateMatrix(clientId, roleFlag = null) {
       acc.instaEmpty += item.instaEmpty;
       acc.tiktokFilled += item.tiktokFilled;
       acc.tiktokEmpty += item.tiktokEmpty;
+      acc.completeFilled += item.completeFilled;
+      acc.completeEmpty += item.completeEmpty;
       return acc;
     },
-    { total: 0, instaFilled: 0, instaEmpty: 0, tiktokFilled: 0, tiktokEmpty: 0 }
+    {
+      total: 0,
+      instaFilled: 0,
+      instaEmpty: 0,
+      tiktokFilled: 0,
+      tiktokEmpty: 0,
+      completeFilled: 0,
+      completeEmpty: 0,
+    }
   );
+
+  const totalsWithPercentages = {
+    ...totals,
+    instaPercent: toPercent(totals.instaFilled, totals.total),
+    tiktokPercent: toPercent(totals.tiktokFilled, totals.total),
+    completePercent: toPercent(totals.completeFilled, totals.total),
+    platforms: {
+      instagram: {
+        filled: totals.instaFilled,
+        empty: totals.instaEmpty,
+        percent: toPercent(totals.instaFilled, totals.total),
+      },
+      tiktok: {
+        filled: totals.tiktokFilled,
+        empty: totals.tiktokEmpty,
+        percent: toPercent(totals.tiktokFilled, totals.total),
+      },
+      complete: {
+        filled: totals.completeFilled,
+        empty: totals.completeEmpty,
+        percent: toPercent(totals.completeFilled, totals.total),
+      },
+    },
+  };
 
   return {
     clientName: client.nama || clientIdStr.toUpperCase(),
     clientId: normalizedClientId,
     stats: orderedStats,
-    totals,
+    totals: totalsWithPercentages,
   };
 }
 
