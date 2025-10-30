@@ -64,11 +64,11 @@ describe('satkerUpdateMatrixService', () => {
 
   test('collectSatkerUpdateMatrix sorts satker with directorate first and computes stats', async () => {
     mockGetUsersSocialByClient.mockResolvedValue([
-      { client_id: 'DITBINMAS', insta: 'ig', tiktok: 'tt' },
-      { client_id: 'POLRES_A', insta: 'user1', tiktok: 'tk1' },
-      { client_id: 'POLRES_A', insta: '', tiktok: '' },
-      { client_id: 'POLRES_B', insta: 'user2', tiktok: 'tt2' },
-      { client_id: 'POLRES_B', insta: 'user3', tiktok: '' },
+      { client_id: 'DITBINMAS', user_id: 'DIR1', insta: 'ig', tiktok: 'tt' },
+      { client_id: 'POLRES_A', user_id: 'USR1', insta: 'user1', tiktok: 'tk1' },
+      { client_id: 'POLRES_A', user_id: 'USR2', insta: '', tiktok: '' },
+      { client_id: 'POLRES_B', user_id: 'USR3', insta: 'user2', tiktok: 'tt2' },
+      { client_id: 'POLRES_B', user_id: 'USR4', insta: 'user3', tiktok: '' },
     ]);
     mockGetClientsByRole.mockResolvedValue(['polres_a', 'polres_b']);
 
@@ -78,23 +78,45 @@ describe('satkerUpdateMatrixService', () => {
     expect(result.stats[0]).toMatchObject({
       cid: 'ditbinmas',
       instaPercent: 100,
+      tiktokPercent: 100,
+      completePercent: 100,
       jumlahDsp: 102,
     });
     expect(result.stats[1]).toMatchObject({
       cid: 'polres_b',
       instaPercent: 100,
       tiktokPercent: 50,
+      completePercent: 50,
       jumlahDsp: null,
     });
-    expect(result.stats[2]).toMatchObject({ cid: 'polres_a', instaPercent: 50, jumlahDsp: null });
-    expect(result.totals).toMatchObject({ total: 5, instaFilled: 4, tiktokFilled: 3 });
+    expect(result.stats[2]).toMatchObject({
+      cid: 'polres_a',
+      instaPercent: 50,
+      tiktokPercent: 50,
+      completePercent: 50,
+      jumlahDsp: null,
+    });
+    expect(result.totals).toMatchObject({
+      total: 5,
+      instaFilled: 4,
+      tiktokFilled: 3,
+      completeFilled: 3,
+      instaPercent: 80,
+      tiktokPercent: 60,
+      completePercent: 60,
+      platforms: {
+        instagram: { filled: 4, empty: 1, percent: 80 },
+        tiktok: { filled: 3, empty: 2, percent: 60 },
+        complete: { filled: 3, empty: 2, percent: 60 },
+      },
+    });
   });
 
   test('collectSatkerUpdateMatrix normalizes client ids from users and roles', async () => {
     mockGetUsersSocialByClient.mockResolvedValue([
-      { client_id: '  POLRES_A  ', insta: 'ig', tiktok: '' },
-      { client_id: 'polres_a', insta: '', tiktok: 'tt' },
-      { client_id: '  POLRES_B', insta: '', tiktok: '' },
+      { client_id: '  POLRES_A  ', user_id: 'A1', insta: 'ig', tiktok: '' },
+      { client_id: 'polres_a', user_id: 'A2', insta: '', tiktok: 'tt' },
+      { client_id: '  POLRES_B', user_id: 'B1', insta: '', tiktok: '' },
     ]);
     mockGetClientsByRole.mockResolvedValue([' POLRES_A ', 'polres_b  ']);
 
@@ -104,12 +126,54 @@ describe('satkerUpdateMatrixService', () => {
     expect(uniqueIds).toEqual(new Set(['ditbinmas', 'polres_a', 'polres_b']));
 
     const polresAStat = result.stats.find((s) => s.cid === 'polres_a');
-    expect(polresAStat).toMatchObject({ total: 2, instaFilled: 1, tiktokFilled: 1 });
+    expect(polresAStat).toMatchObject({
+      total: 2,
+      instaFilled: 1,
+      tiktokFilled: 1,
+      completeFilled: 0,
+      completePercent: 0,
+    });
 
     const calls = mockFindClientById.mock.calls.map(([arg]) => arg);
     expect(calls).toEqual(
       expect.arrayContaining(['ditbinmas', 'polres_a', 'polres_b'])
     );
+  });
+
+  test('collectSatkerUpdateMatrix deduplicates repeated users and tracks completeness', async () => {
+    mockGetUsersSocialByClient.mockResolvedValue([
+      { client_id: 'POLRES_A', user_id: 'USR1', insta: 'handle1', tiktok: null },
+      { client_id: 'POLRES_A', user_id: 'USR1', insta: null, tiktok: 'tt1' },
+      { client_id: 'POLRES_A', user_id: 'USR1', insta: 'handle1', tiktok: 'tt1' },
+      { client_id: 'POLRES_A', user_id: 'USR2', insta: null, tiktok: null },
+    ]);
+    mockGetClientsByRole.mockResolvedValue(['polres_a']);
+
+    const result = await collectSatkerUpdateMatrix('DITBINMAS', 'ditbinmas');
+
+    expect(result.stats).toHaveLength(2);
+    const polresA = result.stats.find((s) => s.cid === 'polres_a');
+    expect(polresA).toMatchObject({
+      total: 2,
+      instaFilled: 1,
+      tiktokFilled: 1,
+      completeFilled: 1,
+      instaPercent: 50,
+      tiktokPercent: 50,
+      completePercent: 50,
+    });
+
+    expect(result.totals).toMatchObject({
+      total: 2,
+      instaFilled: 1,
+      tiktokFilled: 1,
+      completeFilled: 1,
+      platforms: {
+        instagram: { filled: 1, empty: 1, percent: 50 },
+        tiktok: { filled: 1, empty: 1, percent: 50 },
+        complete: { filled: 1, empty: 1, percent: 50 },
+      },
+    });
   });
 
   test('collectSatkerUpdateMatrix rejects for non directorate client', async () => {
@@ -125,8 +189,8 @@ describe('satkerUpdateMatrixService', () => {
   test('saveSatkerUpdateMatrixExcel writes workbook with sanitized username', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2024-01-15T08:30:45.000Z'));
     mockGetUsersSocialByClient.mockResolvedValue([
-      { client_id: 'DITBINMAS', insta: 'ig', tiktok: 'tt' },
-      { client_id: 'POLRES_A', insta: '', tiktok: '' },
+      { client_id: 'DITBINMAS', user_id: 'DIR1', insta: 'ig', tiktok: 'tt' },
+      { client_id: 'POLRES_A', user_id: 'USR1', insta: '', tiktok: '' },
     ]);
     mockGetClientsByRole.mockResolvedValue(['polres_a']);
 
