@@ -88,13 +88,13 @@ test('filters users and posts by role when role is ditbinmas', async () => {
   expect(likesSql).toContain('user_roles ur');
   expect(likesSql).toContain('roles r');
   expect(likesSql).toMatch(/LOWER\(r\.role_name\) = LOWER\(\$\d+\)/);
-  expect(likesSql).toContain('JOIN insta_post_roles pr ON pr.post_id = p.post_id');
+  expect(likesSql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
   expect(likesSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
   expect(likesSql).toContain('1=1');
   expect(likesSql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(likesSql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(likesParams).toEqual(['ditbinmas']);
-  expect(postsSql).toContain('JOIN insta_post_roles pr ON pr.post_id = p.post_id');
+  expect(postsSql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
   expect(postsSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
   expect(postsParams).toEqual(['ditbinmas']);
 });
