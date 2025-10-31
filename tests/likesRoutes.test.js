@@ -48,18 +48,15 @@ test('GET /likes/instagram returns ditbinmas like summary', async () => {
   expect(res.body.kurangUsersCount).toBe(1);
   expect(res.body.belumUsersCount).toBe(2);
   expect(res.body.noUsernameUsersCount).toBe(1);
-  expect(res.body.targetLikesPerUser).toBe(2);
   expect(res.body.summary).toEqual(
     expect.objectContaining({
       totalPosts: 4,
       totalUsers: 4,
-      targetOnTrackLikes: 2,
       totalLikes: 5,
       distribution: expect.objectContaining({
-        complete: 1,
-        onTrack: 0,
-        needsAttention: 1,
-        notStarted: 1,
+        sudah: 1,
+        kurang: 1,
+        belum: 1,
         noUsername: 1,
       }),
     })
@@ -70,20 +67,20 @@ test('GET /likes/instagram returns ditbinmas like summary', async () => {
     expect.arrayContaining([
       expect.objectContaining({
         username: 'alice',
-        status: 'complete',
+        status: 'sudah',
         completionPercentage: 100,
         missingLikes: 0,
         ranking: 1,
       }),
       expect.objectContaining({
         username: 'bob',
-        status: 'needs_attention',
+        status: 'kurang',
         completionPercentage: 25,
         missingLikes: 3,
       }),
       expect.objectContaining({
         username: 'charlie',
-        status: 'not_started',
+        status: 'belum',
         completionPercentage: 0,
         missingLikes: 4,
       }),
@@ -109,10 +106,9 @@ test('GET /likes/instagram returns ditbinmas like summary', async () => {
   );
   expect(res.body.statusLegend).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ status: 'complete' }),
-      expect.objectContaining({ status: 'on_track' }),
-      expect.objectContaining({ status: 'needs_attention' }),
-      expect.objectContaining({ status: 'not_started' }),
+      expect.objectContaining({ status: 'sudah' }),
+      expect.objectContaining({ status: 'kurang' }),
+      expect.objectContaining({ status: 'belum' }),
       expect.objectContaining({ status: 'no_username' }),
     ])
   );

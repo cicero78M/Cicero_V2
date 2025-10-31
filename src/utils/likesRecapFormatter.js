@@ -17,8 +17,6 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
 
   const perRowHeight = 36;
   const minChartHeight = 320;
-  const targetOnTrackLikes = totalPosts > 0 ? Math.ceil(totalPosts * 0.5) : 0;
-
   const processedRows = [];
   const sudahUsers = [];
   const kurangUsers = [];
@@ -26,10 +24,9 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
   const noUsernameUsersDetails = [];
   const chartData = [];
   const distribution = {
-    complete: 0,
-    onTrack: 0,
-    needsAttention: 0,
-    notStarted: 0,
+    sudah: 0,
+    kurang: 0,
+    belum: 0,
     noUsername: 0,
     noPosts: 0,
   };
@@ -63,34 +60,29 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
     } else if (!hasUsername) {
       status = "no_username";
     } else if (likesNumber >= totalPosts) {
-      status = "complete";
-    } else if (likesNumber >= targetOnTrackLikes) {
-      status = "on_track";
+      status = "sudah";
     } else if (likesNumber > 0) {
-      status = "needs_attention";
+      status = "kurang";
     } else {
-      status = "not_started";
+      status = "belum";
     }
 
     if (totalPosts > 0 && status !== "no_username" && status !== "no_posts") {
       activeCompletionSum += completionRate;
       activeUserCount += 1;
-      if (["complete", "on_track", "needs_attention"].includes(status)) {
+      if (["sudah", "kurang"].includes(status)) {
         participatingUsers += 1;
       }
     }
 
     const badges = [];
-    if (status === "complete") {
+    if (status === "sudah") {
       badges.push("✅ Semua konten pada periode ini sudah di-like.");
     }
-    if (status === "on_track") {
-      badges.push("📈 Minimal 50% konten sudah di-like.");
+    if (status === "kurang") {
+      badges.push("⚠️ Masih ada konten yang belum di-like.");
     }
-    if (status === "needs_attention") {
-      badges.push("⚠️ Kurang dari 50% konten yang sudah di-like.");
-    }
-    if (status === "not_started") {
+    if (status === "belum") {
       badges.push("⏳ Belum ada like pada periode ini.");
     }
     if (status === "no_posts") {
@@ -115,20 +107,16 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
     processedRows.push(processedUser);
 
     switch (status) {
-      case "complete":
-        distribution.complete += 1;
+      case "sudah":
+        distribution.sudah += 1;
         sudahUsers.push(processedUser.username);
         break;
-      case "on_track":
-        distribution.onTrack += 1;
-        sudahUsers.push(processedUser.username);
-        break;
-      case "needs_attention":
-        distribution.needsAttention += 1;
+      case "kurang":
+        distribution.kurang += 1;
         kurangUsers.push(processedUser.username);
         break;
-      case "not_started":
-        distribution.notStarted += 1;
+      case "belum":
+        distribution.belum += 1;
         belumUsers.push(processedUser.username);
         break;
       case "no_username":
@@ -177,7 +165,6 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
   const summary = {
     totalPosts,
     totalUsers: processedRows.length,
-    targetOnTrackLikes,
     totalLikes,
     averageCompletionPercentage,
     participationRatePercentage,
@@ -185,17 +172,16 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
   };
 
   const insights = [];
-  const onTrackCount = distribution.complete + distribution.onTrack;
-  if (onTrackCount > 0) {
-    insights.push(`✅ ${onTrackCount} akun telah mencapai target minimal 50% like.`);
+  if (distribution.sudah > 0) {
+    insights.push(`✅ ${distribution.sudah} akun sudah me-like semua konten yang tersedia.`);
   }
-  if (distribution.needsAttention > 0) {
+  if (distribution.kurang > 0) {
     insights.push(
-      `⚠️ ${distribution.needsAttention} akun perlu perhatian karena belum mencapai 50% like.`
+      `⚠️ ${distribution.kurang} akun masih kekurangan like pada sebagian konten.`
     );
   }
-  if (distribution.notStarted > 0) {
-    insights.push(`⏳ ${distribution.notStarted} akun belum memberikan like sama sekali.`);
+  if (distribution.belum > 0) {
+    insights.push(`⏳ ${distribution.belum} akun belum memberikan like sama sekali.`);
   }
   if (distribution.noUsername > 0) {
     insights.push(`❗ ${distribution.noUsername} akun belum memiliki username Instagram.`);
@@ -206,23 +192,18 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
 
   const statusLegend = [
     {
-      status: "complete",
-      label: "Complete",
+      status: "sudah",
+      label: "Sudah",
       description: "Semua konten pada periode ini telah di-like.",
     },
     {
-      status: "on_track",
-      label: "On Track",
-      description: "Minimal 50% konten sudah di-like.",
+      status: "kurang",
+      label: "Kurang",
+      description: "Sudah melakukan like tetapi masih ada konten yang belum di-like.",
     },
     {
-      status: "needs_attention",
-      label: "Needs Attention",
-      description: "Sudah melakukan like tetapi belum mencapai 50% konten.",
-    },
-    {
-      status: "not_started",
-      label: "Not Started",
+      status: "belum",
+      label: "Belum",
       description: "Belum memberikan like pada periode ini.",
     },
     {
@@ -254,7 +235,6 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
     chartData,
     insights,
     statusLegend,
-    targetLikesPerUser: targetOnTrackLikes,
     noUsernameUsersDetails,
   };
 }

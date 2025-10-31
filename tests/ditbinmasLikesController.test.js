@@ -42,22 +42,25 @@ test('returns ditbinmas like summaries', async () => {
       kurangUsersCount: 1,
       belumUsersCount: 2,
       noUsernameUsersCount: 1,
-      targetLikesPerUser: 2,
       summary: expect.objectContaining({
         distribution: expect.objectContaining({
-          complete: 1,
-          needsAttention: 1,
-          notStarted: 1,
+          sudah: 1,
+          kurang: 1,
+          belum: 1,
           noUsername: 1,
         }),
       }),
       data: expect.arrayContaining([
-        expect.objectContaining({ username: 'alice', status: 'complete' }),
-        expect.objectContaining({ username: 'bob', status: 'needs_attention' }),
-        expect.objectContaining({ username: 'charlie', status: 'not_started' }),
+        expect.objectContaining({ username: 'alice', status: 'sudah' }),
+        expect.objectContaining({ username: 'bob', status: 'kurang' }),
+        expect.objectContaining({ username: 'charlie', status: 'belum' }),
       ]),
       insights: expect.any(Array),
-      statusLegend: expect.any(Array),
+      statusLegend: expect.arrayContaining([
+        expect.objectContaining({ status: 'sudah' }),
+        expect.objectContaining({ status: 'kurang' }),
+        expect.objectContaining({ status: 'belum' }),
+      ]),
     })
   );
 });

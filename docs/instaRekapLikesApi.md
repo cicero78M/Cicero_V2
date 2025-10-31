@@ -17,7 +17,7 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
       "completionRate": 1,
       "completionPercentage": 100,
       "missingLikes": 0,
-      "status": "complete",
+      "status": "sudah",
       "badges": ["✅ Semua konten pada periode ini sudah di-like."]
     },
     {
@@ -29,8 +29,8 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
       "completionRate": 0.25,
       "completionPercentage": 25,
       "missingLikes": 3,
-      "status": "needs_attention",
-      "badges": ["⚠️ Kurang dari 50% konten yang sudah di-like."]
+      "status": "kurang",
+      "badges": ["⚠️ Masih ada konten yang belum di-like."]
     }
   ],
   "chartHeight": 320,
@@ -43,19 +43,16 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
   "belumUsersCount": 2,
   "noUsernameUsersCount": 1,
   "usersCount": 4,
-  "targetLikesPerUser": 2,
   "summary": {
     "totalPosts": 4,
     "totalUsers": 4,
-    "targetOnTrackLikes": 2,
     "totalLikes": 5,
     "averageCompletionPercentage": 41.7,
     "participationRatePercentage": 66.7,
     "distribution": {
-      "complete": 1,
-      "onTrack": 0,
-      "needsAttention": 1,
-      "notStarted": 1,
+      "sudah": 1,
+      "kurang": 1,
+      "belum": 1,
       "noUsername": 1,
       "noPosts": 0
     }
@@ -65,16 +62,15 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
     { "label": "Bob", "likes": 1, "missingLikes": 3, "completionPercentage": 25 }
   ],
   "insights": [
-    "✅ 1 akun telah mencapai target minimal 50% like.",
-    "⚠️ 1 akun perlu perhatian karena belum mencapai 50% like.",
+    "✅ 1 akun sudah me-like semua konten yang tersedia.",
+    "⚠️ 1 akun masih kekurangan like pada sebagian konten.",
     "⏳ 1 akun belum memberikan like sama sekali.",
     "❗ 1 akun belum memiliki username Instagram."
   ],
   "statusLegend": [
-    { "status": "complete", "label": "Complete", "description": "Semua konten pada periode ini telah di-like." },
-    { "status": "on_track", "label": "On Track", "description": "Minimal 50% konten sudah di-like." },
-    { "status": "needs_attention", "label": "Needs Attention", "description": "Sudah melakukan like tetapi belum mencapai 50% konten." },
-    { "status": "not_started", "label": "Not Started", "description": "Belum memberikan like pada periode ini." },
+    { "status": "sudah", "label": "Sudah", "description": "Semua konten pada periode ini telah di-like." },
+    { "status": "kurang", "label": "Kurang", "description": "Sudah melakukan like tetapi masih ada konten yang belum di-like." },
+    { "status": "belum", "label": "Belum", "description": "Belum memberikan like pada periode ini." },
     { "status": "no_username", "label": "No Username", "description": "Belum memiliki username Instagram di sistem." },
     { "status": "no_posts", "label": "No Posts", "description": "Tidak ada konten untuk periode yang dipilih." }
   ],
@@ -88,7 +84,6 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 - **sudahUsers / kurangUsers / belumUsers** – daftar username untuk filter cepat di UI.
 - **belumUsersCount** – jumlah akun yang belum memberi like **ditambah** akun tanpa username Instagram.
 - **noUsernameUsersCount** – jumlah akun tanpa username; detail tambahan ada di `noUsernameUsersDetails`.
-- **targetLikesPerUser** – ambang minimal like (50% dari total konten) untuk dinyatakan “on track”.
 - **summary** – ringkasan agregat yang bisa ditampilkan sebagai kartu KPI.
 - **chartData** – data siap pakai untuk grafik stacked bar/polar chart (likes vs kekurangan).
 - **insights** – teks rekomendasi yang bisa langsung ditampilkan sebagai highlight.
