@@ -88,8 +88,9 @@ test('filters users and posts by role when role is ditbinmas', async () => {
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
   expect(sql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
+  expect(sql).toContain('LEFT JOIN roles ro ON pr.role_id = ro.role_id');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
+  expect(sql).toContain('COALESCE(LOWER(ro.role_name), LOWER(pr.role_name)) = LOWER($1)');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas']);
@@ -102,9 +103,10 @@ test('ditbinmas role reuses role parameter for posts count', async () => {
   const likeSql = mockQuery.mock.calls[0][0];
   const postSql = mockQuery.mock.calls[1][0];
   const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(likeSql).toContain('LOWER(pr.role_name) = LOWER($2)');
+  expect(likeSql).toContain('COALESCE(LOWER(ro.role_name), LOWER(pr.role_name)) = LOWER($2)');
   expect(postSql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
-  expect(postSql).toContain('LOWER(pr.role_name) = LOWER($2)');
+  expect(postSql).toContain('LEFT JOIN roles ro ON pr.role_id = ro.role_id');
+  expect(postSql).toContain('COALESCE(LOWER(ro.role_name), LOWER(pr.role_name)) = LOWER($2)');
   expect(paramsSecond).toEqual(['2023-10-05', 'ditbinmas']);
 });
 
