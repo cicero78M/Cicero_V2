@@ -150,15 +150,9 @@ export async function getRekapLikesByClient(
       GROUP BY username
     `;
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
-    postClientFilter = `COALESCE(LOWER(ro.role_name), LOWER(pr.role_name)) = LOWER($${roleIdx})`;
-    postRoleJoinLikes = `
-      JOIN insta_post_roles pr ON pr.shortcode = p.shortcode
-      LEFT JOIN roles ro ON pr.role_id = ro.role_id
-    `;
-    postRoleJoinPosts = `
-      JOIN insta_post_roles pr ON pr.shortcode = p.shortcode
-      LEFT JOIN roles ro ON pr.role_id = ro.role_id
-    `;
+    postClientFilter = `LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = '';
   }
 
