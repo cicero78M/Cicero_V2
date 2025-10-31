@@ -138,7 +138,6 @@ export async function getRekapLikesByClient(
   if (roleLower === 'ditbinmas') {
     params.shift();
     tanggalFilter = tanggalFilter.replace(/\$(\d+)/g, (_, n) => `$${n - 1}`);
-    postClientFilter = '1=1';
     const roleIdx = params.push(roleLower);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
@@ -151,6 +150,10 @@ export async function getRekapLikesByClient(
       GROUP BY username
     `;
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
+    postClientFilter = `LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleFilter = '';
   }
 
   const { rows } = await query(`
@@ -197,7 +200,7 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
+  const postParams = params;
 
   const { rows: postRows } = await query(
     `WITH posts AS (
