@@ -151,15 +151,6 @@ export async function getRekapLikesByClient(
       GROUP BY username
     `;
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
-    postRoleJoinLikes = `
-      JOIN insta_post_roles pr ON pr.post_id = p.post_id
-    `;
-    postRoleJoinPosts = `
-      JOIN insta_post_roles pr ON pr.post_id = p.post_id
-    `;
-    postRoleFilter = `
-        AND LOWER(pr.role_name) = LOWER($${roleIdx})
-    `;
   }
 
   const { rows } = await query(`
@@ -206,7 +197,7 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  const postParams = params;
+  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
 
   const { rows: postRows } = await query(
     `WITH posts AS (
