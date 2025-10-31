@@ -79,28 +79,36 @@ test('parses jumlah_like as integer', async () => {
   expect(rows[0].jumlah_like).toBe(3);
 });
 
-test('filters users by role when role is ditbinmas', async () => {
+test('filters users and posts by role when role is ditbinmas', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
-  const sql = mockQuery.mock.calls[0][0];
-  const params = mockQuery.mock.calls[0][1];
-  expect(sql).toContain('user_roles ur');
-  expect(sql).toContain('roles r');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).toContain('1=1');
-  expect(sql).not.toContain('insta_post_roles');
-  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas']);
+  const [likesSql, likesParams] = mockQuery.mock.calls[0];
+  const [postsSql, postsParams] = mockQuery.mock.calls[1];
+  expect(likesSql).toContain('user_roles ur');
+  expect(likesSql).toContain('roles r');
+  expect(likesSql).toMatch(/LOWER\(r\.role_name\) = LOWER\(\$\d+\)/);
+  expect(likesSql).toContain('JOIN insta_post_roles pr ON pr.post_id = p.post_id');
+  expect(likesSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
+  expect(likesSql).toContain('1=1');
+  expect(likesSql).not.toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(likesSql).not.toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(likesParams).toEqual(['ditbinmas']);
+  expect(postsSql).toContain('JOIN insta_post_roles pr ON pr.post_id = p.post_id');
+  expect(postsSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
+  expect(postsParams).toEqual(['ditbinmas']);
 });
 
-test('ditbinmas role passes only date to posts query', async () => {
+test('ditbinmas role shares role placeholder between likes and posts queries', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
-  const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(paramsSecond).toEqual(['2023-10-05']);
+  const [likesSql, likesParams] = mockQuery.mock.calls[0];
+  const [postsSql, postsParams] = mockQuery.mock.calls[1];
+  expect(likesSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
+  expect(postsSql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
+  expect(postsParams).toEqual(likesParams);
+  expect(postsParams).toEqual(['2023-10-05', 'ditbinmas']);
 });
 
 test('ignores non-ditbinmas roles', async () => {
