@@ -88,6 +88,20 @@ export async function getRekapLikesByClient(
   role
 ) {
   const roleLower = role ? role.toLowerCase() : null;
+  const clientIdLower = client_id ? client_id.toLowerCase() : null;
+  let clientType;
+  if (client_id) {
+    const clientTypeRes = await query(
+      "SELECT LOWER(client_type) AS client_type FROM clients WHERE LOWER(client_id) = LOWER($1)",
+      [client_id]
+    );
+    clientType = clientTypeRes.rows[0]?.client_type;
+  }
+
+  const knownDirectorates = new Set(["ditbinmas", "ditlantas", "bidhumas"]);
+  const targetIsDirectorate =
+    !!clientIdLower && (clientType === "direktorat" || knownDirectorates.has(clientIdLower));
+
   const params = [client_id];
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
@@ -135,11 +149,18 @@ export async function getRekapLikesByClient(
   let postRoleJoinLikes = '';
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
-  if (roleLower === 'ditbinmas') {
+
+  const directorateRole = targetIsDirectorate
+    ? clientIdLower
+    : roleLower && knownDirectorates.has(roleLower)
+    ? roleLower
+    : null;
+
+  if (directorateRole) {
     params.shift();
     tanggalFilter = tanggalFilter.replace(/\$(\d+)/g, (_, n) => `$${n - 1}`);
     postClientFilter = '1=1';
-    const roleIdx = params.push(roleLower);
+    const roleIdx = params.push(directorateRole);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
