@@ -79,7 +79,7 @@ test('parses jumlah_like as integer', async () => {
   expect(rows[0].jumlah_like).toBe(3);
 });
 
-test('filters users and posts by role when role is ditbinmas', async () => {
+test('filters users by role when role is ditbinmas', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
@@ -87,25 +87,20 @@ test('filters users and posts by role when role is ditbinmas', async () => {
   const params = mockQuery.mock.calls[0][1];
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
-  expect(sql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
   expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
+  expect(sql).toContain('1=1');
+  expect(sql).not.toContain('insta_post_roles');
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
   expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas']);
 });
 
-test('ditbinmas role reuses role parameter for posts count', async () => {
+test('ditbinmas role passes only date to posts query', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
-  const likeSql = mockQuery.mock.calls[0][0];
-  const postSql = mockQuery.mock.calls[1][0];
   const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(likeSql).toContain('LOWER(pr.role_name) = LOWER($2)');
-  expect(postSql).toContain('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
-  expect(postSql).toContain('LOWER(pr.role_name) = LOWER($2)');
-  expect(paramsSecond).toEqual(['2023-10-05', 'ditbinmas']);
+  expect(paramsSecond).toEqual(['2023-10-05']);
 });
 
 test('ignores non-ditbinmas roles', async () => {
@@ -131,33 +126,4 @@ test('skips role filter for operator role', async () => {
   expect(sql).not.toContain('user_roles');
   expect(sql).not.toContain('insta_post_roles');
   expect(params).toEqual(['c1']);
-});
-
-test('matching like and post counts keeps missingLikes at zero for ditbinmas', async () => {
-  const likeRows = [{
-    user_id: 'u1',
-    title: 'Briptu',
-    nama: 'Alice',
-    username: 'alice',
-    divisi: 'DIT',
-    exception: false,
-    client_id: 'ditbinmas',
-    jumlah_like: '2',
-  }];
-  mockQuery.mockResolvedValueOnce({ rows: likeRows });
-  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 2 }] });
-
-  const { formatLikesRecapResponse } = await import('../src/utils/likesRecapFormatter.js');
-  const { rows, totalKonten } = await getRekapLikesByClient(
-    'c1',
-    'harian',
-    undefined,
-    undefined,
-    undefined,
-    'ditbinmas'
-  );
-  const formatted = formatLikesRecapResponse(rows, totalKonten);
-  expect(formatted.data[0]).toEqual(
-    expect.objectContaining({ missingLikes: 0, jumlah_like: 2, username: 'alice' })
-  );
 });
