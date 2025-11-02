@@ -1,4 +1,6 @@
 import { jest } from "@jest/globals";
+
+process.env.JWT_SECRET = "testsecret";
 import {
   SESSION_CLOSED_MESSAGE,
   userMenuHandlers,

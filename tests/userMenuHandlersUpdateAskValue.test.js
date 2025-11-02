@@ -1,4 +1,6 @@
 import { jest } from "@jest/globals";
+
+process.env.JWT_SECRET = "testsecret";
 import { userMenuHandlers } from "../src/handler/menu/userMenuHandlers.js";
 
 describe("userMenuHandlers.updateAskValue social media normalization", () => {

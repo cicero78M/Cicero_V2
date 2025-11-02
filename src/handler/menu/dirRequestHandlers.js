@@ -31,6 +31,7 @@ import {
 } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
+import { generateWeeklyTiktokHighLowReport } from "../../service/weeklyTiktokHighLowService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
 import { saveEngagementRankingExcel } from "../../service/engagementRankingExcelService.js";
@@ -971,6 +972,20 @@ async function performAction(
         break;
       }
       case "25": {
+        try {
+          msg = await generateWeeklyTiktokHighLowReport(clientId, { roleFlag });
+        } catch (error) {
+          console.error("Gagal membuat laporan TikTok High & Low:", error);
+          msg =
+            error?.message &&
+            (error.message.includes("data") ||
+              error.message.includes("clientId"))
+              ? error.message
+              : "❌ Gagal membuat laporan TikTok High & Low.";
+        }
+        break;
+      }
+      case "26": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -995,7 +1010,7 @@ async function performAction(
         }
         break;
       }
-      case "26": {
+      case "27": {
         const data = await collectLikesRecap(clientId);
         if (typeof data === "string") {
           msg = data;
@@ -1018,7 +1033,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "27": {
+      case "28": {
         const recapData = await collectKomentarRecap(clientId);
         if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
@@ -1122,13 +1137,14 @@ export const dirRequestHandlers = {
         "2️⃣2️⃣ Rekap ranking engagement jajaran\n\n" +
         "📆 *Laporan Mingguan*\n" +
         "2️⃣3️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣4️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣4️⃣ Rekap file Tiktok mingguan\n" +
+        "2️⃣5️⃣ TikTok High & Low (Top 5 & Bottom 5)\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣5️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣6️⃣ Rekap like Instagram per konten (Excel)\n" +
-        "2️⃣7️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "2️⃣6️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣7️⃣ Rekap like Instagram per konten (Excel)\n" +
+        "2️⃣8️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
-        "2️⃣8️⃣ Laporan Kasatker\n\n" +
+        "2️⃣9️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1178,6 +1194,7 @@ export const dirRequestHandlers = {
           "26",
           "27",
           "28",
+          "29",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1198,7 +1215,7 @@ export const dirRequestHandlers = {
       return;
     }
 
-    if (choice === "28") {
+    if (choice === "29") {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
