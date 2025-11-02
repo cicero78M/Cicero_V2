@@ -1109,6 +1109,26 @@ test('choose_menu option 25 sends TikTok High & Low recap', async () => {
   expect(messages).toContain('Ringkasan High Low');
 });
 
+test('choose_menu option 25 blocks non-DITBINMAS users', async () => {
+  const session = {
+    selectedClientId: 'polres_kediri',
+    clientName: 'POLRES KEDIRI',
+    role: 'operator',
+  };
+  const chatId = '794-block-tiktok';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '25', waClient);
+
+  expect(mockGenerateWeeklyTiktokHighLowReport).not.toHaveBeenCalled();
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('hanya tersedia untuk pengguna DITBINMAS'),
+    ])
+  );
+});
+
 test('choose_menu option 26 sends Instagram High & Low recap', async () => {
   mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue(
     'Ringkasan IG High Low'
