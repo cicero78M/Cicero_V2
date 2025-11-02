@@ -29,6 +29,7 @@ import {
   saveCommentRecapExcel,
   saveCommentRecapPerContentExcel,
 } from "../../service/commentRecapExcelService.js";
+import { generateWeeklyInstagramHighLowMessage } from "../../service/weeklyInstagramHighLowService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
@@ -921,6 +922,15 @@ async function performAction(
         return;
       }
       case "23": {
+        try {
+          msg = await generateWeeklyInstagramHighLowMessage(clientId);
+        } catch (error) {
+          console.error("Gagal membuat laporan Instagram High & Low:", error);
+          msg = "❌ Gagal membuat laporan Instagram High & Low.";
+        }
+        break;
+      }
+      case "24": {
         let filePath;
         try {
           filePath = await saveWeeklyLikesRecapExcel(clientId);
@@ -945,7 +955,7 @@ async function performAction(
         }
         break;
       }
-      case "24": {
+      case "25": {
         let filePath;
         try {
           filePath = await saveWeeklyCommentRecapExcel(clientId);
@@ -970,7 +980,7 @@ async function performAction(
         }
         break;
       }
-      case "25": {
+      case "26": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -995,7 +1005,7 @@ async function performAction(
         }
         break;
       }
-      case "26": {
+      case "27": {
         const data = await collectLikesRecap(clientId);
         if (typeof data === "string") {
           msg = data;
@@ -1018,7 +1028,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "27": {
+      case "28": {
         const recapData = await collectKomentarRecap(clientId);
         if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
@@ -1121,14 +1131,15 @@ export const dirRequestHandlers = {
         "2️⃣1️⃣ Rekap gabungan semua sosmed\n" +
         "2️⃣2️⃣ Rekap ranking engagement jajaran\n\n" +
         "📆 *Laporan Mingguan*\n" +
-        "2️⃣3️⃣ Rekap file Instagram mingguan\n" +
-        "2️⃣4️⃣ Rekap file Tiktok mingguan\n\n" +
+        "2️⃣3️⃣ Instagram High & Low\n" +
+        "2️⃣4️⃣ Rekap file Instagram mingguan\n" +
+        "2️⃣5️⃣ Rekap file Tiktok mingguan\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣5️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣6️⃣ Rekap like Instagram per konten (Excel)\n" +
-        "2️⃣7️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "2️⃣6️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣7️⃣ Rekap like Instagram per konten (Excel)\n" +
+        "2️⃣8️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
-        "2️⃣8️⃣ Laporan Kasatker\n\n" +
+        "2️⃣9️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1178,6 +1189,7 @@ export const dirRequestHandlers = {
           "26",
           "27",
           "28",
+          "29",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1198,7 +1210,7 @@ export const dirRequestHandlers = {
       return;
     }
 
-    if (choice === "28") {
+    if (choice === "29") {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
