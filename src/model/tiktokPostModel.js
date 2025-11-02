@@ -1,9 +1,8 @@
 // src/model/tiktokPostModel.js
 import { query } from '../repository/db.js';
+import { normalizeClientId } from '../utils/utilsHelper.js';
 
-function normalizeClientId(id) {
-  return typeof id === "string" ? id.trim().toLowerCase() : id;
-}
+const DITBINMAS_CLIENT_ID = normalizeClientId('ditbinmas');
 
 /**
  * Simpan/update satu atau banyak post TikTok (array of objects)
@@ -123,6 +122,7 @@ export async function countPostsByClient(
   role
 ) {
   const normalizedId = normalizeClientId(client_id);
+  const normalizedRole = normalizeClientId(role);
   let clientType = null;
   if (normalizedId) {
     const clientTypeRes = await query(
@@ -143,18 +143,21 @@ export async function countPostsByClient(
     const idx = addParam(normalizedId);
     whereClauses.push(`LOWER(TRIM(p.client_id)) = ${idx}`);
   } else if (clientType === 'direktorat') {
-    const effectiveRole = normalizeClientId(role) || normalizedId;
-    if (effectiveRole) {
-      const roleIdx = addParam(effectiveRole);
-      whereClauses.push(`EXISTS (
-        SELECT 1
-        FROM "user" u
-        JOIN user_roles ur ON ur.user_id = u.user_id
-        JOIN roles r ON r.role_id = ur.role_id
-        WHERE LOWER(TRIM(u.client_id)) = LOWER(TRIM(p.client_id))
-          AND LOWER(TRIM(r.role_name)) = ${roleIdx}
-      )`);
-    }
+    const clientIdx = addParam(DITBINMAS_CLIENT_ID);
+    const roleParamValue =
+      normalizedRole === DITBINMAS_CLIENT_ID
+        ? DITBINMAS_CLIENT_ID
+        : DITBINMAS_CLIENT_ID;
+    const roleIdx = addParam(roleParamValue);
+    whereClauses.push(`LOWER(TRIM(p.client_id)) = ${clientIdx}`);
+    whereClauses.push(`EXISTS (
+      SELECT 1
+      FROM "user" u
+      JOIN user_roles ur ON ur.user_id = u.user_id
+      JOIN roles r ON r.role_id = ur.role_id
+      WHERE LOWER(TRIM(u.client_id)) = LOWER(TRIM(p.client_id))
+        AND LOWER(TRIM(r.role_name)) = ${roleIdx}
+    )`);
   }
 
   let dateFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
