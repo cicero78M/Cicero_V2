@@ -31,6 +31,7 @@ import {
 } from "../../service/commentRecapExcelService.js";
 import { saveWeeklyLikesRecapExcel } from "../../service/weeklyLikesRecapExcelService.js";
 import { saveWeeklyCommentRecapExcel } from "../../service/weeklyCommentRecapExcelService.js";
+import { generateWeeklyInstagramHighLowReport } from "../../service/weeklyInstagramHighLowService.js";
 import { generateWeeklyTiktokHighLowReport } from "../../service/weeklyTiktokHighLowService.js";
 import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcelService.js";
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
@@ -40,6 +41,11 @@ import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
+
+const isDitbinmas = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase() === DITBINMAS_CLIENT_ID;
 
 const ENGAGEMENT_RECAP_PERIOD_MAP = {
   "1": {
@@ -986,6 +992,26 @@ async function performAction(
         break;
       }
       case "26": {
+        if (!isDitbinmas(clientId) || !isDitbinmas(roleFlag)) {
+          msg =
+            "Menu Instagram High & Low hanya tersedia untuk pengguna DITBINMAS.";
+          break;
+        }
+        try {
+          msg = await generateWeeklyInstagramHighLowReport(clientId, { roleFlag });
+        } catch (error) {
+          console.error("Gagal membuat laporan Instagram High & Low:", error);
+          msg =
+            error?.message &&
+            (error.message.includes("data") ||
+              error.message.includes("clientId") ||
+              error.message.includes("DITBINMAS"))
+              ? error.message
+              : "❌ Gagal membuat laporan Instagram High & Low.";
+        }
+        break;
+      }
+      case "27": {
         let filePath;
         try {
           filePath = await saveMonthlyLikesRecapExcel(clientId);
@@ -1010,7 +1036,7 @@ async function performAction(
         }
         break;
       }
-      case "27": {
+      case "28": {
         const data = await collectLikesRecap(clientId);
         if (typeof data === "string") {
           msg = data;
@@ -1033,7 +1059,7 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-      case "28": {
+      case "29": {
         const recapData = await collectKomentarRecap(clientId);
         if (!recapData?.videoIds?.length) {
           msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
@@ -1138,13 +1164,14 @@ export const dirRequestHandlers = {
         "📆 *Laporan Mingguan*\n" +
         "2️⃣3️⃣ Rekap file Instagram mingguan\n" +
         "2️⃣4️⃣ Rekap file Tiktok mingguan\n" +
-        "2️⃣5️⃣ TikTok High & Low (Top 5 & Bottom 5)\n\n" +
+        "2️⃣5️⃣ TikTok High & Low (Top 5 & Bottom 5)\n" +
+        "2️⃣6️⃣ Instagram High & Low (Top 5 & Bottom 5)\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
-        "2️⃣6️⃣ Rekap file Instagram bulanan\n" +
-        "2️⃣7️⃣ Rekap like Instagram per konten (Excel)\n" +
-        "2️⃣8️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "2️⃣7️⃣ Rekap file Instagram bulanan\n" +
+        "2️⃣8️⃣ Rekap like Instagram per konten (Excel)\n" +
+        "2️⃣9️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
-        "2️⃣9️⃣ Laporan Kasatker\n\n" +
+        "3️⃣0️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1195,6 +1222,7 @@ export const dirRequestHandlers = {
           "27",
           "28",
           "29",
+          "30",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1215,7 +1243,7 @@ export const dirRequestHandlers = {
       return;
     }
 
-    if (choice === "29") {
+    if (choice === "30") {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
