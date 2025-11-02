@@ -44,6 +44,10 @@ const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
 
 const numberFormatter = new Intl.NumberFormat('id-ID');
 
+function normalizeDitbinmas(value) {
+  return String(value || '').trim().toUpperCase() === 'DITBINMAS';
+}
+
 function rankWeight(rank) {
   const idx = RANK_ORDER.indexOf(String(rank || '').toUpperCase());
   return idx === -1 ? RANK_ORDER.length : idx;
@@ -150,6 +154,10 @@ export async function generateWeeklyTiktokHighLowReport(
 ) {
   if (!clientId) {
     throw new Error('clientId wajib diisi untuk membuat laporan mingguan.');
+  }
+
+  if (!normalizeDitbinmas(clientId) || !normalizeDitbinmas(roleFlag)) {
+    throw new Error('Menu TikTok High & Low hanya tersedia untuk pengguna DITBINMAS.');
   }
 
   const bounds = getWeekBoundaries();
