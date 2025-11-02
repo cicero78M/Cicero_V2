@@ -87,12 +87,12 @@ test('filters users by role when role is ditbinmas', async () => {
   const params = mockQuery.mock.calls[0][1];
   expect(sql).toContain('user_roles ur');
   expect(sql).toContain('roles r');
-  expect(sql).toContain('LOWER(r.role_name) = LOWER($1)');
-  expect(sql).toContain('1=1');
-  expect(sql).not.toContain('insta_post_roles');
-  expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
-  expect(params).toEqual(['ditbinmas']);
+  expect(sql).toContain('LOWER(r.role_name) = LOWER($2)');
+  expect(sql).toContain('LOWER(u.client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($1)');
+  expect(sql).toContain('WHERE LOWER(client_id) = LOWER($1)');
+  expect(sql).toContain('LOWER(lc.client_id) = LOWER($1)');
+  expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
 test('ditbinmas role passes only date to posts query', async () => {
@@ -100,7 +100,7 @@ test('ditbinmas role passes only date to posts query', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
   const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(paramsSecond).toEqual(['2023-10-05']);
+  expect(paramsSecond).toEqual(['ditbinmas', '2023-10-05']);
 });
 
 test('ignores non-ditbinmas roles', async () => {
@@ -126,4 +126,13 @@ test('skips role filter for operator role', async () => {
   expect(sql).not.toContain('user_roles');
   expect(sql).not.toContain('insta_post_roles');
   expect(params).toEqual(['c1']);
+});
+
+test('ditbinmas role enforces ditbinmas client id filter', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
+  await getRekapLikesByClient('c-lain', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  const params = mockQuery.mock.calls[0][1];
+  expect(params[0]).toBe('ditbinmas');
+  expect(params.includes('c-lain')).toBe(false);
 });
