@@ -34,7 +34,6 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
   const req = {
     query: {
-      client_id: 'c1',
       periode: 'harian',
       tanggal_mulai: '2024-01-01',
       tanggal_selesai: '2024-01-31'
@@ -43,48 +42,36 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   const json = jest.fn();
   const res = { json };
   await getInstaRekapLikes(req, res);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, '2024-01-01', '2024-01-31', undefined);
+  expect(mockGetRekap).toHaveBeenCalledWith(
+    'ditbinmas',
+    'harian',
+    undefined,
+    '2024-01-01',
+    '2024-01-31',
+    'ditbinmas'
+  );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 320 }));
 });
 
-test('returns 403 when client_id unauthorized', async () => {
+test('ignores client_id filter and always uses ditbinmas role', async () => {
+  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
   const req = {
     query: { client_id: 'c2' },
-    user: { client_ids: ['c1'] }
+    user: { client_ids: ['c1'], client_id: 'c1' }
   };
   const json = jest.fn();
-  const res = { json, status: jest.fn().mockReturnThis() };
+  const status = jest.fn().mockReturnThis();
+  const res = { json, status };
   await getInstaRekapLikes(req, res);
-  expect(res.status).toHaveBeenCalledWith(403);
-  expect(json).toHaveBeenCalledWith({ success: false, message: 'client_id tidak diizinkan' });
-  expect(mockGetRekap).not.toHaveBeenCalled();
-});
-
-test('allows authorized client_id', async () => {
-  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
-  const req = {
-    query: { client_id: 'c1' },
-    user: { client_ids: ['c1', 'c2'] }
-  };
-  const json = jest.fn();
-  const res = { json, status: jest.fn().mockReturnThis() };
-  await getInstaRekapLikes(req, res);
-  expect(res.status).not.toHaveBeenCalledWith(403);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, undefined, undefined, undefined);
-  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-});
-
-test('supports client_ids as string', async () => {
-  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
-  const req = {
-    query: { client_id: 'c1' },
-    user: { client_ids: 'c1' }
-  };
-  const json = jest.fn();
-  const res = { json, status: jest.fn().mockReturnThis() };
-  await getInstaRekapLikes(req, res);
-  expect(res.status).not.toHaveBeenCalledWith(403);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, undefined, undefined, undefined);
+  expect(status).not.toHaveBeenCalled();
+  expect(mockGetRekap).toHaveBeenCalledWith(
+    'ditbinmas',
+    'harian',
+    undefined,
+    undefined,
+    undefined,
+    'ditbinmas'
+  );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
@@ -96,10 +83,7 @@ test('returns user like summaries', async () => {
     { username: null, jumlah_like: 0 }
   ];
   mockGetRekap.mockResolvedValue({ rows, totalKonten: 4 });
-  const req = {
-    query: { client_id: 'c1' },
-    user: { client_ids: ['c1'] }
-  };
+  const req = { query: {} };
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getInstaRekapLikes(req, res);
