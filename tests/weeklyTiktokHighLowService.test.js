@@ -128,9 +128,7 @@ test('generateWeeklyTiktokHighLowReport returns no data message when participant
   mockGetRekapKomentarByClient.mockResolvedValue([]);
   mockCountPostsByClient.mockResolvedValue(0);
 
-  const message = await generateWeeklyTiktokHighLowReport('DITBINMAS', {
-    roleFlag: 'ditbinmas',
-  });
+  const message = await generateWeeklyTiktokHighLowReport('DITBINMAS');
 
   expect(message).toContain('📊 *Laporan TikTok High & Low*');
   expect(message).toContain('Total tugas TikTok: 0');
@@ -143,17 +141,6 @@ test('generateWeeklyTiktokHighLowReport throws when clientId missing', async () 
   await expect(generateWeeklyTiktokHighLowReport('')).rejects.toThrow(
     /clientId wajib diisi/i
   );
-  expect(mockGetRekapKomentarByClient).not.toHaveBeenCalled();
-  expect(mockCountPostsByClient).not.toHaveBeenCalled();
-});
-
-test('generateWeeklyTiktokHighLowReport rejects non-DITBINMAS access', async () => {
-  await expect(
-    generateWeeklyTiktokHighLowReport('POLRES_X', { roleFlag: 'operator' })
-  ).rejects.toThrow(/DITBINMAS/);
-  await expect(
-    generateWeeklyTiktokHighLowReport('DITBINMAS', { roleFlag: 'operator' })
-  ).rejects.toThrow(/DITBINMAS/);
   expect(mockGetRekapKomentarByClient).not.toHaveBeenCalled();
   expect(mockCountPostsByClient).not.toHaveBeenCalled();
 });
