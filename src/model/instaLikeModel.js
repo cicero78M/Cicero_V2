@@ -90,7 +90,6 @@ export async function getRekapLikesByClient(
   role
 ) {
   const roleLower = role ? role.toLowerCase() : null;
-  const clientIdLower = client_id ? client_id.toLowerCase() : null;
   const params = [client_id];
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
@@ -138,14 +137,9 @@ export async function getRekapLikesByClient(
   let postRoleJoinLikes = '';
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
-  const isDitbinmasRequest = clientIdLower === DITBINMAS_CLIENT_ID;
-  if (isDitbinmasRequest) {
+  if (roleLower === 'ditbinmas') {
     params[0] = DITBINMAS_CLIENT_ID;
-    const ditbinmasRoleParam =
-      roleLower === DITBINMAS_CLIENT_ID
-        ? roleLower
-        : DITBINMAS_CLIENT_ID;
-    const roleIdx = params.push(ditbinmasRoleParam);
+    const roleIdx = params.push(roleLower);
     userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -208,7 +202,7 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  const postParams = isDitbinmasRequest ? params.slice(0, -1) : params;
+  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
 
   const { rows: postRows } = await query(
     `WITH posts AS (

@@ -79,10 +79,10 @@ test('parses jumlah_like as integer', async () => {
   expect(rows[0].jumlah_like).toBe(3);
 });
 
-test('filters users by role for ditbinmas request', async () => {
+test('filters users by role when role is ditbinmas', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
-  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
+  await getRekapLikesByClient('c1', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const sql = mockQuery.mock.calls[0][0];
   const params = mockQuery.mock.calls[0][1];
   expect(sql).toContain('user_roles ur');
@@ -95,10 +95,10 @@ test('filters users by role for ditbinmas request', async () => {
   expect(params).toEqual(['ditbinmas', 'ditbinmas']);
 });
 
-test('ditbinmas request passes only date to posts query', async () => {
+test('ditbinmas role passes only date to posts query', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
-  await getRekapLikesByClient('ditbinmas', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
+  await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
   const paramsSecond = mockQuery.mock.calls[1][1];
   expect(paramsSecond).toEqual(['ditbinmas', '2023-10-05']);
 });
@@ -128,20 +128,11 @@ test('skips role filter for operator role', async () => {
   expect(params).toEqual(['c1']);
 });
 
-test('ditbinmas request enforces ditbinmas client id filter', async () => {
-  mockQuery.mockResolvedValueOnce({ rows: [] });
-  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
-  await getRekapLikesByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
-  const params = mockQuery.mock.calls[0][1];
-  expect(params[0]).toBe('ditbinmas');
-  expect(params.includes('ditbinmas')).toBe(true);
-});
-
-test('ditbinmas role does not override other client requests', async () => {
+test('ditbinmas role enforces ditbinmas client id filter', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c-lain', 'harian', undefined, undefined, undefined, 'ditbinmas');
   const params = mockQuery.mock.calls[0][1];
-  expect(params[0]).toBe('c-lain');
-  expect(params.includes('ditbinmas')).toBe(false);
+  expect(params[0]).toBe('ditbinmas');
+  expect(params.includes('c-lain')).toBe(false);
 });

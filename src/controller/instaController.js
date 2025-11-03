@@ -17,10 +17,7 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 
 export async function getInstaRekapLikes(req, res) {
-  let client_id =
-    req.query.client_id ||
-    req.user?.client_id ||
-    req.headers["x-client-id"];
+  let client_id = req.query.client_id;
   const periode = req.query.periode || "harian";
   const tanggal = req.query.tanggal;
   const startDate =
@@ -29,7 +26,7 @@ export async function getInstaRekapLikes(req, res) {
   const role = req.user?.role;
   const roleLower = role?.toLowerCase();
 
-  if (roleLower === "ditbinmas" && !client_id) {
+  if (roleLower === "ditbinmas") {
     client_id = "ditbinmas";
   }
 
