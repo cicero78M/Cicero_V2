@@ -17,66 +17,27 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 
 export async function getInstaRekapLikes(req, res) {
-  const role = req.user?.role;
-  const roleLower = role?.toLowerCase();
-  const isDitbinmasRole = roleLower === "ditbinmas";
-
-  let client_id =
-    req.query.client_id ||
-    req.user?.client_id ||
-    req.headers["x-client-id"];
-  if (isDitbinmasRole) {
-    client_id = "ditbinmas";
-  }
+  const targetRole = "ditbinmas";
+  const client_id = targetRole;
   const periode = req.query.periode || "harian";
   const tanggal = req.query.tanggal;
   const startDate =
     req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
-
-  if (isDitbinmasRole && !client_id) {
-    client_id = "ditbinmas";
-  }
-
-  if (!client_id) {
-    return res
-      .status(400)
-      .json({ success: false, message: "client_id wajib diisi" });
-  }
-
-  if (req.user?.client_ids && !isDitbinmasRole) {
-    const userClientIds = Array.isArray(req.user.client_ids)
-      ? req.user.client_ids
-      : [req.user.client_ids];
-    const idsLower = userClientIds.map((c) => c.toLowerCase());
-    if (
-      !idsLower.includes(client_id.toLowerCase()) &&
-      roleLower !== client_id.toLowerCase()
-    ) {
-      return res
-        .status(403)
-        .json({ success: false, message: "client_id tidak diizinkan" });
-    }
-  }
-  if (
-    req.user?.client_id &&
-    req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
-    roleLower !== client_id.toLowerCase() &&
-    !isDitbinmasRole
-  ) {
-    return res
-      .status(403)
-      .json({ success: false, message: "client_id tidak diizinkan" });
-  }
   try {
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}` });
+    sendConsoleDebug({
+      tag: "INSTA",
+      msg: `getInstaRekapLikes role=${targetRole} ${periode} ${
+        tanggal || ""
+      } ${startDate || ""} ${endDate || ""}`,
+    });
     const { rows, totalKonten } = await getRekapLikesByClient(
       client_id,
       periode,
       tanggal,
       startDate,
       endDate,
-      role
+      targetRole
     );
 
     const payload = formatLikesRecapResponse(rows, totalKonten);
