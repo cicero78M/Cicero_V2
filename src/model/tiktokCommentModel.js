@@ -1,7 +1,4 @@
 import { query } from '../repository/db.js';
-import { normalizeClientId } from '../utils/utilsHelper.js';
-
-const DITBINMAS_CLIENT_ID = normalizeClientId('ditbinmas');
 
 function normalizeUsername(uname) {
   if (typeof uname !== 'string' || uname.length === 0) return null;
@@ -76,16 +73,14 @@ export async function getRekapKomentarByClient(
   end_date,
   role
 ) {
-  const normalizedClientId = normalizeClientId(client_id);
-  const normalizedRole = normalizeClientId(role);
   const clientTypeRes = await query(
-    "SELECT client_type FROM clients WHERE LOWER(TRIM(client_id)) = $1",
-    [normalizedClientId]
+    "SELECT client_type FROM clients WHERE client_id = $1",
+    [client_id]
   );
   const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
-  const roleLower = normalizedRole || null;
+  const roleLower = typeof role === 'string' ? role.toLowerCase() : null;
 
-  const params = clientType === "direktorat" ? [] : [normalizedClientId];
+  const params = clientType === "direktorat" ? [] : [client_id];
   let tanggalFilter =
     "c.updated_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
@@ -115,24 +110,23 @@ export async function getRekapKomentarByClient(
     tanggalFilter = `c.updated_at::date = $${idx}::date`;
   }
 
-  const ditbinmasClientId = DITBINMAS_CLIENT_ID;
-  let postClientFilter = "LOWER(TRIM(p.client_id)) = $1";
-  let userWhere = "LOWER(TRIM(u.client_id)) = $1";
+  let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
+  let userWhere = "LOWER(u.client_id) = LOWER($1)";
   if (clientType === "direktorat") {
-    const clientIdx = params.push(ditbinmasClientId);
-    const roleIdx = params.push(ditbinmasClientId);
-    postClientFilter = `LOWER(TRIM(p.client_id)) = $${clientIdx}`;
-    userWhere = `LOWER(TRIM(u.client_id)) = $${clientIdx} AND EXISTS (
+    postClientFilter = "1=1";
+    const effectiveRole = (roleLower || String(client_id || "")).toLowerCase();
+    const roleIdx = params.push(effectiveRole);
+    userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(TRIM(r.role_name)) = $${roleIdx}
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
   } else if (roleLower && roleLower !== "operator") {
     const roleIdx = params.push(roleLower);
-    userWhere = `LOWER(TRIM(u.client_id)) = $1 AND EXISTS (
+    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(TRIM(r.role_name)) = $${roleIdx}
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
   }
 
