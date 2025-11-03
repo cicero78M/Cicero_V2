@@ -79,8 +79,6 @@ export async function getLikesByShortcode(shortcode) {
  * @returns {Promise<Array>}
  */
 
-const DITBINMAS_CLIENT_ID = 'ditbinmas';
-
 export async function getRekapLikesByClient(
   client_id,
   periode = "harian",
@@ -138,24 +136,21 @@ export async function getRekapLikesByClient(
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
   if (roleLower === 'ditbinmas') {
-    params[0] = DITBINMAS_CLIENT_ID;
+    params.shift();
+    tanggalFilter = tanggalFilter.replace(/\$(\d+)/g, (_, n) => `$${n - 1}`);
+    postClientFilter = '1=1';
     const roleIdx = params.push(roleLower);
-    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
+    userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
     likeCountsSelect = `
-      SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
+      SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
       FROM valid_likes
-      WHERE LOWER(client_id) = LOWER($1)
-      GROUP BY username, client_id
+      GROUP BY username
     `;
-    likeJoin = `
-      lower(replace(trim(u.insta), '@', '')) = lc.username
-      AND LOWER(u.client_id) = LOWER(lc.client_id)
-      AND LOWER(lc.client_id) = LOWER($1)
-    `;
+    likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
   }
 
   const { rows } = await query(`
