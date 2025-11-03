@@ -978,10 +978,6 @@ async function performAction(
         break;
       }
       case "25": {
-        if (!isDitbinmas(clientId) || !isDitbinmas(roleFlag)) {
-          msg = "Menu TikTok High & Low hanya tersedia untuk pengguna DITBINMAS.";
-          break;
-        }
         try {
           msg = await generateWeeklyTiktokHighLowReport(clientId, { roleFlag });
         } catch (error) {
