@@ -38,12 +38,12 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
   const res = { json, status: jest.fn().mockReturnThis() };
   await getTiktokRekapKomentar(req, res);
   expect(mockGetRekap).toHaveBeenCalledWith(
-    'ditbinmas',
+    'DITBINMAS',
     'harian',
     undefined,
     '2024-01-01',
     '2024-01-31',
-    'ditbinmas'
+    undefined
   );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 300 }));
 });

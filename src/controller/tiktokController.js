@@ -81,20 +81,20 @@ export async function getTiktokPosts(req, res) {
 import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
 
 export async function getTiktokRekapKomentar(req, res) {
-  const client_id = 'ditbinmas';
-  const targetRole = 'ditbinmas';
+  const client_id = 'DITBINMAS';
   const periode = req.query.periode || 'harian';
   const tanggal = req.query.tanggal;
   const startDate = req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
   try {
+    const role = req.user?.role;
     const data = await getRekapKomentarByClient(
       client_id,
       periode,
       tanggal,
       startDate,
       endDate,
-      targetRole
+      role
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
