@@ -2,6 +2,28 @@ import axios from 'axios';
 import { fetchTiktokSecUid } from './clientService.js';
 import { env } from '../config/env.js';
 
+const COMMENT_PAGE_MAX_RETRIES = 3;
+const COMMENT_PAGE_BASE_DELAY_MS = 500;
+const RETRYABLE_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EAI_AGAIN',
+  'ECONNABORTED',
+  'ENOTFOUND'
+]);
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableError(err) {
+  if (!err) return false;
+  if (!err.response) return true;
+  if (err.response?.status >= 500) return true;
+  if (err.code && RETRYABLE_ERROR_CODES.has(err.code)) return true;
+  return false;
+}
+
 const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
 
@@ -137,33 +159,42 @@ export async function fetchTiktokPostsBySecUid(secUid, limit = 10) {
 
 export async function fetchTiktokCommentsPage(videoId, cursor = 0, count = 50) {
   if (!videoId) return { comments: [], next_cursor: null, total: null };
-  try {
-    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
-      params: { videoId, count: String(count), cursor: String(cursor) },
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-        'x-cache-control': 'no-cache'
+
+  for (let attempt = 1; attempt <= COMMENT_PAGE_MAX_RETRIES; attempt++) {
+    try {
+      const res = await axios.get(`https://${RAPIDAPI_HOST}/api/post/comments`, {
+        params: { videoId, count: String(count), cursor: String(cursor) },
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'x-cache-control': 'no-cache'
+        }
+      });
+      let comments = [];
+      let total = null;
+      const data = res.data;
+      if (Array.isArray(data?.data?.comments)) {
+        comments = data.data.comments;
+        if (typeof data.data.total === 'number') total = data.data.total;
+      } else if (Array.isArray(data?.comments)) {
+        comments = data.comments;
+        if (typeof data.total === 'number') total = data.total;
       }
-    });
-    let comments = [];
-    let total = null;
-    const data = res.data;
-    if (Array.isArray(data?.data?.comments)) {
-      comments = data.data.comments;
-      if (typeof data.data.total === 'number') total = data.data.total;
-    } else if (Array.isArray(data?.comments)) {
-      comments = data.comments;
-      if (typeof data.total === 'number') total = data.total;
+      const next_cursor = cursor + count;
+      const has_more = comments.length > 0 && (total === null || next_cursor <= total);
+      return { comments, next_cursor: has_more ? next_cursor : null, total };
+    } catch (err) {
+      const shouldRetry = attempt < COMMENT_PAGE_MAX_RETRIES && isRetryableError(err);
+      if (shouldRetry) {
+        const waitMs = COMMENT_PAGE_BASE_DELAY_MS * 2 ** (attempt - 1);
+        await delay(waitMs);
+        continue;
+      }
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      const error = new Error(msg);
+      error.statusCode = err.response?.status;
+      throw error;
     }
-    const next_cursor = cursor + count;
-    const has_more = comments.length > 0 && (total === null || next_cursor <= total);
-    return { comments, next_cursor: has_more ? next_cursor : null, total };
-  } catch (err) {
-    const msg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-    const error = new Error(msg);
-    error.statusCode = err.response?.status;
-    throw error;
   }
 }
 
