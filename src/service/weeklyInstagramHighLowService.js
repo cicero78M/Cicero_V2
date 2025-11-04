@@ -164,7 +164,13 @@ export async function generateWeeklyInstagramHighLowReport(
     roleFlag
   );
 
-  const participants = normalizeRows(rows);
+  const restrictToDitbinmas =
+    normalizeDitbinmas(clientId) && normalizeDitbinmas(roleFlag);
+  const filteredRows = restrictToDitbinmas
+    ? rows.filter((row) => normalizeDitbinmas(row.client_id))
+    : rows;
+
+  const participants = normalizeRows(filteredRows);
   const sortedDesc = participants.slice().sort(sortDescending);
   const sortedAsc = participants.slice().sort(sortAscending);
 

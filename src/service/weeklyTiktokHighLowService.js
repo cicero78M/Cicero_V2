@@ -44,6 +44,14 @@ const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
 
 const numberFormatter = new Intl.NumberFormat('id-ID');
 
+function normalizeIdentifier(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function isDitbinmas(value) {
+  return normalizeIdentifier(value) === 'DITBINMAS';
+}
+
 function rankWeight(rank) {
   const idx = RANK_ORDER.indexOf(String(rank || '').toUpperCase());
   return idx === -1 ? RANK_ORDER.length : idx;
@@ -167,7 +175,12 @@ export async function generateWeeklyTiktokHighLowReport(
     countPostsByClient(clientId, 'harian', undefined, startIso, endIso, roleFlag),
   ]);
 
-  const participants = normalizeRows(rows);
+  const restrictToDitbinmas = isDitbinmas(clientId) && isDitbinmas(roleFlag);
+  const filteredRows = restrictToDitbinmas
+    ? rows.filter((row) => isDitbinmas(row.client_id))
+    : rows;
+
+  const participants = normalizeRows(filteredRows);
   const sortedDesc = participants.slice().sort(sortDescending);
   const sortedAsc = participants.slice().sort(sortAscending);
 
