@@ -188,7 +188,7 @@ export async function generateWeeklyTiktokHighLowReport(
   const bottomFive = sortedAsc.slice(0, 5);
 
   const headerLines = [
-    '📊 *Laporan TikTok High & Low*',
+    '📊 *Laporan TikTok Top and Bottom*',
     `Periode: ${rangeText}`,
     `Total tugas TikTok: ${numberFormatter.format(totalTasks || 0)}`,
   ];

@@ -149,7 +149,9 @@ export async function generateWeeklyInstagramHighLowReport(
   }
 
   if (!normalizeDitbinmas(clientId) || !normalizeDitbinmas(roleFlag)) {
-    throw new Error('Menu Instagram High & Low hanya tersedia untuk pengguna DITBINMAS.');
+    throw new Error(
+      'Menu Instagram Top and Bottom hanya tersedia untuk pengguna DITBINMAS.'
+    );
   }
 
   const bounds = getWeekBoundaries();
@@ -178,7 +180,7 @@ export async function generateWeeklyInstagramHighLowReport(
   const bottomFive = sortedAsc.slice(0, 5);
 
   const headerLines = [
-    '📊 *Laporan Instagram High & Low*',
+    '📊 *Laporan Instagram Top and Bottom*',
     `Periode: ${rangeText}`,
     `Total tugas Instagram: ${numberFormatter.format(totalKonten || 0)}`,
   ];
