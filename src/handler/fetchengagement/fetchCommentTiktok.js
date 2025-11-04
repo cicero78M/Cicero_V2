@@ -5,6 +5,13 @@ import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
 
+const MAX_COMMENT_FETCH_ATTEMPTS = 3;
+const COMMENT_FETCH_RETRY_DELAY_MS = 2000;
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const limit = pLimit(3); // atur parallel fetch sesuai kebutuhan
 
 function normalizeClientId(id) {
@@ -122,7 +129,23 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
     for (const video_id of videoIds) {
       await limit(async () => {
         try {
-          const commentsToday = await fetchAllTiktokComments(video_id);
+          let commentsToday = null;
+          for (let attempt = 1; attempt <= MAX_COMMENT_FETCH_ATTEMPTS; attempt++) {
+            try {
+              commentsToday = await fetchAllTiktokComments(video_id);
+              break;
+            } catch (err) {
+              if (attempt >= MAX_COMMENT_FETCH_ATTEMPTS) throw err;
+              sendDebug({
+                tag: "TTK COMMENT RETRY",
+                msg: `Video ${video_id}: percobaan ${attempt} gagal (${(err && err.message) || String(err)}), mencoba ulang...`,
+                client_id: video_id,
+              });
+              const waitMs = COMMENT_FETCH_RETRY_DELAY_MS * attempt;
+              await delay(waitMs);
+            }
+          }
+          commentsToday = commentsToday || [];
           const uniqueUsernames = extractUniqueUsernamesFromComments(commentsToday);
           const allUsernames = [
             ...new Set([...uniqueUsernames, ...exceptionUsernames]),
