@@ -168,8 +168,10 @@ beforeEach(() => {
   });
   mockGenerateKasatkerReport.mockResolvedValue('Narasi Kasatker');
   mockSaveLikesRecapPerContentExcel.mockResolvedValue('/tmp/recap_per_content.xlsx');
-  mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue('Laporan IG High Low');
-  mockGenerateWeeklyTiktokHighLowReport.mockResolvedValue('Laporan High Low');
+  mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue(
+    'Laporan IG Top and Bottom'
+  );
+  mockGenerateWeeklyTiktokHighLowReport.mockResolvedValue('Laporan Top and Bottom');
 });
 
 test('main always sets session to DITBINMAS client', async () => {
@@ -1090,8 +1092,8 @@ test('choose_menu option 24 sends no data message when service returns null', as
   );
 });
 
-test('choose_menu option 25 sends TikTok High & Low recap', async () => {
-  mockGenerateWeeklyTiktokHighLowReport.mockResolvedValue('Ringkasan High Low');
+test('choose_menu option 25 sends TikTok Top and Bottom recap', async () => {
+  mockGenerateWeeklyTiktokHighLowReport.mockResolvedValue('Ringkasan Top and Bottom');
   const session = {
     selectedClientId: 'ditbinmas',
     clientName: 'DIT BINMAS',
@@ -1106,12 +1108,12 @@ test('choose_menu option 25 sends TikTok High & Low recap', async () => {
     roleFlag: 'ditbinmas',
   });
   const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
-  expect(messages).toContain('Ringkasan High Low');
+  expect(messages).toContain('Ringkasan Top and Bottom');
 });
 
-test('choose_menu option 26 sends Instagram High & Low recap', async () => {
+test('choose_menu option 26 sends Instagram Top and Bottom recap', async () => {
   mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue(
-    'Ringkasan IG High Low'
+    'Ringkasan IG Top and Bottom'
   );
   const session = {
     selectedClientId: 'ditbinmas',
@@ -1130,7 +1132,7 @@ test('choose_menu option 26 sends Instagram High & Low recap', async () => {
     }
   );
   const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
-  expect(messages).toContain('Ringkasan IG High Low');
+  expect(messages).toContain('Ringkasan IG Top and Bottom');
 });
 
 test('choose_menu option 26 blocks non-DITBINMAS users', async () => {
@@ -1153,7 +1155,7 @@ test('choose_menu option 26 blocks non-DITBINMAS users', async () => {
   );
 });
 
-test('choose_menu option 25 reports failure when TikTok High & Low service throws', async () => {
+test('choose_menu option 25 reports failure when TikTok Top and Bottom service throws', async () => {
   mockGenerateWeeklyTiktokHighLowReport.mockRejectedValue(
     new Error('Tidak ada data mingguan tersedia')
   );

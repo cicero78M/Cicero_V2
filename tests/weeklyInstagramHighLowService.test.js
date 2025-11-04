@@ -104,7 +104,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
     '2024-07-07',
     'ditbinmas'
   );
-  expect(message).toContain('📊 *Laporan Instagram High & Low*');
+  expect(message).toContain('📊 *Laporan Instagram Top and Bottom*');
   expect(message).toContain('Periode: Senin, 01 Juli 2024 s.d. Minggu, 07 Juli 2024');
   expect(message).toContain('Total tugas Instagram: 32');
   expect(message).toContain('🔥 *5 Pelaksana Tertinggi*');
@@ -120,7 +120,7 @@ test('generateWeeklyInstagramHighLowReport returns no data message when particip
     roleFlag: 'ditbinmas',
   });
 
-  expect(message).toContain('📊 *Laporan Instagram High & Low*');
+  expect(message).toContain('📊 *Laporan Instagram Top and Bottom*');
   expect(message).toContain('Total tugas Instagram: 0');
   expect(message).toContain(
     'Tidak ada data pelaksanaan likes Instagram pada periode tersebut.'

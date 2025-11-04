@@ -981,33 +981,33 @@ async function performAction(
         try {
           msg = await generateWeeklyTiktokHighLowReport(clientId, { roleFlag });
         } catch (error) {
-          console.error("Gagal membuat laporan TikTok High & Low:", error);
+          console.error("Gagal membuat laporan TikTok Top and Bottom:", error);
           msg =
             error?.message &&
             (error.message.includes("data") ||
               error.message.includes("clientId"))
               ? error.message
-              : "❌ Gagal membuat laporan TikTok High & Low.";
+              : "❌ Gagal membuat laporan TikTok Top and Bottom.";
         }
         break;
       }
       case "26": {
         if (!isDitbinmas(clientId) || !isDitbinmas(roleFlag)) {
           msg =
-            "Menu Instagram High & Low hanya tersedia untuk pengguna DITBINMAS.";
+            "Menu Instagram Top and Bottom hanya tersedia untuk pengguna DITBINMAS.";
           break;
         }
         try {
           msg = await generateWeeklyInstagramHighLowReport(clientId, { roleFlag });
         } catch (error) {
-          console.error("Gagal membuat laporan Instagram High & Low:", error);
+          console.error("Gagal membuat laporan Instagram Top and Bottom:", error);
           msg =
             error?.message &&
             (error.message.includes("data") ||
               error.message.includes("clientId") ||
               error.message.includes("DITBINMAS"))
               ? error.message
-              : "❌ Gagal membuat laporan Instagram High & Low.";
+              : "❌ Gagal membuat laporan Instagram Top and Bottom.";
         }
         break;
       }
@@ -1164,8 +1164,8 @@ export const dirRequestHandlers = {
         "📆 *Laporan Mingguan*\n" +
         "2️⃣3️⃣ Rekap file Instagram mingguan\n" +
         "2️⃣4️⃣ Rekap file Tiktok mingguan\n" +
-        "2️⃣5️⃣ TikTok High & Low (Top 5 & Bottom 5)\n" +
-        "2️⃣6️⃣ Instagram High & Low (Top 5 & Bottom 5)\n\n" +
+        "2️⃣5️⃣ TikTok Top and Bottom (Top 5 & Bottom 5)\n" +
+        "2️⃣6️⃣ Instagram Top and Bottom (Top 5 & Bottom 5)\n\n" +
         "🗓️ *Laporan Bulanan*\n" +
         "2️⃣7️⃣ Rekap file Instagram bulanan\n" +
         "2️⃣8️⃣ Rekap like Instagram per konten (Excel)\n" +

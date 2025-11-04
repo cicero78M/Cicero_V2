@@ -115,7 +115,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
     '2024-07-07',
     'ditbinmas'
   );
-  expect(message).toContain('📊 *Laporan TikTok High & Low*');
+  expect(message).toContain('📊 *Laporan TikTok Top and Bottom*');
   expect(message).toContain('Periode: Senin, 01 Juli 2024 s.d. Minggu, 07 Juli 2024');
   expect(message).toContain('Total tugas TikTok: 12');
   expect(message).toContain('🔥 *5 Pelaksana Tertinggi*');
@@ -130,7 +130,7 @@ test('generateWeeklyTiktokHighLowReport returns no data message when participant
 
   const message = await generateWeeklyTiktokHighLowReport('DITBINMAS');
 
-  expect(message).toContain('📊 *Laporan TikTok High & Low*');
+  expect(message).toContain('📊 *Laporan TikTok Top and Bottom*');
   expect(message).toContain('Total tugas TikTok: 0');
   expect(message).toContain(
     'Tidak ada data pelaksanaan komentar TikTok pada periode tersebut.'
