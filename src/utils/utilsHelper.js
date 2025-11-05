@@ -1,3 +1,5 @@
+import { normalizeHandleValue } from "./handleNormalizer.js";
+
 export function sortDivisionKeys(keys) {
   const order = ["BAG", "SAT", "SI", "SPKT", "POLSEK"];
   return keys.sort((a, b) => {
@@ -158,9 +160,7 @@ function toTitleCase(value) {
 }
 
 function normalizeHandle(value) {
-  const cleaned = value.replace(/\s+/g, "").replace(/^@+/, "");
-  if (!cleaned) return "";
-  return "@" + cleaned.toLowerCase();
+  return normalizeHandleValue(value);
 }
 
 function normalizeSentence(value) {
