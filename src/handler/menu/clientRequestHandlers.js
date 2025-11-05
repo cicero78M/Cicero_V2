@@ -29,6 +29,8 @@ import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTiktokProfile } from "../../service/tiktokRapidService.js";
+import { hasUserLikedBetween } from "../../model/instaLikeModel.js";
+import { hasUserCommentedBetween } from "../../model/tiktokCommentModel.js";
 
 function ignore(..._args) {}
 
@@ -61,12 +63,47 @@ async function sendComplaintResponse(session, waClient) {
 
 const numberFormatter = new Intl.NumberFormat("id-ID");
 const UPDATE_DATA_LINK = "https://papiqo.com/claim";
+const ACTIVITY_START_DATE = "2025-09-01";
+const ID_DATE_FORMATTER = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 
 function formatNumber(value) {
   if (value === null || value === undefined) return "-";
   const num = Number(value);
   if (Number.isNaN(num)) return String(value);
   return numberFormatter.format(num);
+}
+
+function formatIdDate(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return ID_DATE_FORMATTER.format(date);
+}
+
+function buildRecordedActivitySolution({
+  issueText,
+  platform,
+  activityVerb,
+  handle,
+  activityCount,
+  startDate = ACTIVITY_START_DATE,
+  endDate = new Date(),
+}) {
+  const decoratedHandle = handle ? `*${handle}*` : "akun tersebut";
+  const startLabel = formatIdDate(startDate) || formatIdDate(ACTIVITY_START_DATE) || "1 September 2025";
+  const endLabel = formatIdDate(endDate) || formatIdDate(new Date());
+  const activitySummary = formatNumber(activityCount);
+  const lines = [
+    `• Kendala: ${issueText}`,
+    "",
+    `Hasil pengecekan sistem menunjukkan akun ${decoratedHandle} telah tercatat ${activityVerb} pada ${activitySummary} konten ${platform} dalam periode ${startLabel} hingga ${endLabel}.`,
+    "Tidak ada kendala pencatatan ditemukan di sistem Cicero. Mohon informasikan kepada personel untuk mengecek kembali dashboard atau riwayat tugas.",
+  ];
+  return lines.join("\n").trim();
 }
 
 function isZeroMetric(value) {
@@ -648,6 +685,28 @@ async function verifyTiktokHandle(handle) {
 async function buildInstagramIssueSolution(issueText, parsed, user, accountStatus) {
   const dbHandle = ensureHandle(user?.insta);
   const complaintHandle = normalizeComplaintHandle(parsed.instagram);
+  const clientId = user?.client_id || user?.clientId || null;
+  if (dbHandle) {
+    const now = new Date();
+    const likeCount = await hasUserLikedBetween(
+      dbHandle,
+      ACTIVITY_START_DATE,
+      now,
+      clientId
+    );
+    if (likeCount > 0) {
+      return buildRecordedActivitySolution({
+        issueText,
+        platform: "Instagram",
+        activityVerb: "memberikan like",
+        handle: dbHandle,
+        activityCount: likeCount,
+        startDate: ACTIVITY_START_DATE,
+        endDate: now,
+      });
+    }
+  }
+
   const lines = [`• Kendala: ${issueText}`];
   const dbStatus = accountStatus?.instagram || {};
   const handlesMatch =
@@ -754,6 +813,28 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
 async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) {
   const dbHandle = ensureHandle(user?.tiktok);
   const complaintHandle = normalizeComplaintHandle(parsed.tiktok);
+  const clientId = user?.client_id || user?.clientId || null;
+  if (dbHandle) {
+    const now = new Date();
+    const commentCount = await hasUserCommentedBetween(
+      dbHandle,
+      ACTIVITY_START_DATE,
+      now,
+      clientId
+    );
+    if (commentCount > 0) {
+      return buildRecordedActivitySolution({
+        issueText,
+        platform: "TikTok",
+        activityVerb: "memberikan komentar",
+        handle: dbHandle,
+        activityCount: commentCount,
+        startDate: ACTIVITY_START_DATE,
+        endDate: now,
+      });
+    }
+  }
+
   const lines = [`• Kendala: ${issueText}`];
   const dbStatus = accountStatus?.tiktok || {};
   const handlesMatch =

@@ -1,6 +1,32 @@
 // src/model/instaLikeModel.js
 import { query } from '../repository/db.js';
 
+const DEFAULT_ACTIVITY_START = '2025-09-01';
+
+function normalizeLikeUsername(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/^@+/, '').toLowerCase();
+}
+
+function toTimestampParam(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const time = value.getTime();
+    if (Number.isNaN(time)) return null;
+    return value.toISOString();
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+    return null;
+  }
+  return date.toISOString();
+}
+
 /**
  * Upsert (insert/update) daftar username likes untuk sebuah shortcode.
  * Disarankan kolom likes bertipe JSONB.
@@ -70,6 +96,43 @@ export async function getAllShortcodesToday() {
 export async function getLikesByShortcode(shortcode) {
   // alias untuk backward compatibility
   return getLikeUsernamesByShortcode(shortcode);
+}
+
+export async function hasUserLikedBetween(
+  username,
+  startDate = DEFAULT_ACTIVITY_START,
+  endDate,
+  clientId
+) {
+  const normalized = normalizeLikeUsername(username);
+  if (!normalized) return 0;
+
+  const startParam = toTimestampParam(startDate) || DEFAULT_ACTIVITY_START;
+  const endParam = toTimestampParam(endDate);
+  const params = [normalized, startParam, endParam];
+
+  let clientParamIndex = null;
+  if (clientId) {
+    clientParamIndex = params.push(clientId);
+  }
+
+  const queryText = `
+    SELECT COUNT(DISTINCT p.shortcode) AS total_activity
+    FROM insta_like l
+    JOIN insta_post p ON p.shortcode = l.shortcode
+    JOIN LATERAL (
+      SELECT lower(replace(trim(
+        COALESCE(elem->>'username', trim(both '"' FROM elem::text))
+      ), '@', '')) AS username
+      FROM jsonb_array_elements(COALESCE(l.likes, '[]'::jsonb)) AS elem
+    ) AS liked ON liked.username = $1
+    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN $2::timestamptz AND COALESCE($3::timestamptz, NOW())
+      ${clientParamIndex ? `AND LOWER(p.client_id) = LOWER($${clientParamIndex})` : ''}
+  `;
+
+  const { rows } = await query(queryText, params);
+  const total = Number(rows[0]?.total_activity || 0);
+  return Number.isFinite(total) ? total : 0;
 }
 
 /**

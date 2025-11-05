@@ -1,9 +1,35 @@
 import { query } from '../repository/db.js';
 
+const DEFAULT_ACTIVITY_START = '2025-09-01';
+
 function normalizeUsername(uname) {
   if (typeof uname !== 'string' || uname.length === 0) return null;
   const lower = uname.toLowerCase();
   return lower.startsWith('@') ? lower : `@${lower}`;
+}
+
+function normalizeUsernameForSearch(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/^@+/, '').toLowerCase();
+}
+
+function toTimestampParam(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const time = value.getTime();
+    if (Number.isNaN(time)) return null;
+    return value.toISOString();
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+    return null;
+  }
+  return date.toISOString();
 }
 
 /**
@@ -60,6 +86,41 @@ export async function getCommentsByVideoId(video_id) {
   const q = `SELECT comments FROM tiktok_comment WHERE video_id = $1`;
   const res = await query(q, [video_id]);
   return res.rows[0] ? { comments: res.rows[0].comments } : { comments: [] };
+}
+
+export async function hasUserCommentedBetween(
+  username,
+  startDate = DEFAULT_ACTIVITY_START,
+  endDate,
+  clientId
+) {
+  const normalized = normalizeUsernameForSearch(username);
+  if (!normalized) return 0;
+
+  const startParam = toTimestampParam(startDate) || DEFAULT_ACTIVITY_START;
+  const endParam = toTimestampParam(endDate);
+  const params = [normalized, startParam, endParam];
+
+  let clientParamIndex = null;
+  if (clientId) {
+    clientParamIndex = params.push(clientId);
+  }
+
+  const queryText = `
+    SELECT COUNT(DISTINCT c.video_id) AS total_activity
+    FROM tiktok_comment c
+    JOIN tiktok_post p ON p.video_id = c.video_id
+    JOIN LATERAL (
+      SELECT lower(replace(trim(raw_username), '@', '')) AS username
+      FROM jsonb_array_elements_text(COALESCE(c.comments, '[]'::jsonb)) AS raw(raw_username)
+    ) AS commenter ON commenter.username = $1
+    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN $2::timestamptz AND COALESCE($3::timestamptz, NOW())
+      ${clientParamIndex ? `AND LOWER(p.client_id) = LOWER($${clientParamIndex})` : ''}
+  `;
+
+  const { rows } = await query(queryText, params);
+  const total = Number(rows[0]?.total_activity || 0);
+  return Number.isFinite(total) ? total : 0;
 }
 
 export const findByVideoId = getCommentsByVideoId;
