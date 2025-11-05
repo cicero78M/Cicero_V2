@@ -173,6 +173,37 @@ function ensureHandle(value) {
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
 }
 
+const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
+
+function standardizeDash(value) {
+  return value.replace(/[\u2012-\u2015]/g, "-");
+}
+
+function parseBulkStatusEntries(message) {
+  const standardized = standardizeDash(message);
+  const lines = standardized.split(/\r?\n/);
+  const entries = [];
+  const entryRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+?)\s+-\s+(.+)$/;
+
+  for (const line of lines) {
+    const match = line.match(entryRegex);
+    if (!match) continue;
+    const [, index, name, rawId, reason] = match;
+    entries.push({
+      index: Number(index),
+      name: name.trim(),
+      rawId: rawId.trim(),
+      reason: reason.trim(),
+      line: line.trim(),
+    });
+  }
+
+  const headerLine =
+    lines.find((line) => BULK_STATUS_HEADER_REGEX.test(line))?.trim() || "";
+
+  return { entries, headerLine };
+}
+
 function isUserActive(user) {
   if (!user) return false;
   const { status } = user;
@@ -1402,10 +1433,11 @@ export const clientRequestHandlers = {
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
 1️⃣7️⃣ Response Komplain
+1️⃣8️⃣ Penghapusan Massal Status User
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Ketik *angka* menu, atau *batal* untuk keluar.
   `.trim();
-    if (!/^([1-9]|1[0-7])$/.test(text.trim())) {
+    if (!/^([1-9]|1[0-8])$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -1428,6 +1460,7 @@ export const clientRequestHandlers = {
       15: "downloadDocs_choose",
       16: "absensiOprDitbinmas",
       17: "respondComplaint_start",
+      18: "bulkStatus_prompt",
     };
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
@@ -2857,6 +2890,142 @@ export const clientRequestHandlers = {
         `❌ Gagal menghapus WA admin: ${err.message}`
       );
     }
+    session.step = "main";
+  },
+
+  // ================== BULK STATUS USER ==================
+  bulkStatus_prompt: async (session, chatId, _text, waClient) => {
+    session.step = "bulkStatus_process";
+    const exampleLines = [
+      "Permohonan Penghapusan Data Personil – SATKER",
+      "",
+      "1. Nama Personel – 75020201 – mutasi",
+      "2. Nama Personel – 75020202 – pensiun",
+      "3. Nama Personel – 75020203 – double data",
+    ];
+    await waClient.sendMessage(
+      chatId,
+      [
+        "Kirimkan template *Permohonan Penghapusan Data Personil – ...* dari satker yang bersangkutan.",
+        "Gunakan format daftar berikut agar dapat diproses otomatis:",
+        "",
+        ...exampleLines,
+        "",
+        "Tuliskan alasan asli (mis. mutasi/pensiun/double data).",
+        "Balas *batal* untuk membatalkan.",
+      ].join("\n")
+    );
+  },
+  bulkStatus_process: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      await waClient.sendMessage(
+        chatId,
+        "Format tidak dikenali. Mohon kirimkan template lengkap atau ketik *batal*."
+      );
+      return;
+    }
+    if (trimmed.toLowerCase() === "batal") {
+      await waClient.sendMessage(chatId, "Permohonan penghapusan dibatalkan.");
+      session.step = "main";
+      return;
+    }
+    if (!BULK_STATUS_HEADER_REGEX.test(trimmed)) {
+      await waClient.sendMessage(
+        chatId,
+        "Pesan tidak memuat judul *Permohonan Penghapusan Data Personil*. Mohon gunakan template resmi."
+      );
+      return;
+    }
+
+    const { entries, headerLine } = parseBulkStatusEntries(trimmed);
+    if (!entries.length) {
+      await waClient.sendMessage(
+        chatId,
+        "Tidak menemukan daftar personel. Pastikan format setiap baris: `1. NAMA – USER_ID – alasan`."
+      );
+      return;
+    }
+
+    const successes = [];
+    const failures = [];
+
+    for (const entry of entries) {
+      const normalizedId = normalizeUserId(entry.rawId);
+      if (!normalizedId) {
+        failures.push({
+          ...entry,
+          userId: "",
+          error: "user_id tidak valid",
+        });
+        continue;
+      }
+
+      try {
+        await userModel.updateUserField(normalizedId, "status", false);
+      } catch (err) {
+        failures.push({
+          ...entry,
+          userId: normalizedId,
+          error: err?.message || String(err),
+        });
+        continue;
+      }
+
+      let whatsappError = null;
+      try {
+        await userModel.updateUserField(normalizedId, "whatsapp", "");
+      } catch (err) {
+        whatsappError = err;
+      }
+
+      successes.push({
+        ...entry,
+        userId: normalizedId,
+        whatsappError,
+      });
+    }
+
+    const lines = [];
+    const title = headerLine || "Permohonan Penghapusan Data Personil";
+    lines.push(`📄 *${title}*`);
+
+    if (successes.length) {
+      lines.push("", `✅ Status dinonaktifkan untuk ${successes.length} personel:`);
+      successes.forEach(({ userId, name, reason }) => {
+        lines.push(`- ${userId} (${name}) • ${reason}`);
+      });
+      const whatsappWarnings = successes.filter((s) => s.whatsappError);
+      if (whatsappWarnings.length) {
+        lines.push("", "⚠️ Catatan WhatsApp:");
+        whatsappWarnings.forEach(({ userId, whatsappError }) => {
+          const note = whatsappError?.message || String(whatsappError);
+          lines.push(`- ${userId}: ${note}`);
+        });
+      }
+    }
+
+    if (failures.length) {
+      lines.push(
+        "",
+        `❌ ${failures.length} entri gagal diproses:`
+      );
+      failures.forEach(({ rawId, userId, name, reason, error }) => {
+        const idLabel = userId || rawId;
+        lines.push(`- ${idLabel} (${name}) • ${reason} → ${error}`);
+      });
+    }
+
+    lines.push("", "Selesai diproses. Terima kasih.");
+
+    await waClient.sendMessage(chatId, lines.join("\n").trim());
     session.step = "main";
   },
 
