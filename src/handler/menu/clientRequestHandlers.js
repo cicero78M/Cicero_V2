@@ -121,11 +121,24 @@ function buildRecordedActivitySolution({
   const startLabel = formatIdDate(startDate) || formatIdDate(ACTIVITY_START_DATE) || "1 September 2025";
   const endLabel = formatIdDate(endDate) || formatIdDate(new Date());
   const activitySummary = formatNumber(activityCount);
+  const platformMenuInfo =
+    platform === "Instagram"
+      ? {
+          menu: "*Absensi Amplifikasi*",
+          refreshInstruction:
+            "Buka menu tersebut di dashboard Cicero, pilih ulang filter satker/periode lalu tekan tombol *Refresh* untuk memuat riwayat terbaru.",
+        }
+      : {
+          menu: "*Absensi Komentar*",
+          refreshInstruction:
+            "Buka menu tersebut di dashboard Cicero, pilih ulang filter satker/periode kemudian klik *Refresh* atau muat ulang riwayat tugasnya.",
+        };
   const lines = [
-    `• Kendala: ${issueText}`,
+    `Ringkasan pengecekan: akun ${decoratedHandle} tercatat ${activityVerb} pada ${activitySummary} konten ${platform} dalam periode ${startLabel} hingga ${endLabel}.`,
+    "Sistem Cicero tidak menemukan gangguan pencatatan untuk aktivitas tersebut.",
     "",
-    `Hasil pengecekan sistem menunjukkan akun ${decoratedHandle} telah tercatat ${activityVerb} pada ${activitySummary} konten ${platform} dalam periode ${startLabel} hingga ${endLabel}.`,
-    "Tidak ada kendala pencatatan ditemukan di sistem Cicero. Mohon informasikan kepada personel untuk mengecek kembali dashboard atau riwayat tugas.",
+    `Menu dashboard yang perlu dicek: ${platformMenuInfo.menu}. ${platformMenuInfo.refreshInstruction}`,
+    "Bila data tetap belum muncul, minta personel mengirim tangkapan layar hasil refresh dan hubungi operator piket untuk pendampingan lebih lanjut.",
   ];
   return lines.join("\n").trim();
 }

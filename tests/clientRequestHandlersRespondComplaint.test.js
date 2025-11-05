@@ -329,12 +329,18 @@ test('respondComplaint_message shortcuts when Instagram like activity already re
     'client01'
   );
   expect(mockHasUserCommentedBetween).not.toHaveBeenCalled();
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    waClient,
-    '08123@wa',
-    expect.stringContaining('Tidak ada kendala')
-  );
-  expect(mockSafeSendMessage.mock.calls[0][2]).toContain('@RegisteredIG');
+    expect(mockSafeSendMessage).toHaveBeenCalledWith(
+      waClient,
+      '08123@wa',
+      expect.stringContaining('Ringkasan pengecekan')
+    );
+    const instagramSolution = mockSafeSendMessage.mock.calls[0][2];
+    expect(instagramSolution).toContain('@RegisteredIG');
+    expect(instagramSolution).toContain('Sistem Cicero tidak menemukan gangguan pencatatan');
+    expect(instagramSolution).toContain('Absensi Amplifikasi');
+    expect(instagramSolution.toLowerCase()).toContain('refresh');
+    expect(instagramSolution.toLowerCase()).toContain('tangkapan layar');
+    expect(instagramSolution.toLowerCase()).toContain('hubungi operator');
   expect(mockFetchInstagramInfo).toHaveBeenCalledTimes(1);
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
@@ -374,12 +380,18 @@ test('respondComplaint_message shortcuts when TikTok comment activity already re
     'client99'
   );
   expect(mockHasUserLikedBetween).not.toHaveBeenCalled();
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    waClient,
-    '08123@wa',
-    expect.stringContaining('Tidak ada kendala')
-  );
-  expect(mockSafeSendMessage.mock.calls[0][2]).toContain('@TikTokUser');
+    expect(mockSafeSendMessage).toHaveBeenCalledWith(
+      waClient,
+      '08123@wa',
+      expect.stringContaining('Ringkasan pengecekan')
+    );
+    const tiktokSolution = mockSafeSendMessage.mock.calls[0][2];
+    expect(tiktokSolution).toContain('@TikTokUser');
+    expect(tiktokSolution).toContain('Sistem Cicero tidak menemukan gangguan pencatatan');
+    expect(tiktokSolution).toContain('Absensi Komentar');
+    expect(tiktokSolution.toLowerCase()).toContain('refresh');
+    expect(tiktokSolution.toLowerCase()).toContain('tangkapan layar');
+    expect(tiktokSolution.toLowerCase()).toContain('hubungi operator');
   expect(mockFetchTiktokProfile).toHaveBeenCalledTimes(1);
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
