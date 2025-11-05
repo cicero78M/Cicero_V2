@@ -11,6 +11,7 @@ import {
   formatUserData,
   formatComplaintIssue,
 } from "../../utils/utilsHelper.js";
+import { normalizeHandleValue } from "../../utils/handleNormalizer.js";
 import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
 import {
   getAdminWANumbers,
@@ -504,13 +505,7 @@ function buildUpdateDataInstructions(platformLabel) {
 }
 
 function normalizeComplaintHandle(value) {
-  if (!value) return "";
-  const trimmed = String(value).trim();
-  if (!trimmed) return "";
-  const withoutLabel = trimmed.replace(/@\s+/g, "@");
-  const collapsed = withoutLabel.replace(/\s+/g, "");
-  if (!collapsed) return "";
-  return collapsed.startsWith("@") ? collapsed.toLowerCase() : `@${collapsed.toLowerCase()}`;
+  return normalizeHandleValue(value);
 }
 
 function parseComplaintMessage(message) {
@@ -3035,5 +3030,7 @@ export const clientRequestHandlers = {
     session.step = "main";
   },
 };
+
+export { normalizeComplaintHandle, parseComplaintMessage };
 
 export default clientRequestHandlers;

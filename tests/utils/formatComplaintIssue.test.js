@@ -26,4 +26,23 @@ describe('formatComplaintIssue', () => {
     const raw = 'Keluhan umum tanpa format khusus';
     expect(formatComplaintIssue(raw)).toBe(raw);
   });
+
+  it('normalizes social handles provided as profile URLs', () => {
+    const raw = [
+      'Pesan Komplain',
+      'NRP    : 75020201',
+      'Nama : Nanang Yuwono',
+      'Polres : Mojokerto kota',
+      'Username IG : https://instagram.com/u/Example.User/',
+      'Username Tiktok : https://www.tiktok.com/@AnotherUser',
+      '',
+      'Kendala',
+      '- Sudah melaksanakan Instagram belum terdata',
+    ].join('\n');
+
+    const formatted = formatComplaintIssue(raw);
+
+    expect(formatted).toContain('• Instagram: @example.user');
+    expect(formatted).toContain('• TikTok: @anotheruser');
+  });
 });
