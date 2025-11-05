@@ -126,7 +126,9 @@ export async function hasUserLikedBetween(
       ), '@', '')) AS username
       FROM jsonb_array_elements(COALESCE(l.likes, '[]'::jsonb)) AS elem
     ) AS liked ON liked.username = $1
-    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN $2::timestamptz AND COALESCE($3::timestamptz, NOW())
+    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN
+          ($2::timestamptz AT TIME ZONE 'Asia/Jakarta') AND
+          (COALESCE($3::timestamptz, NOW()) AT TIME ZONE 'Asia/Jakarta')
       ${clientParamIndex ? `AND LOWER(p.client_id) = LOWER($${clientParamIndex})` : ''}
   `;
 
