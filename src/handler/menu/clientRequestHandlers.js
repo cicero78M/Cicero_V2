@@ -1591,7 +1591,8 @@ export const clientRequestHandlers = {
       `Kelola Client: *${clients[idx].nama}* (${clients[idx].client_id})\n` +
         `1️⃣ Update Data Client\n` +
         `2️⃣ Hapus Client\n` +
-        `3️⃣ Info Client\nKetik angka menu di atas atau *batal* untuk keluar.`
+        `3️⃣ Info Client\n` +
+        `4️⃣ Ubah Status Massal\nKetik angka menu di atas atau *batal* untuk keluar.`
     );
   },
   kelolaClient_menu: async (
@@ -1661,6 +1662,16 @@ export const clientRequestHandlers = {
         await waClient.sendMessage(chatId, "❌ Client tidak ditemukan.");
       }
       session.step = "main";
+    } else if (text.trim() === "4") {
+      await clientRequestHandlers.bulkStatus_prompt(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService
+      );
     } else {
       await waClient.sendMessage(
         chatId,
