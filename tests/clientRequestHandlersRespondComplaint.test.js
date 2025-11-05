@@ -338,7 +338,8 @@ test('respondComplaint_message shortcuts when Instagram like activity already re
     expect(instagramSolution).toContain('@RegisteredIG');
     expect(instagramSolution).toContain('Sistem Cicero tidak menemukan gangguan pencatatan');
     expect(instagramSolution).toContain('Absensi Amplifikasi');
-    expect(instagramSolution.toLowerCase()).toContain('refresh');
+    expect(instagramSolution).toContain('dashboard Cicero');
+    expect(instagramSolution).toContain('tekan tombol *Refresh*');
     expect(instagramSolution.toLowerCase()).toContain('tangkapan layar');
     expect(instagramSolution.toLowerCase()).toContain('hubungi operator');
   expect(mockFetchInstagramInfo).toHaveBeenCalledTimes(1);
@@ -389,7 +390,8 @@ test('respondComplaint_message shortcuts when TikTok comment activity already re
     expect(tiktokSolution).toContain('@TikTokUser');
     expect(tiktokSolution).toContain('Sistem Cicero tidak menemukan gangguan pencatatan');
     expect(tiktokSolution).toContain('Absensi Komentar');
-    expect(tiktokSolution.toLowerCase()).toContain('refresh');
+    expect(tiktokSolution).toContain('dashboard Cicero');
+    expect(tiktokSolution).toContain('klik *Refresh*');
     expect(tiktokSolution.toLowerCase()).toContain('tangkapan layar');
     expect(tiktokSolution.toLowerCase()).toContain('hubungi operator');
   expect(mockFetchTiktokProfile).toHaveBeenCalledTimes(1);
