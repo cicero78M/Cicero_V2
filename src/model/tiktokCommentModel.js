@@ -114,7 +114,9 @@ export async function hasUserCommentedBetween(
       SELECT lower(replace(trim(raw_username), '@', '')) AS username
       FROM jsonb_array_elements_text(COALESCE(c.comments, '[]'::jsonb)) AS raw(raw_username)
     ) AS commenter ON commenter.username = $1
-    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN $2::timestamptz AND COALESCE($3::timestamptz, NOW())
+    WHERE (p.created_at AT TIME ZONE 'Asia/Jakarta') BETWEEN
+          ($2::timestamptz AT TIME ZONE 'Asia/Jakarta') AND
+          (COALESCE($3::timestamptz, NOW()) AT TIME ZONE 'Asia/Jakarta')
       ${clientParamIndex ? `AND LOWER(p.client_id) = LOWER($${clientParamIndex})` : ''}
   `;
 
