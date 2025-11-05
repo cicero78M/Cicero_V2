@@ -174,6 +174,7 @@ function ensureHandle(value) {
 }
 
 const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
+const NUMERIC_ID_REGEX = /\b\d{6,}\b/g;
 
 function standardizeDash(value) {
   return value
@@ -194,10 +195,152 @@ function extractNameAndReason(segment) {
   return { name: trimmed, reason: "" };
 }
 
+function extractNarrativeSentence(text, index) {
+  let start = index;
+  while (start > 0) {
+    const char = text[start - 1];
+    if (char === "\n" || char === "!" || char === "?" || char === ".") {
+      break;
+    }
+    start -= 1;
+  }
+
+  let end = index;
+  while (end < text.length) {
+    const char = text[end];
+    if (char === "\n" || char === "!" || char === "?" || char === ".") {
+      break;
+    }
+    end += 1;
+  }
+
+  return text.slice(start, end).trim();
+}
+
+function cleanReasonText(text) {
+  if (!text) return "";
+  return text
+    .replace(/\b(?:nrp|nip)\b.*$/i, "")
+    .replace(NUMERIC_ID_REGEX, "")
+    .replace(/^[\s,:;\-]+/, "")
+    .replace(/[\s,:;\-]+$/, "")
+    .trim();
+}
+
+function extractNarrativeReason(sentence, rawId) {
+  const normalized = sentence.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const keywordRegex = /\b(karena|alasan)\b\s*[:\-]?\s*/i;
+  const keywordMatch = keywordRegex.exec(normalized);
+  if (keywordMatch) {
+    const start = keywordMatch.index + keywordMatch[0].length;
+    const remainder = normalized.slice(start).trim();
+    const boundaryMatch = remainder.match(/^[^.!?\n]+/);
+    const extracted = boundaryMatch ? boundaryMatch[0] : remainder;
+    const cleaned = cleanReasonText(extracted);
+    if (cleaned) return cleaned;
+  }
+
+  const idIndex = normalized.indexOf(rawId);
+  if (idIndex !== -1) {
+    const afterId = normalized.slice(idIndex + rawId.length).trim();
+    const afterDashMatch = afterId.match(/^[-:–—]\s*([^.!?\n]+)/);
+    if (afterDashMatch) {
+      const cleaned = cleanReasonText(afterDashMatch[1]);
+      if (cleaned) return cleaned;
+    }
+  }
+
+  const dashMatch = normalized.match(/[-:–—]\s*([^.!?\n]+)$/);
+  if (dashMatch) {
+    const cleaned = cleanReasonText(dashMatch[1]);
+    if (cleaned) return cleaned;
+  }
+
+  if (keywordMatch) {
+    const start = keywordMatch.index + keywordMatch[0].length;
+    const remainder = normalized.slice(start).trim();
+    const cleaned = cleanReasonText(remainder);
+    if (cleaned) return cleaned;
+  }
+
+  return "";
+}
+
+function extractNarrativeName(sentence, rawId) {
+  const normalized = sentence.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const idIndex = normalized.indexOf(rawId);
+  if (idIndex === -1) return "";
+
+  const beforeId = normalized.slice(0, idIndex).trim();
+  const afterId = normalized.slice(idIndex + rawId.length).trim();
+
+  const parenAfter = afterId.match(/^\(([^)]+)\)/);
+  if (parenAfter) return parenAfter[1].trim();
+
+  const parenBefore = beforeId.match(/\(([^)]+)\)\s*$/);
+  if (parenBefore) return parenBefore[1].trim();
+
+  const atasNamaMatch = beforeId.match(/\b(?:atas nama|a\.n\.|a\.n|an\.)\s+(.+)$/i);
+  if (atasNamaMatch) {
+    return cleanReasonText(atasNamaMatch[1]);
+  }
+
+  let nameCandidate = beforeId;
+  const nrpIndex = nameCandidate.toLowerCase().lastIndexOf("nrp");
+  const nipIndex = nameCandidate.toLowerCase().lastIndexOf("nip");
+  const indexToCut = Math.max(nrpIndex, nipIndex);
+  if (indexToCut !== -1) {
+    nameCandidate = nameCandidate.slice(0, indexToCut).trim();
+  }
+
+  nameCandidate = nameCandidate.replace(/[-:]+$/, "").trim();
+  if (!nameCandidate) return "";
+
+  const fillerWords = new Set([
+    "mohon",
+    "tolong",
+    "harap",
+    "agar",
+    "untuk",
+    "personel",
+    "personil",
+    "nonaktifkan",
+    "nonaktif",
+    "dinonaktifkan",
+    "user",
+    "dengan",
+    "nomor",
+    "nrp",
+    "nip",
+    "id",
+    "atas",
+    "nama",
+  ]);
+
+  const words = nameCandidate.split(/\s+/).filter(Boolean);
+  const meaningful = [];
+  for (let i = words.length - 1; i >= 0; i -= 1) {
+    const word = words[i];
+    if (!word) continue;
+    if (meaningful.length === 0 && fillerWords.has(word.toLowerCase())) {
+      continue;
+    }
+    meaningful.push(word);
+  }
+  meaningful.reverse();
+  const reconstructed = meaningful.join(" ").trim();
+  return reconstructed;
+}
+
 function parseBulkStatusEntries(message) {
   const standardized = standardizeDash(message);
   const lines = standardized.split(/\r?\n/);
   const entries = [];
+  const knownIds = new Set();
   const entryRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+?)\s+-\s+(.+)$/;
   const fallbackRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+)$/;
 
@@ -212,6 +355,7 @@ function parseBulkStatusEntries(message) {
         reason: reason.trim(),
         line: line.trim(),
       });
+      knownIds.add(rawId.trim());
       continue;
     }
 
@@ -228,6 +372,31 @@ function parseBulkStatusEntries(message) {
       reason,
       line: line.trim(),
     });
+    knownIds.add(rawId.trim());
+  }
+
+  let nextIndex = entries.reduce((max, entry) => Math.max(max, entry.index || 0), 0) + 1;
+
+  const matches = standardized.matchAll(NUMERIC_ID_REGEX);
+  for (const match of matches) {
+    const rawId = match[0];
+    if (knownIds.has(rawId)) continue;
+
+    const sentence = extractNarrativeSentence(standardized, match.index);
+    if (!sentence) continue;
+
+    const reason = extractNarrativeReason(sentence, rawId);
+    const name = extractNarrativeName(sentence, rawId);
+
+    entries.push({
+      index: nextIndex,
+      name,
+      rawId,
+      reason,
+      line: sentence.trim(),
+    });
+    knownIds.add(rawId);
+    nextIndex += 1;
   }
 
   const headerLine =
@@ -3366,6 +3535,6 @@ export const clientRequestHandlers = {
   },
 };
 
-export { normalizeComplaintHandle, parseComplaintMessage };
+export { normalizeComplaintHandle, parseComplaintMessage, parseBulkStatusEntries };
 
 export default clientRequestHandlers;
