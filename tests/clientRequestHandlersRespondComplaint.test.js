@@ -10,6 +10,8 @@ const mockFormatUserData = jest.fn();
 const mockFormatComplaintIssue = jest.fn();
 const mockFetchInstagramInfo = jest.fn();
 const mockFetchTiktokProfile = jest.fn();
+const mockHasUserLikedBetween = jest.fn();
+const mockHasUserCommentedBetween = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -56,6 +58,12 @@ jest.unstable_mockModule('../src/service/instaRapidService.js', () => ({
 jest.unstable_mockModule('../src/service/tiktokRapidService.js', () => ({
   fetchTiktokProfile: mockFetchTiktokProfile,
 }));
+jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
+  hasUserLikedBetween: mockHasUserLikedBetween,
+}));
+jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
+  hasUserCommentedBetween: mockHasUserCommentedBetween,
+}));
 
 process.env.JWT_SECRET = 'test';
 
@@ -86,6 +94,8 @@ beforeEach(() => {
     video_count: 12,
     username: 'username',
   });
+  mockHasUserLikedBetween.mockResolvedValue(0);
+  mockHasUserCommentedBetween.mockResolvedValue(0);
 });
 
 test('respondComplaint_message automatically sends default response when social usernames are empty', async () => {
@@ -204,6 +214,96 @@ test('respondComplaint_message sends activation guidance when akun tidak aktif',
     chatId,
     '✅ Respon komplain telah dikirim ke Pelapor (12345).'
   );
+  expect(session.step).toBe('main');
+  expect(session.respondComplaint).toBeUndefined();
+});
+
+test('respondComplaint_message shortcuts when Instagram like activity already recorded', async () => {
+  const session = {};
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  const userModel = {
+    findUserById: jest.fn().mockResolvedValue({
+      whatsapp: '08123',
+      insta: 'RegisteredIG',
+      tiktok: '',
+      nama: 'Nama Lengkap',
+      status: true,
+      client_id: 'client01',
+    }),
+  };
+  mockHasUserLikedBetween.mockResolvedValueOnce(4);
+
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\n\nKendala\n- Sudah melaksanakan Instagram belum terdata.`;
+
+  await clientRequestHandlers.respondComplaint_message(
+    session,
+    chatId,
+    complaintMessage,
+    waClient,
+    null,
+    userModel
+  );
+
+  expect(mockHasUserLikedBetween).toHaveBeenCalledWith(
+    '@RegisteredIG',
+    '2025-09-01',
+    expect.any(Date),
+    'client01'
+  );
+  expect(mockHasUserCommentedBetween).not.toHaveBeenCalled();
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    '08123@wa',
+    expect.stringContaining('Tidak ada kendala')
+  );
+  expect(mockSafeSendMessage.mock.calls[0][2]).toContain('@RegisteredIG');
+  expect(mockFetchInstagramInfo).toHaveBeenCalledTimes(1);
+  expect(session.step).toBe('main');
+  expect(session.respondComplaint).toBeUndefined();
+});
+
+test('respondComplaint_message shortcuts when TikTok comment activity already recorded', async () => {
+  const session = {};
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  const userModel = {
+    findUserById: jest.fn().mockResolvedValue({
+      whatsapp: '08123',
+      insta: '',
+      tiktok: 'TikTokUser',
+      nama: 'Nama Lengkap',
+      status: true,
+      client_id: 'client99',
+    }),
+  };
+  mockHasUserCommentedBetween.mockResolvedValueOnce(7);
+
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\n\nKendala\n- Sudah melaksanakan TikTok belum terdata.`;
+
+  await clientRequestHandlers.respondComplaint_message(
+    session,
+    chatId,
+    complaintMessage,
+    waClient,
+    null,
+    userModel
+  );
+
+  expect(mockHasUserCommentedBetween).toHaveBeenCalledWith(
+    '@TikTokUser',
+    '2025-09-01',
+    expect.any(Date),
+    'client99'
+  );
+  expect(mockHasUserLikedBetween).not.toHaveBeenCalled();
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    '08123@wa',
+    expect.stringContaining('Tidak ada kendala')
+  );
+  expect(mockSafeSendMessage.mock.calls[0][2]).toContain('@TikTokUser');
+  expect(mockFetchTiktokProfile).toHaveBeenCalledTimes(1);
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
 });
