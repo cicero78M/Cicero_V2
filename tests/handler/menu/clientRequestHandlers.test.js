@@ -169,5 +169,44 @@ describe('bulkStatus_process', () => {
     expect(summaryMessage).toContain('User tidak ditemukan');
     expect(session.step).toBe('main');
   });
+
+  it('parses reason-first entries that include the name in parentheses', async () => {
+    const session = { step: 'bulkStatus_process' };
+    const chatId = 'chat-reason-first';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    const updateUserField = jest.fn().mockResolvedValue();
+
+    const requestMessage = [
+      'Permohonan Penghapusan Data Personil - POLRESTABES SURABAYA',
+      '',
+      '1. MUTASI (AIPTU ERWAN WAHYUDI) • 76070503',
+      '2. PENSIUN (AIPTU KANTUN SUTRISNO) – 67030561',
+    ].join('\n');
+
+    await clientRequestHandlers.bulkStatus_process(
+      session,
+      chatId,
+      requestMessage,
+      { sendMessage },
+      undefined,
+      { updateUserField }
+    );
+
+    const statusCalls = updateUserField.mock.calls.filter(
+      ([, field]) => field === 'status'
+    );
+    expect(statusCalls.map(([id]) => id)).toEqual(['76070503', '67030561']);
+
+    const whatsappCalls = updateUserField.mock.calls.filter(
+      ([, field]) => field === 'whatsapp'
+    );
+    expect(whatsappCalls.map(([id]) => id)).toEqual(['76070503', '67030561']);
+
+    const summaryMessage = sendMessage.mock.calls[0][1];
+    expect(summaryMessage).toContain('76070503 (AIPTU ERWAN WAHYUDI) • MUTASI');
+    expect(summaryMessage).toContain('67030561 (AIPTU KANTUN SUTRISNO) • PENSIUN');
+    expect(session.step).toBe('main');
+  });
 });
 

@@ -176,7 +176,22 @@ function ensureHandle(value) {
 const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
 
 function standardizeDash(value) {
-  return value.replace(/[\u2012-\u2015]/g, "-");
+  return value
+    .replace(/[\u2012-\u2015]/g, "-")
+    .replace(/[•●▪]/g, "-");
+}
+
+function extractNameAndReason(segment) {
+  const trimmed = segment.trim();
+  const match = trimmed.match(/^(?<reason>[^()]+?)\s*\((?<name>.+?)\)$/);
+  if (match?.groups) {
+    const { reason, name } = match.groups;
+    return {
+      name: name.trim(),
+      reason: reason.trim(),
+    };
+  }
+  return { name: trimmed, reason: "" };
 }
 
 function parseBulkStatusEntries(message) {
@@ -184,16 +199,33 @@ function parseBulkStatusEntries(message) {
   const lines = standardized.split(/\r?\n/);
   const entries = [];
   const entryRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+?)\s+-\s+(.+)$/;
+  const fallbackRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+)$/;
 
   for (const line of lines) {
     const match = line.match(entryRegex);
-    if (!match) continue;
-    const [, index, name, rawId, reason] = match;
+    if (match) {
+      const [, index, name, rawId, reason] = match;
+      entries.push({
+        index: Number(index),
+        name: name.trim(),
+        rawId: rawId.trim(),
+        reason: reason.trim(),
+        line: line.trim(),
+      });
+      continue;
+    }
+
+    const fallbackMatch = line.match(fallbackRegex);
+    if (!fallbackMatch) continue;
+
+    const [, index, firstSegment, rawId] = fallbackMatch;
+    const { name, reason } = extractNameAndReason(firstSegment);
+
     entries.push({
       index: Number(index),
-      name: name.trim(),
+      name,
       rawId: rawId.trim(),
-      reason: reason.trim(),
+      reason,
       line: line.trim(),
     });
   }
