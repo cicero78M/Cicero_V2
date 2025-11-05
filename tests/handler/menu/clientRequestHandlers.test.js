@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 import clientRequestHandlers, {
   normalizeComplaintHandle,
   parseComplaintMessage,
@@ -62,6 +64,40 @@ describe('parseComplaintMessage', () => {
 
     expect(parsed.instagram).toBe('@example.user');
     expect(parsed.tiktok).toBe('@anotheruser');
+  });
+});
+
+describe('kelolaUser mass status option', () => {
+  it('shows bulk status choice in the kelola user menu', async () => {
+    const session = {};
+    const chatId = 'chat-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.kelolaUser_choose(session, chatId, '', {
+      sendMessage,
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('4️⃣ Ubah Status Massal')
+    );
+    expect(session.step).toBe('kelolaUser_menu');
+  });
+
+  it('redirects kelola user option 4 to the bulk status prompt', async () => {
+    const session = {};
+    const chatId = 'chat-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.kelolaUser_menu(session, chatId, '4', {
+      sendMessage,
+    });
+
+    expect(session.step).toBe('bulkStatus_process');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Permohonan Penghapusan Data Personil')
+    );
   });
 });
 
