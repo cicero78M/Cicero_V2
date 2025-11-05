@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 import clientRequestHandlers, {
   normalizeComplaintHandle,
   parseComplaintMessage,
+  parseBulkStatusEntries,
 } from '../../../src/handler/menu/clientRequestHandlers.js';
 
 describe('normalizeComplaintHandle', () => {
@@ -207,6 +208,48 @@ describe('bulkStatus_process', () => {
     expect(summaryMessage).toContain('76070503 (AIPTU ERWAN WAHYUDI) • MUTASI');
     expect(summaryMessage).toContain('67030561 (AIPTU KANTUN SUTRISNO) • PENSIUN');
     expect(session.step).toBe('main');
+  });
+});
+
+describe('parseBulkStatusEntries', () => {
+  it('extracts id and reason from narrative sentences', () => {
+    const message = [
+      'Mohon bantu nonaktifkan personel atas nama Brigadir Budi Hartono NRP 75020205 karena pindah tugas ke Ditreskrimum.',
+      'Terima kasih.',
+    ].join(' ');
+
+    const { entries } = parseBulkStatusEntries(message);
+
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rawId: '75020205',
+          reason: 'pindah tugas ke Ditreskrimum',
+        }),
+      ])
+    );
+  });
+
+  it('merges numbered entries with narrative requests', () => {
+    const message = [
+      'Permohonan Penghapusan Data Personil - POLRES CONTOH',
+      '1. Asep Sunandar - 75020201 - mutasi',
+      'Mohon juga user 75020205 karena data ganda di satuan lain.',
+      '2. Budi Santoso - 75020202 - pensiun',
+    ].join('\n');
+
+    const { entries } = parseBulkStatusEntries(message);
+
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rawId: '75020201', reason: 'mutasi' }),
+        expect.objectContaining({ rawId: '75020202', reason: 'pensiun' }),
+        expect.objectContaining({
+          rawId: '75020205',
+          reason: 'data ganda di satuan lain',
+        }),
+      ])
+    );
   });
 });
 
