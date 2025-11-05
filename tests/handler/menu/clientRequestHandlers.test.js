@@ -1,4 +1,4 @@
-import {
+import clientRequestHandlers, {
   normalizeComplaintHandle,
   parseComplaintMessage,
 } from '../../../src/handler/menu/clientRequestHandlers.js';
@@ -62,6 +62,76 @@ describe('parseComplaintMessage', () => {
 
     expect(parsed.instagram).toBe('@example.user');
     expect(parsed.tiktok).toBe('@anotheruser');
+  });
+});
+
+describe('bulkStatus_process', () => {
+  it('updates every listed user and reports summary with reasons', async () => {
+    const session = { step: 'bulkStatus_prompt' };
+    const chatId = 'chat-1';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.bulkStatus_prompt(session, chatId, '', {
+      sendMessage,
+    });
+
+    expect(session.step).toBe('bulkStatus_process');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Permohonan Penghapusan Data Personil')
+    );
+
+    sendMessage.mockClear();
+
+    const updateUserField = jest.fn(async (userId, field) => {
+      if (userId === '75020203' && field === 'status') {
+        throw new Error('User tidak ditemukan');
+      }
+    });
+
+    const requestMessage = [
+      'Permohonan Penghapusan Data Personil – Polres Contoh',
+      '',
+      '1. Asep Sunandar – 75020201 – mutasi',
+      '2. Budi Santoso - 75020202 - pensiun',
+      '3. Carla Dewi – 75020203 – double data',
+    ].join('\n');
+
+    await clientRequestHandlers.bulkStatus_process(
+      session,
+      chatId,
+      requestMessage,
+      { sendMessage },
+      undefined,
+      { updateUserField }
+    );
+
+    const statusCalls = updateUserField.mock.calls.filter(
+      ([, field]) => field === 'status'
+    );
+    expect(statusCalls).toHaveLength(3);
+    expect(statusCalls.map(([id]) => id)).toEqual([
+      '75020201',
+      '75020202',
+      '75020203',
+    ]);
+
+    const whatsappCalls = updateUserField.mock.calls.filter(
+      ([, field]) => field === 'whatsapp'
+    );
+    expect(whatsappCalls).toHaveLength(2);
+    expect(whatsappCalls.map(([id]) => id)).toEqual([
+      '75020201',
+      '75020202',
+    ]);
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    const summaryMessage = sendMessage.mock.calls[0][1];
+    expect(summaryMessage).toContain('✅ Status dinonaktifkan untuk 2 personel');
+    expect(summaryMessage).toContain('75020201 (Asep Sunandar) • mutasi');
+    expect(summaryMessage).toContain('double data');
+    expect(summaryMessage).toContain('User tidak ditemukan');
+    expect(session.step).toBe('main');
   });
 });
 
