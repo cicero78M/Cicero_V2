@@ -7,6 +7,7 @@ import {
   sortDivisionKeys,
   formatNama,
   normalizeUserId,
+  normalizeEmail,
   getGreeting,
   formatUserData,
   formatComplaintIssue,
@@ -32,12 +33,13 @@ import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTiktokProfile } from "../../service/tiktokRapidService.js";
 import { hasUserLikedBetween } from "../../model/instaLikeModel.js";
 import { hasUserCommentedBetween } from "../../model/tiktokCommentModel.js";
+import { sendComplaintEmail } from "../../service/emailService.js";
 
 function ignore(..._args) {}
 
 async function sendComplaintResponse(session, waClient) {
   const data = session.respondComplaint || {};
-  const { nrp, user, issue, solution } = data;
+  const { nrp, user, issue, solution, channel: storedChannel } = data;
 
   if (!nrp || !user || !issue || !solution) {
     throw new Error("Data komplain tidak lengkap.");
@@ -45,7 +47,6 @@ async function sendComplaintResponse(session, waClient) {
 
   const salam = getGreeting();
   const reporterName = formatNama(user) || user.nama || nrp;
-  const target = formatToWhatsAppId(user.whatsapp);
   const message = [
     `${salam}! Kami menindaklanjuti laporan yang Anda sampaikan.`,
     `\n*Pelapor*: ${reporterName}`,
@@ -58,8 +59,30 @@ async function sendComplaintResponse(session, waClient) {
     .join("\n")
     .trim();
 
-  await safeSendMessage(waClient, target, message);
-  return { reporterName, nrp };
+  const whatsappNumber = user?.whatsapp ? String(user.whatsapp).trim() : "";
+  const normalizedEmail = normalizeEmail(user?.email);
+  const channel =
+    storedChannel ||
+    (whatsappNumber
+      ? "whatsapp"
+      : normalizedEmail
+      ? "email"
+      : "");
+
+  if (channel === "whatsapp") {
+    const target = formatToWhatsAppId(whatsappNumber);
+    await safeSendMessage(waClient, target, message);
+  } else if (channel === "email") {
+    if (!normalizedEmail) {
+      throw new Error("Email pelapor tidak tersedia.");
+    }
+    const subject = `Tindak Lanjut Laporan Cicero - ${reporterName}`;
+    await sendComplaintEmail(normalizedEmail, subject, message);
+  } else {
+    throw new Error("Kanal pengiriman respon tidak tersedia.");
+  }
+
+  return { reporterName, nrp, channel };
 }
 
 const numberFormatter = new Intl.NumberFormat("id-ID");
@@ -2834,13 +2857,25 @@ export const clientRequestHandlers = {
     ].join("\n");
     await waClient.sendMessage(chatId, userSummary);
 
-    if (!user.whatsapp) {
+    const whatsappNumber = user?.whatsapp ? String(user.whatsapp).trim() : "";
+    const normalizedEmail = normalizeEmail(user?.email);
+    const hasWhatsapp = Boolean(whatsappNumber);
+    const hasEmail = Boolean(normalizedEmail);
+
+    if (!hasWhatsapp && !hasEmail) {
       await waClient.sendMessage(
         chatId,
         `User *${nrp}* (${formatNama(user) || user.nama || "-"}) belum memiliki nomor WhatsApp terdaftar. Masukkan NRP lain atau ketik *batal* untuk keluar.`
       );
       return;
     }
+    const contactChannel = hasWhatsapp ? "whatsapp" : "email";
+    session.respondComplaint = {
+      ...(session.respondComplaint || {}),
+      nrp,
+      user,
+      channel: contactChannel,
+    };
     const instaUsername =
       typeof user.insta === "string" ? user.insta.trim() : user.insta || "";
     const tiktokUsername =
@@ -2861,6 +2896,7 @@ export const clientRequestHandlers = {
       ].join("\n");
 
       session.respondComplaint = {
+        ...(session.respondComplaint || {}),
         nrp,
         user,
         accountStatus: null,
@@ -2880,6 +2916,7 @@ export const clientRequestHandlers = {
 
     if (!hasInsta && !hasTiktok) {
       session.respondComplaint = {
+        ...(session.respondComplaint || {}),
         nrp,
         user,
         accountStatus,
@@ -2921,6 +2958,7 @@ export const clientRequestHandlers = {
       : formatComplaintIssue(parsedComplaint.raw);
 
     session.respondComplaint = {
+      ...(session.respondComplaint || {}),
       nrp,
       user,
       accountStatus,

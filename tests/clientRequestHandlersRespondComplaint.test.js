@@ -12,6 +12,8 @@ const mockFetchInstagramInfo = jest.fn();
 const mockFetchTiktokProfile = jest.fn();
 const mockHasUserLikedBetween = jest.fn();
 const mockHasUserCommentedBetween = jest.fn();
+const mockSendComplaintEmail = jest.fn();
+const mockNormalizeEmail = jest.fn();
 
 jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
   absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
@@ -23,6 +25,7 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   sortDivisionKeys: jest.fn(),
   formatNama: mockFormatNama,
   normalizeUserId: mockNormalizeUserId,
+  normalizeEmail: mockNormalizeEmail,
   getGreeting: mockGetGreeting,
   formatUserData: mockFormatUserData,
   formatComplaintIssue: mockFormatComplaintIssue,
@@ -34,6 +37,11 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: jest.fn(),
   formatToWhatsAppId: mockFormatToWhatsAppId,
   safeSendMessage: mockSafeSendMessage,
+}));
+
+jest.unstable_mockModule('../src/service/emailService.js', () => ({
+  sendComplaintEmail: mockSendComplaintEmail,
+  sendOtpEmail: jest.fn(),
 }));
 
 jest.unstable_mockModule('../src/db/index.js', () => ({ query: jest.fn() }));
@@ -81,6 +89,9 @@ beforeEach(() => {
   mockFormatToWhatsAppId.mockImplementation((value) => `${value}@wa`);
   mockFormatUserData.mockReturnValue('```\nMock User\n```');
   mockFormatComplaintIssue.mockImplementation((value) => value.trim());
+  mockNormalizeEmail.mockImplementation((value) =>
+    value === undefined || value === null ? '' : String(value).trim().toLowerCase()
+  );
   mockFetchInstagramInfo.mockResolvedValue({
     follower_count: 1234,
     following_count: 321,
@@ -96,6 +107,7 @@ beforeEach(() => {
   });
   mockHasUserLikedBetween.mockResolvedValue(0);
   mockHasUserCommentedBetween.mockResolvedValue(0);
+  mockSendComplaintEmail.mockResolvedValue();
 });
 
 test('respondComplaint_message automatically sends default response when social usernames are empty', async () => {
@@ -136,6 +148,7 @@ test('respondComplaint_message automatically sends default response when social 
     chatId,
     expect.stringContaining('Ringkasan Respon Komplain')
   );
+  expect(mockSendComplaintEmail).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     1,
     chatId,
@@ -199,6 +212,7 @@ test('respondComplaint_message sends activation guidance when akun tidak aktif',
     chatId,
     expect.stringContaining('Ringkasan Respon Komplain')
   );
+  expect(mockSendComplaintEmail).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenNthCalledWith(
     1,
     chatId,
@@ -214,6 +228,69 @@ test('respondComplaint_message sends activation guidance when akun tidak aktif',
     chatId,
     '✅ Respon komplain telah dikirim ke Pelapor (12345).'
   );
+  expect(session.step).toBe('main');
+  expect(session.respondComplaint).toBeUndefined();
+});
+
+test('respondComplaint_message falls back to email when WhatsApp is missing', async () => {
+  const session = {};
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  const userModel = {
+    findUserById: jest.fn().mockResolvedValue({
+      whatsapp: '   ',
+      email: 'Pelapor@Example.com ',
+      insta: '',
+      tiktok: '',
+      nama: 'Nama Lengkap',
+      status: true,
+    }),
+  };
+
+  const complaintMessage = `Pesan Komplain\nNRP    : 12345\n\nKendala\n- Sudah melaksanakan Instagram belum terdata.`;
+
+  await clientRequestHandlers.respondComplaint_message(
+    session,
+    chatId,
+    complaintMessage,
+    waClient,
+    null,
+    userModel
+  );
+
+  expect(mockSendComplaintEmail).toHaveBeenCalledTimes(1);
+  expect(mockSendComplaintEmail).toHaveBeenCalledWith(
+    'pelapor@example.com',
+    expect.stringContaining('Tindak Lanjut Laporan Cicero'),
+    expect.stringContaining('Solusi/Tindak Lanjut')
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    chatId,
+    expect.stringContaining('Ringkasan Respon Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    1,
+    chatId,
+    expect.stringContaining('Data Pelapor')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    2,
+    chatId,
+    expect.stringContaining('Pesan Komplain')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    3,
+    chatId,
+    expect.stringContaining('Status Akun Sosial Media')
+  );
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    4,
+    chatId,
+    '✅ Respon komplain telah dikirim ke Pelapor (12345).'
+  );
+  expect(mockFormatToWhatsAppId).not.toHaveBeenCalled();
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
 });
