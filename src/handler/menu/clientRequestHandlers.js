@@ -3183,37 +3183,72 @@ export const clientRequestHandlers = {
 
     for (const entry of entries) {
       const normalizedId = normalizeUserId(entry.rawId);
+      const fallbackName = entry.name || "";
       if (!normalizedId) {
         failures.push({
           ...entry,
+          name: fallbackName,
           userId: "",
           error: "user_id tidak valid",
         });
         continue;
       }
 
+      let dbUser;
+      try {
+        dbUser = await userModel.findUserById(normalizedId);
+      } catch (err) {
+        failures.push({
+          ...entry,
+          name: fallbackName,
+          userId: normalizedId,
+          error: `gagal mengambil data user: ${err?.message || String(err)}`,
+        });
+        continue;
+      }
+
+      if (!dbUser) {
+        failures.push({
+          ...entry,
+          name: fallbackName,
+          userId: normalizedId,
+          error: "user tidak ditemukan",
+        });
+        continue;
+      }
+
+      const officialName =
+        formatNama(dbUser) || dbUser.nama || fallbackName || normalizedId;
+
       try {
         await userModel.updateUserField(normalizedId, "status", false);
       } catch (err) {
         failures.push({
           ...entry,
+          name: officialName,
           userId: normalizedId,
           error: err?.message || String(err),
         });
         continue;
       }
 
-      let whatsappError = null;
       try {
         await userModel.updateUserField(normalizedId, "whatsapp", "");
       } catch (err) {
-        whatsappError = err;
+        const note = err?.message || String(err);
+        failures.push({
+          ...entry,
+          name: officialName,
+          userId: normalizedId,
+          error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
+        });
+        continue;
       }
 
       successes.push({
         ...entry,
+        name: officialName,
         userId: normalizedId,
-        whatsappError,
       });
     }
 
@@ -3223,17 +3258,11 @@ export const clientRequestHandlers = {
 
     if (successes.length) {
       lines.push("", `✅ Status dinonaktifkan untuk ${successes.length} personel:`);
-      successes.forEach(({ userId, name, reason }) => {
-        lines.push(`- ${userId} (${name}) • ${reason}`);
+      successes.forEach(({ userId, name, reason, rawId }) => {
+        const displayName = name || rawId || userId;
+        const reasonLabel = reason ? ` • ${reason}` : "";
+        lines.push(`- ${userId} (${displayName})${reasonLabel}`);
       });
-      const whatsappWarnings = successes.filter((s) => s.whatsappError);
-      if (whatsappWarnings.length) {
-        lines.push("", "⚠️ Catatan WhatsApp:");
-        whatsappWarnings.forEach(({ userId, whatsappError }) => {
-          const note = whatsappError?.message || String(whatsappError);
-          lines.push(`- ${userId}: ${note}`);
-        });
-      }
     }
 
     if (failures.length) {
@@ -3242,8 +3271,10 @@ export const clientRequestHandlers = {
         `❌ ${failures.length} entri gagal diproses:`
       );
       failures.forEach(({ rawId, userId, name, reason, error }) => {
-        const idLabel = userId || rawId;
-        lines.push(`- ${idLabel} (${name}) • ${reason} → ${error}`);
+        const idLabel = userId || rawId || "-";
+        const displayName = name || idLabel;
+        const reasonLabel = reason ? ` • ${reason}` : "";
+        lines.push(`- ${idLabel} (${displayName})${reasonLabel} → ${error}`);
       });
     }
 

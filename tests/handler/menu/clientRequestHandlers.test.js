@@ -103,7 +103,7 @@ describe('kelolaUser mass status option', () => {
 });
 
 describe('bulkStatus_process', () => {
-  it('updates every listed user and reports summary with reasons', async () => {
+  it('updates every listed user, fetches official names, and reports summary with reasons', async () => {
     const session = { step: 'bulkStatus_prompt' };
     const chatId = 'chat-1';
     const sendMessage = jest.fn().mockResolvedValue();
@@ -121,9 +121,18 @@ describe('bulkStatus_process', () => {
     sendMessage.mockClear();
 
     const updateUserField = jest.fn(async (userId, field) => {
-      if (userId === '75020203' && field === 'status') {
-        throw new Error('User tidak ditemukan');
+      if (userId === '75020202' && field === 'whatsapp') {
+        throw new Error('Tidak dapat menghapus WhatsApp');
       }
+    });
+    const findUserById = jest.fn(async (userId) => {
+      if (userId === '75020201') {
+        return { user_id: userId, title: 'AKP', nama: 'Asep Sunandar' };
+      }
+      if (userId === '75020202') {
+        return { user_id: userId, title: 'IPTU', nama: 'Budi Santoso' };
+      }
+      return null;
     });
 
     const requestMessage = [
@@ -140,18 +149,14 @@ describe('bulkStatus_process', () => {
       requestMessage,
       { sendMessage },
       undefined,
-      { updateUserField }
+      { updateUserField, findUserById }
     );
 
     const statusCalls = updateUserField.mock.calls.filter(
       ([, field]) => field === 'status'
     );
-    expect(statusCalls).toHaveLength(3);
-    expect(statusCalls.map(([id]) => id)).toEqual([
-      '75020201',
-      '75020202',
-      '75020203',
-    ]);
+    expect(statusCalls).toHaveLength(2);
+    expect(statusCalls.map(([id]) => id)).toEqual(['75020201', '75020202']);
 
     const whatsappCalls = updateUserField.mock.calls.filter(
       ([, field]) => field === 'whatsapp'
@@ -164,10 +169,14 @@ describe('bulkStatus_process', () => {
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
     const summaryMessage = sendMessage.mock.calls[0][1];
-    expect(summaryMessage).toContain('✅ Status dinonaktifkan untuk 2 personel');
-    expect(summaryMessage).toContain('75020201 (Asep Sunandar) • mutasi');
-    expect(summaryMessage).toContain('double data');
-    expect(summaryMessage).toContain('User tidak ditemukan');
+    expect(summaryMessage).toContain('✅ Status dinonaktifkan untuk 1 personel');
+    expect(summaryMessage).toContain('75020201 (AKP Asep Sunandar) • mutasi');
+    expect(summaryMessage).toContain(
+      '75020202 (IPTU Budi Santoso) • pensiun → status dinonaktifkan, namun gagal mengosongkan WhatsApp: Tidak dapat menghapus WhatsApp'
+    );
+    expect(summaryMessage).toContain(
+      '75020203 (Carla Dewi) • double data → user tidak ditemukan'
+    );
     expect(session.step).toBe('main');
   });
 
@@ -191,7 +200,18 @@ describe('bulkStatus_process', () => {
       requestMessage,
       { sendMessage },
       undefined,
-      { updateUserField }
+      {
+        updateUserField,
+        findUserById: jest.fn(async (userId) => {
+          if (userId === '76070503') {
+            return { user_id: userId, title: 'AIPTU', nama: 'ERWAN WAHYUDI' };
+          }
+          if (userId === '67030561') {
+            return { user_id: userId, title: 'AIPTU', nama: 'KANTUN SUTRISNO' };
+          }
+          return null;
+        }),
+      }
     );
 
     const statusCalls = updateUserField.mock.calls.filter(
