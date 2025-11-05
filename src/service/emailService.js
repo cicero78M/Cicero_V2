@@ -20,3 +20,12 @@ export async function sendOtpEmail(email, otp) {
     text: `Kode OTP Anda: ${otp}`,
   });
 }
+
+export async function sendComplaintEmail(email, subject, message) {
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: email,
+    subject,
+    text: message,
+  });
+}
