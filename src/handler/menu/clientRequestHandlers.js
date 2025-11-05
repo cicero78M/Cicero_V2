@@ -1735,7 +1735,7 @@ export const clientRequestHandlers = {
   ) => {
     await waClient.sendMessage(
       chatId,
-      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\nKetik angka menu atau *batal* untuk keluar.`
+      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\n4️⃣ Ubah Status Massal\nKetik angka menu atau *batal* untuk keluar.`
     );
     session.step = "kelolaUser_menu";
   },
@@ -1747,10 +1747,22 @@ export const clientRequestHandlers = {
     pool,
     userModel
   ) => {
-    if (!/^[1-3]$/.test(text.trim())) {
+    if (!/^[1-4]$/.test(text.trim())) {
       await waClient.sendMessage(
         chatId,
         "Pilihan tidak valid. Balas angka menu."
+      );
+      return;
+    }
+    if (text.trim() === "4") {
+      delete session.kelolaUser_mode;
+      await clientRequestHandlers.bulkStatus_prompt(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
       );
       return;
     }

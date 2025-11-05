@@ -1468,6 +1468,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 1️⃣5️⃣ Download Docs
 1️⃣6️⃣ Absensi Operator Ditbinmas
 1️⃣7️⃣ Response Komplain
+1️⃣8️⃣ Penghapusan Massal Status User
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk keluar.
 `.trim()
