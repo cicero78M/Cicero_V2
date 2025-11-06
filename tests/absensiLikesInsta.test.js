@@ -263,6 +263,6 @@ test('lapharDitbinmas does not count exception usernames as likes', async () => 
 
   const result = await lapharDitbinmas();
 
-  expect(result.narrative).toMatch(/https:\/\/www.instagram.com\/p\/sc1 : 0/);
+  expect(result.narrative).toMatch(/https:\/\/www.instagram.com\/p\/sc1 — 0 likes/);
 });
 
