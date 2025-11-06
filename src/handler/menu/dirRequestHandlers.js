@@ -565,30 +565,135 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const parsePart = (text) => {
-    const afterDir = text.split("DIREKTORAT BINMAS")[1] || "";
-    const [beforeUpdate, afterUpdate = ""] = afterDir.split("Absensi Update Data");
-    return { beforeUpdate: beforeUpdate.trim(), afterUpdate: afterUpdate.trim() };
+  const parsePart = (text, { platform }) => {
+    const normalized = (text || "").replace(/\r\n/g, "\n");
+    const lines = normalized.split("\n").map((line) => line.trimEnd());
+
+    const matchLine = (regex) => {
+      const idx = lines.findIndex((line) => regex.test(line));
+      return idx === -1 ? null : lines[idx];
     };
 
-  const igParts = parsePart(igNarrative);
-  const ttParts = parsePart(ttNarrative);
+    const summary = {
+      content: matchLine(/Konten(?: Tiktok)? hari ini:/i),
+      performance: matchLine(/Kinerja (?:Likes|Komentar) konten:/i),
+      target: matchLine(/Target harian ≥95% =/i),
+    };
 
-  const intro =
-    `Mohon Ijin Komandan, melaporkan perkembangan implementasi update data dan absensi engagement Instagram, TikTok dan update data oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
-    `DIREKTORAT BINMAS\n\n`;
+    const contributorIdx = lines.findIndex((line) =>
+      /^Kontributor (?:likes|komentar) terbesar/i.test(line)
+    );
+    const contributor =
+      contributorIdx === -1
+        ? ""
+        : [lines[contributorIdx], lines[contributorIdx + 1] || ""].join("\n").trim();
 
-  const updateSection = igParts.afterUpdate
-    ? `ABSENSI UPDATE DATA PERSONIL\n\n${igParts.afterUpdate}`.trim()
+    const highlightMatch = normalized.match(
+      /#\s*Highlight[\s\S]*?(?=#\s*Konsentrasi|##\s*Catatan|Demikian|$)/i
+    );
+    const highlightSection = highlightMatch ? highlightMatch[0].trim() : "";
+
+    const catatanMatch = normalized.match(/##\s*Catatan[\s\S]*?(?=Demikian|$)/i);
+    const catatanSection = catatanMatch ? catatanMatch[0].trim() : "";
+
+    const headingIndex = lines.findIndex((line) => /^#\s*Highlight/i.test(line));
+    const limitIndex = headingIndex === -1 ? lines.length : headingIndex;
+    const absensiCandidates = [];
+    for (let i = 0; i < limitIndex; i += 1) {
+      const line = lines[i].trim();
+      if (line.startsWith("*")) absensiCandidates.push(line);
+    }
+    const absensiSummary = absensiCandidates.slice(0, 4);
+
+    const dirIndex = lines.findIndex((line) => line.toUpperCase() === "DIREKTORAT BINMAS");
+    const rawBody = lines
+      .slice(dirIndex === -1 ? 0 : dirIndex + 1)
+      .filter((line) =>
+        line &&
+        !line.startsWith("Mohon Ijin Komandan") &&
+        !/^Demikian/i.test(line)
+      )
+      .join("\n")
+      .trim();
+
+    return {
+      platform,
+      summary,
+      contributor,
+      highlightSection,
+      catatanSection,
+      absensiSummary,
+      rawBody,
+    };
+  };
+
+  const igParts = parsePart(igNarrative, { platform: "Instagram" });
+  const ttParts = parsePart(ttNarrative, { platform: "TikTok" });
+
+  const formatSummaryLine = (parts, icon) => {
+    if (!parts.summary.content && !parts.summary.performance && !parts.summary.target)
+      return "";
+
+    const pieces = [];
+    const contentMatch = parts.summary.content?.match(/: ([^\n]+)/);
+    if (contentMatch) {
+      const countMatch = contentMatch[1].match(/[0-9][0-9.,]*/);
+      pieces.push(countMatch ? `${countMatch[0]} konten` : contentMatch[1].trim());
+    }
+
+    const performanceMatch = parts.summary.performance?.match(/: ([^\n]+)/);
+    if (performanceMatch) pieces.push(performanceMatch[1].trim());
+
+    const targetMatch = parts.summary.target?.match(/= ([^\n]+)/);
+    if (targetMatch) {
+      const [targetValue, gapValue] = targetMatch[1].split("→").map((s) => s.trim());
+      if (targetValue) pieces.push(`Target ${targetValue}`);
+      if (gapValue) pieces.push(`Gap: ${gapValue}`);
+    }
+
+    return `${icon} *${parts.platform}:* ${pieces.join("; ")}`.trim();
+  };
+
+  const header = `*Laporan Harian Pelaksanaan Engagement* – ${hari}, ${tanggal} ${jam} WIB`;
+  const summaryLines = [formatSummaryLine(igParts, "📸"), formatSummaryLine(ttParts, "🎵")].filter(Boolean);
+  const summaryBlock = summaryLines.length
+    ? ["📊 *Ringkasan Cepat*", ...summaryLines].join("\n")
     : "";
 
-  return [
-    `${intro}${igParts.beforeUpdate}`,
-    ttParts.beforeUpdate,
-    updateSection,
-  ]
+  const detailSections = ["*DIREKTORAT BINMAS*"];
+
+  if (igParts.contributor || igParts.highlightSection || igParts.rawBody) {
+    detailSections.push(
+      "",
+      "📸 *Instagram*",
+      igParts.contributor,
+      igParts.highlightSection || igParts.rawBody
+    );
+  }
+
+  if (ttParts.contributor || ttParts.highlightSection || ttParts.rawBody) {
+    detailSections.push(
+      "",
+      "🎵 *TikTok*",
+      ttParts.contributor,
+      ttParts.highlightSection || ttParts.rawBody
+    );
+  }
+
+  const absensiSummary =
+    igParts.absensiSummary.length ? igParts.absensiSummary : ttParts.absensiSummary;
+  if (absensiSummary.length) {
+    detailSections.push("", "📋 *Status Personel Engagement*", absensiSummary.join("\n"));
+  }
+
+  const catatanSection = igParts.catatanSection || ttParts.catatanSection;
+  if (catatanSection) detailSections.push("", catatanSection);
+
+  detailSections.push("", "Demikian laporan singkat, Komandan.");
+
+  return [header, "", summaryBlock, "", detailSections.filter(Boolean).join("\n")] // appended list
     .filter(Boolean)
-    .join("\n\n")
+    .join("\n")
     .trim();
 }
 
