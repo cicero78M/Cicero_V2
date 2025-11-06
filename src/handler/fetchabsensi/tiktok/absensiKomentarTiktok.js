@@ -379,9 +379,9 @@ export async function absensiKomentar(client_id, opts = {}) {
       maximumFractionDigits: 1,
     });
 
-  const usersWithUsername = users.filter(
-    (u) => u.tiktok && u.tiktok.trim() !== ""
-  );
+  const usersWithUsername = users
+    .filter((u) => u.tiktok && u.tiktok.trim() !== "")
+    .map((u) => ({ ...u, count: userStats[u.user_id]?.count || 0 }));
   const targetPerUser = Math.ceil(totalKonten / 2) || 0;
   const totalEligible = usersWithUsername.length;
   const totalInteractions = Object.values(userStats).reduce(
@@ -426,9 +426,9 @@ export async function absensiKomentar(client_id, opts = {}) {
     return `${snippet} – ${fmtNumber(stat.commenters)} akun (${stat.link})`;
   };
 
-  const contributorCandidates = usersWithUsername
-    .map((u) => ({ ...u, count: userStats[u.user_id]?.count || 0 }))
-    .sort((a, b) => b.count - a.count || formatNama(a).localeCompare(formatNama(b)));
+  const contributorCandidates = [...usersWithUsername].sort(
+    (a, b) => b.count - a.count || formatNama(a).localeCompare(formatNama(b))
+  );
   const topContributors = contributorCandidates.slice(0, 3);
   const topContributorLines = topContributors.length
     ? topContributors
