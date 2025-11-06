@@ -1447,31 +1447,22 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
-    await waClient.sendMessage(
+    await clientRequestHandlers.main(
+      getSession(chatId),
       chatId,
-      `
-┏━━━ *MENU CLIENT CICERO* ━━━
-1️⃣ Tambah client baru
-2️⃣ Kelola client (update/hapus/info)
-3️⃣ Kelola user (update/exception/status)
-4️⃣ Proses Instagram
-5️⃣ Proses TikTok
-6️⃣ Absensi Username Instagram
-7️⃣ Absensi Username TikTok
-8️⃣ Transfer User
-9️⃣ Exception Info
-🔟 Hapus WA Admin
-1️⃣1️⃣ Hapus WA User
-1️⃣2️⃣ Transfer User Sheet
-1️⃣3️⃣ Download Sheet Amplifikasi
-1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
-1️⃣5️⃣ Download Docs
-1️⃣6️⃣ Absensi Operator Ditbinmas
-1️⃣7️⃣ Response Komplain
-1️⃣8️⃣ Penghapusan Massal Status User
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Ketik *angka* menu, atau *batal* untuk keluar.
-`.trim()
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      handleFetchLikesInstagram,
+      handleFetchKomentarTiktokBatch
     );
     return;
   }
