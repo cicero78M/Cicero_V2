@@ -85,6 +85,7 @@ export async function calculateDitbinmasStats(data) {
   };
   const perClientStats = [];
   const perClientBelumBlocks = [];
+  const personnelLikesByContent = new Array(shortcodes.length).fill(0);
 
   for (const cid of clientIds) {
     const users = usersByClient[cid] || [];
@@ -102,8 +103,11 @@ export async function calculateDitbinmasStats(data) {
       }
       const uname = normalizeUsername(u.insta);
       let count = 0;
-      likesSets.forEach((set) => {
-        if (set.has(uname)) count += 1;
+      likesSets.forEach((set, idx) => {
+        if (set.has(uname)) {
+          count += 1;
+          personnelLikesByContent[idx] += 1;
+        }
       });
       if (count === shortcodes.length) already.push({ ...u, count });
       else if (count > 0) partial.push({ ...u, count });
@@ -229,7 +233,7 @@ export async function calculateDitbinmasStats(data) {
   const contentStats = shortcodes.map((shortcode, idx) => ({
     shortcode,
     link: kontenLinks?.[idx] || `https://www.instagram.com/p/${shortcode}`,
-    likes: likesSets[idx] ? likesSets[idx].size : 0,
+    likes: personnelLikesByContent[idx] || 0,
   }));
   const avgLikesPerContent = shortcodes.length
     ? totalLikes / shortcodes.length
