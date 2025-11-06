@@ -1865,15 +1865,92 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const msg = `
 ┏━━━ *Transfer & Laporan* ━━━
 1️⃣ Transfer User
-2️⃣ Transfer User Sheet
-3️⃣ Absensi Operator Ditbinmas
-4️⃣ Response Komplain
+2️⃣ Absensi Operator Ditbinmas
+3️⃣ Response Komplain
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
 `.trim();
 
-    if (!/^[1-4]$/.test(text.trim())) {
+    if (!/^[1-3]$/.test(text.trim())) {
       session.step = "clientMenu_transfer";
+      await waClient.sendMessage(chatId, msg);
+      return;
+    }
+
+    const mapStep = {
+      1: "transferUser_menu",
+      2: "absensiOprDitbinmas",
+      3: "respondComplaint_start",
+    };
+
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
+  },
+
+  transferUser_menu: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    if (text.trim().toLowerCase() === "batal") {
+      await clientRequestHandlers.clientMenu_transfer(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        fetchAndStoreLikesInstaContent,
+        handleFetchKomentarTiktokBatch
+      );
+      return;
+    }
+
+    const msg = `
+┏━━━ *Transfer User* ━━━
+1️⃣ Dari Folder user_data
+2️⃣ Dari Google Sheet
+┗━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* sumber data, atau *batal* untuk kembali.
+`.trim();
+
+    if (!/^[1-2]$/.test(text.trim())) {
+      session.step = "transferUser_menu";
       await waClient.sendMessage(chatId, msg);
       return;
     }
@@ -1881,8 +1958,6 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const mapStep = {
       1: "transferUser_choose",
       2: "transferUserSheet_choose",
-      3: "absensiOprDitbinmas",
-      4: "respondComplaint_start",
     };
 
     session.step = mapStep[text.trim()];
@@ -2941,7 +3016,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
     session.clientList = clients;
-    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    let msg = `*Daftar Client — Sumber Folder user_data*\nBalas angka untuk memilih client tujuan migrasi:\n`;
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
@@ -2970,11 +3045,11 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const client_id = clients[idx].client_id;
     await waClient.sendMessage(
       chatId,
-      `⏳ Migrasi user dari user_data/${client_id}/ ...`
+      `⏳ Migrasi user dari folder *user_data/${client_id}/* ke database...`
     );
     try {
       const result = await migrateUsersFromFolder(client_id);
-      let report = `*Hasil transfer user dari client ${client_id}:*\n`;
+      let report = `*Hasil transfer user dari folder ke client ${client_id}:*\n`;
       result.forEach((r) => {
         report += `- ${r.file}: ${r.status}${
           r.error ? " (" + r.error + ")" : ""}\n`;
@@ -3015,7 +3090,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
     session.clientList = clients;
-    let msg = `*Daftar Client*\nBalas angka untuk memilih:\n`;
+    let msg = `*Daftar Client — Import via Google Sheet*\nBalas angka untuk memilih client tujuan migrasi:\n`;
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
@@ -3042,7 +3117,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.transferSheetClientId = client_id;
     await waClient.sendMessage(
       chatId,
-      `Kirim link Google Sheet untuk transfer user ke *${client_id}*:`
+      `Kirim link Google Sheet yang berisi data user untuk diimport ke *${client_id}*:`
     );
     session.step = "transferUserSheet_action";
   },
@@ -3070,11 +3145,11 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     }
     await waClient.sendMessage(
       chatId,
-      `⏳ Mengambil & migrasi data dari Google Sheet...`
+      `⏳ Mengambil & migrasi data dari Google Sheet untuk client *${client_id}*...`
     );
     try {
       const result = await importUsersFromGoogleSheet(sheetUrl, client_id);
-      let report = `*Hasil import user ke client ${client_id}:*\n`;
+      let report = `*Hasil import user dari Google Sheet ke client ${client_id}:*\n`;
       result.forEach((r) => {
         report += `- ${r.user_id}: ${r.status}${
           r.error ? " (" + r.error + ")" : ""}\n`;
