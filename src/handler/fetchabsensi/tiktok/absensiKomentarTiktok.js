@@ -372,72 +372,158 @@ export async function absensiKomentar(client_id, opts = {}) {
 
   const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
 
+  const fmtNumber = (value) => value.toLocaleString("id-ID");
+  const fmtPercent = (value) =>
+    value.toLocaleString("id-ID", {
+      minimumFractionDigits: value > 0 && value < 1 ? 1 : 0,
+      maximumFractionDigits: 1,
+    });
+
+  const usersWithUsername = users.filter(
+    (u) => u.tiktok && u.tiktok.trim() !== ""
+  );
+  const targetPerUser = Math.ceil(totalKonten / 2) || 0;
+  const totalEligible = usersWithUsername.length;
+  const totalInteractions = Object.values(userStats).reduce(
+    (acc, u) => acc + (u.count || 0),
+    0
+  );
+  const targetInteractions = totalEligible * targetPerUser;
+  const achievementPct = totalEligible
+    ? (sudah.length / totalEligible) * 100
+    : 0;
+  const interactionPct = targetInteractions
+    ? (totalInteractions / targetInteractions) * 100
+    : 0;
+  const backlogUsername = users.length - totalEligible;
+  const belumTarget = usersWithUsername.filter(
+    (u) => u.count < targetPerUser
+  ).length;
+
+  const uniqueParticipants = new Set();
+  commentSets.forEach((set) => {
+    set.forEach((uname) => uniqueParticipants.add(uname));
+  });
+
+  const contentStats = posts.map((post, idx) => ({
+    videoId: post.video_id,
+    link: kontenLinks[idx],
+    caption: post.caption || "",
+    commenters: commentSets[idx]?.size || 0,
+  }));
+  const sortedContent = [...contentStats].sort(
+    (a, b) => b.commenters - a.commenters || a.videoId.localeCompare(b.videoId)
+  );
+  const bestContent = sortedContent[0];
+  const worstContent = sortedContent[sortedContent.length - 1];
+  const formatContentHighlight = (stat) => {
+    if (!stat) return "-";
+    const snippet = stat.caption
+      ? stat.caption.length > 60
+        ? `${stat.caption.slice(0, 57)}…`
+        : stat.caption
+      : stat.videoId;
+    return `${snippet} – ${fmtNumber(stat.commenters)} akun (${stat.link})`;
+  };
+
+  const contributorCandidates = usersWithUsername
+    .map((u) => ({ ...u, count: userStats[u.user_id]?.count || 0 }))
+    .sort((a, b) => b.count - a.count || formatNama(a).localeCompare(formatNama(b)));
+  const topContributors = contributorCandidates.slice(0, 3);
+  const topContributorLines = topContributors.length
+    ? topContributors
+        .map(
+          (u, idx) =>
+            `${idx + 1}. ${formatNama(u)} – ${u.count}/${totalKonten} konten`
+        )
+        .join("\n")
+    : "-";
+
   let msg =
     `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Akumulasi Komentar TikTok*\n*${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
-    `*Jumlah Konten:* ${totalKonten}\n` +
-    `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-    `*Jumlah user:* ${users.length}\n` +
-    `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
-    `❌ *Belum melaksanakan* : *${belum.length} user*\n\n`;
+    `📊 *Rekap Analitik Komentar TikTok*\n` +
+    `*${clientNama}* | ${hari}, ${tanggal} | Jam ${jam} WIB\n\n` +
+    `*Ringkasan Capaian*\n` +
+    `• Konten dipantau : ${totalKonten}\n` +
+    `• Target minimal per personel : ${targetPerUser} konten\n` +
+    `• Personel mencapai target : ${fmtNumber(sudah.length)}/${fmtNumber(totalEligible)} (${fmtPercent(achievementPct)}%)\n` +
+    `• Interaksi aktual : ${fmtNumber(totalInteractions)}/${fmtNumber(targetInteractions || 0)} (${fmtPercent(interactionPct)}%)\n` +
+    `• Partisipan unik : ${fmtNumber(uniqueParticipants.size)} akun\n\n` +
+    `*Sorotan Konten*\n` +
+    `• Performa tertinggi : ${formatContentHighlight(bestContent)}\n` +
+    `• Performa terendah : ${formatContentHighlight(sortedContent.length > 1 ? worstContent : bestContent)}\n\n` +
+    `*Kontributor Utama*\n${topContributorLines}\n\n` +
+    `*Catatan personel:* ${fmtNumber(users.length)} tercatat (${fmtNumber(totalEligible)} memiliki username, ${fmtNumber(backlogUsername)} belum). ${fmtNumber(belumTarget)} belum mencapai target minimal.\n\n` +
+    `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}`;
 
-  // === List User Sudah ===
+  const lampiranSections = [];
+
   if (mode === "all" || mode === "sudah") {
-    msg += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
     const sudahDiv = groupByDivision(sudah);
+    const lines = [];
     sortDivisionKeys(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
       const list = sudahDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
+      lines.push(`*${div}* (${list.length} user):`);
+      lines.push(
         list
           .map((u) => {
-            let ket = "";
-            if (u.count) ket = `(${u.count}/${totalKonten} konten)`;
+            const ket = u.count
+              ? `(${u.count}/${totalKonten} konten)`
+              : "";
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
               `${u.tiktok ? u.tiktok : "belum mengisi data tiktok"} ${ket}`
-            );
+            ).trim();
           })
-          .join("\n") + "\n";
-      if (idx < arr.length - 1) msg += "\n";
+          .join("\n")
+      );
+      if (idx < arr.length - 1) lines.push("");
     });
-    if (Object.keys(sudahDiv).length === 0) msg += "-\n";
-    msg += "\n";
+    if (!Object.keys(sudahDiv).length) lines.push("-");
+    lampiranSections.push(
+      `✅ *Lampiran – Personel mencapai target* (${sudah.length} user)\n${lines.join("\n")}`
+    );
   }
 
-  // === List User Belum ===
   if (mode === "all" || mode === "belum") {
-    msg += `❌ *Belum melaksanakan* (${belum.length} user):\n`;
     const belumDiv = groupByDivision(belum);
+    const lines = [];
     sortDivisionKeys(Object.keys(belumDiv)).forEach((div, idx, arr) => {
       const list = belumDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
+      lines.push(`*${div}* (${list.length} user):`);
+      lines.push(
         list
           .map((u) => {
             let ket = "";
             if (!u.count || u.count === 0) {
               ket = `(0/${totalKonten} konten)`;
-            } else if (u.count > 0 && u.count < Math.ceil(totalKonten / 2)) {
+            } else if (u.count > 0 && u.count < targetPerUser) {
               ket = `(${u.count}/${totalKonten} konten)`;
             }
             return (
               `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
               `${u.tiktok ? u.tiktok : "belum mengisi data tiktok"} ${ket}`
-            );
+            ).trim();
           })
-          .join("\n") + "\n";
-      if (idx < arr.length - 1) msg += "\n";
+          .join("\n")
+      );
+      if (idx < arr.length - 1) lines.push("");
     });
-    if (Object.keys(belumDiv).length === 0) msg += "-\n";
-    msg += "\n";
+    if (!Object.keys(belumDiv).length) lines.push("-");
+    lampiranSections.push(
+      `❌ *Lampiran – Personel belum mencapai target* (${belum.length} user)\n${lines.join("\n")}`
+    );
+  }
+
+  if (lampiranSections.length) {
+    msg += `\n\n📎 ${lampiranSections.join("\n\n📎 ")}`;
   }
 
   if (failedVideoIds.length) {
-    msg += `⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}.\n\n`;
+    msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
   }
 
-  msg += `Terimakasih.`;
+  msg += `\n\nTerimakasih.`;
   return msg.trim();
 }
 
@@ -828,13 +914,6 @@ export async function lapharTiktokDitbinmas() {
     commentCounts[idx] = set.size;
   });
   const failedVideoSet = new Set(failedVideoIds);
-  const kontenLinkComments = kontenLinks.map((link, idx) => {
-    const videoId = posts[idx]?.video_id;
-    if (videoId && failedVideoSet.has(videoId)) {
-      return `${link} : GAGAL`;
-    }
-    return `${link} : ${commentCounts[idx]}`;
-  });
 
   const pangkatOrder = [
     "KOMISARIS BESAR POLISI",
@@ -969,6 +1048,11 @@ export async function lapharTiktokDitbinmas() {
       noUsername: noUname.length,
       noTiktok,
       totalUsers: users.length,
+      alreadyCount: already.length,
+      partialCount: partial.length,
+      noneCount: none.length,
+      eligibleUsers: users.length - noTiktok,
+      activeCount: already.length + partial.length,
     });
 
     if (none.length || noUname.length) {
@@ -1009,161 +1093,92 @@ export async function lapharTiktokDitbinmas() {
     ? (totalComments / totalPossibleComments) * 100
     : 0;
   const targetComments = Math.ceil(totalPossibleComments * 0.95);
-  const deficit = targetComments - totalComments;
-
-  const topContribArr = [...perClientStats]
-    .sort((a, b) => b.comments - a.comments)
-    .slice(0, 4);
-  const topContrib = topContribArr
-    .map((p) => `${p.name} ${p.comments}`)
-    .join(", ");
-  const topContribPercent = totalComments
-    ? (
-        (topContribArr.reduce((acc, p) => acc + p.comments, 0) / totalComments) *
-        100
-      ).toFixed(1)
-    : "0";
 
   const satkerStats = perClientStats.filter((p) => p.cid !== "DITBINMAS");
   const fmtNum = (n) => n.toLocaleString("id-ID");
   const fmtPct = (n) =>
     n.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const median = (arr) => {
-    if (!arr.length) return 0;
-    const sorted = [...arr].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 !== 0
-      ? sorted[mid]
-      : (sorted[mid - 1] + sorted[mid]) / 2;
-  };
-  const igUpdated = totals.total - totals.noUsername;
-  const tiktokUpdated = totals.total - totals.noTiktok;
-  const igOverallPercent = totals.total ? (igUpdated / totals.total) * 100 : 0;
-  const tiktokOverallPercent = totals.total
-    ? (tiktokUpdated / totals.total) * 100
-    : 0;
-  const avgIg =
-    satkerStats.reduce((acc, p) => acc + p.igPercent, 0) /
-    (satkerStats.length || 1);
-  const avgTiktok =
-    satkerStats.reduce((acc, p) => acc + p.tiktokPercent, 0) /
-    (satkerStats.length || 1);
-  const medianIg = median(satkerStats.map((p) => p.igPercent));
-  const medianTiktok = median(satkerStats.map((p) => p.tiktokPercent));
-  const lowSatker = satkerStats.filter(
-    (p) => p.igPercent < 10 && p.tiktokPercent < 10
-  );
-  const bestSatkers = satkerStats.filter(
-    (p) => p.igPercent >= 90 && p.tiktokPercent >= 90
-  );
-  const strongSatkers = satkerStats.filter(
-    (p) =>
-      p.igPercent >= 80 &&
-      p.tiktokPercent >= 80 &&
-      (p.igPercent < 90 || p.tiktokPercent < 90)
-  );
-  const topAvgStats = satkerStats
-    .map((p) => ({ ...p, avg: (p.igPercent + p.tiktokPercent) / 2 }))
-    .sort((a, b) => b.avg - a.avg);
-  const topPerformers = topAvgStats.slice(0, 5);
-  const topPerformerLines = topPerformers
-    .map(
-      (p, idx) =>
-        `${idx + 1}. ${p.name} ${p.igPercent.toFixed(1)}/${p.tiktokPercent.toFixed(1)}`
-    )
-    .join(", ");
-  const bottomPerformersArr = [...topAvgStats].reverse().slice(0, 5);
-  const bottomPerformerLines = bottomPerformersArr
-    .map(
-      (p) =>
-        `* ${p.name} ${p.igPercent.toFixed(1)}% / ${p.tiktokPercent.toFixed(1)}%`
-    )
-    .join("\n");
-  const extraUnderTen = satkerStats
-    .filter(
-      (p) =>
-        p.igPercent < 10 &&
-        p.tiktokPercent < 10 &&
-        !bottomPerformersArr.some((b) => b.cid === p.cid)
-    )
-    .map((p) => p.name);
-  const gapThreshold = 10;
-  const gapCandidates = perClientStats.filter(
-    (p) => Math.abs(p.igPercent - p.tiktokPercent) >= gapThreshold
-  );
-  const gapLines = gapCandidates.map((p) => {
-    const diff = p.igPercent - p.tiktokPercent;
-    const sign = diff >= 0 ? "+" : "-";
-    const dir = diff >= 0 ? "ke IG" : "ke TT";
-    return `* *${p.name}* IG ${p.igPercent.toFixed(1)}% vs TT ${p.tiktokPercent.toFixed(
-      1
-    )}% (*${sign}${Math.abs(diff).toFixed(1)} poin ${dir}*)`;
+
+  const contentStats = kontenLinks.map((link, idx) => {
+    const videoId = posts[idx]?.video_id;
+    const caption = posts[idx]?.caption || "";
+    const commenters = commentCounts[idx] || 0;
+    const failed = failedVideoSet.has(videoId);
+    return { link, videoId, caption, commenters, failed };
   });
-  const igBacklog = totals.noUsername;
-  const tiktokBacklog = totals.noTiktok;
-  const top10Ig = [...satkerStats]
-    .filter((p) => p.noUsername > 0)
-    .sort((a, b) => b.noUsername - a.noUsername)
-    .slice(0, 10);
-  const top10IgList = top10Ig
-    .map((p) => `${p.name} (${fmtNum(p.noUsername)})`)
-    .join(", ");
-  const top10IgSum = top10Ig.reduce((acc, p) => acc + p.noUsername, 0);
-  const top10IgPercent = igBacklog
-    ? (top10IgSum / igBacklog) * 100
-    : 0;
-  const top10Tiktok = [...satkerStats]
-    .filter((p) => p.noTiktok > 0)
-    .sort((a, b) => b.noTiktok - a.noTiktok)
-    .slice(0, 10);
-  const top10TiktokList = top10Tiktok
-    .map((p) => `${p.name} (${fmtNum(p.noTiktok)})`)
-    .join(", ");
-  const top10TiktokSum = top10Tiktok.reduce((acc, p) => acc + p.noTiktok, 0);
-  const top10TiktokPercent = tiktokBacklog
-    ? (top10TiktokSum / tiktokBacklog) * 100
-    : 0;
-  const projectedIgPercent = totals.total
-    ? ((igUpdated + 0.7 * top10IgSum) / totals.total) * 100
-    : 0;
-  const projectedTiktokPercent = totals.total
-    ? ((tiktokUpdated + 0.7 * top10TiktokSum) / totals.total) * 100
-    : 0;
-  const backlogBig = top10Ig.slice(0, 6).map((p) => p.name);
-  const largestGapPos = gapCandidates
-    .filter((p) => p.igPercent > p.tiktokPercent)
-    .sort(
-      (a, b) => (b.igPercent - b.tiktokPercent) - (a.igPercent - a.tiktokPercent)
-    )[0];
-  const largestGapNeg = gapCandidates
-    .filter((p) => p.tiktokPercent > p.igPercent)
-    .sort(
-      (a, b) => (b.tiktokPercent - b.igPercent) - (a.tiktokPercent - a.igPercent)
-    )[0];
-  const mentorList = topPerformers.map((p) => p.name);
-  const lowestInput = bottomPerformersArr.map((p) => p.name);
-  const bestSatkerNames = bestSatkers.map((p) => p.name);
-  const strongSatkerList = strongSatkers.map(
-    (p) => `${p.name} (${p.igPercent.toFixed(1)}% / ${p.tiktokPercent.toFixed(1)}%)`
+  const successfulContent = contentStats.filter((c) => !c.failed);
+  const rankedContentSource = successfulContent.length ? successfulContent : contentStats;
+  const rankedContent = [...rankedContentSource].sort(
+    (a, b) =>
+      b.commenters - a.commenters ||
+      String(a.videoId || "").localeCompare(String(b.videoId || ""))
   );
-  const notesLines = [];
-  if (backlogBig.length)
-    notesLines.push(`* *${backlogBig.join(', ')}* → backlog terbesar;`);
-  if (lowestInput.length)
-    notesLines.push(
-      `* *${lowestInput.join(', ')}* → Input Username Ter rendah`
-    );
-  if (largestGapPos)
-    notesLines.push(
-      `* *${largestGapPos.name}* → Anomali TT sangat rendah; Menjadi perhatian khusus.`
-    );
-  if (largestGapNeg)
-    notesLines.push(`* *${largestGapNeg.name}* → TT unggul;`);
-  if (mentorList.length)
-    notesLines.push(
-      `* *${mentorList.join('/')}* → pertahankan; mendorong sebagai mentor lintas satker( minta saran masukan).`
-    );
-  const notesSection = notesLines.join("\n");
+  const bestContent = rankedContent[0] || null;
+  const worstContent =
+    rankedContent.length > 1 ? rankedContent[rankedContent.length - 1] : bestContent;
+  const formatContentHighlight = (item) => {
+    if (!item) return "-";
+    if (item.failed) return `${item.link} – data komentar gagal diambil`;
+    const snippet = item.caption
+      ? item.caption.length > 60
+        ? `${item.caption.slice(0, 57)}…`
+        : item.caption
+      : item.videoId;
+    return `${snippet} – ${fmtNum(item.commenters)} akun (${item.link})`;
+  };
+
+  const uniqueParticipants = new Set();
+  commentSets.forEach((set) => set.forEach((uname) => uniqueParticipants.add(uname)));
+
+  const eligibleTotal = perClientStats.reduce(
+    (acc, p) => acc + Math.max(p.eligibleUsers || 0, 0),
+    0
+  );
+  const hitTargetTotal = perClientStats.reduce(
+    (acc, p) => acc + (p.alreadyCount || 0),
+    0
+  );
+  const activeTotal = perClientStats.reduce(
+    (acc, p) => acc + (p.activeCount || 0),
+    0
+  );
+  const backlogTotal = perClientStats.reduce(
+    (acc, p) => acc + (p.noneCount || 0),
+    0
+  );
+
+  const participationPct = eligibleTotal ? (hitTargetTotal / eligibleTotal) * 100 : 0;
+  const activationPct = eligibleTotal ? (activeTotal / eligibleTotal) * 100 : 0;
+
+  const topContribArr = satkerStats
+    .slice()
+    .sort((a, b) => b.comments - a.comments)
+    .slice(0, 4);
+  const topContribSummary = topContribArr.length
+    ? topContribArr.map((p) => `${p.name} (${fmtNum(p.comments)})`).join(", ")
+    : "-";
+
+  const topSatkerList = satkerStats.slice(0, 3).map(
+    (p, idx) => `${idx + 1}. ${p.name} – ${fmtNum(p.comments)} komentar`
+  );
+  const lowSatkerList = [...satkerStats]
+    .reverse()
+    .slice(0, 3)
+    .map((p) => `${p.name} – ${fmtNum(p.comments)} komentar`);
+
+  const backlogSatkerList = satkerStats
+    .filter((p) => (p.noneCount || 0) > 0)
+    .sort((a, b) => (b.noneCount || 0) - (a.noneCount || 0))
+    .slice(0, 3)
+    .map((p) => `${p.name} (${fmtNum(p.noneCount)})`);
+
+  const missingHandleSatkers = satkerStats
+    .filter((p) => (p.noTiktok || 0) > 0)
+    .sort((a, b) => (b.noTiktok || 0) - (a.noTiktok || 0))
+    .slice(0, 3)
+    .map((p) => `${p.name} (${fmtNum(p.noTiktok)})`);
+
+  const formatList = (list) => (list.length ? list.join("; ") : "-");
 
   let text =
     `Mohon ijin Komandan,\n\n` +
@@ -1183,33 +1198,25 @@ export async function lapharTiktokDitbinmas() {
     `${perClientBlocks.join("\n\n")}`;
 
   let narrative =
-    `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi komentar oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
-    `DIREKTORAT BINMAS\n\n` +
-    `Konten Tiktok hari ini: ${posts.length} link: ${kontenLinkComments.join(", ")}\n\n` +
-    `Kinerja Komentar konten: ${totalComments}/${totalPossibleComments} (${commentPercent.toFixed(2)}%)\n` +
-    `Target harian ≥95% = ${targetComments} komentar${deficit > 0 ? ` → kekurangan ${deficit}` : ""}\n\n` +
-    `Kontributor komentar terbesar (konten hari ini):\n${topContrib ? `${topContrib} → menyumbang ${topContribPercent}% dari total komentar saat ini.` : "-"}\n\n` +
-    `Absensi Update Data\n\n` +
-    `*Personil Saat ini :* ${fmtNum(totals.total)} Personil\n` +
-    `* *Cakupan keseluruhan:* IG *${fmtPct(igOverallPercent)}%* (${fmtNum(igUpdated)}/${fmtNum(totals.total)}), TT *${fmtPct(tiktokOverallPercent)}%* (${fmtNum(tiktokUpdated)}/${fmtNum(totals.total)}).\n` +
-    `* *Rata-rata satker:* IG *${fmtPct(avgIg)}%* (median ${fmtPct(medianIg)}%), TT *${fmtPct(avgTiktok)}%* (median ${fmtPct(medianTiktok)}%)${lowSatker.length ? ` → penyebaran masih lebar, ${lowSatker.length} satker di bawah 10%.` : ""}\n` +
-    `* *Satker dengan Capaian terbaik (≥90% IG & TT):* ${bestSatkerNames.length ? `*${bestSatkerNames.join(', ')}*` : '-'}\n` +
-    `* *Tambahan kuat (≥80% IG & TT):* ${strongSatkerList.length ? `*${strongSatkerList.join(', ')}*` : '-'}\n\n` +
-    `#Highlight Pencapaian & Masalah\n\n` +
-    `*Top performer (rata-rata IG/TT):*\n\n` +
-    `${topPerformerLines}\n\n` +
-    `*Bottom performer (rata-rata IG/TT, sangat rendah di kedua platform):*\n\n` +
-    `${bottomPerformerLines}${extraUnderTen.length ? `\n  *(juga: ${extraUnderTen.join(', ')} berada <10% IG/TT)*` : ''}\n\n` +
-    `*Kesenjangan IG vs TikTok (perlu investigasi):*\n\n` +
-    `${gapLines.length ? gapLines.join('\n') : '-'}\n\n` +
-    `# Konsentrasi Backlog (prioritas penanganan)\n\n` +
-    `> *Top-10 yang usernya belum melakukan update username menyerap >50% backlog* masing-masing platform.\n\n` +
-    `* *IG Belum Diisi (${fmtNum(igBacklog)})* – 10 terbesar (≈*${fmtPct(top10IgPercent)}%* dari backlog):\n  ${top10IgList}.\n\n` +
-    `* *TikTok Belum Diisi (${fmtNum(tiktokBacklog)})* – 10 terbesar (≈*${fmtPct(top10TiktokPercent)}%*):\n  ${top10TiktokList}.\n\n` +
-    `*Proyeksi dampak cepat:* menutup *70%* backlog di Top-10 (mendorong satker untuk update data cepat) akan menaikkan capaian *IG → ~${fmtPct(projectedIgPercent)}%* dan *TT → ~${fmtPct(projectedTiktokPercent)}%*.\n\n` +
-    `## Catatan per Satker.\n\n` +
-    `${notesSection}\n\n` +
-    `Demikian Komandan hasil analisa yang bisa kami laporkan.`;
+    `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
+    `📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n` +
+    `*Ringkasan Kinerja*\n` +
+    `• Konten dipantau : ${posts.length}\n` +
+    `• Interaksi aktual : ${fmtNum(totalComments)}/${fmtNum(targetComments)} (${fmtPct(commentPercent)}%)\n` +
+    `• Personel mencapai target : ${fmtNum(hitTargetTotal)}/${fmtNum(eligibleTotal)} (${fmtPct(participationPct)}%)\n` +
+    `• Personel aktif (≥1 konten) : ${fmtNum(activeTotal)}/${fmtNum(eligibleTotal)} (${fmtPct(activationPct)}%)\n` +
+    `• Partisipan unik : ${fmtNum(uniqueParticipants.size)} akun\n\n` +
+    `*Sorotan Konten*\n` +
+    `• Performa tertinggi : ${formatContentHighlight(bestContent)}\n` +
+    `• Performa terendah : ${formatContentHighlight(worstContent)}\n\n` +
+    `*Kontributor Utama*\n` +
+    `• Penyumbang komentar terbesar : ${topContribSummary}\n` +
+    `• Top satker aktif : ${formatList(topSatkerList)}\n` +
+    `• Satker perlu perhatian : ${formatList(lowSatkerList)}\n\n` +
+    `*Catatan Backlog*\n` +
+    `• Personel belum komentar : ${fmtNum(backlogTotal)} (prioritas: ${formatList(backlogSatkerList)})\n` +
+    `• Belum input akun TikTok : ${fmtNum(totals.noTiktok)} (sumber utama: ${formatList(missingHandleSatkers)})\n\n` +
+    `Demikian Komandan, terimakasih.`;
 
   let textBelum =
     `Belum melaksanakan Komentar atau belum input username IG/Tiktok\n` +
