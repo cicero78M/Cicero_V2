@@ -1615,54 +1615,355 @@ export const clientRequestHandlers = {
     fetchAndStoreLikesInstaContent,
     handleFetchKomentarTiktokBatch
   ) => {
- let msg = `
- ┏━━━ *MENU CLIENT CICERO* ━━━
-1️⃣ Tambah client baru
-2️⃣ Kelola client (update/hapus/info)
-3️⃣ Kelola user (update/exception/status)
-4️⃣ Proses Instagram
-5️⃣ Proses TikTok
-6️⃣ Absensi Username Instagram
-7️⃣ Absensi Username TikTok
-8️⃣ Transfer User
-9️⃣ Exception Info
-🔟 Hapus WA Admin
-1️⃣1️⃣ Hapus WA User
-1️⃣2️⃣ Transfer User Sheet
-1️⃣3️⃣ Download Sheet Amplifikasi
-1️⃣4️⃣ Download Sheet Amplifikasi Bulan sebelumnya
-1️⃣5️⃣ Download Docs
-1️⃣6️⃣ Absensi Operator Ditbinmas
-1️⃣7️⃣ Response Komplain
-1️⃣8️⃣ Penghapusan Massal Status User
+    const msg = `
+┏━━━ *MENU CLIENT CICERO* ━━━
+1️⃣ Manajemen Client & User
+2️⃣ Operasional Media Sosial
+3️⃣ Transfer & Laporan
+4️⃣ Administratif
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Ketik *angka* menu, atau *batal* untuk keluar.
-  `.trim();
-    if (!/^([1-9]|1[0-8])$/.test(text.trim())) {
+Ketik *angka* menu, atau *batal* untuk keluar.
+`.trim();
+
+    if (!/^[1-4]$/.test(text.trim())) {
       session.step = "main";
       await waClient.sendMessage(chatId, msg);
       return;
     }
     const mapStep = {
+      1: "clientMenu_management",
+      2: "clientMenu_social",
+      3: "clientMenu_transfer",
+      4: "clientMenu_admin",
+    };
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
+  },
+
+  clientMenu_management: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    if (text.trim().toLowerCase() === "batal") {
+      await clientRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        fetchAndStoreLikesInstaContent,
+        handleFetchKomentarTiktokBatch
+      );
+      return;
+    }
+
+    const msg = `
+┏━━━ *Manajemen Client & User* ━━━
+1️⃣ Tambah client baru
+2️⃣ Kelola client (update/hapus/info)
+3️⃣ Kelola user (update/exception/status)
+4️⃣ Hapus WA User
+5️⃣ Penghapusan Massal Status User
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk kembali.
+`.trim();
+
+    if (!/^[1-5]$/.test(text.trim())) {
+      session.step = "clientMenu_management";
+      await waClient.sendMessage(chatId, msg);
+      return;
+    }
+
+    const mapStep = {
       1: "addClient_id",
       2: "kelolaClient_choose",
       3: "kelolaUser_choose",
-      4: "prosesInstagram_choose",
-      5: "prosesTiktok_choose",
-      6: "absensiUsernameInsta_choose",
-      7: "absensiUsernameTiktok_choose",
-      8: "transferUser_choose",
-      9: "exceptionInfo_chooseClient",
-      10: "hapusWAAdmin_confirm",
-      11: "hapusWAUser_start",
-      12: "transferUserSheet_choose",
-      13: "downloadSheet_choose",
-      14: "downloadSheetPrev_choose",
-      15: "downloadDocs_choose",
-      16: "absensiOprDitbinmas",
-      17: "respondComplaint_start",
-      18: "bulkStatus_prompt",
+      4: "hapusWAUser_start",
+      5: "bulkStatus_prompt",
     };
+
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
+  },
+
+  clientMenu_social: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    if (text.trim().toLowerCase() === "batal") {
+      await clientRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        fetchAndStoreLikesInstaContent,
+        handleFetchKomentarTiktokBatch
+      );
+      return;
+    }
+
+    const msg = `
+┏━━━ *Operasional Media Sosial* ━━━
+1️⃣ Proses Instagram
+2️⃣ Proses TikTok
+3️⃣ Absensi Username Instagram
+4️⃣ Absensi Username TikTok
+5️⃣ Download Sheet Amplifikasi
+6️⃣ Download Sheet Amplifikasi Bulan sebelumnya
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk kembali.
+`.trim();
+
+    if (!/^[1-6]$/.test(text.trim())) {
+      session.step = "clientMenu_social";
+      await waClient.sendMessage(chatId, msg);
+      return;
+    }
+
+    const mapStep = {
+      1: "prosesInstagram_choose",
+      2: "prosesTiktok_choose",
+      3: "absensiUsernameInsta_choose",
+      4: "absensiUsernameTiktok_choose",
+      5: "downloadSheet_choose",
+      6: "downloadSheetPrev_choose",
+    };
+
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
+  },
+
+  clientMenu_transfer: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    if (text.trim().toLowerCase() === "batal") {
+      await clientRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        fetchAndStoreLikesInstaContent,
+        handleFetchKomentarTiktokBatch
+      );
+      return;
+    }
+
+    const msg = `
+┏━━━ *Transfer & Laporan* ━━━
+1️⃣ Transfer User
+2️⃣ Transfer User Sheet
+3️⃣ Absensi Operator Ditbinmas
+4️⃣ Response Komplain
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk kembali.
+`.trim();
+
+    if (!/^[1-4]$/.test(text.trim())) {
+      session.step = "clientMenu_transfer";
+      await waClient.sendMessage(chatId, msg);
+      return;
+    }
+
+    const mapStep = {
+      1: "transferUser_choose",
+      2: "transferUserSheet_choose",
+      3: "absensiOprDitbinmas",
+      4: "respondComplaint_start",
+    };
+
+    session.step = mapStep[text.trim()];
+    await clientRequestHandlers[session.step](
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      fetchAndStoreLikesInstaContent,
+      handleFetchKomentarTiktokBatch
+    );
+  },
+
+  clientMenu_admin: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    fetchAndStoreLikesInstaContent,
+    handleFetchKomentarTiktokBatch
+  ) => {
+    if (text.trim().toLowerCase() === "batal") {
+      await clientRequestHandlers.main(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        fetchAndStoreLikesInstaContent,
+        handleFetchKomentarTiktokBatch
+      );
+      return;
+    }
+
+    const msg = `
+┏━━━ *Administratif* ━━━
+1️⃣ Exception Info
+2️⃣ Hapus WA Admin
+3️⃣ Download Docs
+┗━━━━━━━━━━━━━━━━━━━━━━
+Ketik *angka* menu, atau *batal* untuk kembali.
+`.trim();
+
+    if (!/^[1-3]$/.test(text.trim())) {
+      session.step = "clientMenu_admin";
+      await waClient.sendMessage(chatId, msg);
+      return;
+    }
+
+    const mapStep = {
+      1: "exceptionInfo_chooseClient",
+      2: "hapusWAAdmin_confirm",
+      3: "downloadDocs_choose",
+    };
+
     session.step = mapStep[text.trim()];
     await clientRequestHandlers[session.step](
       session,
