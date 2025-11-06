@@ -1334,16 +1334,68 @@ test('choose_menu option 20 sends combined sosmed recap and files', async () => 
   mockLapharDitbinmas.mockResolvedValue({
     text: 'ig',
     filename: 'ig.txt',
-    narrative:
-      'IGHEADER\nDIREKTORAT BINMAS\nIGPART\nAbsensi Update Data\nIGUPDATE',
+    narrative: [
+      'Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari Senin, 1/1/2024 pukul 07:00 WIB.',
+      '',
+      'DIREKTORAT BINMAS',
+      '',
+      'Konten hari ini: 2 link: https://instagram.com/p/1, https://instagram.com/p/2',
+      '',
+      'Kinerja Likes konten: 150/200 (75.00%)',
+      'Target harian ≥95% = 190 likes → kekurangan 40',
+      '',
+      'Kontributor likes terbesar (konten hari ini):',
+      'Operator A → menyumbang 30% dari total likes saat ini.',
+      '',
+      '*Personil Saat ini :* 100 Personil',
+      '* *Cakupan keseluruhan:* IG *80,0%* (80/100), TT *70,0%* (70/100).',
+      '* *Rata-rata satker:* IG *75,0%* (median 70,0%), TT *65,0%* (median 60,0%)',
+      '',
+      '#Highlight Pencapaian & Masalah',
+      '',
+      '*Top performer (rata-rata IG/TT):*',
+      '- SATKER A',
+      '',
+      '## Catatan per Satker.',
+      '',
+      '- SATKER A: tetap dipertahankan.',
+      '',
+      'Demikian Komandan hasil analisa yang bisa kami laporkan.',
+    ].join('\n'),
   });
   mockCollectLikesRecap.mockResolvedValue({ shortcodes: ['sc1'] });
   mockSaveLikesRecapExcel.mockResolvedValue('/tmp/ig.xlsx');
   mockLapharTiktokDitbinmas.mockResolvedValue({
     text: 'tt',
     filename: 'tt.txt',
-    narrative:
-      'TTHEADER\nDIREKTORAT BINMAS\nTTPART\nAbsensi Update Data\nTTUPDATE',
+    narrative: [
+      'Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi komentar oleh personil hari Senin, 1/1/2024 pukul 07:00 WIB.',
+      '',
+      'DIREKTORAT BINMAS',
+      '',
+      'Konten Tiktok hari ini: 1 link: https://www.tiktok.com/@ditbinmas/video/1',
+      '',
+      'Kinerja Komentar konten: 80/100 (80.00%)',
+      'Target harian ≥95% = 95 komentar → kekurangan 15',
+      '',
+      'Kontributor komentar terbesar (konten hari ini):',
+      'Operator B → menyumbang 40% dari total komentar saat ini.',
+      '',
+      '*Personil Saat ini :* 100 Personil',
+      '* *Cakupan keseluruhan:* IG *80,0%* (80/100), TT *70,0%* (70/100).',
+      '* *Rata-rata satker:* IG *75,0%* (median 70,0%), TT *65,0%* (median 60,0%)',
+      '',
+      '#Highlight Pencapaian & Masalah',
+      '',
+      '*Top performer (rata-rata IG/TT):*',
+      '- SATKER A',
+      '',
+      '## Catatan per Satker.',
+      '',
+      '- SATKER A: tetap dipertahankan.',
+      '',
+      'Demikian Komandan hasil analisa yang bisa kami laporkan.',
+    ].join('\n'),
   });
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: ['vid1'] });
   mockSaveCommentRecapExcel.mockResolvedValue('/tmp/tt.xlsx');
@@ -1359,11 +1411,16 @@ test('choose_menu option 20 sends combined sosmed recap and files', async () => 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
   expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
   const combined = waClient.sendMessage.mock.calls[0][1];
-  expect(combined).toContain('IGPART');
-  expect(combined).toContain('TTPART');
-  expect(combined).toContain('ABSENSI UPDATE DATA PERSONIL');
-  expect(combined).toContain('IGUPDATE');
-  expect(combined).not.toContain('TTUPDATE');
+  expect(combined).toContain('*Laporan Harian Pelaksanaan Engagement*');
+  expect(combined).toContain('📊 *Ringkasan Cepat*');
+  expect(combined).toContain('📸 *Instagram:* 2 konten');
+  expect(combined).toContain('Gap: kekurangan 40');
+  expect(combined).toContain('🎵 *TikTok:* 1 konten');
+  expect(combined).toContain('Gap: kekurangan 15');
+  expect(combined).toContain('📋 *Status Personel Engagement*');
+  expect(combined).toContain('Operator A → menyumbang 30%');
+  expect(combined).toContain('Operator B → menyumbang 40%');
+  expect(combined).not.toContain('# Konsentrasi Backlog');
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
     1,
     waClient,

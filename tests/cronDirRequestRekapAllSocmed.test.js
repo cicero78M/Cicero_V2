@@ -72,7 +72,7 @@ beforeEach(() => {
     textBelum: 'ttb',
     filenameBelum: 'ttb.txt',
   });
-  mockFormatRekapAllSosmed.mockReturnValue('nar ig + nar tt');
+  mockFormatRekapAllSosmed.mockReturnValue('*Laporan Harian Pelaksanaan Engagement* – Ringkasan');
   mockCollectLikesRecap.mockResolvedValue({ shortcodes: [1] });
   mockCollectKomentarRecap.mockResolvedValue({ videoIds: [1] });
   mockSaveLikesRecapPerContentExcel.mockResolvedValue('igrecap.xlsx');
@@ -89,9 +89,21 @@ test('runCron without rekap sends to admin and group only', async () => {
   expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
   expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar ig + nar tt');
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'nar ig + nar tt');
-  expect(mockSafeSendMessage).not.toHaveBeenCalledWith({}, '6281234560377@c.us', 'nar ig + nar tt');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '123@c.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '120363419830216549@g.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
+  expect(mockSafeSendMessage).not.toHaveBeenCalledWith(
+    {},
+    '6281234560377@c.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
 
   expect(mockSendWAFile).not.toHaveBeenCalledWith(
     {},
@@ -108,9 +120,21 @@ test('runCron with rekap sends to all recipients', async () => {
   expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
   expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', 'nar ig + nar tt');
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'nar ig + nar tt');
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '6281234560377@c.us', 'nar ig + nar tt');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '123@c.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '120363419830216549@g.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    {},
+    '6281234560377@c.us',
+    '*Laporan Harian Pelaksanaan Engagement* – Ringkasan'
+  );
 
   expect(mockSendWAFile).toHaveBeenCalledWith(
     {},
