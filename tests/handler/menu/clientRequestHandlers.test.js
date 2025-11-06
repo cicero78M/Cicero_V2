@@ -68,6 +68,49 @@ describe('parseComplaintMessage', () => {
   });
 });
 
+describe('main menu bulk status option removal', () => {
+  it('re-prompts when option 18 is entered and never calls the bulk status prompt', async () => {
+    const session = { step: 'main' };
+    const chatId = 'chat-main-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const bulkSpy = jest.spyOn(clientRequestHandlers, 'bulkStatus_prompt');
+
+    try {
+      await clientRequestHandlers.main(session, chatId, '18', {
+        sendMessage,
+      });
+
+      expect(session.step).toBe('main');
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      const [[calledChatId, message]] = sendMessage.mock.calls;
+      expect(calledChatId).toBe(chatId);
+      expect(message).not.toContain('18');
+      expect(message).not.toContain('Penghapusan');
+      expect(bulkSpy).not.toHaveBeenCalled();
+    } finally {
+      bulkSpy.mockRestore();
+    }
+  });
+});
+
+describe('kelolaClient mass status option', () => {
+  it('redirects kelola client option 4 to the bulk status prompt', async () => {
+    const session = { selected_client_id: 'CLIENT-001' };
+    const chatId = 'chat-client-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.kelolaClient_menu(session, chatId, '4', {
+      sendMessage,
+    });
+
+    expect(session.step).toBe('bulkStatus_process');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Permohonan Penghapusan Data Personil')
+    );
+  });
+});
+
 describe('kelolaUser mass status option', () => {
   it('shows bulk status choice in the kelola user menu', async () => {
     const session = {};
