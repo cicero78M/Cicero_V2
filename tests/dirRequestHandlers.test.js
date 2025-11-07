@@ -368,10 +368,14 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
     expect(message).toContain('3. 👥 *Data Personil*');
-    expect(message).toContain('Kontributor utama: Satker A → menyumbang 35% dari total likes saat ini.');
-    expect(message).toContain('Satker dominan: 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar');
-    expect(message).toMatch(/Backlog IG: 30 akun/);
-    expect(message).toContain('Backlog personel masih tinggi, mohon percepat tindak lanjut satker prioritas.');
+    expect(message).toContain(
+      'Kontribusi utama mengalir dari Satker A → menyumbang 35% dari total likes saat ini, menghadirkan energi positif bagi jajaran DITBINMAS.'
+    );
+    expect(message).toContain(
+      'Energi komunitas dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
+    );
+    expect(message).toContain('Backlog Instagram tersisa 30 akun (Top-10 ≈ 60,0%: Satker E, Satker F).');
+    expect(message).toContain('Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.');
   });
 
   test('adapts closing note when target tercapai dan backlog rendah', () => {
@@ -384,7 +388,7 @@ describe('formatRekapAllSosmed', () => {
 
     const message = formatRekapAllSosmed(igNarrative, ttNarrative);
 
-    expect(message).toContain('Capaian IG & TikTok sudah sesuai target, pertahankan konsistensi distribusi personel.');
+    expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DITBINMAS.');
   });
 });
 
