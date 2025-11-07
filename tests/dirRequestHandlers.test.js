@@ -145,10 +145,11 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
 
 let dirRequestHandlers;
 let formatRekapUserData;
+let formatRekapAllSosmed;
 let dirRequestHandlersModule;
 beforeAll(async () => {
   dirRequestHandlersModule = await import('../src/handler/menu/dirRequestHandlers.js');
-  ({ dirRequestHandlers, formatRekapUserData } = dirRequestHandlersModule);
+  ({ dirRequestHandlers, formatRekapUserData, formatRekapAllSosmed } = dirRequestHandlersModule);
 });
 
 beforeEach(() => {
@@ -345,6 +346,50 @@ test('choose_menu option 4 generates satker update matrix excel', async () => {
   );
   expect(mockUnlink).toHaveBeenCalledWith('/tmp/satker.xlsx');
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, '✅ File Excel dikirim.');
+});
+
+describe('formatRekapAllSosmed', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('structures report with numbered sections and backlog/closing insights', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
+
+    const igNarrative = `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\nDIREKTORAT BINMAS\n\n# Insight Likes Konten\n- Jumlah konten aktif: 3 link.\n- Total likes: 1.200 dari 1.500 kemungkinan likes (80,0% capaian).\n- Target harian ≥95%: 1.425 likes → kekurangan 225.\n- Rata-rata likes/konten: 400,0; Link A unggul 100 likes dibanding Link B (100 selisih).\n- Kontributor likes terbesar: Satker A → menyumbang 35% dari total likes saat ini.\n- Distribusi likes per konten:\n1. https://instagram.com/p/abc — 500 likes\n2. https://instagram.com/p/def — 400 likes\n3. https://instagram.com/p/ghi — 300 likes\n\n# Status Data Personel\n- Personil tercatat: 150 → IG 80,0% (120), TT 70,0% (105).\n- Rata-rata satker: IG 78,0% (median 79,0%), TT 69,0% (median 70,0%).\n- Satker dengan capaian ≥90% IG & TT: *Satker Hebat*.\n- Satker di kisaran 80% (butuh dorongan akhir): Satker B.\n- Satker perlu perhatian (<10% di kedua kanal): Satker C.\n- Gap IG vs TikTok (≥10 poin, investigasi lanjut):\nSatker D (IG 90% vs TT 70%)\n\n# Backlog & Prioritas Singkat\n- IG belum diisi: 30 akun (Top-10 menyumbang ≈60,0%: Satker E, Satker F)\n- TikTok belum diisi: 25 akun (Top-10 menyumbang ≈55,0%: Satker G)\n- Proyeksi jika 70% Top-10 teratasi: IG → ~88,0%, TT → ~82,0%.\n\n# Performa Satker\n- Top performer rata-rata IG/TT: Satker Hebat (95%).\n- Bottom performer rata-rata IG/TT: Satker Lemah (20%).\n\n# Catatan Tambahan\n- Dorong satker C untuk update harian.\n\nDemikian Komandan hasil analisa yang bisa kami laporkan.`;
+
+    const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Ringkasan Kinerja*\n• Konten dipantau : 2\n• Interaksi aktual : 300/400 (75,0%)\n• Personel mencapai target : 60/120 (50,0%)\n• Personel aktif (≥1 konten) : 80/120 (66,7%)\n• Partisipan unik : 90 akun\n\n*Sorotan Konten*\n• Performa tertinggi : Video A – 200 komentar\n• Performa terendah : Video B – 100 komentar\n• Distribusi komentar per konten:\n1. Video A – 200 komentar\n2. Video B – 100 komentar\n\n*Kontributor Utama*\n• Penyumbang komentar terbesar : Satker Alpha (120)\n• Top satker aktif : 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar\n• Satker perlu perhatian : Satker Gamma – 10 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 40 (prioritas: Satker Delta (20))\n• Belum input akun TikTok : 5 (sumber utama: Satker Epsilon (3))\n\nDemikian Komandan, terimakasih.`;
+
+    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+
+    expect(message).toContain('*Laporan Harian Engagement – Rabu, 27 Agustus 2025*');
+    expect(message).toContain('*DIREKTORAT BINMAS*');
+    expect(message).toContain('1. 📸 *Instagram*');
+    expect(message).toContain('2. 🎵 *TikTok*');
+    expect(message).toContain('3. 👥 *Data Personil*');
+    expect(message).toContain('Kontributor utama: Satker A → menyumbang 35% dari total likes saat ini.');
+    expect(message).toContain('Satker dominan: 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar');
+    expect(message).toContain('*Distribusi Likes Instagram per Konten*');
+    expect(message).toContain('- 1. https://instagram.com/p/abc — 500 likes');
+    expect(message).toContain('*Distribusi Komentar TikTok per Konten*');
+    expect(message).toContain('- 1. Video A – 200 komentar');
+    expect(message).toMatch(/Backlog IG: 30 akun/);
+    expect(message).toContain('Backlog personel masih tinggi, mohon percepat tindak lanjut satker prioritas.');
+  });
+
+  test('adapts closing note when target tercapai dan backlog rendah', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
+
+    const igNarrative = `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\nDIREKTORAT BINMAS\n\n# Insight Likes Konten\n- Jumlah konten aktif: 2 link.\n- Total likes: 1.600 dari 1.500 kemungkinan likes (106,7% capaian).\n- Target harian ≥95%: 1.425 likes (target tercapai).\n- Rata-rata likes/konten: 800,0; Seluruh konten stabil.\n- Kontributor likes terbesar: Satker A → menyumbang 40% dari total likes saat ini.\n- Distribusi likes per konten:\n1. https://instagram.com/p/abc — 900 likes\n2. https://instagram.com/p/def — 700 likes\n\n# Status Data Personel\n- Personil tercatat: 120 → IG 97,5% (117), TT 92,0% (110).\n- Rata-rata satker: IG 95,0% (median 95,0%), TT 90,0% (median 90,0%).\n- Satker dengan capaian ≥90% IG & TT: *Satker Juara*.\n\n# Backlog & Prioritas Singkat\n- IG belum diisi: 5 akun (Top-10 menyumbang ≈40,0%: Satker Fokus)\n- TikTok belum diisi: 4 akun (Top-10 menyumbang ≈35,0%: Satker Fokus)\n- Proyeksi jika 70% Top-10 teratasi: IG → ~99,0%, TT → ~96,0%.\n\n# Performa Satker\n- Top performer rata-rata IG/TT: Satker Juara (98%).\n- Bottom performer rata-rata IG/TT: Satker Pembina (85%).\n\nDemikian Komandan hasil analisa yang bisa kami laporkan.`;
+
+    const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Ringkasan Kinerja*\n• Konten dipantau : 2\n• Interaksi aktual : 400/400 (100,0%)\n• Personel mencapai target : 100/100 (100,0%)\n• Personel aktif (≥1 konten) : 100/100 (100,0%)\n• Partisipan unik : 100 akun\n\n*Kontributor Utama*\n• Penyumbang komentar terbesar : Satker Alpha (150)\n• Top satker aktif : 1. Satker Alpha – 150 komentar; 2. Satker Beta – 120 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 3 (prioritas: Satker Solid (1))\n• Belum input akun TikTok : 1 (sumber utama: Satker Solid (1))\n\nDemikian Komandan, terimakasih.`;
+
+    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+
+    expect(message).toContain('Capaian IG & TikTok sudah sesuai target, pertahankan konsistensi distribusi personel.');
+  });
 });
 
 test('choose_menu option 5 absensi likes ditbinmas', async () => {
@@ -1411,7 +1456,7 @@ test('choose_menu option 20 sends combined sosmed recap and files', async () => 
   expect(mockLapharDitbinmas).toHaveBeenCalled();
   expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
   const combined = waClient.sendMessage.mock.calls[0][1];
-  expect(combined).toContain('*Laporan Harian Pelaksanaan Engagement*');
+  expect(combined).toContain('*Laporan Harian Engagement');
   expect(combined).toContain('📊 *Ringkasan Cepat*');
   expect(combined).toContain('📸 *Instagram:* 2 konten');
   expect(combined).toContain('Gap: kekurangan 40');

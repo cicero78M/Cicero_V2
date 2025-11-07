@@ -562,137 +562,484 @@ return lines.join("\n").trim();
 function formatRekapAllSosmed(igNarrative, ttNarrative) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
-  const tanggal = now.toLocaleDateString("id-ID");
-  const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+  const tanggal = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 
-  const parsePart = (text, { platform }) => {
-    const normalized = (text || "").replace(/\r\n/g, "\n");
-    const lines = normalized.split("\n").map((line) => line.trimEnd());
-
-    const matchLine = (regex) => {
-      const idx = lines.findIndex((line) => regex.test(line));
-      return idx === -1 ? null : lines[idx];
-    };
-
-    const summary = {
-      content: matchLine(/Konten(?: Tiktok)? hari ini:/i),
-      performance: matchLine(/Kinerja (?:Likes|Komentar) konten:/i),
-      target: matchLine(/Target harian ≥95% =/i),
-    };
-
-    const contributorIdx = lines.findIndex((line) =>
-      /^Kontributor (?:likes|komentar) terbesar/i.test(line)
-    );
-    const contributor =
-      contributorIdx === -1
-        ? ""
-        : [lines[contributorIdx], lines[contributorIdx + 1] || ""].join("\n").trim();
-
-    const highlightMatch = normalized.match(
-      /#\s*Highlight[\s\S]*?(?=#\s*Konsentrasi|##\s*Catatan|Demikian|$)/i
-    );
-    const highlightSection = highlightMatch ? highlightMatch[0].trim() : "";
-
-    const catatanMatch = normalized.match(/##\s*Catatan[\s\S]*?(?=Demikian|$)/i);
-    const catatanSection = catatanMatch ? catatanMatch[0].trim() : "";
-
-    const headingIndex = lines.findIndex((line) => /^#\s*Highlight/i.test(line));
-    const limitIndex = headingIndex === -1 ? lines.length : headingIndex;
-    const absensiCandidates = [];
-    for (let i = 0; i < limitIndex; i += 1) {
-      const line = lines[i].trim();
-      if (line.startsWith("*")) absensiCandidates.push(line);
-    }
-    const absensiSummary = absensiCandidates.slice(0, 4);
-
-    const dirIndex = lines.findIndex((line) => line.toUpperCase() === "DIREKTORAT BINMAS");
-    const rawBody = lines
-      .slice(dirIndex === -1 ? 0 : dirIndex + 1)
-      .filter((line) =>
-        line &&
-        !line.startsWith("Mohon Ijin Komandan") &&
-        !/^Demikian/i.test(line)
-      )
-      .join("\n")
-      .trim();
-
-    return {
-      platform,
-      summary,
-      contributor,
-      highlightSection,
-      catatanSection,
-      absensiSummary,
-      rawBody,
-    };
+  const normalizeText = (text) => (text || "").replace(/\r\n/g, "\n");
+  const parseNumber = (value) => {
+    if (!value) return null;
+    const normalized = value.replace(/\./g, "").replace(/,/g, ".");
+    const num = Number.parseFloat(normalized);
+    return Number.isNaN(num) ? null : num;
+  };
+  const formatInteger = (value) =>
+    value == null
+      ? null
+      : Math.round(value).toLocaleString("id-ID", { maximumFractionDigits: 0 });
+  const formatPercent = (value) =>
+    value == null
+      ? null
+      : value.toLocaleString("id-ID", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        });
+  const formatRatio = (numerator, denominator, percent) => {
+    if (numerator == null || denominator == null)
+      return null;
+    const parts = [
+      `${formatInteger(numerator)}/${formatInteger(denominator)}`,
+    ];
+    if (percent != null) parts.push(`(${formatPercent(percent)}%)`);
+    return parts.join(" ");
   };
 
-  const igParts = parsePart(igNarrative, { platform: "Instagram" });
-  const ttParts = parsePart(ttNarrative, { platform: "TikTok" });
+  const extractIgData = (text) => {
+    const normalized = normalizeText(text);
+    const data = {};
 
-  const formatSummaryLine = (parts, icon) => {
-    if (!parts.summary.content && !parts.summary.performance && !parts.summary.target)
-      return "";
+    const kontenMatch = normalized.match(/Jumlah konten aktif:\s*([\d.,]+)/i);
+    if (kontenMatch) data.contentCount = parseNumber(kontenMatch[1]);
 
-    const pieces = [];
-    const contentMatch = parts.summary.content?.match(/: ([^\n]+)/);
-    if (contentMatch) {
-      const countMatch = contentMatch[1].match(/[0-9][0-9.,]*/);
-      pieces.push(countMatch ? `${countMatch[0]} konten` : contentMatch[1].trim());
+    const likeMatch = normalized.match(
+      /Total likes:\s*([\d.,]+)\s+dari\s+([\d.,]+)[^()]*\(([\d.,]+)%/i
+    );
+    if (likeMatch) {
+      data.totalLikes = parseNumber(likeMatch[1]);
+      data.totalLikesTarget = parseNumber(likeMatch[2]);
+      data.likePercent = parseNumber(likeMatch[3]);
     }
 
-    const performanceMatch = parts.summary.performance?.match(/: ([^\n]+)/);
-    if (performanceMatch) pieces.push(performanceMatch[1].trim());
-
-    const targetMatch = parts.summary.target?.match(/= ([^\n]+)/);
+    const targetMatch = normalized.match(
+      /Target harian ≥95%:\s*([\d.,]+)\s+likes(?:\s*→\s*kekurangan\s*([\d.,]+))?/i
+    );
     if (targetMatch) {
-      const [targetValue, gapValue] = targetMatch[1].split("→").map((s) => s.trim());
-      if (targetValue) pieces.push(`Target ${targetValue}`);
-      if (gapValue) pieces.push(`Gap: ${gapValue}`);
+      data.targetLikes = parseNumber(targetMatch[1]);
+      data.likeGap = parseNumber(targetMatch[2]);
+      data.targetAchieved =
+        /target tercapai/i.test(targetMatch[0]) ||
+        (data.likeGap != null && data.likeGap <= 0);
     }
 
-    return `${icon} *${parts.platform}:* ${pieces.join("; ")}`.trim();
+    const rataMatch = normalized.match(
+      /Rata-rata likes\/konten:\s*([\d.,]+)/i
+    );
+    if (rataMatch) data.avgLikesPerContent = parseNumber(rataMatch[1]);
+
+    const gapKontenMatch = normalized.match(
+      /Rata-rata likes\/konten:[^\n]*;\s*([^\n]+)/i
+    );
+    if (gapKontenMatch) data.contentGapLine = gapKontenMatch[1].trim();
+
+    const contribMatch = normalized.match(
+      /Kontributor likes terbesar:\s*([^\n]+)/i
+    );
+    if (contribMatch) data.topContributor = contribMatch[1].trim();
+
+    const distribMatch = normalized.match(
+      /Distribusi likes per konten:\s*([\s\S]*?)(?:\n#|\nDemikian|$)/i
+    );
+    if (distribMatch) {
+      data.contentDistribution = distribMatch[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      data.topContentLine = data.contentDistribution[0] || "";
+      data.otherContentLines = data.contentDistribution.slice(1);
+    }
+
+    const personilMatch = normalized.match(
+      /Personil tercatat:\s*([\d.,]+)\s*→\s*IG\s*([\d.,]+)%\s*\(([\d.,]+)\),\s*TT\s*([\d.,]+)%\s*\(([\d.,]+)\)/i
+    );
+    if (personilMatch) {
+      data.personilTotal = parseNumber(personilMatch[1]);
+      data.personilIgPercent = parseNumber(personilMatch[2]);
+      data.personilIgCount = parseNumber(personilMatch[3]);
+      data.personilTtPercent = parseNumber(personilMatch[4]);
+      data.personilTtCount = parseNumber(personilMatch[5]);
+    }
+
+    const rataSatkerMatch = normalized.match(
+      /Rata-rata satker:\s*IG\s*([\d.,]+)%\s*\(median\s*([\d.,]+)%\),\s*TT\s*([\d.,]+)%\s*\(median\s*([\d.,]+)%\)/i
+    );
+    if (rataSatkerMatch) {
+      data.avgIg = parseNumber(rataSatkerMatch[1]);
+      data.medianIg = parseNumber(rataSatkerMatch[2]);
+      data.avgTt = parseNumber(rataSatkerMatch[3]);
+      data.medianTt = parseNumber(rataSatkerMatch[4]);
+    }
+
+    const bestSatkerMatch = normalized.match(
+      /Satker dengan capaian ≥90% IG & TT:\s*([^\n.]+)[^\n]*/i
+    );
+    if (bestSatkerMatch) data.bestSatkers = bestSatkerMatch[1].trim();
+
+    const strongSatkerMatch = normalized.match(
+      /Satker di kisaran 80% \(butuh dorongan akhir\):\s*([^\n.]+)[^\n]*/i
+    );
+    if (strongSatkerMatch) data.strongSatkers = strongSatkerMatch[1].trim();
+
+    const lowSatkerMatch = normalized.match(
+      /Satker perlu perhatian \(<10% di kedua kanal\):\s*([^\n.]+)[^\n]*/i
+    );
+    if (lowSatkerMatch) data.lowSatkers = lowSatkerMatch[1].trim();
+
+    const gapLinesMatch = normalized.match(
+      /Gap IG vs TikTok \(≥10 poin[^\n]*\):\s*([\s\S]*?)(?:\n#|\nDemikian|$)/i
+    );
+    if (gapLinesMatch) {
+      data.gapLines = gapLinesMatch[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    const igBacklogMatch = normalized.match(
+      /IG belum diisi:\s*([\d.,]+)\s+akun[^≈]*≈([\d.,]+)%: ([^\n)]+)/i
+    );
+    if (igBacklogMatch) {
+      data.igBacklog = parseNumber(igBacklogMatch[1]);
+      data.igBacklogTopPercent = parseNumber(igBacklogMatch[2]);
+      data.igBacklogTopList = igBacklogMatch[3].trim();
+    }
+
+    const ttBacklogMatch = normalized.match(
+      /TikTok belum diisi:\s*([\d.,]+)\s+akun[^≈]*≈([\d.,]+)%: ([^\n)]+)/i
+    );
+    if (ttBacklogMatch) {
+      data.ttBacklog = parseNumber(ttBacklogMatch[1]);
+      data.ttBacklogTopPercent = parseNumber(ttBacklogMatch[2]);
+      data.ttBacklogTopList = ttBacklogMatch[3].trim();
+    }
+
+    const projectionMatch = normalized.match(
+      /Proyeksi jika 70% Top-10 teratasi:\s*IG\s*→\s*~([\d.,]+)%[,\s]+TT\s*→\s*~([\d.,]+)%/i
+    );
+    if (projectionMatch) {
+      data.projectedIg = parseNumber(projectionMatch[1]);
+      data.projectedTt = parseNumber(projectionMatch[2]);
+    }
+
+    const topPerfMatch = normalized.match(
+      /Top performer rata-rata IG\/TT:\s*([^\n.]+)[^\n]*/i
+    );
+    if (topPerfMatch) data.topPerformers = topPerfMatch[1].trim();
+
+    const bottomPerfMatch = normalized.match(
+      /Bottom performer rata-rata IG\/TT:\s*([^\n.]+)[^\n]*/i
+    );
+    if (bottomPerfMatch) data.bottomPerformers = bottomPerfMatch[1].trim();
+
+    const notesMatch = normalized.match(/# Catatan Tambahan\s*([\s\S]*?)(?:\nDemikian|$)/i);
+    if (notesMatch) {
+      data.notes = notesMatch[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    return data;
   };
 
-  const header = `*Laporan Harian Pelaksanaan Engagement* – ${hari}, ${tanggal} ${jam} WIB`;
-  const summaryLines = [formatSummaryLine(igParts, "📸"), formatSummaryLine(ttParts, "🎵")].filter(Boolean);
-  const summaryBlock = summaryLines.length
-    ? ["📊 *Ringkasan Cepat*", ...summaryLines].join("\n")
-    : "";
+  const extractTtData = (text) => {
+    const normalized = normalizeText(text);
+    const data = {};
 
-  const detailSections = ["*DIREKTORAT BINMAS*"];
+    const contentMatch = normalized.match(/Konten dipantau\s*:\s*([\d.,]+)/i);
+    if (contentMatch) data.contentCount = parseNumber(contentMatch[1]);
 
-  if (igParts.contributor || igParts.highlightSection || igParts.rawBody) {
-    detailSections.push(
-      "",
-      "📸 *Instagram*",
-      igParts.contributor,
-      igParts.highlightSection || igParts.rawBody
+    const interactionMatch = normalized.match(
+      /Interaksi aktual\s*:\s*([\d.,]+)\/([\d.,]+)\s*\(([\d.,]+)%/i
+    );
+    if (interactionMatch) {
+      data.totalComments = parseNumber(interactionMatch[1]);
+      data.targetComments = parseNumber(interactionMatch[2]);
+      data.commentPercent = parseNumber(interactionMatch[3]);
+    }
+
+    const hitTargetMatch = normalized.match(
+      /Personel mencapai target\s*:\s*([\d.,]+)\/([\d.,]+)\s*\(([\d.,]+)%/i
+    );
+    if (hitTargetMatch) {
+      data.hitTarget = parseNumber(hitTargetMatch[1]);
+      data.eligible = parseNumber(hitTargetMatch[2]);
+      data.participationPercent = parseNumber(hitTargetMatch[3]);
+    }
+
+    const activeMatch = normalized.match(
+      /Personel aktif \(≥1 konten\)\s*:\s*([\d.,]+)\/([\d.,]+)\s*\(([\d.,]+)%/i
+    );
+    if (activeMatch) {
+      data.activeCount = parseNumber(activeMatch[1]);
+      data.activeEligible = parseNumber(activeMatch[2]);
+      data.activationPercent = parseNumber(activeMatch[3]);
+    }
+
+    const uniqueMatch = normalized.match(/Partisipan unik\s*:\s*([\d.,]+)/i);
+    if (uniqueMatch) data.uniqueParticipants = parseNumber(uniqueMatch[1]);
+
+    const bestContentMatch = normalized.match(
+      /Performa tertinggi\s*:\s*([^\n]+)/i
+    );
+    if (bestContentMatch) data.bestContent = bestContentMatch[1].trim();
+
+    const worstContentMatch = normalized.match(
+      /Performa terendah\s*:\s*([^\n]+)/i
+    );
+    if (worstContentMatch) data.worstContent = worstContentMatch[1].trim();
+
+    const topContribMatch = normalized.match(
+      /Penyumbang komentar terbesar\s*:\s*([^\n]+)/i
+    );
+    if (topContribMatch) data.topContributor = topContribMatch[1].trim();
+
+    const commentDistribMatch = normalized.match(
+      /Distribusi komentar per konten\s*:\s*([\s\S]*?)(?:\n\*|\nDemikian|$)/i
+    );
+    if (commentDistribMatch) {
+      data.commentDistribution = commentDistribMatch[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    const topSatkerMatch = normalized.match(
+      /Top satker aktif\s*:\s*([^\n]+)/i
+    );
+    if (topSatkerMatch) data.topSatkers = topSatkerMatch[1].trim();
+
+    const lowSatkerMatch = normalized.match(
+      /Satker perlu perhatian\s*:\s*([^\n]+)/i
+    );
+    if (lowSatkerMatch) data.lowSatkers = lowSatkerMatch[1].trim();
+
+    const backlogMatch = normalized.match(
+      /Personel belum komentar\s*:\s*([\d.,]+)\s*\(prioritas:\s*([^\n]+)\)/i
+    );
+    if (backlogMatch) {
+      data.backlog = parseNumber(backlogMatch[1]);
+      data.backlogFocus = backlogMatch[2].trim();
+    }
+
+    const missingHandleMatch = normalized.match(
+      /Belum input akun TikTok\s*:\s*([\d.,]+)\s*\(sumber utama:\s*([^\n]+)\)/i
+    );
+    if (missingHandleMatch) {
+      data.missingHandle = parseNumber(missingHandleMatch[1]);
+      data.missingHandleFocus = missingHandleMatch[2].trim();
+    }
+
+    const failureMatch = normalized.match(/⚠️ Data komentar gagal diambil[^\n]*/i);
+    if (failureMatch) data.failureNote = failureMatch[0];
+
+    return data;
+  };
+
+  const ig = extractIgData(igNarrative);
+  const tt = extractTtData(ttNarrative);
+
+  const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
+
+  const igLines = [];
+  if (ig.contentCount != null)
+    igLines.push(`• Konten aktif: ${formatInteger(ig.contentCount)}`);
+  const likeRatio = formatRatio(ig.totalLikes, ig.totalLikesTarget, ig.likePercent);
+  if (likeRatio)
+    igLines.push(`• Likes aktual: ${likeRatio}`);
+  if (ig.targetLikes != null) {
+    const gapText =
+      ig.likeGap != null
+        ? ig.likeGap > 0
+          ? `→ gap ${formatInteger(ig.likeGap)}`
+          : "→ target tercapai"
+        : ig.targetAchieved
+        ? "→ target tercapai"
+        : "";
+    igLines.push(
+      `• Target harian: ${formatInteger(ig.targetLikes)} likes ${gapText}`.trim()
+    );
+  }
+  if (ig.topContributor)
+    igLines.push(`• Kontributor utama: ${ig.topContributor}`);
+  if (ig.topContentLine)
+    igLines.push(`• Konten unggulan: ${ig.topContentLine}`);
+  if (ig.contentGapLine)
+    igLines.push(`• Catatan distribusi: ${ig.contentGapLine}`);
+
+  const ttLines = [];
+  if (tt.contentCount != null)
+    ttLines.push(`• Konten dipantau: ${formatInteger(tt.contentCount)}`);
+  const commentRatio = formatRatio(
+    tt.totalComments,
+    tt.targetComments,
+    tt.commentPercent
+  );
+  if (commentRatio)
+    ttLines.push(`• Interaksi aktual: ${commentRatio}`);
+  const participantRatio = formatRatio(
+    tt.hitTarget,
+    tt.eligible,
+    tt.participationPercent
+  );
+  if (participantRatio)
+    ttLines.push(`• Personel mencapai target: ${participantRatio}`);
+  const activationRatio = formatRatio(
+    tt.activeCount,
+    tt.activeEligible,
+    tt.activationPercent
+  );
+  if (activationRatio)
+    ttLines.push(`• Personel aktif: ${activationRatio}`);
+  if (tt.topContributor)
+    ttLines.push(`• Penyumbang terbesar: ${tt.topContributor}`);
+  if (tt.topSatkers)
+    ttLines.push(`• Satker dominan: ${tt.topSatkers}`);
+  if (tt.backlog != null)
+    ttLines.push(
+      `• Backlog komentar: ${formatInteger(tt.backlog)} (${tt.backlogFocus})`
+    );
+  if (tt.missingHandle != null)
+    ttLines.push(
+      `• Belum input akun: ${formatInteger(tt.missingHandle)} (${tt.missingHandleFocus})`
+    );
+  if (tt.failureNote) ttLines.push(`• Catatan teknis: ${tt.failureNote}`);
+
+  const personilLines = [];
+  if (ig.personilTotal != null) {
+    const summaryParts = [
+      `Total ${formatInteger(ig.personilTotal)} pers`,
+    ];
+    if (ig.personilIgPercent != null && ig.personilIgCount != null)
+      summaryParts.push(
+        `IG ${formatPercent(ig.personilIgPercent)}% (${formatInteger(
+          ig.personilIgCount
+        )})`
+      );
+    if (ig.personilTtPercent != null && ig.personilTtCount != null)
+      summaryParts.push(
+        `TT ${formatPercent(ig.personilTtPercent)}% (${formatInteger(
+          ig.personilTtCount
+        )})`
+      );
+    personilLines.push(`• ${summaryParts.join(" → ")}`);
+  }
+  if (ig.avgIg != null || ig.avgTt != null) {
+    const avgParts = [];
+    if (ig.avgIg != null) {
+      const medianText =
+        ig.medianIg != null ? ` (median ${formatPercent(ig.medianIg)}%)` : "";
+      avgParts.push(`IG ${formatPercent(ig.avgIg)}%${medianText}`);
+    }
+    if (ig.avgTt != null) {
+      const medianText =
+        ig.medianTt != null ? ` (median ${formatPercent(ig.medianTt)}%)` : "";
+      avgParts.push(`TT ${formatPercent(ig.avgTt)}%${medianText}`);
+    }
+    if (avgParts.length) personilLines.push(`• Rata-rata satker: ${avgParts.join("; ")}`);
+  }
+  if (ig.bestSatkers)
+    personilLines.push(`• Satker unggul: ${ig.bestSatkers}`);
+  if (ig.strongSatkers)
+    personilLines.push(`• Fokus dorongan: ${ig.strongSatkers}`);
+  if (ig.lowSatkers)
+    personilLines.push(`• Perlu perhatian: ${ig.lowSatkers}`);
+  if (ig.igBacklog != null) {
+    const percentText =
+      ig.igBacklogTopPercent != null
+        ? `≈ ${formatPercent(ig.igBacklogTopPercent)}%`
+        : null;
+    const top10Label = percentText ? `Top-10 ${percentText}` : "Top-10";
+    personilLines.push(
+      `• Backlog IG: ${formatInteger(ig.igBacklog)} akun (${top10Label}: ${
+        ig.igBacklogTopList || "-"
+      })`
+    );
+  }
+  if (ig.ttBacklog != null) {
+    const percentText =
+      ig.ttBacklogTopPercent != null
+        ? `≈ ${formatPercent(ig.ttBacklogTopPercent)}%`
+        : null;
+    const top10Label = percentText ? `Top-10 ${percentText}` : "Top-10";
+    personilLines.push(
+      `• Backlog TikTok: ${formatInteger(ig.ttBacklog)} akun (${top10Label}: ${
+        ig.ttBacklogTopList || "-"
+      })`
+    );
+  }
+  if (ig.projectedIg != null || ig.projectedTt != null) {
+    const projParts = [];
+    if (ig.projectedIg != null) projParts.push(`IG → ~${formatPercent(ig.projectedIg)}%`);
+    if (ig.projectedTt != null)
+      projParts.push(`TT → ~${formatPercent(ig.projectedTt)}%`);
+    personilLines.push(`• Proyeksi bila backlog tertangani: ${projParts.join(", ")}`);
+  }
+  if (ig.topPerformers)
+    personilLines.push(`• Top performer: ${ig.topPerformers}`);
+  if (ig.bottomPerformers)
+    personilLines.push(`• Bottom performer: ${ig.bottomPerformers}`);
+  if (ig.notes) personilLines.push(`• Catatan tambahan: ${ig.notes}`);
+
+  const buildClosing = () => {
+    const igBacklog = ig.igBacklog ?? 0;
+    const ttBacklog = tt.backlog ?? 0;
+    const igGood = ig.targetAchieved === true || (ig.likePercent ?? 0) >= 95;
+    const ttGood = (tt.commentPercent ?? 0) >= 80;
+    const backlogHigh = igBacklog > 30 || ttBacklog > 30;
+    const backlogModerate = igBacklog > 10 || ttBacklog > 10;
+    const likeGapHigh = (ig.likeGap ?? 0) > 0;
+
+    if (igGood && ttGood && !backlogModerate)
+      return "Capaian IG & TikTok sudah sesuai target, pertahankan konsistensi distribusi personel.";
+    if (backlogHigh)
+      return "Backlog personel masih tinggi, mohon percepat tindak lanjut satker prioritas.";
+    if (likeGapHigh || !ttGood)
+      return "Target harian belum tercapai, mohon optimalkan penggerakan personel dan konversi komentar.";
+    return "Progres positif, tetap kawal pengejaran target harian hingga tuntas.";
+  };
+
+  const sections = [];
+  sections.push(["1. 📸 *Instagram*", ...igLines.map((line) => `   ${line}`)].join("\n"));
+  sections.push(["2. 🎵 *TikTok*", ...ttLines.map((line) => `   ${line}`)].join("\n"));
+  sections.push(["3. 👥 *Data Personil*", ...personilLines.map((line) => `   ${line}`)].join("\n"));
+
+  const closingLine = buildClosing();
+
+  const distributionSections = [];
+  const igDistribution = ig.contentDistribution || [];
+  if (igDistribution.length) {
+    distributionSections.push(
+      [
+        "*Distribusi Likes Instagram per Konten*",
+        ...igDistribution.map((line) => `- ${line}`),
+      ].join("\n")
+    );
+  }
+  const ttDistribution = tt.commentDistribution || [];
+  if (ttDistribution.length) {
+    distributionSections.push(
+      [
+        "*Distribusi Komentar TikTok per Konten*",
+        ...ttDistribution.map((line) => `- ${line}`),
+      ].join("\n")
     );
   }
 
-  if (ttParts.contributor || ttParts.highlightSection || ttParts.rawBody) {
-    detailSections.push(
-      "",
-      "🎵 *TikTok*",
-      ttParts.contributor,
-      ttParts.highlightSection || ttParts.rawBody
-    );
-  }
-
-  const absensiSummary =
-    igParts.absensiSummary.length ? igParts.absensiSummary : ttParts.absensiSummary;
-  if (absensiSummary.length) {
-    detailSections.push("", "📋 *Status Personel Engagement*", absensiSummary.join("\n"));
-  }
-
-  const catatanSection = igParts.catatanSection || ttParts.catatanSection;
-  if (catatanSection) detailSections.push("", catatanSection);
-
-  detailSections.push("", "Demikian laporan singkat, Komandan.");
-
-  return [header, "", summaryBlock, "", detailSections.filter(Boolean).join("\n")] // appended list
-    .filter(Boolean)
+  return [
+    header,
+    "",
+    "*DIREKTORAT BINMAS*",
+    "",
+    ...sections,
+    "",
+    closingLine,
+    "",
+    ...distributionSections,
+  ]
+    .filter((segment) => typeof segment === "string" && segment.trim() !== "")
     .join("\n")
     .trim();
 }
