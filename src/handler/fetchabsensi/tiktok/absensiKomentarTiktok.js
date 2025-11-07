@@ -1127,6 +1127,16 @@ export async function lapharTiktokDitbinmas() {
     return `${snippet} – ${fmtNum(item.commenters)} akun (${item.link})`;
   };
 
+  const komentarDistribusi = contentStats.length
+    ? contentStats
+        .map((item, idx) =>
+          item.failed
+            ? `${idx + 1}. ${item.link} — data komentar gagal diambil`
+            : `${idx + 1}. ${item.link} — ${fmtNum(item.commenters)} akun`
+        )
+        .join("\n")
+    : "-";
+
   const uniqueParticipants = new Set();
   commentSets.forEach((set) => set.forEach((uname) => uniqueParticipants.add(uname)));
 
@@ -1195,7 +1205,8 @@ export async function lapharTiktokDitbinmas() {
     `Belum melaksanakan : ${totals.belum} pers\n` +
     `Belum Update Username Tiktok : ${totals.noTiktok} pers\n\n` +
     `_Kesatuan  :  Jumlah user / Sudah komentar / Komentar kurang/ Belum komentar/ Belum input TikTok_\n` +
-    `${perClientBlocks.join("\n\n")}`;
+    `${perClientBlocks.join("\n\n")}` +
+    `\n\nDistribusi komentar per konten:\n${komentarDistribusi}`;
 
   let narrative =
     `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
@@ -1216,6 +1227,8 @@ export async function lapharTiktokDitbinmas() {
     `*Catatan Backlog*\n` +
     `• Personel belum komentar : ${fmtNum(backlogTotal)} (prioritas: ${formatList(backlogSatkerList)})\n` +
     `• Belum input akun TikTok : ${fmtNum(totals.noTiktok)} (sumber utama: ${formatList(missingHandleSatkers)})\n\n` +
+    `*Distribusi Komentar per Konten*\n` +
+    `${komentarDistribusi}\n\n` +
     `Demikian Komandan, terimakasih.`;
 
   let textBelum =

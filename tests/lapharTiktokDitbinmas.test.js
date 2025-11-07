@@ -70,6 +70,10 @@ test('builds analytical narrative with key metrics', async () => {
   expect(result.narrative).toMatch(/• Penyumbang komentar terbesar : POLRES A \(1\), POLRES B \(0\)/);
   expect(result.narrative).toMatch(/• Personel belum komentar : 1 \(prioritas: POLRES B \(1\)\)/);
   expect(result.narrative).toMatch(/• Belum input akun TikTok : 1 \(sumber utama: POLRES A \(1\)\)/);
+  expect(result.text).toMatch(/Distribusi komentar per konten:/);
+  expect(result.text).toMatch(/1\. https:\/\/www\.tiktok\.com\/\@ditbinmas\/video\/v1 — 2 akun/);
+  expect(result.narrative).toMatch(/\*Distribusi Komentar per Konten\*/);
+  expect(result.narrative).toMatch(/1\. https:\/\/www\.tiktok\.com\/\@ditbinmas\/video\/v1 — 2 akun/);
   expect(result.narrative).toMatch(/Demikian Komandan, terimakasih\./);
 });
 

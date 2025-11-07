@@ -64,6 +64,8 @@ test('orders clients by likes with ditbinmas first and returns narrative', async
   expect(result.narrative).toMatch(/Status Data Personel/);
   expect(result.narrative).toMatch(/Backlog & Prioritas Singkat/);
   expect(result.narrative).toMatch(/Performa Satker/);
+  expect(result.text).toMatch(/Distribusi Likes per Konten:/);
+  expect(result.text).toMatch(/1\. https:\/\/www\.instagram\.com\/p\/sc1 — 2 likes/);
   expect(result.filename).toMatch(/^Absensi_All_Engagement_Instagram_/);
   expect(result.filenameBelum).toMatch(/^Absensi_Belum_Engagement_Instagram_/);
   expect(result.textBelum).toMatch(/Belum Input Sosial media/);
