@@ -596,6 +596,31 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
     return parts.join(" ");
   };
 
+  const cleanContentLine = (line) =>
+    line ? line.replace(/^\d+\.\s*/, "").trim() : null;
+
+  const stripTrailingPunctuation = (text) =>
+    text ? text.replace(/[.;:,]+\s*$/u, "").trim() : text;
+
+  const combineSentences = (segments) =>
+    segments
+      .map((segment) => (segment || "").trim())
+      .filter(Boolean)
+      .join(" ");
+
+  const indentParagraphs = (paragraphs) =>
+    paragraphs
+      .map((paragraph) => (paragraph || "").trim())
+      .filter(Boolean)
+      .flatMap((paragraph, index, array) => {
+        const lines = paragraph
+          .split("\n")
+          .map((line) => `   ${line.trim()}`)
+          .filter((line) => line.trim() !== "");
+        if (index < array.length - 1) return [...lines, ""];
+        return lines;
+      });
+
   const extractIgData = (text) => {
     const normalized = normalizeText(text);
     const data = {};
@@ -833,145 +858,213 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
   const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
 
-  const igLines = [];
-  if (ig.contentCount != null)
-    igLines.push(`• Konten aktif: ${formatInteger(ig.contentCount)}`);
   const likeRatio = formatRatio(ig.totalLikes, ig.totalLikesTarget, ig.likePercent);
-  if (likeRatio)
-    igLines.push(`• Likes aktual: ${likeRatio}`);
-  if (ig.targetLikes != null) {
-    const gapText =
-      ig.likeGap != null
-        ? ig.likeGap > 0
-          ? `→ gap ${formatInteger(ig.likeGap)}`
-          : "→ target tercapai"
-        : ig.targetAchieved
-        ? "→ target tercapai"
-        : "";
-    igLines.push(
-      `• Target harian: ${formatInteger(ig.targetLikes)} likes ${gapText}`.trim()
-    );
-  }
-  if (ig.topContributor)
-    igLines.push(`• Kontributor utama: ${ig.topContributor}`);
-  if (ig.topContentLine)
-    igLines.push(`• Konten unggulan: ${ig.topContentLine}`);
-  if (ig.contentGapLine)
-    igLines.push(`• Catatan distribusi: ${ig.contentGapLine}`);
+  const igTargetText = (() => {
+    if (ig.targetLikes == null) return null;
+    if (ig.likeGap != null && ig.likeGap > 0)
+      return `Selisih ${formatInteger(
+        ig.likeGap
+      )} dari target ${formatInteger(
+        ig.targetLikes
+      )} likes membuka ruang kolaborasi lembut untuk mengejar momentum hari ini.`;
+    return `Target ${formatInteger(
+      ig.targetLikes
+    )} likes sudah tercapai; pola sukses ini bisa menjadi contoh hangat bagi satker lain.`;
+  })();
+  const igContributorSentence = ig.topContributor
+    ? `Kontribusi utama mengalir dari ${stripTrailingPunctuation(
+        ig.topContributor
+      )}, menghadirkan energi positif bagi jajaran DITBINMAS.`
+    : null;
+  const igContentSentence = ig.topContentLine
+    ? `Konten unggulan ${cleanContentLine(
+        ig.topContentLine
+      )} memancing percakapan hangat dan menjadi jangkar perhatian publik.`
+    : null;
+  const igGapSentence = ig.contentGapLine
+    ? `Sebaran masih timpang—${ig.contentGapLine}—kita dapat menata ulang ritme distribusi agar setiap cerita ikut bersinar.`
+    : null;
 
-  const ttLines = [];
-  if (tt.contentCount != null)
-    ttLines.push(`• Konten dipantau: ${formatInteger(tt.contentCount)}`);
+  const igParagraphs = [];
+  igParagraphs.push(
+    combineSentences([
+      ig.contentCount != null
+        ? `Cicero memotret ${formatInteger(
+            ig.contentCount
+          )} konten aktif yang meramaikan etalase pembinaan masyarakat hari ini.`
+        : null,
+      likeRatio
+        ? `Respon warganet tercermin pada ${likeRatio}, menguatkan narasi pendampingan yang dibawa DITBINMAS.`
+        : null,
+      igTargetText,
+    ])
+  );
+  igParagraphs.push(combineSentences([igContributorSentence, igContentSentence, igGapSentence]));
+
   const commentRatio = formatRatio(
     tt.totalComments,
     tt.targetComments,
     tt.commentPercent
   );
-  if (commentRatio)
-    ttLines.push(`• Interaksi aktual: ${commentRatio}`);
   const participantRatio = formatRatio(
     tt.hitTarget,
     tt.eligible,
     tt.participationPercent
   );
-  if (participantRatio)
-    ttLines.push(`• Personel mencapai target: ${participantRatio}`);
   const activationRatio = formatRatio(
     tt.activeCount,
     tt.activeEligible,
     tt.activationPercent
   );
-  if (activationRatio)
-    ttLines.push(`• Personel aktif: ${activationRatio}`);
-  if (tt.topContributor)
-    ttLines.push(`• Penyumbang terbesar: ${tt.topContributor}`);
-  if (tt.topSatkers)
-    ttLines.push(`• Satker dominan: ${tt.topSatkers}`);
-  if (tt.backlog != null)
-    ttLines.push(
-      `• Backlog komentar: ${formatInteger(tt.backlog)} (${tt.backlogFocus})`
-    );
-  if (tt.missingHandle != null)
-    ttLines.push(
-      `• Belum input akun: ${formatInteger(tt.missingHandle)} (${tt.missingHandleFocus})`
-    );
-  if (tt.failureNote) ttLines.push(`• Catatan teknis: ${tt.failureNote}`);
 
-  const personilLines = [];
+  const ttBacklogSentence =
+    tt.backlog != null
+      ? `Masih ada ${formatInteger(
+          tt.backlog
+        )} komentar yang menunggu respon (${tt.backlogFocus}); sentuhan ringan tiap hari akan mempercepat penutupan.`
+      : null;
+  const ttMissingSentence =
+    tt.missingHandle != null
+      ? `Sebanyak ${formatInteger(
+          tt.missingHandle
+        )} akun belum ter-input (${tt.missingHandleFocus}); melengkapinya akan memperkuat jangkauan komunitas.`
+      : null;
+  const ttContributorSentence = (() => {
+    if (tt.topContributor && tt.topSatkers)
+      return `Energi komunitas dipimpin oleh ${tt.topContributor}, disambut ${tt.topSatkers} yang menjaga irama komentar.`;
+    if (tt.topContributor)
+      return `Energi komunitas dipimpin oleh ${tt.topContributor}.`;
+    if (tt.topSatkers)
+      return `Gelombang interaksi dijaga oleh ${tt.topSatkers}.`;
+    return null;
+  })();
+
+  const ttParagraphs = [];
+  ttParagraphs.push(
+    combineSentences([
+      tt.contentCount != null
+        ? `Di ruang TikTok, Cicero merekam ${formatInteger(
+            tt.contentCount
+          )} konten yang membuat lini masa DITBINMAS tetap hidup.`
+        : null,
+      commentRatio
+        ? `Gelombang interaksi ${commentRatio} menggambarkan partisipasi yang terus bergerak.`
+        : null,
+      participantRatio
+        ? `Sebaran personel yang mencapai target berada pada ${participantRatio}, menandakan kebiasaan positif mulai mengakar.`
+        : null,
+      activationRatio
+        ? `Aktivasi harian tercatat ${activationRatio}, menegaskan komunitas semakin solid.`
+        : null,
+    ])
+  );
+  ttParagraphs.push(
+    combineSentences([ttContributorSentence, ttBacklogSentence, ttMissingSentence])
+  );
+  if (tt.failureNote)
+    ttParagraphs.push(
+      combineSentences([
+        `Catatan teknis: ${tt.failureNote}.`,
+        "Tim analitik siap melakukan reset sensor jika diperlukan.",
+      ])
+    );
+
+  const personilParagraphs = [];
   if (ig.personilTotal != null) {
-    const summaryParts = [
-      `Total ${formatInteger(ig.personilTotal)} pers`,
-    ];
+    const channels = [];
     if (ig.personilIgPercent != null && ig.personilIgCount != null)
-      summaryParts.push(
-        `IG ${formatPercent(ig.personilIgPercent)}% (${formatInteger(
+      channels.push(
+        `Instagram ${formatPercent(ig.personilIgPercent)}% (${formatInteger(
           ig.personilIgCount
         )})`
       );
     if (ig.personilTtPercent != null && ig.personilTtCount != null)
-      summaryParts.push(
-        `TT ${formatPercent(ig.personilTtPercent)}% (${formatInteger(
+      channels.push(
+        `TikTok ${formatPercent(ig.personilTtPercent)}% (${formatInteger(
           ig.personilTtCount
         )})`
       );
-    personilLines.push(`• ${summaryParts.join(" → ")}`);
+    personilParagraphs.push(
+      combineSentences([
+        `Jejaring personel DITBINMAS tercatat ${formatInteger(
+          ig.personilTotal
+        )} individu aktif, tersebar di ${channels.join(" dan ")} sebagai garda terdepan pembinaan masyarakat.`,
+      ])
+    );
   }
+
   if (ig.avgIg != null || ig.avgTt != null) {
-    const avgParts = [];
+    const avgSentences = [];
     if (ig.avgIg != null) {
       const medianText =
         ig.medianIg != null ? ` (median ${formatPercent(ig.medianIg)}%)` : "";
-      avgParts.push(`IG ${formatPercent(ig.avgIg)}%${medianText}`);
+      avgSentences.push(
+        `Rata-rata satker IG berada di ${formatPercent(ig.avgIg)}%${medianText}.`
+      );
     }
     if (ig.avgTt != null) {
       const medianText =
         ig.medianTt != null ? ` (median ${formatPercent(ig.medianTt)}%)` : "";
-      avgParts.push(`TT ${formatPercent(ig.avgTt)}%${medianText}`);
+      avgSentences.push(
+        `Rata-rata satker TikTok mencapai ${formatPercent(ig.avgTt)}%${medianText}.`
+      );
     }
-    if (avgParts.length) personilLines.push(`• Rata-rata satker: ${avgParts.join("; ")}`);
+    if (avgSentences.length)
+      personilParagraphs.push(combineSentences(avgSentences));
   }
-  if (ig.bestSatkers)
-    personilLines.push(`• Satker unggul: ${ig.bestSatkers}`);
-  if (ig.strongSatkers)
-    personilLines.push(`• Fokus dorongan: ${ig.strongSatkers}`);
-  if (ig.lowSatkers)
-    personilLines.push(`• Perlu perhatian: ${ig.lowSatkers}`);
-  if (ig.igBacklog != null) {
-    const percentText =
-      ig.igBacklogTopPercent != null
-        ? `≈ ${formatPercent(ig.igBacklogTopPercent)}%`
-        : null;
-    const top10Label = percentText ? `Top-10 ${percentText}` : "Top-10";
-    personilLines.push(
-      `• Backlog IG: ${formatInteger(ig.igBacklog)} akun (${top10Label}: ${
-        ig.igBacklogTopList || "-"
-      })`
-    );
-  }
-  if (ig.ttBacklog != null) {
-    const percentText =
-      ig.ttBacklogTopPercent != null
-        ? `≈ ${formatPercent(ig.ttBacklogTopPercent)}%`
-        : null;
-    const top10Label = percentText ? `Top-10 ${percentText}` : "Top-10";
-    personilLines.push(
-      `• Backlog TikTok: ${formatInteger(ig.ttBacklog)} akun (${top10Label}: ${
-        ig.ttBacklogTopList || "-"
-      })`
-    );
-  }
-  if (ig.projectedIg != null || ig.projectedTt != null) {
-    const projParts = [];
-    if (ig.projectedIg != null) projParts.push(`IG → ~${formatPercent(ig.projectedIg)}%`);
-    if (ig.projectedTt != null)
-      projParts.push(`TT → ~${formatPercent(ig.projectedTt)}%`);
-    personilLines.push(`• Proyeksi bila backlog tertangani: ${projParts.join(", ")}`);
-  }
-  if (ig.topPerformers)
-    personilLines.push(`• Top performer: ${ig.topPerformers}`);
-  if (ig.bottomPerformers)
-    personilLines.push(`• Bottom performer: ${ig.bottomPerformers}`);
-  if (ig.notes) personilLines.push(`• Catatan tambahan: ${ig.notes}`);
+
+  const excellenceSentences = combineSentences([
+    ig.bestSatkers
+      ? `${ig.bestSatkers} memimpin papan atas dan layak dijadikan referensi praktik baik.`
+      : null,
+    ig.strongSatkers
+      ? `${ig.strongSatkers} tinggal selangkah lagi menuju kategori unggul; dorongan positif akan sangat membantu.`
+      : null,
+    ig.lowSatkers
+      ? `Area yang masih mencari ritme: ${ig.lowSatkers}; pendampingan ringan bisa mengangkat performanya.`
+      : null,
+  ]);
+  if (excellenceSentences) personilParagraphs.push(excellenceSentences);
+
+  const backlogParagraph = combineSentences([
+    ig.igBacklog != null
+      ? `Backlog Instagram tersisa ${formatInteger(ig.igBacklog)} akun (${ig.igBacklogTopPercent != null
+          ? `Top-10 ≈ ${formatPercent(ig.igBacklogTopPercent)}%`
+          : "Top-10"
+        }: ${ig.igBacklogTopList || "-"}).`
+      : null,
+    ig.ttBacklog != null
+      ? `Backlog TikTok berada di ${formatInteger(ig.ttBacklog)} akun (${ig.ttBacklogTopPercent != null
+          ? `Top-10 ≈ ${formatPercent(ig.ttBacklogTopPercent)}%`
+          : "Top-10"
+        }: ${ig.ttBacklogTopList || "-"}).`
+      : null,
+    ig.projectedIg != null || ig.projectedTt != null
+      ? `Jika backlog ini terurai, proyeksi capaian dapat menyentuh ${[
+          ig.projectedIg != null
+            ? `IG ~${formatPercent(ig.projectedIg)}%`
+            : null,
+          ig.projectedTt != null
+            ? `TikTok ~${formatPercent(ig.projectedTt)}%`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(", "
+        )}.`
+      : null,
+  ]);
+  if (backlogParagraph) personilParagraphs.push(backlogParagraph);
+
+  const performanceNotes = combineSentences([
+    ig.topPerformers
+      ? `Top performer: ${ig.topPerformers}, memberikan suntikan semangat.`
+      : null,
+    ig.bottomPerformers
+      ? `Area belajar: ${ig.bottomPerformers}, dapat menjadi fokus sesi coaching berikutnya.`
+      : null,
+    ig.notes ? `Catatan tambahan: ${ig.notes}.` : null,
+  ]);
+  if (performanceNotes) personilParagraphs.push(performanceNotes);
 
   const buildClosing = () => {
     const igBacklog = ig.igBacklog ?? 0;
@@ -983,18 +1076,24 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
     const likeGapHigh = (ig.likeGap ?? 0) > 0;
 
     if (igGood && ttGood && !backlogModerate)
-      return "Capaian IG & TikTok sudah sesuai target, pertahankan konsistensi distribusi personel.";
+      return "Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DITBINMAS.";
     if (backlogHigh)
-      return "Backlog personel masih tinggi, mohon percepat tindak lanjut satker prioritas.";
+      return "Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.";
     if (likeGapHigh || !ttGood)
-      return "Target harian belum tercapai, mohon optimalkan penggerakan personel dan konversi komentar.";
-    return "Progres positif, tetap kawal pengejaran target harian hingga tuntas.";
+      return "Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.";
+    return "Progres bergerak positif; mari terus kawal pengejaran target harian dengan ritme nyaman ala DITBINMAS.";
   };
 
   const sections = [];
-  sections.push(["1. 📸 *Instagram*", ...igLines.map((line) => `   ${line}`)].join("\n"));
-  sections.push(["2. 🎵 *TikTok*", ...ttLines.map((line) => `   ${line}`)].join("\n"));
-  sections.push(["3. 👥 *Data Personil*", ...personilLines.map((line) => `   ${line}`)].join("\n"));
+  sections.push(
+    ["1. 📸 *Instagram*", ...indentParagraphs(igParagraphs)].join("\n")
+  );
+  sections.push(
+    ["2. 🎵 *TikTok*", ...indentParagraphs(ttParagraphs)].join("\n")
+  );
+  sections.push(
+    ["3. 👥 *Data Personil*", ...indentParagraphs(personilParagraphs)].join("\n")
+  );
 
   const closingLine = buildClosing();
 
