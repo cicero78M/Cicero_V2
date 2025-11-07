@@ -458,7 +458,18 @@ export function formatDitbinmasText(stats) {
     totals,
     perClientBlocks,
     perClientBelumBlocks,
+    contentStats,
   } = stats;
+
+  const fmtNum = (n) => n.toLocaleString("id-ID");
+  const distribusiLikes = (contentStats || []).length
+    ? contentStats
+        .map(
+          (item, idx) =>
+            `${idx + 1}. ${item.link} — ${fmtNum(item.likes)} likes`
+        )
+        .join("\n")
+    : "-";
 
   const text =
     `Mohon ijin Komandan,\n\n` +
@@ -475,7 +486,8 @@ export function formatDitbinmasText(stats) {
     `Belum Melaksanakan : ${totals.belum} pers\n` +
     `Belum Update Username Instagram : ${totals.noUsername} pers\n` +
     `_Kesatuan  :  Jumlah user / Sudah likes / Likes kurang/ Belum likes/ Belum input IG _\n` +
-    `${perClientBlocks.join("\n\n")}`;
+    `${perClientBlocks.join("\n\n")}` +
+    `\n\nDistribusi Likes per Konten:\n${distribusiLikes}`;
 
   const textBelum =
     `Belum melaksanakan Likes atau belum input username IG/Tiktok\n` +
