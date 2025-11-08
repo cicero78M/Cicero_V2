@@ -592,7 +592,7 @@ export function createHandleMessage(waClient, options = {}) {
     }
 
     // ===== Deklarasi State dan Konstanta =====
-    const session = getSession(chatId);
+    let session = getSession(chatId);
 
     if (isGroupChat) {
       const handledGroupComplaint = await handleComplaintMessageIfApplicable({
@@ -609,10 +609,15 @@ export function createHandleMessage(waClient, options = {}) {
         pool,
         userModel,
       });
-      if (!handledGroupComplaint) {
-        console.log(`${clientLabel} Ignored group message from ${chatId}`);
+      if (handledGroupComplaint) {
+        return;
       }
-      return;
+
+      session = getSession(chatId);
+      if (!session) {
+        console.log(`${clientLabel} Ignored group message from ${chatId}`);
+        return;
+      }
     }
 
     const hasAnySession = () =>
