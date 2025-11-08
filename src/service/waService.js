@@ -89,6 +89,7 @@ import {
   getGreeting,
   formatUserData,
 } from "../utils/utilsHelper.js";
+import { handleComplaintMessageIfApplicable } from "./waAutoComplaintService.js";
 import {
   isAdminWhatsApp,
   formatToWhatsAppId,
@@ -106,6 +107,8 @@ import {
 dotenv.config();
 
 const messageQueue = new PQueue({ concurrency: 1 });
+
+const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
 
 // Fixed delay to ensure consistent 3-second response timing
 const responseDelayMs = 3000;
@@ -554,13 +557,12 @@ export function createHandleMessage(waClient, options = {}) {
     const userWaNum = chatId.replace(/[^0-9]/g, "");
     const initialIsMyContact =
       typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
+    const isGroupChat = chatId?.endsWith("@g.us");
+    const senderId = msg.author || chatId;
+    const isAdmin = isAdminWhatsApp(senderId);
     console.log(`${clientLabel} Incoming message from ${chatId}: ${text}`);
     if (msg.isStatus || chatId === "status@broadcast") {
       console.log(`${clientLabel} Ignored status message from ${chatId}`);
-      return;
-    }
-    if (chatId?.endsWith("@g.us")) {
-      console.log(`${clientLabel} Ignored group message from ${chatId}`);
       return;
     }
     if (!waReady) {
@@ -591,6 +593,28 @@ export function createHandleMessage(waClient, options = {}) {
 
     // ===== Deklarasi State dan Konstanta =====
     const session = getSession(chatId);
+
+    if (isGroupChat) {
+      const handledGroupComplaint = await handleComplaintMessageIfApplicable({
+        text,
+        allowUserMenu,
+        session,
+        isAdmin,
+        initialIsMyContact,
+        chatId,
+        adminOptionSessions,
+        setSession,
+        getSession,
+        waClient,
+        pool,
+        userModel,
+      });
+      if (!handledGroupComplaint) {
+        console.log(`${clientLabel} Ignored group message from ${chatId}`);
+      }
+      return;
+    }
+
     const hasAnySession = () =>
       Boolean(getSession(chatId)) ||
       Boolean(userMenuContext[chatId]) ||
@@ -622,8 +646,6 @@ export function createHandleMessage(waClient, options = {}) {
     const isAdminCommand = adminCommands.some((cmd) =>
       lowerText.startsWith(cmd)
     );
-    const senderId = msg.author || chatId;
-    const isAdmin = isAdminWhatsApp(senderId);
 
     let cachedUserByWa = null;
     let userByWaError = null;
@@ -1349,6 +1371,24 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       time: Date.now(),
     });
     await wabotDitbinmasHandlers.main(getSession(chatId), chatId, "", waClient);
+    return;
+  }
+
+  const handledComplaint = await handleComplaintMessageIfApplicable({
+    text,
+    allowUserMenu,
+    session,
+    isAdmin,
+    initialIsMyContact,
+    chatId,
+    adminOptionSessions,
+    setSession,
+    getSession,
+    waClient,
+    pool,
+    userModel,
+  });
+  if (handledComplaint) {
     return;
   }
 
@@ -3011,52 +3051,48 @@ const handleUserMessage = createHandleMessage(waUserClient, {
   clientLabel: "[WA-USER]",
 });
 
-waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
+if (shouldInitWhatsAppClients) {
+  waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
-waUserClient.on('message', (msg) => {
-  const from = msg.from || '';
-  if (from.endsWith('@g.us') || from === 'status@broadcast') {
-    return;
-  }
-  handleIncoming('wwebjs-user', msg, handleUserMessage);
-});
+  waUserClient.on('message', (msg) => {
+    const from = msg.from || '';
+    if (from.endsWith('@g.us') || from === 'status@broadcast') {
+      return;
+    }
+    handleIncoming('wwebjs-user', msg, handleUserMessage);
+  });
 
-// Fallback handler for environments that emit `message_create` instead of `message`
-
-// =======================
-// INISIALISASI WA CLIENT
-// =======================
-console.log("[WA] Starting WhatsApp client initialization");
-try {
-  await waClient.connect();
-} catch (err) {
-  console.error("[WA] Initialization failed:", err.message);
-}
-
-console.log("[WA-USER] Starting WhatsApp client initialization");
-try {
-  await waUserClient.connect();
-} catch (err) {
-  console.error("[WA-USER] Initialization failed:", err.message);
-}
-
-console.log("[WA-GATEWAY] Starting WhatsApp client initialization");
-try {
-  await waGatewayClient.connect();
-} catch (err) {
-  console.error("[WA-GATEWAY] Initialization failed:", err.message);
-}
-
-// Watchdog: jika event 'ready' tidak muncul, cek state setelah 60 detik
-setTimeout(async () => {
+  console.log("[WA] Starting WhatsApp client initialization");
   try {
-    const state = await waClient.getState();
-    console.log("[WA] getState:", state);
-    if (state === "CONNECTED" || state === "open") markWaReady("getState");
-  } catch (e) {
-    console.log("[WA] getState error:", e?.message);
+    await waClient.connect();
+  } catch (err) {
+    console.error("[WA] Initialization failed:", err.message);
   }
-}, 60000);
+
+  console.log("[WA-USER] Starting WhatsApp client initialization");
+  try {
+    await waUserClient.connect();
+  } catch (err) {
+    console.error("[WA-USER] Initialization failed:", err.message);
+  }
+
+  console.log("[WA-GATEWAY] Starting WhatsApp client initialization");
+  try {
+    await waGatewayClient.connect();
+  } catch (err) {
+    console.error("[WA-GATEWAY] Initialization failed:", err.message);
+  }
+
+  setTimeout(async () => {
+    try {
+      const state = await waClient.getState();
+      console.log("[WA] getState:", state);
+      if (state === "CONNECTED" || state === "open") markWaReady("getState");
+    } catch (e) {
+      console.log("[WA] getState error:", e?.message);
+    }
+  }, 60000);
+}
 
 export default waClient;
 
