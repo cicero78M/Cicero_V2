@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import { scheduleCronJob } from '../utils/cronScheduler.js';
 import dotenv from 'dotenv';
 import fs from 'fs/promises';
 import path from 'path';
@@ -32,7 +32,10 @@ function isLastDayOfMonth() {
   return tomorrow.getDate() === 1;
 }
 
-cron.schedule(
+const JOB_KEY = './src/cron/cronAmplifyLinkMonthly.js';
+
+scheduleCronJob(
+  JOB_KEY,
   '0 23 28-31 * *',
   async () => {
     if (!isLastDayOfMonth()) return;

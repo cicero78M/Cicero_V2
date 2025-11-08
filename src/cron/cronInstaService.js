@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -10,7 +10,10 @@ import { getActiveClientsIG, absensiLikes } from "../handler/fetchabsensi/insta/
 import { rekapLikesIG } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-cron.schedule(
+const JOB_KEY = "./src/cron/cronInstaService.js";
+
+scheduleCronJob(
+  JOB_KEY,
   "30 6-21 * * *",
   async () => {
     sendDebug({

@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -38,6 +38,8 @@ export async function runCron() {
   }
 }
 
-cron.schedule("32 20 * * *", runCron, { timezone: "Asia/Jakarta" });
+const JOB_KEY = "./src/cron/cronDirRequestDirektorat.js";
+
+scheduleCronJob(JOB_KEY, "32 20 * * *", runCron, { timezone: "Asia/Jakarta" });
 
 export default null;

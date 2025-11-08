@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -97,22 +97,18 @@ export async function runMonthlyReport(date = new Date()) {
   return sendKasatkerReport("this_month", "bulanan");
 }
 
+const JOB_KEY = "./src/cron/cronDirRequestLapharKasatker.js";
+
 if (process.env.JEST_WORKER_ID === undefined) {
-  cron.schedule("42 20 * * *", () => {
-    runDailyReport();
-  }, {
+  scheduleCronJob(JOB_KEY, "42 20 * * *", () => runDailyReport(), {
     timezone: "Asia/Jakarta",
   });
 
-  cron.schedule("47 20 * * 0", () => {
-    runWeeklyReport();
-  }, {
+  scheduleCronJob(JOB_KEY, "47 20 * * 0", () => runWeeklyReport(), {
     timezone: "Asia/Jakarta",
   });
 
-  cron.schedule("50 20 * * *", () => {
-    runMonthlyReport();
-  }, {
+  scheduleCronJob(JOB_KEY, "50 20 * * *", () => runMonthlyReport(), {
     timezone: "Asia/Jakarta",
   });
 }
