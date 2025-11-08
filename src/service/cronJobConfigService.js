@@ -4,6 +4,10 @@ export function listCronJobs() {
   return cronJobConfigModel.listCronJobs();
 }
 
+export function list() {
+  return listCronJobs();
+}
+
 export function getCronJob(jobKey) {
   return cronJobConfigModel.getCronJob(jobKey);
 }
