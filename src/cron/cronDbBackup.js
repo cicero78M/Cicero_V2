@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import { scheduleCronJob } from '../utils/cronScheduler.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -66,7 +66,10 @@ async function backupDatabase() {
   await fsPromises.unlink(filePath);
 }
 
-cron.schedule(
+const JOB_KEY = './src/cron/cronDbBackup.js';
+
+scheduleCronJob(
+  JOB_KEY,
   '0 4 * * *',
   () => {
     backupDatabase().catch((err) => {

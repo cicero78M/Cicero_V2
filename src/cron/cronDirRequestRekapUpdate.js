@@ -5,6 +5,7 @@ import waClient from "../service/waService.js";
 import { formatRekapUserData, formatExecutiveSummary } from "../handler/menu/dirRequestHandlers.js";
 import { safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
@@ -49,7 +50,11 @@ export async function runCron() {
   }
 }
 
-//cron.schedule("0 8-18/4 * * *", runCron, { timezone: "Asia/Jakarta" });
+const JOB_KEY = "./src/cron/cronDirRequestRekapUpdate.js";
+
+if (process.env.JEST_WORKER_ID === undefined) {
+  scheduleCronJob(JOB_KEY, "0 8-18/4 * * *", () => runCron(), { timezone: "Asia/Jakarta" });
+}
 
 export default null;
 

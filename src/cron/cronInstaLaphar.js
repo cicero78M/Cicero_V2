@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -50,7 +50,10 @@ function getAllNotifRecipients(client) {
   return Array.from(result);
 }
 
-cron.schedule(
+const JOB_KEY = "./src/cron/cronInstaLaphar.js";
+
+scheduleCronJob(
+  JOB_KEY,
   "00 15,18,21 * * *",
   async () => {
     // Step 1: Fetch post IG
