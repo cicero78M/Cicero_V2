@@ -16,6 +16,17 @@ CREATE TABLE clients (
   client_super VARCHAR
 );
 
+CREATE TABLE satbinmas_official_accounts (
+  satbinmas_account_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id VARCHAR NOT NULL REFERENCES clients(client_id) ON DELETE CASCADE,
+  platform VARCHAR NOT NULL,
+  username VARCHAR NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (client_id, platform)
+);
+
 CREATE TABLE "user" (
   user_id VARCHAR PRIMARY KEY,
   nama VARCHAR,

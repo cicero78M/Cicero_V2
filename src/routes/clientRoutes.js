@@ -24,6 +24,21 @@ router.get(
   clientController.getTiktokComments
 );
 router.get("/:client_id/summary", authRequired, clientController.getSummary);
+router.get(
+  "/:client_id/satbinmas-official",
+  authRequired,
+  clientController.getSatbinmasOfficialAccounts
+);
+router.put(
+  "/:client_id/satbinmas-official",
+  authRequired,
+  clientController.saveSatbinmasOfficialAccount
+);
+router.delete(
+  "/:client_id/satbinmas-official/:account_id",
+  authRequired,
+  clientController.deleteSatbinmasOfficialAccount
+);
 
 // Profil client
 
