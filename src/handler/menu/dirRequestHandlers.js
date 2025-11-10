@@ -334,10 +334,13 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   ).trim();
 }
 
-const topPersonnelRankingDependencies = {
+const topRankingDependencies = {
   getRekapLikesByClient,
   getRekapKomentarByClient,
 };
+
+const topPersonnelRankingDependencies = topRankingDependencies;
+const topPolresRankingDependencies = topRankingDependencies;
 
 async function formatTopPersonnelRanking(clientId, roleFlag = null) {
   const [likesData, commentData] = await Promise.all([
@@ -422,6 +425,106 @@ async function formatTopPersonnelRanking(clientId, roleFlag = null) {
 
   return (
     "📊 *Top Ranking Like & Komentar Personel*\n" +
+    "Periode: semua\n\n" +
+    lines.join("\n\n")
+  );
+}
+
+async function formatTopPolresRanking(clientId, roleFlag = null) {
+  const [likesData, commentData] = await Promise.all([
+    topPolresRankingDependencies.getRekapLikesByClient(
+      clientId,
+      "semua",
+      undefined,
+      undefined,
+      undefined,
+      roleFlag
+    ),
+    topPolresRankingDependencies.getRekapKomentarByClient(
+      clientId,
+      "semua",
+      undefined,
+      undefined,
+      undefined,
+      roleFlag
+    ),
+  ]);
+
+  const likeRows = Array.isArray(likesData?.rows) ? likesData.rows : [];
+  const commentRows = Array.isArray(commentData) ? commentData : [];
+
+  const combined = new Map();
+  const ensureEntry = (row) => {
+    const rawKey = String(row.client_id || row.client_name || "-")
+      .trim()
+      .toLowerCase();
+    const key = rawKey || "-";
+    if (!combined.has(key)) {
+      combined.set(key, {
+        client_id: row.client_id || "-",
+        client_name: String(row.client_name || row.client_id || "-")
+          .trim()
+          .toUpperCase(),
+        jumlah_like: 0,
+        jumlah_komentar: 0,
+      });
+    }
+    const entry = combined.get(key);
+    if (row.client_id && entry.client_id === "-") {
+      entry.client_id = row.client_id;
+    }
+    if (row.client_name && entry.client_name === "-") {
+      entry.client_name = String(row.client_name).trim().toUpperCase();
+    }
+    return entry;
+  };
+
+  likeRows.forEach((row) => {
+    const entry = ensureEntry(row);
+    entry.jumlah_like =
+      (entry.jumlah_like || 0) + parseInt(row.jumlah_like ?? 0, 10);
+  });
+
+  commentRows.forEach((row) => {
+    const entry = ensureEntry(row);
+    entry.jumlah_komentar =
+      (entry.jumlah_komentar || 0) + parseInt(row.jumlah_komentar ?? 0, 10);
+  });
+
+  const ranked = Array.from(combined.values())
+    .map((entry) => ({
+      ...entry,
+      total: (entry.jumlah_like || 0) + (entry.jumlah_komentar || 0),
+    }))
+    .filter((entry) => entry.total > 0)
+    .sort((a, b) => {
+      if (b.total !== a.total) {
+        return b.total - a.total;
+      }
+      const nameA = String(a.client_name || a.client_id || "");
+      const nameB = String(b.client_name || b.client_id || "");
+      return nameA.localeCompare(nameB);
+    });
+
+  if (!ranked.length) {
+    return "Tidak ada data ranking like/komentar polres.";
+  }
+
+  const lines = ranked.map((entry, index) => {
+    const totalFormatted = Number(entry.total).toLocaleString("id-ID");
+    const likeFormatted = Number(entry.jumlah_like || 0).toLocaleString("id-ID");
+    const commentFormatted = Number(entry.jumlah_komentar || 0).toLocaleString(
+      "id-ID"
+    );
+    return (
+      `${index + 1}. Kesatuan: ${entry.client_name}` +
+      `\n   Total Like/Komentar: ${totalFormatted}` +
+      `\n   Like: ${likeFormatted} | Komentar: ${commentFormatted}`
+    );
+  });
+
+  return (
+    "📊 *Top Ranking Like & Komentar Polres*\n" +
     "Periode: semua\n\n" +
     lines.join("\n\n")
   );
@@ -1696,6 +1799,18 @@ async function performAction(
       }
       break;
     }
+    case "32": {
+      try {
+        msg = await formatTopPolresRanking(clientId, roleFlag);
+      } catch (error) {
+        console.error(
+          "Gagal membuat ranking like/komentar polres:",
+          error
+        );
+        msg = "❌ Gagal membuat ranking like/komentar polres.";
+      }
+      break;
+    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -1790,7 +1905,8 @@ export const dirRequestHandlers = {
         "2️⃣9️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
         "3️⃣0️⃣ Laporan Kasatker\n" +
-        "3️⃣1️⃣ Top ranking like/komentar personel\n\n" +
+        "3️⃣1️⃣ Top ranking like/komentar personel\n" +
+        "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1843,6 +1959,7 @@ export const dirRequestHandlers = {
           "29",
           "30",
           "31",
+          "32",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2016,6 +2133,8 @@ export {
   formatRekapUserData,
   formatTopPersonnelRanking,
   topPersonnelRankingDependencies,
+  formatTopPolresRanking,
+  topPolresRankingDependencies,
   absensiLikesDitbinmas,
   absensiLikesDitbinmasSimple,
   absensiKomentarDitbinmas,

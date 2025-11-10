@@ -149,7 +149,9 @@ let dirRequestHandlers;
 let formatRekapUserData;
 let formatRekapAllSosmed;
 let formatTopPersonnelRanking;
+let formatTopPolresRanking;
 let topPersonnelRankingDependencies;
+let topPolresRankingDependencies;
 let dirRequestHandlersModule;
 let originalGetRekapLikesByClient;
 let originalGetRekapKomentarByClient;
@@ -160,7 +162,9 @@ beforeAll(async () => {
     formatRekapUserData,
     formatRekapAllSosmed,
     formatTopPersonnelRanking,
+    formatTopPolresRanking,
     topPersonnelRankingDependencies,
+    topPolresRankingDependencies,
   } = dirRequestHandlersModule);
   originalGetRekapLikesByClient = topPersonnelRankingDependencies.getRekapLikesByClient;
   originalGetRekapKomentarByClient =
@@ -171,6 +175,10 @@ afterAll(() => {
   topPersonnelRankingDependencies.getRekapLikesByClient =
     originalGetRekapLikesByClient;
   topPersonnelRankingDependencies.getRekapKomentarByClient =
+    originalGetRekapKomentarByClient;
+  topPolresRankingDependencies.getRekapLikesByClient =
+    originalGetRekapLikesByClient;
+  topPolresRankingDependencies.getRekapKomentarByClient =
     originalGetRekapKomentarByClient;
 });
 
@@ -183,6 +191,9 @@ beforeEach(() => {
   mockGetRekapKomentarByClient.mockReset();
   topPersonnelRankingDependencies.getRekapLikesByClient = mockGetRekapLikesByClient;
   topPersonnelRankingDependencies.getRekapKomentarByClient =
+    mockGetRekapKomentarByClient;
+  topPolresRankingDependencies.getRekapLikesByClient = mockGetRekapLikesByClient;
+  topPolresRankingDependencies.getRekapKomentarByClient =
     mockGetRekapKomentarByClient;
   mockMkdir.mockResolvedValue();
   mockWriteFile.mockResolvedValue();
@@ -397,6 +408,74 @@ test('formatTopPersonnelRanking merges like and comment totals', async () => {
   expect(message).toContain('Total Like/Komentar: 3');
 });
 
+test('formatTopPolresRanking aggregates totals per client', async () => {
+  mockGetRekapLikesByClient.mockResolvedValue({
+    rows: [
+      {
+        client_id: 'POLRES_A',
+        client_name: 'Polres A',
+        jumlah_like: 5,
+      },
+      {
+        client_id: 'POLRES_B',
+        client_name: 'Polres B',
+        jumlah_like: '3',
+      },
+      {
+        client_id: 'POLRES_A',
+        client_name: 'Polres A',
+        jumlah_like: 2,
+      },
+    ],
+  });
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    {
+      client_id: 'POLRES_A',
+      client_name: 'Polres A',
+      jumlah_komentar: 4,
+    },
+    {
+      client_id: 'POLRES_B',
+      client_name: 'Polres B',
+      jumlah_komentar: '1',
+    },
+    {
+      client_id: 'POLRES_C',
+      client_name: 'Polres C',
+      jumlah_komentar: 7,
+    },
+  ]);
+
+  const message = await formatTopPolresRanking('DITBINMAS', 'ditbinmas');
+
+  expect(mockGetRekapLikesByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'semua',
+    undefined,
+    undefined,
+    undefined,
+    'ditbinmas'
+  );
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'semua',
+    undefined,
+    undefined,
+    undefined,
+    'ditbinmas'
+  );
+  expect(message).toContain('📊 *Top Ranking Like & Komentar Polres*');
+  expect(message).toContain('Periode: semua');
+  const firstEntry = message.indexOf('1. Kesatuan: POLRES A');
+  const secondEntry = message.indexOf('2. Kesatuan: POLRES C');
+  expect(firstEntry).toBeGreaterThan(-1);
+  expect(secondEntry).toBeGreaterThan(-1);
+  expect(firstEntry).toBeLessThan(secondEntry);
+  expect(message).toContain('Total Like/Komentar: 11');
+  expect(message).toContain('Like: 7 | Komentar: 4');
+  expect(message).toContain('Like: 0 | Komentar: 7');
+});
+
 test('choose_menu option 2 executive summary reports totals', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2025-09-05T00:46:00Z'));
@@ -550,6 +629,39 @@ test('choose_menu option 31 sends top personnel ranking', async () => {
   );
   const menuMsg = waClient.sendMessage.mock.calls[1][1];
   expect(menuMsg).toContain('3️⃣1️⃣ Top ranking like/komentar personel');
+  expect(menuMsg).toContain('3️⃣2️⃣ Top ranking like/komentar polres tertinggi');
+});
+
+test('choose_menu option 32 top polres ranking', async () => {
+  mockGetRekapLikesByClient.mockResolvedValue({
+    rows: [
+      { client_id: 'POLRES_A', client_name: 'Polres A', jumlah_like: 5 },
+    ],
+  });
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { client_id: 'POLRES_A', client_name: 'Polres A', jumlah_komentar: 2 },
+  ]);
+
+  const session = {
+    role: 'ditbinmas',
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    dir_client_id: 'ditbinmas',
+  };
+  const chatId = '501';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '32', waClient);
+
+  expect(mockGetRekapLikesByClient).toHaveBeenCalled();
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenNthCalledWith(
+    1,
+    chatId,
+    expect.stringContaining('Top Ranking Like & Komentar Polres')
+  );
+  const menuMsg = waClient.sendMessage.mock.calls[1][1];
+  expect(menuMsg).toContain('3️⃣2️⃣ Top ranking like/komentar polres tertinggi');
 });
 
 test('choose_menu option 6 absensi likes ditbinmas simple', async () => {
