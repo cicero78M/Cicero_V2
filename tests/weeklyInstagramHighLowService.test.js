@@ -39,7 +39,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'AKP',
         nama: 'Budi',
         divisi: 'Sat Binmas',
-        client_id: 'POLRES_A',
+        client_id: 'ditbinmas',
         client_name: 'Polres A',
         jumlah_like: 25,
       },
@@ -48,7 +48,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'IPTU',
         nama: 'Ani',
         divisi: 'Sat Lantas',
-        client_id: 'POLRES_A',
+        client_id: 'ditbinmas',
         client_name: 'Polres A',
         jumlah_like: 15,
       },
@@ -57,7 +57,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'IPDA',
         nama: 'Candra',
         divisi: 'Sat Intelkam',
-        client_id: 'POLRES_B',
+        client_id: 'ditbinmas',
         client_name: 'Polres B',
         jumlah_like: 10,
       },
@@ -66,7 +66,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'AIPTU',
         nama: 'Dedi',
         divisi: 'Sat Samapta',
-        client_id: 'POLRES_B',
+        client_id: 'ditbinmas',
         client_name: 'Polres B',
         jumlah_like: 4,
       },
@@ -75,7 +75,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'BRIPKA',
         nama: 'Eko',
         divisi: 'Sat Reskrim',
-        client_id: 'POLRES_C',
+        client_id: 'ditbinmas',
         client_name: 'Polres C',
         jumlah_like: 2,
       },
@@ -84,9 +84,18 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
         title: 'BRIPTU',
         nama: 'Fajar',
         divisi: 'Sat Sabhara',
-        client_id: 'POLRES_D',
+        client_id: 'ditbinmas',
         client_name: 'Polres D',
         jumlah_like: 0,
+      },
+      {
+        user_id: '99',
+        title: 'IPTU',
+        nama: 'Haris',
+        divisi: 'Sat Narkoba',
+        client_id: 'polres_x',
+        client_name: 'Polres X',
+        jumlah_like: 50,
       },
     ],
     totalKonten: 32,
@@ -111,6 +120,7 @@ test('generateWeeklyInstagramHighLowReport returns formatted recap with top and 
   expect(message).toContain('1. AKP Budi (Sat Binmas • Polres A) — 25 likes');
   expect(message).toContain('❄️ *5 Pelaksana Terendah*');
   expect(message).toContain('1. BRIPTU Fajar (Sat Sabhara • Polres D) — 0 likes');
+  expect(message).not.toContain('Polres X');
 });
 
 test('generateWeeklyInstagramHighLowReport returns no data message when participants empty', async () => {
