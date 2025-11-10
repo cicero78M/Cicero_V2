@@ -96,12 +96,25 @@ test('filters users by role when role is ditbinmas', async () => {
   expect(params).toEqual(['ditbinmas']);
 });
 
-test('ditbinmas role passes only date to posts query', async () => {
+test('ditbinmas role includes role param in posts query', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
   const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(paramsSecond).toEqual(['2023-10-05']);
+  expect(paramsSecond).toEqual(['2023-10-05', 'ditbinmas']);
+});
+
+test('ditbinmas posts query has matching placeholders and params', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
+  await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
+  const postSql = mockQuery.mock.calls[1][0];
+  const postParams = mockQuery.mock.calls[1][1];
+  const matches = [...postSql.matchAll(/\$(\d+)/g)];
+  const highestPlaceholder = matches.length
+    ? Math.max(...matches.map(match => Number(match[1])))
+    : 0;
+  expect(postParams).toHaveLength(highestPlaceholder);
 });
 
 test('ignores non-ditbinmas roles', async () => {
