@@ -98,6 +98,11 @@ const KASATKER_REPORT_PERIOD_MAP = {
     label: "bulan ini",
     description: "Laporan bulanan (periode bulan ini)",
   },
+  "4": {
+    period: "all_time",
+    label: "semua periode",
+    description: "Laporan semua periode (seluruh data)",
+  },
 };
 
 const DIGIT_EMOJI = {
@@ -2091,7 +2096,7 @@ export const dirRequestHandlers = {
     if (!option) {
       await waClient.sendMessage(
         chatId,
-        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+        "Pilihan tidak valid. Balas angka 1 sampai 4 atau ketik *batal*."
       );
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;

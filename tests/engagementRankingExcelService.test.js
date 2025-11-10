@@ -174,6 +174,25 @@ describe('engagementRankingExcelService', () => {
     expect(result.periodInfo.label).toMatch(/Hari, Tanggal:/);
   });
 
+  test('collectEngagementRanking menggunakan rentang semua periode saat diminta', async () => {
+    const result = await collectEngagementRanking('DITBINMAS', 'ditbinmas', {
+      period: 'all_time',
+    });
+
+    expect(mockGetShortcodesByDateRange).toHaveBeenLastCalledWith(
+      'ditbinmas',
+      '2000-01-01',
+      expect.any(String)
+    );
+    expect(mockGetPostsByClientAndDateRange).toHaveBeenLastCalledWith(
+      'ditbinmas',
+      '2000-01-01',
+      expect.any(String)
+    );
+    expect(result.periodInfo.period).toBe('all_time');
+    expect(result.periodInfo.label).toMatch(/Semua periode data/);
+  });
+
   test('collectEngagementRanking menyertakan satker yang hanya muncul pada data user', async () => {
     mockGroupUsersByClientDivision.mockResolvedValueOnce({
       polresIds: ['DITBINMAS'],
