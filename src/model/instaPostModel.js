@@ -188,7 +188,11 @@ export async function getShortcodesTodayByUsername(username) {
 
 export async function getPostsTodayByClient(client_id) {
   const res = await query(
-    `SELECT * FROM insta_post WHERE client_id = $1 AND created_at::date = NOW()::date`,
+    `SELECT *
+     FROM insta_post
+     WHERE LOWER(client_id) = LOWER($1)
+       AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
+     ORDER BY created_at ASC`,
     [client_id]
   );
   return res.rows;
