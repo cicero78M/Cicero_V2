@@ -227,9 +227,10 @@ export async function getRekapLikesByClient(
       FROM valid_likes
       GROUP BY username
     `;
-    postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    const roleFilterCondition = `LOWER(p.client_id) = LOWER($${roleIdx}) OR LOWER(pr.role_name) = LOWER($${roleIdx})`;
+    postRoleJoinLikes = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleJoinPosts = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+    postRoleFilter = `AND (${roleFilterCondition})`;
   }
 
   const { rows } = await query(`

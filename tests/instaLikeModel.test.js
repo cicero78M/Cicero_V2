@@ -89,10 +89,10 @@ test('filters users by role when role is ditbinmas', async () => {
   expect(sql).toContain('roles r');
   expect(sql).toMatch(/LOWER\(r\.role_name\) = LOWER\(\$\d+\)/);
   expect(sql).toContain('1=1');
-  expect(sql).toContain('insta_post_roles pr ON pr.shortcode = p.shortcode');
+  expect(sql).toContain('LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
+  expect(sql).toMatch(/LOWER\(p\.client_id\) = LOWER\(\$\d+\)/);
   expect(sql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
   expect(sql).not.toContain('LOWER(u.client_id) = LOWER($1)');
-  expect(sql).not.toContain('LOWER(p.client_id) = LOWER($1)');
   expect(params).toEqual(['ditbinmas']);
 });
 
