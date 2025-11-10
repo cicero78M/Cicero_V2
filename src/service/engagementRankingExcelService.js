@@ -18,6 +18,7 @@ const PERIOD_DESCRIPTIONS = {
   last_week: "minggu sebelumnya",
   this_month: "bulan ini",
   last_month: "bulan sebelumnya",
+  all_time: "semua periode",
 };
 
 function getJakartaDate(baseDate = new Date()) {
@@ -106,6 +107,13 @@ function resolvePeriodRange(
   let fileLabel;
 
   switch (normalizedPeriod) {
+    case "all_time": {
+      startDateObj = new Date(2000, 0, 1);
+      endDateObj = new Date(now);
+      label = `Semua periode data hingga ${formatDayDate(endDateObj)}`;
+      fileLabel = `Semua_Periode_${toDateKey(startDateObj)}_${toDateKey(endDateObj)}`;
+      break;
+    }
     case "yesterday": {
       startDateObj.setDate(now.getDate() - 1);
       endDateObj = new Date(startDateObj);

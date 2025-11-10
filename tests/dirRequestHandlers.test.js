@@ -1568,6 +1568,27 @@ test('choose_kasatker_report_period option 1 mengirim narasi dan kembali ke menu
   expect(session.step).toBe('choose_menu');
 });
 
+test('choose_kasatker_report_period option 4 mengirim narasi semua periode', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '994a';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_report_period(session, chatId, '4', waClient);
+
+  expect(mockGenerateKasatkerReport).toHaveBeenCalledWith({
+    clientId: 'ditbinmas',
+    roleFlag: 'ditbinmas',
+    period: 'all_time',
+  });
+  expect(session.step).toBe('choose_menu');
+});
+
 test('choose_kasatker_report_period menampilkan pesan error ketika layanan gagal', async () => {
   mockGenerateKasatkerReport.mockRejectedValueOnce(
     new Error('Tidak ada data satker untuk disusun.')
