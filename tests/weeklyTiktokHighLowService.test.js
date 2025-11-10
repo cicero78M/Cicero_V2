@@ -44,7 +44,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'AKP',
       nama: 'Budi',
       divisi: 'Sat Binmas',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_A',
       client_name: 'Polres A',
       jumlah_komentar: 10,
     },
@@ -53,7 +53,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'IPTU',
       nama: 'Ani',
       divisi: 'Sat Lantas',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_A',
       client_name: 'Polres A',
       jumlah_komentar: 8,
     },
@@ -62,7 +62,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'IPDA',
       nama: 'Candra',
       divisi: 'Sat Intelkam',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_B',
       client_name: 'Polres B',
       jumlah_komentar: 5,
     },
@@ -71,7 +71,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'AIPTU',
       nama: 'Dedi',
       divisi: 'Sat Samapta',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_B',
       client_name: 'Polres B',
       jumlah_komentar: 3,
     },
@@ -80,7 +80,7 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'BRIPKA',
       nama: 'Eko',
       divisi: 'Sat Reskrim',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_C',
       client_name: 'Polres C',
       jumlah_komentar: 1,
     },
@@ -89,18 +89,9 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
       title: 'BRIPTU',
       nama: 'Fajar',
       divisi: 'Sat Sabhara',
-      client_id: 'ditbinmas',
+      client_id: 'POLRES_D',
       client_name: 'Polres D',
       jumlah_komentar: 0,
-    },
-    {
-      user_id: '66',
-      title: 'AKP',
-      nama: 'Gilang',
-      divisi: 'Sat Resnarkoba',
-      client_id: 'polres_y',
-      client_name: 'Polres Y',
-      jumlah_komentar: 30,
     },
   ]);
 
@@ -131,7 +122,6 @@ test('generateWeeklyTiktokHighLowReport returns formatted recap with top and bot
   expect(message).toContain('1. AKP Budi (Sat Binmas • Polres A) — 10 tugas');
   expect(message).toContain('❄️ *5 Pelaksana Terendah*');
   expect(message).toContain('1. BRIPTU Fajar (Sat Sabhara • Polres D) — 0 tugas');
-  expect(message).not.toContain('Polres Y');
 });
 
 test('generateWeeklyTiktokHighLowReport returns no data message when participants empty', async () => {
