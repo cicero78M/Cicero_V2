@@ -186,8 +186,15 @@ export async function getRekapKomentarByClient(
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
     )`;
     if (effectiveRole === "ditbinmas") {
-      postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = p.video_id";
-      postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleJoin = `LEFT JOIN tiktok_post_roles pr
+        ON pr.video_id = p.video_id
+       AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleFilter = `AND (
+        pr.video_id IS NOT NULL
+        OR NOT EXISTS (
+          SELECT 1 FROM tiktok_post_roles pr_all WHERE pr_all.video_id = p.video_id
+        )
+      )`;
     }
   } else if (roleLower && roleLower !== "operator") {
     roleParamIndex = params.push(roleLower);
@@ -197,8 +204,15 @@ export async function getRekapKomentarByClient(
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
     )`;
     if (roleLower === "ditbinmas") {
-      postRoleJoin = "JOIN tiktok_post_roles pr ON pr.video_id = p.video_id";
-      postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleJoin = `LEFT JOIN tiktok_post_roles pr
+        ON pr.video_id = p.video_id
+       AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleFilter = `AND (
+        pr.video_id IS NOT NULL
+        OR NOT EXISTS (
+          SELECT 1 FROM tiktok_post_roles pr_all WHERE pr_all.video_id = p.video_id
+        )
+      )`;
     }
   }
 
