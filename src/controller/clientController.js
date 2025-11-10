@@ -4,6 +4,7 @@ import * as instaPostService from '../service/instaPostService.js';
 import * as instaLikeService from '../service/instaLikeService.js';
 import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
+import * as satbinmasOfficialAccountService from '../service/satbinmasOfficialAccountService.js';
 import { sendSuccess } from '../utils/response.js';
 
 // List semua client (bisa filter by group)
@@ -145,6 +146,50 @@ export const getSummary = async (req, res, next) => {
     if (!summary) return res.status(404).json({ error: 'Client not found' });
     sendSuccess(res, summary);
   } catch (err) {
+    next(err);
+  }
+};
+
+export const getSatbinmasOfficialAccounts = async (req, res, next) => {
+  try {
+    const accounts = await satbinmasOfficialAccountService.listSatbinmasOfficialAccounts(
+      req.params.client_id
+    );
+    sendSuccess(res, accounts);
+  } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    next(err);
+  }
+};
+
+export const saveSatbinmasOfficialAccount = async (req, res, next) => {
+  try {
+    const result = await satbinmasOfficialAccountService.saveSatbinmasOfficialAccount(
+      req.params.client_id,
+      req.body
+    );
+    sendSuccess(res, result, result.created ? 201 : 200);
+  } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    next(err);
+  }
+};
+
+export const deleteSatbinmasOfficialAccount = async (req, res, next) => {
+  try {
+    const deleted = await satbinmasOfficialAccountService.deleteSatbinmasOfficialAccount(
+      req.params.client_id,
+      req.params.account_id
+    );
+    sendSuccess(res, deleted);
+  } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     next(err);
   }
 };
