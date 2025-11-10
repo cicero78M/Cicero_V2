@@ -151,27 +151,37 @@ export async function getRekapLikesByClient(
   role
 ) {
   const roleLower = role ? role.toLowerCase() : null;
-  const params = [client_id];
+  const params = [];
+  const addParam = value => {
+    params.push(value);
+    return params.length;
+  };
+
+  let clientParamIdx = null;
+  if (roleLower !== 'ditbinmas') {
+    clientParamIdx = addParam(client_id);
+  }
+
   let tanggalFilter =
     "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
-    const startIdx = params.push(start_date);
-    const endIdx = params.push(end_date);
+    const startIdx = addParam(start_date);
+    const endIdx = addParam(end_date);
     tanggalFilter =
       `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      const idx = params.push(monthDate);
-        tanggalFilter =
-          `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
+      const idx = addParam(monthDate);
+      tanggalFilter =
+        `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
     } else {
       tanggalFilter =
         "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (periode === 'mingguan') {
     if (tanggal) {
-      const idx = params.push(tanggal);
+      const idx = addParam(tanggal);
       tanggalFilter =
         `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
     } else {
@@ -180,12 +190,12 @@ export async function getRekapLikesByClient(
   } else if (periode === 'semua') {
     tanggalFilter = '1=1';
   } else if (tanggal) {
-    const idx = params.push(tanggal);
+    const idx = addParam(tanggal);
     tanggalFilter = `p.created_at::date = $${idx}::date`;
   }
 
-  let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
-  let userWhere = 'LOWER(u.client_id) = LOWER($1)';
+  let postClientFilter = '1=1';
+  let userWhere = '1=1';
   let likeCountsSelect = `
     SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
     FROM valid_likes
@@ -198,11 +208,15 @@ export async function getRekapLikesByClient(
   let postRoleJoinLikes = '';
   let postRoleJoinPosts = '';
   let postRoleFilter = '';
+  if (clientParamIdx !== null) {
+    postClientFilter = `LOWER(p.client_id) = LOWER($${clientParamIdx})`;
+    userWhere = `LOWER(u.client_id) = LOWER($${clientParamIdx})`;
+  } else {
+    likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
+  }
+
   if (roleLower === 'ditbinmas') {
-    params.shift();
-    tanggalFilter = tanggalFilter.replace(/\$(\d+)/g, (_, n) => `$${n - 1}`);
-    postClientFilter = '1=1';
-    const roleIdx = params.push(roleLower);
+    const roleIdx = addParam(roleLower);
     userWhere = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
@@ -213,7 +227,6 @@ export async function getRekapLikesByClient(
       FROM valid_likes
       GROUP BY username
     `;
-    likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
     postRoleJoinLikes = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleJoinPosts = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
     postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
@@ -263,8 +276,6 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
-
   const { rows: postRows } = await query(
     `WITH posts AS (
       SELECT p.shortcode
@@ -275,7 +286,7 @@ export async function getRekapLikesByClient(
         AND ${tanggalFilter}
     )
     SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,
-    postParams
+    params
   );
   const totalKonten = parseInt(postRows[0]?.total_post || '0', 10);
 
