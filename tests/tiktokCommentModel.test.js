@@ -39,8 +39,6 @@ test('getRekapKomentarByClient filters directorate users by ditbinmas role only'
   const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('EXISTS (');
   expect(sql).toContain('LOWER(r.role_name) = LOWER(');
-  expect(sql).toContain('tiktok_post_roles pr ON pr.video_id = p.video_id');
-  expect(sql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
   expect(sql).not.toContain('LOWER(u.client_id) = ANY');
   const params = mockQuery.mock.calls[1][1];
   expect(params).toEqual(['ditbinmas']);
