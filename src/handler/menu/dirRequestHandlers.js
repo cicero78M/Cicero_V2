@@ -1,8 +1,6 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
 import { getShortcodesTodayByClient } from "../../model/instaPostModel.js";
 import { getVideoIdsTodayByClient } from "../../model/tiktokPostModel.js";
-import { getRekapLikesByClient } from "../../model/instaLikeModel.js";
-import { getRekapKomentarByClient } from "../../model/tiktokCommentModel.js";
 import {
   absensiLikes,
   lapharDitbinmas,
@@ -332,99 +330,6 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     } pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
     body
   ).trim();
-}
-
-const topPersonnelRankingDependencies = {
-  getRekapLikesByClient,
-  getRekapKomentarByClient,
-};
-
-async function formatTopPersonnelRanking(clientId, roleFlag = null) {
-  const [likesData, commentData] = await Promise.all([
-    topPersonnelRankingDependencies.getRekapLikesByClient(
-      clientId,
-      "semua",
-      undefined,
-      undefined,
-      undefined,
-      roleFlag
-    ),
-    topPersonnelRankingDependencies.getRekapKomentarByClient(
-      clientId,
-      "semua",
-      undefined,
-      undefined,
-      undefined,
-      roleFlag
-    ),
-  ]);
-
-  const likeRows = Array.isArray(likesData?.rows) ? likesData.rows : [];
-  const commentRows = Array.isArray(commentData) ? commentData : [];
-
-  const combined = new Map();
-  const ensureEntry = (row) => {
-    const fallbackKey = `${(row.client_id || "").toLowerCase()}::${(row.username || "").toLowerCase()}`;
-    const key = row.user_id || fallbackKey;
-    if (!combined.has(key)) {
-      combined.set(key, {
-        user_id: row.user_id || "-",
-        title: row.title || "-",
-        nama: row.nama || "-",
-        client_name: row.client_name || row.client_id || "-",
-        jumlah_like: 0,
-        jumlah_komentar: 0,
-      });
-    }
-    return combined.get(key);
-  };
-
-  likeRows.forEach((row) => {
-    const entry = ensureEntry(row);
-    entry.jumlah_like = (entry.jumlah_like || 0) + parseInt(row.jumlah_like ?? 0, 10);
-  });
-
-  commentRows.forEach((row) => {
-    const entry = ensureEntry(row);
-    entry.jumlah_komentar =
-      (entry.jumlah_komentar || 0) + parseInt(row.jumlah_komentar ?? 0, 10);
-  });
-
-  const ranked = Array.from(combined.values())
-    .map((entry) => ({
-      ...entry,
-      total: (entry.jumlah_like || 0) + (entry.jumlah_komentar || 0),
-    }))
-    .filter((entry) => entry.total > 0)
-    .sort((a, b) => {
-      if (b.total !== a.total) {
-        return b.total - a.total;
-      }
-      const nameA = formatNama(a) || `${a.nama}`;
-      const nameB = formatNama(b) || `${b.nama}`;
-      return nameA.localeCompare(nameB);
-    });
-
-  if (!ranked.length) {
-    return "Tidak ada data ranking like/komentar personel.";
-  }
-
-  const lines = ranked.map((entry, index) => {
-    const totalFormatted = Number(entry.total).toLocaleString("id-ID");
-    return (
-      `${index + 1}. Nama: ${entry.nama}` +
-      `\n   Pangkat: ${entry.title}` +
-      `\n   NRP: ${entry.user_id}` +
-      `\n   Kesatuan: ${entry.client_name}` +
-      `\n   Total Like/Komentar: ${totalFormatted}`
-    );
-  });
-
-  return (
-    "📊 *Top Ranking Like & Komentar Personel*\n" +
-    "Periode: semua\n\n" +
-    lines.join("\n\n")
-  );
 }
 
 async function absensiLikesDitbinmas() {
@@ -1665,42 +1570,30 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-    case "29": {
-      const recapData = await collectKomentarRecap(clientId);
-      if (!recapData?.videoIds?.length) {
-        msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+      case "29": {
+        const recapData = await collectKomentarRecap(clientId);
+        if (!recapData?.videoIds?.length) {
+          msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+          break;
+        }
+        const filePath = await saveCommentRecapPerContentExcel(recapData, clientId);
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
         break;
       }
-      const filePath = await saveCommentRecapPerContentExcel(recapData, clientId);
-      const buffer = await readFile(filePath);
-      await sendWAFile(
-        waClient,
-        buffer,
-        basename(filePath),
-        chatId,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      await unlink(filePath);
-      msg = "✅ File Excel dikirim.";
-      break;
+      default:
+        msg = "Menu tidak dikenal.";
     }
-    case "31": {
-      try {
-        msg = await formatTopPersonnelRanking(clientId, roleFlag);
-      } catch (error) {
-        console.error(
-          "Gagal membuat ranking like/komentar personel:",
-          error
-        );
-        msg = "❌ Gagal membuat ranking like/komentar personel.";
-      }
-      break;
-    }
-    default:
-      msg = "Menu tidak dikenal.";
-  }
-  await waClient.sendMessage(chatId, msg.trim());
-  if (action === "12" || action === "14" || action === "16") {
+    await waClient.sendMessage(chatId, msg.trim());
+    if (action === "12" || action === "14" || action === "16") {
       await safeSendMessage(waClient, dirRequestGroup, msg.trim());
     }
   }
@@ -1789,8 +1682,7 @@ export const dirRequestHandlers = {
         "2️⃣8️⃣ Rekap like Instagram per konten (Excel)\n" +
         "2️⃣9️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
-        "3️⃣0️⃣ Laporan Kasatker\n" +
-        "3️⃣1️⃣ Top ranking like/komentar personel\n\n" +
+        "3️⃣0️⃣ Laporan Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1842,7 +1734,6 @@ export const dirRequestHandlers = {
           "28",
           "29",
           "30",
-          "31",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2014,8 +1905,6 @@ export const dirRequestHandlers = {
 
 export {
   formatRekapUserData,
-  formatTopPersonnelRanking,
-  topPersonnelRankingDependencies,
   absensiLikesDitbinmas,
   absensiLikesDitbinmasSimple,
   absensiKomentarDitbinmas,
