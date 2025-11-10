@@ -263,7 +263,8 @@ export async function getRekapLikesByClient(
     user.jumlah_like = parseInt(user.jumlah_like, 10);
   }
 
-  const postParams = roleLower === 'ditbinmas' ? params.slice(0, -1) : params;
+  const hasPostRoleFilter = /LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/.test(postRoleFilter);
+  const postParams = hasPostRoleFilter ? [...params] : params;
 
   const { rows: postRows } = await query(
     `WITH posts AS (

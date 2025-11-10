@@ -96,12 +96,12 @@ test('filters users by role when role is ditbinmas', async () => {
   expect(params).toEqual(['ditbinmas']);
 });
 
-test('ditbinmas role passes only date to posts query', async () => {
+test('ditbinmas role keeps role parameter for posts query', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [] });
   mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
   await getRekapLikesByClient('c1', 'harian', '2023-10-05', undefined, undefined, 'ditbinmas');
   const paramsSecond = mockQuery.mock.calls[1][1];
-  expect(paramsSecond).toEqual(['2023-10-05']);
+  expect(paramsSecond).toEqual(['2023-10-05', 'ditbinmas']);
 });
 
 test('ignores non-ditbinmas roles', async () => {
