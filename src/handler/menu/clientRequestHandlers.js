@@ -2688,7 +2688,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "prosesTiktok_menu";
     await waClient.sendMessage(
       chatId,
-      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\n5️⃣ Hapus Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
     );
   },
   prosesTiktok_menu: async (
@@ -2740,13 +2740,6 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       await waClient.sendMessage(
         chatId,
         "Kirim link atau video ID TikTok yang ingin disimpan. Ketik *batal* untuk membatalkan."
-      );
-      return;
-    } else if (text.trim() === "5") {
-      session.step = "prosesTiktok_delete_prompt";
-      await waClient.sendMessage(
-        chatId,
-        "Kirim link atau video ID TikTok yang akan dihapus beserta likes-nya. Ketik *batal* untuk membatalkan."
       );
       return;
     } else {
