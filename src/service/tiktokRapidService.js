@@ -43,6 +43,23 @@ function parsePosts(resData) {
   return [];
 }
 
+function parsePostDetail(resData) {
+  let payload = resData?.data ?? resData;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch (err) {
+      payload = {};
+    }
+  }
+
+  if (payload?.itemInfo?.itemStruct) return payload.itemInfo.itemStruct;
+  if (payload?.data?.itemInfo?.itemStruct) return payload.data.itemInfo.itemStruct;
+  if (payload?.itemStruct) return payload.itemStruct;
+  if (payload?.itemInfo?.item) return payload.itemInfo.item;
+  return null;
+}
+
 export async function fetchTiktokProfile(username) {
   if (!username) return null;
   try {
@@ -195,6 +212,37 @@ export async function fetchTiktokCommentsPage(videoId, cursor = 0, count = 50) {
       error.statusCode = err.response?.status;
       throw error;
     }
+  }
+}
+
+export async function fetchTiktokPostDetail(videoId) {
+  if (!videoId) {
+    throw new Error('Parameter videoId wajib diisi.');
+  }
+
+  try {
+    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/post/detail`, {
+      params: { videoId },
+      headers: {
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'x-cache-control': 'no-cache'
+      }
+    });
+
+    const itemStruct = parsePostDetail(res.data);
+    if (!itemStruct) {
+      throw new Error('Response detail TikTok tidak memiliki itemStruct.');
+    }
+
+    return itemStruct;
+  } catch (err) {
+    const msg = err.response?.data
+      ? JSON.stringify(err.response.data)
+      : err.message;
+    const error = new Error(msg);
+    error.statusCode = err.response?.status;
+    throw error;
   }
 }
 

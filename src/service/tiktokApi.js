@@ -4,5 +4,6 @@ export {
   fetchTiktokPostsBySecUid,
   fetchTiktokInfo,
   fetchTiktokCommentsPage,
-  fetchAllTiktokComments
+  fetchAllTiktokComments,
+  fetchTiktokPostDetail
 } from './tiktokRapidService.js';
