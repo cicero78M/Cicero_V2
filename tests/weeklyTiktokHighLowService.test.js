@@ -8,10 +8,13 @@ const mockCountPostsByClient = jest.fn();
 
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getRekapKomentarByClient: mockGetRekapKomentarByClient,
+  deleteCommentsByVideoId: jest.fn(),
 }));
 
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   countPostsByClient: mockCountPostsByClient,
+  findPostByVideoId: jest.fn(),
+  deletePostByVideoId: jest.fn(),
 }));
 
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({

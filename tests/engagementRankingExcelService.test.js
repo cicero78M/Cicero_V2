@@ -33,10 +33,13 @@ jest.unstable_mockModule('../src/utils/likesHelper.js', () => ({
 
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getPostsByClientAndDateRange: mockGetPostsByClientAndDateRange,
+  findPostByVideoId: jest.fn(),
+  deletePostByVideoId: jest.fn(),
 }));
 
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getCommentsByVideoId: mockGetCommentsByVideoId,
+  deleteCommentsByVideoId: jest.fn(),
 }));
 
 jest.unstable_mockModule('fs/promises', () => ({

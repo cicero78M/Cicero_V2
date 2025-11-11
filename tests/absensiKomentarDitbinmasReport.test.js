@@ -6,8 +6,15 @@ const mockGetCommentsByVideoId = jest.fn();
 const mockGetUsersByDirektorat = jest.fn();
 
 jest.unstable_mockModule('../src/db/index.js', () => ({ query: mockQuery }));
-jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({ getPostsTodayByClient: mockGetPostsTodayByClient }));
-jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({ getCommentsByVideoId: mockGetCommentsByVideoId }));
+jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
+  getPostsTodayByClient: mockGetPostsTodayByClient,
+  findPostByVideoId: jest.fn(),
+  deletePostByVideoId: jest.fn(),
+}));
+jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
+  getCommentsByVideoId: mockGetCommentsByVideoId,
+  deleteCommentsByVideoId: jest.fn(),
+}));
 jest.unstable_mockModule('../src/model/userModel.js', async () => {
   const actual = await import('../src/model/userModel.js');
   return {

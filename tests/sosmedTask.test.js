@@ -18,9 +18,12 @@ jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getPostsTodayByClient: mockGetTiktokPostsToday,
+  findPostByVideoId: jest.fn(),
+  deletePostByVideoId: jest.fn(),
 }));
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getCommentsByVideoId: mockGetCommentsByVideoId,
+  deleteCommentsByVideoId: jest.fn(),
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,

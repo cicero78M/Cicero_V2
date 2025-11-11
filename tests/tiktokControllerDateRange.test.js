@@ -2,7 +2,8 @@ import { jest } from '@jest/globals';
 
 const mockGetRekap = jest.fn();
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
-  getRekapKomentarByClient: mockGetRekap
+  getRekapKomentarByClient: mockGetRekap,
+  deleteCommentsByVideoId: jest.fn(),
 }));
 jest.unstable_mockModule('../src/service/tiktokCommentService.js', () => ({}));
 jest.unstable_mockModule('../src/service/tiktokPostService.js', () => ({}));
