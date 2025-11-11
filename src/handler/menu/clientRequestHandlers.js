@@ -2680,7 +2680,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "prosesTiktok_menu";
     await waClient.sendMessage(
       chatId,
-      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
     );
   },
   prosesTiktok_menu: async (
@@ -2727,6 +2727,13 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       let msg = `Pilih tipe rekap absensi komentar TikTok:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`;
       await waClient.sendMessage(chatId, msg);
       return;
+    } else if (text.trim() === "4") {
+      session.step = "prosesTiktok_manual_prompt";
+      await waClient.sendMessage(
+        chatId,
+        "Kirim link atau video ID TikTok yang ingin disimpan. Ketik *batal* untuk membatalkan."
+      );
+      return;
     } else {
       await waClient.sendMessage(
         chatId,
@@ -2734,6 +2741,79 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       );
     }
     session.step = "main";
+  },
+
+  prosesTiktok_manual_prompt: async (session, chatId, text, waClient) => {
+    if (!session.selected_client_id) {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Sesi manual fetch tidak menemukan client. Silakan mulai ulang menu."
+      );
+      return;
+    }
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      await waClient.sendMessage(
+        chatId,
+        "Link TikTok tidak boleh kosong. Kirim ulang atau ketik *batal*."
+      );
+      return;
+    }
+
+    if (trimmed.toLowerCase() === "batal") {
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Manual fetch TikTok dibatalkan.");
+      return;
+    }
+
+    try {
+      const { fetchAndStoreSingleTiktokPost } = await import(
+        "../fetchpost/tiktokFetchPost.js"
+      );
+      const result = await fetchAndStoreSingleTiktokPost(
+        session.selected_client_id,
+        trimmed
+      );
+
+      const createdLabel = result.createdAt
+        ? new Date(result.createdAt).toLocaleString("id-ID", {
+            timeZone: "Asia/Jakarta",
+          })
+        : "-";
+      const likeLabel = result.likeCount ?? 0;
+      const commentLabel = result.commentCount ?? 0;
+
+      const confirmation = [
+        "✅ Konten TikTok berhasil disimpan.",
+        `• Client: *${result.clientId}*`,
+        `• Video ID: *${result.videoId}*`,
+        `• Waktu Upload: ${createdLabel}`,
+        `• Likes: ${likeLabel} | Komentar: ${commentLabel}`,
+      ];
+
+      if (result.caption) {
+        confirmation.push("\nCaption:");
+        confirmation.push(
+          result.caption.length > 500
+            ? `${result.caption.slice(0, 497)}...`
+            : result.caption
+        );
+      }
+
+      await waClient.sendMessage(chatId, confirmation.join("\n"));
+      session.step = "main";
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menyimpan konten TikTok: ${err.message || err}`
+      );
+      await waClient.sendMessage(
+        chatId,
+        "Pastikan link benar atau ketik *batal* untuk keluar."
+      );
+    }
   },
 
   // ================== ABSENSI USERNAME INSTAGRAM ==================

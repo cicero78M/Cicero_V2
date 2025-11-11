@@ -8,6 +8,7 @@ import {
   fetchTiktokPosts,
   fetchTiktokPostsBySecUid,
   fetchTiktokInfo,
+  fetchTiktokPostDetail,
 } from "../../service/tiktokApi.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -40,6 +41,159 @@ function isTodayJakarta(unixTimestamp) {
 
 function normalizeClientId(id) {
   return typeof id === "string" ? id.trim().toLowerCase() : id;
+}
+
+function parseNumeric(value, fallback = null) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const normalized = trimmed.replace(/[^0-9.-]/g, "");
+    const num = Number(normalized);
+    if (!Number.isNaN(num)) return num;
+  }
+  return fallback;
+}
+
+function parseCreatedAt(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? new Date(value) : new Date(value * 1000);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d+$/.test(trimmed)) {
+      const num = Number(trimmed);
+      return num > 1e12 ? new Date(num) : new Date(num * 1000);
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+const VIDEO_ID_PATTERNS = [
+  /video\/(\d{8,21})/i,
+  /[?&](?:video_id|videoId|item_id|itemId)=(\d{8,21})/,
+  /share_video_id=(\d{8,21})/,
+  /(?:^|\b)(\d{8,21})(?:\b|$)/,
+];
+
+export function extractVideoId(input) {
+  if (!input && input !== 0) return "";
+  const raw = String(input).trim();
+  if (!raw) return "";
+  if (/^\d{6,}$/.test(raw)) {
+    return raw;
+  }
+
+  for (const pattern of VIDEO_ID_PATTERNS) {
+    const match = raw.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  try {
+    const url = new URL(raw);
+    const direct = url.pathname.match(/video\/(\d{8,21})/i);
+    if (direct?.[1]) return direct[1];
+    const params = url.searchParams;
+    const keys = ["video_id", "videoId", "item_id", "itemId", "share_video_id"];
+    for (const key of keys) {
+      const value = params.get(key);
+      if (value && /^\d{6,}$/.test(value)) {
+        return value;
+      }
+    }
+  } catch {
+    // Not a URL, ignore
+  }
+
+  return "";
+}
+
+export async function fetchAndStoreSingleTiktokPost(clientId, videoInput) {
+  if (!clientId) {
+    throw new Error("Client ID wajib diisi.");
+  }
+
+  const normalizedClientId = normalizeClientId(clientId);
+  const clientRes = await query(
+    "SELECT client_id FROM clients WHERE LOWER(TRIM(client_id)) = $1 LIMIT 1",
+    [normalizedClientId]
+  );
+  const dbClientId = clientRes.rows[0]?.client_id;
+  if (!dbClientId) {
+    throw new Error(`Client ${clientId} tidak ditemukan.`);
+  }
+
+  const videoId = extractVideoId(videoInput);
+  if (!videoId) {
+    throw new Error(
+      "Format link atau video ID TikTok tidak dikenali. Pastikan link berisi /video/<ID>."
+    );
+  }
+
+  sendDebug({
+    tag: "TIKTOK MANUAL",
+    msg: `Manual fetch TikTok videoId=${videoId}`,
+    client_id: dbClientId,
+  });
+
+  const detail = await fetchTiktokPostDetail(videoId);
+  const createdAt =
+    parseCreatedAt(detail?.createTime) ||
+    parseCreatedAt(detail?.create_time) ||
+    parseCreatedAt(detail?.timestamp);
+
+  const stats = detail?.stats || {};
+  const statsV2 = detail?.statsV2 || {};
+
+  const likeCount =
+    parseNumeric(stats.diggCount) ??
+    parseNumeric(detail?.digg_count) ??
+    parseNumeric(detail?.like_count) ??
+    parseNumeric(statsV2.diggCount) ??
+    0;
+
+  const commentCount =
+    parseNumeric(stats.commentCount) ??
+    parseNumeric(detail?.comment_count) ??
+    parseNumeric(statsV2.commentCount) ??
+    0;
+
+  const postPayload = {
+    video_id: detail?.id || detail?.video_id || videoId,
+    caption: detail?.desc || detail?.caption || "",
+    created_at: createdAt,
+    like_count: likeCount,
+    comment_count: commentCount,
+  };
+
+  await upsertTiktokPosts(dbClientId, [postPayload]);
+
+  sendDebug({
+    tag: "TIKTOK MANUAL",
+    msg: `Sukses upsert manual TikTok videoId=${postPayload.video_id}`,
+    client_id: dbClientId,
+  });
+
+  return {
+    clientId: dbClientId,
+    videoId: postPayload.video_id,
+    caption: postPayload.caption,
+    createdAt,
+    likeCount,
+    commentCount,
+  };
 }
 
 /**
