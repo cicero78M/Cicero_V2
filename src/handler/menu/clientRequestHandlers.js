@@ -32,8 +32,16 @@ import { formatToWhatsAppId } from "../../utils/waHelper.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTiktokProfile } from "../../service/tiktokRapidService.js";
 import { hasUserLikedBetween } from "../../model/instaLikeModel.js";
-import { hasUserCommentedBetween } from "../../model/tiktokCommentModel.js";
+import {
+  hasUserCommentedBetween,
+  deleteCommentsByVideoId,
+} from "../../model/tiktokCommentModel.js";
 import { sendComplaintEmail } from "../../service/emailService.js";
+import {
+  findPostByVideoId,
+  deletePostByVideoId,
+} from "../../model/tiktokPostModel.js";
+import { extractVideoId } from "../../utils/tiktokHelper.js";
 
 function ignore(..._args) {}
 
@@ -2680,7 +2688,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "prosesTiktok_menu";
     await waClient.sendMessage(
       chatId,
-      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\n5️⃣ Hapus Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
     );
   },
   prosesTiktok_menu: async (
@@ -2732,6 +2740,13 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       await waClient.sendMessage(
         chatId,
         "Kirim link atau video ID TikTok yang ingin disimpan. Ketik *batal* untuk membatalkan."
+      );
+      return;
+    } else if (text.trim() === "5") {
+      session.step = "prosesTiktok_delete_prompt";
+      await waClient.sendMessage(
+        chatId,
+        "Kirim link atau video ID TikTok yang akan dihapus beserta likes-nya. Ketik *batal* untuk membatalkan."
       );
       return;
     } else {
@@ -2812,6 +2827,115 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       await waClient.sendMessage(
         chatId,
         "Pastikan link benar atau ketik *batal* untuk keluar."
+      );
+    }
+  },
+  prosesTiktok_delete_prompt: async (session, chatId, text, waClient) => {
+    if (!session.selected_client_id) {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Sesi hapus konten tidak menemukan client. Silakan mulai ulang menu."
+      );
+      return;
+    }
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      await waClient.sendMessage(
+        chatId,
+        "Video ID TikTok tidak boleh kosong. Kirim ulang atau ketik *batal*."
+      );
+      return;
+    }
+
+    if (trimmed.toLowerCase() === "batal") {
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Penghapusan konten TikTok dibatalkan.");
+      return;
+    }
+
+    const videoId = extractVideoId(trimmed);
+    if (!videoId) {
+      await waClient.sendMessage(
+        chatId,
+        "Format link atau video ID TikTok tidak dikenali. Pastikan link berisi /video/<ID>."
+      );
+      return;
+    }
+
+    try {
+      const post = await findPostByVideoId(videoId);
+      if (!post) {
+        await waClient.sendMessage(
+          chatId,
+          `Konten TikTok dengan video ID *${videoId}* tidak ditemukan.`
+        );
+        return;
+      }
+
+      const selectedClient = session.selected_client_id;
+      const normalize = (value) => (value || "").toString().trim().toLowerCase();
+      if (normalize(post.client_id) !== normalize(selectedClient)) {
+        await waClient.sendMessage(
+          chatId,
+          `Video ID tersebut terdaftar untuk client *${post.client_id}*. Pilih client yang sesuai terlebih dahulu.`
+        );
+        return;
+      }
+
+      const removedComments = await deleteCommentsByVideoId(videoId);
+      const removedPosts = await deletePostByVideoId(videoId);
+
+      if (!removedPosts) {
+        await waClient.sendMessage(
+          chatId,
+          "Konten TikTok gagal dihapus karena sudah tidak tersedia."
+        );
+        return;
+      }
+
+      session.step = "main";
+
+      const createdLabel = post.created_at
+        ? new Date(post.created_at).toLocaleString("id-ID", {
+            timeZone: "Asia/Jakarta",
+          })
+        : "-";
+      const likeLabel = formatNumber(post.like_count ?? 0);
+      const commentLabel = formatNumber(post.comment_count ?? 0);
+
+      const lines = [
+        "🗑️ Konten TikTok berhasil dihapus.",
+        `• Client: *${selectedClient}*`,
+        `• Video ID: *${videoId}*`,
+        `• Waktu Upload: ${createdLabel}`,
+        `• Likes Tercatat: ${likeLabel}`,
+        `• Komentar Tercatat: ${commentLabel}`,
+        removedComments
+          ? `• ${removedComments} catatan komentar turut dihapus.`
+          : "• Tidak ada catatan komentar yang tersimpan.",
+        "",
+        "Data tugas likes untuk video ini juga telah dibersihkan.",
+      ];
+
+      if (post.caption) {
+        const caption = String(post.caption);
+        lines.push(
+          "\nCaption:",
+          caption.length > 500 ? `${caption.slice(0, 497)}...` : caption
+        );
+      }
+
+      await waClient.sendMessage(chatId, lines.join("\n"));
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menghapus konten TikTok: ${err.message || err}`
+      );
+      await waClient.sendMessage(
+        chatId,
+        "Pastikan video ID benar atau ketik *batal* untuk keluar."
       );
     }
   },

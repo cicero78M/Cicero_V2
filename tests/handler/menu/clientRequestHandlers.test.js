@@ -5,6 +5,8 @@ import clientRequestHandlers, {
   parseComplaintMessage,
   parseBulkStatusEntries,
 } from '../../../src/handler/menu/clientRequestHandlers.js';
+import * as tiktokPostModel from '../../../src/model/tiktokPostModel.js';
+import * as tiktokCommentModel from '../../../src/model/tiktokCommentModel.js';
 
 describe('normalizeComplaintHandle', () => {
   it('normalizes plain handles to lowercase with a leading @', () => {
@@ -316,3 +318,84 @@ describe('parseBulkStatusEntries', () => {
   });
 });
 
+
+describe('prosesTiktok menu delete option', () => {
+  it('switches to the delete prompt when option 5 is selected', async () => {
+    const session = { selected_client_id: 'client-123' };
+    const chatId = 'chat-delete-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.prosesTiktok_menu(
+      session,
+      chatId,
+      '5',
+      { sendMessage },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    expect(session.step).toBe('prosesTiktok_delete_prompt');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('hapus konten TikTok')
+    );
+  });
+});
+
+describe('prosesTiktok_delete_prompt', () => {
+  it('removes TikTok post data for the selected client', async () => {
+    const session = {
+      selected_client_id: 'client-123',
+      step: 'prosesTiktok_delete_prompt',
+    };
+    const chatId = 'chat-delete';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    const findSpy = jest
+      .spyOn(tiktokPostModel, 'findPostByVideoId')
+      .mockResolvedValue({
+        client_id: 'client-123',
+        caption: 'Contoh caption',
+        created_at: new Date('2024-01-01T10:00:00Z'),
+        like_count: 12,
+        comment_count: 4,
+      });
+    const deletePostSpy = jest
+      .spyOn(tiktokPostModel, 'deletePostByVideoId')
+      .mockResolvedValue(1);
+    const deleteCommentsSpy = jest
+      .spyOn(tiktokCommentModel, 'deleteCommentsByVideoId')
+      .mockResolvedValue(2);
+
+    try {
+      await clientRequestHandlers.prosesTiktok_delete_prompt(
+        session,
+        chatId,
+        '7571332440556571924',
+        { sendMessage }
+      );
+
+      expect(findSpy).toHaveBeenCalledWith('7571332440556571924');
+      expect(deleteCommentsSpy).toHaveBeenCalledWith('7571332440556571924');
+      expect(deletePostSpy).toHaveBeenCalledWith('7571332440556571924');
+      expect(session.step).toBe('main');
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      const [[calledChatId, message]] = sendMessage.mock.calls;
+      expect(calledChatId).toBe(chatId);
+      expect(message).toContain('Konten TikTok berhasil dihapus');
+    } finally {
+      findSpy.mockRestore();
+      deletePostSpy.mockRestore();
+      deleteCommentsSpy.mockRestore();
+    }
+  });
+});

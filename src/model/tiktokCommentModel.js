@@ -88,6 +88,23 @@ export async function getCommentsByVideoId(video_id) {
   return res.rows[0] ? { comments: res.rows[0].comments } : { comments: [] };
 }
 
+/**
+ * Hapus komentar TikTok untuk video tertentu.
+ * @param {string} video_id
+ * @returns {Promise<number>} jumlah baris yang dihapus
+ */
+export async function deleteCommentsByVideoId(video_id) {
+  const normalizedVideoId = (video_id || "").trim();
+  if (!normalizedVideoId) {
+    return 0;
+  }
+  const res = await query(
+    `DELETE FROM tiktok_comment WHERE video_id = $1`,
+    [normalizedVideoId]
+  );
+  return res.rowCount || 0;
+}
+
 export async function hasUserCommentedBetween(
   username,
   startDate = DEFAULT_ACTIVITY_START,

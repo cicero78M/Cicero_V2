@@ -71,6 +71,7 @@ jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   hasUserCommentedBetween: mockHasUserCommentedBetween,
+  deleteCommentsByVideoId: jest.fn(),
 }));
 
 process.env.JWT_SECRET = 'test';

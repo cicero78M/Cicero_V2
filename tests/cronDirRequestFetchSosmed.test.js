@@ -40,6 +40,8 @@ jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getVideoIdsTodayByClient: mockGetVideoIdsTodayByClient,
+  findPostByVideoId: jest.fn(),
+  deletePostByVideoId: jest.fn(),
 }));
 
 let runCron;
