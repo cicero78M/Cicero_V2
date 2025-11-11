@@ -11,6 +11,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | Table Name | Purpose |
 |------------|---------|
 | clients | master table for registered organisations |
+| satbinmas_official_accounts | Satbinmas official handles linked to a client |
 | user | members belonging to a client |
 | roles / user_roles | role catalogue and pivot for users |
 | dashboard_user | login credentials for dashboard access |
@@ -45,6 +46,10 @@ Represents each organisation using the system.
 - `client_status` – boolean, active or not
 - `client_insta` / `client_tiktok` – usernames of the client accounts
 - `client_operator`, `client_group`, `tiktok_secuid`, `client_super` – optional metadata
+
+Official Satbinmas accounts for each client are stored in the dedicated
+`satbinmas_official_accounts` table described below so that operators can manage
+per-platform handles without mutating legacy `client_*` columns.
 
 ### `user`
 Holds users belonging to a client.
@@ -296,3 +301,13 @@ Repeat the command for each unused table. Always ensure a recent backup exists
 before dropping tables.
 
 Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
+
+### `satbinmas_official_accounts`
+Stores the verified Satbinmas social media handles for each client so they can be audited separately from generic client metadata.
+- `satbinmas_account_id` – UUID primary key generated via `gen_random_uuid()`
+- `client_id` – foreign key referencing `clients(client_id)` with cascade delete to remove linked accounts automatically when a client is deleted
+- `platform` – lowercase text tag for the social platform (e.g. `instagram`, `tiktok`); a `(client_id, platform)` pair must be unique
+- `username` – trimmed handle as entered by an operator
+- `is_active` – boolean flag defaulting to `TRUE`; interpreted via service-side parsing helpers that accept booleans, `0/1`, or user-friendly strings such as `yes/no`
+- `created_at`, `updated_at` – timestamps maintained by the database trigger `satbinmas_official_accounts_set_updated_at`
+
