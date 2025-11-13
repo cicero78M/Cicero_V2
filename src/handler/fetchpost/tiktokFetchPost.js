@@ -160,12 +160,12 @@ export async function fetchAndStoreSingleTiktokPost(clientId, videoInput) {
  * Dapatkan semua video_id tiktok hari ini dari DB
  */
 async function getVideoIdsToday(clientId = null) {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  let sql = `SELECT video_id FROM tiktok_post WHERE DATE(created_at) = $1`;
-  const params = [`${yyyy}-${mm}-${dd}`];
+  const todayJakarta = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
+  let sql =
+    "SELECT video_id FROM tiktok_post WHERE DATE(created_at AT TIME ZONE 'Asia/Jakarta') = $1";
+  const params = [todayJakarta];
   if (clientId) {
     sql += ` AND LOWER(TRIM(client_id)) = $2`;
     params.push(normalizeClientId(clientId));
@@ -176,13 +176,12 @@ async function getVideoIdsToday(clientId = null) {
 
 async function deleteVideoIds(videoIdsToDelete, clientId = null) {
   if (!videoIdsToDelete.length) return;
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
+  const todayJakarta = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
   let sql =
-    `DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at) = $2`;
-  const params = [videoIdsToDelete, `${yyyy}-${mm}-${dd}`];
+    "DELETE FROM tiktok_post WHERE video_id = ANY($1) AND DATE(created_at AT TIME ZONE 'Asia/Jakarta') = $2";
+  const params = [videoIdsToDelete, todayJakarta];
   if (clientId) {
     sql += ` AND LOWER(TRIM(client_id)) = $3`;
     params.push(normalizeClientId(clientId));
@@ -390,13 +389,12 @@ export async function fetchAndStoreTiktokContent(
   }
 
   // Ambil konten hari ini beserta client_id
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
+  const todayJakarta = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
   let kontenHariIniSql =
-    `SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at) = $1`;
-  const kontenParams = [`${yyyy}-${mm}-${dd}`];
+    "SELECT video_id, client_id, created_at FROM tiktok_post WHERE DATE(created_at AT TIME ZONE 'Asia/Jakarta') = $1";
+  const kontenParams = [todayJakarta];
   if (targetClientId) {
     kontenHariIniSql += ` AND LOWER(TRIM(client_id)) = $2`;
     kontenParams.push(normalizeClientId(targetClientId));
