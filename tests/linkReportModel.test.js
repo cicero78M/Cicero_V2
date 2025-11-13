@@ -1,5 +1,7 @@
 import { jest } from '@jest/globals';
 
+import { PRIORITY_USER_NAMES } from '../src/utils/constants.js';
+
 const mockQuery = jest.fn();
 
 jest.unstable_mockModule('../src/repository/db.js', () => ({
@@ -37,6 +39,12 @@ beforeEach(() => {
 
 function mockClientType(type = 'instansi') {
   mockQuery.mockResolvedValueOnce({ rows: [{ client_type: type }] });
+}
+
+const PRIORITY_UPPER = PRIORITY_USER_NAMES.map(name => name.toUpperCase());
+
+function expectPriorityTail(params, expectedPrefixLength) {
+  expect(params.slice(expectedPrefixLength)).toEqual(PRIORITY_UPPER);
 }
 
 test('createLinkReport inserts row', async () => {
@@ -230,8 +238,10 @@ test('getRekapLinkByClient uses provided date', async () => {
   expect(mockQuery).toHaveBeenNthCalledWith(
     3,
     expect.stringContaining('link_sum AS'),
-    ['POLRES', '2024-01-02']
+    expect.any(Array)
   );
+  expect(mockQuery.mock.calls[2][1].slice(0, 2)).toEqual(['POLRES', '2024-01-02']);
+  expectPriorityTail(mockQuery.mock.calls[2][1], 2);
 });
 
 test('getRekapLinkByClient handles start_date and end_date', async () => {
@@ -249,8 +259,10 @@ test('getRekapLinkByClient handles start_date and end_date', async () => {
   expect(mockQuery).toHaveBeenNthCalledWith(
     3,
     expect.stringContaining('BETWEEN $2::date AND $3::date'),
-    ['POLRES', '2024-01-01', '2024-01-31']
+    expect.any(Array)
   );
+  expect(mockQuery.mock.calls[2][1].slice(0, 3)).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
+  expectPriorityTail(mockQuery.mock.calls[2][1], 3);
 });
 
 test('getRekapLinkByClient applies post date filter in link_sum', async () => {
@@ -274,6 +286,7 @@ test('getRekapLinkByClient applies post date filter in link_sum', async () => {
   const sql = mockQuery.mock.calls[2][0];
   expect(sql).toContain('p.created_at');
   expect(sql).toContain('r.created_at');
+  expectPriorityTail(mockQuery.mock.calls[2][1], 1);
 });
 
 test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async () => {
@@ -295,6 +308,19 @@ test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async (
     });
   const rows = await getRekapLinkByClient('POLRES');
   expect(rows[0].sudahMelaksanakan).toBe(true);
+});
+
+test('getRekapLinkByClient applies priority ordering to nama', async () => {
+  mockClientType();
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapLinkByClient('POLRES');
+  const sql = mockQuery.mock.calls[2][0];
+  const matches = sql.match(/WHEN UPPER\(u\.nama\) = \$\d+/g) || [];
+  expect(matches.length).toBeGreaterThanOrEqual(PRIORITY_UPPER.length);
+  expect(sql).toContain('CASE WHEN');
+  expect(sql).toContain('UPPER(u.nama)');
 });
 
 test('getRekapLinkByClient includes directorate role filter for ditbinmas', async () => {

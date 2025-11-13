@@ -1,4 +1,5 @@
 import { query } from '../repository/db.js';
+import { buildPriorityOrderClause } from '../utils/sqlPriority.js';
 
 export async function createLinkReport(data) {
   const res = await query(
@@ -158,6 +159,14 @@ export async function getRekapLinkByClient(
   );
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
+  const linkParams = [...params];
+  const addPriorityParam = value => {
+    linkParams.push(value);
+    return linkParams.length;
+  };
+  const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
+  const priorityExpr = `(${priorityCase})`;
+
   const { rows } = await query(
     `WITH cli AS (
        SELECT client_type FROM clients WHERE client_id = $1
@@ -189,15 +198,20 @@ export async function getRekapLinkByClient(
      WHERE u.status = true
        AND (
          (SELECT client_type FROM cli) <> 'direktorat' AND u.client_id = $1
-         OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
-           SELECT 1 FROM user_roles ur
-           JOIN roles r ON ur.role_id = r.role_id
-           WHERE ur.user_id = u.user_id AND r.role_name = $1
-         )
-       )
-     GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
-     ORDER BY jumlah_link DESC, u.nama ASC`,
-    params
+       OR (SELECT client_type FROM cli) = 'direktorat' AND EXISTS (
+         SELECT 1 FROM user_roles ur
+          JOIN roles r ON ur.role_id = r.role_id
+          WHERE ur.user_id = u.user_id AND r.role_name = $1
+        )
+      )
+    )
+    GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
+    ORDER BY
+      ${priorityExpr} ASC,
+      CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
+      jumlah_link DESC,
+      UPPER(u.nama) ASC`,
+    linkParams
   );
 
   for (const user of rows) {

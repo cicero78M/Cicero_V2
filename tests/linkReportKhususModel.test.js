@@ -1,5 +1,7 @@
 import { jest } from '@jest/globals';
 
+import { PRIORITY_USER_NAMES } from '../src/utils/constants.js';
+
 const mockQuery = jest.fn();
 
 jest.unstable_mockModule('../src/repository/db.js', () => ({
@@ -11,6 +13,7 @@ let getLinkReports;
 let findLinkReportByShortcode;
 let getReportsTodayByClient;
 let getReportsTodayByShortcode;
+let getRekapLinkByClient;
 
 beforeAll(async () => {
   const mod = await import('../src/model/linkReportKhususModel.js');
@@ -19,11 +22,14 @@ beforeAll(async () => {
   findLinkReportByShortcode = mod.findLinkReportByShortcode;
   getReportsTodayByClient = mod.getReportsTodayByClient;
   getReportsTodayByShortcode = mod.getReportsTodayByShortcode;
+  getRekapLinkByClient = mod.getRekapLinkByClient;
 });
 
 beforeEach(() => {
   mockQuery.mockReset();
 });
+
+const PRIORITY_UPPER = PRIORITY_USER_NAMES.map(name => name.toUpperCase());
 
 test('createLinkReport inserts row', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
@@ -81,4 +87,20 @@ test('getReportsTodayByShortcode filters by client and shortcode', async () => {
     expect.stringContaining('r.shortcode = $2'),
     ['POLRES', 'abc']
   );
+});
+
+test('getRekapLinkByClient_khusus orders by priority list first', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  await getRekapLinkByClient('POLRES');
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
+  expect(params.slice(0, 1)).toEqual(['POLRES']);
+  expect(params.slice(1)).toEqual(PRIORITY_UPPER);
+  const matches = sql.match(/WHEN UPPER\(u\.nama\) = \$\d+/g) || [];
+  expect(matches.length).toBeGreaterThanOrEqual(PRIORITY_UPPER.length);
+  expect(sql).toContain('CASE WHEN');
+  expect(sql).toContain('UPPER(u.nama)');
 });
