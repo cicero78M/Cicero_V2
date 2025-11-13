@@ -1,4 +1,5 @@
 import { query } from '../repository/db.js';
+import { buildPriorityOrderClause } from '../utils/sqlPriority.js';
 
 const LINK_REPORT_INTERVAL = '2 days';
 
@@ -282,6 +283,14 @@ export async function getRekapLinkByClient(
   );
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
+  const linkParams = [...params];
+  const addPriorityParam = value => {
+    linkParams.push(value);
+    return linkParams.length;
+  };
+  const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
+  const priorityExpr = `(${priorityCase})`;
+
   const { rows } = await query(
     `WITH link_sum AS (
        SELECT r.user_id,
@@ -310,10 +319,14 @@ export async function getRekapLinkByClient(
      FROM "user" u
      LEFT JOIN link_sum ls ON ls.user_id = u.user_id
      WHERE u.status = true
-       AND ${userWhere}
-     GROUP BY u.client_id,  u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
-     ORDER BY jumlah_link DESC, u.nama ASC`,
-    params
+     AND ${userWhere}
+    GROUP BY u.client_id,  u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
+    ORDER BY
+      ${priorityExpr} ASC,
+      CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
+      jumlah_link DESC,
+      UPPER(u.nama) ASC`,
+    linkParams
   );
 
   for (const user of rows) {

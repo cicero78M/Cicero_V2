@@ -162,6 +162,7 @@ describe('waService createHandleMessage group complaints', () => {
       TT_PROFILE_REGEX: /@([\w.]+)/i,
       adminCommands: [],
       hariIndo: [],
+      PRIORITY_USER_NAMES: [],
     }));
 
     const { createHandleMessage } = await import('../src/service/waService.js');

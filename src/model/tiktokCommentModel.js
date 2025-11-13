@@ -1,4 +1,5 @@
 import { query } from '../repository/db.js';
+import { buildPriorityOrderClause } from '../utils/sqlPriority.js';
 
 const DEFAULT_ACTIVITY_START = '2025-09-01';
 
@@ -233,6 +234,14 @@ export async function getRekapKomentarByClient(
     }
   }
 
+  const commentParams = [...params];
+  const addPriorityParam = value => {
+    commentParams.push(value);
+    return commentParams.length;
+  };
+  const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
+  const priorityExpr = `(${priorityCase})`;
+
   const { rows } = await query(
     `WITH valid_comments AS (
       SELECT c.video_id,
@@ -266,8 +275,12 @@ export async function getRekapKomentarByClient(
       ON lower(replace(trim(coalesce(u.tiktok, '')), '@', '')) = cc.username
     WHERE u.status = true
       AND ${userWhere}
-    ORDER BY jumlah_komentar DESC, u.nama ASC`,
-    params
+    ORDER BY
+      ${priorityExpr} ASC,
+      CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
+      jumlah_komentar DESC,
+      UPPER(u.nama) ASC`,
+    commentParams
   );
   for (const user of rows) {
     user.jumlah_komentar = parseInt(user.jumlah_komentar, 10);

@@ -1,5 +1,6 @@
 // src/model/instaLikeModel.js
 import { query } from '../repository/db.js';
+import { buildPriorityOrderClause } from '../utils/sqlPriority.js';
 
 const DEFAULT_ACTIVITY_START = '2025-09-01';
 
@@ -233,6 +234,14 @@ export async function getRekapLikesByClient(
     postRoleFilter = `AND (${roleFilterCondition})`;
   }
 
+  const likeParams = [...params];
+  const addPriorityParam = value => {
+    likeParams.push(value);
+    return likeParams.length;
+  };
+  const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
+  const priorityExpr = `(${priorityCase})`;
+
   const { rows } = await query(`
     WITH valid_likes AS (
       SELECT
@@ -270,8 +279,12 @@ export async function getRekapLikesByClient(
       ON ${likeJoin}
     WHERE u.status = true
       AND ${userWhere}
-    ORDER BY jumlah_like DESC, u.nama ASC
-  `, params);
+    ORDER BY
+      ${priorityExpr} ASC,
+      CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
+      jumlah_like DESC,
+      UPPER(u.nama) ASC
+  `, likeParams);
 
   for (const user of rows) {
     user.jumlah_like = parseInt(user.jumlah_like, 10);
