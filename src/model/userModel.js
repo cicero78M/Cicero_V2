@@ -1,7 +1,21 @@
 // src/model/userModel.js
 
 import { query } from '../repository/db.js';
+import { PRIORITY_USER_NAMES } from '../utils/constants.js';
 import { normalizeUserId } from '../utils/utilsHelper.js';
+
+const NAME_PRIORITY_DEFAULT = PRIORITY_USER_NAMES.length + 1;
+
+function buildNamePriorityCase(alias = 'u') {
+  const column = alias ? `${alias}.nama` : 'nama';
+  const upperColumn = `UPPER(COALESCE(${column}, ''))`;
+  const cases = PRIORITY_USER_NAMES.map(
+    (name, index) => `WHEN ${upperColumn} = '${name}' THEN ${index + 1}`
+  ).join(' ');
+  return `CASE ${cases} ELSE ${NAME_PRIORITY_DEFAULT} END`;
+}
+
+const NAME_PRIORITY_CASE_U = buildNamePriorityCase('u');
 
 async function addRole(userId, roleName) {
   const uid = normalizeUserId(userId);
@@ -175,7 +189,7 @@ export async function getInstaFilledUsersByClient(clientId, roleFilter = null) {
     `SELECT divisi, nama, user_id, title, insta
      FROM "user" u
      WHERE ${clause} AND insta IS NOT NULL AND insta <> '' AND status = true
-     ORDER BY divisi, nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
   return result.rows;
@@ -188,7 +202,7 @@ export async function getInstaEmptyUsersByClient(clientId, roleFilter = null) {
     `SELECT divisi, nama, user_id, title
      FROM "user" u
      WHERE ${clause} AND (insta IS NULL OR insta = '') AND status = true
-     ORDER BY divisi, nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
   return result.rows;
@@ -201,7 +215,7 @@ export async function getTiktokFilledUsersByClient(clientId, roleFilter = null) 
     `SELECT divisi, nama, user_id, title, tiktok
      FROM "user" u
      WHERE ${clause} AND tiktok IS NOT NULL AND tiktok <> '' AND status = true
-     ORDER BY divisi, nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
   return result.rows;
@@ -214,7 +228,7 @@ export async function getTiktokEmptyUsersByClient(clientId, roleFilter = null) {
     `SELECT divisi, nama, user_id, title
      FROM "user" u
      WHERE ${clause} AND (tiktok IS NULL OR tiktok = '') AND status = true
-     ORDER BY divisi, nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
   return result.rows;
@@ -226,7 +240,7 @@ export async function getUsersWithWaByClient(clientId, roleFilter = null) {
   const result = await query(
     `SELECT divisi, nama, user_id, title, whatsapp
      FROM "user" u WHERE ${clause} AND status = true
-     ORDER BY divisi, nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
   return result.rows;
@@ -252,7 +266,7 @@ export async function getUsersMissingDataByClient(clientId, roleFilter = null) {
        AND (insta IS NULL OR insta='' OR
             tiktok IS NULL OR tiktok='' OR
             whatsapp IS NULL OR whatsapp='')
-     ORDER BY nama`,
+     ORDER BY ${NAME_PRIORITY_CASE_U}, nama`,
     params
   );
   return res.rows;
