@@ -5,6 +5,23 @@ export const IG_PROFILE_REGEX =
 export const TT_PROFILE_REGEX =
   /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i;
 
+// Urutan prioritas satker (nama) untuk pelaporan
+export const PRIORITY_USER_NAMES = [
+  "POLRES LAMONGAN",
+  "POLRES BOJONEGORO",
+  "POLRES PROBOLINGGO",
+  "POLRES NGAWI",
+  "POLRES MADIUN",
+  "POLRES PACITAN",
+  "POLRES BONDOWOSO",
+  "POLRES SITUBONDO",
+  "POLRES MOJOKERTO",
+  "POLRES KEDIRI",
+  "POLRES KEDIRI KOTA",
+  "POLRESTA MALANG KOTA",
+  "POLRES MADIUN KOTA",
+];
+
 export const adminCommands = [
   "addnewclient#",
   "updateclient#",
