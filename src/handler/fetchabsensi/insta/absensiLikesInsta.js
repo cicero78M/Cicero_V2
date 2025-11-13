@@ -7,6 +7,7 @@ import {
   sortDivisionKeys,
   formatNama,
 } from "../../../utils/utilsHelper.js";
+import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { findClientById } from "../../../service/clientService.js";
 import {
   normalizeUsername,
@@ -41,6 +42,9 @@ const sortUsersByRankAndName = (users = []) =>
   users
     .slice()
     .sort((a, b) => {
+      const priorityDiff =
+        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
+      if (priorityDiff !== 0) return priorityDiff;
       const rankDiff = rankIdx(a.title) - rankIdx(b.title);
       if (rankDiff !== 0) return rankDiff;
       return (a.nama || "").localeCompare(b.nama || "", "id-ID", {

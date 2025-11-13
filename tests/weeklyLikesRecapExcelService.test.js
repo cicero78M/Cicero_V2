@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { unlink } from 'fs/promises';
 import XLSX from 'xlsx';
+import { PRIORITY_USER_NAMES } from '../src/utils/constants.js';
 
 process.env.TZ = 'Asia/Jakarta';
 
@@ -83,6 +84,45 @@ test('saveWeeklyLikesRecapExcel returns null when no data', async () => {
 
   const filePath = await saveWeeklyLikesRecapExcel('DITBINMAS');
   expect(filePath).toBeNull();
+  jest.useRealTimers();
+});
+
+test('saveWeeklyLikesRecapExcel prioritizes configured names before totals', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+  mockGetRekapLikesByClient.mockReset();
+  mockGetRekapLikesByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') {
+      return {
+        rows: [
+          {
+            client_name: 'POLRES PRIORITAS',
+            title: 'AKP',
+            nama: PRIORITY_USER_NAMES[1],
+            divisi: 'Sat B',
+            jumlah_like: 5,
+          },
+          {
+            client_name: 'POLRES PRIORITAS',
+            title: 'AKP',
+            nama: PRIORITY_USER_NAMES[0],
+            divisi: 'Sat A',
+            jumlah_like: 1,
+          },
+        ],
+        totalKonten: 2,
+      };
+    }
+    return { rows: [], totalKonten: 0 };
+  });
+
+  const filePath = await saveWeeklyLikesRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES PRIORITAS'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  expect(aoa[4][2]).toBe(PRIORITY_USER_NAMES[0]);
+  expect(aoa[5][2]).toBe(PRIORITY_USER_NAMES[1]);
+
+  await unlink(filePath);
   jest.useRealTimers();
 });
 

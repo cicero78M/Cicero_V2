@@ -2,6 +2,7 @@ import { mkdir } from 'fs/promises';
 import path from 'path';
 import XLSX from 'xlsx';
 import { hariIndo } from '../utils/constants.js';
+import { getNamaPriorityIndex } from '../utils/sqlPriority.js';
 import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
 import { countPostsByClient } from '../model/tiktokPostModel.js';
 import { generateSheetName } from '../utils/excelHelper.js';
@@ -249,6 +250,9 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
     const { name: satkerName, key: satkerKey, users: usersMap } = satkerEntry;
     const users = Object.values(usersMap);
     users.sort((a, b) => {
+      const priorityDiff =
+        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
+      if (priorityDiff !== 0) return priorityDiff;
       if (b.totalKomentar !== a.totalKomentar)
         return b.totalKomentar - a.totalKomentar;
       const rankA = rankWeight(a.pangkat);
