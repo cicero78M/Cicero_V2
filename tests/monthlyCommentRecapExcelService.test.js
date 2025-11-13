@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { unlink } from 'fs/promises';
 import XLSX from 'xlsx';
+import { PRIORITY_USER_NAMES } from '../src/utils/constants.js';
 
 process.env.TZ = 'Asia/Jakarta';
 
@@ -83,6 +84,41 @@ test('saveMonthlyCommentRecapExcel returns null when no data', async () => {
 
   const filePath = await saveMonthlyCommentRecapExcel('DITBINMAS');
   expect(filePath).toBeNull();
+  jest.useRealTimers();
+});
+
+test('saveMonthlyCommentRecapExcel applies name priority before totals', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-15T00:00:00Z'));
+  mockGetRekapKomentarByClient.mockReset();
+  mockCountPostsByClient.mockReset();
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    {
+      client_name: 'POLRES PRIORITAS',
+      client_id: 'POLRESP',
+      title: 'AKP',
+      nama: PRIORITY_USER_NAMES[1],
+      divisi: 'Sat B',
+      jumlah_komentar: 10,
+    },
+    {
+      client_name: 'POLRES PRIORITAS',
+      client_id: 'POLRESP',
+      title: 'AKP',
+      nama: PRIORITY_USER_NAMES[0],
+      divisi: 'Sat A',
+      jumlah_komentar: 1,
+    },
+  ]);
+  mockCountPostsByClient.mockResolvedValue(5);
+
+  const filePath = await saveMonthlyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES PRIORITAS'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  expect(aoa[4][2]).toBe(PRIORITY_USER_NAMES[0]);
+  expect(aoa[5][2]).toBe(PRIORITY_USER_NAMES[1]);
+
+  await unlink(filePath);
   jest.useRealTimers();
 });
 

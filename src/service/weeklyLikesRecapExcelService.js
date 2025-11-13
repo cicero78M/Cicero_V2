@@ -2,6 +2,7 @@ import { mkdir } from 'fs/promises';
 import path from 'path';
 import XLSX from 'xlsx';
 import { hariIndo } from '../utils/constants.js';
+import { getNamaPriorityIndex } from '../utils/sqlPriority.js';
 import { getRekapLikesByClient } from '../model/instaLikeModel.js';
 
 const RANK_ORDER = [
@@ -126,6 +127,9 @@ export async function saveWeeklyLikesRecapExcel(clientId) {
   Object.entries(grouped).forEach(([satker, usersMap]) => {
     const users = Object.values(usersMap);
     users.sort((a, b) => {
+      const priorityDiff =
+        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
+      if (priorityDiff !== 0) return priorityDiff;
       if (b.totalLikes !== a.totalLikes) return b.totalLikes - a.totalLikes;
       const rankA = rankWeight(a.pangkat);
       const rankB = rankWeight(b.pangkat);

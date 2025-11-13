@@ -8,6 +8,7 @@ import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
 import { groupByDivision, sortDivisionKeys, formatNama } from "../../../utils/utilsHelper.js";
+import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { sendDebug } from "../../../middleware/debugHandler.js";
 
 // Dapatkan nama dan username tiktok client
@@ -73,6 +74,9 @@ const sortUsersByRankAndName = (users = []) =>
   users
     .slice()
     .sort((a, b) => {
+      const priorityDiff =
+        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
+      if (priorityDiff !== 0) return priorityDiff;
       const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
       if (rankDiff !== 0) return rankDiff;
       return (a.nama || "").localeCompare(b.nama || "", "id-ID", {

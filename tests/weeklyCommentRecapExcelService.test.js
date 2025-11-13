@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { unlink } from 'fs/promises';
 import XLSX from 'xlsx';
+import { PRIORITY_USER_NAMES } from '../src/utils/constants.js';
 
 process.env.TZ = 'Asia/Jakarta';
 
@@ -199,6 +200,47 @@ test('saveWeeklyCommentRecapExcel creates sheet when satker users lack TikTok us
   mockGetRekapKomentarByClient.mock.calls.forEach((call) => {
     expect(call[5]).toBe('ditbinmas');
   });
+
+  await unlink(filePath);
+});
+
+test('saveWeeklyCommentRecapExcel prioritizes configured names before totals', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-04-07T00:00:00Z'));
+
+  mockGetRekapKomentarByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (tanggal === '2024-04-07') {
+      return [
+        {
+          client_name: 'POLRES PRIORITAS',
+          client_id: 'POLRESP',
+          title: 'AKP',
+          nama: PRIORITY_USER_NAMES[1],
+          divisi: 'Sat B',
+          jumlah_komentar: 10,
+        },
+        {
+          client_name: 'POLRES PRIORITAS',
+          client_id: 'POLRESP',
+          title: 'AKP',
+          nama: PRIORITY_USER_NAMES[0],
+          divisi: 'Sat A',
+          jumlah_komentar: 1,
+        },
+      ];
+    }
+    return [];
+  });
+  mockCountPostsByClient.mockImplementation(async (clientId, periode, tanggal) => {
+    if (clientId === 'DITBINMAS' && tanggal === '2024-04-07') return 4;
+    return 0;
+  });
+
+  const filePath = await saveWeeklyCommentRecapExcel('DITBINMAS');
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets['POLRES PRIORITAS'];
+  const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  expect(aoa[4][2]).toBe(PRIORITY_USER_NAMES[0]);
+  expect(aoa[5][2]).toBe(PRIORITY_USER_NAMES[1]);
 
   await unlink(filePath);
 });
