@@ -221,18 +221,130 @@ async function waitUntilReady(waClient, timeout = 10000) {
   });
 }
 
-export async function safeSendMessage(waClient, chatId, message, options = {}) {
-  try {
-    if (typeof waClient?.waitForWaReady === 'function') {
-      await waClient.waitForWaReady();
-    } else {
-      const ready = await waitUntilReady(waClient);
-      if (!ready) {
-        console.warn(`[WA] Client not ready, cannot send message to ${chatId}`);
-        return false;
+function computeDelay(attemptIndex, baseDelayMs, maxDelayMs, jitterRatio) {
+  const baseDelay = Math.max(0, Number(baseDelayMs) || 0);
+  const maxDelay = Math.max(baseDelay, Number(maxDelayMs) || baseDelay);
+  if (baseDelay === 0) return 0;
+  const exponentialDelay = Math.min(maxDelay, baseDelay * 2 ** attemptIndex);
+  const jitterFraction = Math.max(0, Math.min(1, Number(jitterRatio) || 0));
+  const jitterOffset =
+    jitterFraction > 0 ? Math.random() * exponentialDelay * jitterFraction : 0;
+  return Math.min(maxDelay, Math.floor(exponentialDelay + jitterOffset));
+}
+
+function defaultShouldRetry(err) {
+  if (!err) return false;
+  if (err.retryable === false || err.retriable === false) return false;
+  if (err.isFatal || err.fatal || err.nonRetryable) return false;
+
+  const status =
+    err.status ?? err.statusCode ?? err.httpStatus ?? err?.response?.status;
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    return false;
+  }
+
+  const code = err.code || err?.response?.data?.code;
+  const name = err.name || err?.response?.data?.name;
+  if (
+    code === 'ERR_INVALID_ARG_TYPE' ||
+    code === 'ERR_INVALID_ARG_VALUE' ||
+    code === 'ValidationError' ||
+    name === 'ValidationError'
+  ) {
+    return false;
+  }
+
+  const message = String(err.message || '').toLowerCase();
+  if (!message) return true;
+  if (
+    message.includes('invalid parameter') ||
+    message.includes('parameter invalid') ||
+    message.includes('invalid recipient') ||
+    message.includes('not a valid') ||
+    message.includes('bad request')
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+async function sendWithRetry(task, config = {}) {
+  const {
+    maxAttempts = 3,
+    baseDelayMs = 500,
+    maxDelayMs = 5000,
+    jitterRatio = 0.2,
+    shouldRetry,
+  } = config;
+  const evaluateRetry = typeof shouldRetry === 'function' ? shouldRetry : defaultShouldRetry;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await task(attempt + 1);
+    } catch (err) {
+      const canRetry = attempt + 1 < maxAttempts && evaluateRetry(err, attempt + 1);
+      if (!canRetry) {
+        throw err;
+      }
+
+      const delay = computeDelay(attempt, baseDelayMs, maxDelayMs, jitterRatio);
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        await Promise.resolve();
       }
     }
-    await waClient.sendMessage(chatId, message, options);
+  }
+  throw new Error('sendWithRetry exhausted attempts');
+}
+
+export async function safeSendMessage(waClient, chatId, message, options = {}) {
+  let retryOptions = {};
+  let sendOptions = options ?? {};
+
+  if (
+    options &&
+    typeof options === 'object' &&
+    !Array.isArray(options) &&
+    Object.prototype.hasOwnProperty.call(options, 'retry')
+  ) {
+    const { retry, ...rest } = options;
+    retryOptions = retry ?? {};
+    sendOptions = rest;
+  }
+
+  if (sendOptions == null || typeof sendOptions !== 'object') {
+    sendOptions = {};
+  }
+
+  const retryConfig = {
+    maxAttempts: 3,
+    baseDelayMs: 500,
+    maxDelayMs: 5000,
+    jitterRatio: 0.2,
+    ...retryOptions,
+  };
+
+  const ensureClientReady = async () => {
+    if (typeof waClient?.waitForWaReady === 'function') {
+      await waClient.waitForWaReady();
+      return;
+    }
+    const ready = await waitUntilReady(waClient);
+    if (!ready) {
+      const error = new Error('WhatsApp client not ready');
+      error.retryable = true;
+      throw error;
+    }
+  };
+
+  try {
+    await sendWithRetry(async () => {
+      await ensureClientReady();
+      await waClient.sendMessage(chatId, message, sendOptions);
+    }, retryConfig);
+
     console.log(
       `[WA] Sent message to ${chatId}: ${String(message).substring(0, 64)}`
     );

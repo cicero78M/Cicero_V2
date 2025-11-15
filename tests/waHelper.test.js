@@ -24,6 +24,41 @@ test('safeSendMessage waits for client ready', async () => {
   expect(waClient.sendMessage).toHaveBeenCalledWith('123@c.us', 'hello', {});
 });
 
+test('safeSendMessage retries recoverable errors', async () => {
+  const waClient = {
+    waitForWaReady: jest.fn().mockResolvedValue(),
+    sendMessage: jest
+      .fn()
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(),
+  };
+
+  const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
+    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0 },
+  });
+
+  expect(result).toBe(true);
+  expect(waClient.waitForWaReady).toHaveBeenCalledTimes(2);
+  expect(waClient.sendMessage).toHaveBeenCalledTimes(2);
+});
+
+test('safeSendMessage stops on non-retryable error', async () => {
+  const fatalError = new Error('invalid parameter');
+  fatalError.status = 400;
+  const waClient = {
+    waitForWaReady: jest.fn().mockResolvedValue(),
+    sendMessage: jest.fn().mockRejectedValue(fatalError),
+  };
+
+  const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
+    retry: { maxAttempts: 5, baseDelayMs: 0, jitterRatio: 0 },
+  });
+
+  expect(result).toBe(false);
+  expect(waClient.waitForWaReady).toHaveBeenCalledTimes(1);
+  expect(waClient.sendMessage).toHaveBeenCalledTimes(1);
+});
+
 test('isAdminWhatsApp recognizes various input formats', () => {
   const original = process.env.ADMIN_WHATSAPP;
   process.env.ADMIN_WHATSAPP = '6281';
