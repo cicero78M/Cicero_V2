@@ -37,6 +37,7 @@ const mockSaveMonthlyCommentRecapExcel = jest.fn();
 const mockSaveSatkerUpdateMatrixExcel = jest.fn();
 const mockSaveEngagementRankingExcel = jest.fn();
 const mockGenerateKasatkerReport = jest.fn();
+const mockGenerateKasatkerAttendanceSummary = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -140,6 +141,9 @@ jest.unstable_mockModule('../src/service/engagementRankingExcelService.js', () =
 jest.unstable_mockModule('../src/service/kasatkerReportService.js', () => ({
   generateKasatkerReport: mockGenerateKasatkerReport,
 }));
+jest.unstable_mockModule('../src/service/kasatkerAttendanceService.js', () => ({
+  generateKasatkerAttendanceSummary: mockGenerateKasatkerAttendanceSummary,
+}));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
@@ -208,6 +212,7 @@ beforeEach(() => {
     fileName: 'Ranking.xlsx',
   });
   mockGenerateKasatkerReport.mockResolvedValue('Narasi Kasatker');
+  mockGenerateKasatkerAttendanceSummary.mockResolvedValue('Narasi Absensi Kasatker');
   mockSaveLikesRecapPerContentExcel.mockResolvedValue('/tmp/recap_per_content.xlsx');
   mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue(
     'Laporan IG Top and Bottom'
@@ -236,6 +241,7 @@ test('main always sets session to DITBINMAS client', async () => {
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).toMatch(/Client: \*DIT BINMAS\*/);
   expect(msg).toContain('3️⃣1️⃣ Top ranking like/komentar personel');
+  expect(msg).toContain('3️⃣3️⃣ Absensi Kasatker');
 });
 
 test('choose_menu aggregates directorate data by client_id', async () => {
@@ -1542,6 +1548,47 @@ test('choose_menu option 30 opens Kasatker report submenu', async () => {
     chatId,
     expect.stringContaining('Silakan pilih periode Laporan Kasatker:')
   );
+});
+
+test('choose_menu option 33 memanggil layanan absensi Kasatker dan kembali ke menu utama', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '998';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '33', waClient);
+
+  expect(session.step).toBe('choose_menu');
+  expect(mockGenerateKasatkerAttendanceSummary).toHaveBeenCalledWith({
+    clientId: 'ditbinmas',
+    roleFlag: 'ditbinmas',
+  });
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages[0]).toBe('Narasi Absensi Kasatker');
+  expect(messages.some((msg) => msg.includes('Client: *DITBINMAS*'))).toBe(true);
+});
+
+test('choose_kasatker_attendance mengirim pesan error ketika layanan gagal', async () => {
+  mockGenerateKasatkerAttendanceSummary.mockRejectedValueOnce(
+    new Error('Tidak ada data Kasat Binmas')
+  );
+  const session = {
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '999';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasatker_attendance(session, chatId, '', waClient);
+
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Tidak ada data Kasat Binmas')])
+  );
+  expect(session.step).toBe('choose_menu');
 });
 
 test('choose_kasatker_report_period option 1 mengirim narasi dan kembali ke menu utama', async () => {
