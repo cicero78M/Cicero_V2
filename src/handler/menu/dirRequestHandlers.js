@@ -41,6 +41,7 @@ import { saveEngagementRankingExcel } from "../../service/engagementRankingExcel
 import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
 import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttendanceService.js";
 import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRecapService.js";
+import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmasTiktokCommentRecapService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -152,6 +153,28 @@ const KASAT_BINMAS_LIKES_PERIOD_MAP = {
 const KASAT_BINMAS_LIKES_MENU_TEXT =
   "Silakan pilih rekap Absensi Likes Kasat Binmas:\n" +
   Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
+  "1": {
+    period: "daily",
+    description: "Rekap absensi komentar harian (hari ini)",
+  },
+  "2": {
+    period: "weekly",
+    description: "Rekap absensi komentar mingguan (Senin - Minggu)",
+  },
+  "3": {
+    period: "monthly",
+    description: "Rekap absensi komentar bulanan",
+  },
+};
+
+const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT =
+  "Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:\n" +
+  Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
   "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
@@ -1938,6 +1961,7 @@ export const dirRequestHandlers = {
         "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n" +
         "3️⃣3️⃣ Absensi Kasatker\n" +
         "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n\n" +
+        "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1993,6 +2017,7 @@ export const dirRequestHandlers = {
           "32",
           "33",
           "34",
+          "35",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2028,6 +2053,12 @@ export const dirRequestHandlers = {
     if (choice === "34") {
       session.step = "choose_kasat_binmas_likes_period";
       await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "35") {
+      session.step = "choose_kasat_binmas_tiktok_comment_period";
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
       return;
     }
 
@@ -2162,6 +2193,57 @@ export const dirRequestHandlers = {
           error.message.includes("Tidak ada data"))
           ? error.message
           : `❌ Gagal membuat rekap Absensi Likes Kasat Binmas (${option.description}).`;
+      await waClient.sendMessage(chatId, msg);
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_kasat_binmas_tiktok_comment_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu Absensi Komentar TikTok Kasat Binmas ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
+      return;
+    }
+
+    try {
+      const narrative = await generateKasatBinmasTiktokCommentRecap({
+        period: option.period,
+      });
+      await waClient.sendMessage(chatId, narrative);
+    } catch (error) {
+      console.error(
+        "Gagal membuat rekap Absensi Komentar TikTok Kasat Binmas:",
+        error
+      );
+      const msg =
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+          ? error.message
+          : `❌ Gagal membuat rekap Absensi Komentar TikTok Kasat Binmas (${option.description}).`;
       await waClient.sendMessage(chatId, msg);
     }
 
