@@ -236,7 +236,6 @@ test('main always sets session to DITBINMAS client', async () => {
   const msg = waClient.sendMessage.mock.calls[0][1];
   expect(msg).toMatch(/Client: \*DIT BINMAS\*/);
   expect(msg).toContain('3️⃣1️⃣ Top ranking like/komentar personel');
-  expect(msg).toContain('3️⃣3️⃣ Absensi like Instagram Kasatker');
 });
 
 test('choose_menu aggregates directorate data by client_id', async () => {
@@ -587,27 +586,6 @@ test('choose_menu option 5 absensi likes ditbinmas', async () => {
   expect(mockAbsensiLikesDitbinmasReport).toHaveBeenCalled();
   expect(mockAbsensiLikes).not.toHaveBeenCalled();
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
-});
-
-test('choose_menu option 33 absensi instagram kasatker', async () => {
-  mockAbsensiLikes.mockResolvedValue('rekap kasatker');
-
-  const session = {
-    role: 'ditbinmas',
-    selectedClientId: 'polres_pasuruan_kota',
-    clientName: 'POLRES PASURUAN KOTA',
-    dir_client_id: 'ditbinmas',
-  };
-  const chatId = '331';
-  const waClient = { sendMessage: jest.fn() };
-
-  await dirRequestHandlers.choose_menu(session, chatId, '33', waClient);
-
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('ditbinmas', {
-    clientFilter: 'polres_pasuruan_kota',
-    roleFlag: 'ditbinmas',
-  });
-  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'rekap kasatker');
 });
 
 test('choose_menu option 31 sends top personnel ranking', async () => {

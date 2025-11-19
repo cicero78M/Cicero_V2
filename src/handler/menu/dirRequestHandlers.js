@@ -541,9 +541,6 @@ async function absensiLikesDitbinmas() {
 async function absensiLikesDitbinmasSimple() {
   return await absensiLikesDitbinmasSimpleReport();
 }
-async function absensiLikesKasatker(clientId, roleFlag, clientFilter) {
-  return await absensiLikes(clientId, { roleFlag, clientFilter });
-}
 async function absensiKomentarTiktok() {
   return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
 }
@@ -1819,10 +1816,6 @@ async function performAction(
       }
       break;
     }
-    case "33": {
-      msg = await absensiLikesKasatker(clientId, roleFlag, userClientId);
-      break;
-    }
     default:
       msg = "Menu tidak dikenal.";
   }
@@ -1919,8 +1912,6 @@ export const dirRequestHandlers = {
         "3️⃣0️⃣ Laporan Kasatker\n" +
         "3️⃣1️⃣ Top ranking like/komentar personel\n" +
         "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n\n" +
-        "🕒 *Absensi Kasatker*\n" +
-        "3️⃣3️⃣ Absensi like Instagram Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1974,7 +1965,6 @@ export const dirRequestHandlers = {
           "30",
           "31",
           "32",
-          "33",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
