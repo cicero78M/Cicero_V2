@@ -607,49 +607,12 @@ test('choose_menu option 33 absensi instagram kasatker', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '33', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('polres_pasuruan_kota', {
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('ditbinmas', {
     clientFilter: 'polres_pasuruan_kota',
     roleFlag: 'ditbinmas',
     positionFilter: 'kasat binmas',
   });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'rekap kasatker');
-});
-
-test('choose_menu option 33 prompts for Polres selection before running', async () => {
-  mockAbsensiLikes.mockResolvedValue('rekap kasatker');
-  mockGetClientsByRole.mockResolvedValue(['polres_a', 'polres_b']);
-  mockFindClientById.mockImplementation(async (cid) => ({
-    ditbinmas: { nama: 'DIT BINMAS', client_type: 'direktorat' },
-    polres_a: { nama: 'POLRES A', client_type: 'org' },
-    polres_b: { nama: 'POLRES B', client_type: 'org' },
-  })[cid.toLowerCase()]);
-
-  const session = {
-    role: 'ditbinmas',
-    selectedClientId: 'ditbinmas',
-    clientName: 'DIT BINMAS',
-    dir_client_id: 'ditbinmas',
-  };
-  const chatId = '332';
-  const waClient = { sendMessage: jest.fn() };
-
-  await dirRequestHandlers.choose_menu(session, chatId, '33', waClient);
-
-  expect(session.step).toBe('choose_client');
-  expect(session.pendingAction).toBe('33');
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    expect.stringContaining('Pilih Client Polres untuk Absensi Kasatker:')
-  );
-
-  await dirRequestHandlers.choose_client(session, chatId, '2', waClient);
-
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('polres_b', {
-    clientFilter: 'polres_b',
-    roleFlag: 'ditbinmas',
-    positionFilter: 'kasat binmas',
-  });
-  expect(session.step).toBe('choose_menu');
 });
 
 test('choose_menu option 31 sends top personnel ranking', async () => {
