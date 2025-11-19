@@ -39,6 +39,7 @@ import { saveMonthlyLikesRecapExcel } from "../../service/monthlyLikesRecapExcel
 import { saveSatkerUpdateMatrixExcel } from "../../service/satkerUpdateMatrixService.js";
 import { saveEngagementRankingExcel } from "../../service/engagementRankingExcelService.js";
 import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
+import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttendanceService.js";
 import { hariIndo } from "../../utils/constants.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
@@ -1911,7 +1912,8 @@ export const dirRequestHandlers = {
         "🛡️ *Monitoring Kasatker*\n" +
         "3️⃣0️⃣ Laporan Kasatker\n" +
         "3️⃣1️⃣ Top ranking like/komentar personel\n" +
-        "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n\n" +
+        "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n" +
+        "3️⃣3️⃣ Absensi Kasatker\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -1965,6 +1967,7 @@ export const dirRequestHandlers = {
           "30",
           "31",
           "32",
+          "33",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -1988,6 +1991,12 @@ export const dirRequestHandlers = {
     if (choice === "30") {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "33") {
+      session.step = "choose_kasatker_attendance";
+      await dirRequestHandlers.choose_kasatker_attendance(session, chatId, "", waClient);
       return;
     }
 
@@ -2126,6 +2135,33 @@ export const dirRequestHandlers = {
       } else {
         msg = `❌ Gagal membuat Laporan Kasatker (${option.label}).`;
       }
+      await waClient.sendMessage(chatId, msg);
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_kasatker_attendance(session, chatId, text, waClient) {
+    const targetClientId =
+      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const roleFlag = session.role;
+
+    try {
+      const narrative = await generateKasatkerAttendanceSummary({
+        clientId: targetClientId,
+        roleFlag,
+      });
+      await waClient.sendMessage(chatId, narrative);
+    } catch (error) {
+      console.error("Gagal membuat Absensi Kasatker:", error);
+      const msg =
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+          ? error.message
+          : "❌ Gagal membuat Absensi Kasatker.";
       await waClient.sendMessage(chatId, msg);
     }
 
