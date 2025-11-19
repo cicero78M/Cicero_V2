@@ -20,7 +20,7 @@ export async function getLikesSets(shortcodes) {
 }
 
 export async function groupUsersByClientDivision(roleName, opts = {}) {
-  const { clientFilter, selfOnly } = opts;
+  const { clientFilter, selfOnly, positionFilter } = opts;
   let polresIds;
   let allUsers;
 
@@ -50,6 +50,13 @@ export async function groupUsersByClientDivision(roleName, opts = {}) {
       }
     });
     polresIds = Array.from(polresSet);
+  }
+
+  const normalizedPosition = (positionFilter || "").toString().trim().toLowerCase();
+  if (normalizedPosition) {
+    allUsers = allUsers.filter(
+      (u) => (u.jabatan || "").toString().trim().toLowerCase() === normalizedPosition
+    );
   }
 
   const usersByClient = {};

@@ -129,7 +129,7 @@ export async function getClientsByRole(roleName, clientId = null) {
 export async function getUsersByClient(client_id, roleFilter = null) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1, roleFilter);
   const res = await query(
-    `SELECT user_id, nama, tiktok, insta, divisi, title, status, exception
+    `SELECT user_id, nama, tiktok, insta, divisi, title, jabatan, status, exception
      FROM "user" u
      WHERE ${clause} AND status = true`,
     params

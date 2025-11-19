@@ -542,7 +542,11 @@ async function absensiLikesDitbinmasSimple() {
   return await absensiLikesDitbinmasSimpleReport();
 }
 async function absensiLikesKasatker(clientId, roleFlag, clientFilter) {
-  return await absensiLikes(clientId, { roleFlag, clientFilter });
+  return await absensiLikes(clientId, {
+    roleFlag,
+    clientFilter,
+    positionFilter: "kasat binmas",
+  });
 }
 async function absensiKomentarTiktok() {
   return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
@@ -1820,7 +1824,26 @@ async function performAction(
       break;
     }
     case "33": {
-      msg = await absensiLikesKasatker(clientId, roleFlag, userClientId);
+      const normalizedRole = (roleFlag || "").toLowerCase();
+      if (normalizedRole !== "ditbinmas") {
+        msg = "Menu Absensi Kasatker hanya tersedia untuk role Ditbinmas.";
+        break;
+      }
+
+      if (!userClientId || userType !== "org") {
+        msg =
+          "Pilih client Polres terlebih dahulu untuk menjalankan Absensi Kasatker.";
+        break;
+      }
+
+      const kasatkerMsg = await absensiLikesKasatker(
+        clientId,
+        roleFlag,
+        userClientId
+      );
+      msg =
+        kasatkerMsg ||
+        "Tidak ada data Absensi Likes Instagram untuk Kasat Binmas saat ini.";
       break;
     }
     default:
