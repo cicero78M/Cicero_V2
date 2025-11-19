@@ -73,6 +73,47 @@ describe('generateKasatkerAttendanceSummary', () => {
     expect(summary).not.toContain('SAT LAMA');
   });
 
+  test('sorts Kasat Binmas by pangkat priority then name', async () => {
+    mockGetUsersByClient.mockResolvedValue([
+      {
+        user_id: '1',
+        nama: 'Zulu',
+        title: 'BRIPDA',
+        client_name: 'Polres C',
+        jabatan: 'Kasat Binmas',
+        insta: null,
+        tiktok: null,
+      },
+      {
+        user_id: '2',
+        nama: 'Charlie',
+        title: 'AKBP',
+        client_name: 'Polres A',
+        jabatan: 'Kasat Binmas',
+        insta: null,
+        tiktok: null,
+      },
+      {
+        user_id: '3',
+        nama: 'Alpha',
+        title: 'AKP',
+        client_name: 'Polres B',
+        jabatan: 'Kasat Binmas',
+        insta: null,
+        tiktok: null,
+      },
+    ]);
+
+    const summary = await generateKasatkerAttendanceSummary();
+    const listLines = summary
+      .split('\n')
+      .filter((line) => /^\d+\.\s/.test(line.trim()));
+
+    expect(listLines).toHaveLength(3);
+    expect(listLines[0]).toContain('AKBP Charlie');
+    expect(listLines[2]).toContain('BRIPDA Zulu');
+  });
+
   test('returns fallback text when there are no Kasat Binmas', async () => {
     mockGetUsersByClient.mockResolvedValue([
       { user_id: '1', jabatan: 'Operator' },
