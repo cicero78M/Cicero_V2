@@ -26,6 +26,7 @@ describe('generateKasatkerAttendanceSummary', () => {
         nama: 'Alpha',
         title: 'AKP',
         divisi: 'Sat Binmas',
+        client_name: 'Polres Contoh',
         jabatan: 'Kasat Binmas',
         insta: 'alpha.ig',
         tiktok: 'alpha.tt',
@@ -50,6 +51,26 @@ describe('generateKasatkerAttendanceSummary', () => {
     expect(summary).toContain('Total Kasat Binmas: 1');
     expect(summary).toContain('Alpha');
     expect(summary).toContain('Client: DITBINMAS');
+  });
+
+  test('uses client_name or client_id for displayed polres info', async () => {
+    mockGetUsersByClient.mockResolvedValue([
+      {
+        user_id: '1',
+        nama: 'Gamma',
+        title: 'AKP',
+        divisi: 'Sat Lama',
+        client_name: 'Polres Bukit',
+        jabatan: 'Kasat Binmas',
+        insta: null,
+        tiktok: null,
+      },
+    ]);
+
+    const summary = await generateKasatkerAttendanceSummary();
+
+    expect(summary).toContain('POLRES BUKIT');
+    expect(summary).not.toContain('SAT LAMA');
   });
 
   test('returns fallback text when there are no Kasat Binmas', async () => {

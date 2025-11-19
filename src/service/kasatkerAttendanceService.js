@@ -76,10 +76,10 @@ export async function generateKasatkerAttendanceSummary({
     ...kasatkers
       .sort((a, b) => (a?.nama || "").localeCompare(b?.nama || "", "id-ID", { sensitivity: "base" }))
       .map((user, idx) => {
-        const division = (user?.divisi || "-").toUpperCase();
+        const polres = (user?.client_name || user?.client_id || "-").toUpperCase();
         const name = formatNama(user) || "(Tanpa Nama)";
         const status = formatAccountStatus(user);
-        return `${idx + 1}. ${name} (${division}) — ${status}`;
+        return `${idx + 1}. ${name} (${polres}) — ${status}`;
       }),
   ];
 
