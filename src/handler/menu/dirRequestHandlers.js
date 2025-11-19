@@ -151,6 +151,30 @@ const rankIdx = (t) => {
   return i === -1 ? pangkatOrder.length : i;
 };
 
+async function getOrgClientsForRole(roleFlag) {
+  const normalizedRole = (roleFlag || "").toLowerCase();
+  if (normalizedRole !== "ditbinmas") return [];
+
+  const clientIds = ((await getClientsByRole(normalizedRole)) || []).map((id) =>
+    String(id || "").toLowerCase()
+  );
+
+  const uniqueIds = Array.from(new Set(clientIds));
+  const clients = await Promise.all(
+    uniqueIds.map(async (clientId) => {
+      const client = await findClientById(clientId);
+      return { clientId, client };
+    })
+  );
+
+  return clients
+    .filter(({ client }) => (client?.client_type || "").toLowerCase() === "org")
+    .map(({ clientId, client }) => ({
+      id: clientId,
+      name: (client?.nama || clientId).toUpperCase(),
+    }));
+}
+
 async function formatRekapUserData(clientId, roleFlag = null) {
   const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   const filterRole = directorateRoles.includes(roleFlag?.toLowerCase())
@@ -1830,16 +1854,17 @@ async function performAction(
         break;
       }
 
-      if (!userClientId || userType !== "org") {
+      const targetClientId = userType === "org" ? userClientId : null;
+      if (!targetClientId) {
         msg =
           "Pilih client Polres terlebih dahulu untuk menjalankan Absensi Kasatker.";
         break;
       }
 
       const kasatkerMsg = await absensiLikesKasatker(
-        clientId,
+        targetClientId,
         roleFlag,
-        userClientId
+        targetClientId
       );
       msg =
         kasatkerMsg ||
@@ -1884,18 +1909,18 @@ export const dirRequestHandlers = {
 
   async main(session, chatId, _text, waClient) {
     session.client_ids = [DITBINMAS_CLIENT_ID];
-    if ((session.selectedClientId || "").toUpperCase() !== DITBINMAS_CLIENT_ID) {
+    if (!session.selectedClientId) {
       session.selectedClientId = DITBINMAS_CLIENT_ID;
     }
     if (!session.dir_client_id) {
       session.dir_client_id = DITBINMAS_CLIENT_ID;
     }
-    if (!session.clientName || session.selectedClientId !== DITBINMAS_CLIENT_ID) {
+    if (!session.clientName) {
       try {
-        const client = await findClientById(DITBINMAS_CLIENT_ID);
-        session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+        const client = await findClientById(session.selectedClientId);
+        session.clientName = client?.nama || session.selectedClientId;
       } catch {
-        session.clientName = DITBINMAS_CLIENT_ID;
+        session.clientName = session.selectedClientId;
       }
     }
 
@@ -1951,13 +1976,83 @@ export const dirRequestHandlers = {
   },
 
   async choose_client(session, chatId, text, waClient) {
-    session.selectedClientId = DITBINMAS_CLIENT_ID;
-    try {
-      const client = await findClientById(DITBINMAS_CLIENT_ID);
-      session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
-    } catch {
-      session.clientName = DITBINMAS_CLIENT_ID;
+    const input = (text || "").trim();
+    const roleFlag = session.role || session.user?.role;
+    const options =
+      session.dir_org_clients && Array.isArray(session.dir_org_clients)
+        ? session.dir_org_clients
+        : await getOrgClientsForRole(roleFlag);
+
+    if (!options.length) {
+      session.selectedClientId = DITBINMAS_CLIENT_ID;
+      try {
+        const client = await findClientById(DITBINMAS_CLIENT_ID);
+        session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+      } catch {
+        session.clientName = DITBINMAS_CLIENT_ID;
+      }
+      await waClient.sendMessage(
+        chatId,
+        "❌ Tidak ada client Polres yang dapat dipilih untuk Absensi Kasatker."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
     }
+
+    if (!input) {
+      await waClient.sendMessage(
+        chatId,
+        `Pilih Client Polres untuk Absensi Kasatker:\n\n${options
+          .map((opt, idx) => `${idx + 1}. ${opt.name} (${opt.id.toUpperCase()})`)
+          .join("\n")}\n\nBalas angka untuk memilih atau ketik *batal* untuk kembali.`
+      );
+      session.dir_org_clients = options;
+      session.step = "choose_client";
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      delete session.dir_org_clients;
+      delete session.pendingAction;
+      session.selectedClientId = DITBINMAS_CLIENT_ID;
+      session.clientName = DITBINMAS_CLIENT_ID;
+      session.step = "main";
+      await waClient.sendMessage(chatId, "✅ Pemilihan client dibatalkan.");
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const idx = parseInt(input, 10) - 1;
+    if (Number.isNaN(idx) || idx < 0 || idx >= options.length) {
+      await waClient.sendMessage(chatId, "Pilihan client tidak valid. Balas angka yang tersedia.");
+      session.dir_org_clients = options;
+      session.step = "choose_client";
+      return;
+    }
+
+    const chosen = options[idx];
+    session.selectedClientId = chosen.id;
+    session.clientName = chosen.name || chosen.id;
+    delete session.dir_org_clients;
+
+    if (session.pendingAction === "33") {
+      session.pendingAction = undefined;
+      await performAction(
+        "33",
+        session.dir_client_id || DITBINMAS_CLIENT_ID,
+        waClient,
+        chatId,
+        session.role,
+        session.selectedClientId,
+        { username: session.username || session.user?.username }
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
 
@@ -2003,7 +2098,8 @@ export const dirRequestHandlers = {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
       return;
     }
-    const userClientId = session.selectedClientId;
+    const selectedClientId = session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const userClientId = selectedClientId;
     if (!userClientId) {
       await waClient.sendMessage(chatId, "Client belum dipilih.");
       session.step = "main";
@@ -2022,6 +2118,45 @@ export const dirRequestHandlers = {
       session.step = "choose_kasatker_report_period";
       await waClient.sendMessage(chatId, KASATKER_REPORT_MENU_TEXT);
       return;
+    }
+
+    if (choice === "33") {
+      const roleFlag = (session.role || "").toLowerCase();
+      if (roleFlag !== "ditbinmas") {
+        await waClient.sendMessage(
+          chatId,
+          "Menu Absensi Kasatker hanya tersedia untuk role Ditbinmas."
+        );
+        return;
+      }
+
+      const selectedClient = await findClientById(userClientId);
+      const selectedType = (selectedClient?.client_type || "").toLowerCase();
+      if (selectedType !== "org") {
+        const orgClients = await getOrgClientsForRole(session.role);
+        if (!orgClients.length) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Tidak ada client Polres yang dapat dipilih untuk Absensi Kasatker."
+          );
+          session.step = "main";
+          await dirRequestHandlers.main(session, chatId, "", waClient);
+          return;
+        }
+
+        session.dir_org_clients = orgClients;
+        session.pendingAction = "33";
+        session.step = "choose_client";
+        await waClient.sendMessage(
+          chatId,
+          `Pilih Client Polres untuk Absensi Kasatker:\n\n${orgClients
+            .map(
+              (opt, idx) => `${idx + 1}. ${opt.name} (${opt.id.toUpperCase()})`
+            )
+            .join("\n")}\n\nBalas angka untuk memilih atau ketik *batal* untuk kembali.`
+        );
+        return;
+      }
     }
 
     await performAction(
