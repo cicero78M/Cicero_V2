@@ -2,8 +2,45 @@ import { getUsersByClient } from "../model/userModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
-const TARGET_JABATAN = "KASAT BINMAS";
 const TARGET_ROLE = "ditbinmas";
+const REGION_KEYWORDS = [
+  "POLRES",
+  "POLDA",
+  "POLRESTA",
+  "POLTABES",
+  "POLSEK",
+  "KOTA",
+  "KAB",
+  "KABUPATEN",
+  "RESORT",
+  "WILAYAH",
+];
+const REGION_REGEX = new RegExp(`\\b(${REGION_KEYWORDS.join("|")})\\b`, "g");
+const KASAT_BINMAS_REGEX = /KASAT\s*BINMAS/;
+
+function sanitizeJabatanText(jabatan = "") {
+  if (!jabatan) {
+    return "";
+  }
+
+  return jabatan
+    .toString()
+    .replace(/[.,/:;\\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toUpperCase()
+    .replace(REGION_REGEX, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function matchesKasatBinmasJabatan(jabatan) {
+  const sanitized = sanitizeJabatanText(jabatan);
+  if (!sanitized) {
+    return false;
+  }
+
+  return KASAT_BINMAS_REGEX.test(sanitized.replace(/\s+/g, " "));
+}
 
 function formatAccountStatus(user) {
   const ig = user?.insta ? "✅" : "❌";
@@ -18,8 +55,8 @@ export async function generateKasatkerAttendanceSummary({
   const targetClientId = (clientId || DITBINMAS_CLIENT_ID).toUpperCase();
   const targetRole = roleFlag || TARGET_ROLE;
   const users = await getUsersByClient(targetClientId, targetRole);
-  const kasatkers = (users || []).filter(
-    (user) => (user?.jabatan || "").trim().toUpperCase() === TARGET_JABATAN
+  const kasatkers = (users || []).filter((user) =>
+    matchesKasatBinmasJabatan(user?.jabatan)
   );
 
   if (!kasatkers.length) {
