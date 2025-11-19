@@ -60,7 +60,8 @@ export async function generateKasatkerAttendanceSummary({
   );
 
   if (!kasatkers.length) {
-    return "Tidak ada data Kasat Binmas aktif yang dapat ditampilkan.";
+    const totalUsers = users?.length || 0;
+    return `Dari ${totalUsers} user aktif ${targetClientId} (${targetRole}), tidak ditemukan data Kasat Binmas.`;
   }
 
   const withInsta = kasatkers.filter((user) => !!user.insta).length;

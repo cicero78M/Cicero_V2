@@ -62,6 +62,8 @@ describe('generateKasatkerAttendanceSummary', () => {
     });
 
     expect(mockGetUsersByClient).toHaveBeenCalledWith('POLRESABC', 'ditbinmas');
-    expect(summary).toContain('Tidak ada data Kasat Binmas aktif');
+    expect(summary).toBe(
+      'Dari 1 user aktif POLRESABC (ditbinmas), tidak ditemukan data Kasat Binmas.'
+    );
   });
 });
