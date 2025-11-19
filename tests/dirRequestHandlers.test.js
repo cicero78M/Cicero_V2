@@ -39,6 +39,7 @@ const mockSaveEngagementRankingExcel = jest.fn();
 const mockGenerateKasatkerReport = jest.fn();
 const mockGenerateKasatkerAttendanceSummary = jest.fn();
 const mockGenerateKasatBinmasLikesRecap = jest.fn();
+const mockGenerateKasatBinmasTiktokCommentRecap = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -149,6 +150,12 @@ jest.unstable_mockModule(
   '../src/service/kasatBinmasLikesRecapService.js',
   () => ({
     generateKasatBinmasLikesRecap: mockGenerateKasatBinmasLikesRecap,
+  })
+);
+jest.unstable_mockModule(
+  '../src/service/kasatBinmasTiktokCommentRecapService.js',
+  () => ({
+    generateKasatBinmasTiktokCommentRecap: mockGenerateKasatBinmasTiktokCommentRecap,
   })
 );
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
@@ -1678,6 +1685,115 @@ test('choose_kasat_binmas_likes_period menampilkan pesan error saat layanan gaga
   );
 
   expect(mockGenerateKasatBinmasLikesRecap).toHaveBeenCalledWith({
+    period: 'daily',
+  });
+  expect(session.step).toBe('choose_menu');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Tidak ada data Kasat Binmas')])
+  );
+});
+
+test('choose_menu option 35 membuka submenu Absensi Komentar TikTok Kasat Binmas', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '998f';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '35', waClient);
+
+  expect(session.step).toBe('choose_kasat_binmas_tiktok_comment_period');
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:')
+  );
+});
+
+test('choose_kasat_binmas_tiktok_comment_period option 2 memanggil layanan mingguan', async () => {
+  mockGenerateKasatBinmasTiktokCommentRecap.mockResolvedValue('Rekap komentar mingguan siap');
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998g';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_tiktok_comment_period(
+    session,
+    chatId,
+    '2',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith({
+    period: 'weekly',
+  });
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toContain('Rekap komentar mingguan siap');
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_kasat_binmas_tiktok_comment_period dapat dibatalkan', async () => {
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998h';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_tiktok_comment_period(
+    session,
+    chatId,
+    'batal',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).not.toHaveBeenCalled();
+  expect(session.step).toBe('choose_menu');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Menu Absensi Komentar TikTok Kasat Binmas ditutup.'),
+    ])
+  );
+});
+
+test('choose_kasat_binmas_tiktok_comment_period mengingatkan saat pilihan tidak valid', async () => {
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998i';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_tiktok_comment_period(
+    session,
+    chatId,
+    '9',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).not.toHaveBeenCalled();
+  expect(session.step).toBeUndefined();
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Pilihan tidak valid'),
+      expect.stringContaining('Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:'),
+    ])
+  );
+});
+
+test('choose_kasat_binmas_tiktok_comment_period menampilkan pesan error saat layanan gagal', async () => {
+  mockGenerateKasatBinmasTiktokCommentRecap.mockRejectedValue(
+    new Error('Tidak ada data Kasat Binmas')
+  );
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998j';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_tiktok_comment_period(
+    session,
+    chatId,
+    '1',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith({
     period: 'daily',
   });
   expect(session.step).toBe('choose_menu');
