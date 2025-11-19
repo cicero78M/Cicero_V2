@@ -129,8 +129,10 @@ export async function getClientsByRole(roleName, clientId = null) {
 export async function getUsersByClient(client_id, roleFilter = null) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1, roleFilter);
   const res = await query(
-    `SELECT user_id, nama, tiktok, insta, divisi, title, status, exception, jabatan
+    `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
+            u.client_id, c.nama AS client_name
      FROM "user" u
+     LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
      WHERE ${clause} AND status = true`,
     params
   );
