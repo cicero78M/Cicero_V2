@@ -38,6 +38,7 @@ const mockSaveSatkerUpdateMatrixExcel = jest.fn();
 const mockSaveEngagementRankingExcel = jest.fn();
 const mockGenerateKasatkerReport = jest.fn();
 const mockGenerateKasatkerAttendanceSummary = jest.fn();
+const mockGenerateKasatBinmasLikesRecap = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -144,6 +145,12 @@ jest.unstable_mockModule('../src/service/kasatkerReportService.js', () => ({
 jest.unstable_mockModule('../src/service/kasatkerAttendanceService.js', () => ({
   generateKasatkerAttendanceSummary: mockGenerateKasatkerAttendanceSummary,
 }));
+jest.unstable_mockModule(
+  '../src/service/kasatBinmasLikesRecapService.js',
+  () => ({
+    generateKasatBinmasLikesRecap: mockGenerateKasatBinmasLikesRecap,
+  })
+);
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
@@ -1569,6 +1576,115 @@ test('choose_menu option 33 memanggil layanan absensi Kasatker dan kembali ke me
   const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
   expect(messages[0]).toBe('Narasi Absensi Kasatker');
   expect(messages.some((msg) => msg.includes('Client: *DITBINMAS*'))).toBe(true);
+});
+
+test('choose_menu option 34 membuka submenu Absensi Likes Kasat Binmas', async () => {
+  const session = {
+    selectedClientId: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  };
+  const chatId = '998a';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '34', waClient);
+
+  expect(session.step).toBe('choose_kasat_binmas_likes_period');
+  expect(mockGenerateKasatBinmasLikesRecap).not.toHaveBeenCalled();
+  expect(waClient.sendMessage).toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('Silakan pilih rekap Absensi Likes Kasat Binmas:')
+  );
+});
+
+test('choose_kasat_binmas_likes_period option 2 memanggil layanan mingguan', async () => {
+  mockGenerateKasatBinmasLikesRecap.mockResolvedValue('Rekap mingguan siap');
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998b';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_likes_period(
+    session,
+    chatId,
+    '2',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasLikesRecap).toHaveBeenCalledWith({
+    period: 'weekly',
+  });
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toContain('Rekap mingguan siap');
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_kasat_binmas_likes_period dapat dibatalkan', async () => {
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998c';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_likes_period(
+    session,
+    chatId,
+    'batal',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasLikesRecap).not.toHaveBeenCalled();
+  expect(session.step).toBe('choose_menu');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Menu Absensi Likes Kasat Binmas ditutup.'),
+    ])
+  );
+});
+
+test('choose_kasat_binmas_likes_period mengingatkan saat pilihan tidak valid', async () => {
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998d';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_likes_period(
+    session,
+    chatId,
+    '9',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasLikesRecap).not.toHaveBeenCalled();
+  expect(session.step).toBeUndefined();
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('Pilihan tidak valid'),
+      expect.stringContaining('Silakan pilih rekap Absensi Likes Kasat Binmas:'),
+    ])
+  );
+});
+
+test('choose_kasat_binmas_likes_period menampilkan pesan error saat layanan gagal', async () => {
+  mockGenerateKasatBinmasLikesRecap.mockRejectedValue(
+    new Error('Tidak ada data Kasat Binmas')
+  );
+  const session = { selectedClientId: 'ditbinmas' };
+  const chatId = '998e';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_likes_period(
+    session,
+    chatId,
+    '1',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasLikesRecap).toHaveBeenCalledWith({
+    period: 'daily',
+  });
+  expect(session.step).toBe('choose_menu');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toEqual(
+    expect.arrayContaining([expect.stringContaining('Tidak ada data Kasat Binmas')])
+  );
 });
 
 test('choose_kasatker_attendance mengirim pesan error ketika layanan gagal', async () => {
