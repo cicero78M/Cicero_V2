@@ -108,7 +108,7 @@ export async function collectLikesRecap(clientId, opts = {}) {
 
 // === AKUMULASI ===
 export async function absensiLikes(client_id, opts = {}) {
-  const { clientFilter } = opts;
+  const { clientFilter, positionFilter } = opts;
   const roleFlag = opts.roleFlag;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -151,11 +151,19 @@ export async function absensiLikes(client_id, opts = {}) {
     try {
       ({ polresIds, usersByClient } = await groupUsersByClientDivision(
         roleName,
-        { clientFilter }
+        { clientFilter, positionFilter }
       ));
     } catch (error) {
       console.error(error);
       return "Maaf, gagal mengelompokkan pengguna.";
+    }
+
+    const totalFilteredUsers = Object.values(usersByClient).reduce(
+      (acc, list) => acc + list.length,
+      0
+    );
+    if (positionFilter && totalFilteredUsers === 0) {
+      return `Tidak ada personil dengan jabatan ${positionFilter} pada client terkait.`;
     }
 
 
@@ -239,6 +247,16 @@ export async function absensiLikes(client_id, opts = {}) {
   }
 
   const users = await getUsersByClient(clientFilter || client_id, roleFlag);
+  const normalizedPosition = (positionFilter || "").toString().trim().toLowerCase();
+  const filteredUsers = normalizedPosition
+    ? users.filter(
+        (u) => (u.jabatan || "").toString().trim().toLowerCase() === normalizedPosition
+      )
+    : users;
+
+  if (normalizedPosition && filteredUsers.length === 0) {
+    return `Tidak ada personil dengan jabatan ${positionFilter} pada client terkait.`;
+  }
   const targetClient = roleFlag || client_id;
   let shortcodes;
   try {
@@ -252,7 +270,7 @@ export async function absensiLikes(client_id, opts = {}) {
     return `Tidak ada konten pada akun Official Instagram  *${clientNama}* hari ini.`;
 
   const userStats = {};
-  users.forEach((u) => {
+  filteredUsers.forEach((u) => {
     userStats[u.user_id] = { ...u, count: 0 };
   });
   let likesSets;
@@ -263,7 +281,7 @@ export async function absensiLikes(client_id, opts = {}) {
     return "Maaf, gagal mengambil data likes Instagram.";
   }
   likesSets.forEach((likesSet) => {
-    users.forEach((u) => {
+    filteredUsers.forEach((u) => {
       if (
         u.insta &&
         u.insta.trim() !== "" &&
@@ -304,7 +322,7 @@ export async function absensiLikes(client_id, opts = {}) {
     `📋 *Rekap Akumulasi Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${totalKonten}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-    `*Jumlah user:* ${users.length}\n` +
+    `*Jumlah user:* ${filteredUsers.length}\n` +
     `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
     `❌ *Belum melaksanakan* : *${belum.length} user*\n\n`;
 

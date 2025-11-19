@@ -591,6 +591,10 @@ test('choose_menu option 5 absensi likes ditbinmas', async () => {
 
 test('choose_menu option 33 absensi instagram kasatker', async () => {
   mockAbsensiLikes.mockResolvedValue('rekap kasatker');
+  mockFindClientById.mockResolvedValue({
+    client_type: 'org',
+    nama: 'POLRES PASURUAN KOTA',
+  });
 
   const session = {
     role: 'ditbinmas',
@@ -606,6 +610,7 @@ test('choose_menu option 33 absensi instagram kasatker', async () => {
   expect(mockAbsensiLikes).toHaveBeenCalledWith('ditbinmas', {
     clientFilter: 'polres_pasuruan_kota',
     roleFlag: 'ditbinmas',
+    positionFilter: 'kasat binmas',
   });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'rekap kasatker');
 });
