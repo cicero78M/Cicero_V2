@@ -34,7 +34,7 @@ const REGION_KEYWORDS = [
   "WILAYAH",
 ];
 const REGION_REGEX = new RegExp(`\\b(${REGION_KEYWORDS.join("|")})\\b`, "g");
-const KASAT_BINMAS_REGEX = /KASAT\s*BINMAS/;
+const KASAT_BINMAS_REGEX = /^KASAT\s*BINMAS\b/;
 
 function rankWeight(rank) {
   const idx = PANGKAT_ORDER.indexOf(String(rank || "").toUpperCase());
@@ -62,7 +62,12 @@ export function matchesKasatBinmasJabatan(jabatan) {
     return false;
   }
 
-  return KASAT_BINMAS_REGEX.test(sanitized.replace(/\s+/g, " "));
+  const normalized = sanitized.replace(/\s+/g, " ");
+  if (!normalized.startsWith("KASAT")) {
+    return false;
+  }
+
+  return KASAT_BINMAS_REGEX.test(normalized);
 }
 
 function formatAccountStatus(user) {

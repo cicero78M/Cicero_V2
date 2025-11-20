@@ -30,10 +30,6 @@ describe('generateKasatBinmasLikesRecap', () => {
     jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
       formatNama: (user) => user?.nama || '',
     }));
-    jest.unstable_mockModule('../src/service/kasatkerAttendanceService.js', () => ({
-      matchesKasatBinmasJabatan: (jabatan = '') => /kasat\s*binmas/i.test(jabatan),
-    }));
-
     ({ generateKasatBinmasLikesRecap } = await import(
       '../src/service/kasatBinmasLikesRecapService.js'
     ));
@@ -70,6 +66,14 @@ describe('generateKasatBinmasLikesRecap', () => {
         jabatan: 'Operator',
         insta: 'gamma',
       },
+      {
+        user_id: '4',
+        nama: 'Delta',
+        title: 'AKP',
+        client_name: 'Polres D',
+        jabatan: 'WA Kasat Binmas',
+        insta: 'delta',
+      },
     ]);
     mockGetRekapLikesByClient.mockResolvedValue({
       rows: [
@@ -94,6 +98,7 @@ describe('generateKasatBinmasLikesRecap', () => {
     expect(narrative).toContain('✅ Lengkap: 1 pers');
     expect(narrative).toContain('⚠️ Sebagian: 1 pers');
     expect(narrative).toMatch(/Alpha.*3\/3/);
+    expect(narrative).not.toMatch(/Delta/);
   });
 
   test('menghasilkan pesan ketika tidak ada Kasat Binmas', async () => {
