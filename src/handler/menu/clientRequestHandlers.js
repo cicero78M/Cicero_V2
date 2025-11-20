@@ -2320,7 +2320,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
   ) => {
     await waClient.sendMessage(
       chatId,
-      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\n4️⃣ Ubah Status Massal\nKetik angka menu atau *batal* untuk keluar.`
+      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\n4️⃣ Ubah Status Massal\n5️⃣ Ubah Client ID\nKetik angka menu atau *batal* untuk keluar.`
     );
     session.step = "kelolaUser_menu";
   },
@@ -2332,7 +2332,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     pool,
     userModel
   ) => {
-    if (!/^[1-4]$/.test(text.trim())) {
+    if (!/^[1-5]$/.test(text.trim())) {
       await waClient.sendMessage(
         chatId,
         "Pilihan tidak valid. Balas angka menu."
@@ -2379,6 +2379,12 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       await waClient.sendMessage(
         chatId,
         "Ketik *true* untuk aktif, *false* untuk non-aktif:"
+      );
+    } else if (session.kelolaUser_mode === "5") {
+      session.step = "kelolaUser_updateClientId";
+      await waClient.sendMessage(
+        chatId,
+        "Masukkan *client_id* baru untuk user tersebut:"
       );
     }
   },
@@ -2489,6 +2495,52 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       );
     } catch (e) {
       await waClient.sendMessage(chatId, `Gagal update status: ${e.message}`);
+    }
+    session.step = "main";
+  },
+  kelolaUser_updateClientId: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
+    const targetClientId = text.trim().toUpperCase();
+    if (!targetClientId) {
+      await waClient.sendMessage(
+        chatId,
+        "client_id tidak boleh kosong. Masukkan client_id baru:"
+      );
+      return;
+    }
+    try {
+      if (clientService?.findClientById) {
+        const client = await clientService.findClientById(targetClientId);
+        if (!client) {
+          await waClient.sendMessage(
+            chatId,
+            `❌ Client ID ${targetClientId} tidak ditemukan.`
+          );
+          session.step = "main";
+          return;
+        }
+      }
+      await userModel.updateUserField(
+        session.target_user_id,
+        "client_id",
+        targetClientId
+      );
+      await waClient.sendMessage(
+        chatId,
+        `✅ Client ID user ${session.target_user_id} berhasil diubah menjadi ${targetClientId}.`
+      );
+    } catch (e) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mengubah client_id: ${e.message}`
+      );
     }
     session.step = "main";
   },
