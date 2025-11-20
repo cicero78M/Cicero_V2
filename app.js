@@ -33,6 +33,7 @@ const cronBuckets = {
     './src/cron/cronDirRequestLapharKasatker.js',
     './src/cron/cronDirRequestDirektorat.js',
     './src/cron/cronDirRequestHighLow.js',
+    './src/cron/cronDirRequestKasatBinmasRecap.js',
   ],
 };
 
