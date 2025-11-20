@@ -158,9 +158,9 @@ describe('generateKasatBinmasLikesRecap', () => {
 
     const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
     expect(kurangEntries).toHaveLength(3);
-    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\).*4\/5 konten/);
-    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\).*4\/5 konten/);
-    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\).*2\/5 konten/);
+    expect(kurangEntries[0]).toMatch(/^\s*1\. Bravo \(POLRES B\).*4\/5 konten/);
+    expect(kurangEntries[1]).toMatch(/^\s*2\. Charlie \(POLRES C\).*4\/5 konten/);
+    expect(kurangEntries[2]).toMatch(/^\s*3\. Alpha \(POLRES A\).*2\/5 konten/);
   });
 
   test('mengirimkan parameter rentang Senin-Minggu untuk rekap mingguan', async () => {
@@ -225,9 +225,9 @@ describe('generateKasatBinmasLikesRecap', () => {
     const narrative = await generateKasatBinmasLikesRecap({ period: 'weekly' });
 
     const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
-    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\)/);
-    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\)/);
-    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\)/);
+    expect(kurangEntries[0]).toMatch(/^\s*1\. Bravo \(POLRES B\)/);
+    expect(kurangEntries[1]).toMatch(/^\s*2\. Charlie \(POLRES C\)/);
+    expect(kurangEntries[2]).toMatch(/^\s*3\. Alpha \(POLRES A\)/);
   });
 
   test('menggunakan urutan yang sama untuk rekap bulanan', async () => {
@@ -270,8 +270,8 @@ describe('generateKasatBinmasLikesRecap', () => {
     const narrative = await generateKasatBinmasLikesRecap({ period: 'monthly' });
 
     const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
-    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\)/);
-    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\)/);
-    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\)/);
+    expect(kurangEntries[0]).toMatch(/^\s*1\. Bravo \(POLRES B\)/);
+    expect(kurangEntries[1]).toMatch(/^\s*2\. Charlie \(POLRES C\)/);
+    expect(kurangEntries[2]).toMatch(/^\s*3\. Alpha \(POLRES A\)/);
   });
 });

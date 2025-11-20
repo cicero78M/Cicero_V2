@@ -201,23 +201,29 @@ export async function generateKasatBinmasLikesRecap({ period = "daily" } = {}) {
     const entries = sortKasatList(grouped[key] || []);
     const header = `${icon} *${label} (${entries.length} pers)*`;
     if (!entries.length) {
-      return `${header}\n-`;
+      return `${header}\n  - Tidak ada data`;
     }
     const list = entries
-      .map((entry, idx) => `${idx + 1}. ${formatUserEntry(entry.user, entry.count, totalKonten)}`)
+      .map(
+        (entry, idx) =>
+          `  ${idx + 1}. ${formatUserEntry(entry.user, entry.count, totalKonten)}`
+      )
       .join("\n");
     return `${header}\n${list}`;
   }).join("\n\n");
 
   const summaryLines = [
     "📋 *Absensi Likes Kasat Binmas*",
-    `Periode: ${periodInfo.label}`,
-    `Total konten periode ini: ${totalKonten}`,
-    `Total Kasat Binmas: ${totals.total} pers`,
-    `✅ Lengkap: ${totals.lengkap} pers`,
-    `⚠️ Sebagian: ${totals.kurang} pers`,
-    `❌ Belum: ${totals.belum} pers`,
-    `⚠️❌ Belum update username IG: ${totals.noUsername} pers`,
+    "",
+    `🗓️ Periode: ${periodInfo.label}`,
+    `📈 Total konten periode ini: ${totalKonten}`,
+    `👥 Total Kasat Binmas: ${totals.total} pers`,
+    "",
+    "📊 Distribusi Status:",
+    `  ✅ Lengkap: ${totals.lengkap} pers`,
+    `  ⚠️ Sebagian: ${totals.kurang} pers`,
+    `  ❌ Belum: ${totals.belum} pers`,
+    `  ⚠️❌ Belum update username IG: ${totals.noUsername} pers`,
     "",
     sectionsText,
   ];
