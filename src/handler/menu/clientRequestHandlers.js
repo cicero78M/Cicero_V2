@@ -4198,6 +4198,11 @@ Ketik *angka* menu, atau *batal* untuk kembali.
   },
 };
 
-export { normalizeComplaintHandle, parseComplaintMessage, parseBulkStatusEntries };
+export {
+  normalizeComplaintHandle,
+  parseComplaintMessage,
+  parseBulkStatusEntries,
+  BULK_STATUS_HEADER_REGEX,
+};
 
 export default clientRequestHandlers;
