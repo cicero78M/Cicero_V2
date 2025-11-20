@@ -119,6 +119,46 @@ Example error (expired token or mismatched confirmation):
 }
 ```
 
+### Password Reset Aliasing via `/api/password-reset/*`
+`POST /api/password-reset/request`
+
+`POST /api/password-reset/confirm`
+
+These endpoints forward to the same dashboard password reset handlers described above but live under a dedicated `/api/password-reset/*` path for routing aliases. The payloads and success responses are identical to the dashboard flows:
+
+**Request payload**
+```json
+{
+  "username": "admin",
+  "contact": "08123456789"
+}
+```
+
+**Request success response**
+```json
+{
+  "success": true,
+  "message": "Instruksi reset password telah dikirim melalui WhatsApp."
+}
+```
+
+**Confirm payload**
+```json
+{
+  "token": "63e80f9a-3e63-4ad4-8a69-7c7f4d92721e",
+  "password": "Newpass123",
+  "confirmPassword": "Newpass123"
+}
+```
+
+**Confirm success response**
+```json
+{
+  "success": true,
+  "message": "Password berhasil diperbarui. Silakan login kembali."
+}
+```
+
 ## 2. Example `curl`
 
 ```bash
