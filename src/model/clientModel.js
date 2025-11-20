@@ -206,3 +206,10 @@ export async function getAllClientIds() {
     status: r.client_status,
   }));
 }
+
+export async function findAllOrgClients() {
+  const res = await query(
+    `SELECT client_id, nama, client_status FROM clients WHERE client_type = 'ORG' ORDER BY client_id`
+  );
+  return res.rows;
+}

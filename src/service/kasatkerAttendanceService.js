@@ -1,4 +1,5 @@
 import { getUsersByClient } from "../model/userModel.js";
+import { findAllOrgClients } from "../model/clientModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -70,6 +71,70 @@ function formatAccountStatus(user) {
   return `IG ${ig} | TT ${tiktok}`;
 }
 
+function normalizeKey(value) {
+  return (value || "").toString().trim().toUpperCase();
+}
+
+function mapOrgClients(clients) {
+  return (clients || [])
+    .map((client) => {
+      const client_id = normalizeKey(client?.client_id);
+      const nama = normalizeKey(client?.nama);
+      return {
+        client_id,
+        nama,
+        rawId: client?.client_id,
+        rawNama: client?.nama,
+      };
+    })
+    .filter((client) => client.client_id || client.nama);
+}
+
+function buildDetectedPolresSet(kasatkers) {
+  const detected = new Set();
+
+  (kasatkers || []).forEach((user) => {
+    const polresId = normalizeKey(user?.client_id || user?.clientId);
+    const polresName = normalizeKey(user?.client_name || user?.clientName);
+    [polresId, polresName].forEach((key) => {
+      if (key) {
+        detected.add(key);
+      }
+    });
+  });
+
+  return detected;
+}
+
+function getMissingPolres(orgClients, detectedPolresSet) {
+  return (orgClients || []).filter((client) => {
+    const keys = [client.client_id, client.nama].filter(Boolean);
+    return keys.every((key) => !detectedPolresSet.has(key));
+  });
+}
+
+function formatMissingPolresSection(orgClients, missingPolres) {
+  const lines = ["🚧 Polres tanpa Kasat Binmas terdeteksi:"];
+
+  if (!orgClients?.length) {
+    lines.push("- Data client ORG tidak tersedia untuk pembanding.");
+    return lines;
+  }
+
+  if (!missingPolres.length) {
+    lines.push("- Tidak ada; semua Polres ORG sudah memiliki Kasat Binmas terdata.");
+    return lines;
+  }
+
+  missingPolres.forEach((client) => {
+    const idLabel = client.rawId || client.client_id || "(Tanpa ID)";
+    const namaLabel = client.rawNama || client.nama;
+    lines.push(namaLabel ? `- ${idLabel} (${namaLabel})` : `- ${idLabel}`);
+  });
+
+  return lines;
+}
+
 export async function generateKasatkerAttendanceSummary({
   clientId = DITBINMAS_CLIENT_ID,
   roleFlag,
@@ -81,9 +146,19 @@ export async function generateKasatkerAttendanceSummary({
     matchesKasatBinmasJabatan(user?.jabatan)
   );
 
+  const orgClients = mapOrgClients(await findAllOrgClients());
+  const detectedPolresSet = buildDetectedPolresSet(kasatkers);
+  const missingPolres = getMissingPolres(orgClients, detectedPolresSet);
+
   if (!kasatkers.length) {
     const totalUsers = users?.length || 0;
-    return `Dari ${totalUsers} user aktif ${targetClientId} (${targetRole}), tidak ditemukan data Kasat Binmas.`;
+    const missingSection = formatMissingPolresSection(orgClients, missingPolres);
+    return [
+      `Dari ${totalUsers} user aktif ${targetClientId} (${targetRole}), tidak ditemukan data Kasat Binmas.`,
+      ...missingSection,
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   const withInsta = kasatkers.filter((user) => !!user.insta).length;
@@ -112,6 +187,8 @@ export async function generateKasatkerAttendanceSummary({
         return `${idx + 1}. ${name} (${polres}) — ${status}`;
       }),
   ];
+
+  summaryLines.push("", ...formatMissingPolresSection(orgClients, missingPolres));
 
   return summaryLines.filter(Boolean).join("\n");
 }
