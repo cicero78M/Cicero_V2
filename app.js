@@ -34,6 +34,7 @@ const cronBuckets = {
     './src/cron/cronDirRequestDirektorat.js',
     './src/cron/cronDirRequestHighLow.js',
     './src/cron/cronDirRequestKasatBinmasRecap.js',
+    './src/cron/cronWaNotificationReminder.js',
   ],
 };
 
