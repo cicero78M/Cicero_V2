@@ -11,11 +11,6 @@ jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getRekapKomentarByClient: mockGetRekapKomentarByClient,
 }));
 
-jest.unstable_mockModule('../src/service/kasatkerAttendanceService.js', () => ({
-  matchesKasatBinmasJabatan: (jabatan) =>
-    typeof jabatan === 'string' && jabatan.toLowerCase().includes('kasat binmas'),
-}));
-
 let generateKasatBinmasTiktokCommentRecap;
 
 beforeAll(async () => {
@@ -47,6 +42,15 @@ test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () =
       client_id: 'POLRESB',
       client_name: 'Polres B',
       tiktok: '',
+    },
+    {
+      user_id: '4',
+      nama: 'Delta',
+      title: 'AKP',
+      jabatan: 'WA Kasat Binmas',
+      client_id: 'POLRESD',
+      client_name: 'Polres D',
+      tiktok: '@delta',
     },
     {
       user_id: '3',
@@ -82,6 +86,7 @@ test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () =
   expect(summary).toContain('Belum update akun TikTok: 1 pers');
   expect(summary).toMatch(/Alpha/);
   expect(summary).not.toMatch(/Charlie/);
+  expect(summary).not.toMatch(/Delta/);
 });
 
 test('mengembalikan pesan ketika tidak ada Kasat Binmas', async () => {
