@@ -4,6 +4,17 @@ let generateKasatBinmasLikesRecap;
 let mockGetRekapLikesByClient;
 let mockGetUsersByClient;
 
+const extractSectionEntries = (narrative, label) => {
+  const start = narrative.indexOf(label);
+  if (start === -1) return [];
+  const section = narrative.slice(start);
+  const endBreak = section.indexOf('\n\n');
+  const block = endBreak === -1 ? section : section.slice(0, endBreak);
+  return block.split('\n').slice(1);
+};
+
+const KURANG_HEADER = '⚠️ *Melaksanakan Sebagian';
+
 describe('generateKasatBinmasLikesRecap', () => {
   beforeEach(async () => {
     jest.resetModules();
@@ -106,6 +117,52 @@ describe('generateKasatBinmasLikesRecap', () => {
     expect(narrative).toContain('Belum ada konten Instagram Ditbinmas');
   });
 
+  test('mengurutkan daftar berdasarkan jumlah like lalu pangkat dan nama untuk rekap harian', async () => {
+    jest.useFakeTimers({ now: new Date('2024-05-23T03:00:00Z') });
+    mockGetUsersByClient.mockResolvedValue([
+      {
+        user_id: '1',
+        nama: 'Alpha',
+        title: 'IPTU',
+        client_name: 'Polres A',
+        jabatan: 'Kasat Binmas',
+        insta: 'alpha',
+      },
+      {
+        user_id: '2',
+        nama: 'Bravo',
+        title: 'AKP',
+        client_name: 'Polres B',
+        jabatan: 'Kasat Binmas',
+        insta: 'bravo',
+      },
+      {
+        user_id: '3',
+        nama: 'Charlie',
+        title: 'AKP',
+        client_name: 'Polres C',
+        jabatan: 'Kasat Binmas',
+        insta: 'charlie',
+      },
+    ]);
+    mockGetRekapLikesByClient.mockResolvedValue({
+      rows: [
+        { user_id: '1', jumlah_like: 2 },
+        { user_id: '2', jumlah_like: 4 },
+        { user_id: '3', jumlah_like: 4 },
+      ],
+      totalKonten: 5,
+    });
+
+    const narrative = await generateKasatBinmasLikesRecap({ period: 'daily' });
+
+    const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
+    expect(kurangEntries).toHaveLength(3);
+    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\).*4\/5 konten/);
+    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\).*4\/5 konten/);
+    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\).*2\/5 konten/);
+  });
+
   test('mengirimkan parameter rentang Senin-Minggu untuk rekap mingguan', async () => {
     jest.useFakeTimers({ now: new Date('2024-05-22T10:00:00Z') });
     mockGetUsersByClient.mockResolvedValue([
@@ -126,5 +183,95 @@ describe('generateKasatBinmasLikesRecap', () => {
       '2024-05-26',
       'ditbinmas'
     );
+  });
+
+  test('menggunakan urutan yang sama untuk rekap mingguan', async () => {
+    jest.useFakeTimers({ now: new Date('2024-05-24T03:00:00Z') });
+    mockGetUsersByClient.mockResolvedValue([
+      {
+        user_id: '1',
+        nama: 'Alpha',
+        title: 'IPTU',
+        client_name: 'Polres A',
+        jabatan: 'Kasat Binmas',
+        insta: 'alpha',
+      },
+      {
+        user_id: '2',
+        nama: 'Bravo',
+        title: 'AKP',
+        client_name: 'Polres B',
+        jabatan: 'Kasat Binmas',
+        insta: 'bravo',
+      },
+      {
+        user_id: '3',
+        nama: 'Charlie',
+        title: 'AKP',
+        client_name: 'Polres C',
+        jabatan: 'Kasat Binmas',
+        insta: 'charlie',
+      },
+    ]);
+    mockGetRekapLikesByClient.mockResolvedValue({
+      rows: [
+        { user_id: '1', jumlah_like: 2 },
+        { user_id: '2', jumlah_like: 4 },
+        { user_id: '3', jumlah_like: 4 },
+      ],
+      totalKonten: 5,
+    });
+
+    const narrative = await generateKasatBinmasLikesRecap({ period: 'weekly' });
+
+    const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
+    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\)/);
+    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\)/);
+    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\)/);
+  });
+
+  test('menggunakan urutan yang sama untuk rekap bulanan', async () => {
+    jest.useFakeTimers({ now: new Date('2024-05-25T03:00:00Z') });
+    mockGetUsersByClient.mockResolvedValue([
+      {
+        user_id: '1',
+        nama: 'Alpha',
+        title: 'IPTU',
+        client_name: 'Polres A',
+        jabatan: 'Kasat Binmas',
+        insta: 'alpha',
+      },
+      {
+        user_id: '2',
+        nama: 'Bravo',
+        title: 'AKP',
+        client_name: 'Polres B',
+        jabatan: 'Kasat Binmas',
+        insta: 'bravo',
+      },
+      {
+        user_id: '3',
+        nama: 'Charlie',
+        title: 'AKP',
+        client_name: 'Polres C',
+        jabatan: 'Kasat Binmas',
+        insta: 'charlie',
+      },
+    ]);
+    mockGetRekapLikesByClient.mockResolvedValue({
+      rows: [
+        { user_id: '1', jumlah_like: 2 },
+        { user_id: '2', jumlah_like: 4 },
+        { user_id: '3', jumlah_like: 4 },
+      ],
+      totalKonten: 5,
+    });
+
+    const narrative = await generateKasatBinmasLikesRecap({ period: 'monthly' });
+
+    const kurangEntries = extractSectionEntries(narrative, KURANG_HEADER);
+    expect(kurangEntries[0]).toMatch(/^1\. Bravo \(POLRES B\)/);
+    expect(kurangEntries[1]).toMatch(/^2\. Charlie \(POLRES C\)/);
+    expect(kurangEntries[2]).toMatch(/^3\. Alpha \(POLRES A\)/);
   });
 });
