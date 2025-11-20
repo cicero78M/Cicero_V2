@@ -54,7 +54,10 @@ import { getUsersByClient } from "../model/userModel.js";
 
 // Handler Imports
 import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
-import { clientRequestHandlers } from "../handler/menu/clientRequestHandlers.js";
+import {
+  BULK_STATUS_HEADER_REGEX,
+  clientRequestHandlers,
+} from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { dashRequestHandlers } from "../handler/menu/dashRequestHandlers.js";
 import { dirRequestHandlers } from "../handler/menu/dirRequestHandlers.js";
@@ -592,7 +595,7 @@ export function createHandleMessage(waClient, options = {}) {
     }
 
     // ===== Deklarasi State dan Konstanta =====
-    const session = getSession(chatId);
+    let session = getSession(chatId);
 
     if (isGroupChat) {
       const handledGroupComplaint = await handleComplaintMessageIfApplicable({
@@ -643,6 +646,7 @@ export function createHandleMessage(waClient, options = {}) {
       await saveContactIfNew(chatId);
     }
     const lowerText = text.toLowerCase();
+    const trimmedText = text.trim();
     const isAdminCommand = adminCommands.some((cmd) =>
       lowerText.startsWith(cmd)
     );
@@ -947,6 +951,29 @@ export function createHandleMessage(waClient, options = {}) {
       await waClient.sendMessage(chatId, lines.join("\n"));
       return true;
     };
+
+    if (
+      trimmedText &&
+      BULK_STATUS_HEADER_REGEX.test(trimmedText) &&
+      (!session || session.menu === "clientrequest")
+    ) {
+      const nextSession = {
+        ...(session || {}),
+        menu: "clientrequest",
+        step: "bulkStatus_process",
+      };
+      setSession(chatId, nextSession);
+      session = getSession(chatId);
+      await clientRequestHandlers.bulkStatus_process(
+        session,
+        chatId,
+        trimmedText,
+        waClient,
+        pool,
+        userModel
+      );
+      return;
+    }
 
     if (allowUserMenu && userRequestLinkSessions[chatId]) {
       const selection = userRequestLinkSessions[chatId];
