@@ -59,8 +59,8 @@ test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () =
     },
   ]);
   mockGetRekapKomentarByClient.mockResolvedValue([
-    { user_id: '1', jumlah_komentar: 3 },
-    { user_id: '2', jumlah_komentar: 0 },
+    { user_id: '1', jumlah_komentar: 3, total_konten: 3 },
+    { user_id: '2', jumlah_komentar: 0, total_konten: 3 },
   ]);
 
   const summary = await generateKasatBinmasTiktokCommentRecap({ period: 'daily' });
@@ -74,8 +74,11 @@ test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () =
     'ditbinmas'
   );
   expect(summary).toContain('📋 *Absensi Komentar TikTok Kasat Binmas*');
+  expect(summary).toContain('Total konten periode: 3 video');
   expect(summary).toContain('Total Kasat Binmas: 2 pers');
-  expect(summary).toContain('Melaksanakan komentar: 1/2 pers');
+  expect(summary).toContain('Lengkap: 1/2 pers');
+  expect(summary).toContain('Sebagian: 0/2 pers');
+  expect(summary).toContain('Belum komentar: 0/2 pers');
   expect(summary).toContain('Belum update akun TikTok: 1 pers');
   expect(summary).toMatch(/Alpha/);
   expect(summary).not.toMatch(/Charlie/);
@@ -104,7 +107,9 @@ test('mengirim parameter minggu Senin-Minggu untuk period weekly', async () => {
       tiktok: '@alpha',
     },
   ]);
-  mockGetRekapKomentarByClient.mockResolvedValue([{ user_id: '1', jumlah_komentar: 1 }]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '1', jumlah_komentar: 1, total_konten: 1 },
+  ]);
 
   const summary = await generateKasatBinmasTiktokCommentRecap({ period: 'weekly' });
 

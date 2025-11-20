@@ -161,33 +161,42 @@ export async function getRekapKomentarByClient(
 
   const params = clientType === "direktorat" ? [] : [client_id];
   let tanggalFilter =
-    "c.updated_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    "__DATE_FIELD__::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
     const startIdx = params.push(start_date);
     const endIdx = params.push(end_date);
-    tanggalFilter = `(c.updated_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
+    tanggalFilter = `(__DATE_FIELD__)::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
       const idx = params.push(tanggal);
-      tanggalFilter = `date_trunc('week', c.updated_at) = date_trunc('week', $${idx}::date)`;
+      tanggalFilter = `date_trunc('week', __DATE_FIELD__) = date_trunc('week', $${idx}::date)`;
     } else {
-      tanggalFilter = "date_trunc('week', c.updated_at) = date_trunc('week', NOW())";
+      tanggalFilter = "date_trunc('week', __DATE_FIELD__) = date_trunc('week', NOW())";
     }
   } else if (periode === "bulanan") {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
       const idx = params.push(monthDate);
-      tanggalFilter = `date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
+      tanggalFilter = `date_trunc('month', __DATE_FIELD__) = date_trunc('month', $${idx}::date)`;
     } else {
       tanggalFilter =
-        "date_trunc('month', c.updated_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+        "date_trunc('month', __DATE_FIELD__) = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
     const idx = params.push(tanggal);
-    tanggalFilter = `c.updated_at::date = $${idx}::date`;
+    tanggalFilter = `__DATE_FIELD__::date = $${idx}::date`;
   }
+
+  const commentTanggalFilter = tanggalFilter.replaceAll(
+    "__DATE_FIELD__",
+    "c.updated_at AT TIME ZONE 'Asia/Jakarta'"
+  );
+  const postTanggalFilter = tanggalFilter.replaceAll(
+    "__DATE_FIELD__",
+    "p.created_at AT TIME ZONE 'Asia/Jakarta'"
+  );
 
   let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
   let userWhere = "LOWER(u.client_id) = LOWER($1)";
@@ -253,7 +262,15 @@ export async function getRekapKomentarByClient(
       JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
       WHERE ${postClientFilter}
         ${postRoleFilter}
-        AND ${tanggalFilter}
+        AND ${commentTanggalFilter}
+    ),
+    total_posts AS (
+      SELECT COUNT(DISTINCT p.video_id) AS total_konten
+      FROM tiktok_post p
+      ${postRoleJoin}
+      WHERE ${postClientFilter}
+        ${postRoleFilter}
+        AND ${postTanggalFilter}
     ),
     comment_counts AS (
       SELECT username, COUNT(DISTINCT video_id) AS jumlah_komentar
@@ -268,11 +285,13 @@ export async function getRekapKomentarByClient(
       u.tiktok AS username,
       u.divisi,
       cl.nama AS client_name,
-      COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar
+      COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar,
+      tp.total_konten
     FROM "user" u
     JOIN clients cl ON cl.client_id = u.client_id
     LEFT JOIN comment_counts cc
       ON lower(replace(trim(coalesce(u.tiktok, '')), '@', '')) = cc.username
+    CROSS JOIN total_posts tp
     WHERE u.status = true
       AND ${userWhere}
     ORDER BY
