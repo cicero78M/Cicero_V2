@@ -197,6 +197,20 @@ test('updateUserField updates ditbinmas field', async () => {
   expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
 });
 
+test('updateUserField updates client_id when valid', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_id: 'TARGET' }] }) // validate client
+    .mockResolvedValueOnce({}) // update user
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', client_id: 'TARGET' }] }); // fetch user
+
+  const row = await updateUserField('1', 'client_id', 'target');
+
+  expect(mockQuery.mock.calls[0][0]).toContain('FROM clients');
+  expect(mockQuery.mock.calls[0][1]).toEqual(['TARGET']);
+  expect(mockQuery.mock.calls[1][0]).toContain('UPDATE "user" SET client_id');
+  expect(row).toEqual({ user_id: '1', client_id: 'TARGET' });
+});
+
 test('updateUserRolesUserId migrates roles and updates user_id', async () => {
   mockQuery
     .mockResolvedValueOnce({}) // BEGIN

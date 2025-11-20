@@ -354,6 +354,7 @@ export async function updateUserField(user_id, field, value) {
     "divisi",
     "jabatan",
     "desa",
+    "client_id",
     "premium_status",
     "premium_end_date",
   ];
@@ -365,6 +366,19 @@ export async function updateUserField(user_id, field, value) {
   if (roleFields.includes(field)) {
     if (value) await addRole(uid, field);
     else await removeRole(uid, field);
+    return findUserById(uid);
+  }
+  if (field === 'client_id') {
+    const normalizedClientId = typeof value === 'string' ? value.toUpperCase() : value;
+    const { rows } = await query(
+      'SELECT 1 FROM clients WHERE LOWER(client_id) = LOWER($1)',
+      [normalizedClientId]
+    );
+    if (!rows.length) throw new Error('client_id tidak ditemukan');
+    await query(
+      `UPDATE "user" SET client_id=$1 WHERE user_id=$2`,
+      [normalizedClientId, uid]
+    );
     return findUserById(uid);
   }
   await query(
