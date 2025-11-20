@@ -7,7 +7,8 @@ const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
 
 const STATUS_SECTIONS = [
-  { key: "aktif", icon: "✅", label: "Melaksanakan komentar" },
+  { key: "lengkap", icon: "✅", label: "Lengkap (sesuai target)" },
+  { key: "sebagian", icon: "🟡", label: "Sebagian (belum semua konten)" },
   { key: "belum", icon: "❌", label: "Belum komentar" },
   { key: "noUsername", icon: "⚠️❌", label: "Belum update akun TikTok" },
 ];
@@ -107,17 +108,23 @@ function sortKasatEntries(entries) {
   });
 }
 
-function formatEntryLine(entry, index) {
+function formatEntryLine(entry, index, totalKonten) {
   const user = entry.user;
   const polres = (user?.client_name || user?.client_id || "-").toUpperCase();
   const name = formatNama(user) || "(Tanpa Nama)";
   if (!user?.tiktok) {
     return `${index}. ${name} (${polres}) — Username TikTok belum tersedia`;
   }
-  if (entry.count > 0) {
-    return `${index}. ${name} (${polres}) — ${entry.count} video`;
+  if (totalKonten === 0) {
+    return `${index}. ${name} (${polres}) — Tidak ada konten untuk dikomentari`;
   }
-  return `${index}. ${name} (${polres}) — Belum komentar`;
+  if (entry.count >= totalKonten) {
+    return `${index}. ${name} (${polres}) — Lengkap (${entry.count}/${totalKonten} konten)`;
+  }
+  if (entry.count > 0) {
+    return `${index}. ${name} (${polres}) — ${entry.count}/${totalKonten} konten`;
+  }
+  return `${index}. ${name} (${polres}) — 0/${totalKonten} konten`;
 }
 
 export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" } = {}) {
@@ -141,21 +148,30 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
   );
 
   const commentCountByUser = new Map();
+  const totalKonten = Number(recapRows?.[0]?.total_konten ?? 0);
   (recapRows || []).forEach((row) => {
     if (!row) return;
     commentCountByUser.set(row.user_id, Number(row.jumlah_komentar) || 0);
   });
 
-  const grouped = { aktif: [], belum: [], noUsername: [] };
-  const totals = { total: kasatUsers.length, aktif: 0, belum: 0, noUsername: 0 };
+  const grouped = { lengkap: [], sebagian: [], belum: [], noUsername: [] };
+  const totals = {
+    total: kasatUsers.length,
+    lengkap: 0,
+    sebagian: 0,
+    belum: 0,
+    noUsername: 0,
+  };
 
   kasatUsers.forEach((user) => {
     const count = commentCountByUser.get(user.user_id) || 0;
     let key = "belum";
     if (!user?.tiktok) {
       key = "noUsername";
+    } else if (count >= totalKonten) {
+      key = "lengkap";
     } else if (count > 0) {
-      key = "aktif";
+      key = "sebagian";
     }
 
     totals[key] += 1;
@@ -168,17 +184,31 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     if (!entries.length) {
       return header;
     }
-    const lines = entries.map((entry, idx) => `   ${formatEntryLine(entry, idx + 1)}`);
+    const lines = entries.map(
+      (entry, idx) => `   ${formatEntryLine(entry, idx + 1, totalKonten)}`
+    );
     return [header, ...lines].join("\n");
   });
+
+  const totalKontenLine =
+    totalKonten > 0
+      ? `Total konten periode: ${totalKonten} video`
+      : "Total konten periode: 0 (tidak ada konten untuk dikomentari)";
+  const noKontenNote =
+    totalKonten === 0
+      ? "Tidak ada konten yang perlu dikomentari pada periode ini. Status lengkap berarti tidak ada kewajiban komentar."
+      : "";
 
   return [
     "📋 *Absensi Komentar TikTok Kasat Binmas*",
     `Periode: ${periodInfo.label}`,
+    totalKontenLine,
     `Total Kasat Binmas: ${totals.total} pers`,
-    `Melaksanakan komentar: ${totals.aktif}/${totals.total} pers`,
+    `Lengkap: ${totals.lengkap}/${totals.total} pers`,
+    `Sebagian: ${totals.sebagian}/${totals.total} pers`,
     `Belum komentar: ${totals.belum}/${totals.total} pers`,
     `Belum update akun TikTok: ${totals.noUsername} pers`,
+    noKontenNote,
     "",
     ...sectionsText,
   ]
