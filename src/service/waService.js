@@ -1573,6 +1573,50 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     return;
   }
 
+  if (text.toLowerCase().startsWith("notifwa#")) {
+    const [, prefRaw] = text.split("#");
+    const normalized = String(prefRaw || "").trim().toLowerCase();
+    let optIn;
+    if (["on", "ya", "yes", "true", "1", "aktif"].includes(normalized)) {
+      optIn = true;
+    } else if (
+      ["off", "no", "tidak", "false", "0", "nonaktif"].includes(normalized)
+    ) {
+      optIn = false;
+    }
+
+    if (typeof optIn !== "boolean") {
+      await waClient.sendMessage(
+        chatId,
+        "Format salah! Gunakan notifwa#on atau notifwa#off untuk mengatur preferensi notifikasi."
+      );
+      return;
+    }
+
+    const waNum = chatId.replace(/[^0-9]/g, "");
+    const user = await userModel.findUserByWhatsApp(waNum);
+    if (!user) {
+      await waClient.sendMessage(
+        chatId,
+        "Nomor WhatsApp ini belum terhubung ke data user. Mohon selesaikan binding akun terlebih dahulu dengan mengirimkan NRP/NIP sesuai petunjuk."
+      );
+      return;
+    }
+
+    await userModel.updateUserField(
+      user.user_id,
+      "wa_notification_opt_in",
+      optIn
+    );
+    await waClient.sendMessage(
+      chatId,
+      optIn
+        ? "✅ Notifikasi WhatsApp untuk likes/komentar Instagram diaktifkan."
+        : "🚫 Notifikasi WhatsApp untuk likes/komentar Instagram dimatikan."
+    );
+    return;
+  }
+
   // ========== Update Username via Link Profile IG/TikTok ==========
   if (
     !text.includes("#") &&

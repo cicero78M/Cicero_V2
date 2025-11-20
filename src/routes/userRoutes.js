@@ -11,6 +11,10 @@ router.get('/list', userController.getUserList);
 router.get('/by-client/:client_id', userController.getUsersByClient);
 router.get('/by-client-full/:client_id', userController.getUsersByClientFull);
 router.post('/create', userController.createUser);
+router.put(
+  '/:id/wa-notification',
+  userController.updateWaNotificationPreference
+);
 router.put('/:id/roles', userController.updateUserRoles);
 router.get('/:id', userController.getUserById);
 router.post('/', userController.createUser);

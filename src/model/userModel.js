@@ -241,7 +241,7 @@ export async function getUsersWithWaByClient(clientId, roleFilter = null) {
   const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
   const result = await query(
     `SELECT divisi, nama, user_id, title, whatsapp
-     FROM "user" u WHERE ${clause} AND status = true
+     FROM "user" u WHERE ${clause} AND status = true AND whatsapp IS NOT NULL AND whatsapp <> '' AND wa_notification_opt_in = true
      ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
@@ -253,7 +253,7 @@ export async function getActiveUsersWithWhatsapp() {
   const { rows } = await query(
     `SELECT nama, whatsapp
      FROM "user"
-     WHERE status = true AND whatsapp IS NOT NULL AND whatsapp <> ''`
+     WHERE status = true AND whatsapp IS NOT NULL AND whatsapp <> '' AND wa_notification_opt_in = true`
   );
   return rows;
 }
@@ -357,6 +357,7 @@ export async function updateUserField(user_id, field, value) {
     "client_id",
     "premium_status",
     "premium_end_date",
+    "wa_notification_opt_in",
   ];
   const roleFields = ["ditbinmas", "ditlantas", "bidhumas", "operator"];
   if (!allowed.includes(field) && !roleFields.includes(field)) throw new Error("Field tidak diizinkan!");
@@ -550,8 +551,8 @@ export async function createUser(userData) {
     (r) => userData[r]
   );
   const q = `
-    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    INSERT INTO "user" (user_id, nama, title, divisi, jabatan, desa, status, whatsapp, insta, tiktok, client_id, exception, wa_notification_opt_in)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
   `;
   const params = [
     userData.user_id,
@@ -565,7 +566,8 @@ export async function createUser(userData) {
     userData.insta || "",
     userData.tiktok || "",
     userData.client_id || null,
-    userData.exception ?? false
+    userData.exception ?? false,
+    userData.wa_notification_opt_in ?? false
   ];
   await query(q, params);
   for (const r of roles) {

@@ -38,6 +38,7 @@ CREATE TABLE "user" (
   desa VARCHAR,
   client_id VARCHAR REFERENCES clients(client_id),
   status BOOLEAN DEFAULT TRUE,
+  wa_notification_opt_in BOOLEAN NOT NULL DEFAULT FALSE,
   premium_status BOOLEAN DEFAULT FALSE,
   premium_end_date DATE
 );
