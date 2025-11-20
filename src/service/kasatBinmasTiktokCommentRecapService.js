@@ -100,8 +100,14 @@ function describePeriod(period = "daily") {
 
 function sortKasatEntries(entries) {
   return entries.slice().sort((a, b) => {
+    const countA = Number(a.count) || 0;
+    const countB = Number(b.count) || 0;
+    const countDiff = countB - countA;
+    if (countDiff !== 0) return countDiff;
+
     const rankDiff = rankWeight(a.user?.title) - rankWeight(b.user?.title);
     if (rankDiff !== 0) return rankDiff;
+
     const nameA = formatNama(a.user) || "";
     const nameB = formatNama(b.user) || "";
     return nameA.localeCompare(nameB, "id-ID", { sensitivity: "base" });
