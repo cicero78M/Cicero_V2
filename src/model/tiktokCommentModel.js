@@ -189,13 +189,15 @@ export async function getRekapKomentarByClient(
     tanggalFilter = `__DATE_FIELD__::date = $${idx}::date`;
   }
 
+  const commentDateField = "(c.updated_at AT TIME ZONE 'Asia/Jakarta')";
+  const postDateField = "(p.created_at AT TIME ZONE 'Asia/Jakarta')";
   const commentTanggalFilter = tanggalFilter.replaceAll(
     "__DATE_FIELD__",
-    "c.updated_at AT TIME ZONE 'Asia/Jakarta'"
+    commentDateField
   );
   const postTanggalFilter = tanggalFilter.replaceAll(
     "__DATE_FIELD__",
-    "p.created_at AT TIME ZONE 'Asia/Jakarta'"
+    postDateField
   );
 
   let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
