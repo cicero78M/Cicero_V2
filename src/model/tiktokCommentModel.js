@@ -161,7 +161,7 @@ export async function getRekapKomentarByClient(
 
   const params = clientType === "direktorat" ? [] : [client_id];
   let tanggalFilter =
-    "__DATE_FIELD__::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    "(__DATE_FIELD__)::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
     const startIdx = params.push(start_date);
     const endIdx = params.push(end_date);
@@ -186,7 +186,7 @@ export async function getRekapKomentarByClient(
     }
   } else if (tanggal) {
     const idx = params.push(tanggal);
-    tanggalFilter = `__DATE_FIELD__::date = $${idx}::date`;
+    tanggalFilter = `(__DATE_FIELD__)::date = $${idx}::date`;
   }
 
   const commentTanggalFilter = tanggalFilter.replaceAll(
