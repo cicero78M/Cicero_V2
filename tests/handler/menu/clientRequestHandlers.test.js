@@ -127,6 +127,10 @@ describe('kelolaUser mass status option', () => {
       chatId,
       expect.stringContaining('4️⃣ Ubah Status Massal')
     );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('5️⃣ Ubah Client ID')
+    );
     expect(session.step).toBe('kelolaUser_menu');
   });
 
@@ -144,6 +148,86 @@ describe('kelolaUser mass status option', () => {
       chatId,
       expect.stringContaining('Permohonan Penghapusan Data Personil')
     );
+  });
+
+  it('routes option 5 through the user lookup flow', async () => {
+    const session = {};
+    const chatId = 'chat-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.kelolaUser_menu(session, chatId, '5', {
+      sendMessage,
+    });
+
+    expect(session.kelolaUser_mode).toBe('5');
+    expect(session.step).toBe('kelolaUser_nrp');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Masukkan *user_id* / NRP/NIP user:')
+    );
+  });
+});
+
+describe('kelolaUser_updateClientId', () => {
+  it('validates the target client and updates the user', async () => {
+    const session = { target_user_id: 'USR-1' };
+    const chatId = 'chat-client-id';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const updateUserField = jest.fn().mockResolvedValue();
+    const findClientById = jest.fn(async (clientId) => {
+      if (clientId === 'TARGET') {
+        return { client_id: clientId };
+      }
+      return null;
+    });
+
+    await clientRequestHandlers.kelolaUser_updateClientId(
+      session,
+      chatId,
+      '  target  ',
+      { sendMessage },
+      undefined,
+      { updateUserField },
+      { findClientById }
+    );
+
+    expect(findClientById).toHaveBeenCalledWith('TARGET');
+    expect(updateUserField).toHaveBeenCalledWith(
+      'USR-1',
+      'client_id',
+      'TARGET'
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('TARGET')
+    );
+    expect(session.step).toBe('main');
+  });
+
+  it('sends an error when the target client is missing', async () => {
+    const session = { target_user_id: 'USR-2' };
+    const chatId = 'chat-client-id';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const updateUserField = jest.fn().mockResolvedValue();
+    const findClientById = jest.fn().mockResolvedValue(null);
+
+    await clientRequestHandlers.kelolaUser_updateClientId(
+      session,
+      chatId,
+      'missing',
+      { sendMessage },
+      undefined,
+      { updateUserField },
+      { findClientById }
+    );
+
+    expect(findClientById).toHaveBeenCalledWith('MISSING');
+    expect(updateUserField).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('tidak ditemukan')
+    );
+    expect(session.step).toBe('main');
   });
 });
 
