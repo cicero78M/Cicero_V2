@@ -146,6 +146,8 @@ function groupKasatByStatus(kasatList, likeCounts, totalKonten) {
 
 function sortKasatList(entries) {
   return entries.slice().sort((a, b) => {
+    const countDiff = (b.count || 0) - (a.count || 0);
+    if (countDiff !== 0) return countDiff;
     const rankDiff = rankWeight(a.user?.title) - rankWeight(b.user?.title);
     if (rankDiff !== 0) return rankDiff;
     const nameA = formatNama(a.user) || "";
