@@ -1,6 +1,7 @@
 import * as userModel from '../model/userModel.js';
 import * as clientService from '../service/clientService.js';
 import { sendSuccess } from '../utils/response.js';
+import { normalizeWhatsappNumber } from '../utils/waHelper.js';
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -110,6 +111,70 @@ export const updateUser = async (req, res, next) => {
   try {
     const user = await userModel.updateUser(req.params.id, req.body);
     sendSuccess(res, user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateWaNotificationPreference = async (req, res, next) => {
+  try {
+    const { whatsapp, opt_in, wa_notification_opt_in } = req.body;
+    const userId = req.params.id;
+
+    if (!whatsapp) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'whatsapp wajib diisi' });
+    }
+
+    const normalizedRequestWa = normalizeWhatsappNumber(String(whatsapp));
+    let normalizedPreference;
+    if (typeof opt_in === 'boolean') {
+      normalizedPreference = opt_in;
+    } else if (typeof wa_notification_opt_in === 'boolean') {
+      normalizedPreference = wa_notification_opt_in;
+    } else {
+      const raw = String(opt_in ?? wa_notification_opt_in ?? '').toLowerCase();
+      if (['true', '1', 'on', 'ya', 'yes'].includes(raw)) {
+        normalizedPreference = true;
+      } else if (['false', '0', 'off', 'tidak', 'no'].includes(raw)) {
+        normalizedPreference = false;
+      }
+    }
+
+    if (typeof normalizedPreference !== 'boolean') {
+      return res
+        .status(400)
+        .json({ success: false, message: 'opt_in harus bernilai boolean' });
+    }
+
+    const existing = await userModel.findUserById(userId);
+    if (!existing) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'user tidak ditemukan' });
+    }
+    if (!existing.whatsapp) {
+      return res.status(400).json({
+        success: false,
+        message: 'user belum memiliki nomor WhatsApp yang terdaftar',
+      });
+    }
+
+    const normalizedStoredWa = normalizeWhatsappNumber(
+      String(existing.whatsapp)
+    );
+    if (normalizedStoredWa !== normalizedRequestWa) {
+      return res.status(400).json({
+        success: false,
+        message: 'nomor WhatsApp tidak sesuai dengan data user',
+      });
+    }
+
+    const updated = await userModel.updateUser(userId, {
+      wa_notification_opt_in: normalizedPreference,
+    });
+    sendSuccess(res, updated);
   } catch (err) {
     next(err);
   }
