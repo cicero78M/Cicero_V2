@@ -196,6 +196,10 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     return [header, ...lines].join("\n");
   });
 
+  const sectionsWithSpacing = sectionsText.flatMap((section, index) =>
+    index === sectionsText.length - 1 ? [section] : [section, ""]
+  );
+
   const totalKontenLine =
     totalKonten > 0
       ? `Total konten periode: ${totalKonten} video`
@@ -205,21 +209,26 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
       ? "Tidak ada konten yang perlu dikomentari pada periode ini. Status lengkap berarti tidak ada kewajiban komentar."
       : "";
 
-  return [
+  const summaryLines = [
     "📋 *Absensi Komentar TikTok Kasat Binmas*",
     `Periode: ${periodInfo.label}`,
-    totalKontenLine,
-    `Total Kasat Binmas: ${totals.total} pers`,
-    `Lengkap: ${totals.lengkap}/${totals.total} pers`,
-    `Sebagian: ${totals.sebagian}/${totals.total} pers`,
-    `Belum komentar: ${totals.belum}/${totals.total} pers`,
-    `Belum update akun TikTok: ${totals.noUsername} pers`,
-    noKontenNote,
     "",
-    ...sectionsText,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    "*Ringkasan:*",
+    `- ${totalKontenLine}`,
+    `- Total Kasat Binmas: ${totals.total} pers`,
+    `- Lengkap: ${totals.lengkap}/${totals.total} pers`,
+    `- Sebagian: ${totals.sebagian}/${totals.total} pers`,
+    `- Belum komentar: ${totals.belum}/${totals.total} pers`,
+    `- Belum update akun TikTok: ${totals.noUsername} pers`,
+    noKontenNote ? `- ${noKontenNote}` : "",
+  ];
+
+  return [
+    ...summaryLines.filter(Boolean),
+    "",
+    "*Rincian per status:*",
+    ...sectionsWithSpacing,
+  ].join("\n");
 }
 
 export default { generateKasatBinmasTiktokCommentRecap };
