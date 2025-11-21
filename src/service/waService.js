@@ -57,6 +57,7 @@ import { userMenuHandlers } from "../handler/menu/userMenuHandlers.js";
 import {
   BULK_STATUS_HEADER_REGEX,
   clientRequestHandlers,
+  processBulkDeletionRequest,
 } from "../handler/menu/clientRequestHandlers.js";
 import { oprRequestHandlers } from "../handler/menu/oprRequestHandlers.js";
 import { dashRequestHandlers } from "../handler/menu/dashRequestHandlers.js";
@@ -3124,14 +3125,13 @@ const handleUserMessage = createHandleMessage(waUserClient, {
 
 async function processGatewayBulkDeletion(chatId, text) {
   const session = { menu: "clientrequest", step: "bulkStatus_process" };
-  await clientRequestHandlers.bulkStatus_process(
+  await processBulkDeletionRequest({
     session,
     chatId,
     text,
-    waGatewayClient,
-    pool,
-    userModel
-  );
+    waClient: waGatewayClient,
+    userModel,
+  });
 }
 
 async function handleGatewayMessage(msg) {
@@ -3146,15 +3146,6 @@ async function handleGatewayMessage(msg) {
 
   if (chatId.endsWith("@g.us")) {
     console.log(`[WA-GATEWAY] Ignored group message from ${chatId}`);
-    return;
-  }
-
-  if (!BULK_STATUS_HEADER_REGEX.test(text)) {
-    await safeSendMessage(
-      waGatewayClient,
-      chatId,
-      "Gateway hanya memproses template *Permohonan Penghapusan Data Personil*. Kirimkan format tersebut untuk diproses otomatis."
-    );
     return;
   }
 
