@@ -14,8 +14,37 @@ export const JOB_KEY = "./src/cron/cronWaNotificationReminder.js";
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
 
-function buildGenericNotificationMessage() {
+function buildGreeting(user) {
+  let hour = Number.parseInt(
+    new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date()),
+    10
+  );
+
+  if (Number.isNaN(hour)) hour = 8;
+
+  let moment = "Malam";
+  if (hour >= 4 && hour < 11) {
+    moment = "Pagi";
+  } else if (hour >= 11 && hour < 16) {
+    moment = "Siang";
+  }
+
+  const pangkat = (user?.pangkat || user?.title || "").toString().trim();
+  const nama = (user?.nama || user?.name || "").toString().trim();
+  const pangkatNama = [pangkat, nama].filter(Boolean).join(" ").trim();
+  const recipient = pangkatNama ? `Bapak/Ibu ${pangkatNama}` : "Bapak/Ibu";
+
+  return `Selamat ${moment}, ${recipient}`;
+}
+
+function buildGenericNotificationMessage(user) {
+  const greeting = buildGreeting(user);
   return (
+    `${greeting}\n\n` +
     "👋 Pengingat engagement harian\n\n" +
     "1️⃣ Pastikan setiap unggahan mendapat dukungan likes sesuai target.\n" +
     "2️⃣ Tambahkan komentar positif dan relevan pada konten terbaru.\n\n" +
@@ -136,11 +165,13 @@ function buildUserTaskStatus(user, recap) {
   };
 }
 
-function buildNotificationMessage(status) {
-  if (!status) return buildGenericNotificationMessage();
-  if (status.allDone) return THANK_YOU_MESSAGE;
+function buildNotificationMessage(user, status) {
+  if (!status) return buildGenericNotificationMessage(user);
 
-  const lines = ["👋 Pengingat engagement harian", ""];
+  const greeting = buildGreeting(user);
+  if (status.allDone) return `${greeting}\n\n${THANK_YOU_MESSAGE}`;
+
+  const lines = [greeting, "", "👋 Pengingat engagement harian", ""];
 
   if (status.incompleteIg.length) {
     lines.push("Konten Instagram yang perlu diselesaikan:");
@@ -191,10 +222,10 @@ export async function runCron() {
     try {
       const recap = await getClientTaskRecap(user?.client_id, recapCache);
       const status = buildUserTaskStatus(user, recap);
-      message = buildNotificationMessage(status);
+      message = buildNotificationMessage(user, status);
     } catch (error) {
       console.error("Failed to build WA notification reminder", error);
-      message = buildGenericNotificationMessage();
+      message = buildGenericNotificationMessage(user);
     }
 
     await safeSendMessage(waGatewayClient, chatId, message);
