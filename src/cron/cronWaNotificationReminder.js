@@ -214,7 +214,11 @@ export async function runCron() {
     if (user?.wa_notification_opt_in !== true) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId || recipients.has(chatId)) continue;
-    recipients.set(chatId, user);
+    const userWithPangkat = {
+      ...user,
+      pangkat: user?.pangkat ?? user?.title,
+    };
+    recipients.set(chatId, userWithPangkat);
   }
 
   for (const [chatId, user] of recipients.entries()) {
