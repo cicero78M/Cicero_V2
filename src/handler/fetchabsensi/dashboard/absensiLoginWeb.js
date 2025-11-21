@@ -164,6 +164,8 @@ export async function absensiLoginWeb({ mode = 'harian', startTime, endTime } = 
       '',
       'Mohon ijin Komandan,',
       '',
+      'Frekuensi login operator berbanding lurus dengan efektivitas pemanfaatan dashboard, baik untuk absensi, monitoring, pengawasan real-time, maupun capaian likes/komentar.',
+      '',
       '📊 Rekap Absensi Login Web Cicero (Bulanan)',
       `Periode: ${monthLabel}`,
       `Total login: ${formatNumber(totalLogin)}`,
