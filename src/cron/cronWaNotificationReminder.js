@@ -26,6 +26,7 @@ export async function runCron() {
   const recipients = new Set();
 
   for (const user of users) {
+    if (user?.wa_notification_opt_in !== true) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId) continue;
     recipients.add(chatId);
