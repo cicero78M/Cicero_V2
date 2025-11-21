@@ -130,7 +130,7 @@ async function fetchPolresLoginRecap({ startTime, endTime }) {
             COUNT(DISTINCT ll.actor_id) AS operator_count,
             COUNT(*) AS login_count
      FROM login_log ll
-     JOIN dashboard_user_clients duc ON duc.dashboard_user_id = ll.actor_id
+     JOIN dashboard_user_clients duc ON duc.dashboard_user_id::TEXT = ll.actor_id
      JOIN clients c ON c.client_id = duc.client_id
      WHERE ll.login_source = 'web'
        AND ll.logged_at >= $1
