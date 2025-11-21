@@ -3121,6 +3121,10 @@ const handleUserMessage = createHandleMessage(waUserClient, {
   allowUserMenu: true,
   clientLabel: "[WA-USER]",
 });
+const handleGatewayMessage = createHandleMessage(waGatewayClient, {
+  allowUserMenu: false,
+  clientLabel: "[WA-GATEWAY]",
+});
 
 if (shouldInitWhatsAppClients) {
   waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
@@ -3131,6 +3135,14 @@ if (shouldInitWhatsAppClients) {
       return;
     }
     handleIncoming('wwebjs-user', msg, handleUserMessage);
+  });
+
+  waGatewayClient.on('message', (msg) => {
+    const from = msg.from || '';
+    if (from.endsWith('@g.us') || from === 'status@broadcast') {
+      return;
+    }
+    handleIncoming('wwebjs', msg, handleGatewayMessage);
   });
 
   console.log("[WA] Starting WhatsApp client initialization");
