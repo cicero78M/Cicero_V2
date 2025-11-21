@@ -413,6 +413,152 @@ function parseBulkStatusEntries(message) {
   return { entries, headerLine };
 }
 
+async function processBulkDeletionRequest({
+  session,
+  chatId,
+  text,
+  waClient,
+  userModel,
+}) {
+  const trimmed = (text || "").trim();
+  if (!trimmed) {
+    await waClient.sendMessage(
+      chatId,
+      "Format tidak dikenali. Mohon kirimkan template lengkap atau ketik *batal*."
+    );
+    return { processed: false };
+  }
+
+  if (trimmed.toLowerCase() === "batal") {
+    await waClient.sendMessage(chatId, "Permohonan penghapusan dibatalkan.");
+    if (session) session.step = "main";
+    return { processed: true, cancelled: true };
+  }
+
+  if (!BULK_STATUS_HEADER_REGEX.test(trimmed)) {
+    await waClient.sendMessage(
+      chatId,
+      "Pesan tidak memuat judul *Permohonan Penghapusan Data Personil*. Mohon gunakan template resmi."
+    );
+    return { processed: false };
+  }
+
+  const { entries, headerLine } = parseBulkStatusEntries(trimmed);
+  if (!entries.length) {
+    await waClient.sendMessage(
+      chatId,
+      "Tidak menemukan daftar personel. Pastikan format setiap baris: `1. NAMA – USER_ID – alasan`."
+    );
+    return { processed: false };
+  }
+
+  const successes = [];
+  const failures = [];
+
+  for (const entry of entries) {
+    const normalizedId = normalizeUserId(entry.rawId);
+    const fallbackName = entry.name || "";
+    if (!normalizedId) {
+      failures.push({
+        ...entry,
+        name: fallbackName,
+        userId: "",
+        error: "user_id tidak valid",
+      });
+      continue;
+    }
+
+    let dbUser;
+    try {
+      dbUser = await userModel.findUserById(normalizedId);
+    } catch (err) {
+      failures.push({
+        ...entry,
+        name: fallbackName,
+        userId: normalizedId,
+        error: `gagal mengambil data user: ${err?.message || String(err)}`,
+      });
+      continue;
+    }
+
+    if (!dbUser) {
+      failures.push({
+        ...entry,
+        name: fallbackName,
+        userId: normalizedId,
+        error: "user tidak ditemukan",
+      });
+      continue;
+    }
+
+    const officialName =
+      formatNama(dbUser) || dbUser.nama || fallbackName || normalizedId;
+
+    try {
+      await userModel.updateUserField(normalizedId, "status", false);
+    } catch (err) {
+      failures.push({
+        ...entry,
+        name: officialName,
+        userId: normalizedId,
+        error: err?.message || String(err),
+      });
+      continue;
+    }
+
+    try {
+      await userModel.updateUserField(normalizedId, "whatsapp", "");
+    } catch (err) {
+      const note = err?.message || String(err);
+      failures.push({
+        ...entry,
+        name: officialName,
+        userId: normalizedId,
+        error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
+      });
+      continue;
+    }
+
+    successes.push({
+      ...entry,
+      name: officialName,
+      userId: normalizedId,
+    });
+  }
+
+  const lines = [];
+  const title = headerLine || "Permohonan Penghapusan Data Personil";
+  lines.push(`📄 *${title}*`);
+
+  if (successes.length) {
+    lines.push("", `✅ Status dinonaktifkan untuk ${successes.length} personel:`);
+    successes.forEach(({ userId, name, reason, rawId }) => {
+      const displayName = name || rawId || userId;
+      const reasonLabel = reason ? ` • ${reason}` : "";
+      lines.push(`- ${userId} (${displayName})${reasonLabel}`);
+    });
+  }
+
+  if (failures.length) {
+    lines.push(
+      "",
+      `❌ ${failures.length} entri gagal diproses:`
+    );
+    failures.forEach(({ rawId, userId, name, reason, error }) => {
+      const idLabel = userId || rawId || "-";
+      const displayName = name || idLabel;
+      const reasonLabel = reason ? ` • ${reason}` : "";
+      lines.push(`- ${idLabel} (${displayName})${reasonLabel} → ${error}`);
+    });
+  }
+
+  lines.push("", "Selesai diproses. Terima kasih.");
+
+  await waClient.sendMessage(chatId, lines.join("\n").trim());
+  if (session) session.step = "main";
+  return { processed: true };
+}
+
 function isUserActive(user) {
   if (!user) return false;
   const { status } = user;
@@ -3780,140 +3926,13 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     pool,
     userModel
   ) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      await waClient.sendMessage(
-        chatId,
-        "Format tidak dikenali. Mohon kirimkan template lengkap atau ketik *batal*."
-      );
-      return;
-    }
-    if (trimmed.toLowerCase() === "batal") {
-      await waClient.sendMessage(chatId, "Permohonan penghapusan dibatalkan.");
-      session.step = "main";
-      return;
-    }
-    if (!BULK_STATUS_HEADER_REGEX.test(trimmed)) {
-      await waClient.sendMessage(
-        chatId,
-        "Pesan tidak memuat judul *Permohonan Penghapusan Data Personil*. Mohon gunakan template resmi."
-      );
-      return;
-    }
-
-    const { entries, headerLine } = parseBulkStatusEntries(trimmed);
-    if (!entries.length) {
-      await waClient.sendMessage(
-        chatId,
-        "Tidak menemukan daftar personel. Pastikan format setiap baris: `1. NAMA – USER_ID – alasan`."
-      );
-      return;
-    }
-
-    const successes = [];
-    const failures = [];
-
-    for (const entry of entries) {
-      const normalizedId = normalizeUserId(entry.rawId);
-      const fallbackName = entry.name || "";
-      if (!normalizedId) {
-        failures.push({
-          ...entry,
-          name: fallbackName,
-          userId: "",
-          error: "user_id tidak valid",
-        });
-        continue;
-      }
-
-      let dbUser;
-      try {
-        dbUser = await userModel.findUserById(normalizedId);
-      } catch (err) {
-        failures.push({
-          ...entry,
-          name: fallbackName,
-          userId: normalizedId,
-          error: `gagal mengambil data user: ${err?.message || String(err)}`,
-        });
-        continue;
-      }
-
-      if (!dbUser) {
-        failures.push({
-          ...entry,
-          name: fallbackName,
-          userId: normalizedId,
-          error: "user tidak ditemukan",
-        });
-        continue;
-      }
-
-      const officialName =
-        formatNama(dbUser) || dbUser.nama || fallbackName || normalizedId;
-
-      try {
-        await userModel.updateUserField(normalizedId, "status", false);
-      } catch (err) {
-        failures.push({
-          ...entry,
-          name: officialName,
-          userId: normalizedId,
-          error: err?.message || String(err),
-        });
-        continue;
-      }
-
-      try {
-        await userModel.updateUserField(normalizedId, "whatsapp", "");
-      } catch (err) {
-        const note = err?.message || String(err);
-        failures.push({
-          ...entry,
-          name: officialName,
-          userId: normalizedId,
-          error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
-        });
-        continue;
-      }
-
-      successes.push({
-        ...entry,
-        name: officialName,
-        userId: normalizedId,
-      });
-    }
-
-    const lines = [];
-    const title = headerLine || "Permohonan Penghapusan Data Personil";
-    lines.push(`📄 *${title}*`);
-
-    if (successes.length) {
-      lines.push("", `✅ Status dinonaktifkan untuk ${successes.length} personel:`);
-      successes.forEach(({ userId, name, reason, rawId }) => {
-        const displayName = name || rawId || userId;
-        const reasonLabel = reason ? ` • ${reason}` : "";
-        lines.push(`- ${userId} (${displayName})${reasonLabel}`);
-      });
-    }
-
-    if (failures.length) {
-      lines.push(
-        "",
-        `❌ ${failures.length} entri gagal diproses:`
-      );
-      failures.forEach(({ rawId, userId, name, reason, error }) => {
-        const idLabel = userId || rawId || "-";
-        const displayName = name || idLabel;
-        const reasonLabel = reason ? ` • ${reason}` : "";
-        lines.push(`- ${idLabel} (${displayName})${reasonLabel} → ${error}`);
-      });
-    }
-
-    lines.push("", "Selesai diproses. Terima kasih.");
-
-    await waClient.sendMessage(chatId, lines.join("\n").trim());
-    session.step = "main";
+    await processBulkDeletionRequest({
+      session,
+      chatId,
+      text,
+      waClient,
+      userModel,
+    });
   },
 
   // ================== RESPONSE KOMPLAIN ==================
@@ -4202,6 +4221,7 @@ export {
   normalizeComplaintHandle,
   parseComplaintMessage,
   parseBulkStatusEntries,
+  processBulkDeletionRequest,
   BULK_STATUS_HEADER_REGEX,
 };
 
