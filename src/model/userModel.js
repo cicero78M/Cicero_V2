@@ -241,7 +241,7 @@ export async function getUsersWithWaByClient(clientId, roleFilter = null) {
   const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
   const result = await query(
     `SELECT divisi, nama, user_id, title, whatsapp
-     FROM "user" u WHERE ${clause} AND status = true AND whatsapp IS NOT NULL AND whatsapp <> '' AND wa_notification_opt_in = true
+     FROM "user" u WHERE ${clause} AND status = true
      ORDER BY ${NAME_PRIORITY_CASE_U}, divisi, nama`,
     params
   );
