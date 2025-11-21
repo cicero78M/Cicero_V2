@@ -251,7 +251,7 @@ export async function getUsersWithWaByClient(clientId, roleFilter = null) {
 // Ambil seluruh user aktif dengan nomor WhatsApp
 export async function getActiveUsersWithWhatsapp() {
   const { rows } = await query(
-    `SELECT nama, whatsapp, wa_notification_opt_in, insta, tiktok, client_id
+    `SELECT nama, title, title AS pangkat, whatsapp, wa_notification_opt_in, insta, tiktok, client_id
      FROM "user"
      WHERE status = true AND whatsapp IS NOT NULL AND whatsapp <> '' AND wa_notification_opt_in = true`
   );
