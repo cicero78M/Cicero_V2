@@ -436,10 +436,6 @@ async function processBulkDeletionRequest({
   }
 
   if (!BULK_STATUS_HEADER_REGEX.test(trimmed)) {
-    await waClient.sendMessage(
-      chatId,
-      "Pesan tidak memuat judul *Permohonan Penghapusan Data Personil*. Mohon gunakan template resmi."
-    );
     return { processed: false };
   }
 

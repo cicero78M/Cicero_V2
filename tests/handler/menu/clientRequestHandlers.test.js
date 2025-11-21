@@ -309,6 +309,22 @@ describe('bulkStatus_process', () => {
     expect(session.step).toBe('main');
   });
 
+  it('ignores messages that are not bulk deletion requests', async () => {
+    const session = { step: 'bulkStatus_process' };
+    const chatId = 'chat-ignore';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.bulkStatus_process(
+      session,
+      chatId,
+      'Mohon bantu nonaktifkan user 75020201 karena mutasi.',
+      { sendMessage }
+    );
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(session.step).toBe('bulkStatus_process');
+  });
+
   it('parses reason-first entries that include the name in parentheses', async () => {
     const session = { step: 'bulkStatus_process' };
     const chatId = 'chat-reason-first';
