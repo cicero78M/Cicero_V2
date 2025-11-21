@@ -128,14 +128,14 @@ async function fetchPolresLoginRecap({ startTime, endTime }) {
     `SELECT UPPER(c.client_id) AS client_id,
             COALESCE(c.nama, c.client_id) AS nama,
             COUNT(DISTINCT ll.actor_id) AS operator_count,
-            COUNT(*) AS login_count
-     FROM login_log ll
-     JOIN dashboard_user_clients duc ON duc.dashboard_user_id::TEXT = ll.actor_id
-     JOIN clients c ON c.client_id = duc.client_id
-     WHERE ll.login_source = 'web'
+            COUNT(ll.logged_at) AS login_count
+     FROM clients c
+     LEFT JOIN dashboard_user_clients duc ON duc.client_id = c.client_id
+     LEFT JOIN login_log ll ON ll.actor_id = duc.dashboard_user_id::TEXT
+       AND ll.login_source = 'web'
        AND ll.logged_at >= $1
        AND ll.logged_at <= $2
-       AND (LOWER(c.client_type) = 'org' OR UPPER(c.client_id) = 'DITBINMAS')
+     WHERE LOWER(c.client_type) = 'org' OR UPPER(c.client_id) = 'DITBINMAS'
      GROUP BY c.client_id, c.nama`,
     [startTime, endTime]
   );

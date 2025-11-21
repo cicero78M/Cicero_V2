@@ -56,7 +56,7 @@ test('builds monthly recap grouped by polres', async () => {
   mockGetWebLoginCountsByActor.mockResolvedValue([]);
 
   mockQuery.mockImplementation((sql, params) => {
-    if (sql.includes('FROM login_log ll') && sql.includes('dashboard_user_clients')) {
+    if (sql.includes('FROM clients c') && sql.includes('LEFT JOIN login_log')) {
       expect(params).toEqual([expectedStart, expectedEnd]);
       return {
         rows: [
