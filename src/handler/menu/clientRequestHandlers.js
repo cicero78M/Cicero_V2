@@ -348,22 +348,36 @@ function parseBulkStatusEntries(message) {
   const standardized = standardizeDash(message);
   const lines = standardized.split(/\r?\n/);
   const entries = [];
-  const knownIds = new Set();
+  const knownRawIds = new Set();
+  const knownNormalizedIds = new Set();
   const entryRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+?)\s+-\s+(.+)$/;
   const fallbackRegex = /^\s*(\d+)\.\s+(.+?)\s+-\s+(.+)$/;
+
+  function addEntry({ index, name, rawId, reason, line }) {
+    const trimmedRawId = rawId.trim();
+    const normalizedId = normalizeUserId(trimmedRawId) || "";
+
+    if (normalizedId && knownNormalizedIds.has(normalizedId)) return;
+    if (!normalizedId && knownRawIds.has(trimmedRawId)) return;
+
+    knownRawIds.add(trimmedRawId);
+    if (normalizedId) knownNormalizedIds.add(normalizedId);
+
+    entries.push({
+      index: Number(index),
+      name: (name || "").trim(),
+      rawId: trimmedRawId,
+      normalizedId,
+      reason: (reason || "").trim(),
+      line: (line || "").trim(),
+    });
+  }
 
   for (const line of lines) {
     const match = line.match(entryRegex);
     if (match) {
       const [, index, name, rawId, reason] = match;
-      entries.push({
-        index: Number(index),
-        name: name.trim(),
-        rawId: rawId.trim(),
-        reason: reason.trim(),
-        line: line.trim(),
-      });
-      knownIds.add(rawId.trim());
+      addEntry({ index, name, rawId, reason, line });
       continue;
     }
 
@@ -373,14 +387,7 @@ function parseBulkStatusEntries(message) {
     const [, index, firstSegment, rawId] = fallbackMatch;
     const { name, reason } = extractNameAndReason(firstSegment);
 
-    entries.push({
-      index: Number(index),
-      name,
-      rawId: rawId.trim(),
-      reason,
-      line: line.trim(),
-    });
-    knownIds.add(rawId.trim());
+    addEntry({ index, name, rawId, reason, line });
   }
 
   let nextIndex = entries.reduce((max, entry) => Math.max(max, entry.index || 0), 0) + 1;
@@ -388,7 +395,7 @@ function parseBulkStatusEntries(message) {
   const matches = standardized.matchAll(NUMERIC_ID_REGEX);
   for (const match of matches) {
     const rawId = match[0];
-    if (knownIds.has(rawId)) continue;
+    if (knownRawIds.has(rawId)) continue;
 
     const sentence = extractNarrativeSentence(standardized, match.index);
     if (!sentence) continue;
@@ -396,14 +403,13 @@ function parseBulkStatusEntries(message) {
     const reason = extractNarrativeReason(sentence, rawId);
     const name = extractNarrativeName(sentence, rawId);
 
-    entries.push({
+    addEntry({
       index: nextIndex,
       name,
       rawId,
       reason,
       line: sentence.trim(),
     });
-    knownIds.add(rawId);
     nextIndex += 1;
   }
 
@@ -452,7 +458,7 @@ async function processBulkDeletionRequest({
   const failures = [];
 
   for (const entry of entries) {
-    const normalizedId = normalizeUserId(entry.rawId);
+    const normalizedId = entry.normalizedId || normalizeUserId(entry.rawId);
     const fallbackName = entry.name || "";
     if (!normalizedId) {
       failures.push({
