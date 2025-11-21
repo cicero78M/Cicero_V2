@@ -1,10 +1,10 @@
 import { jest } from '@jest/globals';
 
-const mockAbsensiRegistrasiDashboardDitbinmas = jest.fn();
+const mockAbsensiLoginWeb = jest.fn();
 const mockSafeSendMessage = jest.fn();
 
-jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
-  absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
+jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiLoginWeb.js', () => ({
+  absensiLoginWeb: mockAbsensiLoginWeb,
 }));
 
 jest.unstable_mockModule('../src/db/index.js', () => ({ query: jest.fn() }));
@@ -38,15 +38,15 @@ beforeAll(async () => {
   ({ clientRequestHandlers } = await import('../src/handler/menu/clientRequestHandlers.js'));
 });
 
-test('absensiOprDitbinmas sends report and resets step', async () => {
-  mockAbsensiRegistrasiDashboardDitbinmas.mockResolvedValue('msg');
+test('absensiLoginWebDitbinmas sends report and resets step', async () => {
+  mockAbsensiLoginWeb.mockResolvedValue('msg');
   const session = {};
   const chatId = '123';
   const waClient = { sendMessage: jest.fn() };
 
-  await clientRequestHandlers.absensiOprDitbinmas(session, chatId, '', waClient);
+  await clientRequestHandlers.absensiLoginWebDitbinmas(session, chatId, '', waClient);
 
-  expect(mockAbsensiRegistrasiDashboardDitbinmas).toHaveBeenCalled();
+  expect(mockAbsensiLoginWeb).toHaveBeenCalledWith({ mode: 'bulanan' });
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'msg');
   expect(session.step).toBe('main');
 });

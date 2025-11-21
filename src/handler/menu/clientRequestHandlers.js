@@ -13,7 +13,7 @@ import {
   formatComplaintIssue,
 } from "../../utils/utilsHelper.js";
 import { normalizeHandleValue } from "../../utils/handleNormalizer.js";
-import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
+import { absensiLoginWeb } from "../fetchabsensi/dashboard/absensiLoginWeb.js";
 import {
   getAdminWANumbers,
   getAdminWAIds,
@@ -2015,7 +2015,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const msg = `
 ┏━━━ *Transfer & Laporan* ━━━
 1️⃣ Transfer User
-2️⃣ Absensi Operator Ditbinmas
+2️⃣ Absensi Login Web
 3️⃣ Response Komplain
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
@@ -2029,7 +2029,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
     const mapStep = {
       1: "transferUser_menu",
-      2: "absensiOprDitbinmas",
+      2: "absensiLoginWebDitbinmas",
       3: "respondComplaint_start",
     };
 
@@ -4198,9 +4198,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     await processComplaintResolution(session, chatId, waClient);
   },
 
-  // ================== ABSENSI OPERATOR DITBINMAS ==================
-  absensiOprDitbinmas: async (session, chatId, _text, waClient) => {
-    const msg = await absensiRegistrasiDashboardDitbinmas();
+  // ================== ABSENSI LOGIN WEB DITBINMAS ==================
+  absensiLoginWebDitbinmas: async (session, chatId, _text, waClient) => {
+    const msg = await absensiLoginWeb({ mode: "bulanan" });
     await waClient.sendMessage(chatId, msg);
     session.step = "main";
   },

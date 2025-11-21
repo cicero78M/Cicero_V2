@@ -1,5 +1,9 @@
 import { query } from '../../../db/index.js';
 import { getWebLoginCountsByActor } from '../../../model/loginLogModel.js';
+import { getGreeting } from '../../../utils/utilsHelper.js';
+
+const numberFormatter = new Intl.NumberFormat('id-ID');
+const monthFormatter = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' });
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -11,6 +15,18 @@ function endOfDay(date) {
   const d = new Date(date);
   d.setHours(23, 59, 59, 999);
   return d;
+}
+
+function startOfMonth(date) {
+  const d = new Date(date);
+  d.setDate(1);
+  return startOfDay(d);
+}
+
+function endOfMonth(date) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + 1, 0);
+  return endOfDay(d);
 }
 
 function addDays(date, days) {
@@ -50,10 +66,29 @@ function resolveRange({ mode, startTime, endTime }) {
   return { start, end, mode: normalizedMode };
 }
 
+function resolveMonthlyRange({ startTime, endTime }) {
+  const baseDate = startTime || endTime || new Date();
+  const parsed = new Date(baseDate);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('Tanggal periode bulanan tidak valid');
+  }
+  const start = startOfMonth(baseDate);
+  const end = endOfMonth(baseDate);
+  return { start, end };
+}
+
 function formatDate(date) {
   return new Date(date).toLocaleDateString('id-ID', {
     timeZone: 'Asia/Jakarta',
   });
+}
+
+function formatMonthYear(date) {
+  return monthFormatter.format(new Date(date));
+}
+
+function formatNumber(value) {
+  return numberFormatter.format(Number(value) || 0);
 }
 
 async function fetchActorDetails(actorIds = []) {
@@ -88,7 +123,82 @@ async function fetchActorDetails(actorIds = []) {
   return details;
 }
 
+async function fetchPolresLoginRecap({ startTime, endTime }) {
+  const { rows } = await query(
+    `SELECT UPPER(c.client_id) AS client_id,
+            COALESCE(c.nama, c.client_id) AS nama,
+            COUNT(DISTINCT ll.actor_id) AS operator_count,
+            COUNT(*) AS login_count
+     FROM login_log ll
+     JOIN dashboard_user_clients duc ON duc.dashboard_user_id = ll.actor_id
+     JOIN clients c ON c.client_id = duc.client_id
+     WHERE ll.login_source = 'web'
+       AND ll.logged_at >= $1
+       AND ll.logged_at <= $2
+       AND (LOWER(c.client_type) = 'org' OR UPPER(c.client_id) = 'DITBINMAS')
+     GROUP BY c.client_id, c.nama`,
+    [startTime, endTime]
+  );
+
+  return rows.map((row) => ({
+    client_id: row.client_id,
+    nama: row.nama,
+    operator_count: Number(row.operator_count) || 0,
+    login_count: Number(row.login_count) || 0,
+  }));
+}
+
 export async function absensiLoginWeb({ mode = 'harian', startTime, endTime } = {}) {
+  if (mode === 'bulanan') {
+    const { start, end } = resolveMonthlyRange({ startTime, endTime });
+    const polresRows = await fetchPolresLoginRecap({ startTime: start, endTime: end });
+    const salam = getGreeting();
+    const monthLabel = formatMonthYear(start);
+
+    const totalPolres = polresRows.length;
+    const totalOperators = polresRows.reduce((sum, row) => sum + row.operator_count, 0);
+    const totalLogin = polresRows.reduce((sum, row) => sum + row.login_count, 0);
+
+    const lines = [
+      salam,
+      '',
+      'Mohon ijin Komandan,',
+      '',
+      '📊 Rekap Absensi Login Web Cicero (Bulanan)',
+      `Periode: ${monthLabel}`,
+      `Total login: ${formatNumber(totalLogin)}`,
+      `Total operator aktif: ${formatNumber(totalOperators)} orang`,
+      `Polres terlapor: ${formatNumber(totalPolres)} satuan`,
+      '',
+    ];
+
+    if (!polresRows.length) {
+      lines.push('Belum ada aktivitas login web pada periode ini.');
+      return lines.join('\n').trim();
+    }
+
+    lines.push('Rincian per Polres:');
+
+    const sortedPolres = [...polresRows].sort((a, b) => {
+      const diff = b.login_count - a.login_count;
+      if (diff !== 0) return diff;
+      return String(a.nama || a.client_id || '').localeCompare(
+        String(b.nama || b.client_id || ''),
+        'id-ID',
+        { sensitivity: 'base' }
+      );
+    });
+
+    sortedPolres.forEach((row, idx) => {
+      const name = (row.nama || row.client_id || '-').toString().toUpperCase();
+      const operatorLabel = `${formatNumber(row.operator_count)} operator`;
+      const loginLabel = `${formatNumber(row.login_count)} login`;
+      lines.push(`${idx + 1}. ${name} — ${operatorLabel} | ${loginLabel}`);
+    });
+
+    return lines.join('\n').trim();
+  }
+
   const { start, end, mode: normalizedMode } = resolveRange({ mode, startTime, endTime });
   const recapRows = await getWebLoginCountsByActor({ startTime: start, endTime: end });
   const actorIds = recapRows.map((row) => row.actor_id).filter(Boolean);
@@ -103,7 +213,7 @@ export async function absensiLoginWeb({ mode = 'harian', startTime, endTime } = 
   const lines = [
     header,
     `Periode: ${formatDate(start)} - ${formatDate(end)}`,
-    `Total hadir: ${totalParticipants} user (${totalLogin} login)`
+    `Total hadir: ${formatNumber(totalParticipants)} user (${formatNumber(totalLogin)} login)`
   ];
 
   if (!recapRows.length) {
@@ -124,7 +234,9 @@ export async function absensiLoginWeb({ mode = 'harian', startTime, endTime } = 
     const name = detail.username || detail.nama || row.actor_id || '-';
     const roleLabel = detail.role ? ` - ${String(detail.role).toUpperCase()}` : '';
     const sourceLabel = detail.source ? detail.source : 'unknown';
-    lines.push(`${idx + 1}. ${name} (${sourceLabel}${roleLabel}) — ${Number(row.login_count) || 0} kali`);
+    lines.push(
+      `${idx + 1}. ${name} (${sourceLabel}${roleLabel}) — ${formatNumber(row.login_count)} kali`
+    );
   });
 
   return lines.join('\n');
