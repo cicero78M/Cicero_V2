@@ -3122,6 +3122,45 @@ const handleUserMessage = createHandleMessage(waUserClient, {
   clientLabel: "[WA-USER]",
 });
 
+async function processGatewayBulkDeletion(chatId, text) {
+  const session = { menu: "clientrequest", step: "bulkStatus_process" };
+  await clientRequestHandlers.bulkStatus_process(
+    session,
+    chatId,
+    text,
+    waGatewayClient,
+    pool,
+    userModel
+  );
+}
+
+async function handleGatewayMessage(msg) {
+  const chatId = msg.from || "";
+  const text = (msg.body || "").trim();
+  if (!text) return;
+
+  if (msg.isStatus || chatId === "status@broadcast") {
+    console.log("[WA-GATEWAY] Ignored status message");
+    return;
+  }
+
+  if (chatId.endsWith("@g.us")) {
+    console.log(`[WA-GATEWAY] Ignored group message from ${chatId}`);
+    return;
+  }
+
+  if (!BULK_STATUS_HEADER_REGEX.test(text)) {
+    await safeSendMessage(
+      waGatewayClient,
+      chatId,
+      "Gateway hanya memproses template *Permohonan Penghapusan Data Personil*. Kirimkan format tersebut untuk diproses otomatis."
+    );
+    return;
+  }
+
+  await processGatewayBulkDeletion(chatId, text);
+}
+
 if (shouldInitWhatsAppClients) {
   waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
@@ -3131,6 +3170,10 @@ if (shouldInitWhatsAppClients) {
       return;
     }
     handleIncoming('wwebjs-user', msg, handleUserMessage);
+  });
+
+  waGatewayClient.on('message', (msg) => {
+    handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
 
   console.log("[WA] Starting WhatsApp client initialization");
