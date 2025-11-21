@@ -16,7 +16,7 @@ beforeEach(() => {
 
 test('builds recap message with dashboard and penmas users', async () => {
   const startTime = new Date('2025-05-05T00:00:00Z');
-  const endTime = new Date('2025-05-11T23:59:59Z');
+  const endTime = new Date('2025-05-11T23:59:59.999Z');
 
   mockGetWebLoginCountsByActor.mockResolvedValue([
     { actor_id: 'dash-1', login_count: '2' },
@@ -45,5 +45,36 @@ test('builds recap message with dashboard and penmas users', async () => {
   expect(message).toContain(`Periode: ${startLabel} - ${endLabel}`);
   expect(message).toContain('Total hadir: 2 user (3 login)');
   expect(message).toMatch(/1\. alice \(dashboard - ADMIN\) — 2 kali/);
-  expect(message).toMatch(/budi \(penmas - OPERATOR\) — 1 kali/);
+  expect(message).toMatch(/2\. budi \(penmas - OPERATOR\) — 1 kali/);
+});
+
+test('builds monthly recap grouped by polres', async () => {
+  const startTime = new Date('2025-06-15T00:00:00Z');
+  const expectedStart = new Date('2025-06-01T00:00:00.000Z');
+  const expectedEnd = new Date('2025-06-30T23:59:59.999Z');
+
+  mockGetWebLoginCountsByActor.mockResolvedValue([]);
+
+  mockQuery.mockImplementation((sql, params) => {
+    if (sql.includes('FROM login_log ll') && sql.includes('dashboard_user_clients')) {
+      expect(params).toEqual([expectedStart, expectedEnd]);
+      return {
+        rows: [
+          { client_id: 'RES A', nama: 'Polres A', operator_count: 2, login_count: 15 },
+          { client_id: 'RES B', nama: 'Polres B', operator_count: 1, login_count: 5 },
+        ],
+      };
+    }
+    return { rows: [] };
+  });
+
+  const message = await absensiLoginWeb({ mode: 'bulanan', startTime });
+
+  expect(mockGetWebLoginCountsByActor).not.toHaveBeenCalled();
+  expect(message).toContain('Absensi Login Web Cicero (Bulanan)');
+  expect(message).toContain('Juni 2025');
+  expect(message).toContain('Total login: 20');
+  expect(message).toContain('Total operator aktif: 3 orang');
+  expect(message).toMatch(/1\. POLRES A — 2 operator \| 15 login/);
+  expect(message).toMatch(/2\. POLRES B — 1 operator \| 5 login/);
 });
