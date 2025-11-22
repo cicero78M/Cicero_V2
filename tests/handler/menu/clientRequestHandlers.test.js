@@ -68,6 +68,33 @@ describe('parseComplaintMessage', () => {
     expect(parsed.instagram).toBe('@example.user');
     expect(parsed.tiktok).toBe('@anotheruser');
   });
+
+  it('parses bullet-prefixed complaints with numbered issues', () => {
+    const parsed = parseComplaintMessage(
+      [
+        'Pesan komplain',
+        '• NRP/NIP: 79061548',
+        '• Nama: INDRAYANA PRIBADI',
+        '• Polres: Polres Blitar',
+        '• Instagram: @indrabinmas',
+        '• TikTok: @indra.yana0304',
+        '',
+        'Kendala',
+        '1. Sudah melaksanakan like dan comment instagram belum terdata.',
+        '2. Sudah melaksanakan like dan comment tiktok belum terdata.',
+      ].join('\n')
+    );
+
+    expect(parsed.nrp).toBe('79061548');
+    expect(parsed.name).toBe('INDRAYANA PRIBADI');
+    expect(parsed.polres).toBe('Polres Blitar');
+    expect(parsed.instagram).toBe('@indrabinmas');
+    expect(parsed.tiktok).toBe('@indra.yana0304');
+    expect(parsed.issues).toEqual([
+      'Sudah melaksanakan like dan comment instagram belum terdata.',
+      'Sudah melaksanakan like dan comment tiktok belum terdata.',
+    ]);
+  });
 });
 
 describe('main menu bulk status option removal', () => {
