@@ -183,6 +183,8 @@ function ensureHandle(value) {
 
 const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
 const NUMERIC_ID_REGEX = /\b\d{6,}\b/g;
+const BOT_SUMMARY_HEADER_REGEX = /^📄\s*\*?Permohonan Penghapusan Data Personil/i;
+const BULK_STATUS_SUMMARY_KEYWORDS = /(?:Status dinonaktifkan|entri gagal diproses)/i;
 
 function standardizeDash(value) {
   return value
@@ -419,6 +421,21 @@ function parseBulkStatusEntries(message) {
   return { entries, headerLine };
 }
 
+function isGatewayForward(text) {
+  if (!text) return false;
+  const normalized = text.trim().toLowerCase();
+  return /^(wagateway|wabot)\b/.test(normalized);
+}
+
+function isBulkDeletionSummaryEcho(text) {
+  if (!text) return false;
+  const normalized = text.trim();
+  if (BOT_SUMMARY_HEADER_REGEX.test(normalized)) return true;
+  if (BULK_STATUS_SUMMARY_KEYWORDS.test(normalized)) return true;
+  const arrowCount = (normalized.match(/→/g) || []).length;
+  return arrowCount >= 2;
+}
+
 async function processBulkDeletionRequest({
   session,
   chatId,
@@ -432,6 +449,10 @@ async function processBulkDeletionRequest({
       chatId,
       "Format tidak dikenali. Mohon kirimkan template lengkap atau ketik *batal*."
     );
+    return { processed: false };
+  }
+
+  if (isGatewayForward(trimmed) || isBulkDeletionSummaryEcho(trimmed)) {
     return { processed: false };
   }
 
