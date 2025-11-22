@@ -571,12 +571,19 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('2. 🎵 *TikTok*');
     expect(message).toContain('3. 👥 *Data Personil*');
     expect(message).toContain(
+      'Jejaring personel DITBINMAS tercatat 150 individu aktif, tersebar di Instagram 80,0% (120) dan TikTok 70,0% (105) sebagai garda terdepan pembinaan masyarakat.'
+    );
+    expect(message).toContain('Rata-rata satker IG berada di 78,0% (median 79,0%). Rata-rata satker TikTok mencapai 69,0% (median 70,0%).');
+    expect(message).toContain(
       'Kontribusi utama mengalir dari Satker A → menyumbang 35% dari total likes saat ini, menghadirkan energi positif bagi jajaran DITBINMAS.'
     );
     expect(message).toContain(
       'Energi komunitas dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
     );
     expect(message).toContain('Backlog Instagram tersisa 30 akun (Top-10 ≈ 60,0%: Satker E, Satker F).');
+    expect(message).not.toContain('memimpin papan atas dan layak dijadikan referensi praktik baik.');
+    expect(message).not.toContain('tinggal selangkah lagi menuju kategori unggul; dorongan positif akan sangat membantu.');
+    expect(message).not.toContain('Area yang masih mencari ritme: Satker C; pendampingan ringan bisa mengangkat performanya.');
     expect(message).toContain('Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.');
   });
 
