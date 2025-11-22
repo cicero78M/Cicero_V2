@@ -78,11 +78,10 @@ export async function validateEmail(req, res, next) {
       throw err;
     }
 
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email sudah terdaftar. Gunakan email lain atau hubungi admin jika ini email Anda',
-      });
+    if (existingUser && existingUser.status === false) {
+      return res
+        .status(403)
+        .json({ success: false, message: 'Email tidak aktif. Hubungi admin untuk mengaktifkan kembali.' });
     }
 
     sendSuccess(res, { message: 'Email valid dan bisa digunakan' });
