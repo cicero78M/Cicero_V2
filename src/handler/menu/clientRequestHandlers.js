@@ -946,6 +946,9 @@ function parseComplaintMessage(message) {
     issues: [],
   };
 
+  const stripListPrefix = (value) =>
+    value.replace(/^[•●*\-]+\s*/, "").replace(/^\d+[.)]\s*/, "");
+
   const extractField = (line) => {
     const [, ...rest] = line.split(/[:：]/);
     return rest.join(":").trim();
@@ -957,7 +960,8 @@ function parseComplaintMessage(message) {
     if (!line) {
       continue;
     }
-    const normalized = line.toLowerCase();
+    const contentLine = stripListPrefix(line);
+    const normalized = contentLine.toLowerCase();
     if (/^pesan\s+komplain/.test(normalized)) {
       continue;
     }
@@ -967,7 +971,7 @@ function parseComplaintMessage(message) {
     }
 
     if (inIssues) {
-      const issueContent = line.replace(/^[-•●]+\s*/, "").trim();
+      const issueContent = stripListPrefix(line).trim();
       if (issueContent) {
         data.issues.push(issueContent);
       }
@@ -975,23 +979,23 @@ function parseComplaintMessage(message) {
     }
 
     if (normalized.startsWith("nrp")) {
-      data.nrp = extractField(line);
+      data.nrp = extractField(contentLine);
       continue;
     }
     if (normalized.startsWith("nama")) {
-      data.name = extractField(line);
+      data.name = extractField(contentLine);
       continue;
     }
     if (normalized.startsWith("polres")) {
-      data.polres = extractField(line);
+      data.polres = extractField(contentLine);
       continue;
     }
     if (normalized.startsWith("username ig") || normalized.startsWith("username instagram")) {
-      data.instagram = normalizeComplaintHandle(extractField(line));
+      data.instagram = normalizeComplaintHandle(extractField(contentLine));
       continue;
     }
     if (normalized.startsWith("username tiktok")) {
-      data.tiktok = normalizeComplaintHandle(extractField(line));
+      data.tiktok = normalizeComplaintHandle(extractField(contentLine));
       continue;
     }
   }
