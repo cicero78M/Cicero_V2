@@ -28,7 +28,11 @@ test('filters web logins by date range and groups by actor', async () => {
   const rows = await getWebLoginCountsByActor({ startTime, endTime });
 
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('login_source = $1'),
+    expect.stringContaining('JOIN org_actors'),
+    ['web', startTime, endTime]
+  );
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining("WHERE LOWER(c.client_type) = 'org'"),
     ['web', startTime, endTime]
   );
   expect(rows).toHaveLength(1);

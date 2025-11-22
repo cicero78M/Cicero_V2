@@ -14,27 +14,34 @@ export async function getLoginLogs() {
 
 export async function getWebLoginCountsByActor({ startTime, endTime } = {}) {
   const params = ['web'];
-  const conditions = ['login_source = $1'];
+  const conditions = ['ll.login_source = $1'];
   let paramIndex = params.length + 1;
 
   if (startTime) {
-    conditions.push(`logged_at >= $${paramIndex++}`);
+    conditions.push(`ll.logged_at >= $${paramIndex++}`);
     params.push(startTime);
   }
 
   if (endTime) {
-    conditions.push(`logged_at <= $${paramIndex++}`);
+    conditions.push(`ll.logged_at <= $${paramIndex++}`);
     params.push(endTime);
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const { rows } = await query(
-    `SELECT actor_id, COUNT(*) AS login_count, MIN(logged_at) AS first_login, MAX(logged_at) AS last_login
-     FROM login_log
+    `WITH org_actors AS (
+       SELECT DISTINCT duc.dashboard_user_id::TEXT AS actor_id
+       FROM dashboard_user_clients duc
+       JOIN clients c ON c.client_id = duc.client_id
+       WHERE LOWER(c.client_type) = 'org'
+     )
+     SELECT ll.actor_id, COUNT(*) AS login_count, MIN(ll.logged_at) AS first_login, MAX(ll.logged_at) AS last_login
+     FROM login_log ll
+     JOIN org_actors oa ON oa.actor_id = ll.actor_id
      ${whereClause}
-     GROUP BY actor_id
-     ORDER BY actor_id`,
+     GROUP BY ll.actor_id
+     ORDER BY ll.actor_id`,
     params
   );
 
