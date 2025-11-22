@@ -1184,77 +1184,41 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
   const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
   const actions = [];
 
-  if (treatAsSameHandle) {
-    if (dbActive) {
-      actions.push(
-        "Akun Instagram pada database sudah aktif dan sesuai. Pandu personel membuka menu *Absensi Amplifikasi* di dashboard Cicero, pilih satker/periode yang relevan lalu tekan *Refresh* untuk memastikan catatan like muncul. Jika setelah refresh data belum ada, minta mereka mengirim bukti link tugas atau screenshot hasil refresh kepada admin. Bila bukti sudah dikirim namun data tetap tidak masuk, eskalasi ke operator piket untuk pemeriksaan lanjutan."
-      );
-    } else if (dbFound) {
-      actions.push(
-        "Akun Instagram terdeteksi namun metrik aktivitasnya masih kosong. Dampingi personel memeriksa menu *Absensi Amplifikasi* dengan memilih satker/periode yang benar dan menekan *Refresh* untuk melihat apakah data sudah terbaca."
-      );
-      actions.push(
-        "Jika username yang digunakan berubah atau data belum sesuai, arahkan untuk memperbarui informasi akun melalui instruksi berikut."
-      );
-      appendUpdateInstructions(actions, "Instagram");
-      actions.push(
-        "Setelah pembaruan atau koreksi dilakukan, minta kirim screenshot hasil refresh sebagai bukti. Bila data tetap tidak masuk, eskalasi ke operator piket."
-      );
-    } else {
-      actions.push(
-        "Username Instagram belum tercatat atau tidak terbaca. Bimbing personel membuka menu *Absensi Amplifikasi* dan menekan *Refresh* setelah memilih satker/periode untuk memastikan tidak ada pencatatan atas nama lain."
-      );
-      actions.push(
-        "Minta mereka menyesuaikan data akun melalui instruksi berikut sebelum melakukan pengecekan ulang."
-      );
-      appendUpdateInstructions(actions, "Instagram");
-      actions.push(
-        "Setelah memperbarui data, minta bukti screenshot hasil refresh atau link tugas yang sudah dijalankan. Jika data masih belum tercatat, eskalasi ke operator piket."
-      );
-    }
-  } else if (dbActive && !complaintFound) {
-    actions.push(
-      "Akun Instagram yang tersimpan di database sudah benar dan aktif. Pandu personel memastikan pelaksanaan tugas menggunakan username tersebut lalu cek menu *Absensi Amplifikasi* dengan menekan *Refresh*. Jika data komplain memakai username lain, arahkan koreksi atau pembaruan sebelum melapor ulang. Mintakan juga screenshot hasil refresh; bila data tetap tidak masuk, eskalasi ke operator piket."
-    );
-  } else if (complaintActive && !dbFound) {
-    actions.push(
-      "Username Instagram pada pesan komplain terbaca aktif sementara database belum memuatnya. Bimbing personel membuka menu *Absensi Amplifikasi*, pilih satker/periode yang sesuai, lalu tekan *Refresh* untuk melihat apakah username baru sudah muncul."
-    );
-    actions.push(
-      "Minta mereka segera memperbarui data Cicero menggunakan username tersebut melalui panduan berikut."
-    );
-    appendUpdateInstructions(actions, "Instagram");
-    actions.push(
-      "Setelah update, mintakan screenshot hasil refresh atau link tugas sebagai bukti. Jika tetap tidak masuk, eskalasi ke operator piket."
-    );
-  } else if (!dbActive && !complaintActive) {
-    actions.push(
-      "Kedua username belum terbaca aktif. Minta personel memastikan akun yang benar lalu cek menu *Absensi Amplifikasi* dengan menekan *Refresh* setelah memilih satker/periode."
-    );
-    actions.push(
-      "Setelah konfirmasi akun yang valid, arahkan pembaruan data melalui panduan berikut sebelum melakukan pengecekan ulang."
-    );
-    appendUpdateInstructions(actions, "Instagram");
-    actions.push(
-      "Kumpulkan screenshot hasil refresh setelah pembaruan; apabila data masih tidak tercatat, eskalasi ke operator piket."
-    );
-  } else {
-    actions.push(
-      "Kedua username berbeda namun sama-sama terbaca. Pandu personel memverifikasi akun mana yang dipakai tugas melalui menu *Absensi Amplifikasi* dan tekan *Refresh* untuk melihat catatan yang tampil."
-    );
-    actions.push(
-      "Setelah akun yang benar ditetapkan, minta pembaruan data agar konsisten menggunakan panduan berikut."
-    );
-    appendUpdateInstructions(actions, "Instagram");
-    actions.push(
-      "Minta bukti screenshot hasil refresh setelah penyesuaian; jika data tetap tidak masuk, eskalasi ke operator piket."
-    );
-  }
+  const decoratedHandle = treatAsSameHandle
+    ? dbHandle || complaintHandle || "akun Instagram tersebut"
+    : `${dbHandle || "akun database"} / ${complaintHandle || "akun komplain"}`;
+  const activityDescriptor = (() => {
+    if (dbActive || complaintActive) return "terdeteksi aktif";
+    if (dbFound || complaintFound) return "terdeteksi namun metrik aktivitasnya masih kosong";
+    return "belum terbaca aktif";
+  })();
 
-  if (actions.length) {
-    lines.push("", "Langkah tindak lanjut:");
-    lines.push(...actions);
-  }
+  actions.push("Ringkasan tindak lanjut:");
+  actions.push(
+    `- Akun ${decoratedHandle} ${activityDescriptor}, namun belum ada data aktivitas like/komentar Instagram yang tercatat di sistem.`
+  );
+
+  actions.push("", "Panduan verifikasi:");
+  actions.push(
+    `1) Pastikan like dan komentar dilakukan menggunakan akun yang tercatat (Instagram: ${dbHandle || complaintHandle || "-"}).`
+  );
+  actions.push(
+    "2) Kirim tautan/URL unggahan yang sudah di-like atau dikomentari beserta tanggal dan waktu aksi dilakukan."
+  );
+  actions.push(
+    "3) Beri waktu sinkronisasi ±1 jam; jika tetap belum masuk, kirim ulang bukti (tautan + screenshot aksi) untuk dicek operator."
+  );
+  actions.push(
+    "4) Jika ada target konten tertentu dari satker, pastikan aksi dilakukan pada konten tersebut."
+  );
+
+  actions.push("", "Eskalasi:");
+  actions.push(
+    "- Jika setelah verifikasi di atas data masih belum terbaca, eskalasi ke operator piket untuk pengecekan log sistem."
+  );
+
+  lines.push("", "Langkah tindak lanjut:");
+  lines.push(...actions);
 
   return lines.join("\n").trim();
 }
@@ -1342,77 +1306,41 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
   const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
   const actions = [];
 
-  if (treatAsSameHandle) {
-    if (dbActive) {
-      actions.push(
-        "Akun TikTok pada database sudah aktif dan sesuai. Pandu personel membuka menu *Absensi Komentar* di dashboard Cicero, pilih satker/periode yang relevan lalu tekan *Refresh* untuk memastikan catatan komentar tampil. Jika masih kosong, minta mereka mengirim link video tugas atau screenshot hasil refresh kepada admin. Bila bukti sudah dikirim namun data belum masuk, eskalasi ke operator piket."
-      );
-    } else if (dbFound) {
-      actions.push(
-        "Akun TikTok terdeteksi namun metrik aktivitasnya masih kosong. Dampingi personel memeriksa menu *Absensi Komentar* dengan memilih satker/periode yang tepat dan menekan *Refresh* untuk melihat apakah ada pencatatan."
-      );
-      actions.push(
-        "Jika username yang digunakan berubah atau data berbeda, arahkan pembaruan melalui panduan berikut."
-      );
-      appendUpdateInstructions(actions, "TikTok");
-      actions.push(
-        "Setelah koreksi, minta mereka mengirim screenshot hasil refresh atau link video komentar sebagai bukti. Jika tetap belum masuk, eskalasi ke operator piket."
-      );
-    } else {
-      actions.push(
-        "Username TikTok belum tercatat atau tidak terbaca. Bimbing personel membuka menu *Absensi Komentar* dan tekan *Refresh* setelah memilih satker/periode untuk memastikan tidak ada pencatatan dengan username lama."
-      );
-      actions.push(
-        "Minta penyesuaian data akun melalui panduan berikut sebelum cek ulang."
-      );
-      appendUpdateInstructions(actions, "TikTok");
-      actions.push(
-        "Setelah perbarui, minta bukti screenshot hasil refresh atau link komentar; bila masih kosong, eskalasi ke operator piket."
-      );
-    }
-  } else if (dbActive && !complaintFound) {
-    actions.push(
-      "Akun TikTok yang tersimpan di database sudah benar dan aktif. Pandu personel menggunakan username tersebut saat tugas lalu cek menu *Absensi Komentar* dengan menekan *Refresh*. Jika laporan memakai username lain, arahkan koreksi data sebelum melapor ulang. Mintakan juga link tugas atau screenshot hasil refresh; bila tetap tidak masuk, eskalasi ke operator piket."
-    );
-  } else if (complaintActive && !dbFound) {
-    actions.push(
-      "Username TikTok pada pesan komplain terbaca aktif sementara database belum memuatnya. Bimbing personel membuka menu *Absensi Komentar*, pilih satker/periode yang sesuai, lalu tekan *Refresh* untuk melihat apakah username baru sudah muncul."
-    );
-    actions.push(
-      "Minta mereka segera memperbarui data Cicero menggunakan username tersebut melalui panduan berikut."
-    );
-    appendUpdateInstructions(actions, "TikTok");
-    actions.push(
-      "Setelah update, minta bukti link video atau screenshot hasil refresh sebagai bukti. Jika tetap tidak masuk, eskalasi ke operator piket."
-    );
-  } else if (!dbActive && !complaintActive) {
-    actions.push(
-      "Kedua username TikTok belum terbaca aktif. Minta personel memastikan akun yang benar lalu cek menu *Absensi Komentar* dengan menekan *Refresh* setelah memilih satker/periode."
-    );
-    actions.push(
-      "Setelah memastikan akun valid, arahkan pembaruan data lewat panduan berikut sebelum melakukan pengecekan ulang."
-    );
-    appendUpdateInstructions(actions, "TikTok");
-    actions.push(
-      "Minta screenshot hasil refresh atau link video setelah pembaruan; jika tetap tidak ada, eskalasi ke operator piket."
-    );
-  } else {
-    actions.push(
-      "Kedua username TikTok berbeda namun sama-sama terbaca. Pandu personel memverifikasi akun mana yang dipakai tugas melalui menu *Absensi Komentar* dan tekan *Refresh* untuk melihat catatan yang tampil."
-    );
-    actions.push(
-      "Tetapkan username yang benar lalu perbarui data melalui panduan berikut."
-    );
-    appendUpdateInstructions(actions, "TikTok");
-    actions.push(
-      "Minta bukti screenshot hasil refresh atau link komentar usai penyesuaian; jika data belum masuk, eskalasi ke operator piket."
-    );
-  }
+  const decoratedHandle = treatAsSameHandle
+    ? dbHandle || complaintHandle || "akun TikTok tersebut"
+    : `${dbHandle || "akun database"} / ${complaintHandle || "akun komplain"}`;
+  const activityDescriptor = (() => {
+    if (dbActive || complaintActive) return "terdeteksi aktif";
+    if (dbFound || complaintFound) return "terdeteksi namun metrik aktivitasnya masih kosong";
+    return "belum terbaca aktif";
+  })();
 
-  if (actions.length) {
-    lines.push("", "Langkah tindak lanjut:");
-    lines.push(...actions);
-  }
+  actions.push("Ringkasan tindak lanjut:");
+  actions.push(
+    `- Akun ${decoratedHandle} ${activityDescriptor}, namun belum ada data aktivitas komentar TikTok yang tercatat di sistem.`
+  );
+
+  actions.push("", "Panduan verifikasi:");
+  actions.push(
+    `1) Pastikan komentar dilakukan menggunakan akun yang tercatat (TikTok: ${dbHandle || complaintHandle || "-"}).`
+  );
+  actions.push(
+    "2) Kirim tautan/URL video yang sudah dikomentari beserta tanggal dan waktu aksi dilakukan."
+  );
+  actions.push(
+    "3) Beri waktu sinkronisasi ±1 jam; jika tetap belum masuk, kirim ulang bukti (tautan + screenshot aksi) untuk dicek operator."
+  );
+  actions.push(
+    "4) Jika ada target konten tertentu dari satker, pastikan aksi dilakukan pada konten tersebut."
+  );
+
+  actions.push("", "Eskalasi:");
+  actions.push(
+    "- Jika setelah verifikasi di atas data masih belum terbaca, eskalasi ke operator piket untuk pengecekan log sistem."
+  );
+
+  lines.push("", "Langkah tindak lanjut:");
+  lines.push(...actions);
 
   return lines.join("\n").trim();
 }
