@@ -3134,6 +3134,8 @@ async function processGatewayBulkDeletion(chatId, text) {
   });
 }
 
+const gatewayAllowedGroupIds = new Set(["120363419830216549@g.us"]);
+
 async function handleGatewayMessage(msg) {
   const chatId = msg.from || "";
   const text = (msg.body || "").trim();
@@ -3144,7 +3146,7 @@ async function handleGatewayMessage(msg) {
     return;
   }
 
-  if (chatId.endsWith("@g.us")) {
+  if (chatId.endsWith("@g.us") && !gatewayAllowedGroupIds.has(chatId)) {
     console.log(`[WA-GATEWAY] Ignored group message from ${chatId}`);
     return;
   }
