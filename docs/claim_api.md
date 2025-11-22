@@ -1,0 +1,35 @@
+# Claim API
+
+Dokumen ini merangkum endpoint klaim data berbasis OTP yang digunakan frontend untuk memvalidasi email dan memperbarui profil pengguna.
+
+## Validasi Email
+- **Endpoint:** `POST /api/claim/validate-email`
+- **Body:** `{ "email": "nama@contoh.com" }`
+- **Tujuan:** Memastikan alamat email memiliki format yang benar dan belum terpakai sebelum pengguna meminta OTP atau memperbarui data.
+- **Respons berhasil (200):**
+  ```json
+  { "success": true, "data": { "message": "Email valid dan bisa digunakan" } }
+  ```
+- **Respons error yang mudah dipahami:**
+  - 400 jika email kosong atau format salah dengan pesan jelas, misalnya "Email wajib diisi" atau "Format email tidak valid. Pastikan menulis alamat lengkap seperti nama@contoh.com".
+  - 409 jika email sudah terdaftar oleh pengguna lain dengan pesan "Email sudah terdaftar. Gunakan email lain atau hubungi admin jika ini email Anda".
+  - 503 jika koneksi database bermasalah dengan pesan "Database tidak tersedia".
+
+## Permintaan OTP
+- **Endpoint:** `POST /api/claim/request-otp`
+- **Body:** `{ "nrp": "12345678", "email": "nama@contoh.com" }`
+- **Catatan:** Endpoint ini akan menolak permintaan jika email sudah dipakai akun lain atau tidak cocok dengan data pengguna.
+
+## Verifikasi OTP
+- **Endpoint:** `POST /api/claim/verify-otp`
+- **Body:** `{ "nrp": "12345678", "email": "nama@contoh.com", "otp": "123456" }`
+
+## Ambil Data Pengguna
+- **Endpoint:** `POST /api/claim/user-data`
+- **Body:** `{ "nrp": "12345678", "email": "nama@contoh.com" }`
+- **Catatan:** Hanya dapat digunakan setelah OTP diverifikasi.
+
+## Perbarui Data Pengguna
+- **Endpoint:** `PUT /api/claim/update`
+- **Body:** `{ "nrp": "12345678", "email": "nama@contoh.com", ... }`
+- **Catatan:** Menggunakan OTP yang sudah diverifikasi atau menyertakan OTP di payload.

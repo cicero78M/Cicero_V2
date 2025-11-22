@@ -13,6 +13,19 @@ function isConnectionError(err) {
   return err && err.code === 'ECONNREFUSED';
 }
 
+function isEmailFormatValid(email) {
+  if (!email || email.length > 254) return false;
+  const normalized = normalizeEmail(email);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(normalized)) return false;
+  const [localPart, domain] = normalized.split('@');
+  if (!localPart || !domain) return false;
+  if (localPart.length < 2 || localPart.length > 64) return false;
+  if (domain.length < 3 || domain.length > 190) return false;
+  if (domain.includes('..') || localPart.includes('..')) return false;
+  return domain.includes('.');
+}
+
 function extractInstagramUsername(value) {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -39,6 +52,43 @@ function extractTiktokUsername(value) {
     return null;
   }
   return `@${normalized}`;
+}
+
+export async function validateEmail(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email wajib diisi' });
+    }
+    const normalized = normalizeEmail(email);
+    if (!isEmailFormatValid(normalized)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email tidak valid. Pastikan menulis alamat lengkap seperti nama@contoh.com',
+      });
+    }
+
+    let existingUser;
+    try {
+      existingUser = await userModel.findUserByEmail(normalized);
+    } catch (err) {
+      if (isConnectionError(err)) {
+        return res.status(503).json({ success: false, message: 'Database tidak tersedia' });
+      }
+      throw err;
+    }
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email sudah terdaftar. Gunakan email lain atau hubungi admin jika ini email Anda',
+      });
+    }
+
+    sendSuccess(res, { message: 'Email valid dan bisa digunakan' });
+  } catch (err) {
+    next(err);
+  }
 }
 
 export async function requestOtp(req, res, next) {
