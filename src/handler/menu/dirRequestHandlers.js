@@ -1263,19 +1263,6 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       personilParagraphs.push(combineSentences(avgSentences));
   }
 
-  const excellenceSentences = combineSentences([
-    ig.bestSatkers
-      ? `${ig.bestSatkers} memimpin papan atas dan layak dijadikan referensi praktik baik.`
-      : null,
-    ig.strongSatkers
-      ? `${ig.strongSatkers} tinggal selangkah lagi menuju kategori unggul; dorongan positif akan sangat membantu.`
-      : null,
-    ig.lowSatkers
-      ? `Area yang masih mencari ritme: ${ig.lowSatkers}; pendampingan ringan bisa mengangkat performanya.`
-      : null,
-  ]);
-  if (excellenceSentences) personilParagraphs.push(excellenceSentences);
-
   const backlogParagraph = combineSentences([
     ig.igBacklog != null
       ? `Backlog Instagram tersisa ${formatInteger(ig.igBacklog)} akun (${ig.igBacklogTopPercent != null
