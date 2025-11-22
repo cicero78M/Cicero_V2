@@ -18,7 +18,10 @@ Dokumen ini merangkum endpoint klaim data berbasis OTP yang digunakan frontend u
 ## Permintaan OTP
 - **Endpoint:** `POST /api/claim/request-otp`
 - **Body:** `{ "nrp": "12345678", "email": "nama@contoh.com" }`
-- **Catatan:** Endpoint ini akan menolak permintaan jika email sudah dipakai akun lain atau tidak cocok dengan data pengguna.
+- **Catatan:**
+  - Endpoint menolak permintaan jika email sudah dipakai akun lain atau tidak cocok dengan data pengguna.
+  - Jika pencarian user_id gagal tetapi email sudah tercatat pada user_id yang sama, OTP tetap dikirim untuk mencegah false
+    positive "email sudah terdaftar".
 
 ## Verifikasi OTP
 - **Endpoint:** `POST /api/claim/verify-otp`
