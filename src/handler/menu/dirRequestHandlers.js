@@ -871,6 +871,14 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
         return lines;
       });
 
+  const extractLinksFromText = (text) =>
+    normalizeText(text)
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => /https?:\/\//i.test(line))
+      .map((line) => cleanContentLine(line) || line);
+
   const extractIgData = (text) => {
     const normalized = normalizeText(text);
     const data = {};
@@ -1106,7 +1114,42 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   const ig = extractIgData(igNarrative);
   const tt = extractTtData(ttNarrative);
 
+  const buildContentLinkList = () => {
+    const linkLines = [];
+    const igLines = [ig.topContentLine, ...(ig.otherContentLines || [])]
+      .map((line) => cleanContentLine(line))
+      .filter(Boolean);
+
+    if (!igLines.length) igLines.push(...extractLinksFromText(igNarrative));
+
+    const ttLines = extractLinksFromText(ttNarrative);
+
+    if (igLines.length)
+      igLines.forEach((line, index) =>
+        linkLines.push(`- IG ${index + 1}. ${line}`)
+      );
+    else linkLines.push("- IG: Belum ada link tercatat hari ini.");
+
+    if (ttLines.length)
+      ttLines.forEach((line, index) =>
+        linkLines.push(`- TikTok ${index + 1}. ${line}`)
+      );
+    else if (tt.bestContent || tt.worstContent) {
+      [tt.bestContent, tt.worstContent]
+        .filter(Boolean)
+        .forEach((highlight, index) =>
+          linkLines.push(`- TikTok ${index + 1}. ${highlight}`)
+        );
+    } else {
+      linkLines.push("- TikTok: Belum ada link tercatat hari ini.");
+    }
+
+    return linkLines;
+  };
+
   const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
+  const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
+  const linkLines = buildContentLinkList();
 
   const likeRatio = formatRatio(ig.totalLikes, ig.totalLikesTarget, ig.likePercent);
   const igTargetText = (() => {
@@ -1139,12 +1182,12 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   igParagraphs.push(
     combineSentences([
       ig.contentCount != null
-        ? `Cicero memotret ${formatInteger(
+        ? `Cicero menangkap ${formatInteger(
             ig.contentCount
-          )} konten aktif yang meramaikan etalase pembinaan masyarakat hari ini.`
+          )} konten aktif pada platform Instagram yang meramaikan etalase ruang digital pembinaan masyarakat hari ini.`
         : null,
       likeRatio
-        ? `Respon warganet tercermin pada ${likeRatio}, menguatkan narasi pendampingan yang dibawa DITBINMAS.`
+        ? `Dukungan rekan dan respon warganet tercermin pada ${likeRatio}, menguatkan narasi pendampingan yang dibawa DITBINMAS.`
         : null,
       igTargetText,
     ])
@@ -1181,11 +1224,11 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       : null;
   const ttContributorSentence = (() => {
     if (tt.topContributor && tt.topSatkers)
-      return `Energi komunitas dipimpin oleh ${tt.topContributor}, disambut ${tt.topSatkers} yang menjaga irama komentar.`;
+      return `Pelaksanaan Likes dan Komentar Tertinggi berurutan dipimpin oleh ${tt.topContributor}, disambut ${tt.topSatkers} yang menjaga irama komentar.`;
     if (tt.topContributor)
-      return `Energi komunitas dipimpin oleh ${tt.topContributor}.`;
+      return `Pelaksanaan Likes dan Komentar Tertinggi dipimpin oleh ${tt.topContributor}.`;
     if (tt.topSatkers)
-      return `Gelombang interaksi dijaga oleh ${tt.topSatkers}.`;
+      return `Pelaksanaan komentar dijaga oleh ${tt.topSatkers}.`;
     return null;
   })();
 
@@ -1193,7 +1236,7 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   ttParagraphs.push(
     combineSentences([
       tt.contentCount != null
-        ? `Di ruang TikTok, Cicero merekam ${formatInteger(
+        ? `Di platform TikTok, Cicero merekam ${formatInteger(
             tt.contentCount
           )} konten yang membuat lini masa DITBINMAS tetap hidup.`
         : null,
@@ -1294,7 +1337,18 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
   const closingLine = buildClosing();
 
-  return [header, "", "*DIREKTORAT BINMAS*", "", ...sections, "", closingLine]
+  return [
+    header,
+    "",
+    "*DIREKTORAT BINMAS*",
+    "",
+    linkHeader,
+    ...linkLines,
+    "",
+    ...sections,
+    "",
+    closingLine,
+  ]
     .filter((segment) => typeof segment === "string" && segment.trim() !== "")
     .join("\n")
     .trim();
