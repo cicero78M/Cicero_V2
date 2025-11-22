@@ -567,6 +567,12 @@ describe('formatRekapAllSosmed', () => {
 
     expect(message).toContain('*Laporan Harian Engagement – Rabu, 27 Agustus 2025*');
     expect(message).toContain('*DIREKTORAT BINMAS*');
+    expect(message).toContain('List Link Tugas Instagram dan Tiktok Hari ini :');
+    expect(message).toContain('- IG 1. https://instagram.com/p/abc — 500 likes');
+    expect(message).toContain('- IG 2. https://instagram.com/p/def — 400 likes');
+    expect(message).toContain('- IG 3. https://instagram.com/p/ghi — 300 likes');
+    expect(message).toContain('- TikTok 1. Video A – 200 komentar');
+    expect(message).toContain('- TikTok 2. Video B – 100 komentar');
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
     expect(message).toContain('3. 👥 *Data Personil*');
@@ -578,7 +584,7 @@ describe('formatRekapAllSosmed', () => {
       'Kontribusi utama mengalir dari Satker A → menyumbang 35% dari total likes saat ini, menghadirkan energi positif bagi jajaran DITBINMAS.'
     );
     expect(message).toContain(
-      'Energi komunitas dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
+      'Pelaksanaan Likes dan Komentar Tertinggi berurutan dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
     );
     expect(message).not.toContain('Top performer: Satker Hebat, memberikan suntikan semangat.');
     expect(message).not.toContain(
