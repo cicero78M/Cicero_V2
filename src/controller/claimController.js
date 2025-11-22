@@ -8,6 +8,7 @@ import {
   isVerified,
   refreshVerification,
 } from '../service/otpService.js';
+import dns from 'dns/promises';
 
 function isConnectionError(err) {
   return err && err.code === 'ECONNREFUSED';
@@ -54,6 +55,26 @@ function extractTiktokUsername(value) {
   return `@${normalized}`;
 }
 
+const INACTIVE_DOMAIN_ERRORS = ['ENODATA', 'ENOTFOUND', 'NXDOMAIN', 'ENONAME'];
+const DNS_UNAVAILABLE_ERRORS = ['EAI_AGAIN', 'ETIMEOUT', 'EAI_FAIL', 'ECONNREFUSED', 'SERVFAIL'];
+
+async function hasActiveEmailDomain(domain) {
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    return Array.isArray(mxRecords) && mxRecords.length > 0;
+  } catch (err) {
+    if (INACTIVE_DOMAIN_ERRORS.includes(err.code)) {
+      return false;
+    }
+    if (DNS_UNAVAILABLE_ERRORS.includes(err.code)) {
+      const dnsError = new Error('DNS lookup unavailable');
+      dnsError.code = err.code;
+      throw dnsError;
+    }
+    throw err;
+  }
+}
+
 export async function validateEmail(req, res, next) {
   try {
     const { email } = req.body;
@@ -65,6 +86,27 @@ export async function validateEmail(req, res, next) {
       return res.status(400).json({
         success: false,
         message: 'Format email tidak valid. Pastikan menulis alamat lengkap seperti nama@contoh.com',
+      });
+    }
+
+    const [, domain] = normalized.split('@');
+    let domainActive = false;
+    try {
+      domainActive = await hasActiveEmailDomain(domain);
+    } catch (err) {
+      if (DNS_UNAVAILABLE_ERRORS.includes(err.code)) {
+        return res.status(503).json({
+          success: false,
+          message: 'Layanan validasi email tidak tersedia. Coba beberapa saat lagi.',
+        });
+      }
+      throw err;
+    }
+
+    if (!domainActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email tidak dapat digunakan. Domain email tidak aktif atau tidak menerima email.',
       });
     }
 
