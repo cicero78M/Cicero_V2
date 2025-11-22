@@ -93,7 +93,10 @@ import {
   getGreeting,
   formatUserData,
 } from "../utils/utilsHelper.js";
-import { handleComplaintMessageIfApplicable } from "./waAutoComplaintService.js";
+import {
+  handleComplaintMessageIfApplicable,
+  isGatewayComplaintForward,
+} from "./waAutoComplaintService.js";
 import {
   isAdminWhatsApp,
   formatToWhatsAppId,
@@ -605,6 +608,7 @@ export function createHandleMessage(waClient, options = {}) {
         session,
         isAdmin,
         initialIsMyContact,
+        senderId,
         chatId,
         adminOptionSessions,
         setSession,
@@ -1408,6 +1412,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     session,
     isAdmin,
     initialIsMyContact,
+    senderId,
     chatId,
     adminOptionSessions,
     setSession,
@@ -3136,7 +3141,7 @@ async function processGatewayBulkDeletion(chatId, text) {
 
 const gatewayAllowedGroupIds = new Set(["120363419830216549@g.us"]);
 
-async function handleGatewayMessage(msg) {
+export async function handleGatewayMessage(msg) {
   const chatId = msg.from || "";
   const text = (msg.body || "").trim();
   if (!text) return;
@@ -3157,12 +3162,18 @@ async function handleGatewayMessage(msg) {
     typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
   const session = getSession(chatId);
 
+  if (isGatewayComplaintForward({ senderId, text })) {
+    console.log("[WA-GATEWAY] Skipped gateway-forwarded complaint message");
+    return;
+  }
+
   const handledComplaint = await handleComplaintMessageIfApplicable({
     text,
     allowUserMenu: false,
     session,
     isAdmin,
     initialIsMyContact,
+    senderId,
     chatId,
     adminOptionSessions,
     setSession,

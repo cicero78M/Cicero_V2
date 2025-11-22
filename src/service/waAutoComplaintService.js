@@ -4,6 +4,37 @@ import {
 } from '../handler/menu/clientRequestHandlers.js';
 import { normalizeUserId } from '../utils/utilsHelper.js';
 
+function normalizeWhatsAppId(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (!trimmed) return '';
+  if (/@[cs]\.us$/.test(trimmed) || trimmed.endsWith('@g.us')) {
+    return trimmed;
+  }
+  const numeric = trimmed.replace(/\D/g, '');
+  if (!numeric) return '';
+  return `${numeric}@c.us`;
+}
+
+function getGatewayWhatsAppIds(extraIds = []) {
+  const envGatewayIds = (process.env.GATEWAY_WHATSAPP_ADMIN || '')
+    .split(',')
+    .map((id) => normalizeWhatsAppId(id))
+    .filter(Boolean);
+
+  const providedIds = (extraIds || [])
+    .map((id) => normalizeWhatsAppId(id))
+    .filter(Boolean);
+
+  return new Set([...envGatewayIds, ...providedIds]);
+}
+
+function isGatewayForwardText(text) {
+  if (!text) return false;
+  const normalized = text.trim().toLowerCase();
+  return /^(wagateway|wabot)\b/.test(normalized);
+}
+
 function hasComplaintHeader(text) {
   const lines = String(text || '')
     .split(/\r?\n/)
@@ -25,17 +56,31 @@ function hasComplaintHeader(text) {
   return Boolean(nrp);
 }
 
+export function isGatewayComplaintForward({ senderId, text, gatewayIds }) {
+  const normalizedSender = normalizeWhatsAppId(senderId);
+  const knownGatewayIds = getGatewayWhatsAppIds(gatewayIds);
+
+  if (normalizedSender && knownGatewayIds.has(normalizedSender)) {
+    return true;
+  }
+
+  return isGatewayForwardText(text);
+}
+
 export function shouldHandleComplaintMessage({
   text,
   allowUserMenu,
   session,
   isAdmin,
   initialIsMyContact,
+  senderId,
+  gatewayIds,
 }) {
   if (allowUserMenu) return false;
   if (session?.menu === 'clientrequest') return false;
   const isVerified = isAdmin || initialIsMyContact === true;
   if (!isVerified) return false;
+  if (isGatewayComplaintForward({ senderId, text, gatewayIds })) return false;
   return hasComplaintHeader(text);
 }
 
@@ -45,6 +90,8 @@ export async function handleComplaintMessageIfApplicable({
   session,
   isAdmin,
   initialIsMyContact,
+  senderId,
+  gatewayIds,
   chatId,
   adminOptionSessions,
   setSession,
@@ -60,6 +107,8 @@ export async function handleComplaintMessageIfApplicable({
       session,
       isAdmin,
       initialIsMyContact,
+      senderId,
+      gatewayIds,
     })
   ) {
     return false;

@@ -60,6 +60,7 @@ describe('waService createHandleMessage group complaints', () => {
     jest.unstable_mockModule('../src/service/waAutoComplaintService.js', () => ({
       handleComplaintMessageIfApplicable: handleComplaintMock,
       shouldHandleComplaintMessage: jest.fn(),
+      isGatewayComplaintForward: jest.fn(),
     }));
 
     jest.unstable_mockModule('../src/service/waEventAggregator.js', () => ({
