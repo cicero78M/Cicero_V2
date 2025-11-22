@@ -1263,35 +1263,6 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       personilParagraphs.push(combineSentences(avgSentences));
   }
 
-  const backlogParagraph = combineSentences([
-    ig.igBacklog != null
-      ? `Backlog Instagram tersisa ${formatInteger(ig.igBacklog)} akun (${ig.igBacklogTopPercent != null
-          ? `Top-10 ≈ ${formatPercent(ig.igBacklogTopPercent)}%`
-          : "Top-10"
-        }: ${ig.igBacklogTopList || "-"}).`
-      : null,
-    ig.ttBacklog != null
-      ? `Backlog TikTok berada di ${formatInteger(ig.ttBacklog)} akun (${ig.ttBacklogTopPercent != null
-          ? `Top-10 ≈ ${formatPercent(ig.ttBacklogTopPercent)}%`
-          : "Top-10"
-        }: ${ig.ttBacklogTopList || "-"}).`
-      : null,
-    ig.projectedIg != null || ig.projectedTt != null
-      ? `Jika backlog ini terurai, proyeksi capaian dapat menyentuh ${[
-          ig.projectedIg != null
-            ? `IG ~${formatPercent(ig.projectedIg)}%`
-            : null,
-          ig.projectedTt != null
-            ? `TikTok ~${formatPercent(ig.projectedTt)}%`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(", "
-        )}.`
-      : null,
-  ]);
-  if (backlogParagraph) personilParagraphs.push(backlogParagraph);
-
   const performanceNotes = combineSentences([
     ig.topPerformers
       ? `Top performer: ${ig.topPerformers}, memberikan suntikan semangat.`
