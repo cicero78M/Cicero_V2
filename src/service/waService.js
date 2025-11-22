@@ -3151,7 +3151,30 @@ async function handleGatewayMessage(msg) {
     return;
   }
 
-  await processGatewayBulkDeletion(chatId, text);
+  const senderId = msg.author || chatId;
+  const isAdmin = isAdminWhatsApp(senderId);
+  const initialIsMyContact =
+    typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
+  const session = getSession(chatId);
+
+  const handledComplaint = await handleComplaintMessageIfApplicable({
+    text,
+    allowUserMenu: false,
+    session,
+    isAdmin,
+    initialIsMyContact,
+    chatId,
+    adminOptionSessions,
+    setSession,
+    getSession,
+    waClient: waGatewayClient,
+    pool,
+    userModel,
+  });
+
+  if (!handledComplaint) {
+    await processGatewayBulkDeletion(chatId, text);
+  }
 }
 
 if (shouldInitWhatsAppClients) {
