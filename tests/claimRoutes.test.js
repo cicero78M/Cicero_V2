@@ -33,6 +33,7 @@ describe('claim routes access', () => {
       }));
       jest.unstable_mockModule('../src/model/userModel.js', () => ({
         findUserById: jest.fn().mockResolvedValue({ email: 'a@a.com' }),
+        findUserByEmail: jest.fn().mockResolvedValue(null),
         updateUserField: jest.fn().mockResolvedValue(),
         updateUser: jest.fn().mockResolvedValue({ success: true }),
       }));
@@ -74,6 +75,60 @@ describe('claim routes access', () => {
   });
 });
 
+describe('request otp conflict messaging', () => {
+  let app;
+  let userModelMocks;
+
+  beforeEach(async () => {
+    jest.resetModules();
+    userModelMocks = {
+      findUserById: jest.fn().mockResolvedValue(null),
+      findUserByEmail: jest.fn().mockResolvedValue({ user_id: '2', email: 'used@example.com' }),
+      updateUserField: jest.fn(),
+      updateUser: jest.fn(),
+    };
+
+    await jest.isolateModulesAsync(async () => {
+      jest.unstable_mockModule('../src/config/redis.js', () => ({
+        default: createRedisMock(),
+      }));
+      jest.unstable_mockModule('../src/service/otpService.js', () => ({
+        generateOtp: jest.fn(),
+        verifyOtp: jest.fn(),
+        isVerified: jest.fn(),
+        refreshVerification: jest.fn(),
+        clearVerification: jest.fn(),
+      }));
+      jest.unstable_mockModule('../src/model/userModel.js', () => userModelMocks);
+      jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
+        enqueueOtp: jest.fn(),
+      }));
+      const claimMod = await import('../src/routes/claimRoutes.js');
+      const claimRoutes = claimMod.default;
+      app = express();
+      app.use(express.json());
+      app.use('/api/claim', claimRoutes);
+    });
+  });
+
+  afterEach(() => {
+    jest.resetModules();
+  });
+
+  test('returns conflict when email already used by another account', async () => {
+    const res = await request(app)
+      .post('/api/claim/request-otp')
+      .send({ nrp: '999', email: 'used@example.com' });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({
+      success: false,
+      message:
+        'Email sudah dipakai akun lain. Gunakan email berbeda atau hubungi admin untuk memperbaiki data.',
+    });
+    expect(userModelMocks.findUserByEmail).toHaveBeenCalled();
+  });
+});
+
 describe('claim update validation', () => {
   let app;
   let serviceMocks;
@@ -97,6 +152,7 @@ describe('claim update validation', () => {
       }));
       jest.unstable_mockModule('../src/model/userModel.js', () => ({
         findUserById: jest.fn(),
+        findUserByEmail: jest.fn(),
         updateUserField: jest.fn(),
         updateUser: jest.fn().mockResolvedValue({ success: true }),
       }));
@@ -203,6 +259,7 @@ describe('claim update verification ttl', () => {
       jest.unstable_mockModule('../src/service/otpService.js', () => serviceMocks);
       jest.unstable_mockModule('../src/model/userModel.js', () => ({
         findUserById: jest.fn().mockResolvedValue({ email: 'a@a.com' }),
+        findUserByEmail: jest.fn(),
         updateUserField: jest.fn(),
         updateUser: jest.fn().mockResolvedValue({ success: true }),
       }));

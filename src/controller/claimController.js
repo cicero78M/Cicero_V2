@@ -59,6 +59,21 @@ export async function requestOtp(req, res, next) {
       throw err;
     }
     if (!user) {
+      try {
+        const existingEmailUser = await userModel.findUserByEmail(em);
+        if (existingEmailUser) {
+          return res.status(409).json({
+            success: false,
+            message:
+              'Email sudah dipakai akun lain. Gunakan email berbeda atau hubungi admin untuk memperbaiki data.',
+          });
+        }
+      } catch (err) {
+        if (isConnectionError(err)) {
+          return res.status(503).json({ success: false, message: 'Database tidak tersedia' });
+        }
+        throw err;
+      }
       return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
     }
     if (user.email) {
