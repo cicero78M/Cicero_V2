@@ -78,6 +78,7 @@ describe('claim routes access', () => {
 describe('request otp conflict messaging', () => {
   let app;
   let userModelMocks;
+  let otpServiceMocks;
 
   beforeEach(async () => {
     jest.resetModules();
@@ -87,18 +88,19 @@ describe('request otp conflict messaging', () => {
       updateUserField: jest.fn(),
       updateUser: jest.fn(),
     };
+    otpServiceMocks = {
+      generateOtp: jest.fn().mockResolvedValue('999000'),
+      verifyOtp: jest.fn(),
+      isVerified: jest.fn(),
+      refreshVerification: jest.fn(),
+      clearVerification: jest.fn(),
+    };
 
     await jest.isolateModulesAsync(async () => {
       jest.unstable_mockModule('../src/config/redis.js', () => ({
         default: createRedisMock(),
       }));
-      jest.unstable_mockModule('../src/service/otpService.js', () => ({
-        generateOtp: jest.fn(),
-        verifyOtp: jest.fn(),
-        isVerified: jest.fn(),
-        refreshVerification: jest.fn(),
-        clearVerification: jest.fn(),
-      }));
+      jest.unstable_mockModule('../src/service/otpService.js', () => otpServiceMocks);
       jest.unstable_mockModule('../src/model/userModel.js', () => userModelMocks);
       jest.unstable_mockModule('../src/service/otpQueue.js', () => ({
         enqueueOtp: jest.fn(),
@@ -126,6 +128,18 @@ describe('request otp conflict messaging', () => {
         'Email sudah dipakai akun lain. Gunakan email berbeda atau hubungi admin untuk memperbaiki data.',
     });
     expect(userModelMocks.findUserByEmail).toHaveBeenCalled();
+  });
+
+  test('allows request when email belongs to same nrp even if lookup by id fails', async () => {
+    userModelMocks.findUserByEmail.mockResolvedValue({ user_id: '999', email: 'used@example.com' });
+
+    const res = await request(app)
+      .post('/api/claim/request-otp')
+      .send({ nrp: '999', email: 'used@example.com' });
+
+    expect(res.status).toBe(202);
+    expect(userModelMocks.findUserByEmail).toHaveBeenCalled();
+    expect(otpServiceMocks.generateOtp).toHaveBeenCalledWith('999', 'used@example.com');
   });
 });
 

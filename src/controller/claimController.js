@@ -112,11 +112,16 @@ export async function requestOtp(req, res, next) {
       try {
         const existingEmailUser = await userModel.findUserByEmail(em);
         if (existingEmailUser) {
-          return res.status(409).json({
-            success: false,
-            message:
-              'Email sudah dipakai akun lain. Gunakan email berbeda atau hubungi admin untuk memperbaiki data.',
-          });
+          const ownerId = normalizeUserId(existingEmailUser.user_id);
+          if (ownerId && ownerId === nrp) {
+            user = existingEmailUser;
+          } else {
+            return res.status(409).json({
+              success: false,
+              message:
+                'Email sudah dipakai akun lain. Gunakan email berbeda atau hubungi admin untuk memperbaiki data.',
+            });
+          }
         }
       } catch (err) {
         if (isConnectionError(err)) {
@@ -124,7 +129,9 @@ export async function requestOtp(req, res, next) {
         }
         throw err;
       }
-      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+      }
     }
     if (user.email) {
       const storedEmail = normalizeEmail(user.email);
