@@ -8,13 +8,13 @@ import { generateKasatBinmasTiktokCommentRecap } from "../service/kasatBinmasTik
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
-const DIRREQUEST_GROUP = "120363419830216549@g.us";
+//const DIRREQUEST_GROUP = "120363419830216549@g.us";
 const PRIMARY_RECIPIENT = "6281234560377@c.us";
 const CRON_TAG = "CRON DIRREQ KASAT BINMAS";
 const JOB_KEY = "./src/cron/cronDirRequestKasatBinmasRecap.js";
 
 function getRecipients() {
-  return new Set([...getAdminWAIds(), DIRREQUEST_GROUP, PRIMARY_RECIPIENT]);
+  return new Set([...getAdminWAIds(), PRIMARY_RECIPIENT]);
 }
 
 function getJakartaDate(baseDate = new Date()) {
