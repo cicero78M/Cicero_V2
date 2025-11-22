@@ -135,7 +135,7 @@ async function fetchPolresLoginRecap({ startTime, endTime }) {
        AND ll.login_source = 'web'
        AND ll.logged_at >= $1
        AND ll.logged_at <= $2
-     WHERE LOWER(c.client_type) = 'org' OR UPPER(c.client_id) = 'DITBINMAS'
+     WHERE LOWER(c.client_type) = 'org'
      GROUP BY c.client_id, c.nama`,
     [startTime, endTime]
   );

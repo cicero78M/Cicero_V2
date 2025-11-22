@@ -78,3 +78,30 @@ test('builds monthly recap grouped by polres', async () => {
   expect(message).toMatch(/1\. POLRES A — 2 operator \| 15 login/);
   expect(message).toMatch(/2\. POLRES B — 1 operator \| 5 login/);
 });
+
+test('monthly recap ignores directorat clients even with login activity', async () => {
+  const startTime = new Date('2025-07-10T00:00:00Z');
+  const expectedStart = new Date('2025-07-01T00:00:00.000Z');
+  const expectedEnd = new Date('2025-07-31T23:59:59.999Z');
+
+  mockGetWebLoginCountsByActor.mockResolvedValue([]);
+
+  mockQuery.mockImplementation((sql, params) => {
+    if (sql.includes('FROM clients c') && sql.includes('LEFT JOIN login_log')) {
+      expect(sql).toContain("WHERE LOWER(c.client_type) = 'org'");
+      expect(sql).not.toMatch(/DITBINMAS/i);
+      expect(params).toEqual([expectedStart, expectedEnd]);
+      return {
+        rows: [
+          { client_id: 'RES ORG', nama: 'Polres Org', operator_count: 1, login_count: 3 },
+        ],
+      };
+    }
+    return { rows: [] };
+  });
+
+  const message = await absensiLoginWeb({ mode: 'bulanan', startTime });
+
+  expect(message).toContain('POLRES ORG');
+  expect(message).not.toMatch(/DITBINMAS/i);
+});
