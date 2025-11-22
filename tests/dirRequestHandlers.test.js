@@ -580,6 +580,11 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain(
       'Energi komunitas dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
     );
+    expect(message).not.toContain('Top performer: Satker Hebat, memberikan suntikan semangat.');
+    expect(message).not.toContain(
+      'Area belajar: Satker Lemah, dapat menjadi fokus sesi coaching berikutnya.'
+    );
+    expect(message).not.toContain('Catatan tambahan: Dorong satker C untuk update harian..');
     expect(message).not.toContain('memimpin papan atas dan layak dijadikan referensi praktik baik.');
     expect(message).not.toContain('tinggal selangkah lagi menuju kategori unggul; dorongan positif akan sangat membantu.');
     expect(message).not.toContain('Area yang masih mencari ritme: Satker C; pendampingan ringan bisa mengangkat performanya.');
