@@ -925,6 +925,10 @@ function detectKnownIssueKey(issueText) {
   const mentionsExecuted = /sudah\s+melaksanakan/.test(normalized);
   const mentionsNotRecorded = /(belum|blm|tidak)\s+terdata/.test(normalized);
   const mentionsLessAttendance = /terabsen\s+kurang|absen\s+kurang/.test(normalized);
+  const mentionsFlaggedNotDone =
+    /terabsen[si]?\s+(?:belum|blm)\s+melaksanakan|status\s+belum\s+melaksanakan/.test(
+      normalized
+    );
 
   if (mentionsExecuted && hasInstagram && mentionsNotRecorded) {
     return "instagram_not_recorded";
@@ -934,6 +938,9 @@ function detectKnownIssueKey(issueText) {
   }
   if (mentionsExecuted && mentionsLessAttendance) {
     return "attendance_less";
+  }
+  if (mentionsFlaggedNotDone) {
+    return "activity_flagged_not_done";
   }
   return null;
 }
@@ -1394,6 +1401,51 @@ async function buildAttendanceIssueSolution(issueText, user) {
   return lines.join("\n").trim();
 }
 
+function buildFlaggedNotDoneSolution(issueText, accountStatus) {
+  const lines = [`• Kendala: ${issueText}`];
+
+  const instaHandle = accountStatus?.instagram?.username || "";
+  const tiktokHandle = accountStatus?.tiktok?.username || "";
+  const activeInstagram = hasFullMetrics(accountStatus?.instagram);
+  const activeTiktok = hasFullMetrics(accountStatus?.tiktok);
+
+  if (instaHandle || tiktokHandle) {
+    lines.push("", "Status akun yang tercatat:");
+    if (instaHandle) {
+      lines.push(`- Instagram: ${instaHandle}${activeInstagram ? " (Aktif)" : ""}`);
+    }
+    if (tiktokHandle) {
+      lines.push(`- TikTok: ${tiktokHandle}${activeTiktok ? " (Aktif)" : ""}`);
+    }
+  }
+
+  if (!activeInstagram && !activeTiktok) {
+    return "";
+  }
+
+  const handleLabel = [instaHandle, tiktokHandle].filter(Boolean).join(" / ") || "akun yang terdaftar";
+
+  lines.push("", "Ringkasan tindak lanjut:");
+  lines.push(
+    "- Akun sosial media pelapor terdeteksi aktif dan telah digunakan untuk like/komentar, namun status absensi masih tertulis 'belum melaksanakan'."
+  );
+  lines.push("- Sistem akan membantu pengecekan ulang pencatatan aksi tersebut pada menu absensi terkait.");
+
+  lines.push("", "Panduan verifikasi:");
+  lines.push(`1) Pastikan seluruh aksi dilakukan memakai ${handleLabel} yang tercatat di Cicero.`);
+  lines.push(
+    "2) Kirim tautan konten yang sudah di-like/dikomentari beserta waktu pelaksanaan sebagai bukti pengecekan."
+  );
+  lines.push(
+    "3) Buka menu Absensi Amplifikasi/Absensi Komentar di dashboard Cicero, pilih ulang satker & periode, lalu tekan *Refresh* untuk memuat data terbaru."
+  );
+  lines.push(
+    "4) Jika status tetap 'belum melaksanakan' setelah refresh ±1 jam, kirim tangkapan layar aksi dan hasil refresh untuk eskalasi ke operator piket."
+  );
+
+  return lines.join("\n").trim();
+}
+
 async function buildComplaintSolutionsFromIssues(parsed, user, accountStatus) {
   const issues = Array.isArray(parsed.issues)
     ? parsed.issues.map((issue) => issue.trim()).filter(Boolean)
@@ -1422,6 +1474,11 @@ async function buildComplaintSolutionsFromIssues(parsed, user, accountStatus) {
     }
     if (key === "attendance_less") {
       solutions.push(await buildAttendanceIssueSolution(issueText, user));
+      continue;
+    }
+    if (key === "activity_flagged_not_done") {
+      const solution = buildFlaggedNotDoneSolution(issueText, accountStatus);
+      if (solution) solutions.push(solution);
     }
   }
 
