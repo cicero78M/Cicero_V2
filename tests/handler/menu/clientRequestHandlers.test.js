@@ -352,6 +352,60 @@ describe('bulkStatus_process', () => {
     expect(session.step).toBe('bulkStatus_process');
   });
 
+  it('ignores bot summary echoes without altering the session state', async () => {
+    const session = { step: 'bulkStatus_process' };
+    const chatId = 'chat-summary-echo';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    const botSummary = [
+      '📄 *Permohonan Penghapusan Data Personil*',
+      '',
+      '✅ Status dinonaktifkan untuk 1 personel:',
+      '- 75020201 (AKP Asep) • mutasi',
+      '',
+      '❌ 1 entri gagal diproses:',
+      '- 75020202 (IPTU Budi) • pensiun → user tidak ditemukan',
+      '',
+      'Selesai diproses. Terima kasih.',
+    ].join('\n');
+
+    await clientRequestHandlers.bulkStatus_process(
+      session,
+      chatId,
+      botSummary,
+      { sendMessage }
+    );
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(session.step).toBe('bulkStatus_process');
+  });
+
+  it.each(['wagateway', 'wabot'])(
+    'ignores %s forwards that wrap bulk deletion summaries',
+    async (prefix) => {
+      const session = { step: 'bulkStatus_process' };
+      const chatId = `chat-${prefix}`;
+      const sendMessage = jest.fn().mockResolvedValue();
+
+      const forwardedMessage = [
+        `${prefix} | 628123456789`,
+        'Permohonan Penghapusan Data Personil – Polres Contoh',
+        '✅ Status dinonaktifkan untuk 1 personel:',
+        '- 75020201 (AKP Asep) • mutasi',
+      ].join('\n');
+
+      await clientRequestHandlers.bulkStatus_process(
+        session,
+        chatId,
+        forwardedMessage,
+        { sendMessage }
+      );
+
+      expect(sendMessage).not.toHaveBeenCalled();
+      expect(session.step).toBe('bulkStatus_process');
+    }
+  );
+
   it('parses reason-first entries that include the name in parentheses', async () => {
     const session = { step: 'bulkStatus_process' };
     const chatId = 'chat-reason-first';
