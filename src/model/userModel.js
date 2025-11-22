@@ -2,7 +2,7 @@
 
 import { query } from '../repository/db.js';
 import { PRIORITY_USER_NAMES } from '../utils/constants.js';
-import { normalizeUserId } from '../utils/utilsHelper.js';
+import { normalizeEmail, normalizeUserId } from '../utils/utilsHelper.js';
 
 const NAME_PRIORITY_DEFAULT = PRIORITY_USER_NAMES.length + 1;
 
@@ -316,6 +316,13 @@ export async function findUserById(user_id) {
     [uid]
   );
   return rows[0];
+}
+
+export async function findUserByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+  const { rows } = await query('SELECT * FROM "user" WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
+  return rows[0] || null;
 }
 
 // Ambil user berdasarkan user_id dan client_id

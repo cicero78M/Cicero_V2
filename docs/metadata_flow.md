@@ -10,7 +10,7 @@ This document outlines the flow of data and the main database tables used by the
    - Users for each client are created via the `/users` API, imported from Google Sheets, or self-service through the OTP claim flow (`/api/claim/*`).
 2. **Authentication & Claim**
    - Users authenticate by calling `/api/auth/login`, `/api/auth/user-login`, or `/api/auth/dashboard-login` and receive a JWT token.
-   - Operators without updated records request OTP codes through `/api/claim/request-otp`. OTPs are emailed instantly and must be verified before profile edits.
+   - Operators without updated records request OTP codes through `/api/claim/request-otp`. OTPs are emailed instantly and must be verified before profile edits. Jika NRP tidak ditemukan tetapi email sudah dipakai akun lain, API mengembalikan konflik 409 dengan pesan yang menjelaskan agar user memakai email berbeda atau menghubungi admin.
    - The JWT token or HTTP-only cookie is included in subsequent API calls to authorize access.
 
 ## 2. Database Overview
