@@ -580,10 +580,12 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain(
       'Energi komunitas dipimpin oleh Satker Alpha (120), disambut 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar yang menjaga irama komentar.'
     );
-    expect(message).toContain('Backlog Instagram tersisa 30 akun (Top-10 ≈ 60,0%: Satker E, Satker F).');
     expect(message).not.toContain('memimpin papan atas dan layak dijadikan referensi praktik baik.');
     expect(message).not.toContain('tinggal selangkah lagi menuju kategori unggul; dorongan positif akan sangat membantu.');
     expect(message).not.toContain('Area yang masih mencari ritme: Satker C; pendampingan ringan bisa mengangkat performanya.');
+    expect(message).not.toContain('Backlog Instagram tersisa 30 akun (Top-10 ≈ 60,0%: Satker E, Satker F).');
+    expect(message).not.toContain('Backlog TikTok berada di 25 akun (Top-10 ≈ 55,0%: Satker G).');
+    expect(message).not.toContain('Proyeksi jika 70% Top-10 teratasi: IG → ~88,0%, TT → ~82,0%.');
     expect(message).toContain('Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.');
   });
 
