@@ -5,14 +5,14 @@ Dokumen ini merangkum endpoint klaim data berbasis OTP yang digunakan frontend u
 ## Validasi Email
 - **Endpoint:** `POST /api/claim/validate-email`
 - **Body:** `{ "email": "nama@contoh.com" }`
-- **Tujuan:** Memastikan alamat email memiliki format yang benar dan belum terpakai sebelum pengguna meminta OTP atau memperbarui data.
+- **Tujuan:** Memastikan alamat email memiliki format yang benar dan tidak dalam status non-aktif sebelum pengguna meminta OTP atau memperbarui data.
 - **Respons berhasil (200):**
   ```json
   { "success": true, "data": { "message": "Email valid dan bisa digunakan" } }
   ```
 - **Respons error yang mudah dipahami:**
   - 400 jika email kosong atau format salah dengan pesan jelas, misalnya "Email wajib diisi" atau "Format email tidak valid. Pastikan menulis alamat lengkap seperti nama@contoh.com".
-  - 409 jika email sudah terdaftar oleh pengguna lain dengan pesan "Email sudah terdaftar. Gunakan email lain atau hubungi admin jika ini email Anda".
+  - 403 jika email ditemukan tetapi status akun terkait tidak aktif dengan pesan "Email tidak aktif. Hubungi admin untuk mengaktifkan kembali.".
   - 503 jika koneksi database bermasalah dengan pesan "Database tidak tersedia".
 
 ## Permintaan OTP
