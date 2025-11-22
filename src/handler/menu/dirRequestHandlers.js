@@ -1263,17 +1263,6 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       personilParagraphs.push(combineSentences(avgSentences));
   }
 
-  const performanceNotes = combineSentences([
-    ig.topPerformers
-      ? `Top performer: ${ig.topPerformers}, memberikan suntikan semangat.`
-      : null,
-    ig.bottomPerformers
-      ? `Area belajar: ${ig.bottomPerformers}, dapat menjadi fokus sesi coaching berikutnya.`
-      : null,
-    ig.notes ? `Catatan tambahan: ${ig.notes}.` : null,
-  ]);
-  if (performanceNotes) personilParagraphs.push(performanceNotes);
-
   const buildClosing = () => {
     const igBacklog = ig.igBacklog ?? 0;
     const ttBacklog = tt.backlog ?? 0;
