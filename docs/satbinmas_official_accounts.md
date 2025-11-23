@@ -1,5 +1,5 @@
 # Satbinmas Official Account Management
-*Last updated: 2025-11-06*
+*Last updated: 2025-11-07*
 
 This document explains how Satbinmas official social-media handles are stored
 and managed inside the Cicero backend. The feature introduces a dedicated table
@@ -84,23 +84,19 @@ WhatsApp bot via the client management menu:
 
 1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
 2. Pilih client, lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
-3. Bot meminta peran Satbinmas dengan pilihan berikut (wajib dipilih sebelum
-   lanjut):
-   - `Kasat Binmas`
-   - `Kasi Binpolmas/Binluh`
-   - `Operator Satbinmas/Bhabinkamtibmas`
-4. Masukkan *Client ID* target (default mengikuti client yang dipilih pada menu
-   sebelumnya).
-5. Ketik username Instagram (boleh diawali `@`). Bot memanggil RapidAPI
+3. Bot otomatis menetapkan peran akun menjadi `Akun Resmi Satbinmas` dan
+   langsung meminta *Client ID* tujuan (default mengikuti client yang dipilih
+   pada menu sebelumnya).
+4. Ketik username Instagram (boleh diawali `@`). Bot memanggil RapidAPI
    `fetchInstagramInfo` untuk mengambil metadata akun.
-6. Sistem mengisi `display_name` (gabungan peran + nama akun), `profile_url`,
+5. Sistem mengisi `display_name` (gabungan peran + nama akun), `profile_url`,
    `is_active` (true jika profil ditemukan), serta `is_verified` dari respon
    RapidAPI, lalu menyimpan data melalui
    `satbinmasOfficialAccountService.saveSatbinmasOfficialAccount` ke tabel
    `satbinmas_official_accounts`.
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
-`kembali` digunakan untuk mengulang pilihan peran atau Client ID tanpa
+`kembali` digunakan untuk mengulang instruksi input (Client ID/username) tanpa
 kehilangan sesi.
 
 ## Testing
