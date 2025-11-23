@@ -20,6 +20,7 @@ import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 import premiumRequestRoutes from './premiumRequestRoutes.js';
 import likesRoutes from './likesRoutes.js';
 import userRolesRoutes from './userRolesRoutes.js';
+import officialAccountRoutes from './officialAccountRoutes.js';
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.use('/amplify', amplifyRoutes);
 router.use('/amplify-khusus', amplifyKhususRoutes);
 router.use('/premium-requests', premiumRequestRoutes);
 router.use('/user_roles', userRolesRoutes);
+router.use('/official-accounts', officialAccountRoutes);
 export default router;
 
 

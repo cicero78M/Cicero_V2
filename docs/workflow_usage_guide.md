@@ -64,7 +64,11 @@ Dashboard Next.js (`Cicero_Web`) menggunakan variabel `NEXT_PUBLIC_API_URL` untu
 2. Melihat statistik Instagram/TikTok pada halaman analytics.
 3. Mengelola data client dan user melalui antarmuka atau endpoint REST.
 
-## 6. Tips Penggunaan
+## 6. Pengelolaan Official Account
+
+Endpoint `/api/official-accounts` berada di bawah payung autentikasi `/api`, sehingga hanya pengguna dashboard yang telah login yang dapat membuat, mengubah, atau menghapus akun resmi. Admin Ditbinmas dapat menambahkan akun untuk semua klien, sementara operator klien hanya boleh memutakhirkan akun milik `client_id` mereka sendiri. Setiap platform hanya boleh memiliki satu akun utama (`is_primary = true`); pengecualian harus disertai payload `allowMultiplePrimary` bila dibutuhkan (misalnya untuk proses migrasi data).
+
+## 7. Tips Penggunaan
 
 - Jalankan `npm run lint` dan `npm test` sebelum melakukan commit.
 - Monitor cron job pada jam yang tercantum di `docs/activity_schedule.md`.
