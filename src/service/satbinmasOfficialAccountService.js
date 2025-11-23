@@ -70,6 +70,18 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
     normalizedPlatform
   );
 
+  const conflictingUsername = await satbinmasOfficialAccountModel.findByPlatformAndUsername(
+    normalizedPlatform,
+    trimmedUsername
+  );
+
+  if (
+    conflictingUsername &&
+    (!existing || conflictingUsername.satbinmas_account_id !== existing.satbinmas_account_id)
+  ) {
+    throw createError('username already exists for this platform', 409);
+  }
+
   const resolvedDisplayName =
     (normalizedDisplayName && normalizedDisplayName.length > 0
       ? normalizedDisplayName
@@ -85,20 +97,27 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
     false
   );
 
-  const account = await satbinmasOfficialAccountModel.upsertAccount({
-    client_id: client.client_id,
-    platform: normalizedPlatform,
-    username: trimmedUsername,
-    display_name: resolvedDisplayName,
-    profile_url: resolvedProfileUrl,
-    is_active: normalizedIsActive,
-    is_verified: normalizedIsVerified,
-  });
+  try {
+    const account = await satbinmasOfficialAccountModel.upsertAccount({
+      client_id: client.client_id,
+      platform: normalizedPlatform,
+      username: trimmedUsername,
+      display_name: resolvedDisplayName,
+      profile_url: resolvedProfileUrl,
+      is_active: normalizedIsActive,
+      is_verified: normalizedIsVerified,
+    });
 
-  return {
-    account,
-    created: !existing,
-  };
+    return {
+      account,
+      created: !existing,
+    };
+  } catch (error) {
+    if (error?.code === '23505') {
+      throw createError('username already exists for this platform', 409);
+    }
+    throw error;
+  }
 }
 
 export async function deleteSatbinmasOfficialAccount(clientId, accountId) {

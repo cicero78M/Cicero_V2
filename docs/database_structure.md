@@ -308,7 +308,7 @@ Stores the verified Satbinmas social media handles for each client so they can b
 - `satbinmas_account_id` – UUID primary key generated via `gen_random_uuid()`
 - `client_id` – foreign key referencing `clients(client_id)` with cascade delete to remove linked accounts automatically when a client is deleted
 - `platform` – lowercase text tag for the social platform (e.g. `instagram`, `tiktok`); a `(client_id, platform)` pair must be unique
-- `username` – trimmed handle as entered by an operator
+- `username` – trimmed handle as entered by an operator; must be unique (case-insensitive) per platform across **all** clients
 - `display_name` – optional human-friendly label for the handle
 - `profile_url` – optional public link to the profile
 - `is_active` – boolean flag defaulting to `TRUE`; interpreted via service-side parsing helpers that accept booleans, `0/1`, or user-friendly strings such as `yes/no`
