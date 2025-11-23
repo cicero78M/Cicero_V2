@@ -977,6 +977,27 @@ function parseComplaintMessage(message) {
   const stripListPrefix = (value) =>
     value.replace(/^[•●*\-]+\s*/, "").replace(/^\d+[.)]\s*/, "");
 
+  const isIssueHeader = (value) => {
+    const normalizedHeader = stripListPrefix(value)
+      .replace(/[:：]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    if (!normalizedHeader) {
+      return false;
+    }
+
+    if (/^kendala\b/.test(normalizedHeader)) {
+      return true;
+    }
+
+    const headerVariations =
+      /(?:^|\s)(?:rincian|detail|uraian|keterangan|deskripsi)\s+kendala\b/;
+    const suffixVariations = /\bkendala\s+(?:yang\s+(?:dihadapi|dialami)|berikut)\b/;
+
+    return headerVariations.test(normalizedHeader) || suffixVariations.test(normalizedHeader);
+  };
+
   const extractField = (line) => {
     const [, ...rest] = line.split(/[:：]/);
     return rest.join(":").trim();
@@ -993,7 +1014,7 @@ function parseComplaintMessage(message) {
     if (/^pesan\s+komplain/.test(normalized)) {
       continue;
     }
-    if (/^kendala\b/.test(normalized.replace(/[:：]/g, ""))) {
+    if (isIssueHeader(line)) {
       inIssues = true;
       continue;
     }

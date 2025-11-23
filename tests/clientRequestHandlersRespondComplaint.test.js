@@ -393,9 +393,56 @@ test('respondComplaint_message shortcuts when TikTok comment activity already re
     expect(tiktokSolution).toContain('Absensi Komentar');
     expect(tiktokSolution).toContain('dashboard Cicero');
     expect(tiktokSolution).toContain('klik *Refresh*');
-    expect(tiktokSolution.toLowerCase()).toContain('tangkapan layar');
-    expect(tiktokSolution.toLowerCase()).toContain('hubungi operator');
+  expect(tiktokSolution.toLowerCase()).toContain('tangkapan layar');
+  expect(tiktokSolution.toLowerCase()).toContain('hubungi operator');
   expect(mockFetchTiktokProfile).toHaveBeenCalledTimes(1);
+  expect(session.step).toBe('main');
+  expect(session.respondComplaint).toBeUndefined();
+});
+
+test('respondComplaint_message parses "Rincian Kendala" and auto-resolves TikTok issue', async () => {
+  const session = {};
+  const chatId = 'admin-chat';
+  const waClient = { sendMessage: jest.fn() };
+  const userModel = {
+    findUserById: jest.fn().mockResolvedValue({
+      whatsapp: '08123',
+      insta: '',
+      tiktok: 'TikTokUser',
+      nama: 'Nama Lengkap',
+      status: true,
+      client_id: 'client-rincian',
+    }),
+  };
+
+  const complaintMessage = [
+    'Pesan Komplain',
+    'NRP    : 12345',
+    'Nama   : Nama Lengkap',
+    'Username TikTok : @TikTokUser',
+    '',
+    'Rincian Kendala:',
+    '1) Sudah melaksanakan TikTok belum terdata di dashboard.',
+  ].join('\n');
+
+  await clientRequestHandlers.respondComplaint_message(
+    session,
+    chatId,
+    complaintMessage,
+    waClient,
+    null,
+    userModel
+  );
+
+  expect(waClient.sendMessage).not.toHaveBeenCalledWith(
+    chatId,
+    expect.stringContaining('Kendala belum memiliki solusi otomatis')
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    waClient,
+    '08123@wa',
+    expect.stringContaining('Solusi/Tindak Lanjut')
+  );
   expect(session.step).toBe('main');
   expect(session.respondComplaint).toBeUndefined();
 });
