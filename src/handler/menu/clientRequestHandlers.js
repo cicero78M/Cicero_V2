@@ -187,9 +187,7 @@ const NUMERIC_ID_REGEX = /\b\d{6,}\b/g;
 const BOT_SUMMARY_HEADER_REGEX = /^📄\s*\*?Permohonan Penghapusan Data Personil/i;
 const BULK_STATUS_SUMMARY_KEYWORDS = /(?:Status dinonaktifkan|entri gagal diproses)/i;
 const SATBINMAS_ROLE_CHOICES = [
-  { code: "KASAT_BINMAS", label: "Kasat Binmas" },
-  { code: "KASI_BINPOLMAS", label: "Kasi Binpolmas/Binluh" },
-  { code: "OPERATOR_SATBINMAS", label: "Operator Satbinmas/Bhabinkamtibmas" },
+  { code: "AKUN_RESMI_SATBINMAS", label: "Akun Resmi Satbinmas" },
 ];
 
 function standardizeDash(value) {
@@ -2567,35 +2565,12 @@ Ketik *angka* menu, atau *batal* untuk kembali.
   ) => {
     const trimmed = text.trim();
     const lowered = trimmed.toLowerCase();
-    if (!trimmed) {
-      const options = SATBINMAS_ROLE_CHOICES.map(
-        (role, idx) => `${idx + 1}. ${role.label}`
-      ).join("\n");
-      const prompt = [
-        "Pilih peran Satbinmas untuk akun resmi yang akan dicatat:",
-        options,
-        "Ketik angka sesuai peran atau *batal* untuk kembali ke menu client.",
-      ].join("\n");
-      session.step = "satbinmasOfficial_promptRole";
-      await waClient.sendMessage(chatId, prompt);
-      return;
-    }
-
     if (lowered === "batal") {
       await sendKelolaClientMenu(session, chatId, waClient);
       return;
     }
 
-    const idx = parseInt(trimmed, 10) - 1;
-    const chosenRole = SATBINMAS_ROLE_CHOICES[idx];
-    if (!chosenRole) {
-      await waClient.sendMessage(
-        chatId,
-        "Pilihan tidak valid. Balas dengan angka peran yang tersedia atau ketik *batal*."
-      );
-      session.step = "satbinmasOfficial_promptRole";
-      return;
-    }
+    const chosenRole = SATBINMAS_ROLE_CHOICES[0];
 
     session.satbinmasOfficialDraft = {
       ...(session.satbinmasOfficialDraft || {}),
@@ -2606,12 +2581,12 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const defaultClientId =
       session.satbinmasOfficialDraft?.targetClientId || session.selected_client_id || "";
     const prompt = [
-      `Peran dipilih: *${chosenRole.label}*.`,
+      `Peran disetel otomatis: *${chosenRole.label}*.`,
       "Masukkan Client ID tujuan untuk akun Satbinmas ini.",
       defaultClientId
         ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
         : "Ketik Client ID yang akan disimpan.",
-      "Ketik *kembali* untuk memilih ulang peran atau *batal* untuk keluar.",
+      "Ketik *kembali* untuk mengulang langkah ini atau *batal* untuk keluar.",
     ].join("\n");
 
     await waClient.sendMessage(chatId, prompt);
@@ -2629,7 +2604,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         defaultClientId
           ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
           : "Ketik Client ID yang akan disimpan.",
-        "Ketik *kembali* untuk memilih ulang peran atau *batal* untuk keluar.",
+        "Ketik *kembali* untuk mengulang instruksi ini atau *batal* untuk keluar.",
       ].join("\n");
       session.step = "satbinmasOfficial_promptClient";
       await waClient.sendMessage(chatId, prompt);
