@@ -66,13 +66,7 @@ Dashboard Next.js (`Cicero_Web`) menggunakan variabel `NEXT_PUBLIC_API_URL` untu
 
 ## 6. Pengelolaan Official Account
 
-Endpoint `/api/official-accounts` berada di bawah payung autentikasi `/api`, sehingga hanya pengguna dashboard yang telah login yang dapat membuat, mengubah, atau menghapus akun resmi. Aturan peran yang berlaku:
-
-- **Ditbinmas** dapat mengelola akun resmi untuk semua klien.
-- **Polres** dan **Kasat Binmas** hanya boleh membuat atau memutakhirkan akun dengan `client_id` yang sesuai dengan token login mereka; permintaan tanpa `client_id` akan otomatis diisi dengan hak akses tunggal jika ada.
-- **Bhabinkamtibmas** bersifat _read-only_ dan hanya boleh melakukan permintaan `GET`.
-
-Setiap platform hanya boleh memiliki satu akun utama (`is_primary = true`); pengecualian harus disertai payload `allowMultiplePrimary` bila dibutuhkan (misalnya untuk proses migrasi data).
+Endpoint `/api/official-accounts` berada di bawah payung autentikasi `/api`, sehingga hanya pengguna dashboard yang telah login yang dapat membuat, mengubah, atau menghapus akun resmi. Admin Ditbinmas dapat menambahkan akun untuk semua klien, sementara operator klien hanya boleh memutakhirkan akun milik `client_id` mereka sendiri. Setiap platform hanya boleh memiliki satu akun utama (`is_primary = true`); pengecualian harus disertai payload `allowMultiplePrimary` bila dibutuhkan (misalnya untuk proses migrasi data).
 
 ## 7. Tips Penggunaan
 
