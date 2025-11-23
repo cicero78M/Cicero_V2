@@ -11,7 +11,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | Table Name | Purpose |
 |------------|---------|
 | clients | master table for registered organisations |
-| satbinmas_official_accounts | Satbinmas official handles linked to a client |
+| satbinmas_official_accounts | Satbinmas official handles plus metadata linked to a client |
 | user | members belonging to a client |
 | roles / user_roles | role catalogue and pivot for users |
 | dashboard_user | login credentials for dashboard access |
@@ -49,7 +49,8 @@ Represents each organisation using the system.
 
 Official Satbinmas accounts for each client are stored in the dedicated
 `satbinmas_official_accounts` table described below so that operators can manage
-per-platform handles without mutating legacy `client_*` columns.
+per-platform handles—along with display names, profile links, and verification
+state—without mutating legacy `client_*` columns.
 
 ### `user`
 Holds users belonging to a client.
@@ -308,6 +309,9 @@ Stores the verified Satbinmas social media handles for each client so they can b
 - `client_id` – foreign key referencing `clients(client_id)` with cascade delete to remove linked accounts automatically when a client is deleted
 - `platform` – lowercase text tag for the social platform (e.g. `instagram`, `tiktok`); a `(client_id, platform)` pair must be unique
 - `username` – trimmed handle as entered by an operator
+- `display_name` – optional human-friendly label for the handle
+- `profile_url` – optional public link to the profile
 - `is_active` – boolean flag defaulting to `TRUE`; interpreted via service-side parsing helpers that accept booleans, `0/1`, or user-friendly strings such as `yes/no`
+- `is_verified` – boolean flag defaulting to `FALSE` to track badge/verification status with the same parsing helpers as `is_active`
 - `created_at`, `updated_at` – timestamps maintained by the database trigger `satbinmas_official_accounts_set_updated_at`
 

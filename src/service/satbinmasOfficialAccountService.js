@@ -7,12 +7,12 @@ function createError(message, statusCode) {
   return error;
 }
 
-function parseOptionalBoolean(value, fallback) {
+function parseOptionalBoolean(value, fallback, defaultValue = true) {
   if (value === undefined) {
     if (fallback !== undefined) {
       return fallback;
     }
-    return true;
+    return defaultValue;
   }
 
   if (typeof value === 'boolean') {
@@ -50,7 +50,7 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
     throw createError('Client not found', 404);
   }
 
-  const { platform, username, is_active } = payload;
+  const { platform, username, is_active, display_name, profile_url, is_verified } = payload;
 
   if (!platform || !platform.trim()) {
     throw createError('platform is required', 400);
@@ -62,19 +62,37 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
 
   const normalizedPlatform = platform.trim().toLowerCase();
   const trimmedUsername = username.trim();
+  const normalizedDisplayName = display_name?.trim();
+  const normalizedProfileUrl = profile_url?.trim();
 
   const existing = await satbinmasOfficialAccountModel.findByClientIdAndPlatform(
     client.client_id,
     normalizedPlatform
   );
 
-  const normalizedIsActive = parseOptionalBoolean(is_active, existing?.is_active);
+  const resolvedDisplayName =
+    (normalizedDisplayName && normalizedDisplayName.length > 0
+      ? normalizedDisplayName
+      : existing?.display_name) ?? null;
+  const resolvedProfileUrl =
+    (normalizedProfileUrl && normalizedProfileUrl.length > 0
+      ? normalizedProfileUrl
+      : existing?.profile_url) ?? null;
+  const normalizedIsActive = parseOptionalBoolean(is_active, existing?.is_active, true);
+  const normalizedIsVerified = parseOptionalBoolean(
+    is_verified,
+    existing?.is_verified,
+    false
+  );
 
   const account = await satbinmasOfficialAccountModel.upsertAccount({
     client_id: client.client_id,
     platform: normalizedPlatform,
     username: trimmedUsername,
+    display_name: resolvedDisplayName,
+    profile_url: resolvedProfileUrl,
     is_active: normalizedIsActive,
+    is_verified: normalizedIsVerified,
   });
 
   return {

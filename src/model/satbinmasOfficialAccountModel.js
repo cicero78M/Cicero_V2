@@ -4,7 +4,7 @@ const normalizePlatform = (value) => value?.trim().toLowerCase();
 
 export async function findByClientId(client_id) {
   const res = await query(
-    `SELECT satbinmas_account_id, client_id, platform, username, is_active, created_at, updated_at
+    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
      FROM satbinmas_official_accounts
      WHERE LOWER(client_id) = LOWER($1)
      ORDER BY platform ASC, created_at ASC`,
@@ -16,7 +16,7 @@ export async function findByClientId(client_id) {
 export async function findByClientIdAndPlatform(client_id, platform) {
   const normalizedPlatform = normalizePlatform(platform);
   const res = await query(
-    `SELECT satbinmas_account_id, client_id, platform, username, is_active, created_at, updated_at
+    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
      FROM satbinmas_official_accounts
      WHERE LOWER(client_id) = LOWER($1) AND LOWER(platform) = LOWER($2)
      LIMIT 1`,
@@ -27,7 +27,7 @@ export async function findByClientIdAndPlatform(client_id, platform) {
 
 export async function findById(accountId) {
   const res = await query(
-    `SELECT satbinmas_account_id, client_id, platform, username, is_active, created_at, updated_at
+    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
      FROM satbinmas_official_accounts
      WHERE satbinmas_account_id = $1
      LIMIT 1`,
@@ -36,18 +36,39 @@ export async function findById(accountId) {
   return res.rows[0] || null;
 }
 
-export async function upsertAccount({ client_id, platform, username, is_active }) {
+export async function upsertAccount({
+  client_id,
+  platform,
+  username,
+  display_name,
+  profile_url,
+  is_active,
+  is_verified,
+}) {
   const normalizedPlatform = normalizePlatform(platform);
   const trimmedUsername = username?.trim();
+  const trimmedDisplayName = display_name?.trim();
+  const trimmedProfileUrl = profile_url?.trim();
   const res = await query(
-    `INSERT INTO satbinmas_official_accounts (client_id, platform, username, is_active)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO satbinmas_official_accounts (client_id, platform, username, display_name, profile_url, is_active, is_verified)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (client_id, platform) DO UPDATE
        SET username = EXCLUDED.username,
+           display_name = EXCLUDED.display_name,
+           profile_url = EXCLUDED.profile_url,
            is_active = EXCLUDED.is_active,
+           is_verified = EXCLUDED.is_verified,
            updated_at = NOW()
-     RETURNING satbinmas_account_id, client_id, platform, username, is_active, created_at, updated_at`,
-    [client_id, normalizedPlatform, trimmedUsername, is_active]
+     RETURNING satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at`,
+    [
+      client_id,
+      normalizedPlatform,
+      trimmedUsername,
+      trimmedDisplayName,
+      trimmedProfileUrl,
+      is_active,
+      is_verified,
+    ]
   );
   return res.rows[0] || null;
 }
@@ -56,7 +77,7 @@ export async function removeById(accountId) {
   const res = await query(
     `DELETE FROM satbinmas_official_accounts
      WHERE satbinmas_account_id = $1
-     RETURNING satbinmas_account_id, client_id, platform, username, is_active, created_at, updated_at`,
+     RETURNING satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at`,
     [accountId]
   );
   return res.rows[0] || null;
