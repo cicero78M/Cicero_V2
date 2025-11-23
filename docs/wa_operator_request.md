@@ -61,4 +61,30 @@ Untuk menambahkan akun resmi Satbinmas melalui bot:
 6. Gunakan `kembali` untuk mengulang peran/Client ID atau `batal` untuk kembali ke
    menu kelola client.
 
+### Permintaan Melalui WA Gateway: `#SatbinmasOfficial`
+Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway* dengan mengirim teks `#SatbinmasOfficial` (case-insensitive). Alur dan syaratnya:
+
+1. Pesan harus benar-benar diteruskan dari WA Gateway (sistem otomatis). Pesan langsung tanpa tag gateway akan ditolak.
+2. Nomor pengirim wajib terdaftar pada tabel `dashboard_user` dengan status aktif dan bukan berperan sebagai operator. Jika nomor tidak terdaftar, bot akan mengirim pesan penolakan.
+3. Relasi ke client melalui tabel `dashboard_user_clients` harus ada. Jika dashboard user tidak memiliki client aktif, permintaan ditolak dengan pesan aman.
+4. Bot memetakan client utama (ID pertama pada relasi), mengambil detail client (misalnya nama/Polres), lalu menarik daftar akun resmi Satbinmas via `satbinmas_official_accounts`.
+5. Respons mencantumkan: Client ID, nama Polres, role dashboard yang digunakan, dan daftar akun resmi per platform (IG/TikTok) lengkap dengan status aktif, status verifikasi, serta tautan profil.
+
+Contoh respons:
+```
+📡 Data Akun Resmi Satbinmas
+Client ID : MKS01
+Polres    : Polrestabes Makassar
+Role      : admin
+Dashboard : admin_makassar
+
+Akun Resmi:
+1. [Instagram] @satbinmas_mks
+   Status: Aktif, Verifikasi: Belum verifikasi
+   Profil: https://instagram.com/satbinmas_mks
+2. [TikTok] @satbinmas.tiktok
+   Status: Nonaktif, Verifikasi: Terverifikasi
+   Profil: -
+```
+
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.
