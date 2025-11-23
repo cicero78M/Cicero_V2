@@ -80,7 +80,8 @@ export async function fetchTiktokProfile(username) {
       following_count: data.stats?.followingCount,
       like_count: data.stats?.heart,
       video_count: data.stats?.videoCount,
-      avatar_url: data.user?.avatarThumb
+      avatar_url: data.user?.avatarThumb,
+      verified: Boolean(data.user?.verified)
     };
   } catch (err) {
     const msg = err.response?.data

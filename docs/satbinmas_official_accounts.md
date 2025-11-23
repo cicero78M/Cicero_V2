@@ -1,5 +1,5 @@
 # Satbinmas Official Account Management
-*Last updated: 2025-11-07*
+*Last updated: 2025-11-08*
 
 This document explains how Satbinmas official social-media handles are stored
 and managed inside the Cicero backend. The feature introduces a dedicated table
@@ -78,26 +78,58 @@ JSON error payload with the appropriate HTTP status code. Successful upserts use
 HTTP `201 Created` when a new row is inserted so API consumers can react to the
 change.
 
+### Example Payloads
+Both Instagram and TikTok are supported via the same endpoint. Example requests:
+
+- Instagram upsert
+
+```json
+{
+  "platform": "instagram",
+  "username": "satbinmas",
+  "display_name": "Akun Resmi Satbinmas",
+  "profile_url": "https://instagram.com/satbinmas",
+  "is_active": true,
+  "is_verified": true
+}
+```
+
+- TikTok upsert
+
+```json
+{
+  "platform": "tiktok",
+  "username": "satbinmas_official",
+  "display_name": "Akun Resmi Satbinmas",
+  "profile_url": "https://www.tiktok.com/@satbinmas_official",
+  "is_active": true,
+  "is_verified": false
+}
+```
+
 ## WhatsApp Bot Entry Point
-Operators can now add Satbinmas official Instagram accounts directly from the
-WhatsApp bot via the client management menu:
+Operators can now add Satbinmas official Instagram **atau TikTok** accounts
+directly from the WhatsApp bot via the client management menu:
 
 1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
 2. Pilih client, lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
 3. Bot otomatis menetapkan peran akun menjadi `Akun Resmi Satbinmas` dan
    langsung meminta *Client ID* tujuan (default mengikuti client yang dipilih
    pada menu sebelumnya).
-4. Ketik username Instagram (boleh diawali `@`). Bot memanggil RapidAPI
-   `fetchInstagramInfo` untuk mengambil metadata akun.
-5. Sistem mengisi `display_name` (gabungan peran + nama akun), `profile_url`,
-   `is_active` (true jika profil ditemukan), serta `is_verified` dari respon
-   RapidAPI, lalu menyimpan data melalui
+4. Pilih platform: balas angka/menu kecil untuk **Instagram** atau **TikTok**
+   sebelum mengisi username.
+5. Ketik username sesuai platform (boleh diawali `@`). Bot memanggil RapidAPI
+   `fetchInstagramInfo` atau `fetchTiktokProfile` untuk mengambil metadata
+   akun.
+6. Sistem mengisi `display_name` (gabungan peran + nama akun), `profile_url`,
+   `is_active` (true jika profil ditemukan), serta `is_verified` (termasuk
+   badge TikTok ketika tersedia), lalu menyimpan data melalui
    `satbinmasOfficialAccountService.saveSatbinmasOfficialAccount` ke tabel
    `satbinmas_official_accounts`.
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
-`kembali` digunakan untuk mengulang instruksi input (Client ID/username) tanpa
-kehilangan sesi.
+`kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
+tanpa kehilangan sesi.
 
 ## Testing
 `tests/satbinmasOfficialAccountService.test.js` covers the new service logic,
