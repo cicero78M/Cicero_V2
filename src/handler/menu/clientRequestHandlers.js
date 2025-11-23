@@ -189,6 +189,63 @@ const BULK_STATUS_SUMMARY_KEYWORDS = /(?:Status dinonaktifkan|entri gagal dipros
 const SATBINMAS_ROLE_CHOICES = [
   { code: "AKUN_RESMI_SATBINMAS", label: "Akun Resmi Satbinmas" },
 ];
+const SATBINMAS_PLATFORM_CHOICES = [
+  { code: "instagram", label: "Instagram" },
+  { code: "tiktok", label: "TikTok" },
+];
+
+function findSatbinmasPlatform(choice) {
+  if (!choice) return null;
+  const lowered = String(choice).trim().toLowerCase();
+  const parsedIndex = Number.parseInt(lowered, 10);
+  if (!Number.isNaN(parsedIndex)) {
+    const candidate = SATBINMAS_PLATFORM_CHOICES[parsedIndex - 1];
+    if (candidate) return candidate;
+  }
+
+  return (
+    SATBINMAS_PLATFORM_CHOICES.find(
+      ({ code, label }) =>
+        code.toLowerCase() === lowered || label.toLowerCase() === lowered
+    ) || null
+  );
+}
+
+function formatSatbinmasPlatformLabel(code) {
+  if (!code) return "";
+  return (
+    SATBINMAS_PLATFORM_CHOICES.find(({ code: itemCode }) => itemCode === code)
+      ?.label || code
+  );
+}
+
+async function fetchSatbinmasProfile(platform, username) {
+  if (platform === "tiktok") {
+    const profile = await fetchTiktokProfile(username);
+    const baseDisplayName = profile?.nickname || profile?.username || username;
+    return {
+      profile,
+      baseDisplayName,
+      profileUrl: profile?.avatar_url || `https://www.tiktok.com/@${username}`,
+      isActive: Boolean(profile && (profile.username || profile.nickname)),
+      isVerified: Boolean(profile?.verified),
+    };
+  }
+
+  const profile = await fetchInstagramInfo(username);
+  const baseDisplayName =
+    profile?.full_name || profile?.username || profile?.fullName || username;
+  return {
+    profile,
+    baseDisplayName,
+    profileUrl:
+      profile?.profile_url ||
+      profile?.profile_pic_url ||
+      `https://instagram.com/${username}`,
+    isActive: Boolean(profile && profile.username),
+    isVerified: Boolean(profile?.is_verified),
+  };
+}
 
 function standardizeDash(value) {
   return value
@@ -2640,10 +2697,73 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       ...draft,
       targetClientId: targetClientId.toUpperCase(),
     };
+    session.step = "satbinmasOfficial_promptPlatform";
+    await clientRequestHandlers.satbinmasOfficial_promptPlatform(
+      session,
+      chatId,
+      "",
+      waClient
+    );
+  },
+
+  satbinmasOfficial_promptPlatform: async (session, chatId, text, waClient) => {
+    const trimmed = (text || "").trim();
+    const lowered = trimmed.toLowerCase();
+    const draft = session.satbinmasOfficialDraft || {};
+
+    if (!trimmed) {
+      const menu = SATBINMAS_PLATFORM_CHOICES.map(
+        (option, idx) => `${idx + 1}. ${option.label}`
+      ).join("\n");
+      const prompt = [
+        "Pilih platform akun Satbinmas:",
+        menu,
+        "Balas angka atau nama platform (Instagram/TikTok).",
+        "Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar.",
+      ].join("\n");
+      session.step = "satbinmasOfficial_promptPlatform";
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    if (lowered === "kembali") {
+      await clientRequestHandlers.satbinmasOfficial_promptClient(
+        session,
+        chatId,
+        " ",
+        waClient
+      );
+      return;
+    }
+
+    const selectedPlatform = findSatbinmasPlatform(trimmed);
+    if (!selectedPlatform) {
+      const menu = SATBINMAS_PLATFORM_CHOICES.map(
+        (option, idx) => `${idx + 1}. ${option.label}`
+      ).join("\n");
+      const prompt = [
+        "Pilihan platform tidak dikenali. Gunakan angka atau ketik Instagram/TikTok.",
+        menu,
+        "Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar.",
+      ].join("\n");
+      session.step = "satbinmasOfficial_promptPlatform";
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    session.satbinmasOfficialDraft = {
+      ...draft,
+      platform: selectedPlatform.code,
+    };
     session.step = "satbinmasOfficial_captureHandle";
     await waClient.sendMessage(
       chatId,
-      "Ketik username Instagram resmi Satbinmas (boleh diawali @). Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar."
+      `Ketik username ${selectedPlatform.label} resmi Satbinmas (boleh diawali @). Ketik *kembali* untuk mengubah platform atau *batal* untuk keluar.`
     );
   },
 
@@ -2666,7 +2786,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     }
 
     if (lowered === "kembali") {
-      await clientRequestHandlers.satbinmasOfficial_promptClient(
+      await clientRequestHandlers.satbinmasOfficial_promptPlatform(
         session,
         chatId,
         "",
@@ -2675,11 +2795,24 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
+    const platform = draft.platform;
+    if (!platform) {
+      await clientRequestHandlers.satbinmasOfficial_promptPlatform(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    const platformLabel = formatSatbinmasPlatformLabel(platform);
+
     const normalizedHandle = normalizeHandleValue(trimmed);
     if (!normalizedHandle) {
       await waClient.sendMessage(
         chatId,
-        "Username tidak valid. Sertakan username Instagram tanpa spasi (contoh: @satbinmas)."
+        `Username tidak valid. Sertakan username ${platformLabel} tanpa spasi (contoh: @satbinmas).`
       );
       session.step = "satbinmasOfficial_captureHandle";
       return;
@@ -2687,32 +2820,29 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
     const username = normalizedHandle.replace(/^@/, "");
     let profile = null;
+    let fetched = null;
     try {
-      profile = await fetchInstagramInfo(username);
+      fetched = await fetchSatbinmasProfile(platform, username);
+      profile = fetched?.profile || fetched;
     } catch (err) {
       const reason = err?.message || "tidak diketahui";
       await waClient.sendMessage(
         chatId,
-        `❌ Gagal mengambil profil Instagram (${reason}). Coba ulangi dengan username lain atau ketik *batal*.`
+        `❌ Gagal mengambil profil ${platformLabel} (${reason}). Coba ulangi dengan username lain atau ketik *batal*.`
       );
       session.step = "satbinmasOfficial_captureHandle";
       return;
     }
 
     const roleLabel = draft.selectedRole?.label || "Satbinmas";
-    const baseDisplayName =
-      profile?.full_name || profile?.username || profile?.fullName || username;
-    const displayName = `${roleLabel} – ${baseDisplayName}`.trim();
-    const profileUrl =
-      profile?.profile_url || profile?.profile_pic_url || `https://instagram.com/${username}`;
-
+    const displayName = `${roleLabel} – ${fetched.baseDisplayName}`.trim();
     const payload = {
-      platform: "instagram",
+      platform,
       username,
       display_name: displayName,
-      profile_url: profileUrl,
-      is_active: Boolean(profile && profile.username),
-      is_verified: Boolean(profile?.is_verified),
+      profile_url: fetched.profileUrl,
+      is_active: Boolean(fetched.isActive),
+      is_verified: Boolean(fetched.isVerified),
     };
 
     try {
@@ -2726,9 +2856,10 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         `✅ Akun resmi Satbinmas ${statusLabel}.`,
         `Client ID: *${draft.targetClientId || session.selected_client_id}*`,
         `Peran: *${roleLabel}*`,
+        `Platform: *${platformLabel}*`,
         `Username: @${username}`,
         `Display name: ${displayName}`,
-        `Profile URL: ${profileUrl}`,
+        `Profile URL: ${payload.profile_url}`,
         `Status aktif: ${payload.is_active ? "Ya" : "Tidak"}`,
         `Verified: ${payload.is_verified ? "Ya" : "Tidak"}`,
       ].join("\n");
