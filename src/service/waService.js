@@ -16,6 +16,7 @@ import { handleIncoming } from "./waEventAggregator.js";
 import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
+import * as satbinmasOfficialAccountService from "./satbinmasOfficialAccountService.js";
 import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as premiumService from "./premiumService.js";
 import * as premiumReqModel from "../model/premiumRequestModel.js";
@@ -3157,10 +3158,134 @@ export async function handleGatewayMessage(msg) {
   }
 
   const senderId = msg.author || chatId;
+  const normalizedText = text.trim().toLowerCase();
+  const isGatewayForward = isGatewayComplaintForward({ senderId, text });
   const isAdmin = isAdminWhatsApp(senderId);
   const initialIsMyContact =
     typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
   const session = getSession(chatId);
+
+  if (normalizedText.startsWith("#satbinmasofficial")) {
+    if (!isGatewayForward) {
+      await waGatewayClient.sendMessage(
+        chatId,
+        "❌ Permintaan ini hanya diproses untuk pesan yang diteruskan melalui WA Gateway."
+      );
+      return;
+    }
+
+    const waNumber = senderId.replace(/[^0-9]/g, "");
+    const waId = waNumber
+      ? waNumber.startsWith("62")
+        ? waNumber
+        : "62" + waNumber.replace(/^0/, "")
+      : "";
+
+    if (!waId) {
+      await waGatewayClient.sendMessage(
+        chatId,
+        "❌ Nomor pengirim tidak valid untuk pengecekan akun resmi."
+      );
+      return;
+    }
+
+    let dashUsers = [];
+    try {
+      dashUsers = await dashboardUserModel.findAllByWhatsApp(waId);
+    } catch (err) {
+      console.error(
+        `[WA-GATEWAY] Failed to load dashboard users for ${waId}: ${err?.message || err}`
+      );
+    }
+
+    const validUsers = dashUsers.filter(
+      (u) => u.status === true && u.role?.toLowerCase() !== "operator"
+    );
+
+    if (validUsers.length === 0) {
+      await waGatewayClient.sendMessage(
+        chatId,
+        "❌ Nomor Anda tidak terdaftar atau belum aktif sebagai dashboard user."
+      );
+      return;
+    }
+
+    const chosenUser =
+      validUsers.find((u) => Array.isArray(u.client_ids) && u.client_ids.length)
+        || validUsers[0];
+    const clientIds = Array.isArray(chosenUser?.client_ids)
+      ? chosenUser.client_ids.filter(Boolean)
+      : [];
+    const primaryClientId = clientIds[0];
+
+    if (!primaryClientId) {
+      await waGatewayClient.sendMessage(
+        chatId,
+        "❌ Nomor dashboard Anda belum memiliki relasi client yang aktif."
+      );
+      return;
+    }
+
+    let clientName = primaryClientId;
+    try {
+      const client = await clientService.findClientById(primaryClientId);
+      if (client?.nama) {
+        clientName = client.nama;
+      }
+    } catch (err) {
+      console.error(
+        `[WA-GATEWAY] Failed to load client ${primaryClientId}: ${err?.message || err}`
+      );
+    }
+
+    let officialAccounts = [];
+    try {
+      officialAccounts =
+        await satbinmasOfficialAccountService.listSatbinmasOfficialAccounts(
+          primaryClientId
+        );
+    } catch (err) {
+      console.error(
+        `[WA-GATEWAY] Failed to fetch satbinmas official accounts for ${primaryClientId}: ${err?.message || err}`
+      );
+      await waGatewayClient.sendMessage(
+        chatId,
+        "❌ Gagal mengambil data akun resmi Satbinmas. Silakan coba lagi."
+      );
+      return;
+    }
+
+    const formatAccount = (account, idx) => {
+      const activeLabel = account.is_active ? "Aktif" : "Nonaktif";
+      const verifiedLabel = account.is_verified
+        ? "Terverifikasi"
+        : "Belum verifikasi";
+      const profileLink = account.profile_url || "-";
+      const username = account.username || "-";
+      return (
+        `${idx + 1}. [${getPlatformLabel(account.platform)}] ${username}\n` +
+        `   Status: ${activeLabel}, Verifikasi: ${verifiedLabel}\n` +
+        `   Profil: ${profileLink}`
+      );
+    };
+
+    const accountSection = officialAccounts.length
+      ? officialAccounts.map(formatAccount).join("\n")
+      : "Belum ada akun resmi yang terdaftar.";
+
+    const responseMessage =
+      "📡 *Data Akun Resmi Satbinmas*\n" +
+      `Client ID : ${primaryClientId}\n` +
+      `Polres    : ${clientName}\n` +
+      `Role      : ${chosenUser.role || "-"}\n` +
+      `Dashboard : ${chosenUser.username || "-"}\n` +
+      "\n" +
+      "*Akun Resmi*: \n" +
+      accountSection;
+
+    await waGatewayClient.sendMessage(chatId, responseMessage);
+    return;
+  }
 
   if (isGatewayComplaintForward({ senderId, text })) {
     console.log("[WA-GATEWAY] Skipped gateway-forwarded complaint message");
