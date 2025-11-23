@@ -42,6 +42,7 @@ import {
   deletePostByVideoId,
 } from "../../model/tiktokPostModel.js";
 import { extractVideoId } from "../../utils/tiktokHelper.js";
+import * as satbinmasOfficialAccountService from "../../service/satbinmasOfficialAccountService.js";
 
 function ignore(..._args) {}
 
@@ -185,6 +186,11 @@ const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
 const NUMERIC_ID_REGEX = /\b\d{6,}\b/g;
 const BOT_SUMMARY_HEADER_REGEX = /^📄\s*\*?Permohonan Penghapusan Data Personil/i;
 const BULK_STATUS_SUMMARY_KEYWORDS = /(?:Status dinonaktifkan|entri gagal diproses)/i;
+const SATBINMAS_ROLE_CHOICES = [
+  { code: "KASAT_BINMAS", label: "Kasat Binmas" },
+  { code: "KASI_BINPOLMAS", label: "Kasi Binpolmas/Binluh" },
+  { code: "OPERATOR_SATBINMAS", label: "Operator Satbinmas/Bhabinkamtibmas" },
+];
 
 function standardizeDash(value) {
   return value
@@ -276,6 +282,39 @@ function extractNarrativeReason(sentence, rawId) {
   }
 
   return "";
+}
+
+function findSelectedClient(session) {
+  const selectedId = session.selected_client_id;
+  if (!selectedId) return null;
+  const clients = session.clientList || [];
+  return (
+    clients.find((client) =>
+      String(client.client_id || "").toLowerCase() ===
+      String(selectedId || "").toLowerCase()
+    ) || { client_id: selectedId }
+  );
+}
+
+async function sendKelolaClientMenu(session, chatId, waClient) {
+  const client = findSelectedClient(session);
+  const clientLine = client?.nama
+    ? `Kelola Client: *${client.nama}* (${client.client_id})\n`
+    : client?.client_id
+    ? `Kelola Client (${client.client_id})\n`
+    : "Kelola Client\n";
+
+  const menuText =
+    `${clientLine}` +
+    `1️⃣ Update Data Client\n` +
+    `2️⃣ Hapus Client\n` +
+    `3️⃣ Info Client\n` +
+    `4️⃣ Ubah Status Massal\n` +
+    `5️⃣ Input Akun Resmi Satbinmas\n` +
+    `Ketik angka menu di atas atau *batal* untuk keluar.`;
+
+  session.step = "kelolaClient_menu";
+  await waClient.sendMessage(chatId, menuText);
 }
 
 function extractNarrativeName(sentence, rawId) {
@@ -2349,15 +2388,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
     session.selected_client_id = clients[idx].client_id;
-    session.step = "kelolaClient_menu";
-    await waClient.sendMessage(
-      chatId,
-      `Kelola Client: *${clients[idx].nama}* (${clients[idx].client_id})\n` +
-        `1️⃣ Update Data Client\n` +
-        `2️⃣ Hapus Client\n` +
-        `3️⃣ Info Client\n` +
-        `4️⃣ Ubah Status Massal\nKetik angka menu di atas atau *batal* untuk keluar.`
-    );
+    await sendKelolaClientMenu(session, chatId, waClient);
   },
   kelolaClient_menu: async (
     session,
@@ -2368,6 +2399,29 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     userModel,
     clientService
   ) => {
+    const lowered = text.trim().toLowerCase();
+    if (lowered === "batal") {
+      await clientRequestHandlers.clientMenu_management(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      return;
+    }
+
     if (text.trim() === "1") {
       session.step = "kelolaClient_updatefield";
       const fields = [
@@ -2436,6 +2490,20 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         userModel,
         clientService
       );
+    } else if (text.trim() === "5") {
+      session.satbinmasOfficialDraft = {
+        selectedRole: null,
+        targetClientId: session.selected_client_id,
+      };
+      await clientRequestHandlers.satbinmasOfficial_promptRole(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService
+      );
     } else {
       await waClient.sendMessage(
         chatId,
@@ -2485,6 +2553,220 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
     }
+    session.step = "main";
+  },
+
+  satbinmasOfficial_promptRole: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+    if (!trimmed) {
+      const options = SATBINMAS_ROLE_CHOICES.map(
+        (role, idx) => `${idx + 1}. ${role.label}`
+      ).join("\n");
+      const prompt = [
+        "Pilih peran Satbinmas untuk akun resmi yang akan dicatat:",
+        options,
+        "Ketik angka sesuai peran atau *batal* untuk kembali ke menu client.",
+      ].join("\n");
+      session.step = "satbinmasOfficial_promptRole";
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    const idx = parseInt(trimmed, 10) - 1;
+    const chosenRole = SATBINMAS_ROLE_CHOICES[idx];
+    if (!chosenRole) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas dengan angka peran yang tersedia atau ketik *batal*."
+      );
+      session.step = "satbinmasOfficial_promptRole";
+      return;
+    }
+
+    session.satbinmasOfficialDraft = {
+      ...(session.satbinmasOfficialDraft || {}),
+      selectedRole: chosenRole,
+    };
+    session.step = "satbinmasOfficial_promptClient";
+
+    const defaultClientId =
+      session.satbinmasOfficialDraft?.targetClientId || session.selected_client_id || "";
+    const prompt = [
+      `Peran dipilih: *${chosenRole.label}*.`,
+      "Masukkan Client ID tujuan untuk akun Satbinmas ini.",
+      defaultClientId
+        ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
+        : "Ketik Client ID yang akan disimpan.",
+      "Ketik *kembali* untuk memilih ulang peran atau *batal* untuk keluar.",
+    ].join("\n");
+
+    await waClient.sendMessage(chatId, prompt);
+  },
+
+  satbinmasOfficial_promptClient: async (session, chatId, text, waClient) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+    const draft = session.satbinmasOfficialDraft || {};
+
+    if (!trimmed) {
+      const defaultClientId = draft.targetClientId || session.selected_client_id || "";
+      const prompt = [
+        "Masukkan Client ID tujuan untuk akun Satbinmas ini.",
+        defaultClientId
+          ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
+          : "Ketik Client ID yang akan disimpan.",
+        "Ketik *kembali* untuk memilih ulang peran atau *batal* untuk keluar.",
+      ].join("\n");
+      session.step = "satbinmasOfficial_promptClient";
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    if (lowered === "kembali") {
+      await clientRequestHandlers.satbinmasOfficial_promptRole(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    const targetClientId = trimmed || draft.targetClientId || session.selected_client_id;
+    if (!targetClientId) {
+      await waClient.sendMessage(
+        chatId,
+        "Client ID tidak boleh kosong. Isi Client ID atau ketik *batal*."
+      );
+      session.step = "satbinmasOfficial_promptClient";
+      return;
+    }
+
+    session.satbinmasOfficialDraft = {
+      ...draft,
+      targetClientId: targetClientId.toUpperCase(),
+    };
+    session.step = "satbinmasOfficial_captureHandle";
+    await waClient.sendMessage(
+      chatId,
+      "Ketik username Instagram resmi Satbinmas (boleh diawali @). Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar."
+    );
+  },
+
+  satbinmasOfficial_captureHandle: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+    const draft = session.satbinmasOfficialDraft || {};
+
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    if (lowered === "kembali") {
+      await clientRequestHandlers.satbinmasOfficial_promptClient(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    const normalizedHandle = normalizeHandleValue(trimmed);
+    if (!normalizedHandle) {
+      await waClient.sendMessage(
+        chatId,
+        "Username tidak valid. Sertakan username Instagram tanpa spasi (contoh: @satbinmas)."
+      );
+      session.step = "satbinmasOfficial_captureHandle";
+      return;
+    }
+
+    const username = normalizedHandle.replace(/^@/, "");
+    let profile = null;
+    try {
+      profile = await fetchInstagramInfo(username);
+    } catch (err) {
+      const reason = err?.message || "tidak diketahui";
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mengambil profil Instagram (${reason}). Coba ulangi dengan username lain atau ketik *batal*.`
+      );
+      session.step = "satbinmasOfficial_captureHandle";
+      return;
+    }
+
+    const roleLabel = draft.selectedRole?.label || "Satbinmas";
+    const baseDisplayName =
+      profile?.full_name || profile?.username || profile?.fullName || username;
+    const displayName = `${roleLabel} – ${baseDisplayName}`.trim();
+    const profileUrl =
+      profile?.profile_url || profile?.profile_pic_url || `https://instagram.com/${username}`;
+
+    const payload = {
+      platform: "instagram",
+      username,
+      display_name: displayName,
+      profile_url: profileUrl,
+      is_active: Boolean(profile && profile.username),
+      is_verified: Boolean(profile?.is_verified),
+    };
+
+    try {
+      const result = await satbinmasOfficialAccountService.saveSatbinmasOfficialAccount(
+        draft.targetClientId || session.selected_client_id,
+        payload
+      );
+
+      const statusLabel = result.created ? "ditambahkan" : "diperbarui";
+      const summary = [
+        `✅ Akun resmi Satbinmas ${statusLabel}.`,
+        `Client ID: *${draft.targetClientId || session.selected_client_id}*`,
+        `Peran: *${roleLabel}*`,
+        `Username: @${username}`,
+        `Display name: ${displayName}`,
+        `Profile URL: ${profileUrl}`,
+        `Status aktif: ${payload.is_active ? "Ya" : "Tidak"}`,
+        `Verified: ${payload.is_verified ? "Ya" : "Tidak"}`,
+      ].join("\n");
+
+      await waClient.sendMessage(chatId, summary);
+    } catch (err) {
+      const reason = err?.message || "tidak diketahui";
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menyimpan akun Satbinmas: ${reason}`
+      );
+    }
+
     session.step = "main";
   },
 

@@ -46,4 +46,19 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
 - **Update Tugas Instagram**
   1. Bot menjalankan proses pengambilan tugas terbaru untuk client terkait.
 
+### Input Akun Resmi Satbinmas
+Untuk menambahkan akun resmi Satbinmas melalui bot:
+
+1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
+2. Pilih client tujuan lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
+3. Pilih peran akun (Kasat Binmas, Kasi Binpolmas/Binluh, atau Operator
+   Satbinmas/Bhabinkamtibmas).
+4. Konfirmasi atau ganti Client ID target.
+5. Ketik username Instagram (boleh memakai `@`). Bot memanggil RapidAPI
+   `fetchInstagramInfo` untuk menarik `display_name`, `profile_url`, status aktif,
+   dan status verifikasi sebelum menyimpan ke tabel
+   `satbinmas_official_accounts`.
+6. Gunakan `kembali` untuk mengulang peran/Client ID atau `batal` untuk kembali ke
+   menu kelola client.
+
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.

@@ -78,6 +78,31 @@ JSON error payload with the appropriate HTTP status code. Successful upserts use
 HTTP `201 Created` when a new row is inserted so API consumers can react to the
 change.
 
+## WhatsApp Bot Entry Point
+Operators can now add Satbinmas official Instagram accounts directly from the
+WhatsApp bot via the client management menu:
+
+1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
+2. Pilih client, lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
+3. Bot meminta peran Satbinmas dengan pilihan berikut (wajib dipilih sebelum
+   lanjut):
+   - `Kasat Binmas`
+   - `Kasi Binpolmas/Binluh`
+   - `Operator Satbinmas/Bhabinkamtibmas`
+4. Masukkan *Client ID* target (default mengikuti client yang dipilih pada menu
+   sebelumnya).
+5. Ketik username Instagram (boleh diawali `@`). Bot memanggil RapidAPI
+   `fetchInstagramInfo` untuk mengambil metadata akun.
+6. Sistem mengisi `display_name` (gabungan peran + nama akun), `profile_url`,
+   `is_active` (true jika profil ditemukan), serta `is_verified` dari respon
+   RapidAPI, lalu menyimpan data melalui
+   `satbinmasOfficialAccountService.saveSatbinmasOfficialAccount` ke tabel
+   `satbinmas_official_accounts`.
+
+Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
+`kembali` digunakan untuk mengulang pilihan peran atau Client ID tanpa
+kehilangan sesi.
+
 ## Testing
 `tests/satbinmasOfficialAccountService.test.js` covers the new service logic,
 including:
