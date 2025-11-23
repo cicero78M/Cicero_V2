@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-11-06*
+*Last updated: 2025-11-07*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -11,6 +11,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | Table Name | Purpose |
 |------------|---------|
 | clients | master table for registered organisations |
+| official_accounts | Official social handles per client with per-platform primaries |
 | satbinmas_official_accounts | Satbinmas official handles linked to a client |
 | user | members belonging to a client |
 | roles / user_roles | role catalogue and pivot for users |
@@ -50,6 +51,25 @@ Represents each organisation using the system.
 Official Satbinmas accounts for each client are stored in the dedicated
 `satbinmas_official_accounts` table described below so that operators can manage
 per-platform handles without mutating legacy `client_*` columns.
+
+### `official_accounts`
+Normalised catalog of official social media handles for every client. Intended to
+supersede the legacy `client_insta` / `client_tiktok` columns so Ditbinmas and Polres
+can manage per-platform primaries without losing history.
+- `official_account_id` – UUID primary key generated with `gen_random_uuid()`
+- `client_id` – foreign key referencing `clients(client_id)` with cascade delete
+- `platform` – text label such as `instagram`, `tiktok`, or `facebook`
+- `handle` – username/handle on the corresponding platform
+- `display_name` – optional friendly name shown in UI or exports
+- `links` – JSONB payload for profile or deep links (e.g., `{ "profile": "https://..." }`)
+- `is_primary` – boolean flag marking the canonical account per platform for the client
+- `is_active` / `is_verified` – status booleans for lifecycle and verification state
+- `created_at`, `updated_at` – timestamps with an update trigger that refreshes `updated_at`
+
+A partial unique index enforces one `is_primary = true` row per `(client_id, platform)` to
+prevent multiple primaries. Seed data provisions Ditbinmas Instagram and TikTok demo
+accounts tied to the `ditbinmas` client_id so dashboards and cron jobs have stable
+handles to target while onboarding new Polres entries.
 
 ### `user`
 Holds users belonging to a client.
