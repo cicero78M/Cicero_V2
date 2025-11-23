@@ -6,6 +6,7 @@ Dokumen ini merangkum endpoint klaim data berbasis OTP yang digunakan frontend u
 - **Endpoint:** `POST /api/claim/validate-email`
 - **Body:** `{ "email": "nama@contoh.com" }`
 - **Tujuan:** Memastikan alamat email memiliki format yang benar, domain email masih aktif (memiliki MX record), dan tidak dalam status non-aktif sebelum pengguna meminta OTP atau memperbarui data.
+- **Catatan format:** Validasi format menggunakan `validator.isEmail` dengan opsi `allow_utf8_local_part: false` dan `allow_ip_domain: false`, sehingga hanya alamat dengan karakter ASCII pada local-part serta domain non-IP yang diterima. Email selalu dinormalisasi menjadi huruf kecil sebelum pengecekan domain dan database.
 - **Respons berhasil (200):**
   ```json
   { "success": true, "data": { "message": "Email valid dan bisa digunakan" } }
