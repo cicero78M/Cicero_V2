@@ -9,22 +9,18 @@ import {
   refreshVerification,
 } from '../service/otpService.js';
 import dns from 'dns/promises';
+import validator from 'validator';
 
 function isConnectionError(err) {
   return err && err.code === 'ECONNREFUSED';
 }
 
 function isEmailFormatValid(email) {
-  if (!email || email.length > 254) return false;
   const normalized = normalizeEmail(email);
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(normalized)) return false;
-  const [localPart, domain] = normalized.split('@');
-  if (!localPart || !domain) return false;
-  if (localPart.length < 2 || localPart.length > 64) return false;
-  if (domain.length < 3 || domain.length > 190) return false;
-  if (domain.includes('..') || localPart.includes('..')) return false;
-  return domain.includes('.');
+  return validator.isEmail(normalized, {
+    allow_utf8_local_part: false,
+    allow_ip_domain: false,
+  });
 }
 
 function extractInstagramUsername(value) {
@@ -81,14 +77,14 @@ export async function validateEmail(req, res, next) {
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email wajib diisi' });
     }
-    const normalized = normalizeEmail(email);
-    if (!isEmailFormatValid(normalized)) {
+    if (!isEmailFormatValid(email)) {
       return res.status(400).json({
         success: false,
         message: 'Format email tidak valid. Pastikan menulis alamat lengkap seperti nama@contoh.com',
       });
     }
 
+    const normalized = normalizeEmail(email);
     const [, domain] = normalized.split('@');
     let domainActive = false;
     try {
