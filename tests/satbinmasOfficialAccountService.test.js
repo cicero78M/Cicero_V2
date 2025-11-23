@@ -85,13 +85,18 @@ test('saveSatbinmasOfficialAccount creates new row with default active flag', as
     client_id: 'POLRES01',
     platform: 'instagram',
     username: '@Satbinmas',
+    display_name: 'Satbinmas Kota',
+    profile_url: 'https://instagram.com/satbinmas',
     is_active: true,
+    is_verified: false,
   };
   mockUpsertAccount.mockResolvedValue(account);
 
   const result = await saveSatbinmasOfficialAccount('polres01', {
     platform: ' Instagram ',
     username: '  @Satbinmas  ',
+    display_name: ' Satbinmas Kota ',
+    profile_url: ' https://instagram.com/satbinmas ',
   });
 
   expect(mockFindAccountByClientAndPlatform).toHaveBeenCalledWith('POLRES01', 'instagram');
@@ -99,20 +104,31 @@ test('saveSatbinmasOfficialAccount creates new row with default active flag', as
     client_id: 'POLRES01',
     platform: 'instagram',
     username: '@Satbinmas',
+    display_name: 'Satbinmas Kota',
+    profile_url: 'https://instagram.com/satbinmas',
     is_active: true,
+    is_verified: false,
   });
   expect(result).toEqual({ account, created: true });
 });
 
-test('saveSatbinmasOfficialAccount keeps existing is_active when not provided', async () => {
+test('saveSatbinmasOfficialAccount keeps existing values when not provided', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
-  mockFindAccountByClientAndPlatform.mockResolvedValue({ is_active: false });
+  mockFindAccountByClientAndPlatform.mockResolvedValue({
+    is_active: false,
+    is_verified: true,
+    display_name: 'Existing Name',
+    profile_url: 'https://existing',
+  });
   const account = {
     satbinmas_account_id: 'uuid-2',
     client_id: 'POLRES01',
     platform: 'instagram',
     username: '@Satbinmas',
+    display_name: 'Existing Name',
+    profile_url: 'https://existing',
     is_active: false,
+    is_verified: true,
   };
   mockUpsertAccount.mockResolvedValue(account);
 
@@ -125,7 +141,10 @@ test('saveSatbinmasOfficialAccount keeps existing is_active when not provided', 
     client_id: 'POLRES01',
     platform: 'instagram',
     username: '@Satbinmas',
+    display_name: 'Existing Name',
+    profile_url: 'https://existing',
     is_active: false,
+    is_verified: true,
   });
   expect(result).toEqual({ account, created: false });
 });
@@ -145,13 +164,14 @@ test('saveSatbinmasOfficialAccount validates boolean values', async () => {
 
 test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
-  mockFindAccountByClientAndPlatform.mockResolvedValue({ is_active: false });
+  mockFindAccountByClientAndPlatform.mockResolvedValue({ is_active: false, is_verified: false });
   const account = {
     satbinmas_account_id: 'uuid-3',
     client_id: 'POLRES01',
     platform: 'tiktok',
     username: '@sat',
     is_active: true,
+    is_verified: true,
   };
   mockUpsertAccount.mockResolvedValue(account);
 
@@ -159,15 +179,49 @@ test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
     platform: 'TIKTOK',
     username: '@sat',
     is_active: 'yes',
+    is_verified: 'true',
   });
 
   expect(mockUpsertAccount).toHaveBeenCalledWith({
     client_id: 'POLRES01',
     platform: 'tiktok',
     username: '@sat',
+    display_name: null,
+    profile_url: null,
     is_active: true,
+    is_verified: true,
   });
   expect(result).toEqual({ account, created: false });
+});
+
+test('saveSatbinmasOfficialAccount defaults is_verified to false when new value missing', async () => {
+  mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
+  mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  const account = {
+    satbinmas_account_id: 'uuid-6',
+    client_id: 'POLRES01',
+    platform: 'instagram',
+    username: '@sat',
+    is_active: true,
+    is_verified: false,
+  };
+  mockUpsertAccount.mockResolvedValue(account);
+
+  const result = await saveSatbinmasOfficialAccount('POLRES01', {
+    platform: 'instagram',
+    username: '@sat',
+  });
+
+  expect(mockUpsertAccount).toHaveBeenCalledWith({
+    client_id: 'POLRES01',
+    platform: 'instagram',
+    username: '@sat',
+    display_name: null,
+    profile_url: null,
+    is_active: true,
+    is_verified: false,
+  });
+  expect(result).toEqual({ account, created: true });
 });
 
 test('deleteSatbinmasOfficialAccount validates account id', async () => {

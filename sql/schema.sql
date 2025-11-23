@@ -21,7 +21,10 @@ CREATE TABLE satbinmas_official_accounts (
   client_id VARCHAR NOT NULL REFERENCES clients(client_id) ON DELETE CASCADE,
   platform VARCHAR NOT NULL,
   username VARCHAR NOT NULL,
+  display_name TEXT,
+  profile_url TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE (client_id, platform)

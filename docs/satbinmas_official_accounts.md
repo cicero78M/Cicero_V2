@@ -9,7 +9,9 @@ that keeps official accounts separate from the legacy `client_insta` and
 ## Database Structure
 The `satbinmas_official_accounts` table is created by migration
 `20251023_create_satbinmas_official_accounts.sql` and is also captured in the
-canonical schema export.
+canonical schema export. Additional metadata columns (`display_name`,
+`profile_url`, `is_verified`) are layered on via
+`20251206_enrich_satbinmas_official_account_metadata.sql`.
 
 | Column | Description |
 |--------|-------------|
@@ -17,7 +19,10 @@ canonical schema export.
 | `client_id` | Foreign key to `clients(client_id)` with cascade delete |
 | `platform` | Lowercase platform label (e.g. `instagram`, `tiktok`) |
 | `username` | Trimmed handle for the Satbinmas operator |
+| `display_name` | Optional human-friendly label for the handle |
+| `profile_url` | Optional public link to the profile |
 | `is_active` | Boolean flag defaulting to `TRUE` |
+| `is_verified` | Boolean flag defaulting to `FALSE` that tracks badge/verification status |
 | `created_at` / `updated_at` | Timestamps maintained via trigger |
 
 A unique constraint on `(client_id, platform)` prevents duplicate handles per
@@ -25,17 +30,19 @@ platform, while a trigger keeps `updated_at` fresh on each change.【F:sql/migra
 
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
-used by higher layers:
+used by higher layers. Each reader returns the expanded metadata set (including
+`display_name`, `profile_url`, and `is_verified`):
 
 - `findByClientId(client_id)` returns all rows for a client ordered by platform.
 - `findByClientIdAndPlatform(client_id, platform)` normalizes the platform name
   and retrieves a single row. This is used to determine if an upsert should be
   treated as an update.
 - `findById(accountId)` loads a single account when deleting.
-- `upsertAccount({ client_id, platform, username, is_active })` performs an
-  `INSERT ... ON CONFLICT` so that create and update share one code path.
+- `upsertAccount({ client_id, platform, username, display_name?, profile_url?, is_active, is_verified })`
+  performs an `INSERT ... ON CONFLICT` so that create and update share one code
+  path while keeping the new metadata in sync.
 - `removeById(accountId)` deletes the account and returns the removed row for
-  audit purposes.【F:src/model/satbinmasOfficialAccountModel.js†L1-L51】
+  audit purposes.【F:src/model/satbinmasOfficialAccountModel.js†L1-L84】
 
 ## Service Behaviour
 `src/service/satbinmasOfficialAccountService.js` orchestrates validation and
@@ -44,15 +51,17 @@ business rules before calling the model:
 1. All operations ensure the client exists before continuing.
 2. `listSatbinmasOfficialAccounts` simply proxies to the model after the check.
 3. `saveSatbinmasOfficialAccount` validates that `platform` and `username` are
-   present, trims their values, normalizes the platform to lowercase, and
-   applies `parseOptionalBoolean` so operators can send booleans, `0/1`, or
-   strings like `yes/no`. When `is_active` is omitted, the previous value (if
-   any) is preserved; otherwise it defaults to `true` for new rows. The method
-   returns both the stored row and a `created` flag so callers know whether a new
-   record was inserted or updated.
+   present, trims their values, normalizes the platform to lowercase, and keeps
+   optional `display_name` and `profile_url` trimmed when provided. It applies
+   `parseOptionalBoolean` to both `is_active` (defaulting to `true` when new) and
+   `is_verified` (defaulting to `false` when new) so operators can send
+   booleans, `0/1`, or strings like `yes/no`. When either boolean is omitted,
+   the previous value (if any) is preserved. The method returns both the stored
+   row and a `created` flag so callers know whether a new record was inserted or
+   updated.
 4. `deleteSatbinmasOfficialAccount` checks the `satbinmas_account_id` belongs to
    the same client before removing it, ensuring operators cannot delete handles
-   from other clients.【F:src/service/satbinmasOfficialAccountService.js†L1-L105】
+   from other clients.【F:src/service/satbinmasOfficialAccountService.js†L1-L120】
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:
@@ -60,7 +69,7 @@ Three authenticated endpoints are exposed under the client routes namespace:
 - `GET /api/client/:client_id/satbinmas-official` lists the existing handles for
   a client.
 - `PUT /api/client/:client_id/satbinmas-official` upserts an account. The body
-  accepts `{ platform, username, is_active? }`.
+  accepts `{ platform, username, display_name?, profile_url?, is_active?, is_verified? }`.
 - `DELETE /api/client/:client_id/satbinmas-official/:account_id` removes a
   handle linked to the client.【F:src/controller/clientController.js†L7-L105】【F:src/routes/clientRoutes.js†L1-L36】
 
@@ -78,7 +87,7 @@ including:
 - Defaulting and preservation of the `is_active` flag.
 - Boolean parsing for strings like `"yes"`.
 - Deletion guardrails for missing IDs, unknown clients, and mismatched owners.
-- The happy path for removal returning the deleted row.【F:tests/satbinmasOfficialAccountService.test.js†L1-L214】
+- The happy path for removal returning the deleted row.【F:tests/satbinmasOfficialAccountService.test.js†L1-L240】
 
 Together, these tests ensure that the validation logic and status handling are
 stable before exposing the endpoints to client applications.
