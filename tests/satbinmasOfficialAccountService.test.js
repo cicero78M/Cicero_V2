@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 const mockFindClientById = jest.fn();
 const mockFindAccountsByClient = jest.fn();
 const mockFindAccountByClientAndPlatform = jest.fn();
+const mockFindAccountByPlatformAndUsername = jest.fn();
 const mockFindAccountById = jest.fn();
 const mockUpsertAccount = jest.fn();
 const mockRemoveAccount = jest.fn();
@@ -14,6 +15,7 @@ jest.unstable_mockModule('../src/model/clientModel.js', () => ({
 jest.unstable_mockModule('../src/model/satbinmasOfficialAccountModel.js', () => ({
   findByClientId: mockFindAccountsByClient,
   findByClientIdAndPlatform: mockFindAccountByClientAndPlatform,
+  findByPlatformAndUsername: mockFindAccountByPlatformAndUsername,
   findById: mockFindAccountById,
   upsertAccount: mockUpsertAccount,
   removeById: mockRemoveAccount,
@@ -35,6 +37,7 @@ beforeEach(() => {
   mockFindClientById.mockReset();
   mockFindAccountsByClient.mockReset();
   mockFindAccountByClientAndPlatform.mockReset();
+  mockFindAccountByPlatformAndUsername.mockReset();
   mockFindAccountById.mockReset();
   mockUpsertAccount.mockReset();
   mockRemoveAccount.mockReset();
@@ -80,6 +83,7 @@ test('saveSatbinmasOfficialAccount validates username', async () => {
 test('saveSatbinmasOfficialAccount creates new row with default active flag', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
   mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  mockFindAccountByPlatformAndUsername.mockResolvedValue(null);
   const account = {
     satbinmas_account_id: 'uuid-1',
     client_id: 'POLRES01',
@@ -115,10 +119,14 @@ test('saveSatbinmasOfficialAccount creates new row with default active flag', as
 test('saveSatbinmasOfficialAccount keeps existing values when not provided', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
   mockFindAccountByClientAndPlatform.mockResolvedValue({
+    satbinmas_account_id: 'existing-uuid',
     is_active: false,
     is_verified: true,
     display_name: 'Existing Name',
     profile_url: 'https://existing',
+  });
+  mockFindAccountByPlatformAndUsername.mockResolvedValue({
+    satbinmas_account_id: 'existing-uuid',
   });
   const account = {
     satbinmas_account_id: 'uuid-2',
@@ -152,6 +160,7 @@ test('saveSatbinmasOfficialAccount keeps existing values when not provided', asy
 test('saveSatbinmasOfficialAccount validates boolean values', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
   mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  mockFindAccountByPlatformAndUsername.mockResolvedValue(null);
 
   await expect(
     saveSatbinmasOfficialAccount('POLRES01', {
@@ -164,7 +173,14 @@ test('saveSatbinmasOfficialAccount validates boolean values', async () => {
 
 test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
-  mockFindAccountByClientAndPlatform.mockResolvedValue({ is_active: false, is_verified: false });
+  mockFindAccountByClientAndPlatform.mockResolvedValue({
+    satbinmas_account_id: 'existing-uuid',
+    is_active: false,
+    is_verified: false,
+  });
+  mockFindAccountByPlatformAndUsername.mockResolvedValue({
+    satbinmas_account_id: 'existing-uuid',
+  });
   const account = {
     satbinmas_account_id: 'uuid-3',
     client_id: 'POLRES01',
@@ -197,6 +213,7 @@ test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
 test('saveSatbinmasOfficialAccount defaults is_verified to false when new value missing', async () => {
   mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
   mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  mockFindAccountByPlatformAndUsername.mockResolvedValue(null);
   const account = {
     satbinmas_account_id: 'uuid-6',
     client_id: 'POLRES01',
@@ -222,6 +239,37 @@ test('saveSatbinmasOfficialAccount defaults is_verified to false when new value 
     is_verified: false,
   });
   expect(result).toEqual({ account, created: true });
+});
+
+test('saveSatbinmasOfficialAccount rejects duplicate username on platform across clients', async () => {
+  mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
+  mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  mockFindAccountByPlatformAndUsername.mockResolvedValue({
+    satbinmas_account_id: 'other-uuid',
+    client_id: 'OTHER',
+  });
+
+  await expect(
+    saveSatbinmasOfficialAccount('POLRES01', {
+      platform: 'instagram',
+      username: '@satbinmas',
+    })
+  ).rejects.toMatchObject({ statusCode: 409 });
+  expect(mockUpsertAccount).not.toHaveBeenCalled();
+});
+
+test('saveSatbinmasOfficialAccount maps database unique errors to 409', async () => {
+  mockFindClientById.mockResolvedValue({ client_id: 'POLRES01' });
+  mockFindAccountByClientAndPlatform.mockResolvedValue(null);
+  mockFindAccountByPlatformAndUsername.mockResolvedValue(null);
+  mockUpsertAccount.mockRejectedValue({ code: '23505' });
+
+  await expect(
+    saveSatbinmasOfficialAccount('POLRES01', {
+      platform: 'tiktok',
+      username: '@satbinmas',
+    })
+  ).rejects.toMatchObject({ statusCode: 409 });
 });
 
 test('deleteSatbinmasOfficialAccount validates account id', async () => {

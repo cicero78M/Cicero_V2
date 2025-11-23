@@ -25,6 +25,19 @@ export async function findByClientIdAndPlatform(client_id, platform) {
   return res.rows[0] || null;
 }
 
+export async function findByPlatformAndUsername(platform, username) {
+  const normalizedPlatform = normalizePlatform(platform);
+  const trimmedUsername = username?.trim();
+  const res = await query(
+    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
+     FROM satbinmas_official_accounts
+     WHERE LOWER(platform) = LOWER($1) AND LOWER(username) = LOWER($2)
+     LIMIT 1`,
+    [normalizedPlatform, trimmedUsername]
+  );
+  return res.rows[0] || null;
+}
+
 export async function findById(accountId) {
   const res = await query(
     `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at

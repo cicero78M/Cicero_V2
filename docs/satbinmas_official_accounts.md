@@ -1,5 +1,5 @@
 # Satbinmas Official Account Management
-*Last updated: 2025-11-08*
+*Last updated: 2025-11-09*
 
 This document explains how Satbinmas official social-media handles are stored
 and managed inside the Cicero backend. The feature introduces a dedicated table
@@ -11,7 +11,9 @@ The `satbinmas_official_accounts` table is created by migration
 `20251023_create_satbinmas_official_accounts.sql` and is also captured in the
 canonical schema export. Additional metadata columns (`display_name`,
 `profile_url`, `is_verified`) are layered on via
-`20251206_enrich_satbinmas_official_account_metadata.sql`.
+`20251206_enrich_satbinmas_official_account_metadata.sql`. Username uniqueness
+per platform is enforced at the database level (case-insensitive) by
+`20251207_enforce_unique_satbinmas_usernames.sql`.
 
 | Column | Description |
 |--------|-------------|
@@ -26,7 +28,10 @@ canonical schema export. Additional metadata columns (`display_name`,
 | `created_at` / `updated_at` | Timestamps maintained via trigger |
 
 A unique constraint on `(client_id, platform)` prevents duplicate handles per
-platform, while a trigger keeps `updated_at` fresh on each change.【F:sql/migrations/20251023_create_satbinmas_official_accounts.sql†L1-L25】【F:sql/schema.sql†L17-L26】
+client/platform pair, while a trigger keeps `updated_at` fresh on each change.
+An additional unique index on `(platform, LOWER(username))` disallows
+case-insensitive duplicate usernames on the same platform across all clients, and
+the migration removes older duplicates so the index can be created safely.【F:sql/migrations/20251023_create_satbinmas_official_accounts.sql†L1-L25】【F:sql/migrations/20251207_enforce_unique_satbinmas_usernames.sql†L1-L17】
 
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
@@ -37,6 +42,8 @@ used by higher layers. Each reader returns the expanded metadata set (including
 - `findByClientIdAndPlatform(client_id, platform)` normalizes the platform name
   and retrieves a single row. This is used to determine if an upsert should be
   treated as an update.
+- `findByPlatformAndUsername(platform, username)` normalizes inputs and detects
+  a case-insensitive username conflict across clients for the same platform.
 - `findById(accountId)` loads a single account when deleting.
 - `upsertAccount({ client_id, platform, username, display_name?, profile_url?, is_active, is_verified })`
   performs an `INSERT ... ON CONFLICT` so that create and update share one code
@@ -56,9 +63,11 @@ business rules before calling the model:
    `parseOptionalBoolean` to both `is_active` (defaulting to `true` when new) and
    `is_verified` (defaulting to `false` when new) so operators can send
    booleans, `0/1`, or strings like `yes/no`. When either boolean is omitted,
-   the previous value (if any) is preserved. The method returns both the stored
-   row and a `created` flag so callers know whether a new record was inserted or
-   updated.
+   the previous value (if any) is preserved. Username reuse across clients for
+   the same platform is rejected up front (HTTP 409) and guarded in the database
+   so callers receive a clear error instead of a generic constraint failure.
+   The method returns both the stored row and a `created` flag so callers know
+   whether a new record was inserted or updated.
 4. `deleteSatbinmasOfficialAccount` checks the `satbinmas_account_id` belongs to
    the same client before removing it, ensuring operators cannot delete handles
    from other clients.【F:src/service/satbinmasOfficialAccountService.js†L1-L120】
@@ -104,6 +113,16 @@ Both Instagram and TikTok are supported via the same endpoint. Example requests:
   "profile_url": "https://www.tiktok.com/@satbinmas_official",
   "is_active": true,
   "is_verified": false
+}
+```
+
+### Error Responses
+Attempting to reuse a username that already exists on the same platform (even
+for a different client) results in a `409 Conflict`:
+
+```json
+{
+  "message": "username already exists for this platform"
 }
 ```
 
