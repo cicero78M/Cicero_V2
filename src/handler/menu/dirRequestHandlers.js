@@ -44,6 +44,7 @@ import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRec
 import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmasTiktokCommentRecapService.js";
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
+import { fetchTodaySatbinmasOfficialMedia } from "../../service/satbinmasOfficialMediaService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -184,6 +185,15 @@ const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
   "🔎 *Monitoring Satbinmas Official*\n" +
   "Masukkan username Instagram Satbinmas Official yang ingin dicek. " +
   "Secara default akan memakai Client ID aktif (" +
+  `${clientId || DITBINMAS_CLIENT_ID}).\n` +
+  "Format balasan: `username` atau `CLIENT_ID username`.\n" +
+  "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
+  "Balas *batal* untuk kembali ke menu.";
+
+const SATBINMAS_OFFICIAL_MEDIA_PROMPT = (clientId) =>
+  "📸 *Ambil Konten Harian Satbinmas Official*\n" +
+  "Balas dengan Client ID (opsional) dan username Instagram Satbinmas Official. " +
+  "Jika Client ID tidak diisi, sistem memakai client aktif (" +
   `${clientId || DITBINMAS_CLIENT_ID}).\n` +
   "Format balasan: `username` atau `CLIENT_ID username`.\n" +
   "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
@@ -2000,7 +2010,8 @@ export const dirRequestHandlers = {
         "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n\n" +
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
-        "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n\n" +
+        "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
+        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2058,6 +2069,7 @@ export const dirRequestHandlers = {
           "34",
           "35",
           "36",
+          "37",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2105,6 +2117,17 @@ export const dirRequestHandlers = {
     if (choice === "36") {
       session.step = "fetch_satbinmas_official_metadata";
       await dirRequestHandlers.fetch_satbinmas_official_metadata(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    if (choice === "37") {
+      session.step = "fetch_satbinmas_official_media";
+      await dirRequestHandlers.fetch_satbinmas_official_media(
         session,
         chatId,
         "",
@@ -2300,6 +2323,105 @@ export const dirRequestHandlers = {
       await waClient.sendMessage(
         chatId,
         `❌ Gagal mengambil metadata akun Satbinmas Official: ${reason}`
+      );
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async fetch_satbinmas_official_media(session, chatId, text, waClient) {
+    const defaultClientId =
+      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const rawInput = (text || "").trim();
+
+    if (!rawInput) {
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_MEDIA_PROMPT(defaultClientId)
+      );
+      return;
+    }
+
+    if (rawInput.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu pengambilan konten Satbinmas Official ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const tokens = rawInput.split(/\s+/);
+    const guessedClientId =
+      tokens.length >= 2 && /^[A-Za-z0-9._-]{2,}$/u.test(tokens[0])
+        ? tokens.shift()
+        : defaultClientId;
+    const usernamePart = tokens.join(" ") || rawInput;
+    const normalizedClientId = (guessedClientId || defaultClientId).toUpperCase();
+    const username = usernamePart.replace(/^@/, "").trim();
+
+    if (!username) {
+      await waClient.sendMessage(chatId, "❌ Username belum diisi.");
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_MEDIA_PROMPT(normalizedClientId)
+      );
+      return;
+    }
+
+    const formatNumber = (value) => {
+      if (value == null) return "0";
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return String(value);
+      return numeric.toLocaleString("id-ID", { maximumFractionDigits: 0 });
+    };
+
+    try {
+      const summary = await fetchTodaySatbinmasOfficialMedia(
+        normalizedClientId,
+        username
+      );
+
+      if (!summary.accounts.length) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Akun @${username} tidak ditemukan atau tidak aktif untuk client ${normalizedClientId}.`
+        );
+      } else {
+        const lines = [
+          "📸 Rekap konten Satbinmas Official (hari ini)",
+          `Client ID : ${summary.clientId}`,
+        ];
+
+        summary.accounts.forEach((account) => {
+          lines.push(
+            `Username  : @${account.username}`,
+            `Konten    : ${formatNumber(account.total)} (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)})`
+          );
+        });
+
+        lines.push(
+          `Total     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update`
+        );
+
+        if (summary.errors.length) {
+          lines.push("⚠️ Beberapa akun gagal diambil:");
+          summary.errors.forEach((err) => {
+            lines.push(`- @${err.username}: ${err.message?.slice(0, 160) || "Gagal mengambil data"}`);
+          });
+        }
+
+        await waClient.sendMessage(chatId, lines.join("\n"));
+      }
+    } catch (error) {
+      console.error("Gagal mengambil konten Satbinmas Official:", error);
+      const message =
+        error?.message?.slice(0, 400) || "Gagal mengambil konten Satbinmas Official.";
+      await waClient.sendMessage(
+        chatId,
+        `❌ ${message}`
       );
     }
 

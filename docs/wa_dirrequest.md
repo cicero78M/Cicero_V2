@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-03-15*
+*Last updated: 2025-12-18*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -25,6 +25,20 @@ resmi Satbinmas.
      metadata tidak ditemukan atau layanan gagal diakses, bot menampilkan pesan
      kegagalan beserta alasan singkat.
   6. Balasan `batal` kapan pun akan menutup alur ini dan kembali ke menu utama
+     dirrequest.
+
+- **3️⃣7️⃣ Ambil konten harian IG Satbinmas Official**
+  1. Pilih opsi **3️⃣7️⃣** lalu balas `username` atau `CLIENT_ID username`.
+  2. Bot memuat akun Instagram Satbinmas Official aktif untuk client tersebut
+     (hanya yang tersimpan di tabel `satbinmas_official_accounts`).
+  3. Sistem memanggil RapidAPI Instagram lewat
+     `fetchTodaySatbinmasOfficialMedia` untuk mengambil konten hari berjalan
+     (filter `taken_at` pada hari ini) dan menormalkan metadata, termasuk
+     hashtag dan mention ke tabel terpisah.
+  4. Hasil ringkasan dikirim ke operator: jumlah konten hari ini, berapa yang
+     disisipkan baru vs. diperbarui, serta daftar akun yang gagal diambil jika
+     ada.
+  5. Balasan `batal` kapan saja keluar dari alur dan kembali ke menu utama
      dirrequest.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus

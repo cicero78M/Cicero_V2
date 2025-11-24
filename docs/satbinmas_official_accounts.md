@@ -1,5 +1,5 @@
 # Satbinmas Official Account Management
-*Last updated: 2025-11-24*
+*Last updated: 2025-12-18*
 
 This document explains how Satbinmas official social-media handles are stored
 and managed inside the Cicero backend. The feature introduces a dedicated table
@@ -32,6 +32,31 @@ client/platform pair, while a trigger keeps `updated_at` fresh on each change.
 An additional unique index on `(platform, LOWER(username))` disallows
 case-insensitive duplicate usernames on the same platform across all clients, and
 the migration removes older duplicates so the index can be created safely.【F:sql/migrations/20251023_create_satbinmas_official_accounts.sql†L1-L25】【F:sql/migrations/20251207_enforce_unique_satbinmas_usernames.sql†L1-L17】
+
+### Media Capture & Normalization
+Daily Instagram posts from Satbinmas Official accounts are stored in a dedicated
+table created by migration `20251208_create_satbinmas_official_media.sql`. The
+table captures per-media metadata (IDs, shortcodes, media/product type,
+timestamps, caption, engagement counts, URLs, dimensions, and flags) while
+maintaining the link to both the client and the owning account. A unique index
+on `(client_id, username, media_id, taken_at)` prevents duplicate snapshots and
+supports the required lookup path. Additional tables normalize hashtags and
+mentions so caption parsing stays queryable without string splitting.【F:sql/migrations/20251208_create_satbinmas_official_media.sql†L1-L64】【F:sql/migrations/20251208_create_satbinmas_official_media.sql†L66-L89】
+
+`src/model/satbinmasOfficialMediaModel.js` exposes `upsertMedia` for the main
+metadata plus `replaceHashtagsForMedia` and `replaceMentionsForMedia` to refresh
+the normalized references on each run. `satbinmasOfficialAccountModel` now
+includes `findActiveByClientAndPlatform` to load active Instagram handles per
+client, ensuring the media ingestion process only touches live accounts.【F:src/model/satbinmasOfficialMediaModel.js†L1-L117】【F:src/model/satbinmasOfficialAccountModel.js†L5-L27】
+
+`src/service/satbinmasOfficialMediaService.js` orchestrates the end-to-end
+fetch: it validates the client, loads active Instagram accounts, pulls the
+current-day posts from RapidAPI via `fetchInstagramPosts`, filters by
+`taken_at`, and upserts metadata plus hashtag/mention rows. It returns a summary
+of inserts vs. updates and captures errors per account for operator messaging.
+The WhatsApp dirrequest menu now includes option **3️⃣7️⃣** to trigger this
+service for a chosen client/username and respond with a per-account recap and a
+total row.【F:src/service/satbinmasOfficialMediaService.js†L1-L172】【F:src/handler/menu/dirRequestHandlers.js†L1928-L1999】【F:src/handler/menu/dirRequestHandlers.js†L2299-L2392】
 
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
