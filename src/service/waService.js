@@ -3147,8 +3147,10 @@ export async function handleGatewayMessage(msg) {
   const text = (msg.body || "").trim();
   if (!text) return;
 
-  if (msg.isStatus || chatId === "status@broadcast") {
-    console.log("[WA-GATEWAY] Ignored status message");
+  const isStatusBroadcast = chatId === "status@broadcast";
+
+  if (isStatusBroadcast) {
+    console.log("[WA-GATEWAY] Ignored status broadcast message");
     return;
   }
 
