@@ -176,6 +176,22 @@ function buildSuspiciousAccountNote(platform, handle) {
   ].join("\n");
 }
 
+function formatSatbinmasAttendanceEntry(row, index) {
+  const name = row.nama ? `${row.nama} (${row.client_id})` : row.client_id;
+  const instagram = row.instagram ? "✅" : "❌";
+  const tiktok = row.tiktok ? "✅" : "❌";
+  const missingPlatforms = [];
+
+  if (!row.instagram) missingPlatforms.push("Instagram");
+  if (!row.tiktok) missingPlatforms.push("TikTok");
+
+  const note = missingPlatforms.length
+    ? ` (Perlu: ${missingPlatforms.join(" & ")})`
+    : "";
+
+  return `${index}. ${name}${note}\n   Instagram: ${instagram}\n   TikTok: ${tiktok}`;
+}
+
 function ensureHandle(value) {
   if (!value) return "";
   const trimmed = String(value).trim();
@@ -4709,28 +4725,62 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       const attendance =
         await satbinmasOfficialAccountService.getSatbinmasOfficialAttendance();
 
+      const grouped = attendance.reduce(
+        (acc, row) => {
+          const hasInstagram = Boolean(row.instagram);
+          const hasTiktok = Boolean(row.tiktok);
+
+          if (hasInstagram && hasTiktok) {
+            acc.lengkap.push(row);
+          } else if (hasInstagram || hasTiktok) {
+            acc.kurang.push(row);
+          } else {
+            acc.belum.push(row);
+          }
+
+          return acc;
+        },
+        { lengkap: [], kurang: [], belum: [] }
+      );
+
       const lines = [
         "📋 Absensi Official Account Satbinmas",
         "Langkah pengisian data melalui #SatbinmasOfficial ke nomor 0812351114745.",
         "",
-        "*Legenda:* ✅ sudah mengisi, ❌ belum mengisi.",
+        "*Legenda Status:*",
+        "✅ Lengkap (Instagram & TikTok aktif)",
+        "⚠️ Kurang (salah satu platform belum aktif)",
+        "❌ Belum (tidak ada platform aktif)",
+        "",
+        "*Ringkasan:*",
+        `- Lengkap: ${grouped.lengkap.length}`,
+        `- Kurang: ${grouped.kurang.length}`,
+        `- Belum: ${grouped.belum.length}`,
         "",
       ];
 
-      if (attendance.length === 0) {
-        lines.push("Belum ada client bertipe ORG yang ditemukan.");
-      } else {
-        attendance.forEach((row, idx) => {
-          const name = row.nama
-            ? `${row.nama} (${row.client_id})`
-            : row.client_id;
-          lines.push(
-            `${idx + 1}. ${name}\n   Instagram: ${
-              row.instagram ? "✅" : "❌"
-            }\n   TikTok: ${row.tiktok ? "✅" : "❌"}`
-          );
+      const sections = [
+        { title: "✅ Absensi Lengkap", key: "lengkap" },
+        { title: "⚠️ Absensi Kurang", key: "kurang" },
+        { title: "❌ Belum Mengisi", key: "belum" },
+      ];
+
+      sections.forEach(({ title, key }) => {
+        lines.push(title);
+        const entries = grouped[key];
+
+        if (!entries.length) {
+          lines.push("-");
+          lines.push("");
+          return;
+        }
+
+        entries.forEach((row, idx) => {
+          lines.push(formatSatbinmasAttendanceEntry(row, idx + 1));
         });
-      }
+
+        lines.push("");
+      });
 
       await waClient.sendMessage(chatId, lines.join("\n"));
     } catch (err) {
