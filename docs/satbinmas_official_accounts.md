@@ -156,6 +156,19 @@ dispatcher menu *clientrequest* yang sama, sehingga balasan angka seperti "1"
 atau nama platform langsung diproses tanpa menggantung setelah memilih opsi
 platform.
 
+Balasan gateway merinci setiap akun resmi dalam format:
+
+```
+1. [Instagram] @username
+   Status: Aktif
+   Display Name: Satbinmas Kota
+   Centang Biru: Sudah / Belum
+   Link profile: https://instagram.com/username
+```
+
+`Link profile` otomatis menggunakan `profile_url` yang tersimpan atau dibangkitkan
+dari username (dengan prefiks domain Instagram/TikTok) ketika URL kosong.
+
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
 tanpa kehilangan sesi.

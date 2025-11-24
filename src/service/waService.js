@@ -3363,9 +3363,27 @@ export async function handleGatewayMessage(msg) {
     const formatAccount = (account, idx) => {
       const activeLabel = account.is_active ? "Aktif" : "Nonaktif";
       const blueTickLabel = account.is_verified ? "Sudah" : "Belum";
-      const profileLink = account.profile_url || "-";
-      const username = account.username || "-";
-      const displayName = account.display_name || "-";
+      const normalizedUsername = account.username?.trim();
+      const username = normalizedUsername || "-";
+      const displayName = account.display_name?.trim() || "-";
+      const profileLink = (() => {
+        const trimmedProfileUrl = account.profile_url?.trim();
+        if (trimmedProfileUrl) return trimmedProfileUrl;
+
+        if (!normalizedUsername) return "-";
+        const handle = normalizedUsername.replace(/^@/, "");
+        if (!handle) return "-";
+
+        if (account.platform?.toLowerCase() === "instagram") {
+          return `https://instagram.com/${handle}`;
+        }
+        if (account.platform?.toLowerCase() === "tiktok") {
+          return `https://www.tiktok.com/@${handle}`;
+        }
+
+        return "-";
+      })();
+
       return (
         `${idx + 1}. [${getPlatformLabel(account.platform)}] ${username}\n` +
         `   Status: ${activeLabel}\n` +
