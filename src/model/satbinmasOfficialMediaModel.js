@@ -147,3 +147,56 @@ export async function replaceMentionsForMedia(satbinmas_media_id, mentions = [])
     [satbinmas_media_id, ...normalizedMentions]
   );
 }
+
+export async function deleteMissingMediaForDate(
+  satbinmas_account_id,
+  fetchDate,
+  identifiers = []
+) {
+  if (!satbinmas_account_id || !fetchDate) return { deleted: 0, ids: [] };
+
+  const uniqueMediaIds = Array.from(
+    new Set(
+      (identifiers || [])
+        .map((item) => item?.media_id)
+        .filter((value) => typeof value === 'string' && value.trim())
+        .map((value) => value.trim())
+    )
+  );
+
+  const uniqueCodes = Array.from(
+    new Set(
+      (identifiers || [])
+        .map((item) => item?.code)
+        .filter((value) => typeof value === 'string' && value.trim())
+        .map((value) => value.trim())
+    )
+  );
+
+  const params = [satbinmas_account_id, fetchDate];
+  const keepClauses = [];
+
+  if (uniqueMediaIds.length) {
+    params.push(uniqueMediaIds);
+    keepClauses.push(`media_id = ANY($${params.length})`);
+  }
+
+  if (uniqueCodes.length) {
+    params.push(uniqueCodes);
+    keepClauses.push(`code IS NOT NULL AND code = ANY($${params.length})`);
+  }
+
+  const keepPredicate = keepClauses.length ? keepClauses.join(' OR ') : 'FALSE';
+
+  const res = await query(
+    `DELETE FROM satbinmas_official_media
+     WHERE satbinmas_account_id = $1
+       AND fetched_for_date = $2::date
+       AND NOT (${keepPredicate})
+     RETURNING satbinmas_media_id`,
+    params
+  );
+
+  const ids = res.rows?.map((row) => row.satbinmas_media_id).filter(Boolean) || [];
+  return { deleted: ids.length, ids };
+}

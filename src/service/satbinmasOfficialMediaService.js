@@ -184,7 +184,7 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
   const summary = {
     clientId: client.client_id,
     accounts: [],
-    totals: { fetched: 0, inserted: 0, updated: 0 },
+    totals: { fetched: 0, inserted: 0, updated: 0, removed: 0 },
     errors: [],
   };
 
@@ -201,10 +201,14 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
 
       let inserted = 0;
       let updated = 0;
+      let removed = 0;
+      const identifiers = [];
 
       for (const item of postsWithDate) {
         const normalized = normalizeInstagramMedia(account, item.post, item.takenAt, start);
         if (!normalized) continue;
+
+        identifiers.push({ media_id: normalized.media_id, code: normalized.code });
 
         const { media, inserted: isInserted } = await satbinmasOfficialMediaModel.upsertMedia(normalized);
 
@@ -226,15 +230,26 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
         }
       }
 
+      if (account?.satbinmas_account_id) {
+        const deletionResult = await satbinmasOfficialMediaModel.deleteMissingMediaForDate(
+          account.satbinmas_account_id,
+          start,
+          identifiers
+        );
+        removed = deletionResult.deleted;
+      }
+
       summary.accounts.push({
         username: account.username,
         total: postsWithDate.length,
         inserted,
         updated,
+        removed,
       });
       summary.totals.fetched += postsWithDate.length;
       summary.totals.inserted += inserted;
       summary.totals.updated += updated;
+      summary.totals.removed += removed;
     } catch (error) {
       summary.errors.push({
         username: account.username,

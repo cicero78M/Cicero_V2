@@ -2375,12 +2375,12 @@ export const dirRequestHandlers = {
 
         summary.accounts.forEach((account) => {
           lines.push(
-            `- @${account.username}: ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)})`
+            `- @${account.username}: ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)})`
           );
         });
 
         lines.push(
-          `Total     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update`
+          `Total     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update, ${formatNumber(summary.totals.removed)} dihapus`
         );
 
         if (summary.errors.length) {

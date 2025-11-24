@@ -45,18 +45,25 @@ mentions so caption parsing stays queryable without string splitting.【F:sql/mi
 
 `src/model/satbinmasOfficialMediaModel.js` exposes `upsertMedia` for the main
 metadata plus `replaceHashtagsForMedia` and `replaceMentionsForMedia` to refresh
-the normalized references on each run. `satbinmasOfficialAccountModel` now
-includes `findActiveByClientAndPlatform` to load active Instagram handles per
-client, ensuring the media ingestion process only touches live accounts.【F:src/model/satbinmasOfficialMediaModel.js†L1-L117】【F:src/model/satbinmasOfficialAccountModel.js†L5-L27】
+the normalized references on each run. Stale rows are removed per-account via
+`deleteMissingMediaForDate`, which deletes any media for the current fetch date
+whose `media_id`/`code` no longer appear in the latest crawl (cascading
+hashtags/mentions automatically). `satbinmasOfficialAccountModel` now includes
+`findActiveByClientAndPlatform` to load active Instagram handles per client,
+ensuring the media ingestion process only touches live accounts.【F:src/model/satbinmasOfficialMediaModel.js†L1-L158】【F:src/model/satbinmasOfficialAccountModel.js†L5-L27】
 
 `src/service/satbinmasOfficialMediaService.js` orchestrates the end-to-end
 fetch: it validates the client, loads active Instagram accounts, pulls the
 current-day posts from RapidAPI via `fetchInstagramPosts`, filters by
-`taken_at`, and upserts metadata plus hashtag/mention rows. It returns a summary
-of inserts vs. updates and captures errors per account for operator messaging.
-The WhatsApp dirrequest menu now includes option **3️⃣7️⃣** to trigger this
-service for a chosen client/username and respond with a per-account recap and a
-total row.【F:src/service/satbinmasOfficialMediaService.js†L1-L172】【F:src/handler/menu/dirRequestHandlers.js†L1928-L1999】【F:src/handler/menu/dirRequestHandlers.js†L2299-L2392】
+`taken_at`, and upserts metadata plus hashtag/mention rows. After each account
+is processed the service collects the returned `media_id`/`code` set and removes
+any `satbinmas_official_media` rows for the same fetch date that were not
+present, relying on cascade deletes to purge hashtags/mentions for removed
+records. It returns a summary of inserts vs. updates vs. deletions and captures
+errors per account for operator messaging. The WhatsApp dirrequest menu now
+includes option **3️⃣7️⃣** to trigger this service for a chosen
+client/username and respond with a per-account recap and a total
+row.【F:src/service/satbinmasOfficialMediaService.js†L1-L206】【F:src/handler/menu/dirRequestHandlers.js†L1928-L1999】【F:src/handler/menu/dirRequestHandlers.js†L2299-L2392】
 
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
