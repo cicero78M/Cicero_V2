@@ -84,11 +84,15 @@ Dashboard : admin_makassar
 
 Akun Resmi:
 1. [Instagram] @satbinmas_mks
-   Status: Aktif, Verifikasi: Belum verifikasi
-   Profil: https://instagram.com/satbinmas_mks
+   Status: Aktif
+   Display Name: Satbinmas Makassar
+   Centang Biru: Belum
+   Link profile: https://instagram.com/satbinmas_mks
 2. [TikTok] @satbinmas.tiktok
-   Status: Nonaktif, Verifikasi: Terverifikasi
-   Profil: -
+   Status: Nonaktif
+   Display Name: Satbinmas Tiktok
+   Centang Biru: Sudah
+   Link profile: -
 ```
 
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.

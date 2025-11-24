@@ -3362,15 +3362,16 @@ export async function handleGatewayMessage(msg) {
 
     const formatAccount = (account, idx) => {
       const activeLabel = account.is_active ? "Aktif" : "Nonaktif";
-      const verifiedLabel = account.is_verified
-        ? "Terverifikasi"
-        : "Belum verifikasi";
+      const blueTickLabel = account.is_verified ? "Sudah" : "Belum";
       const profileLink = account.profile_url || "-";
       const username = account.username || "-";
+      const displayName = account.display_name || "-";
       return (
         `${idx + 1}. [${getPlatformLabel(account.platform)}] ${username}\n` +
-        `   Status: ${activeLabel}, Verifikasi: ${verifiedLabel}\n` +
-        `   Profil: ${profileLink}`
+        `   Status: ${activeLabel}\n` +
+        `   Display Name: ${displayName}\n` +
+        `   Centang Biru: ${blueTickLabel}\n` +
+        `   Link profile: ${profileLink}`
       );
     };
 
