@@ -75,6 +75,11 @@ business rules before calling the model:
    simple attendance list containing `client_id`, `nama`, and boolean flags
    indicating whether an active Instagram or TikTok official account has been
    captured for each satker.【F:src/service/satbinmasOfficialAccountService.js†L141-L166】
+6. Pada menu WhatsApp *Transfer & Laporan → Absensi Official Account*, daftar
+   satker ditampilkan hanya dengan nama (tanpa `client_id`) serta status ikon
+   Instagram/TikTok tanpa catatan "Perlu" agar tidak menampilkan metadata
+   sensitif di grup. Format baris dibangun oleh helper
+   `formatSatbinmasAttendanceEntry` sebelum dikirim ke pengguna.【F:src/handler/menu/clientRequestHandlers.js†L170-L189】【F:src/handler/menu/clientRequestHandlers.js†L4722-L4787】
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:

@@ -177,19 +177,11 @@ function buildSuspiciousAccountNote(platform, handle) {
 }
 
 function formatSatbinmasAttendanceEntry(row, index) {
-  const name = row.nama ? `${row.nama} (${row.client_id})` : row.client_id;
+  const name = row.nama?.trim() || "-";
   const instagram = row.instagram ? "✅" : "❌";
   const tiktok = row.tiktok ? "✅" : "❌";
-  const missingPlatforms = [];
 
-  if (!row.instagram) missingPlatforms.push("Instagram");
-  if (!row.tiktok) missingPlatforms.push("TikTok");
-
-  const note = missingPlatforms.length
-    ? ` (Perlu: ${missingPlatforms.join(" & ")})`
-    : "";
-
-  return `${index}. ${name}${note}\n   Instagram: ${instagram}\n   TikTok: ${tiktok}`;
+  return `${index}. ${name}\n   Instagram: ${instagram}\n   TikTok: ${tiktok}`;
 }
 
 function ensureHandle(value) {

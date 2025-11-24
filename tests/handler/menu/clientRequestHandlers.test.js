@@ -276,9 +276,13 @@ describe('absensiSatbinmasOfficial', () => {
       chatId,
       expect.stringContaining('⚠️ Absensi Kurang')
     );
-    expect(sendMessage).toHaveBeenCalledWith(
+    expect(sendMessage).not.toHaveBeenCalledWith(
       chatId,
-      expect.stringContaining('Perlu: TikTok')
+      expect.stringContaining('POLRES02')
+    );
+    expect(sendMessage).not.toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Perlu:')
     );
 
     attendanceSpy.mockRestore();
