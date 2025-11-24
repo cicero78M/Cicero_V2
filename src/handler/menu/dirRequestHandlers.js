@@ -192,12 +192,10 @@ const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
 
 const SATBINMAS_OFFICIAL_MEDIA_PROMPT = (clientId) =>
   "📸 *Ambil Konten Harian Satbinmas Official*\n" +
-  "Balas dengan Client ID (opsional) dan username Instagram Satbinmas Official. " +
-  "Jika Client ID tidak diisi, sistem memakai client aktif (" +
-  `${clientId || DITBINMAS_CLIENT_ID}).\n` +
-  "Format balasan: `username` atau `CLIENT_ID username`.\n" +
-  "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
-  "Balas *batal* untuk kembali ke menu.";
+  "Bot otomatis mengambil seluruh akun Instagram Satbinmas Official yang aktif " +
+  "untuk Client ID " +
+  `${clientId || DITBINMAS_CLIENT_ID}.\n` +
+  "Tidak perlu mengirim username atau Client ID tambahan. Balas *batal* untuk kembali.";
 
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
@@ -2011,7 +2009,7 @@ export const dirRequestHandlers = {
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
-        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official\n\n" +
+        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (otomatis akun aktif)\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2333,15 +2331,8 @@ export const dirRequestHandlers = {
   async fetch_satbinmas_official_media(session, chatId, text, waClient) {
     const defaultClientId =
       session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const normalizedClientId = (defaultClientId || DITBINMAS_CLIENT_ID).toUpperCase();
     const rawInput = (text || "").trim();
-
-    if (!rawInput) {
-      await waClient.sendMessage(
-        chatId,
-        SATBINMAS_OFFICIAL_MEDIA_PROMPT(defaultClientId)
-      );
-      return;
-    }
 
     if (rawInput.toLowerCase() === "batal") {
       await waClient.sendMessage(
@@ -2353,24 +2344,6 @@ export const dirRequestHandlers = {
       return;
     }
 
-    const tokens = rawInput.split(/\s+/);
-    const guessedClientId =
-      tokens.length >= 2 && /^[A-Za-z0-9._-]{2,}$/u.test(tokens[0])
-        ? tokens.shift()
-        : defaultClientId;
-    const usernamePart = tokens.join(" ") || rawInput;
-    const normalizedClientId = (guessedClientId || defaultClientId).toUpperCase();
-    const username = usernamePart.replace(/^@/, "").trim();
-
-    if (!username) {
-      await waClient.sendMessage(chatId, "❌ Username belum diisi.");
-      await waClient.sendMessage(
-        chatId,
-        SATBINMAS_OFFICIAL_MEDIA_PROMPT(normalizedClientId)
-      );
-      return;
-    }
-
     const formatNumber = (value) => {
       if (value == null) return "0";
       const numeric = Number(value);
@@ -2379,26 +2352,30 @@ export const dirRequestHandlers = {
     };
 
     try {
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_MEDIA_PROMPT(normalizedClientId)
+      );
+
       const summary = await fetchTodaySatbinmasOfficialMedia(
-        normalizedClientId,
-        username
+        normalizedClientId
       );
 
       if (!summary.accounts.length) {
         await waClient.sendMessage(
           chatId,
-          `❌ Akun @${username} tidak ditemukan atau tidak aktif untuk client ${normalizedClientId}.`
+          `⚠️ Tidak ada akun Instagram Satbinmas Official aktif untuk client ${normalizedClientId}.`
         );
       } else {
         const lines = [
           "📸 Rekap konten Satbinmas Official (hari ini)",
           `Client ID : ${summary.clientId}`,
+          `Akun aktif: ${formatNumber(summary.accounts.length)}`,
         ];
 
         summary.accounts.forEach((account) => {
           lines.push(
-            `Username  : @${account.username}`,
-            `Konten    : ${formatNumber(account.total)} (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)})`
+            `- @${account.username}: ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)})`
           );
         });
 
