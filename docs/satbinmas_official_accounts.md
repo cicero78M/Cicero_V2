@@ -167,7 +167,9 @@ Balasan gateway merinci setiap akun resmi dalam format:
 ```
 
 `Link profile` otomatis menggunakan `profile_url` yang tersimpan atau dibangkitkan
-dari username (dengan prefiks domain Instagram/TikTok) ketika URL kosong.
+dari username (dengan prefiks domain Instagram/TikTok) ketika URL kosong. URL yang
+tidak memakai domain profil resmi (misalnya CDN foto Instagram) diabaikan dan
+diganti tautan kanonik berdasarkan username.
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)

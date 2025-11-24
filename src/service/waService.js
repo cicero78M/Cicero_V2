@@ -3383,16 +3383,16 @@ export async function handleGatewayMessage(msg) {
         };
 
         const profileUrlMatchesPlatform = () => {
+          const allowedHostsByPlatform = {
+            instagram: ["instagram.com", "www.instagram.com", "m.instagram.com"],
+            tiktok: ["tiktok.com", "www.tiktok.com", "m.tiktok.com"],
+          };
+
           try {
             const url = new URL(trimmedProfileUrl);
             const hostname = url.hostname.toLowerCase();
-            if (normalizedPlatform === "instagram") {
-              return hostname.endsWith("instagram.com");
-            }
-            if (normalizedPlatform === "tiktok") {
-              return hostname.endsWith("tiktok.com");
-            }
-            return false;
+            const allowedHosts = allowedHostsByPlatform[normalizedPlatform] || [];
+            return allowedHosts.includes(hostname);
           } catch (err) {
             return false;
           }
