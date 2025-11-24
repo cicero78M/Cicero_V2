@@ -147,8 +147,9 @@ directly from the WhatsApp bot via the client management menu:
    `satbinmas_official_accounts`.
 7. Setelah penyimpanan sukses, bot menanyakan apakah operator ingin menambah
    akun official lainnya (`tambah`) atau memperbarui data yang sudah ada
-   (`ubah`). Balasan `selesai`/`batal` akan menutup alur dan kembali ke menu
-   kelola client.
+   (`ubah`). Balasan `selesai`/`batal` kini langsung menutup sesi Satbinmas
+   tanpa menampilkan ulang menu *Kelola Client*, sehingga percakapan selesai
+   setelah permintaan tersebut dipenuhi.
 
 Pesan yang dikirim lewat alur *WA Gateway* (`#satbinmasofficial`) kini memakai
 dispatcher menu *clientrequest* yang sama, sehingga balasan angka seperti "1"

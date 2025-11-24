@@ -43,6 +43,7 @@ import {
 } from "../../model/tiktokPostModel.js";
 import { extractVideoId } from "../../utils/tiktokHelper.js";
 import * as satbinmasOfficialAccountService from "../../service/satbinmasOfficialAccountService.js";
+import { clearSession } from "../../utils/sessionsHelper.js";
 
 function ignore(..._args) {}
 
@@ -2891,7 +2892,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
       const followUpPrompt = [
         "Apakah Anda ingin menambahkan akun resmi Satbinmas lainnya atau mengubah data yang sudah ada?",
-        "Balas *tambah* untuk menambahkan akun lain, *ubah* untuk memperbarui data, atau *selesai* untuk kembali ke menu utama.",
+        "Balas *tambah* untuk menambahkan akun lain, *ubah* untuk memperbarui data, atau *selesai* untuk menutup sesi ini.",
       ].join("\n");
 
       session.step = "satbinmasOfficial_afterSave";
@@ -2913,9 +2914,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
   satbinmasOfficial_afterSave: async (session, chatId, text, waClient) => {
     const trimmed = (text || "").trim().toLowerCase();
 
-    if (["batal", "selesai", "tidak", "nggak"].includes(trimmed)) {
-      await sendKelolaClientMenu(session, chatId, waClient);
-      session.step = "main";
+    if (["selesai", "batal", "tidak", "nggak"].includes(trimmed)) {
+      clearSession(chatId);
+      await waClient.sendMessage(chatId, "✅ Sesi Satbinmas resmi ditutup.");
       return;
     }
 
