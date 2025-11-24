@@ -185,6 +185,7 @@ async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPI
   const { start, end } = getTodayRange();
   const summary = {
     clientId: client.client_id,
+    name: client.nama || null,
     accounts: [],
     totals: { fetched: 0, inserted: 0, updated: 0, removed: 0 },
     errors: [],
