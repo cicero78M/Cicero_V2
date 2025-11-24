@@ -3367,21 +3367,42 @@ export async function handleGatewayMessage(msg) {
       const username = normalizedUsername || "-";
       const displayName = account.display_name?.trim() || "-";
       const profileLink = (() => {
+        const normalizedHandle = normalizedUsername?.replace(/^@/, "");
+        const normalizedPlatform = account.platform?.toLowerCase();
         const trimmedProfileUrl = account.profile_url?.trim();
-        if (trimmedProfileUrl) return trimmedProfileUrl;
 
-        if (!normalizedUsername) return "-";
-        const handle = normalizedUsername.replace(/^@/, "");
-        if (!handle) return "-";
+        const canonicalFromUsername = () => {
+          if (!normalizedHandle) return "-";
+          if (normalizedPlatform === "instagram") {
+            return `https://www.instagram.com/${normalizedHandle}`;
+          }
+          if (normalizedPlatform === "tiktok") {
+            return `https://www.tiktok.com/@${normalizedHandle}`;
+          }
+          return "-";
+        };
 
-        if (account.platform?.toLowerCase() === "instagram") {
-          return `https://instagram.com/${handle}`;
+        const profileUrlMatchesPlatform = () => {
+          try {
+            const url = new URL(trimmedProfileUrl);
+            const hostname = url.hostname.toLowerCase();
+            if (normalizedPlatform === "instagram") {
+              return hostname.endsWith("instagram.com");
+            }
+            if (normalizedPlatform === "tiktok") {
+              return hostname.endsWith("tiktok.com");
+            }
+            return false;
+          } catch (err) {
+            return false;
+          }
+        };
+
+        if (trimmedProfileUrl && profileUrlMatchesPlatform()) {
+          return trimmedProfileUrl;
         }
-        if (account.platform?.toLowerCase() === "tiktok") {
-          return `https://www.tiktok.com/@${handle}`;
-        }
 
-        return "-";
+        return canonicalFromUsername();
       })();
 
       return (
