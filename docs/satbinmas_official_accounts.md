@@ -45,7 +45,10 @@ mentions so caption parsing stays queryable without string splitting.【F:sql/mi
 
 `src/model/satbinmasOfficialMediaModel.js` exposes `upsertMedia` for the main
 metadata plus `replaceHashtagsForMedia` and `replaceMentionsForMedia` to refresh
-the normalized references on each run. Stale rows are removed per-account via
+the normalized references on each run. The upsert statement maps exactly 25
+placeholders to the 25 target columns (through `is_video`) to keep Postgres from
+rejecting inserts when the parameters shift, ensuring the daily ingestion loop
+can retry rows idempotently. Stale rows are removed per-account via
 `deleteMissingMediaForDate`, which deletes any media for the current fetch date
 whose `media_id`/`code` no longer appear in the latest crawl (cascading
 hashtags/mentions automatically). `satbinmasOfficialAccountModel` now includes
