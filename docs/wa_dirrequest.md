@@ -30,14 +30,16 @@ resmi Satbinmas.
 - **3️⃣7️⃣ Ambil konten harian IG Satbinmas Official**
   1. Pilih opsi **3️⃣7️⃣**. Bot langsung mengeksekusi tanpa menunggu balasan.
   2. Sistem otomatis memuat seluruh akun Instagram Satbinmas Official yang
-     `is_active` pada client aktif (default `DITBINMAS`) dari tabel
-     `satbinmas_official_accounts`.
-  3. RapidAPI Instagram dipanggil melalui `fetchTodaySatbinmasOfficialMedia`
-     untuk menarik konten hari berjalan (filter `taken_at` hari ini) dan
-     menormalkan metadata, termasuk hashtag dan mention ke tabel terpisah.
-  4. Operator menerima rekap singkat per akun (total konten, sisipan baru,
-     pembaruan) serta ringkasan agregat dan daftar akun yang gagal diproses
-     jika ada.
+     `is_active` untuk setiap client bertipe `ORG` dari tabel
+     `satbinmas_official_accounts`, dieksekusi berurutan per client dengan
+     jeda agar tidak melanggar rate limit RapidAPI.
+  3. RapidAPI Instagram dipanggil melalui
+     `fetchTodaySatbinmasOfficialMediaForOrgClients` untuk menarik konten hari
+     berjalan (filter `taken_at` hari ini) dan menormalkan metadata, termasuk
+     hashtag dan mention ke tabel terpisah.
+  4. Operator menerima rekap singkat per client dan per akun (total konten,
+     sisipan baru, pembaruan) serta ringkasan agregat dan daftar akun yang gagal
+     diproses jika ada.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.

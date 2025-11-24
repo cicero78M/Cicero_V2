@@ -3,6 +3,13 @@ import * as satbinmasOfficialAccountModel from '../model/satbinmasOfficialAccoun
 import * as satbinmasOfficialMediaModel from '../model/satbinmasOfficialMediaModel.js';
 import { fetchInstagramPosts } from './instaRapidService.js';
 
+const RAPIDAPI_FETCH_DELAY_MS = 1500;
+
+function wait(ms = RAPIDAPI_FETCH_DELAY_MS) {
+  if (!ms || ms < 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function createError(message, statusCode) {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -164,12 +171,7 @@ function getTodayRange() {
   return { start, end };
 }
 
-export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter = null) {
-  const client = await clientModel.findById(clientId);
-  if (!client) {
-    throw createError('Client not found', 404);
-  }
-
+async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPIDAPI_FETCH_DELAY_MS) {
   const accounts = await satbinmasOfficialAccountModel.findActiveByClientAndPlatform(
     client.client_id,
     'instagram'
@@ -192,7 +194,8 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
     return summary;
   }
 
-  for (const account of scopedAccounts) {
+  for (let index = 0; index < scopedAccounts.length; index += 1) {
+    const account = scopedAccounts[index];
     try {
       const posts = await fetchInstagramPosts(account.username, 50);
       const postsWithDate = posts
@@ -210,7 +213,9 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
 
         identifiers.push({ media_id: normalized.media_id, code: normalized.code });
 
-        const { media, inserted: isInserted } = await satbinmasOfficialMediaModel.upsertMedia(normalized);
+        const { media, inserted: isInserted } = await satbinmasOfficialMediaModel.upsertMedia(
+          normalized
+        );
 
         if (media?.satbinmas_media_id) {
           await satbinmasOfficialMediaModel.replaceHashtagsForMedia(
@@ -256,7 +261,59 @@ export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter 
         message: error?.message || 'Unknown error',
       });
     }
+
+    const isLastAccount = index === scopedAccounts.length - 1;
+    if (!isLastAccount) {
+      await wait(delayMs);
+    }
   }
 
   return summary;
+}
+
+export async function fetchTodaySatbinmasOfficialMedia(clientId, usernameFilter = null) {
+  const client = await clientModel.findById(clientId);
+  if (!client) {
+    throw createError('Client not found', 404);
+  }
+
+  return fetchMediaForClient(client, usernameFilter);
+}
+
+export async function fetchTodaySatbinmasOfficialMediaForOrgClients(
+  delayMs = RAPIDAPI_FETCH_DELAY_MS
+) {
+  const clients = await clientModel.findAllOrgClients();
+  const results = [];
+
+  const totals = {
+    clients: 0,
+    accounts: 0,
+    fetched: 0,
+    inserted: 0,
+    updated: 0,
+    removed: 0,
+    errors: 0,
+  };
+
+  for (let index = 0; index < clients.length; index += 1) {
+    const client = clients[index];
+    const summary = await fetchMediaForClient(client, null, delayMs);
+
+    results.push(summary);
+    totals.clients += 1;
+    totals.accounts += summary.accounts.length;
+    totals.fetched += summary.totals.fetched;
+    totals.inserted += summary.totals.inserted;
+    totals.updated += summary.totals.updated;
+    totals.removed += summary.totals.removed;
+    totals.errors += summary.errors.length;
+
+    const isLastClient = index === clients.length - 1;
+    if (!isLastClient) {
+      await wait(delayMs);
+    }
+  }
+
+  return { clients: results, totals };
 }

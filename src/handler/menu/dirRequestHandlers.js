@@ -44,7 +44,7 @@ import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRec
 import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmasTiktokCommentRecapService.js";
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
-import { fetchTodaySatbinmasOfficialMedia } from "../../service/satbinmasOfficialMediaService.js";
+import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -190,11 +190,10 @@ const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
   "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
   "Balas *batal* untuk kembali ke menu.";
 
-const SATBINMAS_OFFICIAL_MEDIA_PROMPT = (clientId) =>
+const SATBINMAS_OFFICIAL_MEDIA_PROMPT =
   "📸 *Ambil Konten Harian Satbinmas Official*\n" +
-  "Bot otomatis mengambil seluruh akun Instagram Satbinmas Official yang aktif " +
-  "untuk Client ID " +
-  `${clientId || DITBINMAS_CLIENT_ID}.\n` +
+  "Bot otomatis mengambil seluruh akun Instagram Satbinmas Official aktif " +
+  "untuk seluruh client bertipe ORG secara berurutan dengan jeda agar tetap mematuhi TOS RapidAPI.\n" +
   "Tidak perlu mengirim username atau Client ID tambahan. Balas *batal* untuk kembali.";
 
 const pangkatOrder = [
@@ -2329,9 +2328,6 @@ export const dirRequestHandlers = {
   },
 
   async fetch_satbinmas_official_media(session, chatId, text, waClient) {
-    const defaultClientId =
-      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
-    const normalizedClientId = (defaultClientId || DITBINMAS_CLIENT_ID).toUpperCase();
     const rawInput = (text || "").trim();
 
     if (rawInput.toLowerCase() === "batal") {
@@ -2354,44 +2350,53 @@ export const dirRequestHandlers = {
     try {
       await waClient.sendMessage(
         chatId,
-        SATBINMAS_OFFICIAL_MEDIA_PROMPT(normalizedClientId)
+        SATBINMAS_OFFICIAL_MEDIA_PROMPT
       );
 
-      const summary = await fetchTodaySatbinmasOfficialMedia(
-        normalizedClientId
-      );
+      const summary = await fetchTodaySatbinmasOfficialMediaForOrgClients();
 
-      if (!summary.accounts.length) {
-        await waClient.sendMessage(
-          chatId,
-          `⚠️ Tidak ada akun Instagram Satbinmas Official aktif untuk client ${normalizedClientId}.`
+      const lines = [
+        "📸 Rekap konten Satbinmas Official (hari ini)",
+        `Total Client ORG : ${formatNumber(summary.totals.clients)}`,
+        `Total Akun Aktif : ${formatNumber(summary.totals.accounts)}`,
+        `Total Konten     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update, ${formatNumber(summary.totals.removed)} dihapus`,
+      ];
+
+      if (!summary.totals.accounts) {
+        lines.push("⚠️ Tidak ada akun Instagram Satbinmas Official aktif pada client ORG.");
+      }
+
+      summary.clients.forEach((clientSummary) => {
+        const accountCount = formatNumber(clientSummary.accounts.length);
+        lines.push(
+          `\n🔹 Client ${clientSummary.clientId} — ${accountCount} akun aktif`
         );
-      } else {
-        const lines = [
-          "📸 Rekap konten Satbinmas Official (hari ini)",
-          `Client ID : ${summary.clientId}`,
-          `Akun aktif: ${formatNumber(summary.accounts.length)}`,
-        ];
 
-        summary.accounts.forEach((account) => {
+        clientSummary.accounts.forEach((account) => {
           lines.push(
             `- @${account.username}: ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)})`
           );
         });
 
-        lines.push(
-          `Total     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update, ${formatNumber(summary.totals.removed)} dihapus`
-        );
-
-        if (summary.errors.length) {
-          lines.push("⚠️ Beberapa akun gagal diambil:");
-          summary.errors.forEach((err) => {
-            lines.push(`- @${err.username}: ${err.message?.slice(0, 160) || "Gagal mengambil data"}`);
-          });
+        if (!clientSummary.accounts.length) {
+          lines.push("- Tidak ada akun IG Satbinmas Official aktif.");
         }
 
-        await waClient.sendMessage(chatId, lines.join("\n"));
+        if (clientSummary.errors.length) {
+          lines.push("⚠️ Gagal mengambil beberapa akun:");
+          clientSummary.errors.forEach((err) => {
+            lines.push(
+              `  • @${err.username}: ${err.message?.slice(0, 160) || "Gagal mengambil data"}`
+            );
+          });
+        }
+      });
+
+      if (summary.totals.errors && !summary.clients.some((c) => c.errors.length)) {
+        lines.push("⚠️ Beberapa akun gagal diambil, silakan cek log untuk detailnya.");
       }
+
+      await waClient.sendMessage(chatId, lines.join("\n"));
     } catch (error) {
       console.error("Gagal mengambil konten Satbinmas Official:", error);
       const message =
