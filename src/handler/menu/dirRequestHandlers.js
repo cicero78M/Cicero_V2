@@ -1132,7 +1132,33 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
     if (!igLines.length) igLines.push(...extractLinksFromText(igNarrative));
 
-    const ttLines = extractLinksFromText(ttNarrative);
+    const ttHighlights = [tt.bestContent, tt.worstContent]
+      .map((line) => cleanContentLine(line))
+      .filter(Boolean);
+
+    const ttLinkLines = extractLinksFromText(ttNarrative);
+
+    const ttLines = (() => {
+      if (ttHighlights.length) {
+        const merged = ttHighlights.map((line, index) => {
+          if (/https?:\/\//i.test(line)) return line;
+          const linkCandidate = ttLinkLines[index];
+          const extractedLink = linkCandidate
+            ? linkCandidate.match(/https?:\/\/\S+/i)?.[0]
+            : null;
+          if (extractedLink) return `${line} (${extractedLink})`;
+          return linkCandidate ? `${line} ${linkCandidate}` : line;
+        });
+
+        const overflow = ttLinkLines
+          .slice(ttHighlights.length)
+          .filter(Boolean);
+        return [...merged, ...overflow];
+      }
+
+      if (ttLinkLines.length) return ttLinkLines;
+      return [];
+    })();
 
     if (igLines.length)
       igLines.forEach((line, index) =>
