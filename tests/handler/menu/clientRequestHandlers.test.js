@@ -7,6 +7,7 @@ import clientRequestHandlers, {
 } from '../../../src/handler/menu/clientRequestHandlers.js';
 import * as tiktokPostModel from '../../../src/model/tiktokPostModel.js';
 import * as tiktokCommentModel from '../../../src/model/tiktokCommentModel.js';
+import * as satbinmasOfficialAccountService from '../../../src/service/satbinmasOfficialAccountService.js';
 
 describe('normalizeComplaintHandle', () => {
   it('normalizes plain handles to lowercase with a leading @', () => {
@@ -192,6 +193,120 @@ describe('kelolaUser mass status option', () => {
       chatId,
       expect.stringContaining('Masukkan *user_id* / NRP/NIP user:')
     );
+  });
+});
+
+describe('clientMenu_transfer additions', () => {
+  it('shows the absensi official account option', async () => {
+    const session = {};
+    const chatId = 'chat-transfer-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.clientMenu_transfer(session, chatId, '', {
+      sendMessage,
+    });
+
+    expect(session.step).toBe('clientMenu_transfer');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('4️⃣ Absensi Official Account')
+    );
+  });
+
+  it('routes option 4 to absensiSatbinmasOfficial', async () => {
+    const session = {};
+    const chatId = 'chat-transfer-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const handlerSpy = jest
+      .spyOn(clientRequestHandlers, 'absensiSatbinmasOfficial')
+      .mockResolvedValue();
+
+    try {
+      await clientRequestHandlers.clientMenu_transfer(session, chatId, '4', {
+        sendMessage,
+      });
+
+      expect(handlerSpy).toHaveBeenCalled();
+    } finally {
+      handlerSpy.mockRestore();
+    }
+  });
+});
+
+describe('absensiSatbinmasOfficial', () => {
+  it('renders attendance with platform status and instructions', async () => {
+    const session = {};
+    const chatId = 'chat-absensi-official';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const attendanceSpy = jest
+      .spyOn(
+        satbinmasOfficialAccountService,
+        'getSatbinmasOfficialAttendance'
+      )
+      .mockResolvedValue([
+        {
+          client_id: 'POLRES01',
+          nama: 'Polres Example',
+          instagram: true,
+          tiktok: false,
+        },
+        {
+          client_id: 'POLRES02',
+          nama: '',
+          instagram: false,
+          tiktok: true,
+        },
+      ]);
+
+    await clientRequestHandlers.absensiSatbinmasOfficial(session, chatId, '', {
+      sendMessage,
+    });
+
+    expect(attendanceSpy).toHaveBeenCalled();
+    expect(session.step).toBe('main');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('#SatbinmasOfficial ke nomor 0812351114745')
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('Instagram: ✅')
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('TikTok: ❌')
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('TikTok: ✅')
+    );
+
+    attendanceSpy.mockRestore();
+  });
+
+  it('reports failures gracefully', async () => {
+    const session = {};
+    const chatId = 'chat-absensi-official-error';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const attendanceSpy = jest
+      .spyOn(
+        satbinmasOfficialAccountService,
+        'getSatbinmasOfficialAttendance'
+      )
+      .mockRejectedValue(new Error('db unavailable'));
+
+    await clientRequestHandlers.absensiSatbinmasOfficial(session, chatId, '', {
+      sendMessage,
+    });
+
+    expect(attendanceSpy).toHaveBeenCalled();
+    expect(session.step).toBe('main');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('❌ Gagal menyiapkan absensi akun resmi: db unavailable')
+    );
+
+    attendanceSpy.mockRestore();
   });
 });
 

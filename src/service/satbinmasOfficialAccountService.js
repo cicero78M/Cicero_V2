@@ -137,3 +137,31 @@ export async function deleteSatbinmasOfficialAccount(clientId, accountId) {
 
   return satbinmasOfficialAccountModel.removeById(accountId);
 }
+
+export async function getSatbinmasOfficialAttendance() {
+  const clients = await clientModel.findAllOrgClients();
+
+  const attendance = [];
+  for (const client of clients) {
+    const accounts = await satbinmasOfficialAccountModel.findByClientId(
+      client.client_id
+    );
+
+    const hasPlatform = (platform) =>
+      accounts.some(
+        (acc) =>
+          acc.platform?.toLowerCase() === platform &&
+          acc.username?.trim() &&
+          acc.is_active !== false
+      );
+
+    attendance.push({
+      client_id: client.client_id,
+      nama: client.nama,
+      instagram: hasPlatform('instagram'),
+      tiktok: hasPlatform('tiktok'),
+    });
+  }
+
+  return attendance;
+}

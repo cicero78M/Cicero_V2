@@ -2149,11 +2149,12 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 1️⃣ Transfer User
 2️⃣ Absensi Login Web
 3️⃣ Response Komplain
+4️⃣ Absensi Official Account
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
 `.trim();
 
-    if (!/^[1-3]$/.test(text.trim())) {
+    if (!/^[1-4]$/.test(text.trim())) {
       session.step = "clientMenu_transfer";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -2163,6 +2164,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       1: "transferUser_menu",
       2: "absensiLoginWebDitbinmas",
       3: "respondComplaint_start",
+      4: "absensiSatbinmasOfficial",
     };
 
     session.step = mapStep[text.trim()];
@@ -4699,6 +4701,46 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       solution,
     };
     await processComplaintResolution(session, chatId, waClient);
+  },
+
+  // ================== ABSENSI OFFICIAL ACCOUNT ==================
+  absensiSatbinmasOfficial: async (session, chatId, _text, waClient) => {
+    try {
+      const attendance =
+        await satbinmasOfficialAccountService.getSatbinmasOfficialAttendance();
+
+      const lines = [
+        "📋 Absensi Official Account Satbinmas",
+        "Langkah pengisian data melalui #SatbinmasOfficial ke nomor 0812351114745.",
+        "",
+        "*Legenda:* ✅ sudah mengisi, ❌ belum mengisi.",
+        "",
+      ];
+
+      if (attendance.length === 0) {
+        lines.push("Belum ada client bertipe ORG yang ditemukan.");
+      } else {
+        attendance.forEach((row, idx) => {
+          const name = row.nama
+            ? `${row.nama} (${row.client_id})`
+            : row.client_id;
+          lines.push(
+            `${idx + 1}. ${name}\n   Instagram: ${
+              row.instagram ? "✅" : "❌"
+            }\n   TikTok: ${row.tiktok ? "✅" : "❌"}`
+          );
+        });
+      }
+
+      await waClient.sendMessage(chatId, lines.join("\n"));
+    } catch (err) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal menyiapkan absensi akun resmi: ${err.message}`
+      );
+    }
+
+    session.step = "main";
   },
 
   // ================== ABSENSI LOGIN WEB DITBINMAS ==================
