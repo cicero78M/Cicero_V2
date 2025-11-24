@@ -3246,7 +3246,8 @@ export async function handleGatewayMessage(msg) {
 
     await waGatewayClient.sendMessage(
       chatId,
-      "Belum ada akun resmi yang terdaftar. Balas *ya* untuk menambahkan akun resmi Satbinmas atau *batal* untuk membatalkan."
+      session.prompt ||
+        "Belum ada akun resmi yang terdaftar. Balas *ya* untuk menambahkan akun resmi Satbinmas atau *batal* untuk membatalkan."
     );
     return;
   }
@@ -3414,11 +3415,14 @@ export async function handleGatewayMessage(msg) {
       );
     };
 
-    const accountSection = officialAccounts.length
+    const hasOfficialAccounts = officialAccounts.length > 0;
+    const accountSection = hasOfficialAccounts
       ? officialAccounts.map(formatAccount).join("\n")
-      :
-        "Belum ada akun resmi yang terdaftar.\n" +
-        "Apakah Anda ingin menambahkan akun sosial media official Satbinmas Anda? Balas *ya* untuk melanjutkan atau *batal* untuk berhenti.";
+      : "Belum ada akun resmi yang terdaftar.";
+
+    const followUpPrompt = hasOfficialAccounts
+      ? "Apakah Anda ingin menambah atau mengubah data akun resmi Satbinmas? Balas *ya* untuk melanjutkan input data atau *batal* untuk berhenti."
+      : "Belum ada akun resmi yang terdaftar. Balas *ya* untuk menambahkan akun resmi Satbinmas atau *batal* untuk berhenti.";
 
     const responseMessage =
       "📡 *Data Akun Resmi Satbinmas*\n" +
@@ -3428,19 +3432,20 @@ export async function handleGatewayMessage(msg) {
       `Dashboard : ${chosenUser.username || "-"}\n` +
       "\n" +
       "*Akun Resmi*: \n" +
-      accountSection;
+      accountSection +
+      "\n\n" +
+      followUpPrompt;
 
     await waGatewayClient.sendMessage(chatId, responseMessage);
-    if (officialAccounts.length === 0) {
-      setSession(chatId, {
-        menu: "satbinmasofficial_gateway",
-        step: "confirm_add",
+    setSession(chatId, {
+      menu: "satbinmasofficial_gateway",
+      step: hasOfficialAccounts ? "confirm_manage" : "confirm_add",
+      targetClientId: primaryClientId,
+      satbinmasOfficialDraft: {
         targetClientId: primaryClientId,
-        satbinmasOfficialDraft: {
-          targetClientId: primaryClientId,
-        },
-      });
-    }
+      },
+      prompt: followUpPrompt,
+    });
     return;
   }
 
