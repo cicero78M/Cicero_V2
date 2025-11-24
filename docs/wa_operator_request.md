@@ -68,7 +68,8 @@ Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway*
 2. Nomor pengirim wajib terdaftar pada tabel `dashboard_user` dengan status aktif dan bukan berperan sebagai operator. Jika nomor tidak terdaftar, bot akan mengirim pesan penolakan.
 3. Relasi ke client melalui tabel `dashboard_user_clients` harus ada. Jika dashboard user tidak memiliki client aktif, permintaan ditolak dengan pesan aman.
 4. Bot memetakan client utama (ID pertama pada relasi), mengambil detail client (misalnya nama/Polres), lalu menarik daftar akun resmi Satbinmas via `satbinmas_official_accounts`.
-5. Respons mencantumkan: Client ID, nama Polres, role dashboard yang digunakan, dan daftar akun resmi per platform (IG/TikTok) lengkap dengan status aktif, status verifikasi, serta tautan profil.
+5. Respons mencantumkan: Client ID, nama Polres, role dashboard yang digunakan, dan daftar akun resmi per platform (IG/TikTok) lengkap dengan status aktif, status verifikasi, serta tautan profil. Jika belum ada akun resmi yang tercatat, respons akan menambahkan pertanyaan "Apakah Anda ingin menambahkan akun sosial media official Satbinmas Anda?" dan menunggu balasan *ya* atau *batal*.
+6. Balasan *ya* akan langsung memulai alur input akun resmi Satbinmas dengan menggunakan Client ID yang sama, sehingga operator bisa melanjutkan penambahan akun tanpa menavigasi ulang menu.
 
 Contoh respons:
 ```
