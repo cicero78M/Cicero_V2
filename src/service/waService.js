@@ -3169,6 +3169,50 @@ export async function handleGatewayMessage(msg) {
     typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
   const session = getSession(chatId);
 
+  if (session?.menu === "satbinmasofficial_gateway") {
+    const lowered = normalizedText;
+    const targetClientId = session.targetClientId;
+
+    if (lowered === "ya") {
+      const nextSession = {
+        menu: "clientrequest",
+        step: "satbinmasOfficial_promptRole",
+        selected_client_id: targetClientId,
+        satbinmasOfficialDraft: {
+          ...(session.satbinmasOfficialDraft || {}),
+          targetClientId,
+        },
+      };
+
+      setSession(chatId, nextSession);
+      await clientRequestHandlers.satbinmasOfficial_promptRole(
+        getSession(chatId),
+        chatId,
+        "",
+        waGatewayClient,
+        pool,
+        userModel,
+        clientService
+      );
+      return;
+    }
+
+    if (lowered === "batal") {
+      clearSession(chatId);
+      await waGatewayClient.sendMessage(
+        chatId,
+        "Baik, penambahan akun resmi Satbinmas dibatalkan."
+      );
+      return;
+    }
+
+    await waGatewayClient.sendMessage(
+      chatId,
+      "Belum ada akun resmi yang terdaftar. Balas *ya* untuk menambahkan akun resmi Satbinmas atau *batal* untuk membatalkan."
+    );
+    return;
+  }
+
   if (normalizedText.startsWith("#satbinmasofficial")) {
     if (!isGatewayForward) {
       await waGatewayClient.sendMessage(
@@ -3275,7 +3319,9 @@ export async function handleGatewayMessage(msg) {
 
     const accountSection = officialAccounts.length
       ? officialAccounts.map(formatAccount).join("\n")
-      : "Belum ada akun resmi yang terdaftar.";
+      :
+        "Belum ada akun resmi yang terdaftar.\n" +
+        "Apakah Anda ingin menambahkan akun sosial media official Satbinmas Anda? Balas *ya* untuk melanjutkan atau *batal* untuk berhenti.";
 
     const responseMessage =
       "📡 *Data Akun Resmi Satbinmas*\n" +
@@ -3288,6 +3334,16 @@ export async function handleGatewayMessage(msg) {
       accountSection;
 
     await waGatewayClient.sendMessage(chatId, responseMessage);
+    if (officialAccounts.length === 0) {
+      setSession(chatId, {
+        menu: "satbinmasofficial_gateway",
+        step: "confirm_add",
+        targetClientId: primaryClientId,
+        satbinmasOfficialDraft: {
+          targetClientId: primaryClientId,
+        },
+      });
+    }
     return;
   }
 
