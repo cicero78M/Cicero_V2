@@ -4737,7 +4737,10 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
       const lines = [
         "📋 Absensi Official Account Satbinmas",
-        "Langkah pengisian data melalui #SatbinmasOfficial ke nomor 0812351114745.",
+        "Sebagai bagian dari upaya memperkuat tata kelola ruang digital serta memastikan kesinambungan publikasi kegiatan Satbinmas jajaran, dimohon kepada seluruh Satbinmas Polres jajaran untuk mengirimkan data akun resmi melalui pesan WhatsApp ke 0812-3511-4745 dengan menggunakan format pesan:",
+        "- #SatbinmasOfficial",
+        "- selanjutnya mengikuti alur pengisian data sesuai response sistem.",
+        "- Tindakan ini dilaksanakan oleh Operator.",
         "",
         "*Legenda Status:*",
         "✅ Lengkap (Instagram & TikTok aktif)",

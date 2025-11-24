@@ -184,9 +184,16 @@ Menu *Transfer & Laporan* kini menyediakan **Absensi Official Account** yang
 menampilkan checklist ORG clients (Polres) dalam tiga kategori: ✅ *Lengkap*
 (Instagram & TikTok aktif), ⚠️ *Kurang* (baru satu platform), dan ❌ *Belum*
 (tidak ada akun aktif). Ringkasan jumlah per kategori ada di header, diikuti
-detail tiap Polres beserta platform yang masih perlu dilengkapi. Operator juga
-didorong untuk melengkapi data melalui tagar `#SatbinmasOfficial` ke nomor
-`0812351114745`, sehingga proses pengisian akun resmi tetap terarah.【F:src/handler/menu/clientRequestHandlers.js†L2109-L2159】【F:src/handler/menu/clientRequestHandlers.js†L4706-L4769】
+detail tiap Polres beserta platform yang masih perlu dilengkapi. Header juga
+memuat instruksi kepada Satbinmas Polres untuk mengirim data akun resmi via
+WhatsApp ke `0812-3511-4745` menggunakan format berikut:
+
+- `#SatbinmasOfficial`
+- ikuti alur pengisian data sesuai respons sistem;
+- tindakan dikirim oleh Operator.
+
+Instruksi ini membantu memastikan tata kelola ruang digital yang konsisten dan
+ketersediaan publikasi Satbinmas tetap terjaga.【F:src/handler/menu/clientRequestHandlers.js†L2109-L2159】【F:src/handler/menu/clientRequestHandlers.js†L4706-L4769】
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
