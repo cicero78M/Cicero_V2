@@ -51,15 +51,17 @@ Untuk menambahkan akun resmi Satbinmas melalui bot:
 
 1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
 2. Pilih client tujuan lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
-3. Pilih peran akun (Kasat Binmas, Kasi Binpolmas/Binluh, atau Operator
-   Satbinmas/Bhabinkamtibmas).
-4. Konfirmasi atau ganti Client ID target.
-5. Ketik username Instagram (boleh memakai `@`). Bot memanggil RapidAPI
-   `fetchInstagramInfo` untuk menarik `display_name`, `profile_url`, status aktif,
-   dan status verifikasi sebelum menyimpan ke tabel
+3. Bot otomatis menetapkan peran menjadi *Akun Resmi Satbinmas* dan memakai
+   Client ID aktif dari nomor WhatsApp yang sedang login (tanpa perlu mengetik
+   ulang). Gunakan `kembali` jika ingin mengganti Client ID secara manual.
+4. Pilih platform (Instagram/TikTok), lalu ketik username (boleh memakai `@`).
+   Bot memanggil RapidAPI untuk menarik `display_name`, `profile_url`, status
+   aktif, dan status verifikasi sebelum menyimpan ke tabel
    `satbinmas_official_accounts`.
-6. Gunakan `kembali` untuk mengulang peran/Client ID atau `batal` untuk kembali ke
-   menu kelola client.
+5. Setelah akun tersimpan, bot menanyakan apakah operator ingin menambah akun
+   official lain atau mengubah data yang sudah ada. Balasan `tambah` akan
+   mengulangi langkah pemilihan platform, sedangkan `ubah` memicu input ulang
+   untuk memperbarui data. `selesai`/`batal` kembali ke menu kelola client.
 
 ### Permintaan Melalui WA Gateway: `#SatbinmasOfficial`
 Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway* dengan mengirim teks `#SatbinmasOfficial` (case-insensitive). Alur dan syaratnya:

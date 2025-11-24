@@ -2629,20 +2629,42 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
     const chosenRole = SATBINMAS_ROLE_CHOICES[0];
 
+    const draft = session.satbinmasOfficialDraft || {};
+    const defaultClientId =
+      draft.targetClientId || session.selected_client_id || "";
+
     session.satbinmasOfficialDraft = {
-      ...(session.satbinmasOfficialDraft || {}),
+      ...draft,
       selectedRole: chosenRole,
+      ...(defaultClientId
+        ? { targetClientId: defaultClientId.toUpperCase() }
+        : {}),
     };
+
+    if (defaultClientId) {
+      await waClient.sendMessage(
+        chatId,
+        [
+          `Peran disetel otomatis: *${chosenRole.label}*.`,
+          `Client aktif digunakan: *${defaultClientId.toUpperCase()}*.`,
+          "Langsung pilih platform akun Satbinmas.",
+        ].join("\n")
+      );
+      await clientRequestHandlers.satbinmasOfficial_promptPlatform(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
     session.step = "satbinmasOfficial_promptClient";
 
-    const defaultClientId =
-      session.satbinmasOfficialDraft?.targetClientId || session.selected_client_id || "";
     const prompt = [
       `Peran disetel otomatis: *${chosenRole.label}*.`,
       "Masukkan Client ID tujuan untuk akun Satbinmas ini.",
-      defaultClientId
-        ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
-        : "Ketik Client ID yang akan disimpan.",
+      "Ketik Client ID yang akan disimpan.",
       "Ketik *kembali* untuk mengulang langkah ini atau *batal* untuk keluar.",
     ].join("\n");
 
@@ -2655,12 +2677,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const draft = session.satbinmasOfficialDraft || {};
 
     if (!trimmed) {
-      const defaultClientId = draft.targetClientId || session.selected_client_id || "";
       const prompt = [
         "Masukkan Client ID tujuan untuk akun Satbinmas ini.",
-        defaultClientId
-          ? `Kosongkan pesan untuk menggunakan client aktif: *${defaultClientId}*.`
-          : "Ketik Client ID yang akan disimpan.",
+        "Ketik Client ID yang akan disimpan.",
         "Ketik *kembali* untuk mengulang instruksi ini atau *batal* untuk keluar.",
       ].join("\n");
       session.step = "satbinmasOfficial_promptClient";
@@ -2712,6 +2731,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const draft = session.satbinmasOfficialDraft || {};
 
     if (!trimmed) {
+      const targetClientId = draft.targetClientId || session.selected_client_id || "";
       const menu = SATBINMAS_PLATFORM_CHOICES.map(
         (option, idx) => `${idx + 1}. ${option.label}`
       ).join("\n");
@@ -2719,6 +2739,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         "Pilih platform akun Satbinmas:",
         menu,
         "Balas angka atau nama platform (Instagram/TikTok).",
+        targetClientId
+          ? `Client aktif yang digunakan: *${targetClientId.toUpperCase()}*.`
+          : "Pastikan Client ID sudah dipilih sebelum melanjutkan.",
         "Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar.",
       ].join("\n");
       session.step = "satbinmasOfficial_promptPlatform";
@@ -2865,15 +2888,69 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       ].join("\n");
 
       await waClient.sendMessage(chatId, summary);
+
+      const followUpPrompt = [
+        "Apakah Anda ingin menambahkan akun resmi Satbinmas lainnya atau mengubah data yang sudah ada?",
+        "Balas *tambah* untuk menambahkan akun lain, *ubah* untuk memperbarui data, atau *selesai* untuk kembali ke menu utama.",
+      ].join("\n");
+
+      session.step = "satbinmasOfficial_afterSave";
+      await waClient.sendMessage(chatId, followUpPrompt);
     } catch (err) {
       const reason = err?.message || "tidak diketahui";
       await waClient.sendMessage(
         chatId,
         `❌ Gagal menyimpan akun Satbinmas: ${reason}`
       );
+      session.step = "satbinmasOfficial_afterSave";
+      await waClient.sendMessage(
+        chatId,
+        "Ketik *tambah* untuk mencoba lagi, *ubah* untuk memperbarui data, atau *batal* untuk kembali ke menu."
+      );
+    }
+  },
+
+  satbinmasOfficial_afterSave: async (session, chatId, text, waClient) => {
+    const trimmed = (text || "").trim().toLowerCase();
+
+    if (["batal", "selesai", "tidak", "nggak"].includes(trimmed)) {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      session.step = "main";
+      return;
     }
 
-    session.step = "main";
+    if (trimmed === "tambah") {
+      session.satbinmasOfficialDraft = {
+        ...(session.satbinmasOfficialDraft || {}),
+        platform: undefined,
+      };
+      await clientRequestHandlers.satbinmasOfficial_promptPlatform(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    if (trimmed === "ubah") {
+      await waClient.sendMessage(
+        chatId,
+        "Pilih platform yang ingin diubah, lalu masukkan username terbaru."
+      );
+      await clientRequestHandlers.satbinmasOfficial_promptPlatform(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    await waClient.sendMessage(
+      chatId,
+      "Ketik *tambah* untuk menambahkan akun, *ubah* untuk memperbarui data, atau *selesai* untuk kembali ke menu utama."
+    );
   },
 
   // ================== KELENGKAPAN USER (ALL) ==================
