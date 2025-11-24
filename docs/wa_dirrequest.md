@@ -37,9 +37,12 @@ resmi Satbinmas.
      `fetchTodaySatbinmasOfficialMediaForOrgClients` untuk menarik konten hari
      berjalan (filter `taken_at` hari ini) dan menormalkan metadata, termasuk
      hashtag dan mention ke tabel terpisah.
-  4. Operator menerima rekap singkat per client dan per akun (total konten,
-     sisipan baru, pembaruan) serta ringkasan agregat dan daftar akun yang gagal
-     diproses jika ada.
+4. Operator menerima rekap yang otomatis dikelompokkan menjadi tiga bagian:
+   akun aktif (konten hari ini, diurut dari jumlah konten tertinggi), akun pasif
+   (sudah terdaftar tetapi belum memuat konten), dan daftar client ORG yang
+   belum pernah memasukkan akun Satbinmas Official. Nama polres dipakai apabila
+   tersedia agar mudah dibaca. Rekap tetap memuat ringkasan agregat dan daftar
+   akun yang gagal diproses jika ada.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.

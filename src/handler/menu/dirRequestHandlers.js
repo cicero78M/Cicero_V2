@@ -2355,6 +2355,56 @@ export const dirRequestHandlers = {
 
       const summary = await fetchTodaySatbinmasOfficialMediaForOrgClients();
 
+      const formatClientLabel = (clientSummary) =>
+        clientSummary.name?.trim() || clientSummary.clientId;
+
+      const activeAccounts = [];
+      const passiveAccounts = [];
+      const missingClients = [];
+      const failedAccounts = [];
+
+      summary.clients.forEach((clientSummary) => {
+        const clientLabel = formatClientLabel(clientSummary);
+
+        if (!clientSummary.accounts.length) {
+          missingClients.push(clientLabel);
+        }
+
+        clientSummary.accounts.forEach((account) => {
+          const accountLine = {
+            clientLabel,
+            username: account.username,
+            total: account.total,
+            inserted: account.inserted,
+            updated: account.updated,
+            removed: account.removed,
+          };
+
+          if (account.total > 0) {
+            activeAccounts.push(accountLine);
+          } else {
+            passiveAccounts.push(accountLine);
+          }
+        });
+
+        clientSummary.errors.forEach((err) => {
+          failedAccounts.push({
+            clientLabel,
+            username: err.username,
+            message: err.message?.slice(0, 160) || "Gagal mengambil data",
+          });
+        });
+      });
+
+      activeAccounts.sort(
+        (a, b) =>
+          b.total - a.total || a.clientLabel.localeCompare(b.clientLabel) || a.username.localeCompare(b.username)
+      );
+      passiveAccounts.sort((a, b) =>
+        a.clientLabel.localeCompare(b.clientLabel) || a.username.localeCompare(b.username)
+      );
+      missingClients.sort((a, b) => a.localeCompare(b));
+
       const lines = [
         "📸 Rekap konten Satbinmas Official (hari ini)",
         `Total Client ORG : ${formatNumber(summary.totals.clients)}`,
@@ -2362,38 +2412,42 @@ export const dirRequestHandlers = {
         `Total Konten     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update, ${formatNumber(summary.totals.removed)} dihapus`,
       ];
 
-      if (!summary.totals.accounts) {
-        lines.push("⚠️ Tidak ada akun Instagram Satbinmas Official yang terdaftar pada client ORG.");
-      }
-
-      summary.clients.forEach((clientSummary) => {
-        const accountCount = formatNumber(clientSummary.accounts.length);
-        lines.push(
-          `\n🔹 Client ${clientSummary.clientId} — ${accountCount} akun terdaftar`
-        );
-
-        clientSummary.accounts.forEach((account) => {
+      lines.push("", "🔥 Akun Aktif (urut jumlah konten tertinggi)");
+      if (activeAccounts.length) {
+        activeAccounts.forEach((account) => {
           lines.push(
-            `- @${account.username}: ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)})`
+            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)})`
           );
         });
+      } else {
+        lines.push("- Belum ada akun aktif hari ini.");
+      }
 
-        if (!clientSummary.accounts.length) {
-          lines.push("- Tidak ada akun IG Satbinmas Official terdaftar.");
-        }
+      lines.push("", "🌙 Akun Pasif");
+      if (passiveAccounts.length) {
+        passiveAccounts.forEach((account) => {
+          lines.push(
+            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten`
+          );
+        });
+      } else {
+        lines.push("- Tidak ada akun pasif.");
+      }
 
-        if (clientSummary.errors.length) {
-          lines.push("⚠️ Gagal mengambil beberapa akun:");
-          clientSummary.errors.forEach((err) => {
-            lines.push(
-              `  • @${err.username}: ${err.message?.slice(0, 160) || "Gagal mengambil data"}`
-            );
-          });
-        }
-      });
+      lines.push("", "🚫 Belum Input Akun");
+      if (missingClients.length) {
+        missingClients.forEach((label) => {
+          lines.push(`- ${label}`);
+        });
+      } else {
+        lines.push("- Semua client ORG sudah memiliki akun terdaftar.");
+      }
 
-      if (summary.totals.errors && !summary.clients.some((c) => c.errors.length)) {
-        lines.push("⚠️ Beberapa akun gagal diambil, silakan cek log untuk detailnya.");
+      if (failedAccounts.length) {
+        lines.push("", "⚠️ Gagal mengambil beberapa akun:");
+        failedAccounts.forEach((err) => {
+          lines.push(`- @${err.username} (${err.clientLabel}): ${err.message}`);
+        });
       }
 
       await waClient.sendMessage(chatId, lines.join("\n"));
