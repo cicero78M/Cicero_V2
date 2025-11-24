@@ -554,6 +554,63 @@ waGatewayClient.on("change_state", (state) => {
 // =======================
 // MESSAGE HANDLER UTAMA
 // =======================
+async function handleClientRequestSessionStep({
+  session,
+  chatId,
+  text,
+  waClient,
+  pool,
+  userModel,
+  clientService,
+  migrateUsersFromFolder,
+  checkGoogleSheetCsvStatus,
+  importUsersFromGoogleSheet,
+  fetchAndStoreInstaContent,
+  fetchAndStoreTiktokContent,
+  formatClientData,
+  handleFetchLikesInstagram,
+  handleFetchKomentarTiktokBatch,
+}) {
+  if (!session || session.menu !== "clientrequest") {
+    return false;
+  }
+
+  if ((text || "").toLowerCase() === "batal") {
+    clearSession(chatId);
+    await waClient.sendMessage(chatId, "✅ Menu Client ditutup.");
+    return true;
+  }
+
+  const handler = clientRequestHandlers[session.step || "main"];
+  if (typeof handler === "function") {
+    await handler(
+      session,
+      chatId,
+      text,
+      waClient,
+      pool,
+      userModel,
+      clientService,
+      migrateUsersFromFolder,
+      checkGoogleSheetCsvStatus,
+      importUsersFromGoogleSheet,
+      fetchAndStoreInstaContent,
+      fetchAndStoreTiktokContent,
+      formatClientData,
+      handleFetchLikesInstagram,
+      handleFetchKomentarTiktokBatch
+    );
+  } else {
+    clearSession(chatId);
+    await waClient.sendMessage(
+      chatId,
+      "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*."
+    );
+  }
+
+  return true;
+}
+
 export function createHandleMessage(waClient, options = {}) {
   const { allowUserMenu = true, clientLabel = "[WA]" } = options;
   const userMenuRedirectMessage =
@@ -1426,45 +1483,24 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     return;
   }
 
-  // -- Routing semua step session clientrequest ke handler step terkait --
-  if (session && session.menu === "clientrequest") {
-    // Jika user membatalkan menu clientrequest
-    if (text.toLowerCase() === "batal") {
-      clearSession(chatId);
-      await waClient.sendMessage(chatId, "✅ Menu Client ditutup.");
-      return;
-    }
-
-    // Panggil handler berdasarkan step
-    const handler = clientRequestHandlers[session.step || "main"];
-    if (typeof handler === "function") {
-      await handler(
-        session,
-        chatId,
-        text,
-        waClient,
-        pool,
-        userModel,
-        clientService,
-        migrateUsersFromFolder,
-        checkGoogleSheetCsvStatus,
-        importUsersFromGoogleSheet,
-        fetchAndStoreInstaContent,
-        fetchAndStoreTiktokContent,
-        formatClientData,
-        handleFetchLikesInstagram,
-        handleFetchKomentarTiktokBatch
-      );
-    } else {
-      // Step tidak dikenali, reset session
-      clearSession(chatId);
-      await waClient.sendMessage(
-        chatId,
-        "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*."
-      );
-    }
-    return;
-  }
+  const handledClientRequestSession = await handleClientRequestSessionStep({
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    handleFetchLikesInstagram,
+    handleFetchKomentarTiktokBatch,
+  });
+  if (handledClientRequestSession) return;
 
 
     // ===== Handler Menu User Interaktif Step Lanjut =====
@@ -3214,6 +3250,25 @@ export async function handleGatewayMessage(msg) {
     );
     return;
   }
+
+  const handledClientRequestSession = await handleClientRequestSessionStep({
+    session,
+    chatId,
+    text,
+    waClient: waGatewayClient,
+    pool,
+    userModel,
+    clientService,
+    migrateUsersFromFolder,
+    checkGoogleSheetCsvStatus,
+    importUsersFromGoogleSheet,
+    fetchAndStoreInstaContent,
+    fetchAndStoreTiktokContent,
+    formatClientData,
+    handleFetchLikesInstagram,
+    handleFetchKomentarTiktokBatch,
+  });
+  if (handledClientRequestSession) return;
 
   if (normalizedText.startsWith("#satbinmasofficial")) {
     if (!isGatewayForward) {

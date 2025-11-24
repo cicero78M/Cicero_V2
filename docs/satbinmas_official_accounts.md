@@ -1,5 +1,5 @@
 # Satbinmas Official Account Management
-*Last updated: 2025-11-09*
+*Last updated: 2025-11-24*
 
 This document explains how Satbinmas official social-media handles are stored
 and managed inside the Cicero backend. The feature introduces a dedicated table
@@ -149,6 +149,11 @@ directly from the WhatsApp bot via the client management menu:
    akun official lainnya (`tambah`) atau memperbarui data yang sudah ada
    (`ubah`). Balasan `selesai`/`batal` akan menutup alur dan kembali ke menu
    kelola client.
+
+Pesan yang dikirim lewat alur *WA Gateway* (`#satbinmasofficial`) kini memakai
+dispatcher menu *clientrequest* yang sama, sehingga balasan angka seperti "1"
+atau nama platform langsung diproses tanpa menggantung setelah memilih opsi
+platform.
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
