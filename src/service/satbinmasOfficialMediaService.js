@@ -172,7 +172,7 @@ function getTodayRange() {
 }
 
 async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPIDAPI_FETCH_DELAY_MS) {
-  const accounts = await satbinmasOfficialAccountModel.findActiveByClientAndPlatform(
+  const accounts = await satbinmasOfficialAccountModel.findByClientAndPlatform(
     client.client_id,
     'instagram'
   );

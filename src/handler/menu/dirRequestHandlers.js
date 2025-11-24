@@ -2008,7 +2008,7 @@ export const dirRequestHandlers = {
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
-        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (otomatis akun aktif)\n\n" +
+        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2358,18 +2358,18 @@ export const dirRequestHandlers = {
       const lines = [
         "📸 Rekap konten Satbinmas Official (hari ini)",
         `Total Client ORG : ${formatNumber(summary.totals.clients)}`,
-        `Total Akun Aktif : ${formatNumber(summary.totals.accounts)}`,
+        `Total Akun      : ${formatNumber(summary.totals.accounts)}`,
         `Total Konten     : ${formatNumber(summary.totals.fetched)} konten, ${formatNumber(summary.totals.inserted)} baru, ${formatNumber(summary.totals.updated)} update, ${formatNumber(summary.totals.removed)} dihapus`,
       ];
 
       if (!summary.totals.accounts) {
-        lines.push("⚠️ Tidak ada akun Instagram Satbinmas Official aktif pada client ORG.");
+        lines.push("⚠️ Tidak ada akun Instagram Satbinmas Official yang terdaftar pada client ORG.");
       }
 
       summary.clients.forEach((clientSummary) => {
         const accountCount = formatNumber(clientSummary.accounts.length);
         lines.push(
-          `\n🔹 Client ${clientSummary.clientId} — ${accountCount} akun aktif`
+          `\n🔹 Client ${clientSummary.clientId} — ${accountCount} akun terdaftar`
         );
 
         clientSummary.accounts.forEach((account) => {
@@ -2379,7 +2379,7 @@ export const dirRequestHandlers = {
         });
 
         if (!clientSummary.accounts.length) {
-          lines.push("- Tidak ada akun IG Satbinmas Official aktif.");
+          lines.push("- Tidak ada akun IG Satbinmas Official terdaftar.");
         }
 
         if (clientSummary.errors.length) {
