@@ -266,7 +266,9 @@ describe('absensiSatbinmasOfficial', () => {
     expect(session.step).toBe('main');
     expect(sendMessage).toHaveBeenCalledWith(
       chatId,
-      expect.stringContaining('#SatbinmasOfficial ke nomor 0812351114745')
+      expect.stringContaining(
+        'mengirimkan data akun resmi melalui pesan WhatsApp ke 0812-3511-4745'
+      )
     );
     expect(sendMessage).toHaveBeenCalledWith(
       chatId,
