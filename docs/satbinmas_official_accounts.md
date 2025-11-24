@@ -133,8 +133,8 @@ directly from the WhatsApp bot via the client management menu:
 1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
 2. Pilih client, lalu pilih opsi **5️⃣ Input Akun Resmi Satbinmas**.
 3. Bot otomatis menetapkan peran akun menjadi `Akun Resmi Satbinmas` dan
-   langsung meminta *Client ID* tujuan (default mengikuti client yang dipilih
-   pada menu sebelumnya).
+   memakai *Client ID* aktif (berdasarkan nomor WhatsApp yang login). Jika perlu
+   mengganti target, balas `kembali` untuk memasukkan Client ID lain.
 4. Pilih platform: balas angka/menu kecil untuk **Instagram** atau **TikTok**
    sebelum mengisi username.
 5. Ketik username sesuai platform (boleh diawali `@`). Bot memanggil RapidAPI
@@ -145,6 +145,10 @@ directly from the WhatsApp bot via the client management menu:
    badge TikTok ketika tersedia), lalu menyimpan data melalui
    `satbinmasOfficialAccountService.saveSatbinmasOfficialAccount` ke tabel
    `satbinmas_official_accounts`.
+7. Setelah penyimpanan sukses, bot menanyakan apakah operator ingin menambah
+   akun official lainnya (`tambah`) atau memperbarui data yang sudah ada
+   (`ubah`). Balasan `selesai`/`batal` akan menutup alur dan kembali ke menu
+   kelola client.
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
