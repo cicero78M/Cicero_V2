@@ -2,18 +2,35 @@ import { query } from '../repository/db.js';
 
 const normalizePlatform = (value) => value?.trim().toLowerCase();
 
-export async function findActiveByClientAndPlatform(client_id, platform) {
+export async function findByClientAndPlatform(
+  client_id,
+  platform,
+  { onlyActive = false } = {}
+) {
   const normalizedPlatform = normalizePlatform(platform);
+  const baseQuery =
+    'SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at';
+  const conditions = [
+    'LOWER(client_id) = LOWER($1)',
+    'LOWER(platform) = LOWER($2)',
+  ];
+
+  if (onlyActive) {
+    conditions.push('is_active = TRUE');
+  }
+
   const res = await query(
-    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
+    `${baseQuery}
      FROM satbinmas_official_accounts
-     WHERE LOWER(client_id) = LOWER($1)
-       AND LOWER(platform) = LOWER($2)
-       AND is_active = TRUE
+     WHERE ${conditions.join(' AND ')}
      ORDER BY created_at ASC`,
     [client_id, normalizedPlatform]
   );
   return res.rows;
+}
+
+export async function findActiveByClientAndPlatform(client_id, platform) {
+  return findByClientAndPlatform(client_id, platform, { onlyActive: true });
 }
 
 export async function findByClientId(client_id) {
