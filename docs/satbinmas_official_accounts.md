@@ -71,6 +71,10 @@ business rules before calling the model:
 4. `deleteSatbinmasOfficialAccount` checks the `satbinmas_account_id` belongs to
    the same client before removing it, ensuring operators cannot delete handles
    from other clients.【F:src/service/satbinmasOfficialAccountService.js†L1-L120】
+5. `getSatbinmasOfficialAttendance` iterates through ORG clients and returns a
+   simple attendance list containing `client_id`, `nama`, and boolean flags
+   indicating whether an active Instagram or TikTok official account has been
+   captured for each satker.【F:src/service/satbinmasOfficialAccountService.js†L141-L166】
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:
@@ -170,6 +174,12 @@ Balasan gateway merinci setiap akun resmi dalam format:
 dari username (dengan prefiks domain Instagram/TikTok) ketika URL kosong. URL yang
 tidak memakai domain profil resmi (misalnya CDN foto Instagram) diabaikan dan
 diganti tautan kanonik berdasarkan username.
+
+Menu *Transfer & Laporan* kini menyediakan **Absensi Official Account** yang
+menampilkan checklist ORG clients (Polres) beserta status ketersediaan akun
+Instagram dan TikTok (✅ sudah terisi, ❌ belum). Header pesan mengingatkan
+operator untuk melengkapi data melalui tagar `#SatbinmasOfficial` ke nomor
+`0812351114745`, sehingga proses pengisian akun resmi tetap terarah.【F:src/handler/menu/clientRequestHandlers.js†L2109-L2159】【F:src/handler/menu/clientRequestHandlers.js†L4706-L4744】
 
 Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)

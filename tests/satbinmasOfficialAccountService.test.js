@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 
 const mockFindClientById = jest.fn();
+const mockFindAllOrgClients = jest.fn();
 const mockFindAccountsByClient = jest.fn();
 const mockFindAccountByClientAndPlatform = jest.fn();
 const mockFindAccountByPlatformAndUsername = jest.fn();
@@ -10,6 +11,7 @@ const mockRemoveAccount = jest.fn();
 
 jest.unstable_mockModule('../src/model/clientModel.js', () => ({
   findById: mockFindClientById,
+  findAllOrgClients: mockFindAllOrgClients,
 }));
 
 jest.unstable_mockModule('../src/model/satbinmasOfficialAccountModel.js', () => ({
@@ -24,17 +26,20 @@ jest.unstable_mockModule('../src/model/satbinmasOfficialAccountModel.js', () => 
 let listSatbinmasOfficialAccounts;
 let saveSatbinmasOfficialAccount;
 let deleteSatbinmasOfficialAccount;
+let getSatbinmasOfficialAttendance;
 
 beforeAll(async () => {
   ({
     listSatbinmasOfficialAccounts,
     saveSatbinmasOfficialAccount,
     deleteSatbinmasOfficialAccount,
+    getSatbinmasOfficialAttendance,
   } = await import('../src/service/satbinmasOfficialAccountService.js'));
 });
 
 beforeEach(() => {
   mockFindClientById.mockReset();
+  mockFindAllOrgClients.mockReset();
   mockFindAccountsByClient.mockReset();
   mockFindAccountByClientAndPlatform.mockReset();
   mockFindAccountByPlatformAndUsername.mockReset();
@@ -310,4 +315,54 @@ test('deleteSatbinmasOfficialAccount removes and returns row', async () => {
 
   expect(mockRemoveAccount).toHaveBeenCalledWith('uuid-5');
   expect(result).toEqual(deleted);
+});
+
+test('getSatbinmasOfficialAttendance summarizes ORG clients', async () => {
+  mockFindAllOrgClients.mockResolvedValue([
+    { client_id: 'POLRES01', nama: 'Polres Satu' },
+    { client_id: 'POLRES02', nama: 'Polres Dua' },
+  ]);
+
+  mockFindAccountsByClient.mockImplementation(async (clientId) => {
+    if (clientId === 'POLRES01') {
+      return [
+        { platform: 'instagram', username: 'sat1', is_active: true },
+        { platform: 'tiktok', username: 'sat1_tiktok', is_active: true },
+      ];
+    }
+    return [
+      { platform: 'instagram', username: '', is_active: true },
+      { platform: 'tiktok', username: 'inactive', is_active: false },
+    ];
+  });
+
+  const result = await getSatbinmasOfficialAttendance();
+
+  expect(mockFindAllOrgClients).toHaveBeenCalled();
+  expect(mockFindAccountsByClient).toHaveBeenCalledTimes(2);
+  expect(mockFindAccountsByClient).toHaveBeenCalledWith('POLRES01');
+  expect(mockFindAccountsByClient).toHaveBeenCalledWith('POLRES02');
+  expect(result).toEqual([
+    {
+      client_id: 'POLRES01',
+      nama: 'Polres Satu',
+      instagram: true,
+      tiktok: true,
+    },
+    {
+      client_id: 'POLRES02',
+      nama: 'Polres Dua',
+      instagram: false,
+      tiktok: false,
+    },
+  ]);
+});
+
+test('getSatbinmasOfficialAttendance handles empty org roster', async () => {
+  mockFindAllOrgClients.mockResolvedValue([]);
+
+  const result = await getSatbinmasOfficialAttendance();
+
+  expect(result).toEqual([]);
+  expect(mockFindAccountsByClient).not.toHaveBeenCalled();
 });
