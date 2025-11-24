@@ -1,5 +1,5 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-11-24*
+*Last updated: 2025-03-11*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
 
@@ -64,7 +64,7 @@ Untuk menambahkan akun resmi Satbinmas melalui bot:
 ### Permintaan Melalui WA Gateway: `#SatbinmasOfficial`
 Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway* dengan mengirim teks `#SatbinmasOfficial` (case-insensitive). Alur dan syaratnya:
 
-1. Pesan harus benar-benar diteruskan dari WA Gateway (sistem otomatis). Pesan langsung tanpa tag gateway akan ditolak.
+1. Selama pesan dikirim ke sesi *WA Gateway* (DM/non-grup), bot otomatis memperlakukan pesan sebagai hasil forward gateway. Tag prefix `wagateway`/`wabot` tetap diterima, tetapi tidak lagi wajib.
 2. Nomor pengirim wajib terdaftar pada tabel `dashboard_user` dengan status aktif dan bukan berperan sebagai operator. Jika nomor tidak terdaftar, bot akan mengirim pesan penolakan.
 3. Relasi ke client melalui tabel `dashboard_user_clients` harus ada. Jika dashboard user tidak memiliki client aktif, permintaan ditolak dengan pesan aman.
 4. Bot memetakan client utama (ID pertama pada relasi), mengambil detail client (misalnya nama/Polres), lalu menarik daftar akun resmi Satbinmas via `satbinmas_official_accounts`.

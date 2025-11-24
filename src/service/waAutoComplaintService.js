@@ -56,12 +56,24 @@ function hasComplaintHeader(text) {
   return Boolean(nrp);
 }
 
-export function isGatewayComplaintForward({ senderId, text, gatewayIds }) {
+export function isGatewayComplaintForward({
+  senderId,
+  text,
+  gatewayIds,
+  allowImplicitGatewayForward = false,
+}) {
   const normalizedSender = normalizeWhatsAppId(senderId);
   const knownGatewayIds = getGatewayWhatsAppIds(gatewayIds);
 
   if (normalizedSender && knownGatewayIds.has(normalizedSender)) {
     return true;
+  }
+
+  if (allowImplicitGatewayForward) {
+    const isGroupMessage = (normalizedSender || '').endsWith('@g.us');
+    if (!isGroupMessage) {
+      return true;
+    }
   }
 
   return isGatewayForwardText(text);

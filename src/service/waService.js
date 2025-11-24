@@ -3159,7 +3159,11 @@ export async function handleGatewayMessage(msg) {
 
   const senderId = msg.author || chatId;
   const normalizedText = text.trim().toLowerCase();
-  const isGatewayForward = isGatewayComplaintForward({ senderId, text });
+  const isGatewayForward = isGatewayComplaintForward({
+    senderId,
+    text,
+    allowImplicitGatewayForward: true,
+  });
   const isAdmin = isAdminWhatsApp(senderId);
   const initialIsMyContact =
     typeof msg.isMyContact === "boolean" ? msg.isMyContact : null;
