@@ -71,8 +71,8 @@ Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway*
 3. Nomor pengirim wajib terdaftar pada tabel `dashboard_user` dengan status aktif dan bukan berperan sebagai operator. Jika nomor tidak terdaftar, bot akan mengirim pesan penolakan.
 4. Relasi ke client melalui tabel `dashboard_user_clients` harus ada. Jika dashboard user tidak memiliki client aktif, permintaan ditolak dengan pesan aman.
 5. Bot memetakan client utama (ID pertama pada relasi), mengambil detail client (misalnya nama/Polres), lalu menarik daftar akun resmi Satbinmas via `satbinmas_official_accounts`.
-6. Respons mencantumkan: Client ID, nama Polres, role dashboard yang digunakan, dan daftar akun resmi per platform (IG/TikTok) lengkap dengan status aktif, status centang biru (verifikasi akun), serta *Link profile* yang otomatis diisi dari URL tersimpan atau dibangunkan dari username ketika URL kosong. Jika URL tersimpan bukan berasal dari domain profil resmi platform (misalnya tautan CDN foto Instagram), tautan akan diganti menjadi URL profil resmi sesuai platform—contoh: `https://www.instagram.com/mulyadi.bejo.2` untuk Instagram. Jika belum ada akun resmi yang tercatat, respons akan menambahkan pertanyaan "Apakah Anda ingin menambahkan akun sosial media official Satbinmas Anda?" dan menunggu balasan *ya* atau *batal*.
-7. Balasan *ya* akan langsung memulai alur input akun resmi Satbinmas dengan menggunakan Client ID yang sama, sehingga operator bisa melanjutkan penambahan akun tanpa menavigasi ulang menu.
+6. Respons mencantumkan: Client ID, nama Polres, role dashboard yang digunakan, dan daftar akun resmi per platform (IG/TikTok) lengkap dengan status aktif, status centang biru (verifikasi akun), serta *Link profile* yang otomatis diisi dari URL tersimpan atau dibangunkan dari username ketika URL kosong. Jika URL tersimpan bukan berasal dari domain profil resmi platform (misalnya tautan CDN foto Instagram), tautan akan diganti menjadi URL profil resmi sesuai platform—contoh: `https://www.instagram.com/mulyadi.bejo.2` untuk Instagram. Setelah daftar akun, bot menambahkan prompt apakah operator ingin menambah atau mengubah data; jika belum ada akun resmi, prompt tersebut sekaligus menjelaskan bahwa balasan *ya* akan menambahkan akun baru.
+7. Balasan *ya* akan langsung memulai alur input akun resmi Satbinmas dengan menggunakan Client ID yang sama, sehingga operator bisa melanjutkan penambahan atau pembaruan akun tanpa menavigasi ulang menu.
 
 Contoh respons:
 ```
@@ -93,6 +93,8 @@ Akun Resmi:
    Display Name: Satbinmas Tiktok
    Centang Biru: Sudah
    Link profile: -
+
+Apakah Anda ingin menambah atau mengubah data akun resmi Satbinmas? Balas *ya* untuk melanjutkan input data atau *batal* untuk berhenti.
 ```
 
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.
