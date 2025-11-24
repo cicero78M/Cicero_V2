@@ -43,6 +43,7 @@ import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttenda
 import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRecapService.js";
 import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmasTiktokCommentRecapService.js";
 import { hariIndo } from "../../utils/constants.js";
+import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -178,6 +179,15 @@ const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT =
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
   "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
+  "🔎 *Monitoring Satbinmas Official*\n" +
+  "Masukkan username Instagram Satbinmas Official yang ingin dicek. " +
+  "Secara default akan memakai Client ID aktif (" +
+  `${clientId || DITBINMAS_CLIENT_ID}).\n` +
+  "Format balasan: `username` atau `CLIENT_ID username`.\n" +
+  "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
+  "Balas *batal* untuk kembali ke menu.";
 
 const pangkatOrder = [
   "KOMISARIS BESAR POLISI",
@@ -1963,6 +1973,8 @@ export const dirRequestHandlers = {
         "3️⃣3️⃣ Absensi Kasatker\n" +
         "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n\n" +
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
+        "📡 *Monitoring Satbinmas Official*\n" +
+        "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2019,6 +2031,7 @@ export const dirRequestHandlers = {
           "33",
           "34",
           "35",
+          "36",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2060,6 +2073,17 @@ export const dirRequestHandlers = {
     if (choice === "35") {
       session.step = "choose_kasat_binmas_tiktok_comment_period";
       await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "36") {
+      session.step = "fetch_satbinmas_official_metadata";
+      await dirRequestHandlers.fetch_satbinmas_official_metadata(
+        session,
+        chatId,
+        "",
+        waClient
+      );
       return;
     }
 
@@ -2144,6 +2168,113 @@ export const dirRequestHandlers = {
           console.error("Gagal menghapus file sementara:", err);
         }
       }
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async fetch_satbinmas_official_metadata(session, chatId, text, waClient) {
+    const defaultClientId =
+      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const rawInput = (text || "").trim();
+
+    const formatNumber = (value) => {
+      if (value == null) return null;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return null;
+      return numeric.toLocaleString("id-ID", { maximumFractionDigits: 0 });
+    };
+
+    if (!rawInput) {
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_METADATA_PROMPT(defaultClientId)
+      );
+      return;
+    }
+
+    if (rawInput.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu Monitoring Satbinmas Official ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const tokens = rawInput.split(/\s+/);
+    const guessedClientId =
+      tokens.length >= 2 && /^[A-Za-z0-9_-]{2,}$/u.test(tokens[0])
+        ? tokens.shift()
+        : defaultClientId;
+    const usernamePart = tokens.join(" ") || rawInput;
+    const normalizedClientId = (guessedClientId || defaultClientId).toUpperCase();
+    const username = usernamePart.replace(/^@/, "").trim();
+
+    if (!username) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Username Instagram Satbinmas Official belum diisi."
+      );
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_METADATA_PROMPT(normalizedClientId)
+      );
+      return;
+    }
+
+    const usernamePattern = /^[A-Za-z0-9._]{2,}$/u;
+    if (!usernamePattern.test(username)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Format username tidak valid. Gunakan huruf, angka, titik, atau underscore tanpa spasi."
+      );
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_METADATA_PROMPT(normalizedClientId)
+      );
+      return;
+    }
+
+    try {
+      const profile = await fetchInstagramInfo(username);
+      if (!profile) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ Metadata tidak ditemukan untuk @${username}.`
+        );
+      } else {
+        const profileName =
+          profile.full_name || profile.fullName || profile.username || username;
+        const followers =
+          profile.followers_count ?? profile.follower_count ?? profile.follower;
+        const following = profile.following_count;
+        const posts = profile.media_count ?? profile.posts_count;
+        const bio = profile.biography || profile.bio;
+        const lines = [
+          "📡 Metadata IG Satbinmas Official",
+          `Client ID : ${normalizedClientId}`,
+          `Username  : @${username}`,
+          `Nama      : ${profileName}`,
+          `Followers : ${formatNumber(followers) || "-"}`,
+          `Mengikuti : ${formatNumber(following) || "-"}`,
+          `Postingan : ${formatNumber(posts) || "-"}`,
+          `Verifikasi: ${profile.is_verified ? "Sudah" : "Belum"}`,
+          `Privasi   : ${profile.is_private ? "Private" : "Publik"}`,
+        ];
+        if (bio) lines.push(`Bio: ${bio}`);
+
+        await waClient.sendMessage(chatId, lines.join("\n"));
+      }
+    } catch (error) {
+      console.error("Gagal mengambil metadata IG Satbinmas Official:", error);
+      const reason = error?.message?.slice(0, 400) || "Alasan tidak diketahui.";
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal mengambil metadata akun Satbinmas Official: ${reason}`
+      );
     }
 
     session.step = "main";
