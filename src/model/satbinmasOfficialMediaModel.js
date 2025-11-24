@@ -1,0 +1,149 @@
+import { query } from '../repository/db.js';
+
+function normalizeNullable(value) {
+  return value === undefined ? null : value;
+}
+
+export async function upsertMedia({
+  satbinmas_account_id,
+  client_id,
+  username,
+  media_id,
+  code = null,
+  media_type = null,
+  product_type = null,
+  taken_at,
+  ig_created_at = null,
+  caption_text = null,
+  like_count = null,
+  comment_count = null,
+  view_count = null,
+  play_count = null,
+  save_count = null,
+  share_count = null,
+  thumbnail_url = null,
+  media_url = null,
+  video_url = null,
+  width = null,
+  height = null,
+  duration_seconds = null,
+  fetched_for_date = null,
+  is_album = false,
+  is_video = false,
+}) {
+  const res = await query(
+    `INSERT INTO satbinmas_official_media (
+      satbinmas_account_id, client_id, username, media_id, code, media_type, product_type, taken_at, ig_created_at,
+      caption_text, like_count, comment_count, view_count, play_count, save_count, share_count, thumbnail_url,
+      media_url, video_url, width, height, duration_seconds, fetched_for_date, is_album, is_video
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9,
+      $10, $11, $12, $13, $14, $15, $16, $17,
+      $18, $19, $20, $21, $22, $23, $24, $25, $26
+    )
+    ON CONFLICT (client_id, username, media_id, taken_at) DO UPDATE SET
+      code = EXCLUDED.code,
+      media_type = EXCLUDED.media_type,
+      product_type = EXCLUDED.product_type,
+      ig_created_at = EXCLUDED.ig_created_at,
+      caption_text = EXCLUDED.caption_text,
+      like_count = EXCLUDED.like_count,
+      comment_count = EXCLUDED.comment_count,
+      view_count = EXCLUDED.view_count,
+      play_count = EXCLUDED.play_count,
+      save_count = EXCLUDED.save_count,
+      share_count = EXCLUDED.share_count,
+      thumbnail_url = EXCLUDED.thumbnail_url,
+      media_url = EXCLUDED.media_url,
+      video_url = EXCLUDED.video_url,
+      width = EXCLUDED.width,
+      height = EXCLUDED.height,
+      duration_seconds = EXCLUDED.duration_seconds,
+      fetched_for_date = EXCLUDED.fetched_for_date,
+      satbinmas_account_id = EXCLUDED.satbinmas_account_id,
+      is_album = EXCLUDED.is_album,
+      is_video = EXCLUDED.is_video,
+      updated_at = NOW()
+    RETURNING satbinmas_media_id, satbinmas_account_id, client_id, username, media_id, taken_at, fetched_for_date, created_at, updated_at, (xmax = 0::oid) AS inserted`,
+    [
+      satbinmas_account_id,
+      client_id,
+      username,
+      media_id,
+      normalizeNullable(code),
+      normalizeNullable(media_type),
+      normalizeNullable(product_type),
+      taken_at,
+      normalizeNullable(ig_created_at),
+      normalizeNullable(caption_text),
+      normalizeNullable(like_count),
+      normalizeNullable(comment_count),
+      normalizeNullable(view_count),
+      normalizeNullable(play_count),
+      normalizeNullable(save_count),
+      normalizeNullable(share_count),
+      normalizeNullable(thumbnail_url),
+      normalizeNullable(media_url),
+      normalizeNullable(video_url),
+      normalizeNullable(width),
+      normalizeNullable(height),
+      normalizeNullable(duration_seconds),
+      fetched_for_date,
+      is_album,
+      is_video,
+    ]
+  );
+
+  const media = res.rows[0] || null;
+  return { media, inserted: Boolean(media?.inserted) };
+}
+
+export async function replaceHashtagsForMedia(satbinmas_media_id, hashtags = []) {
+  if (!satbinmas_media_id) return;
+  const normalizedTags = Array.from(
+    new Set((hashtags || []).map((tag) => tag?.trim()).filter(Boolean))
+  );
+
+  await query(
+    'DELETE FROM satbinmas_official_media_hashtags WHERE satbinmas_media_id = $1',
+    [satbinmas_media_id]
+  );
+
+  if (!normalizedTags.length) return;
+
+  const values = normalizedTags
+    .map((_, idx) => `($1, $${idx + 2})`)
+    .join(',');
+
+  await query(
+    `INSERT INTO satbinmas_official_media_hashtags (satbinmas_media_id, tag)
+     VALUES ${values}
+     ON CONFLICT (satbinmas_media_id, LOWER(tag)) DO NOTHING`,
+    [satbinmas_media_id, ...normalizedTags]
+  );
+}
+
+export async function replaceMentionsForMedia(satbinmas_media_id, mentions = []) {
+  if (!satbinmas_media_id) return;
+  const normalizedMentions = Array.from(
+    new Set((mentions || []).map((mention) => mention?.replace(/^@/, '').trim()).filter(Boolean))
+  );
+
+  await query(
+    'DELETE FROM satbinmas_official_media_mentions WHERE satbinmas_media_id = $1',
+    [satbinmas_media_id]
+  );
+
+  if (!normalizedMentions.length) return;
+
+  const values = normalizedMentions
+    .map((_, idx) => `($1, $${idx + 2})`)
+    .join(',');
+
+  await query(
+    `INSERT INTO satbinmas_official_media_mentions (satbinmas_media_id, username)
+     VALUES ${values}
+     ON CONFLICT (satbinmas_media_id, LOWER(username)) DO NOTHING`,
+    [satbinmas_media_id, ...normalizedMentions]
+  );
+}

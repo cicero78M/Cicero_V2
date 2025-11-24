@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-11-06*
+*Last updated: 2025-12-18*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -12,6 +12,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 |------------|---------|
 | clients | master table for registered organisations |
 | satbinmas_official_accounts | Satbinmas official handles plus metadata linked to a client |
+| satbinmas_official_media | Daily Instagram media snapshots for Satbinmas Official accounts |
 | user | members belonging to a client |
 | roles / user_roles | role catalogue and pivot for users |
 | dashboard_user | login credentials for dashboard access |
@@ -314,4 +315,24 @@ Stores the verified Satbinmas social media handles for each client so they can b
 - `is_active` – boolean flag defaulting to `TRUE`; interpreted via service-side parsing helpers that accept booleans, `0/1`, or user-friendly strings such as `yes/no`
 - `is_verified` – boolean flag defaulting to `FALSE` to track badge/verification status with the same parsing helpers as `is_active`
 - `created_at`, `updated_at` – timestamps maintained by the database trigger `satbinmas_official_accounts_set_updated_at`
+
+### `satbinmas_official_media`
+Stores per-post metadata fetched daily from RapidAPI for Instagram Satbinmas Official accounts and keeps a stable link to both
+`client_id` and `satbinmas_account_id` for auditing.
+- `satbinmas_media_id` – UUID primary key generated via `gen_random_uuid()`
+- `satbinmas_account_id` – foreign key to `satbinmas_official_accounts` with cascade delete
+- `client_id`, `username` – denormalised references used by indexes and reporting
+- `media_id` / `code` – identifiers from Instagram (ID + shortcode)
+- `media_type`, `product_type` – media category flags
+- `taken_at`, `ig_created_at` – timestamps from the source payload (day filter uses `taken_at`)
+- `caption_text` – normalized caption text
+- `like_count`, `comment_count`, `view_count`, `play_count`, `save_count`, `share_count` – engagement metrics
+- `thumbnail_url`, `media_url`, `video_url` – media assets; `width`, `height`, `duration_seconds` capture size/duration
+- `is_album`, `is_video` – booleans describing the asset structure
+- `fetched_for_date` – date of the ingestion run; composite unique index `(client_id, username, media_id, taken_at)` prevents duplicates
+- `created_at`, `updated_at` – maintained by trigger for auditing
+
+Companion tables `satbinmas_official_media_hashtags` and `satbinmas_official_media_mentions` store parsed hashtags and mentions
+per media row with unique constraints on `(satbinmas_media_id, LOWER(tag))` and `(satbinmas_media_id, LOWER(username))` so
+caption tokens stay queryable without string parsing at read time.【F:sql/migrations/20251208_create_satbinmas_official_media.sql†L1-L89】
 

@@ -2,6 +2,20 @@ import { query } from '../repository/db.js';
 
 const normalizePlatform = (value) => value?.trim().toLowerCase();
 
+export async function findActiveByClientAndPlatform(client_id, platform) {
+  const normalizedPlatform = normalizePlatform(platform);
+  const res = await query(
+    `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
+     FROM satbinmas_official_accounts
+     WHERE LOWER(client_id) = LOWER($1)
+       AND LOWER(platform) = LOWER($2)
+       AND is_active = TRUE
+     ORDER BY created_at ASC`,
+    [client_id, normalizedPlatform]
+  );
+  return res.rows;
+}
+
 export async function findByClientId(client_id) {
   const res = await query(
     `SELECT satbinmas_account_id, client_id, platform, username, display_name, profile_url, is_active, is_verified, created_at, updated_at
