@@ -64,7 +64,7 @@ export async function upsertMedia({
       is_album = EXCLUDED.is_album,
       is_video = EXCLUDED.is_video,
       updated_at = NOW()
-    RETURNING satbinmas_media_id, satbinmas_account_id, client_id, username, media_id, taken_at, fetched_for_date, created_at, updated_at, (xmax = 0::oid) AS inserted`,
+    RETURNING satbinmas_media_id, satbinmas_account_id, client_id, username, media_id, taken_at, fetched_for_date, created_at, updated_at, (xmax = '0'::xid) AS inserted`,
     [
       satbinmas_account_id,
       client_id,

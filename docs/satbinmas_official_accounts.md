@@ -48,7 +48,9 @@ metadata plus `replaceHashtagsForMedia` and `replaceMentionsForMedia` to refresh
 the normalized references on each run. The upsert statement maps exactly 25
 placeholders to the 25 target columns (through `is_video`) to keep Postgres from
 rejecting inserts when the parameters shift, ensuring the daily ingestion loop
-can retry rows idempotently. Stale rows are removed per-account via
+can retry rows idempotently. To keep the boolean `inserted` flag compatible with
+newer PostgreSQL releases, the `RETURNING` clause now compares `xmax` against
+`'0'::xid` instead of an `oid` cast. Stale rows are removed per-account via
 `deleteMissingMediaForDate`, which deletes any media for the current fetch date
 whose `media_id`/`code` no longer appear in the latest crawl (cascading
 hashtags/mentions automatically). `satbinmasOfficialAccountModel` now includes
