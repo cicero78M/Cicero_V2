@@ -1339,6 +1339,7 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
   const complaintFound = Boolean(complaintCheck.status?.found);
   const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
   const actions = [];
+  const rapidMetricsEmpty = !dbActive && !complaintActive;
 
   const decoratedHandle = treatAsSameHandle
     ? dbHandle || complaintHandle || "akun Instagram tersebut"
@@ -1367,6 +1368,21 @@ async function buildInstagramIssueSolution(issueText, parsed, user, accountStatu
   actions.push(
     "4) Jika ada target konten tertentu dari satker, pastikan aksi dilakukan pada konten tersebut."
   );
+
+  if (!handlesMatch || rapidMetricsEmpty) {
+    actions.push("", "Verifikasi lanjutan:");
+    actions.push(
+      "- Kirim screenshot profil Instagram terbaru yang menampilkan username, foto, dan bio untuk validasi.",
+      "- Konfirmasi ulang username yang benar dan pastikan formatnya sesuai (sering tertukar karakter `_` dan `.`)."
+    );
+    if (!handlesMatch || !dbHandle) {
+      actions.push("- Jika username di database perlu disesuaikan, lakukan pembaruan berikut:");
+      actions.push(buildUpdateDataInstructions("Instagram"));
+    }
+    actions.push(
+      "- Setelah dikonfirmasi, ulangi satu like atau komentar pada konten resmi dengan akun yang bersifat publik, lalu tunggu sinkronisasi ±1 jam sebelum pengecekan ulang."
+    );
+  }
 
   actions.push("", "Eskalasi:");
   actions.push(
