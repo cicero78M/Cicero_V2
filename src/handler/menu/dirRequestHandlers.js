@@ -45,6 +45,7 @@ import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmas
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
+import { resolveSatbinmasOfficialTiktokSecUid } from "../../service/satbinmasOfficialTiktokService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -188,6 +189,15 @@ const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
   `${clientId || DITBINMAS_CLIENT_ID}).\n` +
   "Format balasan: `username` atau `CLIENT_ID username`.\n" +
   "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
+  "Balas *batal* untuk kembali ke menu.";
+
+const SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT = (clientId) =>
+  "🎯 *Sinkronisasi secUid TikTok Satbinmas Official*\n" +
+  "Masukkan username TikTok Satbinmas Official yang ingin disinkronkan. " +
+  "Secara default akan memakai Client ID aktif (" +
+  `${clientId || DITBINMAS_CLIENT_ID}).\n` +
+  "Format balasan: `username` atau `CLIENT_ID username`. Simbol @ opsional.\n" +
+  "Contoh: `satbinmas_binmas` atau `BDG01 satbinmas_binmas`.\n\n" +
   "Balas *batal* untuk kembali ke menu.";
 
 const SATBINMAS_OFFICIAL_MEDIA_PROMPT =
@@ -2008,7 +2018,8 @@ export const dirRequestHandlers = {
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
-        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n\n" +
+        "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n" +
+        "3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2067,6 +2078,7 @@ export const dirRequestHandlers = {
           "35",
           "36",
           "37",
+          "38",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2125,6 +2137,17 @@ export const dirRequestHandlers = {
     if (choice === "37") {
       session.step = "fetch_satbinmas_official_media";
       await dirRequestHandlers.fetch_satbinmas_official_media(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    if (choice === "38") {
+      session.step = "resolve_satbinmas_official_tiktok_secuid";
+      await dirRequestHandlers.resolve_satbinmas_official_tiktok_secuid(
         session,
         chatId,
         "",
@@ -2320,6 +2343,100 @@ export const dirRequestHandlers = {
       await waClient.sendMessage(
         chatId,
         `❌ Gagal mengambil metadata akun Satbinmas Official: ${reason}`
+      );
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async resolve_satbinmas_official_tiktok_secuid(
+    session,
+    chatId,
+    text,
+    waClient
+  ) {
+    const defaultClientId =
+      session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
+    const rawInput = (text || "").trim();
+
+    if (!rawInput) {
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(defaultClientId)
+      );
+      return;
+    }
+
+    if (rawInput.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu sinkronisasi secUid TikTok Satbinmas Official ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const tokens = rawInput.split(/\s+/);
+    const guessedClientId =
+      tokens.length >= 2 && /^[A-Za-z0-9_-]{2,}$/u.test(tokens[0])
+        ? tokens.shift()
+        : defaultClientId;
+    const usernamePart = tokens.join(" ") || rawInput;
+    const normalizedClientId = (guessedClientId || defaultClientId).toUpperCase();
+    const username = usernamePart.replace(/^@/, "").trim();
+
+    if (!username) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Username TikTok Satbinmas Official belum diisi."
+      );
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(normalizedClientId)
+      );
+      return;
+    }
+
+    const usernamePattern = /^[A-Za-z0-9._]{2,}$/u;
+    if (!usernamePattern.test(username)) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Format username TikTok tidak valid. Gunakan huruf, angka, titik, atau underscore tanpa spasi."
+      );
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(normalizedClientId)
+      );
+      return;
+    }
+
+    try {
+      const result = await resolveSatbinmasOfficialTiktokSecUid({
+        clientId: normalizedClientId,
+        username,
+      });
+
+      const lines = [
+        "📡 secUid TikTok Satbinmas Official",
+        `Client ID : ${result.client?.client_id || normalizedClientId}`,
+        `Nama      : ${result.client?.nama || "-"}`,
+        `Username  : @${result.username}`,
+        `secUid    : ${result.secUid}`,
+        `Verifikasi: ${result.profile?.verified ? "Sudah" : "Belum"}`,
+      ];
+
+      await waClient.sendMessage(chatId, lines.join("\n"));
+    } catch (error) {
+      console.error(
+        "Gagal sinkronisasi secUid TikTok Satbinmas Official:",
+        error
+      );
+      const reason = error?.message?.slice(0, 400) || "Alasan tidak diketahui.";
+      await waClient.sendMessage(
+        chatId,
+        `❌ Gagal sinkron secUid TikTok Satbinmas Official: ${reason}`
       );
     }
 
