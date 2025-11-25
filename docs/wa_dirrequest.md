@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-18*
+*Last updated: 2025-12-19*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -37,12 +37,37 @@ resmi Satbinmas.
      `fetchTodaySatbinmasOfficialMediaForOrgClients` untuk menarik konten hari
      berjalan (filter `taken_at` hari ini) dan menormalkan metadata, termasuk
      hashtag dan mention ke tabel terpisah.
-4. Operator menerima rekap yang otomatis dikelompokkan menjadi tiga bagian:
-   akun aktif (konten hari ini, diurut dari jumlah konten tertinggi), akun pasif
-   (sudah terdaftar tetapi belum memuat konten), dan daftar client ORG yang
-   belum pernah memasukkan akun Satbinmas Official. Nama polres dipakai apabila
-   tersedia agar mudah dibaca. Rekap tetap memuat ringkasan agregat dan daftar
-   akun yang gagal diproses jika ada.
+  4. Operator menerima rekap yang otomatis dikelompokkan menjadi tiga bagian:
+     akun aktif (konten hari ini, diurut dari jumlah konten tertinggi), akun
+     pasif (sudah terdaftar tetapi belum memuat konten), dan daftar client ORG
+     yang belum pernah memasukkan akun Satbinmas Official. Nama polres dipakai
+     apabila tersedia agar mudah dibaca. Rekap tetap memuat ringkasan agregat
+     dan daftar akun yang gagal diproses jika ada.
+
+- **3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official**
+  1. Pilih opsi **3️⃣8️⃣** untuk membuka prompt *Sinkronisasi secUid TikTok*.
+  2. Balas dengan format `username` atau `CLIENT_ID username`. Simbol `@` bisa
+     ikut ditulis atau dihilangkan. Jika tidak dicantumkan, bot memakai Client
+     ID aktif (wajib bertipe `ORG`).
+  3. Bot memanggil RapidAPI TikTok (`fetchTiktokProfile`) untuk mengambil
+     `secUid` akun tersebut.
+  4. Layanan `resolveSatbinmasOfficialTiktokSecUid` akan memvalidasi bahwa
+     client bertipe `ORG`, memetakan username ke entri
+     `satbinmas_official_accounts` berplatform `tiktok`, lalu menyimpan
+     `secUid` ke kolom `secuid`.
+  5. Hasil sukses dikirim dalam pesan ringkasan (Client ID, nama, username,
+     `secUid`, status verifikasi). Jika gagal (client bukan ORG, username sudah
+     dipakai client lain, atau RapidAPI tidak mengembalikan `secUid`), bot
+     mengirim pesan kegagalan beserta alasan singkat.
+  6. Balasan `batal` kapan pun akan menutup alur dan kembali ke menu utama.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
+
+## RapidAPI (Instagram & TikTok)
+- Semua opsi di grup *Monitoring Satbinmas Official* membutuhkan kredensial
+  RapidAPI. Pastikan variabel lingkungan `RAPIDAPI_KEY` terisi sebelum bot
+  dijalankan.
+- TikTok memakai host `tiktok-api23.p.rapidapi.com` melalui
+  `fetchTiktokProfile` untuk mengambil `secUid`. Instagram memakai host yang
+  sama via fungsi `fetchInstagramInfo` dan `fetchInstagramPosts`.
