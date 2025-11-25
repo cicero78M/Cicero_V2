@@ -124,6 +124,12 @@ business rules before calling the model:
    Instagram/TikTok tanpa catatan "Perlu" agar tidak menampilkan metadata
    sensitif di grup. Format baris dibangun oleh helper
    `formatSatbinmasAttendanceEntry` sebelum dikirim ke pengguna.【F:src/handler/menu/clientRequestHandlers.js†L170-L189】【F:src/handler/menu/clientRequestHandlers.js†L4722-L4787】
+7. Layanan `syncSatbinmasOfficialTiktokSecUidForOrgClients` mengiterasi seluruh
+   client bertipe ORG, memuat akun TikTok mereka dari
+   `satbinmas_official_accounts`, lalu memanggil RapidAPI TikTok untuk mengambil
+   `secUid` terbaru per akun dengan jeda bawaan 1,5 detik. Setiap keberhasilan
+   atau kegagalan dicatat per client agar rekap WA dapat menampilkan akun
+   tersinkron, error, dan client tanpa akun TikTok sama sekali.【F:src/service/satbinmasOfficialTiktokService.js†L1-L143】
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:

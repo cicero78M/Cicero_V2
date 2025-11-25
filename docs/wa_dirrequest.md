@@ -45,21 +45,17 @@ resmi Satbinmas.
      dan daftar akun yang gagal diproses jika ada.
 
 - **3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official**
-  1. Pilih opsi **3️⃣8️⃣** untuk membuka prompt *Sinkronisasi secUid TikTok*.
-  2. Balas dengan format `username` atau `CLIENT_ID username`. Simbol `@` bisa
-     ikut ditulis atau dihilangkan. Jika tidak dicantumkan, bot memakai Client
-     ID aktif (wajib bertipe `ORG`).
-  3. Bot memanggil RapidAPI TikTok (`fetchTiktokProfile`) untuk mengambil
-     `secUid` akun tersebut.
-  4. Layanan `resolveSatbinmasOfficialTiktokSecUid` akan memvalidasi bahwa
-     client bertipe `ORG`, memetakan username ke entri
-     `satbinmas_official_accounts` berplatform `tiktok`, lalu menyimpan
-     `secUid` ke kolom `secuid`.
-  5. Hasil sukses dikirim dalam pesan ringkasan (Client ID, nama, username,
-     `secUid`, status verifikasi). Jika gagal (client bukan ORG, username sudah
-     dipakai client lain, atau RapidAPI tidak mengembalikan `secUid`), bot
-     mengirim pesan kegagalan beserta alasan singkat.
-  6. Balasan `batal` kapan pun akan menutup alur dan kembali ke menu utama.
+  1. Pilih opsi **3️⃣8️⃣** untuk memicu sinkronisasi otomatis tanpa perlu
+     membalas username.
+  2. Bot mengambil seluruh akun TikTok Satbinmas Official dari tabel
+     `satbinmas_official_accounts` milik *semua* client bertipe `ORG`, lalu
+     memanggil RapidAPI TikTok (`fetchTiktokProfile`) satu per satu untuk
+     menarik `secUid` terbaru dengan jeda aman.
+  3. Setiap hasil sukses disimpan kembali ke kolom `secuid` melalui layanan
+     `syncSatbinmasOfficialTiktokSecUidForOrgClients`, sementara kegagalan
+     (username kosong, konflik, atau RapidAPI error) dicatat dalam ringkasan.
+  4. Operator menerima rekap agregat (jumlah client, akun berhasil, akun gagal)
+     beserta daftar client tanpa akun TikTok yang terdaftar.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.

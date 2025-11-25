@@ -45,7 +45,7 @@ import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmas
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
-import { resolveSatbinmasOfficialTiktokSecUid } from "../../service/satbinmasOfficialTiktokService.js";
+import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -191,14 +191,11 @@ const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
   "Contoh: `satbinmas_official` atau `MKS01 satbinmas_official`.\n\n" +
   "Balas *batal* untuk kembali ke menu.";
 
-const SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT = (clientId) =>
+const SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT = () =>
   "🎯 *Sinkronisasi secUid TikTok Satbinmas Official*\n" +
-  "Masukkan username TikTok Satbinmas Official yang ingin disinkronkan. " +
-  "Secara default akan memakai Client ID aktif (" +
-  `${clientId || DITBINMAS_CLIENT_ID}).\n` +
-  "Format balasan: `username` atau `CLIENT_ID username`. Simbol @ opsional.\n" +
-  "Contoh: `satbinmas_binmas` atau `BDG01 satbinmas_binmas`.\n\n" +
-  "Balas *batal* untuk kembali ke menu.";
+  "Bot akan mengambil seluruh username TikTok Satbinmas Official dari tabel `satbinmas_official_accounts` " +
+  "untuk semua client bertipe ORG, lalu menyinkronkan secUid lewat RapidAPI TikTok secara berurutan.\n" +
+  "Tidak perlu mengirim username atau Client ID tambahan. Balas *batal* untuk kembali ke menu.";
 
 const SATBINMAS_OFFICIAL_MEDIA_PROMPT =
   "📸 *Ambil Konten Harian Satbinmas Official*\n" +
@@ -2360,14 +2357,6 @@ export const dirRequestHandlers = {
       session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID;
     const rawInput = (text || "").trim();
 
-    if (!rawInput) {
-      await waClient.sendMessage(
-        chatId,
-        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(defaultClientId)
-      );
-      return;
-    }
-
     if (rawInput.toLowerCase() === "batal") {
       await waClient.sendMessage(
         chatId,
@@ -2378,54 +2367,69 @@ export const dirRequestHandlers = {
       return;
     }
 
-    const tokens = rawInput.split(/\s+/);
-    const guessedClientId =
-      tokens.length >= 2 && /^[A-Za-z0-9_-]{2,}$/u.test(tokens[0])
-        ? tokens.shift()
-        : defaultClientId;
-    const usernamePart = tokens.join(" ") || rawInput;
-    const normalizedClientId = (guessedClientId || defaultClientId).toUpperCase();
-    const username = usernamePart.replace(/^@/, "").trim();
-
-    if (!username) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Username TikTok Satbinmas Official belum diisi."
-      );
-      await waClient.sendMessage(
-        chatId,
-        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(normalizedClientId)
-      );
-      return;
-    }
-
-    const usernamePattern = /^[A-Za-z0-9._]{2,}$/u;
-    if (!usernamePattern.test(username)) {
-      await waClient.sendMessage(
-        chatId,
-        "❌ Format username TikTok tidak valid. Gunakan huruf, angka, titik, atau underscore tanpa spasi."
-      );
-      await waClient.sendMessage(
-        chatId,
-        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(normalizedClientId)
-      );
-      return;
-    }
-
     try {
-      const result = await resolveSatbinmasOfficialTiktokSecUid({
-        clientId: normalizedClientId,
-        username,
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_TIKTOK_SECUID_PROMPT(defaultClientId)
+      );
+
+      const summary = await syncSatbinmasOfficialTiktokSecUidForOrgClients();
+
+      const successLines = [];
+      const failedLines = [];
+      const missingClients = [];
+
+      summary.clients.forEach((clientSummary) => {
+        const clientLabel = clientSummary.name?.trim() || clientSummary.clientId;
+
+        if (clientSummary.missingAccounts) {
+          missingClients.push(clientLabel);
+          return;
+        }
+
+        clientSummary.accounts.forEach((account) => {
+          successLines.push(
+            `- @${account.username} (${clientLabel}): ${account.secUid}`
+          );
+        });
+
+        clientSummary.errors.forEach((err) => {
+          failedLines.push(
+            `- @${err.username || "(kosong)"} (${clientLabel}): ${
+              err.message || "Gagal sinkron secUid."
+            }`
+          );
+        });
       });
 
       const lines = [
         "📡 secUid TikTok Satbinmas Official",
-        `Client ID : ${result.client?.client_id || normalizedClientId}`,
-        `Nama      : ${result.client?.nama || "-"}`,
-        `Username  : @${result.username}`,
-        `secUid    : ${result.secUid}`,
-        `Verifikasi: ${result.profile?.verified ? "Sudah" : "Belum"}`,
+        `Client ORG diproses : ${summary.totals.clients}`,
+        `Akun TikTok diproses: ${summary.totals.accounts}`,
+        `Berhasil disimpan   : ${summary.totals.resolved}`,
+        `Gagal disimpan      : ${summary.totals.failed}`,
       ];
+
+      lines.push("", "🚫 Client tanpa akun TikTok");
+      if (missingClients.length) {
+        missingClients.forEach((label) => {
+          lines.push(`- ${label}`);
+        });
+      } else {
+        lines.push("- Semua client ORG memiliki akun TikTok terdaftar.");
+      }
+
+      lines.push("", "✅ secUid tersinkron");
+      if (successLines.length) {
+        successLines.forEach((msg) => lines.push(msg));
+      } else {
+        lines.push("- Tidak ada akun yang berhasil disinkron.");
+      }
+
+      if (failedLines.length) {
+        lines.push("", "⚠️ Gagal sinkron secUid");
+        failedLines.forEach((msg) => lines.push(msg));
+      }
 
       await waClient.sendMessage(chatId, lines.join("\n"));
     } catch (error) {
