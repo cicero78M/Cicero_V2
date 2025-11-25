@@ -236,6 +236,7 @@ async function fetchSatbinmasProfile(platform, username) {
       profile,
       baseDisplayName,
       profileUrl: profile?.avatar_url || `https://www.tiktok.com/@${username}`,
+      secUid: profile?.secUid || null,
       isActive: Boolean(profile && (profile.username || profile.nickname)),
       isVerified: Boolean(profile?.verified),
     };
@@ -251,6 +252,7 @@ async function fetchSatbinmasProfile(platform, username) {
       profile?.profile_url ||
       profile?.profile_pic_url ||
       `https://instagram.com/${username}`,
+    secUid: null,
     isActive: Boolean(profile && profile.username),
     isVerified: Boolean(profile?.is_verified),
   };
@@ -2916,6 +2918,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       username,
       display_name: displayName,
       profile_url: fetched.profileUrl,
+      secUid: fetched.secUid,
       is_active: Boolean(fetched.isActive),
       is_verified: Boolean(fetched.isVerified),
     };

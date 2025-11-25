@@ -21,6 +21,7 @@ CREATE TABLE satbinmas_official_accounts (
   client_id VARCHAR NOT NULL REFERENCES clients(client_id) ON DELETE CASCADE,
   platform VARCHAR NOT NULL,
   username VARCHAR NOT NULL,
+  secuid TEXT,
   display_name TEXT,
   profile_url TEXT,
   is_active BOOLEAN DEFAULT TRUE,

@@ -13,7 +13,10 @@ canonical schema export. Additional metadata columns (`display_name`,
 `profile_url`, `is_verified`) are layered on via
 `20251206_enrich_satbinmas_official_account_metadata.sql`. Username uniqueness
 per platform is enforced at the database level (case-insensitive) by
-`20251207_enforce_unique_satbinmas_usernames.sql`.
+`20251207_enforce_unique_satbinmas_usernames.sql`, and
+`20251209_add_secuid_to_satbinmas_official_accounts.sql` stores platform-native
+identifiers (TikTok `secUid`) alongside usernames so downstream fetchers can
+still target the correct profile even if the handle changes.
 
 | Column | Description |
 |--------|-------------|
@@ -21,6 +24,7 @@ per platform is enforced at the database level (case-insensitive) by
 | `client_id` | Foreign key to `clients(client_id)` with cascade delete |
 | `platform` | Lowercase platform label (e.g. `instagram`, `tiktok`) |
 | `username` | Trimmed handle for the Satbinmas operator |
+| `secuid` | Optional platform-native identifier (e.g. TikTok `secUid`) for resilient lookups when usernames rotate |
 | `display_name` | Optional human-friendly label for the handle |
 | `profile_url` | Optional public link to the profile |
 | `is_active` | Boolean flag defaulting to `TRUE` |
@@ -73,7 +77,7 @@ row.【F:src/service/satbinmasOfficialMediaService.js†L1-L206】【F:src/handl
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
 used by higher layers. Each reader returns the expanded metadata set (including
-`display_name`, `profile_url`, and `is_verified`):
+`display_name`, `profile_url`, `secuid`, and `is_verified`):
 
 - `findByClientId(client_id)` returns all rows for a client ordered by platform.
 - `findByClientIdAndPlatform(client_id, platform)` normalizes the platform name
@@ -82,7 +86,7 @@ used by higher layers. Each reader returns the expanded metadata set (including
 - `findByPlatformAndUsername(platform, username)` normalizes inputs and detects
   a case-insensitive username conflict across clients for the same platform.
 - `findById(accountId)` loads a single account when deleting.
-- `upsertAccount({ client_id, platform, username, display_name?, profile_url?, is_active, is_verified })`
+- `upsertAccount({ client_id, platform, username, display_name?, profile_url?, secUid?, is_active, is_verified })`
   performs an `INSERT ... ON CONFLICT` so that create and update share one code
   path while keeping the new metadata in sync.
 - `removeById(accountId)` deletes the account and returns the removed row for
@@ -96,15 +100,18 @@ business rules before calling the model:
 2. `listSatbinmasOfficialAccounts` simply proxies to the model after the check.
 3. `saveSatbinmasOfficialAccount` validates that `platform` and `username` are
    present, trims their values, normalizes the platform to lowercase, and keeps
-   optional `display_name` and `profile_url` trimmed when provided. It applies
-   `parseOptionalBoolean` to both `is_active` (defaulting to `true` when new) and
-   `is_verified` (defaulting to `false` when new) so operators can send
-   booleans, `0/1`, or strings like `yes/no`. When either boolean is omitted,
-   the previous value (if any) is preserved. Username reuse across clients for
-   the same platform is rejected up front (HTTP 409) and guarded in the database
-   so callers receive a clear error instead of a generic constraint failure.
-   The method returns both the stored row and a `created` flag so callers know
-   whether a new record was inserted or updated.
+   optional `display_name` and `profile_url` trimmed when provided. It also
+   accepts `secUid` (or `secuid`) for TikTok so the underlying table stores the
+   platform-native identifier when available, falling back to the previous
+   value if none is provided. It applies `parseOptionalBoolean` to both
+   `is_active` (defaulting to `true` when new) and `is_verified` (defaulting to
+   `false` when new) so operators can send booleans, `0/1`, or strings like
+   `yes/no`. When either boolean is omitted, the previous value (if any) is
+   preserved. Username reuse across clients for the same platform is rejected up
+   front (HTTP 409) and guarded in the database so callers receive a clear error
+   instead of a generic constraint failure. The method returns both the stored
+   row and a `created` flag so callers know whether a new record was inserted or
+   updated.
 4. `deleteSatbinmasOfficialAccount` checks the `satbinmas_account_id` belongs to
    the same client before removing it, ensuring operators cannot delete handles
    from other clients.【F:src/service/satbinmasOfficialAccountService.js†L1-L120】
@@ -124,7 +131,7 @@ Three authenticated endpoints are exposed under the client routes namespace:
 - `GET /api/client/:client_id/satbinmas-official` lists the existing handles for
   a client.
 - `PUT /api/client/:client_id/satbinmas-official` upserts an account. The body
-  accepts `{ platform, username, display_name?, profile_url?, is_active?, is_verified? }`.
+  accepts `{ platform, username, display_name?, profile_url?, secUid?, is_active?, is_verified? }`.
 - `DELETE /api/client/:client_id/satbinmas-official/:account_id` removes a
   handle linked to the client.【F:src/controller/clientController.js†L7-L105】【F:src/routes/clientRoutes.js†L1-L36】
 
@@ -144,6 +151,7 @@ Both Instagram and TikTok are supported via the same endpoint. Example requests:
   "username": "satbinmas",
   "display_name": "Akun Resmi Satbinmas",
   "profile_url": "https://instagram.com/satbinmas",
+  "secUid": null,
   "is_active": true,
   "is_verified": true
 }
@@ -157,6 +165,7 @@ Both Instagram and TikTok are supported via the same endpoint. Example requests:
   "username": "satbinmas_official",
   "display_name": "Akun Resmi Satbinmas",
   "profile_url": "https://www.tiktok.com/@satbinmas_official",
+  "secUid": "SEC12345",
   "is_active": true,
   "is_verified": false
 }

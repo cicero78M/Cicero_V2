@@ -115,6 +115,7 @@ test('saveSatbinmasOfficialAccount creates new row with default active flag', as
     username: '@Satbinmas',
     display_name: 'Satbinmas Kota',
     profile_url: 'https://instagram.com/satbinmas',
+    secUid: null,
     is_active: true,
     is_verified: false,
   });
@@ -129,6 +130,7 @@ test('saveSatbinmasOfficialAccount keeps existing values when not provided', asy
     is_verified: true,
     display_name: 'Existing Name',
     profile_url: 'https://existing',
+    secUid: 'existing-secuid',
   });
   mockFindAccountByPlatformAndUsername.mockResolvedValue({
     satbinmas_account_id: 'existing-uuid',
@@ -140,6 +142,7 @@ test('saveSatbinmasOfficialAccount keeps existing values when not provided', asy
     username: '@Satbinmas',
     display_name: 'Existing Name',
     profile_url: 'https://existing',
+    secUid: 'existing-secuid',
     is_active: false,
     is_verified: true,
   };
@@ -156,6 +159,7 @@ test('saveSatbinmasOfficialAccount keeps existing values when not provided', asy
     username: '@Satbinmas',
     display_name: 'Existing Name',
     profile_url: 'https://existing',
+    secUid: 'existing-secuid',
     is_active: false,
     is_verified: true,
   });
@@ -201,6 +205,7 @@ test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
     username: '@sat',
     is_active: 'yes',
     is_verified: 'true',
+    secUid: 'SEC-123',
   });
 
   expect(mockUpsertAccount).toHaveBeenCalledWith({
@@ -209,6 +214,7 @@ test('saveSatbinmasOfficialAccount parses boolean strings', async () => {
     username: '@sat',
     display_name: null,
     profile_url: null,
+    secUid: 'SEC-123',
     is_active: true,
     is_verified: true,
   });
@@ -240,6 +246,7 @@ test('saveSatbinmasOfficialAccount defaults is_verified to false when new value 
     username: '@sat',
     display_name: null,
     profile_url: null,
+    secUid: null,
     is_active: true,
     is_verified: false,
   });

@@ -50,7 +50,16 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
     throw createError('Client not found', 404);
   }
 
-  const { platform, username, is_active, display_name, profile_url, is_verified } = payload;
+  const {
+    platform,
+    username,
+    is_active,
+    display_name,
+    profile_url,
+    is_verified,
+    secUid,
+    secuid,
+  } = payload;
 
   if (!platform || !platform.trim()) {
     throw createError('platform is required', 400);
@@ -90,6 +99,17 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
     (normalizedProfileUrl && normalizedProfileUrl.length > 0
       ? normalizedProfileUrl
       : existing?.profile_url) ?? null;
+  const providedSecUid =
+    typeof secUid === 'string'
+      ? secUid
+      : typeof secuid === 'string'
+        ? secuid
+        : null;
+  const normalizedSecUid = providedSecUid?.trim();
+  const resolvedSecUid =
+    (normalizedSecUid && normalizedSecUid.length > 0
+      ? normalizedSecUid
+      : existing?.secUid) ?? null;
   const normalizedIsActive = parseOptionalBoolean(is_active, existing?.is_active, true);
   const normalizedIsVerified = parseOptionalBoolean(
     is_verified,
@@ -104,6 +124,7 @@ export async function saveSatbinmasOfficialAccount(clientId, payload = {}) {
       username: trimmedUsername,
       display_name: resolvedDisplayName,
       profile_url: resolvedProfileUrl,
+      secUid: resolvedSecUid,
       is_active: normalizedIsActive,
       is_verified: normalizedIsVerified,
     });
