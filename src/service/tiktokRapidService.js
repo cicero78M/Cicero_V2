@@ -75,6 +75,7 @@ export async function fetchTiktokProfile(username) {
     if (!data) return res.data;
     return {
       username: data.user?.uniqueId,
+      secUid: data.user?.secUid,
       nickname: data.user?.nickname,
       follower_count: data.stats?.followerCount,
       following_count: data.stats?.followingCount,
