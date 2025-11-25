@@ -134,12 +134,12 @@ function buildRecordedActivitySolution({
   const platformMenuInfo =
     platform === "Instagram"
       ? {
-          menu: "*Absensi Amplifikasi*",
+          menu: "*Absensi Likes Instagram*",
           refreshInstruction:
             "Buka menu tersebut di dashboard Cicero, pilih ulang filter satker/periode lalu tekan tombol *Refresh* untuk memuat riwayat terbaru.",
         }
       : {
-          menu: "*Absensi Komentar*",
+          menu: "*Absensi Komentar TikTok*",
           refreshInstruction:
             "Buka menu tersebut di dashboard Cicero, pilih ulang filter satker/periode kemudian klik *Refresh* atau muat ulang riwayat tugasnya.",
         };
@@ -1602,7 +1602,7 @@ function buildFlaggedNotDoneSolution(issueText, accountStatus) {
     "2) Kirim tautan konten yang sudah di-like/dikomentari beserta waktu pelaksanaan sebagai bukti pengecekan."
   );
   lines.push(
-    "3) Buka menu Absensi Amplifikasi/Absensi Komentar di dashboard Cicero, pilih ulang satker & periode, lalu tekan *Refresh* untuk memuat data terbaru."
+    "3) Buka menu Absensi Likes Instagram atau Absensi Komentar TikTok di dashboard Cicero, pilih ulang satker & periode, lalu tekan *Refresh* untuk memuat data terbaru."
   );
   lines.push(
     "4) Jika status tetap 'belum melaksanakan' setelah refresh ±1 jam, kirim tangkapan layar aksi dan hasil refresh untuk eskalasi ke operator piket."
