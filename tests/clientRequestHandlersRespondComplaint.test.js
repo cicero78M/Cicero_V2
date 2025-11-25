@@ -338,7 +338,8 @@ test('respondComplaint_message shortcuts when Instagram like activity already re
     const instagramSolution = mockSafeSendMessage.mock.calls[0][2];
     expect(instagramSolution).toContain('@RegisteredIG');
     expect(instagramSolution).toContain('Sistem Cicero tidak menemukan gangguan pencatatan');
-    expect(instagramSolution).toContain('Absensi Amplifikasi');
+    expect(instagramSolution).toContain('Absensi Likes Instagram');
+    expect(instagramSolution).not.toContain('Amplifikasi');
     expect(instagramSolution).toContain('dashboard Cicero');
     expect(instagramSolution).toContain('tekan tombol *Refresh*');
     expect(instagramSolution.toLowerCase()).toContain('tangkapan layar');
