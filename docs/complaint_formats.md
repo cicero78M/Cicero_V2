@@ -38,3 +38,11 @@ Rincian Kendala:
 ```
 
 Either header will be recognised, and each numbered or bulleted row is evaluated for known issues (e.g., TikTok actions not recorded) before prompting for a manual solution.
+
+## Instagram complaint follow-up
+
+When an Instagram complaint reports missing likes/comments and the username in the message differs from the database or RapidAPI returns profiles without activity metrics, the responder now adds explicit follow-up steps:
+
+- Ask for the latest Instagram profile screenshot that shows the username, photo, and bio, and remind reporters to check subtle character differences (e.g., `_` vs `.`) when confirming the correct handle.
+- If the stored username needs to be updated, the reply embeds the *Update Data Personil* instructions so reporters can refresh the Instagram handle in the database.
+- Reporters are instructed to redo one like or comment on an official post using a public account, then wait about one hour for synchronization before rechecking.
