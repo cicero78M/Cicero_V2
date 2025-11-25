@@ -1399,9 +1399,10 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
   const dbHandle = ensureHandle(user?.tiktok);
   const complaintHandle = normalizeComplaintHandle(parsed.tiktok);
   const clientId = user?.client_id || user?.clientId || null;
+  let commentCount = null;
   if (dbHandle) {
     const now = new Date();
-    const commentCount = await hasUserCommentedBetween(
+    commentCount = await hasUserCommentedBetween(
       dbHandle,
       ACTIVITY_START_DATE,
       now,
@@ -1476,6 +1477,9 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
   const dbActive = dbFound && hasFullMetrics(dbStatus);
   const complaintFound = Boolean(complaintCheck.status?.found);
   const complaintActive = complaintFound && hasFullMetrics(complaintCheck.status);
+  const hasRecordedComment = typeof commentCount === "number" && commentCount > 0;
+  const activeButNoCommentRecord = (dbActive || complaintActive) && !hasRecordedComment;
+  const needsHandleUpdate = !handlesMatch || !dbHandle;
   const actions = [];
 
   const decoratedHandle = treatAsSameHandle
@@ -1506,9 +1510,30 @@ async function buildTiktokIssueSolution(issueText, parsed, user, accountStatus) 
     "4) Jika ada target konten tertentu dari satker, pastikan aksi dilakukan pada konten tersebut."
   );
 
+  if (activeButNoCommentRecord) {
+    actions.push("", "Validasi akun & bukti komentar:");
+    actions.push(
+      "- Verifikasi akun yang dipakai saat komentar; perhatikan perbedaan karakter mirip seperti `_` vs `.` ketika memastikan username benar.",
+      "- Kirim screenshot profil TikTok terbaru yang menampilkan username serta tautan video yang sudah dikomentari.",
+      "- Ulangi satu komentar pada konten resmi satker untuk uji pencatatan, lalu tunggu sinkronisasi ±1 jam sebelum pengecekan ulang.",
+      "- Hindari emoji atau karakter khusus yang mungkin tidak terbaca sistem ketika mengirim komentar maupun bukti."
+    );
+    if (needsHandleUpdate) {
+      actions.push("- Jika username di database perlu disesuaikan, lakukan pembaruan berikut:");
+      actions.push(buildUpdateDataInstructions("TikTok"));
+    }
+  } else if (needsHandleUpdate) {
+    actions.push("", "Pembaruan username:");
+    actions.push("- Jika username di database perlu disesuaikan, lakukan pembaruan berikut:");
+    actions.push(buildUpdateDataInstructions("TikTok"));
+  }
+
   actions.push("", "Eskalasi:");
   actions.push(
     "- Jika setelah verifikasi di atas data masih belum terbaca, eskalasi ke operator piket untuk pengecekan log sistem."
+  );
+  actions.push(
+    "- Setelah sinkronisasi ±1 jam data tetap kosong, minta operator mengecek log integrasi TikTok (RapidAPI/API) termasuk potensi batasan rate limit."
   );
 
   lines.push("", "Langkah tindak lanjut:");

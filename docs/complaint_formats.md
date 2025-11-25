@@ -46,3 +46,12 @@ When an Instagram complaint reports missing likes/comments and the username in t
 - Ask for the latest Instagram profile screenshot that shows the username, photo, and bio, and remind reporters to check subtle character differences (e.g., `_` vs `.`) when confirming the correct handle.
 - If the stored username needs to be updated, the reply embeds the *Update Data Personil* instructions so reporters can refresh the Instagram handle in the database.
 - Reporters are instructed to redo one like or comment on an official post using a public account, then wait about one hour for synchronization before rechecking.
+
+## TikTok complaint follow-up
+
+For TikTok complaints where the profile appears active but comment metrics are still empty, the automated response now covers:
+
+- Reconfirming the account used for commenting (highlighting common typos such as `_` vs `.`) and requesting a fresh profile screenshot plus the commented video link.
+- Prompting reporters to redo one comment on an official satker video with plain text (avoid emojis/special characters) and wait around one hour for synchronization.
+- Recommending a username update through the existing *Update Data Personil* instructions when the complaint handle differs from the database entry.
+- Escalation guidance that asks operators to review TikTok integration logs (RapidAPI/API), including potential rate-limit cases, if data remains empty after the synchronization window.
