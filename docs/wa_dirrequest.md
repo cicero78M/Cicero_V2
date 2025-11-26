@@ -37,12 +37,12 @@ resmi Satbinmas.
      `fetchTodaySatbinmasOfficialMediaForOrgClients` untuk menarik konten hari
      berjalan (filter `taken_at` hari ini) dan menormalkan metadata, termasuk
      hashtag dan mention ke tabel terpisah.
-  4. Operator menerima rekap yang otomatis dikelompokkan menjadi tiga bagian:
-     akun aktif (konten hari ini, diurut dari jumlah konten tertinggi), akun
-     pasif (sudah terdaftar tetapi belum memuat konten), dan daftar client ORG
-     yang belum pernah memasukkan akun Satbinmas Official. Nama polres dipakai
-     apabila tersedia agar mudah dibaca. Rekap tetap memuat ringkasan agregat
-     dan daftar akun yang gagal diproses jika ada.
+  4. Operator menerima rekap harian yang memuat periode pengambilan data,
+     total polres/akun/konten (tanpa rincian baru/update/gagal), daftar akun
+     aktif (urutan konten tertinggi) lengkap dengan total likes dan komentar
+     per akun, akun pasif, serta client ORG yang belum pernah memasukkan akun
+     Satbinmas Official. Nama polres dipakai apabila tersedia agar mudah
+     dibaca. Rekap tetap memuat daftar akun yang gagal diproses jika ada.
 
 - **3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official**
   1. Pilih opsi **3️⃣8️⃣** untuk memicu sinkronisasi otomatis tanpa perlu

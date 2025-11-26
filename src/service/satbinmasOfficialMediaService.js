@@ -206,6 +206,8 @@ async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPI
       let inserted = 0;
       let updated = 0;
       let removed = 0;
+      let likeCount = 0;
+      let commentCount = 0;
       const identifiers = [];
 
       for (const item of postsWithDate) {
@@ -234,6 +236,11 @@ async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPI
         } else {
           updated += 1;
         }
+
+        likeCount += Number.isFinite(normalized.like_count) ? normalized.like_count : 0;
+        commentCount += Number.isFinite(normalized.comment_count)
+          ? normalized.comment_count
+          : 0;
       }
 
       if (account?.satbinmas_account_id) {
@@ -251,6 +258,8 @@ async function fetchMediaForClient(client, usernameFilter = null, delayMs = RAPI
         inserted,
         updated,
         removed,
+        likes: likeCount,
+        comments: commentCount,
       });
       summary.totals.fetched += postsWithDate.length;
       summary.totals.inserted += inserted;
