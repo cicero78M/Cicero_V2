@@ -76,7 +76,7 @@ export async function upsertTiktokAccountSnapshot({
   if (!normalizedUsername) return { account: null, inserted: false };
 
   const res = await query(
-    `INSERT INTO tiktok_accounts (
+    `INSERT INTO satbinmas_tiktok_accounts (
       author_secuid, author_id, username, display_name, bio, avatar_url,
       is_verified, is_private, followers, following, likes_total, video_count, snapshot_at
     ) VALUES (
@@ -122,7 +122,7 @@ export async function replaceHashtagsForPost(post_id, hashtags = []) {
   const normalizedPostId = normalizeText(post_id);
   if (!normalizedPostId) return;
 
-  await query('DELETE FROM tiktok_post_hashtags WHERE post_id = $1', [
+  await query('DELETE FROM satbinmas_tiktok_post_hashtags WHERE post_id = $1', [
     normalizedPostId,
   ]);
 
@@ -131,7 +131,7 @@ export async function replaceHashtagsForPost(post_id, hashtags = []) {
 
   const values = unique.map((_, idx) => `($1, $${idx + 2})`).join(",");
   await query(
-    `INSERT INTO tiktok_post_hashtags (post_id, hashtag)
+    `INSERT INTO satbinmas_tiktok_post_hashtags (post_id, hashtag)
      VALUES ${values}
      ON CONFLICT (post_id, LOWER(hashtag)) DO NOTHING`,
     [normalizedPostId, ...unique]
@@ -146,7 +146,7 @@ export async function upsertTiktokPostSnapshot(payload = {}) {
   }
 
   const res = await query(
-    `INSERT INTO tiktok_posts (
+    `INSERT INTO satbinmas_tiktok_posts (
       post_id, author_secuid, caption, created_at, language, play_url, cover_url,
       duration_sec, height, width, ratio, views, likes, comments, shares, bookmarks,
       is_ad, is_private_post, share_enabled, duet_enabled, stitch_enabled, crawl_at

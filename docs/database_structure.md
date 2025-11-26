@@ -24,7 +24,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | insta_post_roles | restricts Instagram post visibility per role |
 | tiktok_post / tiktok_post_roles | TikTok videos and their role restrictions |
 | tiktok_comment | cached TikTok comments |
-| tiktok_accounts / tiktok_posts / tiktok_post_hashtags | TikTok secUid snapshots for Satbinmas automation (separate from legacy `tiktok_post`) |
+| satbinmas_tiktok_accounts / satbinmas_tiktok_posts / satbinmas_tiktok_post_hashtags | TikTok secUid snapshots for Satbinmas automation (separate from legacy `tiktok_post`) |
 | instagram_user / instagram_user_metrics | extended Instagram account data |
 | ig_ext_* tables | RapidAPI references for detailed Instagram metadata |
 | visitor_logs | record of API access |
@@ -164,7 +164,7 @@ Comments for a TikTok video.
 - `comments` – JSON array of comments
 - `updated_at`
 
-### `tiktok_accounts`
+### `satbinmas_tiktok_accounts`
 Snapshots of TikTok profiles keyed by `secUid` so Satbinmas fetches can persist
 account metrics without touching the legacy `tiktok_post` table.
 - `author_secuid` – primary key (TikTok `secUid`); joinable to
@@ -178,12 +178,12 @@ account metrics without touching the legacy `tiktok_post` table.
 - `followers`, `following`, `likes_total`, `video_count` – aggregate metrics
 - `snapshot_at` – timestamp marking when the profile snapshot was taken
 
-### `tiktok_posts`
-TikTok video snapshots linked to `tiktok_accounts(author_secuid)` via the
+### `satbinmas_tiktok_posts`
+TikTok video snapshots linked to `satbinmas_tiktok_accounts(author_secuid)` via the
 native `secUid`. This table is designed for the new Satbinmas TikTok crawler and
 does **not** reuse the older `tiktok_post` rows bound to `client_id`.
 - `post_id` – primary key (TikTok video ID)
-- `author_secuid` – foreign key to `tiktok_accounts(author_secuid)` with cascade
+- `author_secuid` – foreign key to `satbinmas_tiktok_accounts(author_secuid)` with cascade
   delete
 - `caption`, `language` – textual metadata
 - `created_at` – video creation timestamp parsed from RapidAPI responses
@@ -194,10 +194,10 @@ does **not** reuse the older `tiktok_post` rows bound to `client_id`.
   – boolean flags for the post
 - `crawl_at` – timestamp of the fetch job writing the snapshot
 
-### `tiktok_post_hashtags`
-Stores hashtags extracted from `tiktok_posts` captions. Case-insensitive
+### `satbinmas_tiktok_post_hashtags`
+Stores hashtags extracted from `satbinmas_tiktok_posts` captions. Case-insensitive
 uniqueness prevents duplicates per `post_id`.
-- `post_id` – references `tiktok_posts(post_id)` with cascade delete
+- `post_id` – references `satbinmas_tiktok_posts(post_id)` with cascade delete
 - `hashtag` – raw hashtag text (without the `#` prefix)
 
 ### `tasks`
@@ -309,9 +309,9 @@ erDiagram
     clients ||--o{ user : "has"
     clients ||--o{ insta_post : "posts"
     clients ||--o{ tiktok_post : "videos"
-    satbinmas_official_accounts ||..|| tiktok_accounts : "secuid = author_secuid"
-    tiktok_accounts ||--o{ tiktok_posts : "videos"
-    tiktok_posts ||--o{ tiktok_post_hashtags : "hashtags"
+    satbinmas_official_accounts ||..|| satbinmas_tiktok_accounts : "secuid = author_secuid"
+    satbinmas_tiktok_accounts ||--o{ satbinmas_tiktok_posts : "videos"
+    satbinmas_tiktok_posts ||--o{ satbinmas_tiktok_post_hashtags : "hashtags"
     insta_post ||--|| insta_like : "likes"
     tiktok_post ||--|| tiktok_comment : "comments"
     editorial_event ||--|| press_release_detail : "detail"
@@ -321,10 +321,11 @@ erDiagram
 
 The diagram shows how each `client` owns many `user`, `insta_post` and
 `tiktok_post` records. Instagram and TikTok posts have one-to-one tables for
-likes and comments. Satbinmas TikTok snapshots live in the `tiktok_accounts`
-and `tiktok_posts` tables keyed by `secUid`, which can be joined to
-`satbinmas_official_accounts` without reusing the legacy `tiktok_post`
-structure. Editorial events maintain optional press-release details and multiple
+likes and comments. Satbinmas TikTok snapshots live in the
+`satbinmas_tiktok_accounts` and `satbinmas_tiktok_posts` tables keyed by
+`secUid`, which can be joined to `satbinmas_official_accounts` without reusing
+the legacy `tiktok_post` structure. Editorial events maintain optional
+press-release details and multiple
 approval/change log entries.
 
 ## PostgreSQL Table Management
