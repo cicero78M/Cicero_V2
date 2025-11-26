@@ -5,6 +5,12 @@ function normalizeClientId(id) {
   return typeof id === "string" ? id.trim().toLowerCase() : id;
 }
 
+function toInteger(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.trunc(numeric);
+}
+
 /**
  * Ambil satu post TikTok berdasarkan video_id.
  * @param {string} video_id
@@ -67,6 +73,53 @@ export async function upsertTiktokPosts(client_id, posts) {
       ]
     );
   }
+}
+
+/**
+ * Upsert satu post TikTok dan kembalikan status inserted/updated.
+ * Menggunakan flag xmax agar kompatibel dengan Postgres terbaru.
+ * @param {object} payload
+ * @param {string} payload.client_id
+ * @param {string} payload.video_id
+ * @param {string} [payload.caption]
+ * @param {number} [payload.like_count]
+ * @param {number} [payload.comment_count]
+ * @param {Date|string|number} [payload.created_at]
+ * @returns {Promise<{ inserted: boolean, updated: boolean }>}
+ */
+export async function upsertTiktokPostWithStatus({
+  client_id,
+  video_id,
+  caption,
+  like_count,
+  comment_count,
+  created_at,
+}) {
+  const normalizedVideoId = (video_id || "").trim();
+  if (!normalizedVideoId) return { inserted: false, updated: false };
+
+  const res = await query(
+    `INSERT INTO tiktok_post (client_id, video_id, caption, like_count, comment_count, created_at)
+     VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+     ON CONFLICT (video_id) DO UPDATE
+       SET client_id = EXCLUDED.client_id,
+           caption = EXCLUDED.caption,
+           like_count = EXCLUDED.like_count,
+           comment_count = EXCLUDED.comment_count,
+           created_at = EXCLUDED.created_at
+     RETURNING xmax = '0'::xid AS inserted`,
+    [
+      client_id,
+      normalizedVideoId,
+      caption || "",
+      toInteger(like_count) ?? 0,
+      toInteger(comment_count) ?? 0,
+      created_at || null,
+    ]
+  );
+
+  const inserted = Boolean(res.rows?.[0]?.inserted);
+  return { inserted, updated: !inserted };
 }
 
 /**
