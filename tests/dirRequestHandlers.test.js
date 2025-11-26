@@ -17,6 +17,7 @@ const mockAbsensiKomentar = jest.fn();
 const mockAbsensiKomentarDitbinmasReport = jest.fn();
 const mockAbsensiKomentarDitbinmasSimple = jest.fn();
 const mockFindClientById = jest.fn();
+const mockFetchTiktokSecUid = jest.fn();
 const mockFetchAndStoreInstaContent = jest.fn();
 const mockHandleFetchLikesInstagram = jest.fn();
 const mockRekapLikesIG = jest.fn();
@@ -40,6 +41,8 @@ const mockGenerateKasatkerReport = jest.fn();
 const mockGenerateKasatkerAttendanceSummary = jest.fn();
 const mockGenerateKasatBinmasLikesRecap = jest.fn();
 const mockGenerateKasatBinmasTiktokCommentRecap = jest.fn();
+const mockFetchTodaySatbinmasOfficialTiktokMediaForOrgClients = jest.fn();
+const mockSyncSatbinmasOfficialTiktokSecUidForOrgClients = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
@@ -79,6 +82,13 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
   findClientById: mockFindClientById,
+  fetchTiktokSecUid: mockFetchTiktokSecUid,
+}));
+jest.unstable_mockModule('../src/service/satbinmasOfficialTiktokService.js', () => ({
+  fetchTodaySatbinmasOfficialTiktokMediaForOrgClients:
+    mockFetchTodaySatbinmasOfficialTiktokMediaForOrgClients,
+  syncSatbinmasOfficialTiktokSecUidForOrgClients:
+    mockSyncSatbinmasOfficialTiktokSecUidForOrgClients,
 }));
 jest.unstable_mockModule('fs/promises', () => ({
   writeFile: mockWriteFile,
@@ -209,6 +219,22 @@ beforeEach(() => {
   mockGetVideoIdsTodayByClient.mockResolvedValue([]);
   mockGetRekapLikesByClient.mockReset();
   mockGetRekapKomentarByClient.mockReset();
+  mockFetchTiktokSecUid.mockResolvedValue('');
+  mockFetchTodaySatbinmasOfficialTiktokMediaForOrgClients.mockResolvedValue({
+    clients: [],
+    totals: {
+      clients: 0,
+      accounts: 0,
+      fetched: 0,
+      inserted: 0,
+      updated: 0,
+      removed: 0,
+    },
+  });
+  mockSyncSatbinmasOfficialTiktokSecUidForOrgClients.mockResolvedValue({
+    clients: [],
+    totals: { clients: 0, accounts: 0, resolved: 0, failed: 0, missing: 0 },
+  });
   topPersonnelRankingDependencies.getRekapLikesByClient = mockGetRekapLikesByClient;
   topPersonnelRankingDependencies.getRekapKomentarByClient =
     mockGetRekapKomentarByClient;

@@ -45,7 +45,10 @@ import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmas
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
-import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
+import {
+  fetchTodaySatbinmasOfficialTiktokMediaForOrgClients,
+  syncSatbinmasOfficialTiktokSecUidForOrgClients,
+} from "../../service/satbinmasOfficialTiktokService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -201,6 +204,12 @@ const SATBINMAS_OFFICIAL_MEDIA_PROMPT =
   "📸 *Ambil Konten Harian Satbinmas Official*\n" +
   "Bot otomatis mengambil seluruh akun Instagram Satbinmas Official aktif " +
   "untuk seluruh client bertipe ORG secara berurutan dengan jeda agar tetap mematuhi TOS RapidAPI.\n" +
+  "Tidak perlu mengirim username atau Client ID tambahan. Balas *batal* untuk kembali.";
+
+const SATBINMAS_OFFICIAL_TIKTOK_MEDIA_PROMPT =
+  "🎵 *Ambil Konten Harian TikTok Satbinmas Official*\n" +
+  "Bot otomatis mengambil seluruh akun TikTok Satbinmas Official aktif " +
+  "untuk semua client bertipe ORG secara berurutan dengan jeda aman agar tidak melanggar rate limit RapidAPI.\n" +
   "Tidak perlu mengirim username atau Client ID tambahan. Balas *batal* untuk kembali.";
 
 const pangkatOrder = [
@@ -2016,7 +2025,8 @@ export const dirRequestHandlers = {
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
         "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n" +
-        "3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official\n\n" +
+        "3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official\n" +
+        "3️⃣9️⃣ Ambil konten harian TikTok Satbinmas Official (semua akun ORG)\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2076,6 +2086,7 @@ export const dirRequestHandlers = {
           "36",
           "37",
           "38",
+          "39",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2145,6 +2156,17 @@ export const dirRequestHandlers = {
     if (choice === "38") {
       session.step = "resolve_satbinmas_official_tiktok_secuid";
       await dirRequestHandlers.resolve_satbinmas_official_tiktok_secuid(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
+    if (choice === "39") {
+      session.step = "fetch_satbinmas_official_tiktok_media";
+      await dirRequestHandlers.fetch_satbinmas_official_tiktok_media(
         session,
         chatId,
         "",
@@ -2441,6 +2463,149 @@ export const dirRequestHandlers = {
       await waClient.sendMessage(
         chatId,
         `❌ Gagal sinkron secUid TikTok Satbinmas Official: ${reason}`
+      );
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async fetch_satbinmas_official_tiktok_media(session, chatId, text, waClient) {
+    const rawInput = (text || "").trim();
+
+    if (rawInput.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu pengambilan konten TikTok Satbinmas Official ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const formatNumber = (value) => {
+      if (value == null) return "0";
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return String(value);
+      return numeric.toLocaleString("id-ID", { maximumFractionDigits: 0 });
+    };
+
+    try {
+      await waClient.sendMessage(
+        chatId,
+        SATBINMAS_OFFICIAL_TIKTOK_MEDIA_PROMPT
+      );
+
+      const summary = await fetchTodaySatbinmasOfficialTiktokMediaForOrgClients();
+      const totals =
+        summary?.totals || { clients: 0, accounts: 0, fetched: 0, inserted: 0, updated: 0, removed: 0 };
+      const clientSummaries = summary?.clients || [];
+
+      const formatClientLabel = (clientSummary) =>
+        clientSummary.name?.trim() || clientSummary.clientId;
+
+      const activeAccounts = [];
+      const passiveAccounts = [];
+      const missingClients = [];
+      const failedAccounts = [];
+
+      clientSummaries.forEach((clientSummary) => {
+        const clientLabel = formatClientLabel(clientSummary);
+
+        if (!clientSummary.accounts.length) {
+          missingClients.push(clientLabel);
+        }
+
+        clientSummary.accounts.forEach((account) => {
+          const accountLine = {
+            clientLabel,
+            username: account.username,
+            total: account.total,
+            inserted: account.inserted,
+            updated: account.updated,
+            removed: account.removed,
+            likes: account.likes,
+            comments: account.comments,
+          };
+
+          if (account.total > 0) {
+            activeAccounts.push(accountLine);
+          } else {
+            passiveAccounts.push(accountLine);
+          }
+        });
+
+        clientSummary.errors.forEach((err) => {
+          failedAccounts.push({
+            clientLabel,
+            username: err.username,
+            message: err.message?.slice(0, 160) || "Gagal mengambil data",
+          });
+        });
+      });
+
+      activeAccounts.sort(
+        (a, b) =>
+          b.total - a.total || a.clientLabel.localeCompare(b.clientLabel) || a.username.localeCompare(b.username)
+      );
+      passiveAccounts.sort((a, b) =>
+        a.clientLabel.localeCompare(b.clientLabel) || a.username.localeCompare(b.username)
+      );
+      missingClients.sort((a, b) => a.localeCompare(b));
+
+      const lines = [
+        "🎵 Rekap konten TikTok Satbinmas Official (hari ini)",
+        `Total Client ORG : ${formatNumber(totals.clients)}`,
+        `Total Akun      : ${formatNumber(totals.accounts)}`,
+        `Total Konten     : ${formatNumber(totals.fetched)} konten, ${formatNumber(totals.inserted)} baru, ${formatNumber(totals.updated)} update, ${formatNumber(totals.removed)} dihapus`,
+      ];
+
+      lines.push("", "🔥 Akun Aktif (urut jumlah konten tertinggi)");
+      if (activeAccounts.length) {
+        activeAccounts.forEach((account) => {
+          lines.push(
+            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)}, like ${formatNumber(account.likes)}, komentar ${formatNumber(account.comments)})`
+          );
+        });
+      } else {
+        lines.push("- Belum ada akun aktif hari ini.");
+      }
+
+      lines.push("", "🌙 Akun Pasif");
+      if (passiveAccounts.length) {
+        passiveAccounts.forEach((account) => {
+          lines.push(
+            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten`
+          );
+        });
+      } else {
+        lines.push("- Tidak ada akun pasif.");
+      }
+
+      lines.push("", "🚫 Belum Input Akun");
+      if (missingClients.length) {
+        missingClients.forEach((label) => {
+          lines.push(`- ${label}`);
+        });
+      } else {
+        lines.push("- Semua client ORG sudah memiliki akun terdaftar.");
+      }
+
+      if (failedAccounts.length) {
+        lines.push("", "⚠️ Gagal mengambil beberapa akun:");
+        failedAccounts.forEach((err) => {
+          lines.push(`- @${err.username} (${err.clientLabel}): ${err.message}`);
+        });
+      }
+
+      await waClient.sendMessage(chatId, lines.join("\n"));
+    } catch (error) {
+      console.error("Gagal mengambil konten TikTok Satbinmas Official:", error);
+      const message =
+        error?.message?.slice(0, 400) || "Gagal mengambil konten TikTok Satbinmas Official.";
+      await waClient.sendMessage(
+        chatId,
+        `❌ ${message}`
       );
     }
 
