@@ -8,8 +8,15 @@ import {
   upsertAccount,
   findByClientAndPlatform,
 } from "../model/satbinmasOfficialAccountModel.js";
-import { fetchTiktokPosts, fetchTiktokProfile } from "./tiktokRapidService.js";
-import { upsertTiktokPosts } from "../model/tiktokPostModel.js";
+import {
+  fetchTiktokPosts,
+  fetchTiktokPostsBySecUid,
+  fetchTiktokProfile,
+} from "./tiktokRapidService.js";
+import {
+  upsertTiktokAccountSnapshot,
+  upsertTiktokPostsSnapshot,
+} from "../model/tiktokSnapshotModel.js";
 
 function createError(message, statusCode) {
   const error = new Error(message);
@@ -220,6 +227,117 @@ function normalizeCaption(post) {
   return "";
 }
 
+function extractHashtags(post) {
+  const tags = [];
+
+  (post?.challenges || []).forEach((challenge) => {
+    if (challenge?.title) tags.push(challenge.title);
+    if (challenge?.name) tags.push(challenge.name);
+  });
+
+  (post?.textExtra || []).forEach((item) => {
+    if (item?.hashtagName) tags.push(item.hashtagName);
+  });
+
+  const normalized = tags
+    .map((tag) => (typeof tag === "string" ? tag.replace(/^#/, "").trim() : ""))
+    .filter(Boolean);
+
+  const unique = new Set();
+  return normalized.filter((tag) => {
+    const key = tag.toLowerCase();
+    if (unique.has(key)) return false;
+    unique.add(key);
+    return true;
+  });
+}
+
+function pickAuthorFromPosts(posts = []) {
+  for (const post of posts) {
+    if (post?.author) return post.author;
+  }
+  return null;
+}
+
+function pickPlayUrl(video = {}) {
+  if (typeof video?.playAddr === "string") return video.playAddr;
+  if (Array.isArray(video?.playAddr) && video.playAddr.length) return video.playAddr[0];
+  if (typeof video?.downloadAddr === "string") return video.downloadAddr;
+  if (Array.isArray(video?.downloadAddr) && video.downloadAddr.length)
+    return video.downloadAddr[0];
+  return null;
+}
+
+function pickCoverUrl(video = {}) {
+  const candidates = [video.dynamicCover, video.originCover, video.cover];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate;
+    if (Array.isArray(candidate) && candidate.length) return candidate[0];
+  }
+  return null;
+}
+
+function normalizeLanguage(post) {
+  const candidates = [post?.language, post?.lang, post?.video?.language];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
+function normalizeAccountSnapshot({ accountRow, profile, author, snapshotAt }) {
+  const resolvedSecUid = [accountRow?.secUid, accountRow?.secuid, profile?.secUid, author?.secUid]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find((value) => value);
+
+  return {
+    author_secuid: resolvedSecUid,
+    author_id: author?.id || author?.userId || author?.authorId || null,
+    username: normalizeUsername(author?.uniqueId || profile?.username || accountRow?.username),
+    display_name: author?.nickname || profile?.nickname || accountRow?.display_name,
+    bio: author?.signature || null,
+    avatar_url: author?.avatarThumb || profile?.avatar_url || accountRow?.profile_url,
+    is_verified: author?.verified ?? profile?.verified ?? accountRow?.is_verified ?? false,
+    is_private: author?.privateAccount ?? author?.secret ?? false,
+    followers: author?.followerCount ?? profile?.follower_count ?? null,
+    following: author?.followingCount ?? profile?.following_count ?? null,
+    likes_total: author?.heart ?? author?.heartCount ?? profile?.like_count ?? null,
+    video_count: author?.videoCount ?? profile?.video_count ?? null,
+    snapshot_at: snapshotAt,
+  };
+}
+
+function normalizeTiktokPostSnapshot(post, authorSecUid, crawlAt) {
+  const video = post?.video || {};
+  const stats = post?.stats || {};
+
+  return {
+    post_id: post?.id || post?.video_id,
+    author_secuid: authorSecUid,
+    caption: normalizeCaption(post),
+    created_at: resolveCreatedAt(post),
+    language: normalizeLanguage(post),
+    play_url: pickPlayUrl(video),
+    cover_url: pickCoverUrl(video),
+    duration_sec: video?.duration,
+    height: video?.height,
+    width: video?.width,
+    ratio: video?.ratio,
+    views: stats?.playCount,
+    likes: stats?.diggCount,
+    comments: stats?.commentCount,
+    shares: stats?.shareCount,
+    bookmarks: stats?.collectCount,
+    is_ad: Boolean(post?.isAd || post?.isAds),
+    is_private_post: Boolean(post?.privateItem || post?.privateItemStruct),
+    share_enabled: post?.shareEnabled ?? true,
+    duet_enabled: post?.duetEnabled ?? true,
+    stitch_enabled: post?.stitchEnabled ?? true,
+    hashtags: extractHashtags(post),
+    crawl_at: crawlAt,
+  };
+}
+
 function summarizePostCounts(posts = []) {
   const summary = { likes: 0, comments: 0 };
   posts.forEach((post) => {
@@ -264,34 +382,52 @@ export async function fetchTodaySatbinmasOfficialTiktokMediaForOrgClients(
       summary.totals.accounts += 1;
 
       try {
-        const posts = await fetchTiktokPosts(account.username, 50);
+        const profile = await fetchTiktokProfile(account.username);
+        const secUid = account.secUid || account.secuid || profile?.secUid;
+        const posts = secUid
+          ? await fetchTiktokPostsBySecUid(secUid, 50)
+          : await fetchTiktokPosts(account.username, 50);
+
         const todaysPosts = (posts || []).filter((post) => {
           const createdAt = resolveCreatedAt(post);
           return createdAt && createdAt >= start && createdAt < end;
         });
 
-        if (todaysPosts.length) {
-          const normalizedPosts = todaysPosts.map((post) => ({
-            video_id: post?.id || post?.video_id,
-            desc: normalizeCaption(post),
-            like_count: post?.digg_count ?? post?.stats?.diggCount,
-            comment_count: post?.comment_count ?? post?.stats?.commentCount,
-            created_at: resolveCreatedAt(post),
-          }));
+        const author = pickAuthorFromPosts(todaysPosts) || pickAuthorFromPosts(posts);
+        const crawlAt = new Date();
+        const accountSnapshot = normalizeAccountSnapshot({
+          accountRow: account,
+          profile,
+          author,
+          snapshotAt: crawlAt,
+        });
 
-          await upsertTiktokPosts(client.client_id, normalizedPosts);
+        if (!accountSnapshot.author_secuid) {
+          throw createError("secUid TikTok tidak ditemukan untuk akun Satbinmas.", 502);
+        }
+
+        await upsertTiktokAccountSnapshot(accountSnapshot);
+
+        let postSummary = { inserted: 0, updated: 0, total: todaysPosts.length };
+        if (todaysPosts.length) {
+          const normalizedPosts = todaysPosts.map((post) =>
+            normalizeTiktokPostSnapshot(post, accountSnapshot.author_secuid, crawlAt)
+          );
+
+          postSummary = await upsertTiktokPostsSnapshot(normalizedPosts, crawlAt);
         }
 
         const counts = summarizePostCounts(todaysPosts);
 
         summary.totals.fetched += todaysPosts.length;
-        summary.totals.inserted += todaysPosts.length;
+        summary.totals.inserted += postSummary.inserted;
+        summary.totals.updated += postSummary.updated;
 
         clientSummary.accounts.push({
           username: account.username,
           total: todaysPosts.length,
-          inserted: todaysPosts.length,
-          updated: 0,
+          inserted: postSummary.inserted,
+          updated: postSummary.updated,
           removed: 0,
           likes: counts.likes,
           comments: counts.comments,
