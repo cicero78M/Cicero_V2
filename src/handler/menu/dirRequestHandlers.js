@@ -2018,7 +2018,7 @@ export const dirRequestHandlers = {
         "3️⃣1️⃣ Top ranking like/komentar personel\n" +
         "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n" +
         "3️⃣3️⃣ Absensi Kasatker\n" +
-        "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n\n" +
+        "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n" +
         "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
