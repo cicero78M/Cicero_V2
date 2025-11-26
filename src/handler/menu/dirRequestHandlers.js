@@ -46,7 +46,7 @@ import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
-import { fetchTodaySatbinmasOfficialTiktokMediaForOrgClients } from "../../service/satbinmasOfficialTiktokMediaService.js";
+import { fetchTodaySatbinmasOfficialTiktokMediaForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -2488,6 +2488,25 @@ export const dirRequestHandlers = {
       return numeric.toLocaleString("id-ID", { maximumFractionDigits: 0 });
     };
 
+    const formatPeriodLabel = () => {
+      const now = new Date();
+      const datePart = now.toLocaleDateString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const timePart = now.toLocaleTimeString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return `${datePart}, ${timePart} WIB`;
+    };
+
     try {
       await waClient.sendMessage(
         chatId,
@@ -2552,17 +2571,21 @@ export const dirRequestHandlers = {
       missingClients.sort((a, b) => a.localeCompare(b));
 
       const lines = [
-        "🎵 Rekap konten TikTok Satbinmas Official (hari ini)",
-        `Total Client ORG : ${formatNumber(totals.clients)}`,
+        "🎵 Rekap konten TikTok Satbinmas Official",
+        `Periode Pengambilan Data : ${formatPeriodLabel()}.`,
+        `Total Polres     : ${formatNumber(totals.clients)}`,
         `Total Akun      : ${formatNumber(totals.accounts)}`,
-        `Total Konten     : ${formatNumber(totals.fetched)} konten, ${formatNumber(totals.inserted)} baru, ${formatNumber(totals.updated)} update, ${formatNumber(totals.failed)} gagal`,
+        `Total Konten   : ${formatNumber(totals.fetched)} konten`,
       ];
 
       lines.push("", "🔥 Akun Aktif (urut jumlah konten tertinggi)");
       if (activeAccounts.length) {
-        activeAccounts.forEach((account) => {
+        activeAccounts.forEach((account, idx) => {
           lines.push(
-            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, gagal ${formatNumber(account.failed)}, like ${formatNumber(account.likes)}, komentar ${formatNumber(account.comments)})`
+            `${idx + 1}. ${account.clientLabel}(@${account.username}):`,
+            `- Jumlah Post Konten : ${formatNumber(account.total)} konten`,
+            `- Total Likes : ${formatNumber(account.likes)} Likes`,
+            `- Total Komentar : ${formatNumber(account.comments)} Komentar`
           );
         });
       } else {
@@ -2571,10 +2594,8 @@ export const dirRequestHandlers = {
 
       lines.push("", "🌙 Akun Pasif");
       if (passiveAccounts.length) {
-        passiveAccounts.forEach((account) => {
-          lines.push(
-            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten`
-          );
+        passiveAccounts.forEach((account, idx) => {
+          lines.push(`${idx + 1}. ${account.clientLabel}(@${account.username})`);
         });
       } else {
         lines.push("- Tidak ada akun pasif.");
@@ -2582,8 +2603,8 @@ export const dirRequestHandlers = {
 
       lines.push("", "🚫 Belum Input Akun");
       if (missingClients.length) {
-        missingClients.forEach((label) => {
-          lines.push(`- ${label}`);
+        missingClients.forEach((label, idx) => {
+          lines.push(`${idx + 1}. ${label}`);
         });
       } else {
         lines.push("- Semua client ORG sudah memiliki akun terdaftar.");

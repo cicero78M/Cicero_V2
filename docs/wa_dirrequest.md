@@ -65,10 +65,13 @@ resmi Satbinmas.
   3. RapidAPI TikTok dipanggil melalui
      `fetchTodaySatbinmasOfficialTiktokMediaForOrgClients` untuk menarik konten
      yang dibuat hari ini (berdasarkan `createTime`).
-  4. Operator menerima rekap otomatis yang memisahkan akun aktif (konten hari ini
-     beserta ringkasan like/komentar), akun pasif (terdaftar tetapi kosong), serta
-     client ORG yang belum memiliki akun TikTok terdaftar. Kegagalan per akun
-     juga dicantumkan.
+  4. Seluruh profil, konten, dan hashtag tersimpan di tabel
+     `satbinmas_tiktok_accounts`, `satbinmas_tiktok_posts`, dan
+     `satbinmas_tiktok_post_hashtags`.
+  5. Operator menerima rekap otomatis dengan format baru: periode pengambilan
+     data, total polres/akun/konten, daftar akun aktif (urutan konten tertinggi
+     beserta likes dan komentar per akun), akun pasif, serta client ORG yang
+     belum memiliki akun TikTok terdaftar. Kegagalan per akun juga dicantumkan.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.

@@ -75,16 +75,16 @@ client/username and respond with a per-account recap and a total
 row.【F:src/service/satbinmasOfficialMediaService.js†L1-L206】【F:src/handler/menu/dirRequestHandlers.js†L1928-L1999】【F:src/handler/menu/dirRequestHandlers.js†L2299-L2392】
 
 TikTok media ingestion now mirrors the Instagram flow with
-`src/service/satbinmasOfficialTiktokMediaService.js`. The service iterates over
+`src/service/satbinmasOfficialTiktokService.js`. The service iterates over
 active Satbinmas Official TikTok accounts for every ORG client, prefers RapidAPI
 secUid lookups (falling back to username), filters posts to the current day, and
-normalizes captions and engagement counts before upserting into `tiktok_post`
-via `upsertTiktokPostWithStatus` so inserts vs. updates can be tallied. Each
-client summary tracks fetched, inserted, updated, and failed rows alongside any
-RapidAPI errors to build the WhatsApp recap under the
-*DIRREQUEST → Ambil Konten Harian TikTok Satbinmas Official* menu option.
-Rate limits are respected with a 1.5s delay between accounts/clients to avoid
-429 responses from RapidAPI.【F:src/service/satbinmasOfficialTiktokMediaService.js†L1-L181】【F:src/model/tiktokPostModel.js†L1-L108】【F:src/handler/menu/dirRequestHandlers.js†L2442-L2666】
+normalizes captions, hashtags, and engagement counts before persisting profile
+snapshots in `satbinmas_tiktok_accounts`, posts in `satbinmas_tiktok_posts`, and
+hashtags in `satbinmas_tiktok_post_hashtags`. Each client summary tracks
+fetched, inserted, and updated rows alongside any RapidAPI errors to build the
+WhatsApp recap under the *DIRREQUEST → Ambil Konten Harian TikTok Satbinmas
+Official* menu option. Rate limits are respected with a 1.5s delay between
+accounts/clients to avoid 429 responses from RapidAPI.【F:src/service/satbinmasOfficialTiktokService.js†L320-L409】【F:src/model/tiktokSnapshotModel.js†L1-L215】【F:src/handler/menu/dirRequestHandlers.js†L2442-L2631】
 
 ## Model Layer
 `src/model/satbinmasOfficialAccountModel.js` provides the data-access helpers
