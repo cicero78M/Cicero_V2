@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-19*
+*Last updated: 2026-02-20*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -56,6 +56,19 @@ resmi Satbinmas.
      (username kosong, konflik, atau RapidAPI error) dicatat dalam ringkasan.
   4. Operator menerima rekap agregat (jumlah client, akun berhasil, akun gagal)
      beserta daftar client tanpa akun TikTok yang terdaftar.
+
+- **3️⃣9️⃣ Ambil konten harian TikTok Satbinmas Official**
+  1. Pilih opsi **3️⃣9️⃣**. Bot langsung mengeksekusi tanpa menunggu balasan.
+  2. Sistem otomatis memuat seluruh akun TikTok Satbinmas Official untuk setiap
+     client bertipe `ORG` dari tabel `satbinmas_official_accounts` dan mengeksekusi
+     berurutan per client dengan jeda agar aman dari batas RapidAPI.
+  3. RapidAPI TikTok dipanggil melalui
+     `fetchTodaySatbinmasOfficialTiktokMediaForOrgClients` untuk menarik konten
+     yang dibuat hari ini (berdasarkan `createTime`).
+  4. Operator menerima rekap otomatis yang memisahkan akun aktif (konten hari ini
+     beserta ringkasan like/komentar), akun pasif (terdaftar tetapi kosong), serta
+     client ORG yang belum memiliki akun TikTok terdaftar. Kegagalan per akun
+     juga dicantumkan.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
