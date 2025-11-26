@@ -45,10 +45,8 @@ import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmas
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTodaySatbinmasOfficialMediaForOrgClients } from "../../service/satbinmasOfficialMediaService.js";
-import {
-  fetchTodaySatbinmasOfficialTiktokMediaForOrgClients,
-  syncSatbinmasOfficialTiktokSecUidForOrgClients,
-} from "../../service/satbinmasOfficialTiktokService.js";
+import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
+import { fetchTodaySatbinmasOfficialTiktokMediaForOrgClients } from "../../service/satbinmasOfficialTiktokMediaService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -2498,7 +2496,7 @@ export const dirRequestHandlers = {
 
       const summary = await fetchTodaySatbinmasOfficialTiktokMediaForOrgClients();
       const totals =
-        summary?.totals || { clients: 0, accounts: 0, fetched: 0, inserted: 0, updated: 0, removed: 0 };
+        summary?.totals || { clients: 0, accounts: 0, fetched: 0, inserted: 0, updated: 0, failed: 0 };
       const clientSummaries = summary?.clients || [];
 
       const formatClientLabel = (clientSummary) =>
@@ -2557,14 +2555,14 @@ export const dirRequestHandlers = {
         "🎵 Rekap konten TikTok Satbinmas Official (hari ini)",
         `Total Client ORG : ${formatNumber(totals.clients)}`,
         `Total Akun      : ${formatNumber(totals.accounts)}`,
-        `Total Konten     : ${formatNumber(totals.fetched)} konten, ${formatNumber(totals.inserted)} baru, ${formatNumber(totals.updated)} update, ${formatNumber(totals.removed)} dihapus`,
+        `Total Konten     : ${formatNumber(totals.fetched)} konten, ${formatNumber(totals.inserted)} baru, ${formatNumber(totals.updated)} update, ${formatNumber(totals.failed)} gagal`,
       ];
 
       lines.push("", "🔥 Akun Aktif (urut jumlah konten tertinggi)");
       if (activeAccounts.length) {
         activeAccounts.forEach((account) => {
           lines.push(
-            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, hapus ${formatNumber(account.removed)}, like ${formatNumber(account.likes)}, komentar ${formatNumber(account.comments)})`
+            `- @${account.username} (${account.clientLabel}): ${formatNumber(account.total)} konten (baru ${formatNumber(account.inserted)}, update ${formatNumber(account.updated)}, gagal ${formatNumber(account.failed)}, like ${formatNumber(account.likes)}, komentar ${formatNumber(account.comments)})`
           );
         });
       } else {
