@@ -11,7 +11,11 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 export async function getAggregator(req, res) {
   try {
     const clientId =
-      req.query.client_id || req.headers["x-client-id"];
+      req.query.client_id || 
+      req.headers["x-client-id"] ||       
+      req.clientId ||               // fallback dari middleware
+      req.client_id ||              // kalau ada
+      req.client?.client_id ||      // kalau middleware set req.client;
     sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
     const client = await findById(clientId);
     if (!client) {
