@@ -8,6 +8,52 @@ import { fetchTiktokProfile } from "../service/tiktokRapidService.js";
 import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
+async function resolveAggregatorClient(clientId, userRole) {
+  const requestedClient = await findById(clientId);
+  if (!requestedClient) return null;
+
+  const clientType = requestedClient.client_type?.toLowerCase();
+  if (clientType === "direktorat") {
+    const directorateRole = userRole?.toLowerCase();
+    const roleClient = directorateRole ? await findById(directorateRole) : null;
+    const defaultClient =
+      roleClient?.client_type?.toLowerCase() === "direktorat"
+        ? roleClient
+        : requestedClient;
+    return {
+      client: defaultClient,
+      resolvedClientId: defaultClient.client_id,
+      requestedClientId: requestedClient.client_id,
+      reason:
+        defaultClient === requestedClient
+          ? "direktorat-requested"
+          : "direktorat-role-default",
+    };
+  }
+
+  if (clientType === "org") {
+    const directorateRole = userRole?.toLowerCase();
+    if (directorateRole) {
+      const directorateClient = await findById(directorateRole);
+      if (directorateClient?.client_type?.toLowerCase() === "direktorat") {
+        return {
+          client: directorateClient,
+          resolvedClientId: directorateClient.client_id,
+          requestedClientId: requestedClient.client_id,
+          reason: "org-role-mapped",
+        };
+      }
+    }
+  }
+
+  return {
+    client: requestedClient,
+    resolvedClientId: requestedClient.client_id,
+    requestedClientId: requestedClient.client_id,
+    reason: "requested",
+  };
+}
+
 export async function getAggregator(req, res) {
   try {
     const clientIdsFromUser = Array.isArray(req.user?.client_ids)
@@ -32,13 +78,17 @@ export async function getAggregator(req, res) {
             "client_id atau header x-client-id wajib diisi (atau gunakan token dengan satu client_id)",
         });
     }
-    sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
-    const client = await findById(clientId);
-    if (!client) {
+    const resolution = await resolveAggregatorClient(clientId, req.user?.role);
+    if (!resolution) {
       return res
         .status(404)
         .json({ success: false, message: "client not found" });
     }
+    const { client, resolvedClientId, requestedClientId, reason } = resolution;
+    sendConsoleDebug({
+      tag: "AGG",
+      msg: `getAggregator ${requestedClientId} => ${resolvedClientId} (${reason})`,
+    });
     const limitRequest = parseInt(req.query.limit, 10);
     const limit = Number.isNaN(limitRequest) ? 10 : limitRequest;
     const periode = req.query.periode || "harian";
@@ -48,8 +98,8 @@ export async function getAggregator(req, res) {
       igProfile = await instaProfileService.findByUsername(client.client_insta);
       igPosts =
         periode === "harian"
-          ? await instaPostModel.getPostsTodayByClient(clientId)
-          : await instaPostService.findByClientId(clientId);
+          ? await instaPostModel.getPostsTodayByClient(resolvedClientId)
+          : await instaPostService.findByClientId(resolvedClientId);
       if (Array.isArray(igPosts)) igPosts = igPosts.slice(0, limit);
     }
     let tiktokProfile = null;
@@ -65,8 +115,8 @@ export async function getAggregator(req, res) {
       }
       tiktokPosts =
         periode === "harian"
-          ? await tiktokPostModel.getPostsTodayByClient(clientId)
-          : await tiktokPostService.findByClientId(clientId);
+          ? await tiktokPostModel.getPostsTodayByClient(resolvedClientId)
+          : await tiktokPostService.findByClientId(resolvedClientId);
       if (Array.isArray(tiktokPosts)) tiktokPosts = tiktokPosts.slice(0, limit);
     }
     sendSuccess(res, {
