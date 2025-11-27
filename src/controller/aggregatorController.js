@@ -12,7 +12,7 @@ export async function getAggregator(req, res) {
   try {
     const clientId =
       req.query.client_id || req.headers["x-client-id"];
-    sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
+    sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${req}` });
     const client = await findById(clientId);
     if (!client) {
       return res
