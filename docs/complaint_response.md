@@ -9,3 +9,17 @@ Modul `respondComplaint` menyampaikan langkah tindak lanjut kepada pelapor saat 
 - Jika data masih belum tercatat setelah sinkronisasi sekitar satu jam, kirim bukti tangkapan layar dan eskalasi ke operator piket.
 
 Catatan: Narasi lama yang menyebut "Absensi Amplifikasi" sudah diganti agar selaras dengan terminologi likes/komentar di Instagram dan TikTok.
+
+## Perilaku sesi setelah respon
+- Setelah pesan komplain dibalas dan ringkasan admin dikirim, sesi menu *Client Request* ditutup otomatis.
+- Penutupan sesi mencegah pengiriman ulang pesan menu utama seperti:
+  ```
+  ┏━━━ *MENU CLIENT CICERO* ━━━
+  1️⃣ Manajemen Client & User
+  2️⃣ Operasional Media Sosial
+  3️⃣ Transfer & Laporan
+  4️⃣ Administratif
+  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Ketik *angka* menu, atau *batal* untuk keluar.
+  ```
+- Admin dapat membuka kembali menu dengan perintah `clientrequest` bila diperlukan.

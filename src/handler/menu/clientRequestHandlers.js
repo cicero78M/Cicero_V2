@@ -1702,6 +1702,7 @@ async function processComplaintResolution(session, chatId, waClient) {
     );
     delete session.respondComplaint;
     session.step = "main";
+    clearSession(chatId);
     return true;
   } catch (err) {
     const reporterName = formatNama(user) || user.nama || nrp;
@@ -1712,6 +1713,7 @@ async function processComplaintResolution(session, chatId, waClient) {
     );
     delete session.respondComplaint;
     session.step = "main";
+    clearSession(chatId);
     return false;
   }
 }
