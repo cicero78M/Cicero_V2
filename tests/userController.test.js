@@ -127,9 +127,14 @@ test('operator reactivates existing user and attaches operator role', async () =
   await createUser(req, res, () => {});
 
   expect(mockFindUserById).toHaveBeenCalledWith('1');
-  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'status', true);
-  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'operator', true);
-  expect(mockUpdateUserField).toHaveBeenCalledTimes(2);
+  expect(mockUpdateUser).toHaveBeenCalledWith('1', {
+    status: true,
+    ditbinmas: false,
+    ditlantas: false,
+    bidhumas: false,
+    operator: true
+  });
+  expect(mockUpdateUserField).not.toHaveBeenCalled();
   expect(mockCreateUser).not.toHaveBeenCalled();
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({
@@ -159,10 +164,14 @@ test('operator reactivates existing user with multiple roles', async () => {
   await createUser(req, res, () => {});
 
   expect(mockFindUserById).toHaveBeenCalledWith('5');
-  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'status', true);
-  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'operator', true);
-  expect(mockUpdateUserField).toHaveBeenCalledWith('5', 'ditbinmas', true);
-  expect(mockUpdateUserField).toHaveBeenCalledTimes(3);
+  expect(mockUpdateUser).toHaveBeenCalledWith('5', {
+    status: true,
+    ditbinmas: false,
+    ditlantas: false,
+    bidhumas: false,
+    operator: true
+  });
+  expect(mockUpdateUserField).not.toHaveBeenCalled();
   expect(mockCreateUser).not.toHaveBeenCalled();
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({
@@ -238,14 +247,42 @@ test('reactivates existing user and attaches ditbinmas role', async () => {
 
   await createUser(req, res, () => {});
 
-  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'status', true);
-  expect(mockUpdateUserField).toHaveBeenCalledWith('1', 'ditbinmas', true);
-  expect(mockUpdateUserField).toHaveBeenCalledTimes(2);
+  expect(mockUpdateUser).toHaveBeenCalledWith('1', {
+    status: true,
+    ditbinmas: true,
+    ditlantas: false,
+    bidhumas: false,
+    operator: false
+  });
+  expect(mockUpdateUserField).not.toHaveBeenCalled();
   expect(mockCreateUser).not.toHaveBeenCalled();
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({
     success: true,
     data: { user_id: '1', status: true, ditbinmas: true, nama: 'B', operator: false }
+  });
+});
+
+test('keeps existing roles when adding new role to active user', async () => {
+  mockFindUserById
+    .mockResolvedValueOnce({ user_id: '9', status: true, operator: true })
+    .mockResolvedValueOnce({ user_id: '9', status: true, operator: true, ditlantas: true });
+  const req = {
+    body: { user_id: '9', nama: 'F', roles: ['ditlantas'] },
+    user: { role: 'operator', client_id: 'c1' }
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await createUser(req, res, () => {});
+
+  expect(mockUpdateUserField).toHaveBeenCalledWith('9', 'ditlantas', true);
+  expect(mockUpdateUser).not.toHaveBeenCalled();
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    data: { user_id: '9', status: true, operator: true, ditlantas: true }
   });
 });
 
