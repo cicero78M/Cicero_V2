@@ -83,15 +83,11 @@ export function shouldHandleComplaintMessage({
   text,
   allowUserMenu,
   session,
-  isAdmin,
-  initialIsMyContact,
   senderId,
   gatewayIds,
 }) {
   if (allowUserMenu) return false;
   if (session?.menu === 'clientrequest') return false;
-  const isVerified = isAdmin || initialIsMyContact === true;
-  if (!isVerified) return false;
   if (isGatewayComplaintForward({ senderId, text, gatewayIds })) return false;
   return hasComplaintHeader(text);
 }

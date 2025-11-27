@@ -24,6 +24,14 @@ Kendala
 - Sudah melaksanakan TikTok belum terdata.
 ```
 
+## Access and delivery rules
+
+- The responder now accepts structured *Pesan Komplain* messages from any WhatsApp sender—either direct chats or group rooms—as
+  long as the existing complaint format is followed. Messages no longer need to originate from saved contacts or admins.
+- Complaint replies are throttled with a fixed 3-second pause between each outbound message (including the reporter follow-up and
+  admin summary). The delay can be tuned via `COMPLAINT_RESPONSE_DELAY_MS` but defaults to `3000` ms to keep operator and reporter
+  responses in sync.
+
 ## Example with "Rincian Kendala"
 
 ```
