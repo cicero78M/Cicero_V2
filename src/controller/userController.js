@@ -27,6 +27,20 @@ export const createUser = async (req, res, next) => {
     const adminClientId = req.user?.client_id;
     const data = { ...req.body };
     let roles = [];
+    const defaultRoleFlags = {
+      ditbinmas: false,
+      ditlantas: false,
+      bidhumas: false,
+      operator: false,
+    };
+
+    const getReactivationRoles = () => {
+      if (role === 'operator') return { ...defaultRoleFlags, operator: true };
+      if (role === 'ditbinmas') return { ...defaultRoleFlags, ditbinmas: true };
+      if (role === 'ditlantas') return { ...defaultRoleFlags, ditlantas: true };
+      if (role === 'bidhumas') return { ...defaultRoleFlags, bidhumas: true };
+      return {};
+    };
 
     if (role === 'ditbinmas' || role === 'ditlantas' || role === 'bidhumas') {
       if (adminClientId) data.client_id = adminClientId;
@@ -59,11 +73,14 @@ export const createUser = async (req, res, next) => {
       const existing = await userModel.findUserById(data.user_id);
       if (existing) {
         if (existing.status === false) {
-          await userModel.updateUserField(existing.user_id, 'status', true);
-        }
-
-        for (const r of roles) {
-          await userModel.updateUserField(existing.user_id, r, true);
+          await userModel.updateUser(existing.user_id, {
+            status: true,
+            ...getReactivationRoles(),
+          });
+        } else {
+          for (const r of roles) {
+            await userModel.updateUserField(existing.user_id, r, true);
+          }
         }
 
         const refreshed = await userModel.findUserById(existing.user_id);
@@ -79,20 +96,23 @@ export const createUser = async (req, res, next) => {
     const existing = await userModel.findUserById(data.user_id);
     if (existing) {
       if (existing.status === false) {
-        await userModel.updateUserField(existing.user_id, 'status', true);
-      }
+        await userModel.updateUser(existing.user_id, {
+          status: true,
+          ...getReactivationRoles(),
+        });
+      } else {
+        const rolesToAdd = [];
+        if (
+          role === 'ditbinmas' ||
+          role === 'ditlantas' ||
+          role === 'bidhumas'
+        ) {
+          rolesToAdd.push(role);
+        }
 
-      const rolesToAdd = [];
-      if (
-        role === 'ditbinmas' ||
-        role === 'ditlantas' ||
-        role === 'bidhumas'
-      ) {
-        rolesToAdd.push(role);
-      }
-
-      for (const r of rolesToAdd) {
-        await userModel.updateUserField(existing.user_id, r, true);
+        for (const r of rolesToAdd) {
+          await userModel.updateUserField(existing.user_id, r, true);
+        }
       }
 
       const refreshed = await userModel.findUserById(existing.user_id);
