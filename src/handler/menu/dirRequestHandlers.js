@@ -1155,33 +1155,9 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
     if (!igLines.length) igLines.push(...extractLinksFromText(igNarrative));
 
-    const ttHighlights = [tt.bestContent, tt.worstContent]
-      .map((line) => cleanContentLine(line))
-      .filter(Boolean);
-
     const ttLinkLines = extractLinksFromText(ttNarrative);
 
-    const ttLines = (() => {
-      if (ttHighlights.length) {
-        const merged = ttHighlights.map((line, index) => {
-          if (/https?:\/\//i.test(line)) return line;
-          const linkCandidate = ttLinkLines[index];
-          const extractedLink = linkCandidate
-            ? linkCandidate.match(/https?:\/\/\S+/i)?.[0]
-            : null;
-          if (extractedLink) return `${line} (${extractedLink})`;
-          return linkCandidate ? `${line} ${linkCandidate}` : line;
-        });
-
-        const overflow = ttLinkLines
-          .slice(ttHighlights.length)
-          .filter(Boolean);
-        return [...merged, ...overflow];
-      }
-
-      if (ttLinkLines.length) return ttLinkLines;
-      return [];
-    })();
+    const ttLines = ttLinkLines;
 
     if (igLines.length)
       igLines.forEach((line, index) =>
@@ -1193,13 +1169,7 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       ttLines.forEach((line, index) =>
         linkLines.push(`- TikTok ${index + 1}. ${line}`)
       );
-    else if (tt.bestContent || tt.worstContent) {
-      [tt.bestContent, tt.worstContent]
-        .filter(Boolean)
-        .forEach((highlight, index) =>
-          linkLines.push(`- TikTok ${index + 1}. ${highlight}`)
-        );
-    } else {
+    else {
       linkLines.push("- TikTok: Belum ada link tercatat hari ini.");
     }
 

@@ -587,7 +587,7 @@ describe('formatRekapAllSosmed', () => {
 
     const igNarrative = `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\nDIREKTORAT BINMAS\n\n# Insight Likes Konten\n- Jumlah konten aktif: 3 link.\n- Total likes: 1.200 dari 1.500 kemungkinan likes (80,0% capaian).\n- Target harian ≥95%: 1.425 likes → kekurangan 225.\n- Rata-rata likes/konten: 400,0; Link A unggul 100 likes dibanding Link B (100 selisih).\n- Kontributor likes terbesar: Satker A → menyumbang 35% dari total likes saat ini.\n- Distribusi likes per konten:\n1. https://instagram.com/p/abc — 500 likes\n2. https://instagram.com/p/def — 400 likes\n3. https://instagram.com/p/ghi — 300 likes\n\n# Status Data Personel\n- Personil tercatat: 150 → IG 80,0% (120), TT 70,0% (105).\n- Rata-rata satker: IG 78,0% (median 79,0%), TT 69,0% (median 70,0%).\n- Satker dengan capaian ≥90% IG & TT: *Satker Hebat*.\n- Satker di kisaran 80% (butuh dorongan akhir): Satker B.\n- Satker perlu perhatian (<10% di kedua kanal): Satker C.\n- Gap IG vs TikTok (≥10 poin, investigasi lanjut):\nSatker D (IG 90% vs TT 70%)\n\n# Backlog & Prioritas Singkat\n- IG belum diisi: 30 akun (Top-10 menyumbang ≈60,0%: Satker E, Satker F)\n- TikTok belum diisi: 25 akun (Top-10 menyumbang ≈55,0%: Satker G)\n- Proyeksi jika 70% Top-10 teratasi: IG → ~88,0%, TT → ~82,0%.\n\n# Performa Satker\n- Top performer rata-rata IG/TT: Satker Hebat (95%).\n- Bottom performer rata-rata IG/TT: Satker Lemah (20%).\n\n# Catatan Tambahan\n- Dorong satker C untuk update harian.\n\nDemikian Komandan hasil analisa yang bisa kami laporkan.`;
 
-    const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Ringkasan Kinerja*\n• Konten dipantau : 2\n• Interaksi aktual : 300/400 (75,0%)\n• Personel mencapai target : 60/120 (50,0%)\n• Personel aktif (≥1 konten) : 80/120 (66,7%)\n• Partisipan unik : 90 akun\n\n*Sorotan Konten*\n• Performa tertinggi : Video A – 200 komentar\n• Performa terendah : Video B – 100 komentar\n\n*Kontributor Utama*\n• Penyumbang komentar terbesar : Satker Alpha (120)\n• Top satker aktif : 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar\n• Satker perlu perhatian : Satker Gamma – 10 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 40 (prioritas: Satker Delta (20))\n• Belum input akun TikTok : 5 (sumber utama: Satker Epsilon (3))\n\nDemikian Komandan, terimakasih.`;
+    const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Ringkasan Kinerja*\n• Konten dipantau : 2\n• Interaksi aktual : 300/400 (75,0%)\n• Personel mencapai target : 60/120 (50,0%)\n• Personel aktif (≥1 konten) : 80/120 (66,7%)\n• Partisipan unik : 90 akun\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/aaa — 200 komentar\n2. https://www.tiktok.com/@binmas/video/bbb — 100 komentar\n\n*Kontributor Utama*\n• Penyumbang komentar terbesar : Satker Alpha (120)\n• Top satker aktif : 1. Satker Alpha – 120 komentar; 2. Satker Beta – 80 komentar\n• Satker perlu perhatian : Satker Gamma – 10 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 40 (prioritas: Satker Delta (20))\n• Belum input akun TikTok : 5 (sumber utama: Satker Epsilon (3))\n\nDemikian Komandan, terimakasih.`;
 
     const message = formatRekapAllSosmed(igNarrative, ttNarrative);
 
@@ -597,8 +597,12 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('- IG 1. https://instagram.com/p/abc — 500 likes');
     expect(message).toContain('- IG 2. https://instagram.com/p/def — 400 likes');
     expect(message).toContain('- IG 3. https://instagram.com/p/ghi — 300 likes');
-    expect(message).toContain('- TikTok 1. Video A – 200 komentar');
-    expect(message).toContain('- TikTok 2. Video B – 100 komentar');
+    expect(message).toContain(
+      '- TikTok 1. https://www.tiktok.com/@binmas/video/aaa — 200 komentar'
+    );
+    expect(message).toContain(
+      '- TikTok 2. https://www.tiktok.com/@binmas/video/bbb — 100 komentar'
+    );
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
     expect(message).toContain('3. 👥 *Data Personil*');
