@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2026-02-20*
+*Last updated: 2026-03-14*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -75,6 +75,13 @@ resmi Satbinmas.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
+
+## Automasi Cron Satbinmas Official
+- Cron `cronDirRequestSatbinmasOfficialMedia` menjalankan menu **3️⃣7️⃣** dan
+  **3️⃣9️⃣** secara berurutan setiap hari pukul **13.05** dan **22.05**
+  (zona waktu Asia/Jakarta).
+- Rekap dikirim ke seluruh nomor admin (`ADMIN_WHATSAPP`) dan nomor
+  **081130744171** yang diformat ke WhatsApp ID.
 
 ## RapidAPI (Instagram & TikTok)
 - Semua opsi di grup *Monitoring Satbinmas Official* membutuhkan kredensial
