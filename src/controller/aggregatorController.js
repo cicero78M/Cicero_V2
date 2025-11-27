@@ -12,6 +12,15 @@ export async function getAggregator(req, res) {
   try {
     const clientId =
       req.query.client_id || req.headers["x-client-id"];
+    if (!clientId) {
+      sendConsoleDebug({
+        tag: "AGG",
+        msg: "getAggregator missing client identifier",
+      });
+      return res
+        .status(400)
+        .json({ success: false, message: "client_id or x-client-id header is required" });
+    }
     sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
     const client = await findById(clientId);
     if (!client) {
@@ -19,7 +28,8 @@ export async function getAggregator(req, res) {
         .status(404)
         .json({ success: false, message: "client not found" });
     }
-    const limit = parseInt(req.query.limit, 10) || 10;
+    const limitRequest = parseInt(req.query.limit, 10);
+    const limit = Number.isNaN(limitRequest) ? 10 : limitRequest;
     const periode = req.query.periode || "harian";
     let igProfile = null;
     let igPosts = [];
