@@ -47,6 +47,14 @@ import { clearSession } from "../../utils/sessionsHelper.js";
 
 function ignore(..._args) {}
 
+const COMPLAINT_RESPONSE_DELAY_MS =
+  Number(process.env.COMPLAINT_RESPONSE_DELAY_MS || 3000);
+
+async function waitForComplaintResponseDelay() {
+  if (COMPLAINT_RESPONSE_DELAY_MS <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, COMPLAINT_RESPONSE_DELAY_MS));
+}
+
 async function sendComplaintResponse(session, waClient) {
   const data = session.respondComplaint || {};
   const { nrp, user, issue, solution, channel: storedChannel } = data;
@@ -81,12 +89,14 @@ async function sendComplaintResponse(session, waClient) {
 
   if (channel === "whatsapp") {
     const target = formatToWhatsAppId(whatsappNumber);
+    await waitForComplaintResponseDelay();
     await safeSendMessage(waClient, target, message);
   } else if (channel === "email") {
     if (!normalizedEmail) {
       throw new Error("Email pelapor tidak tersedia.");
     }
     const subject = `Tindak Lanjut Laporan Cicero - ${reporterName}`;
+    await waitForComplaintResponseDelay();
     await sendComplaintEmail(normalizedEmail, subject, message);
   } else {
     throw new Error("Kanal pengiriman respon tidak tersedia.");
@@ -1683,7 +1693,9 @@ async function processComplaintResolution(session, chatId, waClient) {
       .join("\n")
       .trim();
 
+    await waitForComplaintResponseDelay();
     await safeSendMessage(waClient, chatId, adminSummary);
+    await waitForComplaintResponseDelay();
     await waClient.sendMessage(
       chatId,
       `✅ Respon komplain telah dikirim ke ${reporterName} (${reporterNrp}).`
@@ -1693,6 +1705,7 @@ async function processComplaintResolution(session, chatId, waClient) {
     return true;
   } catch (err) {
     const reporterName = formatNama(user) || user.nama || nrp;
+    await waitForComplaintResponseDelay();
     await waClient.sendMessage(
       chatId,
       `❌ Gagal mengirim respon ke ${reporterName}: ${err.message}`

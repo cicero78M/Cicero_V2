@@ -90,6 +90,44 @@ describe('waAutoComplaintService', () => {
     expect(getSession(chatId)).toMatchObject({ menu: 'clientrequest' });
   });
 
+  test('allows structured complaints from unregistered WhatsApp senders', async () => {
+    const chatId = 'public-chat';
+    const adminOptionSessions = {};
+    const sessions = new Map();
+    const setSession = (id, data) => {
+      sessions.set(id, { ...data, time: Date.now() });
+    };
+    const getSession = (id) => sessions.get(id);
+
+    const complaintMessage = [
+      'Pesan Komplain',
+      'NRP    : 99999',
+      '',
+      'Kendala',
+      '- Akses dashboard terkunci.',
+    ].join('\n');
+
+    const handled = await handleComplaintMessageIfApplicable({
+      text: complaintMessage,
+      allowUserMenu: false,
+      session: null,
+      isAdmin: false,
+      initialIsMyContact: false,
+      senderId: '62001234@c.us',
+      chatId,
+      adminOptionSessions,
+      setSession,
+      getSession,
+      waClient: {},
+      pool: {},
+      userModel: {},
+    });
+
+    expect(handled).toBe(true);
+    expect(respondComplaintMessageMock).toHaveBeenCalledTimes(1);
+    expect(getSession(chatId)).toMatchObject({ menu: 'clientrequest' });
+  });
+
   test('should not handle when header or verification is missing', async () => {
     const result = shouldHandleComplaintMessage({
       text: 'Pesan Biasa',

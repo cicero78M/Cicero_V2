@@ -74,6 +74,7 @@ jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   deleteCommentsByVideoId: jest.fn(),
 }));
 
+process.env.COMPLAINT_RESPONSE_DELAY_MS = '0';
 process.env.JWT_SECRET = 'test';
 
 let clientRequestHandlers;
