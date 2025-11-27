@@ -11,8 +11,8 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 export async function getAggregator(req, res) {
   try {
     const clientId =
-      req.query.client_id || req.query.clientId || req.headers["x-client-id"];
-    sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${req.query.clientId}` });
+      req.query.client_id || req.headers["x-client-id"];
+    sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
     const client = await findById(clientId);
     if (!client) {
       return res
