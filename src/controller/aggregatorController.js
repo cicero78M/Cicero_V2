@@ -10,8 +10,15 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 export async function getAggregator(req, res) {
   try {
+    const clientIdsFromUser = Array.isArray(req.user?.client_ids)
+      ? req.user.client_ids
+      : [];
     const clientId =
-      req.query.client_id || req.headers["x-client-id"];
+      req.query.client_id ||
+      req.headers["x-client-id"] ||
+      req.user?.client_id ||
+      (clientIdsFromUser.length === 1 ? clientIdsFromUser[0] : null);
+
     if (!clientId) {
       sendConsoleDebug({
         tag: "AGG",
@@ -19,7 +26,11 @@ export async function getAggregator(req, res) {
       });
       return res
         .status(400)
-        .json({ success: false, message: "client_id or x-client-id header is required" });
+        .json({
+          success: false,
+          message:
+            "client_id atau header x-client-id wajib diisi (atau gunakan token dengan satu client_id)",
+        });
     }
     sendConsoleDebug({ tag: "AGG", msg: `getAggregator ${clientId}` });
     const client = await findById(clientId);

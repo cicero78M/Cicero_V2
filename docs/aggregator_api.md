@@ -6,7 +6,7 @@ Endpoint: `GET /aggregator`
 Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terhubung ke klien tertentu.
 
 ## Parameters
-- **client_id** (query) atau **x-client-id** (header) — wajib. Digunakan untuk menentukan klien yang ingin diambil datanya.
+- **client_id** (query) atau **x-client-id** (header). Bila token autentikasi hanya memiliki satu `client_id`, parameter ini boleh dikosongkan karena nilai akan diambil otomatis dari token tersebut. Jika token memiliki lebih dari satu `client_id`, salah satu di antaranya harus dikirim sebagai parameter.
 - **limit** (query) — opsional, jumlah maksimum posting yang dikembalikan per platform. Nilai non-numerik akan diganti menjadi `10`. Default: `10`.
 - **periode** (query) — opsional, `harian` untuk hanya mengambil posting hari ini, selain itu akan mengambil seluruh riwayat yang tersedia.
 
@@ -17,6 +17,6 @@ Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terh
 - **tiktokPosts**: Array posting TikTok yang sudah dibatasi oleh `limit`.
 
 ## Error Cases
-- `400 Bad Request` bila `client_id` atau header `x-client-id` tidak dikirim.
+- `400 Bad Request` bila `client_id` atau header `x-client-id` tidak dikirim dan token tidak memiliki tepat satu `client_id`.
 - `404 Not Found` bila klien tidak ditemukan.
 - `500 Internal Server Error` untuk kegagalan tak terduga lainnya.
