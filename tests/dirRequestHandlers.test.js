@@ -630,6 +630,29 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.');
   });
 
+  test('builds TikTok task list without mixing top/bottom highlights', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-11-27T12:00:00Z'));
+
+    const igNarrative = `DIREKTORAT BINMAS\n\n# Insight Likes Konten\n- Jumlah konten aktif: 1 link.\n- Total likes: 100 dari 200 (50,0% capaian).\n- Target harian ≥95%: 190 likes → kekurangan 90.\n- Distribusi likes per konten:\n1. https://instagram.com/p/alpha — 100 likes\n\n# Status Data Personel\n- Personil tercatat: 10 → IG 50,0% (5), TT 40,0% (4).`;
+
+    const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Kamis, 27 November 2025 pukul 19.00 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/aaa — 30 komentar\n2. https://www.tiktok.com/@binmas/video/bbb — 20 komentar\n\n*Sorotan Konten*\n• Performa tertinggi : https://www.tiktok.com/@binmas/video/aaa — 30 komentar\n• Performa terendah : https://www.tiktok.com/@binmas/video/ccc — 1 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 5 (prioritas: Satker A (2))`;
+
+    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+
+    const tiktokLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('- TikTok'));
+
+    expect(tiktokLines).toEqual([
+      '- TikTok 1. https://www.tiktok.com/@binmas/video/aaa — 30 komentar',
+      '- TikTok 2. https://www.tiktok.com/@binmas/video/bbb — 20 komentar',
+    ]);
+    expect(message).not.toContain('ccc — 1 komentar');
+
+    jest.useRealTimers();
+  });
+
   test('adapts closing note when target tercapai dan backlog rendah', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
