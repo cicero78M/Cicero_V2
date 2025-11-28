@@ -912,6 +912,28 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
       .filter((line) => /https?:\/\//i.test(line))
       .map((line) => cleanContentLine(line) || line);
 
+  const dedupePreserveOrder = (items) => {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const extractTiktokTasks = (text) => {
+    const normalized = normalizeText(text);
+    const taskSectionMatch = normalized.match(
+      /(?:\*Tugas TikTok\*|Daftar Link Konten TikTok:?)[^\n]*\n([\s\S]*?)(?:\n\s*\n|\n\*|\n#|$)/i
+    );
+
+    const taskSection = taskSectionMatch ? taskSectionMatch[1] : normalized;
+    const links = extractLinksFromText(taskSection);
+
+    return dedupePreserveOrder(links);
+  };
+
   const extractIgData = (text) => {
     const normalized = normalizeText(text);
     const data = {};
@@ -1155,9 +1177,7 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
     if (!igLines.length) igLines.push(...extractLinksFromText(igNarrative));
 
-    const ttLinkLines = extractLinksFromText(ttNarrative);
-
-    const ttLines = ttLinkLines;
+    const ttLines = extractTiktokTasks(ttNarrative);
 
     if (igLines.length)
       igLines.forEach((line, index) =>
