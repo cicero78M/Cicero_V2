@@ -36,7 +36,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-20 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas. |
+| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-20 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
 | `cronDirRequestRekapAllSocmed.js` | `0 4 15,18 * * *<br>0 34 20 * * *` | Send Ditbinmas laphar narratives and recap attachments for daily runs. |
 | `cronDirRequestSosmedRank.js` | `7 15 * * *<br>40 20 * * *` | Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients. |
 | `cronDirRequestEngageRank.js` | `7 15 * * *<br>40 20 * * *` | Generate engagement ranking narratives and Excel exports for Ditbinmas. |
