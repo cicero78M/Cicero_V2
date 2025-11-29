@@ -15,9 +15,9 @@ import { waClient, waGatewayClient } from './src/service/waService.js';
 import { startOtpWorker } from './src/service/otpQueue.js';
 
 const cronBuckets = {
-  always: [
-    './src/cron/cronDbBackup.js',
-  ],
+  //always: [
+  //  './src/cron/cronDbBackup.js',
+  //],
   waClient: [
     './src/cron/cronInstaService.js',
     './src/cron/cronInstaLaphar.js',
