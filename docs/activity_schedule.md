@@ -1,7 +1,7 @@
 # System Activity Schedule
-*Last updated: 2025-11-08*
+*Last updated: 2025-03-11*
 
-This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise.
+This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. The job manifest in `src/cron/cronManifest.js` is the single source of truth for which cron modules are loaded.
 
 ## Runtime safeguards & configuration sync
 
@@ -11,22 +11,31 @@ The configuration data lives in the migration `sql/migrations/20251022_create_cr
 
 ## Cron Jobs
 
+Use the helper script below to regenerate the table so that schedules stay aligned with the manifest and source files:
+
+```bash
+node docs/scripts/renderCronSchedule.js > /tmp/cron-jobs.md
+```
+
+Then paste the output into this section. The table is sourced from `src/cron/cronManifest.js` and each module's `scheduleCronJob` call.
+
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronInstaService.js` | `30 6-21 * * *` | Runs at minute 30 between 06:30–21:30 to fetch Instagram content, refresh like counts, and send "belum" attendance recaps for active clients.【F:src/cron/cronInstaService.js†L15-L105】 |
-| `cronInstaLaphar.js` | `00 15,18,21 * * *` | Triggers at 15:00, 18:00, and 21:00 to pull Instagram posts, update likes, and distribute attendance plus amplifikasi updates to operators and admins.【F:src/cron/cronInstaLaphar.js†L39-L128】 |
-| `cronRekapLink.js` | `2 15,18,21 * * *` | Sends the link amplification recap at 15:02, 18:02, and 21:02 for every active amplification client.【F:src/cron/cronRekapLink.js†L58-L92】 |
-| `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Fires at 23:00 on days 28–31 and proceeds only on the actual last day of the month to generate and deliver monthly amplification spreadsheets.【F:src/cron/cronAmplifyLinkMonthly.js†L29-L78】 |
-| `cronDirRequestFetchSosmed.js` | `30 6 * * *`<br>`0,30 7-20 * * *` | Executes once at 06:30 and then every 30 minutes from 07:00–20:30 to fetch new Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast task status deltas.【F:src/cron/cronDirRequestFetchSosmed.js†L45-L101】 |
-| `cronDirRequestRekapAllSocmed.js` | `0 4 15,18 * * *`<br>`0 34 20 * * *` | Sends laphar narratives and recap attachments at 15:04 and 18:04 to admins and the Ditbinmas group, then at 20:34 for the evening recap run.【F:src/cron/cronDirRequestRekapAllSocmed.js†L86-L119】 |
-| `cronDirRequestSosmedRank.js` | `7 15 * * *`<br>`40 20 * * *` | Delivers combined Instagram like and TikTok comment rankings at 15:07 and again at 20:40 to admins plus the Ditbinmas group.【F:src/cron/cronDirRequestSosmedRank.js†L34-L46】 |
-| `cronDirRequestEngageRank.js` | `7 15 * * *`<br>`40 20 * * *` | Generates and sends the engagement ranking narrative plus Excel at 15:07 and 20:40 to the configured Ditbinmas recipient list.【F:src/cron/cronDirRequestEngageRank.js†L74-L111】 |
-| `cronDirRequestLapharKasatker.js` | `42 20 * * *`<br>`47 20 * * 0`<br>`50 20 * * *` | Issues Ditbinmas daily kasatker reports at 20:42, weekly summaries every Sunday at 20:47, and checks for end-of-month conditions at 20:50 before sending the monthly recap.【F:src/cron/cronDirRequestLapharKasatker.js†L63-L106】 |
-| `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatches the Ditbinmas directorate attendance recaps each evening at 20:32 using the `DITBINMAS` client context for all data queries.【F:src/cron/cronDirRequestDirektorat.js†L12-L53】 |
-| `cronDirRequestHighLow.js` | `50 20 * * 0` | Sends the weekly Instagram and TikTok high/low performance summaries every Sunday at 20:50.【F:src/cron/cronDirRequestHighLow.js†L31-L56】 |
-| `cronWaNotificationReminder.js` | `5 19 * * *` | Sends 19:05 WhatsApp reminders only to DITBINMAS users who opted in, using Instagram and TikTok task recaps for that client before composing the engagement checklist.【F:src/cron/cronWaNotificationReminder.js†L13-L18】【F:src/cron/cronWaNotificationReminder.js†L202-L232】 |
-| `cronAbsensiOprDirektorat.js` | _Not scheduled_ | Helper cron that walks through every active directorate client sequentially and sends the dashboard registration attendance recap to admin WhatsApp targets.【F:src/cron/cronAbsensiOprDirektorat.js†L1-L21】 |
-
-> **Note:** `cronAbsensiUserData.js` currently exposes only a `runCron` helper and is not registered with `scheduleCronJob`, so it remains idle until a schedule is added.【F:src/cron/cronAbsensiUserData.js†L1-L29】
+| `cronDbBackup.js` | `0 4 * * *` | Backup database dump to Google Drive using service account credentials. |
+| `cronInstaService.js` | `30 6-21 * * *` | Fetch Instagram content and likes for active clients while sending attendance recaps. |
+| `cronInstaLaphar.js` | `00 15,18,21 * * *` | Send Instagram laphar updates, likes, and amplifikasi summaries to operators and admins. |
+| `cronRekapLink.js` | `2 15,18,21 * * *` | Distribute amplification link recaps to all active amplification clients. |
+| `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
+| `cronDirRequestRekapUpdate.js` | `0 8-18/4 * * *` | Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups. |
+| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-20 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas. |
+| `cronDirRequestRekapAllSocmed.js` | `0 4 15,18 * * *<br>0 34 20 * * *` | Send Ditbinmas laphar narratives and recap attachments for daily runs. |
+| `cronDirRequestSosmedRank.js` | `7 15 * * *<br>40 20 * * *` | Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients. |
+| `cronDirRequestEngageRank.js` | `7 15 * * *<br>40 20 * * *` | Generate engagement ranking narratives and Excel exports for Ditbinmas. |
+| `cronDirRequestLapharKasatker.js` | `42 20 * * *<br>47 20 * * 0<br>50 20 * * *` | Send Ditbinmas kasatker daily, weekly, and monthly recaps. |
+| `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatch Ditbinmas directorate attendance recaps. |
+| `cronDirRequestHighLow.js` | `50 20 * * 0` | Send weekly Instagram and TikTok high/low performance summaries. |
+| `cronDirRequestKasatBinmasRecap.js` | `36 20 * * *<br>42 20 * * 0<br>52 20 * * *` | Provide Ditbinmas Kasat Binmas recap messages. |
+| `cronWaNotificationReminder.js` | `5 19 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in. |
+| `cronDirRequestSatbinmasOfficialMedia.js` | `5 13,22 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp services, and updates the system accordingly. Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

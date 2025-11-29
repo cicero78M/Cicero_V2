@@ -20,5 +20,6 @@ This document summarizes how to properly format a pull request for the **Cicero_
 - In the body, list the main changes and reference file paths or line numbers when they help reviewers.
 - Mention related issues or context so others understand why the change is needed.
 - Keep the description short but informative.
+- When adding or updating cron jobs, register them in `src/cron/cronManifest.js` so documentation and runtime buckets stay in sync.
 
 Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
