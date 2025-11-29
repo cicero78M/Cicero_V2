@@ -2,27 +2,19 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { waGatewayClient } from "../service/waService.js";
-import {
-  lapharDitbinmas,
-  collectLikesRecap,
-} from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
-import {
-  lapharTiktokDitbinmas,
-  collectKomentarRecap,
-} from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import { collectLikesRecap } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
+import { collectKomentarRecap } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { saveLikesRecapPerContentExcel } from "../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../service/commentRecapExcelService.js";
-import { formatRekapAllSosmed } from "../handler/menu/dirRequestHandlers.js";
 import { sendWAFile, safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
-import { writeFile, mkdir, readFile, unlink } from "fs/promises";
-import { join, basename } from "path";
+import { readFile, unlink } from "fs/promises";
+import { basename } from "path";
 import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
 const CLIENT_ID = "DITBINMAS";
 
 export async function runCron() {
-  const shouldArchive = process.env.LAPHAR_ARCHIVE === "true";
   sendDebug({
     tag: "CRON DIRREQ ALL SOCMED",
     msg: "Mulai cron dirrequest rekap all socmed",
@@ -42,28 +34,12 @@ export async function runCron() {
   }
   let igRecapPath = null;
   let ttRecapPath = null;
-  let igPath = null;
-  let ttPath = null;
   try {
     try {
-      const dirPath = "laphar";
-      if (shouldArchive) {
-        await mkdir(dirPath, { recursive: true });
-      }
-
-      const [ig, tt, igRecap, ttRecap] = await Promise.all([
-        lapharDitbinmas(),
-        lapharTiktokDitbinmas(),
+      const [igRecap, ttRecap] = await Promise.all([
         collectLikesRecap(CLIENT_ID, { selfOnly: false }),
         collectKomentarRecap(CLIENT_ID, { selfOnly: false }),
       ]);
-
-      const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
-
-      const igBuffer =
-        ig.text && ig.filename ? Buffer.from(ig.text, "utf-8") : null;
-      const ttBuffer =
-        tt.text && tt.filename ? Buffer.from(tt.text, "utf-8") : null;
 
       let igRecapBuffer = null;
       let igRecapName = null;
@@ -81,24 +57,14 @@ export async function runCron() {
         ttRecapName = basename(ttRecapPath);
       }
 
-      if (shouldArchive && igBuffer) {
-        igPath = join(dirPath, ig.filename);
-        await writeFile(igPath, igBuffer);
-      }
-      if (shouldArchive && ttBuffer) {
-        ttPath = join(dirPath, tt.filename);
-        await writeFile(ttPath, ttBuffer);
-      }
+      const shouldSendReminder = igRecapBuffer || ttRecapBuffer;
+      const reminderMessage = shouldSendReminder
+        ? "Rekap harian: likes Instagram dan komentar TikTok."
+        : null;
 
       for (const wa of recipients) {
-        if (narrative) {
-          await safeSendMessage(waGatewayClient, wa, narrative.trim());
-        }
-        if (igBuffer) {
-          await sendWAFile(waGatewayClient, igBuffer, ig.filename, wa, "text/plain");
-        }
-        if (ttBuffer) {
-          await sendWAFile(waGatewayClient, ttBuffer, tt.filename, wa, "text/plain");
+        if (reminderMessage) {
+          await safeSendMessage(waGatewayClient, wa, reminderMessage);
         }
         if (igRecapBuffer) {
           await sendWAFile(
@@ -132,12 +98,6 @@ export async function runCron() {
       }
       if (ttRecapPath) {
         await unlink(ttRecapPath).catch(() => {});
-      }
-      if (igPath) {
-        await unlink(igPath).catch(() => {});
-      }
-      if (ttPath) {
-        await unlink(ttPath).catch(() => {});
       }
     }
   } catch (err) {
