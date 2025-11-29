@@ -2486,6 +2486,10 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
             );
           }
         }
+
+        await refreshGatewayAllowedGroups("client group updated via thisgroup").catch(
+          () => {}
+        );
       } else {
         await waClient.sendMessage(
           chatId,
@@ -2541,6 +2545,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
           await waClient.sendMessage(operatorId, `[Notifikasi]:\n${dataText}`);
         }
       }
+
+      await refreshGatewayAllowedGroups("client added via WA").catch(() => {});
     } catch (err) {
       await waClient.sendMessage(
         chatId,
@@ -2595,6 +2601,10 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
               );
             }
           }
+
+          await refreshGatewayAllowedGroups(
+            "client updated via tiktok_secuid refresh"
+          ).catch(() => {});
         } else {
           await waClient.sendMessage(
             chatId,
@@ -2644,6 +2654,10 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
               );
             }
           }
+
+          await refreshGatewayAllowedGroups("client updated via WA").catch(
+            () => {}
+          );
         } else {
           await waClient.sendMessage(
             chatId,
@@ -3183,12 +3197,92 @@ async function processGatewayBulkDeletion(chatId, text) {
   });
 }
 
-const gatewayAllowedGroupIds = new Set(["120363419830216549@g.us"]);
+const gatewayAllowedGroupIds = new Set();
+const gatewayAllowedGroupState = {
+  isLoaded: false,
+  isDirty: true,
+  loadingPromise: null,
+  lastRefreshedAt: 0,
+};
+
+function normalizeGatewayGroupId(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  return trimmed.endsWith("@g.us") ? trimmed : null;
+}
+
+export async function refreshGatewayAllowedGroups(reason = "") {
+  if (gatewayAllowedGroupState.loadingPromise) {
+    return gatewayAllowedGroupState.loadingPromise;
+  }
+
+  const loader = (async () => {
+    try {
+      const res = await query(
+        `SELECT client_group FROM clients
+         WHERE client_status = true
+           AND client_group IS NOT NULL
+           AND client_group <> ''`
+      );
+      const normalizedGroups = (res.rows || [])
+        .map((row) => normalizeGatewayGroupId(row.client_group))
+        .filter(Boolean);
+
+      gatewayAllowedGroupIds.clear();
+      normalizedGroups.forEach((groupId) =>
+        gatewayAllowedGroupIds.add(groupId)
+      );
+
+      gatewayAllowedGroupState.isLoaded = true;
+      gatewayAllowedGroupState.isDirty = false;
+      gatewayAllowedGroupState.lastRefreshedAt = Date.now();
+
+      console.log(
+        `[WA-GATEWAY] Loaded ${gatewayAllowedGroupIds.size} allowed group(s)${
+          reason ? ` (${reason})` : ""
+        }`
+      );
+    } catch (err) {
+      console.error(
+        `[WA-GATEWAY] Failed to load allowed gateway groups${
+          reason ? ` (${reason})` : ""
+        }: ${err?.message || err}`
+      );
+      gatewayAllowedGroupState.isLoaded = gatewayAllowedGroupIds.size > 0;
+    } finally {
+      gatewayAllowedGroupState.loadingPromise = null;
+    }
+  })();
+
+  gatewayAllowedGroupState.loadingPromise = loader;
+  return loader;
+}
+
+export function markGatewayAllowedGroupsDirty() {
+  gatewayAllowedGroupState.isDirty = true;
+}
+
+async function ensureGatewayAllowedGroupsLoaded(reason = "") {
+  if (!gatewayAllowedGroupState.isLoaded || gatewayAllowedGroupState.isDirty) {
+    await refreshGatewayAllowedGroups(reason).catch(() => {});
+    return;
+  }
+
+  const maxCacheAgeMs = 10 * 60 * 1000;
+  if (Date.now() - gatewayAllowedGroupState.lastRefreshedAt > maxCacheAgeMs) {
+    await refreshGatewayAllowedGroups("periodic refresh").catch(() => {});
+  }
+}
+
+// Preload allowlist in the background for faster gateway readiness
+refreshGatewayAllowedGroups("initial warmup").catch(() => {});
 
 export async function handleGatewayMessage(msg) {
   const chatId = msg.from || "";
   const text = (msg.body || "").trim();
   if (!text) return;
+
+  await ensureGatewayAllowedGroupsLoaded("gateway message");
 
   const isStatusBroadcast = chatId === "status@broadcast";
 
