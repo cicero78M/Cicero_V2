@@ -43,7 +43,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestLapharKasatker.js` | `42 20 * * *<br>47 20 * * 0<br>50 20 * * *` | Send Ditbinmas kasatker daily, weekly, and monthly recaps **only to operator contacts** (no group or super admin recipients). |
 | `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatch Ditbinmas directorate attendance recaps. |
 | `cronDirRequestHighLow.js` | `50 20 * * 0` | Send weekly Instagram and TikTok high/low performance summaries. |
-| `cronDirRequestKasatBinmasRecap.js` | `36 20 * * *<br>42 20 * * 0<br>52 20 * * *` | Provide Ditbinmas Kasat Binmas recap messages. |
+| `cronDirRequestKasatBinmasRecap.js` | `36 20 * * *<br>42 20 * * 0<br>52 20 * * *` | Provide Ditbinmas Kasat Binmas recap messages only to super admin contacts (no operator or group delivery). |
 | `cronWaNotificationReminder.js` | `5 19 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 13,22 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 
