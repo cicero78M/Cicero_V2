@@ -29,6 +29,9 @@ export async function runCron() {
   });
   const { recipients, hasClientRecipients } = await buildClientRecipientSet(CLIENT_ID, {
     includeGroup: true,
+    includeAdmins: false,
+    includeSuper: false,
+    includeOperator: false,
   });
   if (!recipients.size) {
     sendDebug({

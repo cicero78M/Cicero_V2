@@ -46,3 +46,21 @@ test('buildClientRecipientSet merges admin, super admin, operator, and group', a
     '120@g.us',
   ]);
 });
+
+test('buildClientRecipientSet can target only group recipients', async () => {
+  mockGetClientContactsById.mockResolvedValue({
+    clientSuper: ['0812-34'],
+    clientOperator: ['62000'],
+    clientGroup: ['120@g.us'],
+  });
+
+  const { recipients, hasClientRecipients } = await buildClientRecipientSet('DITBINMAS', {
+    includeAdmins: false,
+    includeSuper: false,
+    includeOperator: false,
+    includeGroup: true,
+  });
+
+  expect(hasClientRecipients).toBe(true);
+  expect(Array.from(recipients)).toEqual(['120@g.us']);
+});
