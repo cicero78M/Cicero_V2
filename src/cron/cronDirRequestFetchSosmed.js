@@ -20,6 +20,16 @@ let lastTiktokCount = null;
 let lastIgShortcodes = [];
 let lastTiktokVideoIds = [];
 
+function getCurrentHourInJakarta(date = new Date()) {
+  const hourString = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    hour: "numeric",
+    hour12: false,
+  }).format(date);
+
+  return Number.parseInt(hourString, 10);
+}
+
 async function initializeLastCounts() {
   lastIgCount = await getInstaPostCount("DITBINMAS");
   lastTiktokCount = await getTiktokPostCount("DITBINMAS");
@@ -36,16 +46,25 @@ function getRecipients() {
 export async function runCron() {
   sendDebug({ tag: "CRON DIRFETCH SOSMED", msg: "Mulai cron dirrequest fetch sosmed" });
   try {
+    const jakartaHour = getCurrentHourInJakarta();
+    const skipPostFetch = jakartaHour >= 17;
     const previousIgShortcodes = await getShortcodesTodayByClient("DITBINMAS");
     const previousTiktokVideoIds = await getVideoIdsTodayByClient("DITBINMAS");
-    await fetchAndStoreInstaContent(
-      ["shortcode", "caption", "like_count", "timestamp"],
-      null,
-      null,
-      "DITBINMAS"
-    );
+    if (!skipPostFetch) {
+      await fetchAndStoreInstaContent(
+        ["shortcode", "caption", "like_count", "timestamp"],
+        null,
+        null,
+        "DITBINMAS"
+      );
+      await fetchAndStoreTiktokContent("DITBINMAS");
+    } else {
+      sendDebug({
+        tag: "CRON DIRFETCH SOSMED",
+        msg: "Lewati fetch post Instagram dan TikTok setelah pukul 17.00 WIB",
+      });
+    }
     await handleFetchLikesInstagram(null, null, "DITBINMAS");
-    await fetchAndStoreTiktokContent("DITBINMAS");
     await handleFetchKomentarTiktokBatch(null, null, "DITBINMAS");
     const { text, igCount, tiktokCount, state } = await generateSosmedTaskMessage("DITBINMAS", {
       skipTiktokFetch: true,
