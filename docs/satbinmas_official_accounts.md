@@ -224,6 +224,11 @@ directly from the WhatsApp bot via the client management menu:
    tanpa menampilkan ulang menu *Kelola Client*, sehingga percakapan selesai
    setelah permintaan tersebut dipenuhi.
 
+> **Perlindungan hapus client:** di menu *Kelola Client*, opsi **2️⃣ Hapus
+> Client** kini meminta konfirmasi eksplisit. Operator harus membalas *ya
+> hapus* atau *batal* sehingga penghapusan client (beserta relasi yang
+> terkait) tidak terjadi karena salah ketik.
+
 Pesan yang dikirim lewat alur *WA Gateway* (`#satbinmasofficial`) kini memakai
 dispatcher menu *clientrequest* yang sama, sehingga balasan angka seperti "1"
 atau nama platform langsung diproses tanpa menggantung setelah memilih opsi
