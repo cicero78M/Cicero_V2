@@ -25,7 +25,10 @@ function addRecipients(targetSet, candidates = []) {
     .forEach((recipient) => targetSet.add(recipient));
 }
 
-export async function buildClientRecipientSet(clientId, { includeGroup = true, includeAdmins = true } = {}) {
+export async function buildClientRecipientSet(
+  clientId,
+  { includeGroup = true, includeAdmins = true, includeSuper = true, includeOperator = true } = {}
+) {
   const recipients = new Set();
   const contacts = await getClientContactsById(clientId);
 
@@ -33,14 +36,20 @@ export async function buildClientRecipientSet(clientId, { includeGroup = true, i
     addRecipients(recipients, getAdminWAIds());
   }
 
-  addRecipients(recipients, contacts.clientSuper);
-  addRecipients(recipients, contacts.clientOperator);
+  if (includeSuper) {
+    addRecipients(recipients, contacts.clientSuper);
+  }
+  if (includeOperator) {
+    addRecipients(recipients, contacts.clientOperator);
+  }
   if (includeGroup) {
     addRecipients(recipients, contacts.clientGroup);
   }
 
   const hasClientRecipients = Boolean(
-    contacts.clientSuper.length || contacts.clientOperator.length || (includeGroup && contacts.clientGroup.length)
+    (includeSuper && contacts.clientSuper.length) ||
+      (includeOperator && contacts.clientOperator.length) ||
+      (includeGroup && contacts.clientGroup.length)
   );
 
   return { recipients, hasClientRecipients };

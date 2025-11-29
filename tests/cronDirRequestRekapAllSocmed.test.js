@@ -83,26 +83,27 @@ beforeEach(() => {
   mockWriteFile.mockResolvedValue();
   mockUnlink.mockResolvedValue();
   mockBuildClientRecipientSet.mockResolvedValue({
-    recipients: new Set(['123@c.us', 'group@g.us', 'super@c.us']),
+    recipients: new Set(['group@g.us']),
     hasClientRecipients: true,
   });
 });
 
-test('runCron sends to admin, super admin, and group recipients', async () => {
+test('runCron sends only to group recipients', async () => {
   await runCron();
 
   expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
   expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
-  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', { includeGroup: true });
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', {
+    includeGroup: true,
+    includeAdmins: false,
+    includeSuper: false,
+    includeOperator: false,
+  });
 
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', '*Laporan Harian Engagement – Ringkasan*');
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, 'group@g.us', '*Laporan Harian Engagement – Ringkasan*');
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, 'super@c.us', '*Laporan Harian Engagement – Ringkasan*');
 
-  expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', '123@c.us', 'text/plain');
   expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', 'group@g.us', 'text/plain');
-  expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', 'super@c.us', 'text/plain');
 });
 
 test('runCron archives files when LAPHAR_ARCHIVE is true', async () => {

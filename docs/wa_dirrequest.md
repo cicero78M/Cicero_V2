@@ -101,6 +101,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   fallback tersebut.
 - Gunakan kolom `client_super`, `client_operator`, dan `client_group` di DB
   untuk memperbarui target pengiriman tanpa mengubah kode cron.
+- Cron `cronDirRequestRekapAllSocmed` dikunci hanya ke **Group WA** Ditbinmas
+  (menonaktifkan admin, super admin, dan operator) agar broadcast rekap harian
+  tidak lagi dikirim ke nomor pribadi.
 
 ## RapidAPI (Instagram & TikTok)
 - Semua opsi di grup *Monitoring Satbinmas Official* membutuhkan kredensial
