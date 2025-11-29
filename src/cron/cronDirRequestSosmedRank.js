@@ -4,33 +4,36 @@ dotenv.config();
 import { waGatewayClient } from "../service/waService.js";
 import { absensiLikes } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import { absensiKomentar } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
-import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
+import { safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
-const DIRREQUEST_GROUP = "628127309190@c.us";
-const RANK_RECIPIENT = "6281234560377@c.us";
-
-function getRecipients(includeRankRecipient = false) {
-  const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
-  if (includeRankRecipient) recipients.add(RANK_RECIPIENT);
-  return recipients;
-}
+const CLIENT_ID = "DITBINMAS";
 
 export const JOB_KEY = "./src/cron/cronDirRequestSosmedRank.js";
 
-export async function runCron(includeRankRecipient = false) {
+export async function runCron() {
   sendDebug({ tag: "CRON DIRREQ SOSMED RANK", msg: "Mulai cron dirrequest sosmed rank" });
   try {
-    const likesMsg = await absensiLikes("DITBINMAS", { mode: "all", roleFlag: "ditbinmas" });
-    const komentarMsg = await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
-    const recipients = getRecipients(includeRankRecipient);
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(CLIENT_ID, {
+      includeGroup: true,
+    });
+    if (!recipients.size) {
+      sendDebug({ tag: "CRON DIRREQ SOSMED RANK", msg: "Tidak ada penerima WA yang valid" });
+      return;
+    }
+
+    const likesMsg = await absensiLikes(CLIENT_ID, { mode: "all", roleFlag: "ditbinmas" });
+    const komentarMsg = await absensiKomentar(CLIENT_ID, { roleFlag: "ditbinmas" });
     for (const wa of recipients) {
       await safeSendMessage(waGatewayClient, wa, likesMsg.trim());
       await safeSendMessage(waGatewayClient, wa, komentarMsg.trim());
     }
     sendDebug({
       tag: "CRON DIRREQ SOSMED RANK",
-      msg: `Laporan dikirim ke ${recipients.size} penerima`,
+      msg: `Laporan dikirim ke ${recipients.size} penerima${
+        hasClientRecipients ? "" : " (fallback admin)"
+      }`,
     });
   } catch (err) {
     sendDebug({

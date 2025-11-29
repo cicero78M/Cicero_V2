@@ -4,6 +4,7 @@ const mockAbsensiLikes = jest.fn();
 const mockAbsensiKomentar = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
+const mockBuildClientRecipientSet = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
@@ -14,10 +15,12 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
 }));
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   safeSendMessage: mockSafeSend,
-  getAdminWAIds: () => ['123@c.us'],
 }));
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
+}));
+jest.unstable_mockModule('../src/utils/recipientHelper.js', () => ({
+  buildClientRecipientSet: mockBuildClientRecipientSet,
 }));
 
 let runCron;
@@ -30,24 +33,24 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockAbsensiLikes.mockResolvedValue('likes');
   mockAbsensiKomentar.mockResolvedValue('komentar');
+  mockBuildClientRecipientSet.mockResolvedValue({
+    recipients: new Set(['123@c.us', 'group@g.us', 'super@c.us']),
+    hasClientRecipients: true,
+  });
 });
 
-test('runCron sends likes and komentar to admin and group', async () => {
+test('runCron sends likes and komentar to admin, operator, super admin, and group', async () => {
   await runCron();
 
   expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', { mode: 'all', roleFlag: 'ditbinmas' });
   expect(mockAbsensiKomentar).toHaveBeenCalledWith('DITBINMAS', { roleFlag: 'ditbinmas' });
 
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', { includeGroup: true });
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'likes');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'likes');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '120363419830216549@g.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledTimes(4);
-});
-
-test('runCron with rank recipient includes extra number', async () => {
-  await runCron(true);
-
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '6281234560377@c.us', 'likes');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '6281234560377@c.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'likes');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'likes');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledTimes(6);
 });

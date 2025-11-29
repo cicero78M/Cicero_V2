@@ -6,29 +6,35 @@ import {
   absensiLikesDitbinmasSimple,
   absensiKomentarDitbinmasSimple,
 } from "../handler/menu/dirRequestHandlers.js";
-import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
+import { safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
-const REKAP_RECIPIENT = "6281234560377@c.us";
 const CLIENT_ID = "DITBINMAS";
-
-function getRecipients() {
-  return new Set([...getAdminWAIds(), REKAP_RECIPIENT]);
-}
 
 export async function runCron(clientId = CLIENT_ID) {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId);
+    if (!recipients.size) {
+      sendDebug({
+        tag: "CRON DIRREQ DIREKTORAT",
+        msg: "Tidak ada penerima WA yang valid untuk rekap absensi direktorat",
+      });
+      return;
+    }
+
     const likesMsg = await absensiLikesDitbinmasSimple(clientId);
     const komentarMsg = await absensiKomentarDitbinmasSimple(clientId);
-    const recipients = getRecipients();
     for (const wa of recipients) {
       await safeSendMessage(waGatewayClient, wa, likesMsg.trim());
       await safeSendMessage(waGatewayClient, wa, komentarMsg.trim());
     }
     sendDebug({
       tag: "CRON DIRREQ DIREKTORAT",
-      msg: `Laporan dikirim ke ${recipients.size} penerima`,
+      msg: `Laporan dikirim ke ${recipients.size} penerima${
+        hasClientRecipients ? "" : " (fallback admin)"
+      }`,
     });
   } catch (err) {
     sendDebug({

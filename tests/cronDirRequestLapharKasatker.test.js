@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 const mockGenerateKasatkerReport = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockSendDebug = jest.fn();
+const mockBuildClientRecipientSet = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({
   waGatewayClient: { id: 'gateway' },
@@ -14,6 +15,10 @@ jest.unstable_mockModule('../src/service/kasatkerReportService.js', () => ({
 
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   safeSendMessage: mockSafeSendMessage,
+}));
+
+jest.unstable_mockModule('../src/utils/recipientHelper.js', () => ({
+  buildClientRecipientSet: mockBuildClientRecipientSet,
 }));
 
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
@@ -31,6 +36,10 @@ beforeEach(async () => {
   process.env.JWT_SECRET = 'test-secret';
   mockGenerateKasatkerReport.mockResolvedValue(' Narasi Kasatker ');
   mockSafeSendMessage.mockResolvedValue(true);
+  mockBuildClientRecipientSet.mockResolvedValue({
+    recipients: new Set(['111@c.us', '222@c.us']),
+    hasClientRecipients: true,
+  });
 
   ({
     runDailyReport,
@@ -50,7 +59,12 @@ test('runDailyReport generates and sends harian report', async () => {
   });
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     { id: 'gateway' },
-    '628127309190@c.us',
+    '111@c.us',
+    'Narasi Kasatker'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    { id: 'gateway' },
+    '222@c.us',
     'Narasi Kasatker'
   );
   expect(result).toBe(true);
@@ -66,7 +80,12 @@ test('runWeeklyReport generates and sends weekly report', async () => {
   });
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     { id: 'gateway' },
-    '628127309190@c.us',
+    '111@c.us',
+    'Narasi Kasatker'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    { id: 'gateway' },
+    '222@c.us',
     'Narasi Kasatker'
   );
 });
@@ -96,7 +115,12 @@ test('runMonthlyReport sends report on last day of month in Jakarta timezone', a
   });
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
     { id: 'gateway' },
-    '628127309190@c.us',
+    '111@c.us',
+    'Narasi Kasatker'
+  );
+  expect(mockSafeSendMessage).toHaveBeenCalledWith(
+    { id: 'gateway' },
+    '222@c.us',
     'Narasi Kasatker'
   );
 });

@@ -6,22 +6,33 @@ import { generateWeeklyInstagramHighLowReport } from "../service/weeklyInstagram
 import { generateWeeklyTiktokHighLowReport } from "../service/weeklyTiktokHighLowService.js";
 import { safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
-const RECIPIENT = "6281234560377@c.us";
+const CLIENT_ID = "DITBINMAS";
 const CRON_TAG = "CRON DIRREQ HIGHLOW";
 
-export async function runCron() {
+export async function runCron(clientId = CLIENT_ID) {
   sendDebug({ tag: CRON_TAG, msg: "Mulai cron dirrequest high low" });
   try {
-    const instagramReport = await generateWeeklyInstagramHighLowReport("DITBINMAS", { roleFlag: "ditbinmas" });
-    await safeSendMessage(waGatewayClient, RECIPIENT, instagramReport.trim());
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId);
+    if (!recipients.size) {
+      sendDebug({ tag: CRON_TAG, msg: "Tidak ada penerima WA yang valid untuk laporan high-low" });
+      return;
+    }
 
-    const tiktokReport = await generateWeeklyTiktokHighLowReport("DITBINMAS", { roleFlag: "ditbinmas" });
-    await safeSendMessage(waGatewayClient, RECIPIENT, tiktokReport.trim());
+    const instagramReport = await generateWeeklyInstagramHighLowReport(clientId, { roleFlag: "ditbinmas" });
+    const tiktokReport = await generateWeeklyTiktokHighLowReport(clientId, { roleFlag: "ditbinmas" });
+
+    for (const wa of recipients) {
+      await safeSendMessage(waGatewayClient, wa, instagramReport.trim());
+      await safeSendMessage(waGatewayClient, wa, tiktokReport.trim());
+    }
 
     sendDebug({
       tag: CRON_TAG,
-      msg: `Laporan Instagram dan TikTok dikirim ke ${RECIPIENT}`,
+      msg: `Laporan Instagram dan TikTok dikirim ke ${recipients.size} penerima${
+        hasClientRecipients ? "" : " (fallback admin)"
+      }`,
     });
   } catch (err) {
     sendDebug({
