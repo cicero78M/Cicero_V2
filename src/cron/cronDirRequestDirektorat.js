@@ -11,16 +11,17 @@ import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 
 const REKAP_RECIPIENT = "6281234560377@c.us";
+const CLIENT_ID = "DITBINMAS";
 
 function getRecipients() {
   return new Set([...getAdminWAIds(), REKAP_RECIPIENT]);
 }
 
-export async function runCron() {
+export async function runCron(clientId = CLIENT_ID) {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
-    const likesMsg = await absensiLikesDitbinmasSimple();
-    const komentarMsg = await absensiKomentarDitbinmasSimple();
+    const likesMsg = await absensiLikesDitbinmasSimple(clientId);
+    const komentarMsg = await absensiKomentarDitbinmasSimple(clientId);
     const recipients = getRecipients();
     for (const wa of recipients) {
       await safeSendMessage(waGatewayClient, wa, likesMsg.trim());

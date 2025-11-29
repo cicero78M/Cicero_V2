@@ -33,8 +33,8 @@ beforeEach(() => {
 test('runCron sends absensi and komentar to admin and rekap recipient', async () => {
   await runCron();
 
-  expect(mockAbsensi).toHaveBeenCalled();
-  expect(mockKomentar).toHaveBeenCalled();
+  expect(mockAbsensi).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockKomentar).toHaveBeenCalledWith('DITBINMAS');
 
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'absensi');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'komentar');

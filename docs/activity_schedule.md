@@ -22,7 +22,7 @@ The configuration data lives in the migration `sql/migrations/20251022_create_cr
 | `cronDirRequestSosmedRank.js` | `7 15 * * *`<br>`40 20 * * *` | Delivers combined Instagram like and TikTok comment rankings at 15:07 and again at 20:40 to admins plus the Ditbinmas group.【F:src/cron/cronDirRequestSosmedRank.js†L34-L46】 |
 | `cronDirRequestEngageRank.js` | `7 15 * * *`<br>`40 20 * * *` | Generates and sends the engagement ranking narrative plus Excel at 15:07 and 20:40 to the configured Ditbinmas recipient list.【F:src/cron/cronDirRequestEngageRank.js†L74-L111】 |
 | `cronDirRequestLapharKasatker.js` | `42 20 * * *`<br>`47 20 * * 0`<br>`50 20 * * *` | Issues Ditbinmas daily kasatker reports at 20:42, weekly summaries every Sunday at 20:47, and checks for end-of-month conditions at 20:50 before sending the monthly recap.【F:src/cron/cronDirRequestLapharKasatker.js†L63-L106】 |
-| `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatches the Ditbinmas directorate attendance recaps each evening at 20:32.【F:src/cron/cronDirRequestDirektorat.js†L32-L53】 |
+| `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatches the Ditbinmas directorate attendance recaps each evening at 20:32 using the `DITBINMAS` client context for all data queries.【F:src/cron/cronDirRequestDirektorat.js†L12-L53】 |
 | `cronDirRequestHighLow.js` | `50 20 * * 0` | Sends the weekly Instagram and TikTok high/low performance summaries every Sunday at 20:50.【F:src/cron/cronDirRequestHighLow.js†L31-L56】 |
 | `cronAbsensiOprDirektorat.js` | _Not scheduled_ | Helper cron that walks through every active directorate client sequentially and sends the dashboard registration attendance recap to admin WhatsApp targets.【F:src/cron/cronAbsensiOprDirektorat.js†L1-L21】 |
 
