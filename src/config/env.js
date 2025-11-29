@@ -22,6 +22,7 @@ export const env = cleanEnv(process.env, {
   APP_SESSION_NAME: str({ default: '' }),
   USER_WA_CLIENT_ID: str({ default: 'wa-userrequest' }),
   GATEWAY_WA_CLIENT_ID: str({ default: 'wa-gateway' }),
+  ENABLE_DIRREQUEST_GROUP: bool({ default: true }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' }),
   BACKUP_DIR: str({ default: 'backups' }),

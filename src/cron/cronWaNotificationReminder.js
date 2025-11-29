@@ -1,4 +1,3 @@
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 import { waGatewayClient } from "../service/waService.js";
 import { safeSendMessage, formatToWhatsAppId } from "../utils/waHelper.js";
 import { getActiveUsersWithWhatsapp } from "../model/userModel.js";
@@ -239,8 +238,3 @@ export async function runCron() {
   }
 }
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "5 19 * * *", () => runCron(), { timezone: "Asia/Jakarta" });
-}
-
-export default null;

@@ -1,4 +1,3 @@
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -32,10 +31,5 @@ export async function runCron() {
   }
 }
 
-const JOB_KEY = "./src/cron/cronDirRequestHighLow.js";
+export const JOB_KEY = "./src/cron/cronDirRequestHighLow.js";
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "50 20 * * 0", () => runCron(), { timezone: "Asia/Jakarta" });
-}
-
-export default null;

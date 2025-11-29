@@ -1,4 +1,3 @@
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -144,25 +143,4 @@ export async function runCron(sendToRekapRecipient = false) {
   }
 }
 
-const JOB_KEY = "./src/cron/cronDirRequestRekapAllSocmed.js";
-
-scheduleCronJob(
-  JOB_KEY,
-  "0 4 15,18 * * *",
-  async () => {
-    // Send recap to admin and group only
-    await runCron(false);
-  },
-  { timezone: "Asia/Jakarta" }
-);
-scheduleCronJob(
-  JOB_KEY,
-  "0 34 20 * * *",
-  async () => {
-    // Send recap to admin and group only
-    await runCron(false);
-  },
-  { timezone: "Asia/Jakarta" }
-);
-
-export default null;
+export const JOB_KEY = "./src/cron/cronDirRequestRekapAllSocmed.js";

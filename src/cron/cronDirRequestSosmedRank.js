@@ -6,7 +6,6 @@ import { absensiLikes } from "../handler/fetchabsensi/insta/absensiLikesInsta.js
 import { absensiKomentar } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 
 const DIRREQUEST_GROUP = "628127309190@c.us";
 const RANK_RECIPIENT = "6281234560377@c.us";
@@ -17,7 +16,7 @@ function getRecipients(includeRankRecipient = false) {
   return recipients;
 }
 
-const JOB_KEY = "./src/cron/cronDirRequestSosmedRank.js";
+export const JOB_KEY = "./src/cron/cronDirRequestSosmedRank.js";
 
 export async function runCron(includeRankRecipient = false) {
   sendDebug({ tag: "CRON DIRREQ SOSMED RANK", msg: "Mulai cron dirrequest sosmed rank" });
@@ -41,9 +40,3 @@ export async function runCron(includeRankRecipient = false) {
   }
 }
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "7 15 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-  scheduleCronJob(JOB_KEY, "40 20 * * *", () => runCron(false), { timezone: "Asia/Jakarta" });
-}
-
-export default null;

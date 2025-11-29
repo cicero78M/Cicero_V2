@@ -12,6 +12,7 @@ import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
 import cronManifest from './src/cron/cronManifest.js';
+import { registerDirRequestCrons } from './src/cron/dirRequest/index.js';
 import { waClient, waGatewayClient } from './src/service/waService.js';
 import { startOtpWorker } from './src/service/otpQueue.js';
 
@@ -74,7 +75,7 @@ loadCronModules(cronBuckets.always)
   .catch(err => console.error('[CRON] Failed to activate always cron bucket', err));
 
 scheduleCronBucket(waClient, 'waClient', 'WA client');
-scheduleCronBucket(waGatewayClient, 'waGateway', 'WA gateway client');
+registerDirRequestCrons(waGatewayClient);
 
 startOtpWorker().catch(err => console.error('[OTP] worker error', err));
 
