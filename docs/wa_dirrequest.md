@@ -89,8 +89,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Cron `cronDirRequestSatbinmasOfficialMedia` menjalankan menu **3️⃣7️⃣** dan
   **3️⃣9️⃣** secara berurutan setiap hari pukul **13.05** dan **22.05**
   (zona waktu Asia/Jakarta).
-- Rekap dikirim ke seluruh nomor admin (`ADMIN_WHATSAPP`) dan nomor
-  **081130744171** yang diformat ke WhatsApp ID.
+- Rekap dikirim hanya ke daftar admin WhatsApp (`ADMIN_WHATSAPP`). Cron ini
+  tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
+  dilewati jika tidak ada admin penerima yang valid.
 
 ## Penerima Cron DirRequest
 - Cron DirRequest kini mengambil nomor **Super Admin**, **Operator**, dan
