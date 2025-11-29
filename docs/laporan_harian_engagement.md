@@ -5,6 +5,12 @@ Utility `formatRekapAllSosmed` menyusun narasi laporan gabungan Instagram dan
 TikTok untuk Ditbinmas. Bagian pembuka menyertakan daftar tautan tugas yang
 terekstrak dari narasi IG/TT harian.
 
+Cron harian Ditbinmas kini otomatis memanggil narasi IG (laphar Instagram) dan
+TT (laphar TikTok), memformati keduanya dengan `formatRekapAllSosmed`, lalu
+mengirimkan narasi ke seluruh penerima WA sebelum lampiran rekap dikirim.
+Jika narasi tidak tersedia, cron tetap mengirim lampiran dan mencatat fallback
+di log debug sehingga operator mudah melakukan pengecekan.
+
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari poin *top content* dan daftar konten lain
   yang sudah berisi likes per tautan. Jika format berbeda, fallback akan
