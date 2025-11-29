@@ -1,11 +1,20 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2026-03-14*
+*Last updated: 2025-11-29*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
 grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
+
+## Pemilihan Client Direktorat
+- Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
+  *Client ID* bertipe **Direktorat** yang berstatus aktif.
+- Balas dengan angka pada daftar atau langsung mengetik *Client ID* untuk
+  memilih target. Balasan `batal` menutup menu.
+- Semua submenu dirrequest (rekap, absensi, monitoring Satbinmas Official,
+  dan lainnya) dijalankan berdasarkan *Client ID* yang dipilih sehingga tidak
+  selalu bergantung pada default `DITBINMAS`.
 
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
