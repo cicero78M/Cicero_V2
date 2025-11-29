@@ -8,7 +8,6 @@ import { waGatewayClient } from "../service/waService.js";
 import { saveEngagementRankingExcel } from "../service/engagementRankingExcelService.js";
 import { safeSendMessage, sendWAFile } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 
 const DEFAULT_RECIPIENT = "08127309190@c.us";
 const rawRecipient = process.env.DIRREQUEST_ENGAGE_RANK_RECIPIENT;
@@ -74,7 +73,7 @@ function buildNarrative(now = getJakartaDate()) {
   );
 }
 
-const JOB_KEY = "./src/cron/cronDirRequestEngageRank.js";
+export const JOB_KEY = "./src/cron/cronDirRequestEngageRank.js";
 
 export async function runCron({ recipients } = {}) {
   const targetRecipients =
@@ -124,9 +123,3 @@ export async function runCron({ recipients } = {}) {
   }
 }
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "7 15 * * *", () => runCron(), { timezone: "Asia/Jakarta" });
-  scheduleCronJob(JOB_KEY, "40 20 * * *", () => runCron(), { timezone: "Asia/Jakarta" });
-}
-
-export default null;

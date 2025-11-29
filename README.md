@@ -86,6 +86,7 @@ This allows operators to scope responses to the correct client.
     APP_SESSION_NAME=wa-admin
     USER_WA_CLIENT_ID=wa-userrequest
     GATEWAY_WA_CLIENT_ID=wa-gateway
+    ENABLE_DIRREQUEST_GROUP=true
     CORS_ORIGIN=http://localhost:3000
     ALLOW_DUPLICATE_REQUESTS=false
     SECRET_KEY=your-secret
@@ -115,6 +116,7 @@ This allows operators to scope responses to the correct client.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
    `APP_SESSION_NAME` is the session folder name used for the main WhatsApp client; override it when running multiple instances on the same host.
+   `ENABLE_DIRREQUEST_GROUP=false` disables all Ditbinmas dirRequest cron jobs at once while leaving other schedules intact.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
    `CONTACT_CACHE_TTL_MS` controls how long Google contact lookups stay cached in memory.
@@ -184,7 +186,7 @@ A cron job (`src/cron/cronDbBackup.js`) runs daily at **04:00** (Asia/Jakarta), 
 
 ## WhatsApp Sessions & Cron Buckets
 
-Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Jobs are declared in `src/cron/cronManifest.js` and grouped automatically by bucket in `app.js`, so adding a new cron only requires adding it to the manifest. Review `src/cron/` for task details (Instagram/TikTok fetchers, link recaps, directorate reports, etc.).
+Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Manifest entries in `src/cron/cronManifest.js` drive the always/`waClient` buckets, while all Ditbinmas dirRequest jobs are bundled in `src/cron/dirRequest/index.js` and registered via `registerDirRequestCrons(waGatewayClient)` so they share the same gateway context and can be toggled with `ENABLE_DIRREQUEST_GROUP`.
 
 The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP emails are sent synchronously via SMTP to minimise delays.
 

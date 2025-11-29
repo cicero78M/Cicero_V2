@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 import { waGatewayClient } from "../service/waService.js";
 import { generateKasatBinmasLikesRecap } from "../service/kasatBinmasLikesRecapService.js";
 import { generateKasatBinmasTiktokCommentRecap } from "../service/kasatBinmasTiktokCommentRecapService.js";
@@ -11,7 +10,7 @@ import { sendDebug } from "../middleware/debugHandler.js";
 //const DIRREQUEST_GROUP = "120363419830216549@g.us";
 const PRIMARY_RECIPIENT = "6281234560377@c.us";
 const CRON_TAG = "CRON DIRREQ KASAT BINMAS";
-const JOB_KEY = "./src/cron/cronDirRequestKasatBinmasRecap.js";
+export const JOB_KEY = "./src/cron/cronDirRequestKasatBinmasRecap.js";
 
 function getRecipients() {
   return new Set([...getAdminWAIds(), PRIMARY_RECIPIENT]);
@@ -78,16 +77,3 @@ export async function runMonthlyRecap(referenceDate = new Date()) {
   await sendKasatBinmasRecap("monthly");
 }
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "36 20 * * *", () => runDailyRecap(), {
-    timezone: "Asia/Jakarta",
-  });
-  scheduleCronJob(JOB_KEY, "42 20 * * 0", () => runWeeklyRecap(), {
-    timezone: "Asia/Jakarta",
-  });
-  scheduleCronJob(JOB_KEY, "52 20 * * *", () => runMonthlyRecap(), {
-    timezone: "Asia/Jakarta",
-  });
-}
-
-export default null;

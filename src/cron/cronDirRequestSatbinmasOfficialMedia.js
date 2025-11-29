@@ -1,4 +1,3 @@
-import { scheduleCronJob } from "../utils/cronScheduler.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { waGatewayClient } from "../service/waService.js";
 import { formatToWhatsAppId, getAdminWAIds, safeSendMessage } from "../utils/waHelper.js";
@@ -8,7 +7,7 @@ import {
 } from "../service/satbinmasOfficialReportService.js";
 
 const ADDITIONAL_RECIPIENT = formatToWhatsAppId("081130744171");
-const JOB_KEY = "./src/cron/cronDirRequestSatbinmasOfficialMedia.js";
+export const JOB_KEY = "./src/cron/cronDirRequestSatbinmasOfficialMedia.js";
 const CRON_TAG = "CRON DIRREQ SATBINMAS OFFICIAL MEDIA";
 
 function getRecipients() {
@@ -54,8 +53,3 @@ export async function runCron() {
   }
 }
 
-if (process.env.JEST_WORKER_ID === undefined) {
-  scheduleCronJob(JOB_KEY, "5 13,22 * * *", () => runCron(), { timezone: "Asia/Jakarta" });
-}
-
-export default null;
