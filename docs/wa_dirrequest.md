@@ -92,6 +92,16 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Rekap dikirim ke seluruh nomor admin (`ADMIN_WHATSAPP`) dan nomor
   **081130744171** yang diformat ke WhatsApp ID.
 
+## Penerima Cron DirRequest
+- Cron DirRequest kini mengambil nomor **Super Admin**, **Operator**, dan
+  **Group WA** langsung dari tabel `clients` berdasarkan `client_id`
+  (default `DITBINMAS`).
+- Data penerima yang kosong akan digantikan oleh daftar admin (`ADMIN_WHATSAPP`)
+  agar laporan tetap terkirim, tetapi debug log akan menandai kondisi
+  fallback tersebut.
+- Gunakan kolom `client_super`, `client_operator`, dan `client_group` di DB
+  untuk memperbarui target pengiriman tanpa mengubah kode cron.
+
 ## RapidAPI (Instagram & TikTok)
 - Semua opsi di grup *Monitoring Satbinmas Official* membutuhkan kredensial
   RapidAPI. Pastikan variabel lingkungan `RAPIDAPI_KEY` terisi sebelum bot

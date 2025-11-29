@@ -4,6 +4,7 @@ const mockGenerateWeeklyInstagramHighLowReport = jest.fn();
 const mockGenerateWeeklyTiktokHighLowReport = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockSendDebug = jest.fn();
+const mockBuildClientRecipientSet = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/service/weeklyInstagramHighLowService.js', () => ({
@@ -18,6 +19,9 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
 }));
+jest.unstable_mockModule('../src/utils/recipientHelper.js', () => ({
+  buildClientRecipientSet: mockBuildClientRecipientSet,
+}));
 
 let runCron;
 
@@ -30,19 +34,35 @@ beforeEach(() => {
   mockGenerateWeeklyInstagramHighLowReport.mockResolvedValue('IG report');
   mockGenerateWeeklyTiktokHighLowReport.mockResolvedValue('TikTok report');
   mockSafeSendMessage.mockResolvedValue();
+  mockBuildClientRecipientSet.mockResolvedValue({
+    recipients: new Set(['111@c.us', '222@c.us', '120@c.us']),
+    hasClientRecipients: true,
+  });
 });
 
-test('runCron sends Instagram and TikTok reports sequentially to Ditbinmas recipient', async () => {
-  await runCron();
+test('runCron sends Instagram and TikTok reports sequentially to Ditbinmas recipients', async () => {
+  const recipientSet = new Set(['111@c.us', '222@c.us', '120@c.us']);
+  mockBuildClientRecipientSet.mockResolvedValue({
+    recipients: recipientSet,
+    hasClientRecipients: true,
+  });
 
-  expect(mockGenerateWeeklyInstagramHighLowReport).toHaveBeenCalledWith('DITBINMAS', { roleFlag: 'ditbinmas' });
-  expect(mockGenerateWeeklyTiktokHighLowReport).toHaveBeenCalledWith('DITBINMAS', { roleFlag: 'ditbinmas' });
+  await runCron('DITBINMAS');
 
-  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(1, {}, '6281234560377@c.us', 'IG report');
-  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(2, {}, '6281234560377@c.us', 'TikTok report');
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(2);
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGenerateWeeklyInstagramHighLowReport).toHaveBeenCalledWith('DITBINMAS', {
+    roleFlag: 'ditbinmas',
+  });
+  expect(mockGenerateWeeklyTiktokHighLowReport).toHaveBeenCalledWith('DITBINMAS', {
+    roleFlag: 'ditbinmas',
+  });
 
-  const [firstSendOrder] = mockSafeSendMessage.mock.invocationCallOrder;
-  const [tiktokServiceOrder] = mockGenerateWeeklyTiktokHighLowReport.mock.invocationCallOrder;
-  expect(firstSendOrder).toBeLessThan(tiktokServiceOrder);
+  const targets = Array.from(recipientSet);
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(1, {}, targets[0], 'IG report');
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(2, {}, targets[0], 'TikTok report');
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(3, {}, targets[1], 'IG report');
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(4, {}, targets[1], 'TikTok report');
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(5, {}, targets[2], 'IG report');
+  expect(mockSafeSendMessage).toHaveBeenNthCalledWith(6, {}, targets[2], 'TikTok report');
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(6);
 });

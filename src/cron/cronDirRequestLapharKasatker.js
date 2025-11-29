@@ -5,9 +5,9 @@ import { waGatewayClient } from "../service/waService.js";
 import { generateKasatkerReport } from "../service/kasatkerReportService.js";
 import { safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
 const TAG = "CRON DIRREQ KASATKER";
-const TARGET_CHAT_ID = "628127309190@c.us";
 const DEFAULT_CLIENT_ID = "DITBINMAS";
 const DEFAULT_ROLE_FLAG = "ditbinmas";
 
@@ -43,27 +43,38 @@ function isLastDayOfMonthJakarta(date = new Date()) {
 async function sendKasatkerReport(period, description) {
   sendDebug({ tag: TAG, msg: `Mulai laporan ${description}` });
   try {
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(DEFAULT_CLIENT_ID);
+    if (!recipients.size) {
+      sendDebug({ tag: TAG, msg: "Tidak ada penerima WA yang valid untuk laporan Kasatker" });
+      return false;
+    }
+
     const narrative = await generateKasatkerReport({
       clientId: DEFAULT_CLIENT_ID,
       roleFlag: DEFAULT_ROLE_FLAG,
       period,
     });
 
-    const success = await safeSendMessage(
-      waGatewayClient,
-      TARGET_CHAT_ID,
-      String(narrative || "").trim()
+    const targets = Array.from(recipients);
+    const results = await Promise.all(
+      targets.map((target) =>
+        safeSendMessage(waGatewayClient, target, String(narrative || "").trim())
+      )
     );
+
+    const success = results.some(Boolean);
 
     if (success) {
       sendDebug({
         tag: TAG,
-        msg: `Laporan ${description} dikirim ke ${TARGET_CHAT_ID}`,
+        msg: `Laporan ${description} dikirim ke ${targets.length} penerima${
+          hasClientRecipients ? "" : " (fallback admin)"
+        }`,
       });
     } else {
       sendDebug({
         tag: TAG,
-        msg: `Laporan ${description} gagal dikirim ke ${TARGET_CHAT_ID}`,
+        msg: `Laporan ${description} gagal dikirim ke ${targets.length} penerima`,
       });
     }
 

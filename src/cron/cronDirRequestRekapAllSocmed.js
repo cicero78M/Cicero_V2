@@ -13,36 +13,36 @@ import {
 import { saveLikesRecapPerContentExcel } from "../service/likesRecapExcelService.js";
 import { saveCommentRecapExcel } from "../service/commentRecapExcelService.js";
 import { formatRekapAllSosmed } from "../handler/menu/dirRequestHandlers.js";
-import { sendWAFile, safeSendMessage, getAdminWAIds } from "../utils/waHelper.js";
+import { sendWAFile, safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
+import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 
-const DIRREQUEST_GROUP = "120363419830216549@g.us";
-const REKAP_RECIPIENT = "6281234560377@c.us";
 const CLIENT_ID = "DITBINMAS";
 
-function getRecipients(sendToRekapRecipient = false) {
-  const recipients = new Set([...getAdminWAIds(), DIRREQUEST_GROUP]);
-  if (sendToRekapRecipient) {
-    recipients.add(REKAP_RECIPIENT);
-  }
-  return recipients;
-}
-
-export async function runCron(sendToRekapRecipient = false) {
+export async function runCron() {
   const shouldArchive = process.env.LAPHAR_ARCHIVE === "true";
   sendDebug({
     tag: "CRON DIRREQ ALL SOCMED",
     msg: "Mulai cron dirrequest rekap all socmed",
   });
+  const { recipients, hasClientRecipients } = await buildClientRecipientSet(CLIENT_ID, {
+    includeGroup: true,
+  });
+  if (!recipients.size) {
+    sendDebug({
+      tag: "CRON DIRREQ ALL SOCMED",
+      msg: "Tidak ada penerima WA yang valid untuk rekap all socmed",
+    });
+    return;
+  }
   let igRecapPath = null;
   let ttRecapPath = null;
   let igPath = null;
   let ttPath = null;
   try {
     try {
-      const recipients = getRecipients(sendToRekapRecipient);
       const dirPath = "laphar";
       if (shouldArchive) {
         await mkdir(dirPath, { recursive: true });
@@ -119,7 +119,9 @@ export async function runCron(sendToRekapRecipient = false) {
 
       sendDebug({
         tag: "CRON DIRREQ ALL SOCMED",
-        msg: `Laporan dikirim ke ${recipients.size} penerima`,
+        msg: `Laporan dikirim ke ${recipients.size} penerima${
+          hasClientRecipients ? "" : " (fallback admin)"
+        }`,
       });
     } finally {
       if (igRecapPath) {

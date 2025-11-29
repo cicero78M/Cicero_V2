@@ -9,12 +9,12 @@ const mockSaveCommentRecapExcel = jest.fn();
 const mockFormatRekapAllSosmed = jest.fn();
 const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
-const mockGetAdminWAIds = jest.fn();
 const mockSendDebug = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
 const mockUnlink = jest.fn();
+const mockBuildClientRecipientSet = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchabsensi/insta/absensiLikesInsta.js', () => ({
@@ -37,10 +37,12 @@ jest.unstable_mockModule('../src/handler/menu/dirRequestHandlers.js', () => ({
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: mockSendWAFile,
   safeSendMessage: mockSafeSendMessage,
-  getAdminWAIds: mockGetAdminWAIds,
 }));
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
+}));
+jest.unstable_mockModule('../src/utils/recipientHelper.js', () => ({
+  buildClientRecipientSet: mockBuildClientRecipientSet,
 }));
 jest.unstable_mockModule('fs/promises', () => ({
   writeFile: mockWriteFile,
@@ -57,7 +59,6 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGetAdminWAIds.mockReturnValue(['123@c.us']);
   mockLapharDitbinmas.mockResolvedValue({
     text: 'ig',
     filename: 'ig.txt',
@@ -81,68 +82,27 @@ beforeEach(() => {
   mockMkdir.mockResolvedValue();
   mockWriteFile.mockResolvedValue();
   mockUnlink.mockResolvedValue();
+  mockBuildClientRecipientSet.mockResolvedValue({
+    recipients: new Set(['123@c.us', 'group@g.us', 'super@c.us']),
+    hasClientRecipients: true,
+  });
 });
 
-test('runCron without rekap sends to admin and group only', async () => {
-  await runCron(false);
+test('runCron sends to admin, super admin, and group recipients', async () => {
+  await runCron();
 
   expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
   expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
 
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    {},
-    '123@c.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    {},
-    '120363419830216549@g.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
-  expect(mockSafeSendMessage).not.toHaveBeenCalledWith(
-    {},
-    '6281234560377@c.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', { includeGroup: true });
 
-  expect(mockSendWAFile).not.toHaveBeenCalledWith(
-    {},
-    expect.any(Buffer),
-    expect.any(String),
-    '6281234560377@c.us',
-    expect.any(String)
-  );
-});
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '123@c.us', '*Laporan Harian Engagement – Ringkasan*');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, 'group@g.us', '*Laporan Harian Engagement – Ringkasan*');
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, 'super@c.us', '*Laporan Harian Engagement – Ringkasan*');
 
-test('runCron with rekap sends to all recipients', async () => {
-  await runCron(true);
-
-  expect(mockCollectLikesRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
-  expect(mockCollectKomentarRecap).toHaveBeenCalledWith('DITBINMAS', { selfOnly: false });
-
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    {},
-    '123@c.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    {},
-    '120363419830216549@g.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
-  expect(mockSafeSendMessage).toHaveBeenCalledWith(
-    {},
-    '6281234560377@c.us',
-    '*Laporan Harian Engagement – Ringkasan*'
-  );
-
-  expect(mockSendWAFile).toHaveBeenCalledWith(
-    {},
-    expect.any(Buffer),
-    'ig.txt',
-    '6281234560377@c.us',
-    'text/plain'
-  );
+  expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', '123@c.us', 'text/plain');
+  expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', 'group@g.us', 'text/plain');
+  expect(mockSendWAFile).toHaveBeenCalledWith({}, expect.any(Buffer), 'ig.txt', 'super@c.us', 'text/plain');
 });
 
 test('runCron archives files when LAPHAR_ARCHIVE is true', async () => {
