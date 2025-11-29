@@ -531,18 +531,19 @@ export async function absensiKomentar(client_id, opts = {}) {
   return msg.trim();
 }
 
-export async function absensiKomentarDitbinmasSimple() {
+export async function absensiKomentarDitbinmasSimple(clientId = "DITBINMAS") {
   const roleName = "ditbinmas";
+  const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const posts = await getPostsTodayByClient(roleName);
+  const posts = await getPostsTodayByClient(targetClientId);
   if (!posts.length)
     return "Tidak ada konten TikTok pada akun Official DIREKTORAT BINMAS hari ini.";
 
-  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
+  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(targetClientId);
   const kontenLinks = posts.map(
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
@@ -562,7 +563,7 @@ export async function absensiKomentarDitbinmasSimple() {
             videoId: p.video_id,
             error: error?.message || error,
           },
-          client_id: roleName,
+          client_id: targetClientId,
         });
         return new Set();
       }
@@ -572,11 +573,11 @@ export async function absensiKomentarDitbinmasSimple() {
     sendDebug({
       tag: "ABSEN TTK",
       msg: `Komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`,
-      client_id: roleName,
+      client_id: targetClientId,
     });
   }
 
-  const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
+  const allUsersRaw = await getUsersByDirektorat(roleName, targetClientId);
   const allUsers = allUsersRaw.filter(
     (u) => u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
   );

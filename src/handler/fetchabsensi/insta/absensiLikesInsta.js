@@ -520,8 +520,9 @@ export async function rekapLikesIG(client_id) {
   return msg.trim();
 }
 
-export async function absensiLikesDitbinmasSimple() {
+export async function absensiLikesDitbinmasSimple(clientId = "DITBINMAS") {
   const roleName = "ditbinmas";
+  const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -529,7 +530,7 @@ export async function absensiLikesDitbinmasSimple() {
 
   let shortcodes;
   try {
-    shortcodes = await getShortcodesTodayByClient(roleName);
+    shortcodes = await getShortcodesTodayByClient(targetClientId);
   } catch (error) {
     console.error(error);
     return "Maaf, gagal mengambil data konten Instagram.";
@@ -548,13 +549,13 @@ export async function absensiLikesDitbinmasSimple() {
   let usersByClient;
   try {
     ({ usersByClient } = await groupUsersByClientDivision(roleName, {
-      clientFilter: "DITBINMAS",
+      clientFilter: targetClientId,
     }));
   } catch (error) {
     console.error(error);
     return "Maaf, gagal mengelompokkan pengguna.";
   }
-  const allUsers = usersByClient["DITBINMAS"] || [];
+  const allUsers = usersByClient[targetClientId] || [];
   const { summary, userStats } = computeDitbinmasLikesStats(
     allUsers,
     likesSets,
