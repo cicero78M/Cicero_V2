@@ -10,6 +10,7 @@ import { findClientById } from "../service/clientService.js";
 import { normalizeUsername as normalizeInsta } from "../utils/likesHelper.js";
 
 export const JOB_KEY = "./src/cron/cronWaNotificationReminder.js";
+const TARGET_CLIENT_ID = "DITBINMAS";
 
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
@@ -212,6 +213,8 @@ export async function runCron() {
 
   for (const user of users) {
     if (user?.wa_notification_opt_in !== true) continue;
+    const clientId = (user?.client_id || "").toString().trim().toUpperCase();
+    if (clientId !== TARGET_CLIENT_ID) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId || recipients.has(chatId)) continue;
     const userWithPangkat = {
