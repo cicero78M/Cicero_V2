@@ -47,7 +47,7 @@ function buildGenericNotificationMessage(user) {
   return (
     `${greeting}\n\n` +
     "👋 Pengingat engagement harian\n\n" +
-    "1️⃣ Pastikan setiap unggahan mendapat dukungan likes sesuai target.\n" +
+    "1️⃣ Pastikan melaksanakan likes pada setiap unggahan.\n" +
     "2️⃣ Tambahkan komentar positif dan relevan pada konten terbaru.\n\n" +
     "Balas *notifwa#off* jika ingin berhenti menerima pengingat otomatis."
   );
