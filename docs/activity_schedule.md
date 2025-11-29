@@ -24,6 +24,7 @@ The configuration data lives in the migration `sql/migrations/20251022_create_cr
 | `cronDirRequestLapharKasatker.js` | `42 20 * * *`<br>`47 20 * * 0`<br>`50 20 * * *` | Issues Ditbinmas daily kasatker reports at 20:42, weekly summaries every Sunday at 20:47, and checks for end-of-month conditions at 20:50 before sending the monthly recap.【F:src/cron/cronDirRequestLapharKasatker.js†L63-L106】 |
 | `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatches the Ditbinmas directorate attendance recaps each evening at 20:32.【F:src/cron/cronDirRequestDirektorat.js†L32-L53】 |
 | `cronDirRequestHighLow.js` | `50 20 * * 0` | Sends the weekly Instagram and TikTok high/low performance summaries every Sunday at 20:50.【F:src/cron/cronDirRequestHighLow.js†L31-L56】 |
+| `cronAbsensiOprDirektorat.js` | _Not scheduled_ | Helper cron that walks through every active directorate client sequentially and sends the dashboard registration attendance recap to admin WhatsApp targets.【F:src/cron/cronAbsensiOprDirektorat.js†L1-L21】 |
 
 > **Note:** `cronAbsensiUserData.js` currently exposes only a `runCron` helper and is not registered with `scheduleCronJob`, so it remains idle until a schedule is added.【F:src/cron/cronAbsensiUserData.js†L1-L29】
 

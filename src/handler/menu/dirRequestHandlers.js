@@ -17,7 +17,7 @@ import {
   absensiKomentar,
   absensiKomentarDitbinmasSimple as absensiKomentarDitbinmasSimpleReport,
 } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
-import { absensiRegistrasiDashboardDitbinmas } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js";
+import { absensiRegistrasiDashboardDirektorat } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDirektorat.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
@@ -1481,7 +1481,7 @@ async function performAction(
       msg = await absensiKomentarDitbinmas();
       break;
     case "11": {
-      msg = await absensiRegistrasiDashboardDitbinmas();
+      msg = await absensiRegistrasiDashboardDirektorat(clientId || "DITBINMAS");
       break;
     }
     case "12": {
