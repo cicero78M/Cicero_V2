@@ -14,6 +14,17 @@ export const findAllActive = async () => {
   return res.rows;
 };
 
+// Ambil semua client Direktorat yang aktif
+export const findAllActiveDirektorat = async () => {
+  const res = await query(
+    `SELECT client_id, nama, client_type, client_status
+     FROM clients
+     WHERE client_status = true AND LOWER(client_type) = LOWER('direktorat')
+     ORDER BY client_id`
+  );
+  return res.rows;
+};
+
 // Ambil client by client_id (case-insensitive)
 export const findById = async (client_id) => {
   const res = await query(

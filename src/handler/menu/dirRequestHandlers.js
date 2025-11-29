@@ -1934,36 +1934,35 @@ export const dirRequestHandlers = {
       return;
     }
     session.role = chosen.role;
-    session.client_ids = [DITBINMAS_CLIENT_ID];
-    session.dir_client_id = DITBINMAS_CLIENT_ID;
     session.username = chosen.username || session.username;
-    session.selectedClientId = DITBINMAS_CLIENT_ID;
-    try {
-      const ditClient = await findClientById(DITBINMAS_CLIENT_ID);
-      session.clientName = ditClient?.nama || DITBINMAS_CLIENT_ID;
-    } catch {
-      session.clientName = DITBINMAS_CLIENT_ID;
-    }
     delete session.dash_users;
-    session.step = "main";
-    await dirRequestHandlers.main(session, chatId, "", waClient);
+    session.step = "choose_client";
+    await dirRequestHandlers.choose_client(session, chatId, "", waClient);
   },
 
   async main(session, chatId, _text, waClient) {
-    session.client_ids = [DITBINMAS_CLIENT_ID];
-    if ((session.selectedClientId || "").toUpperCase() !== DITBINMAS_CLIENT_ID) {
-      session.selectedClientId = DITBINMAS_CLIENT_ID;
+    const availableClients = session.dir_clients || [];
+    if (!session.selectedClientId && availableClients.length) {
+      session.step = "choose_client";
+      await dirRequestHandlers.choose_client(session, chatId, "", waClient);
+      return;
     }
-    if (!session.dir_client_id) {
-      session.dir_client_id = DITBINMAS_CLIENT_ID;
-    }
-    if (!session.clientName || session.selectedClientId !== DITBINMAS_CLIENT_ID) {
+
+    const selectedClientId =
+      (session.dir_client_id || session.selectedClientId || DITBINMAS_CLIENT_ID).toUpperCase();
+    session.client_ids = [selectedClientId];
+    session.selectedClientId = selectedClientId;
+    session.dir_client_id = selectedClientId;
+
+    const clientChanged = session.clientNameId !== selectedClientId;
+    if (!session.clientName || clientChanged) {
       try {
-        const client = await findClientById(DITBINMAS_CLIENT_ID);
-        session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+        const client = await findClientById(selectedClientId);
+        session.clientName = client?.nama || selectedClientId;
       } catch {
-        session.clientName = DITBINMAS_CLIENT_ID;
+        session.clientName = selectedClientId;
       }
+      session.clientNameId = selectedClientId;
     }
 
     const clientName = session.clientName;
@@ -2024,13 +2023,82 @@ export const dirRequestHandlers = {
   },
 
   async choose_client(session, chatId, text, waClient) {
-    session.selectedClientId = DITBINMAS_CLIENT_ID;
-    try {
-      const client = await findClientById(DITBINMAS_CLIENT_ID);
-      session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
-    } catch {
-      session.clientName = DITBINMAS_CLIENT_ID;
+    const clients = session.dir_clients || [];
+    const choiceList = clients
+      .map((client, idx) => {
+        const numberLabel = DIGIT_EMOJI[String(idx + 1)] || `${idx + 1}`;
+        const nameLabel = client.nama ? ` - ${client.nama}` : "";
+        return `${numberLabel} ${client.client_id}${nameLabel}`;
+      })
+      .join("\n");
+
+    const prompt =
+      "Pilih *Client ID* Direktorat aktif sebelum membuka menu dirrequest:\n" +
+      (choiceList || "(Belum ada data client Direktorat aktif)") +
+      "\n\nBalas *angka* atau *Client ID* yang tertera, atau ketik *batal* untuk keluar.";
+
+    const input = (text || "").trim();
+
+    if (!clients.length) {
+      session.selectedClientId = DITBINMAS_CLIENT_ID;
+      session.dir_client_id = DITBINMAS_CLIENT_ID;
+      session.client_ids = [DITBINMAS_CLIENT_ID];
+      try {
+        const client = await findClientById(DITBINMAS_CLIENT_ID);
+        session.clientName = client?.nama || DITBINMAS_CLIENT_ID;
+      } catch {
+        session.clientName = DITBINMAS_CLIENT_ID;
+      }
+      session.clientNameId = DITBINMAS_CLIENT_ID;
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
     }
+
+    if (!input) {
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      session.menu = null;
+      session.step = null;
+      await waClient.sendMessage(chatId, "✅ Menu dirrequest ditutup.");
+      return;
+    }
+
+    const normalizedInput = input.toUpperCase();
+    let selectedClient = null;
+
+    if (/^\d+$/.test(normalizedInput)) {
+      const index = Number(normalizedInput) - 1;
+      if (clients[index]) {
+        selectedClient = clients[index];
+      }
+    }
+
+    if (!selectedClient) {
+      selectedClient = clients.find(
+        (client) => client.client_id?.toUpperCase() === normalizedInput
+      );
+    }
+
+    if (!selectedClient) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Pilihan client tidak valid. Silakan pilih sesuai daftar."
+      );
+      await waClient.sendMessage(chatId, prompt);
+      return;
+    }
+
+    const normalizedClientId = (selectedClient.client_id || "").toUpperCase();
+    session.selectedClientId = normalizedClientId;
+    session.dir_client_id = normalizedClientId;
+    session.client_ids = [normalizedClientId];
+    session.clientName = selectedClient.nama || normalizedClientId;
+    session.clientNameId = normalizedClientId;
+    session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
 

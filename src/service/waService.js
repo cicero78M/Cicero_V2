@@ -1404,27 +1404,34 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     if (validUsers.length >= 1) {
       const du = validUsers[0];
-      const defaultClientId = "DITBINMAS";
-      let defaultClientName = defaultClientId;
-      try {
-        const ditClient = await clientService.findClientById(defaultClientId);
-        if (ditClient?.nama) {
-          defaultClientName = ditClient.nama;
-        }
-      } catch (e) {
-        // ignore lookup errors and fallback to default label
+      const directorateClients =
+        await clientService.findAllActiveDirektoratClients();
+      const activeDirectorateClients = (directorateClients || []).map((client) => ({
+        client_id: (client.client_id || "").toUpperCase(),
+        nama: client.nama || client.client_id || "",
+      }));
+
+      if (!activeDirectorateClients.length) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Tidak ada client Direktorat aktif yang dapat dipilih saat ini."
+        );
+        return;
       }
+
       setSession(chatId, {
         menu: "dirrequest",
-        step: "main",
+        step: "choose_client",
         role: du.role,
-        client_ids: [defaultClientId],
-        dir_client_id: defaultClientId,
         username: du.username,
-        selectedClientId: defaultClientId,
-        clientName: defaultClientName,
+        dir_clients: activeDirectorateClients,
       });
-      await dirRequestHandlers.main(getSession(chatId), chatId, "", waClient);
+      await dirRequestHandlers.choose_client(
+        getSession(chatId),
+        chatId,
+        "",
+        waClient
+      );
       return;
     }
   }

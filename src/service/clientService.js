@@ -14,6 +14,9 @@ export const findAllClients = async () => await clientModel.findAll();
 
 export const findAllActiveClients = async () => await clientModel.findAllActive();
 
+export const findAllActiveDirektoratClients = async () =>
+  await clientModel.findAllActiveDirektorat();
+
 export const findClientById = async (client_id) => await clientModel.findById(client_id);
 
 export const findClientsByGroup = async (group) => await clientModel.findByGroup(group);
