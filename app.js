@@ -11,33 +11,20 @@ import claimRoutes from './src/routes/claimRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
+import cronManifest from './src/cron/cronManifest.js';
 import { waClient, waGatewayClient } from './src/service/waService.js';
 import { startOtpWorker } from './src/service/otpQueue.js';
 
-const cronBuckets = {
-  //always: [
-  //  './src/cron/cronDbBackup.js',
-  //],
-  waClient: [
-    './src/cron/cronInstaService.js',
-    './src/cron/cronInstaLaphar.js',
-    './src/cron/cronRekapLink.js',
-    './src/cron/cronAmplifyLinkMonthly.js',
-    './src/cron/cronDirRequestRekapUpdate.js',
-  ],
-  waGateway: [
-    './src/cron/cronDirRequestFetchSosmed.js',
-    './src/cron/cronDirRequestRekapAllSocmed.js',
-    './src/cron/cronDirRequestSosmedRank.js',
-    './src/cron/cronDirRequestEngageRank.js',
-    './src/cron/cronDirRequestLapharKasatker.js',
-    './src/cron/cronDirRequestDirektorat.js',
-    './src/cron/cronDirRequestHighLow.js',
-    './src/cron/cronDirRequestKasatBinmasRecap.js',
-    './src/cron/cronWaNotificationReminder.js',
-    './src/cron/cronDirRequestSatbinmasOfficialMedia.js',
-  ],
-};
+const cronBuckets = cronManifest.reduce((buckets, { bucket, modulePath }) => {
+  if (!bucket || !modulePath) return buckets;
+  if (!buckets[bucket]) buckets[bucket] = [];
+
+  if (!buckets[bucket].includes(modulePath)) {
+    buckets[bucket].push(modulePath);
+  }
+
+  return buckets;
+}, { always: [] });
 
 const loadedCronModules = new Set();
 

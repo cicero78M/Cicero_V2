@@ -178,13 +178,13 @@ pg_dump -U <dbuser> -h <host> -d <dbname> > cicero_backup.sql
 psql -U <dbuser> -h <host> -d <dbname> < cicero_backup.sql
 ```
 
-A cron job (`src/cron/cronDbBackup.js`) runs daily at **02:00** (Asia/Jakarta), storing dumps in `BACKUP_DIR` and uploading them to the Drive folder defined by `GOOGLE_DRIVE_FOLDER_ID`. Backups reuse the same Google credentials used for contact sync.
+A cron job (`src/cron/cronDbBackup.js`) runs daily at **04:00** (Asia/Jakarta), storing dumps in `BACKUP_DIR` and uploading them to the Drive folder defined by `GOOGLE_DRIVE_FOLDER_ID`. Backups reuse the same Google credentials used for contact sync.
 
 ---
 
 ## WhatsApp Sessions & Cron Buckets
 
-Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Review `src/cron/` for task details (Instagram/TikTok fetchers, link recaps, directorate reports, etc.).
+Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Jobs are declared in `src/cron/cronManifest.js` and grouped automatically by bucket in `app.js`, so adding a new cron only requires adding it to the manifest. Review `src/cron/` for task details (Instagram/TikTok fetchers, link recaps, directorate reports, etc.).
 
 The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP emails are sent synchronously via SMTP to minimise delays.
 

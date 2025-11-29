@@ -1,0 +1,98 @@
+export default [
+  {
+    jobKey: './src/cron/cronDbBackup.js',
+    modulePath: './src/cron/cronDbBackup.js',
+    bucket: 'always',
+    description: 'Backup database dump to Google Drive using service account credentials.',
+  },
+  {
+    jobKey: './src/cron/cronInstaService.js',
+    modulePath: './src/cron/cronInstaService.js',
+    bucket: 'waClient',
+    description: 'Fetch Instagram content and likes for active clients while sending attendance recaps.',
+  },
+  {
+    jobKey: './src/cron/cronInstaLaphar.js',
+    modulePath: './src/cron/cronInstaLaphar.js',
+    bucket: 'waClient',
+    description: 'Send Instagram laphar updates, likes, and amplifikasi summaries to operators and admins.',
+  },
+  {
+    jobKey: './src/cron/cronRekapLink.js',
+    modulePath: './src/cron/cronRekapLink.js',
+    bucket: 'waClient',
+    description: 'Distribute amplification link recaps to all active amplification clients.',
+  },
+  {
+    jobKey: './src/cron/cronAmplifyLinkMonthly.js',
+    modulePath: './src/cron/cronAmplifyLinkMonthly.js',
+    bucket: 'waClient',
+    description: 'Generate and deliver monthly amplification spreadsheets on the last day of the month.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestRekapUpdate.js',
+    modulePath: './src/cron/cronDirRequestRekapUpdate.js',
+    bucket: 'waClient',
+    description: 'Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestFetchSosmed.js',
+    modulePath: './src/cron/cronDirRequestFetchSosmed.js',
+    bucket: 'waGateway',
+    description: 'Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestRekapAllSocmed.js',
+    modulePath: './src/cron/cronDirRequestRekapAllSocmed.js',
+    bucket: 'waGateway',
+    description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestSosmedRank.js',
+    modulePath: './src/cron/cronDirRequestSosmedRank.js',
+    bucket: 'waGateway',
+    description: 'Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestEngageRank.js',
+    modulePath: './src/cron/cronDirRequestEngageRank.js',
+    bucket: 'waGateway',
+    description: 'Generate engagement ranking narratives and Excel exports for Ditbinmas.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestLapharKasatker.js',
+    modulePath: './src/cron/cronDirRequestLapharKasatker.js',
+    bucket: 'waGateway',
+    description: 'Send Ditbinmas kasatker daily, weekly, and monthly recaps.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestDirektorat.js',
+    modulePath: './src/cron/cronDirRequestDirektorat.js',
+    bucket: 'waGateway',
+    description: 'Dispatch Ditbinmas directorate attendance recaps.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestHighLow.js',
+    modulePath: './src/cron/cronDirRequestHighLow.js',
+    bucket: 'waGateway',
+    description: 'Send weekly Instagram and TikTok high/low performance summaries.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestKasatBinmasRecap.js',
+    modulePath: './src/cron/cronDirRequestKasatBinmasRecap.js',
+    bucket: 'waGateway',
+    description: 'Provide Ditbinmas Kasat Binmas recap messages.',
+  },
+  {
+    jobKey: './src/cron/cronWaNotificationReminder.js',
+    modulePath: './src/cron/cronWaNotificationReminder.js',
+    bucket: 'waGateway',
+    description: 'Send WhatsApp task reminders to Ditbinmas users who opted in.',
+  },
+  {
+    jobKey: './src/cron/cronDirRequestSatbinmasOfficialMedia.js',
+    modulePath: './src/cron/cronDirRequestSatbinmasOfficialMedia.js',
+    bucket: 'waGateway',
+    description: 'Share Satbinmas official media updates with Ditbinmas recipients.',
+  },
+];
