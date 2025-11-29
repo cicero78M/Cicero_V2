@@ -52,6 +52,11 @@ beforeEach(async () => {
 test('runDailyReport generates and sends harian report', async () => {
   const result = await runDailyReport();
 
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', {
+    includeAdmins: false,
+    includeGroup: false,
+    includeSuper: false,
+  });
   expect(mockGenerateKasatkerReport).toHaveBeenCalledWith({
     clientId: 'DITBINMAS',
     roleFlag: 'ditbinmas',
@@ -73,6 +78,11 @@ test('runDailyReport generates and sends harian report', async () => {
 test('runWeeklyReport generates and sends weekly report', async () => {
   await runWeeklyReport();
 
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', {
+    includeAdmins: false,
+    includeGroup: false,
+    includeSuper: false,
+  });
   expect(mockGenerateKasatkerReport).toHaveBeenCalledWith({
     clientId: 'DITBINMAS',
     roleFlag: 'ditbinmas',
@@ -108,6 +118,11 @@ test('runMonthlyReport sends report on last day of month in Jakarta timezone', a
   const result = await runMonthlyReport(date);
 
   expect(result).toBe(true);
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS', {
+    includeAdmins: false,
+    includeGroup: false,
+    includeSuper: false,
+  });
   expect(mockGenerateKasatkerReport).toHaveBeenCalledWith({
     clientId: 'DITBINMAS',
     roleFlag: 'ditbinmas',
