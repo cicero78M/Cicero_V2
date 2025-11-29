@@ -97,4 +97,9 @@ Akun Resmi:
 Apakah Anda ingin menambah atau mengubah data akun resmi Satbinmas? Balas *ya* untuk melanjutkan input data atau *batal* untuk berhenti.
 ```
 
+### Whitelist Grup WA Gateway
+- Pesan grup yang masuk ke nomor *WA Gateway* hanya diproses bila ID grup WhatsApp tercatat sebagai `client_group` pada client aktif di tabel `clients`. Grup yang tidak terdaftar akan diabaikan.
+- Daftar grup yang diizinkan di-*cache* saat inisialisasi dan diperbarui otomatis setelah data client berubah (misalnya setelah perintah `thisgroup#ClientID` atau pembaruan client lain melalui bot). Bot juga melakukan penyegaran berkala untuk menangkap perubahan yang terjadi di luar alur bot.
+- Jika cache belum tersedia atau gagal dimuat, bot akan menolak memproses pesan grup sebagai langkah aman hingga daftar grup berhasil diambil kembali.
+
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.
