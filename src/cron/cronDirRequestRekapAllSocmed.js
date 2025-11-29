@@ -11,6 +11,9 @@ import { sendDebug } from "../middleware/debugHandler.js";
 import { readFile, unlink } from "fs/promises";
 import { basename } from "path";
 import { buildClientRecipientSet } from "../utils/recipientHelper.js";
+import { formatRekapAllSosmed } from "../handler/menu/dirRequestHandlers.js";
+import { lapharDitbinmas } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
+import { lapharTiktokDitbinmas } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 
 const CLIENT_ID = "DITBINMAS";
 
@@ -34,6 +37,7 @@ export async function runCron() {
   }
   let igRecapPath = null;
   let ttRecapPath = null;
+  let narrativeMessage = null;
   try {
     try {
       const [igRecap, ttRecap] = await Promise.all([
@@ -62,7 +66,38 @@ export async function runCron() {
         ? "Rekap harian: likes Instagram dan komentar TikTok."
         : null;
 
+      try {
+        const [igReport, ttReport] = await Promise.all([
+          lapharDitbinmas(),
+          lapharTiktokDitbinmas(),
+        ]);
+
+        const formattedNarrative = formatRekapAllSosmed(
+          igReport?.narrative,
+          ttReport?.narrative
+        );
+
+        narrativeMessage = formattedNarrative?.trim() || null;
+
+        if (!narrativeMessage) {
+          sendDebug({
+            tag: "CRON DIRREQ ALL SOCMED",
+            msg: "Narasi tidak tersedia, melanjutkan pengiriman lampiran saja.",
+          });
+        }
+      } catch (error) {
+        sendDebug({
+          tag: "CRON DIRREQ ALL SOCMED",
+          msg: `[WARN] Gagal membangun narasi rekap all socmed: ${
+            error?.message || error
+          }`,
+        });
+      }
+
       for (const wa of recipients) {
+        if (narrativeMessage) {
+          await safeSendMessage(waGatewayClient, wa, narrativeMessage);
+        }
         if (reminderMessage) {
           await safeSendMessage(waGatewayClient, wa, reminderMessage);
         }
