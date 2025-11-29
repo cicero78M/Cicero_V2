@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 
-const mockAbsensiRegistrasiDashboardDitbinmas = jest.fn();
+const mockAbsensiRegistrasiDashboardDirektorat = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockFormatNama = jest.fn();
 const mockNormalizeUserId = jest.fn();
@@ -15,8 +15,8 @@ const mockHasUserCommentedBetween = jest.fn();
 const mockSendComplaintEmail = jest.fn();
 const mockNormalizeEmail = jest.fn();
 
-jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDitbinmas.js', () => ({
-  absensiRegistrasiDashboardDitbinmas: mockAbsensiRegistrasiDashboardDitbinmas,
+jest.unstable_mockModule('../src/handler/fetchabsensi/dashboard/absensiRegistrasiDashboardDirektorat.js', () => ({
+  absensiRegistrasiDashboardDirektorat: mockAbsensiRegistrasiDashboardDirektorat,
 }));
 
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
