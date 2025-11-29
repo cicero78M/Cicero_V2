@@ -653,6 +653,29 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
+  test('drops performance highlights that sit inside the TikTok task section', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-11-29T08:00:00Z'));
+
+    const igNarrative = `DIREKTORAT BINMAS\n\n# Insight Likes Konten\n- Jumlah konten aktif: 1 link.\n- Total likes: 90 dari 100 (90,0% capaian).\n- Distribusi likes per konten:\n1. https://instagram.com/p/single — 90 likes`;
+
+    const ttNarrative = `*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/aaa — 12 komentar\n2. https://www.tiktok.com/@binmas/video/bbb — 5 komentar\n• Performa tertinggi : https://www.tiktok.com/@binmas/video/aaa — 12 komentar\n• Performa terendah : https://www.tiktok.com/@binmas/video/ccc — 1 komentar`;
+
+    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+
+    const tiktokLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('- TikTok'));
+
+    expect(tiktokLines).toEqual([
+      '- TikTok 1. https://www.tiktok.com/@binmas/video/aaa — 12 komentar',
+      '- TikTok 2. https://www.tiktok.com/@binmas/video/bbb — 5 komentar',
+    ]);
+    expect(message).not.toContain('ccc — 1 komentar');
+
+    jest.useRealTimers();
+  });
+
   test('adapts closing note when target tercapai dan backlog rendah', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));

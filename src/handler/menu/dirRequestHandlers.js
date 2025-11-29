@@ -924,11 +924,16 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
 
   const extractTiktokTasks = (text) => {
     const normalized = normalizeText(text);
-    const taskSectionMatch = normalized.match(
+    const sanitized = normalized
+      .split("\n")
+      .filter((line) => !/performa\s+(tertinggi|terendah)/i.test(line))
+      .join("\n");
+
+    const taskSectionMatch = sanitized.match(
       /(?:\*Tugas TikTok\*|Daftar Link Konten TikTok:?)[^\n]*\n([\s\S]*?)(?:\n\s*\n|\n\*|\n#|$)/i
     );
 
-    const taskSection = taskSectionMatch ? taskSectionMatch[1] : normalized;
+    const taskSection = taskSectionMatch ? taskSectionMatch[1] : sanitized;
     const links = extractLinksFromText(taskSection);
 
     return dedupePreserveOrder(links);
