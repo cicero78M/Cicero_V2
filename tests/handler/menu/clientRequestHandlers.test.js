@@ -124,6 +124,78 @@ describe('main menu bulk status option removal', () => {
 });
 
 describe('kelolaClient mass status option', () => {
+  it('asks for confirmation before deleting a client', async () => {
+    const session = {
+      selected_client_id: 'CLIENT-001',
+      clientList: [{ client_id: 'CLIENT-001', nama: 'Polres Contoh' }],
+    };
+    const chatId = 'chat-client-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.kelolaClient_menu(session, chatId, '2', {
+      sendMessage,
+    });
+
+    expect(session.step).toBe('kelolaClient_confirmDelete');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('ya hapus')
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('CLIENT-001')
+    );
+  });
+
+  it('does not delete client without explicit confirmation', async () => {
+    const session = { selected_client_id: 'CLIENT-001', step: 'kelolaClient_confirmDelete' };
+    const chatId = 'chat-client-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const clientService = { deleteClient: jest.fn() };
+
+    await clientRequestHandlers.kelolaClient_confirmDelete(
+      session,
+      chatId,
+      'lanjutkan',
+      { sendMessage },
+      undefined,
+      undefined,
+      clientService
+    );
+
+    expect(clientService.deleteClient).not.toHaveBeenCalled();
+    expect(session.step).toBe('kelolaClient_confirmDelete');
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('ya hapus')
+    );
+  });
+
+  it('deletes client after receiving the ya hapus confirmation', async () => {
+    const session = { selected_client_id: 'CLIENT-001', step: 'kelolaClient_confirmDelete' };
+    const chatId = 'chat-client-menu';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const clientService = { deleteClient: jest.fn().mockResolvedValue(true) };
+
+    await clientRequestHandlers.kelolaClient_confirmDelete(
+      session,
+      chatId,
+      'ya hapus',
+      { sendMessage },
+      undefined,
+      undefined,
+      clientService
+    );
+
+    expect(clientService.deleteClient).toHaveBeenCalledWith('CLIENT-001');
+    expect(session.step).toBe('main');
+    expect(session.selected_client_id).toBeUndefined();
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('berhasil dihapus')
+    );
+  });
+
   it('redirects kelola client option 4 to the bulk status prompt', async () => {
     const session = { selected_client_id: 'CLIENT-001' };
     const chatId = 'chat-client-menu';

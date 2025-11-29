@@ -2575,18 +2575,26 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       msg += `\nBalas dengan angka sesuai daftar di atas.`;
       await waClient.sendMessage(chatId, msg);
     } else if (text.trim() === "2") {
-      try {
-        const removed = await clientService.deleteClient(
-          session.selected_client_id
-        );
-        await waClient.sendMessage(
-          chatId,
-          removed ? `🗑️ Client berhasil dihapus.` : "❌ Client tidak ditemukan."
-        );
-      } catch (e) {
-        await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
-      }
-      session.step = "main";
+      const target = findSelectedClient(session);
+      const clientLine = target?.client_id
+        ? `- Client ID: *${target.client_id}*`
+        : "- Client ID: (tidak ditemukan)";
+      const clientNameLine = target?.nama
+        ? `- Nama: *${target.nama}*`
+        : null;
+
+      const prompt = [
+        "⚠️ Konfirmasi Penghapusan Client",
+        clientLine,
+        clientNameLine,
+        "Balas *ya hapus* untuk menghapus client beserta relasi terkait.",
+        "Balas *batal* untuk kembali tanpa menghapus.",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      session.step = "kelolaClient_confirmDelete";
+      await waClient.sendMessage(chatId, prompt);
     } else if (text.trim() === "3") {
       // Info client, tampilkan status Aktif/Nonaktif
       const client = await clientService.findClientById(
@@ -2653,6 +2661,47 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       chatId,
       `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key})\nUntuk boolean, isi dengan true/false:`
     );
+  },
+  kelolaClient_confirmDelete: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    if (lowered !== "ya hapus") {
+      await waClient.sendMessage(
+        chatId,
+        "Balas *ya hapus* untuk melanjutkan penghapusan atau *batal* untuk kembali."
+      );
+      return;
+    }
+
+    try {
+      const removed = await clientService.deleteClient(
+        session.selected_client_id
+      );
+      await waClient.sendMessage(
+        chatId,
+        removed ? `🗑️ Client berhasil dihapus.` : "❌ Client tidak ditemukan."
+      );
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+
+    delete session.selected_client_id;
+    delete session.clientList;
+    session.step = "main";
   },
   kelolaClient_updatevalue: async (
     session,
