@@ -43,7 +43,14 @@ function isLastDayOfMonthJakarta(date = new Date()) {
 async function sendKasatkerReport(period, description) {
   sendDebug({ tag: TAG, msg: `Mulai laporan ${description}` });
   try {
-    const { recipients, hasClientRecipients } = await buildClientRecipientSet(DEFAULT_CLIENT_ID);
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(
+      DEFAULT_CLIENT_ID,
+      {
+        includeAdmins: false,
+        includeGroup: false,
+        includeSuper: false,
+      }
+    );
     if (!recipients.size) {
       sendDebug({ tag: TAG, msg: "Tidak ada penerima WA yang valid untuk laporan Kasatker" });
       return false;
