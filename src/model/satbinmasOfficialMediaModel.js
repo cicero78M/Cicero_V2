@@ -235,3 +235,34 @@ export async function findMediaWithRelationsByAccountId(satbinmas_account_id) {
   if (!satbinmas_account_id) return [];
   return findMediaWithRelations('media.satbinmas_account_id = $1', [satbinmas_account_id]);
 }
+
+export async function summarizeMediaCountsByAccounts(accountIds = [], startDate, endDate) {
+  const normalizedIds = (accountIds || []).filter(Boolean);
+  if (!normalizedIds.length || !startDate || !endDate) return new Map();
+
+  const res = await query(
+    `SELECT satbinmas_account_id, client_id, username,
+            COUNT(*) AS total,
+            COALESCE(SUM(like_count), 0) AS likes,
+            COALESCE(SUM(comment_count), 0) AS comments
+     FROM satbinmas_official_media
+     WHERE satbinmas_account_id = ANY($1)
+       AND fetched_for_date >= $2::date
+       AND fetched_for_date < $3::date
+     GROUP BY satbinmas_account_id, client_id, username`,
+    [normalizedIds, startDate, endDate]
+  );
+
+  const map = new Map();
+  res.rows.forEach((row) => {
+    map.set(row.satbinmas_account_id, {
+      total: Number(row.total) || 0,
+      likes: Number(row.likes) || 0,
+      comments: Number(row.comments) || 0,
+      client_id: row.client_id,
+      username: row.username,
+    });
+  });
+
+  return map;
+}

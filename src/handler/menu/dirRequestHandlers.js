@@ -47,6 +47,8 @@ import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import {
   buildSatbinmasOfficialInstagramRecap,
   buildSatbinmasOfficialTiktokRecap,
+  buildStoredSatbinmasOfficialInstagramRecap,
+  buildStoredSatbinmasOfficialTiktokRecap,
 } from "../../service/satbinmasOfficialReportService.js";
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
 
@@ -181,6 +183,35 @@ const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
 const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT =
   "Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:\n" +
   Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP = {
+  "1": {
+    period: "daily",
+    description: "Rekap harian (hari ini)",
+  },
+  "2": {
+    period: "weekly",
+    description: "Rekap mingguan (Senin - Minggu)",
+  },
+  "3": {
+    period: "monthly",
+    description: "Rekap bulanan (1 s/d akhir bulan)",
+  },
+};
+
+const SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT =
+  "Silakan pilih rekap Instagram Satbinmas Official:\n" +
+  Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT =
+  "Silakan pilih rekap TikTok Satbinmas Official:\n" +
+  Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
   "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
@@ -2020,7 +2051,9 @@ export const dirRequestHandlers = {
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
         "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n" +
         "3️⃣8️⃣ Sinkronisasi secUid TikTok Satbinmas Official\n" +
-        "3️⃣9️⃣ Ambil konten harian TikTok Satbinmas Official (semua akun ORG)\n\n" +
+        "3️⃣9️⃣ Ambil konten harian TikTok Satbinmas Official (semua akun ORG)\n" +
+        "4️⃣0️⃣ Rekap Instagram Satbinmas Official\n" +
+        "4️⃣1️⃣ Rekap TikTok Satbinmas Official\n\n" +
         "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" +
         "Ketik *angka* menu atau *batal* untuk keluar.";
     await waClient.sendMessage(chatId, menu);
@@ -2150,6 +2183,8 @@ export const dirRequestHandlers = {
           "37",
           "38",
           "39",
+          "40",
+          "41",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2235,6 +2270,18 @@ export const dirRequestHandlers = {
         "",
         waClient
       );
+      return;
+    }
+
+    if (choice === "40") {
+      session.step = "choose_satbinmas_official_instagram_recap_period";
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "41") {
+      session.step = "choose_satbinmas_official_tiktok_recap_period";
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT);
       return;
     }
 
@@ -2597,6 +2644,92 @@ export const dirRequestHandlers = {
         chatId,
         `❌ ${message}`
       );
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_satbinmas_official_instagram_recap_period(
+    session,
+    chatId,
+    text,
+    waClient
+  ) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT);
+      return;
+    }
+
+    const normalizedInput = input.toLowerCase();
+    if (normalizedInput === "batal" || normalizedInput === "menu" || input === "0") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu rekap Instagram Satbinmas Official ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT);
+      return;
+    }
+
+    try {
+      const recap = await buildStoredSatbinmasOfficialInstagramRecap(option.period);
+      await waClient.sendMessage(chatId, recap);
+    } catch (error) {
+      console.error("Gagal mengambil rekap Instagram Satbinmas Official:", error);
+      const message =
+        error?.message?.slice(0, 400) || "Gagal mengambil rekap Instagram Satbinmas Official.";
+      await waClient.sendMessage(chatId, `❌ ${message}`);
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_satbinmas_official_tiktok_recap_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT);
+      return;
+    }
+
+    const normalizedInput = input.toLowerCase();
+    if (normalizedInput === "batal" || normalizedInput === "menu" || input === "0") {
+      await waClient.sendMessage(chatId, "✅ Menu rekap TikTok Satbinmas Official ditutup.");
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT);
+      return;
+    }
+
+    try {
+      const recap = await buildStoredSatbinmasOfficialTiktokRecap(option.period);
+      await waClient.sendMessage(chatId, recap);
+    } catch (error) {
+      console.error("Gagal mengambil rekap TikTok Satbinmas Official:", error);
+      const message =
+        error?.message?.slice(0, 400) || "Gagal mengambil rekap TikTok Satbinmas Official.";
+      await waClient.sendMessage(chatId, `❌ ${message}`);
     }
 
     session.step = "main";

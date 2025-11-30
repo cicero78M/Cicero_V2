@@ -82,6 +82,28 @@ resmi Satbinmas.
      beserta likes dan komentar per akun), akun pasif, serta client ORG yang
      belum memiliki akun TikTok terdaftar. Kegagalan per akun juga dicantumkan.
 
+- **4️⃣0️⃣ Rekap Instagram Satbinmas Official**
+  1. Pilih opsi **4️⃣0️⃣** untuk membuka submenu rekap.
+  2. Bot menampilkan pilihan periode: harian (hari ini), mingguan (Senin–Minggu
+     berjalan), dan bulanan (tanggal 1 s/d akhir bulan berjalan).
+  3. Balasan angka 1–3 akan mengambil rekap berdasarkan data yang *sudah*
+     tersimpan di tabel `satbinmas_official_media` (tidak memanggil RapidAPI).
+  4. Operator menerima ringkasan berformat sama dengan rekap harian (klasifikasi
+     akun aktif/pasif/belum input) dengan label periode yang dipilih.
+  5. Balasan `batal` atau `0` menutup submenu dan kembali ke menu utama.
+
+- **4️⃣1️⃣ Rekap TikTok Satbinmas Official**
+  1. Pilih opsi **4️⃣1️⃣** untuk membuka submenu rekap TikTok.
+  2. Periode yang ditawarkan sama dengan opsi Instagram (harian, mingguan,
+     bulanan) dan seluruhnya mengambil data yang sudah ada di tabel
+     `satbinmas_tiktok_posts` yang terhubung lewat `secUid` akun Satbinmas
+     Official.
+  3. Submenu tidak memanggil RapidAPI; rekap dibangun dari agregasi data
+     tersimpan (total konten, likes, komentar per akun) dan tetap menandai akun
+     yang belum memiliki `secUid` tersinkron.
+  4. Hasil dikirim sebagai pesan ringkasan ke operator, dan balasan `batal`
+     menutup submenu.
+
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
 
