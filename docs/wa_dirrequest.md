@@ -18,7 +18,9 @@ ditampilkan bot.
 
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
-resmi Satbinmas.
+resmi Satbinmas. Menu utama kini menampilkan rentang opsi **3️⃣6️⃣–4️⃣1️⃣** untuk
+alur ini sehingga operator bisa langsung memilih pengambilan data maupun
+rekap.
 
 - **3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official**
   1. Pilih opsi **3️⃣6️⃣** dari menu dirrequest.
@@ -84,25 +86,35 @@ resmi Satbinmas.
 
 - **4️⃣0️⃣ Rekap Instagram Satbinmas Official**
   1. Pilih opsi **4️⃣0️⃣** untuk membuka submenu rekap.
-  2. Bot menampilkan pilihan periode: harian (hari ini), mingguan (Senin–Minggu
-     berjalan), dan bulanan (tanggal 1 s/d akhir bulan berjalan).
-  3. Balasan angka 1–3 akan mengambil rekap berdasarkan data yang *sudah*
-     tersimpan di tabel `satbinmas_official_media` (tidak memanggil RapidAPI).
-  4. Operator menerima ringkasan berformat sama dengan rekap harian (klasifikasi
-     akun aktif/pasif/belum input) dengan label periode yang dipilih.
-  5. Balasan `batal` atau `0` menutup submenu dan kembali ke menu utama.
+  2. Bot menampilkan pilihan periode: **1. Harian** (hari ini), **2. Mingguan**
+     (Senin–Minggu berjalan), dan **3. Bulanan** (tanggal 1 s/d akhir bulan
+     berjalan).
+  3. Balasan angka **1–3** hanya membaca rekap yang sudah ada di tabel
+     `satbinmas_official_media`; tidak ada pemanggilan RapidAPI.
+  4. Operator menerima ringkasan berformat sama dengan rekap harian: klasifikasi
+     akun aktif/pasif/belum input dengan label periode, total konten, beserta
+     total likes dan komentar per akun.
+  5. Balasan `batal`, `0`, atau `kembali` menutup submenu dan kembali ke menu
+     utama tanpa menjalankan proses apa pun.
 
 - **4️⃣1️⃣ Rekap TikTok Satbinmas Official**
   1. Pilih opsi **4️⃣1️⃣** untuk membuka submenu rekap TikTok.
-  2. Periode yang ditawarkan sama dengan opsi Instagram (harian, mingguan,
-     bulanan) dan seluruhnya mengambil data yang sudah ada di tabel
+  2. Submenu menawarkan periode **1. Harian** (hari ini), **2. Mingguan**
+     (Senin–Minggu berjalan), dan **3. Bulanan** (tanggal 1 s/d akhir bulan
+     berjalan) yang semuanya memakai data tersimpan di tabel
      `satbinmas_tiktok_posts` yang terhubung lewat `secUid` akun Satbinmas
      Official.
-  3. Submenu tidak memanggil RapidAPI; rekap dibangun dari agregasi data
-     tersimpan (total konten, likes, komentar per akun) dan tetap menandai akun
-     yang belum memiliki `secUid` tersinkron.
-  4. Hasil dikirim sebagai pesan ringkasan ke operator, dan balasan `batal`
-     menutup submenu.
+  3. Tidak ada pemanggilan RapidAPI; rekap dibangun dari agregasi data lokal
+     (total konten, likes, komentar per akun) dan tetap menandai akun yang
+     belum memiliki `secUid` tersinkron.
+  4. Hasil dikirim sebagai pesan ringkasan ke operator. Balasan `batal`, `0`,
+     atau `kembali` akan menutup submenu dan kembali ke menu utama.
+
+- **Catatan pemanggilan data**
+  - Menu **3️⃣7️⃣** dan **3️⃣9️⃣** tetap menjalankan pengambilan konten via
+    RapidAPI (Instagram/TikTok) sebelum disimpan dan diringkas.
+  - Menu rekap **4️⃣0️⃣** dan **4️⃣1️⃣** tidak memanggil RapidAPI; outputnya murni
+    berasal dari data yang sudah tersimpan di database.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
@@ -129,9 +141,12 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tidak lagi dikirim ke nomor pribadi.
 
 ## RapidAPI (Instagram & TikTok)
-- Semua opsi di grup *Monitoring Satbinmas Official* membutuhkan kredensial
-  RapidAPI. Pastikan variabel lingkungan `RAPIDAPI_KEY` terisi sebelum bot
-  dijalankan.
+- Opsi pengambilan konten (**3️⃣6️⃣**, **3️⃣7️⃣**, **3️⃣8️⃣**, **3️⃣9️⃣**) membutuhkan
+  kredensial RapidAPI. Pastikan variabel lingkungan `RAPIDAPI_KEY` terisi
+  sebelum bot dijalankan.
 - TikTok memakai host `tiktok-api23.p.rapidapi.com` melalui
   `fetchTiktokProfile` untuk mengambil `secUid`. Instagram memakai host yang
   sama via fungsi `fetchInstagramInfo` dan `fetchInstagramPosts`.
+- Menu rekap (**4️⃣0️⃣**, **4️⃣1️⃣**) hanya membaca database sehingga tetap dapat
+  dipakai ketika RapidAPI tidak tersedia, selama data konten sudah ada di
+  tabel yang disebutkan di atas.
