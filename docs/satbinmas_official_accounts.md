@@ -303,6 +303,18 @@ Navigasi `batal` mengembalikan operator ke menu kelola client, sedangkan
 `kembali` digunakan untuk mengulang instruksi input (Client ID/platform/username)
 tanpa kehilangan sesi.
 
+## Rekap berbasis data tersimpan
+
+- `fetchSatbinmasOfficialMediaFromDb({ start, end })` dan
+  `fetchSatbinmasOfficialTiktokMediaFromDb({ start, end })` memuat agregasi
+  konten Instagram maupun TikTok Satbinmas Official langsung dari database
+  (total konten, likes, komentar per akun aktif) tanpa memanggil RapidAPI.
+  Rentang tanggal default mengikuti hari berjalan bila parameter tidak diisi.
+- `buildSatbinmasOfficialInstagramDbRecap` dan
+  `buildSatbinmasOfficialTiktokDbRecap` menerima flag periode `daily`,
+  `weekly` (Senin–Minggu), atau `monthly` (tanggal 1 s/d akhir bulan) dan
+  merender narasi rekap yang dipakai di submenu DirRequest Satbinmas Official.
+
 ## Testing
 `tests/satbinmasOfficialAccountService.test.js` covers the new service logic,
 including:
