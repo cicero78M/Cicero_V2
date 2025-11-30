@@ -327,3 +327,52 @@ export async function fetchTodaySatbinmasOfficialMediaForOrgClients(
 
   return { clients: results, totals };
 }
+
+export async function fetchSatbinmasOfficialMediaFromDb({ start, end } = {}) {
+  const { start: defaultStart, end: defaultEnd } = getTodayRange();
+  const rangeStart = start || defaultStart;
+  const rangeEnd = end || defaultEnd;
+
+  const clients = await clientModel.findAllOrgClients();
+  const summary = {
+    clients: [],
+    totals: { clients: clients.length, accounts: 0, fetched: 0 },
+  };
+
+  for (const client of clients) {
+    const accounts = await satbinmasOfficialAccountModel.findActiveByClientAndPlatform(
+      client.client_id,
+      "instagram"
+    );
+    const clientSummary = { clientId: client.client_id, name: client.nama, accounts: [], errors: [] };
+
+    if (accounts.length) {
+      const statsMap = await satbinmasOfficialMediaModel.summarizeMediaCountsByAccounts(
+        accounts.map((acc) => acc.satbinmas_account_id),
+        rangeStart,
+        rangeEnd
+      );
+
+      accounts.forEach((account) => {
+        const stats = statsMap.get(account.satbinmas_account_id) || { total: 0, likes: 0, comments: 0 };
+
+        summary.totals.accounts += 1;
+        summary.totals.fetched += stats.total;
+
+        clientSummary.accounts.push({
+          username: account.username,
+          total: stats.total,
+          inserted: 0,
+          updated: 0,
+          removed: 0,
+          likes: stats.likes,
+          comments: stats.comments,
+        });
+      });
+    }
+
+    summary.clients.push(clientSummary);
+  }
+
+  return summary;
+}

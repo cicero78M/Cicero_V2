@@ -1,13 +1,11 @@
-import { findAllOrgClients } from "../model/clientModel.js";
 import {
   fetchTodaySatbinmasOfficialMediaForOrgClients,
+  fetchSatbinmasOfficialMediaFromDb,
 } from "./satbinmasOfficialMediaService.js";
 import {
   fetchTodaySatbinmasOfficialTiktokMediaForOrgClients,
+  fetchSatbinmasOfficialTiktokMediaFromDb,
 } from "./satbinmasOfficialTiktokMediaService.js";
-import { findActiveByClientAndPlatform } from "../model/satbinmasOfficialAccountModel.js";
-import { summarizeMediaCountsByAccounts } from "../model/satbinmasOfficialMediaModel.js";
-import { summarizeSatbinmasTiktokPostsBySecuids } from "../model/tiktokSnapshotModel.js";
 
 function formatNumber(value) {
   if (value == null) return "0";
@@ -242,120 +240,42 @@ function formatPeriodDescription(period) {
   return "Rekap harian (hari ini)";
 }
 
-async function buildInstagramSummaryFromStorage(period = "daily") {
-  const clients = await findAllOrgClients();
+export async function querySatbinmasOfficialInstagramSummary(period = "daily") {
   const { start, end } = resolvePeriodRange(period);
-
-  const summary = {
-    clients: [],
-    totals: { clients: clients.length, accounts: 0, fetched: 0 },
-  };
-
-  for (const client of clients) {
-    const accounts = await findActiveByClientAndPlatform(client.client_id, "instagram");
-    const clientSummary = { clientId: client.client_id, name: client.nama, accounts: [], errors: [] };
-
-    if (accounts.length) {
-      const statsMap = await summarizeMediaCountsByAccounts(
-        accounts.map((acc) => acc.satbinmas_account_id),
-        start,
-        end
-      );
-
-      accounts.forEach((account) => {
-        const stats = statsMap.get(account.satbinmas_account_id) || {
-          total: 0,
-          likes: 0,
-          comments: 0,
-        };
-
-        summary.totals.accounts += 1;
-        summary.totals.fetched += stats.total;
-
-        clientSummary.accounts.push({
-          username: account.username,
-          total: stats.total,
-          inserted: 0,
-          updated: 0,
-          removed: 0,
-          likes: stats.likes,
-          comments: stats.comments,
-        });
-      });
-    }
-
-    summary.clients.push(clientSummary);
-  }
-
-  return summary;
+  return fetchSatbinmasOfficialMediaFromDb({ start, end });
 }
 
-async function buildTiktokSummaryFromStorage(period = "daily") {
-  const clients = await findAllOrgClients();
+export async function querySatbinmasOfficialTiktokSummary(period = "daily") {
   const { start, end } = resolvePeriodRange(period);
-
-  const summary = {
-    clients: [],
-    totals: { clients: clients.length, accounts: 0, fetched: 0 },
-  };
-
-  for (const client of clients) {
-    const accounts = await findActiveByClientAndPlatform(client.client_id, "tiktok");
-    const clientSummary = { clientId: client.client_id, name: client.nama, accounts: [], errors: [] };
-    const usableAccounts = accounts.filter((acc) => acc.secUid?.trim());
-
-    if (usableAccounts.length) {
-      const statsMap = await summarizeSatbinmasTiktokPostsBySecuids(
-        usableAccounts.map((acc) => acc.secUid),
-        start,
-        end
-      );
-
-      usableAccounts.forEach((account) => {
-        const stats = statsMap.get(account.secUid) || {
-          total: 0,
-          likes: 0,
-          comments: 0,
-        };
-
-        summary.totals.accounts += 1;
-        summary.totals.fetched += stats.total;
-
-        clientSummary.accounts.push({
-          username: account.username,
-          total: stats.total,
-          inserted: 0,
-          updated: 0,
-          removed: 0,
-          likes: stats.likes,
-          comments: stats.comments,
-        });
-      });
-    }
-
-    const missingSecUidAccounts = accounts.filter((acc) => !acc.secUid?.trim());
-    missingSecUidAccounts.forEach((account) => {
-      clientSummary.errors.push({
-        username: account.username,
-        message: "secUid TikTok belum tersinkron.",
-      });
-      summary.totals.accounts += 1;
-    });
-
-    summary.clients.push(clientSummary);
-  }
-
-  return summary;
+  return fetchSatbinmasOfficialTiktokMediaFromDb({ start, end });
 }
 
-export async function buildStoredSatbinmasOfficialInstagramRecap(period = "daily") {
-  const summary = await buildInstagramSummaryFromStorage(period);
+export async function buildSatbinmasOfficialInstagramDbRecap(period = "daily") {
+  const summary = await querySatbinmasOfficialInstagramSummary(period);
   const label = `${formatPeriodDescription(period)} (${formatPeriodLabel()})`;
   return renderInstagramRecap(summary, { periodLabel: label });
 }
 
-export async function buildStoredSatbinmasOfficialTiktokRecap(period = "daily") {
-  const summary = await buildTiktokSummaryFromStorage(period);
+export async function buildSatbinmasOfficialTiktokDbRecap(period = "daily") {
+  const summary = await querySatbinmasOfficialTiktokSummary(period);
   const label = `${formatPeriodDescription(period)} (${formatPeriodLabel()})`;
   return renderTiktokRecap(summary, { periodLabel: label });
+}
+
+export async function buildStoredSatbinmasOfficialInstagramRecap(period = "daily") {
+  return buildSatbinmasOfficialInstagramDbRecap(period);
+}
+
+export async function buildStoredSatbinmasOfficialTiktokRecap(period = "daily") {
+  return buildSatbinmasOfficialTiktokDbRecap(period);
+}
+
+export async function buildSatbinmasOfficialInstagramDbSummary(period = "daily") {
+  const { start, end } = resolvePeriodRange(period);
+  return fetchSatbinmasOfficialMediaFromDb({ start, end });
+}
+
+export async function buildSatbinmasOfficialTiktokDbSummary(period = "daily") {
+  const { start, end } = resolvePeriodRange(period);
+  return fetchSatbinmasOfficialTiktokMediaFromDb({ start, end });
 }

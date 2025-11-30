@@ -47,8 +47,8 @@ import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import {
   buildSatbinmasOfficialInstagramRecap,
   buildSatbinmasOfficialTiktokRecap,
-  buildStoredSatbinmasOfficialInstagramRecap,
-  buildStoredSatbinmasOfficialTiktokRecap,
+  buildSatbinmasOfficialInstagramDbRecap,
+  buildSatbinmasOfficialTiktokDbRecap,
 } from "../../service/satbinmasOfficialReportService.js";
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
 
@@ -2684,7 +2684,7 @@ export const dirRequestHandlers = {
     }
 
     try {
-      const recap = await buildStoredSatbinmasOfficialInstagramRecap(option.period);
+      const recap = await buildSatbinmasOfficialInstagramDbRecap(option.period);
       await waClient.sendMessage(chatId, recap);
     } catch (error) {
       console.error("Gagal mengambil rekap Instagram Satbinmas Official:", error);
@@ -2723,7 +2723,7 @@ export const dirRequestHandlers = {
     }
 
     try {
-      const recap = await buildStoredSatbinmasOfficialTiktokRecap(option.period);
+      const recap = await buildSatbinmasOfficialTiktokDbRecap(option.period);
       await waClient.sendMessage(chatId, recap);
     } catch (error) {
       console.error("Gagal mengambil rekap TikTok Satbinmas Official:", error);
