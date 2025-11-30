@@ -164,6 +164,20 @@ export const getSatbinmasOfficialAccounts = async (req, res, next) => {
   }
 };
 
+export const getSatbinmasOfficialAccountData = async (req, res, next) => {
+  try {
+    const data = await satbinmasOfficialAccountService.getSatbinmasOfficialAccountData(
+      req.params.client_id
+    );
+    sendSuccess(res, data);
+  } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    next(err);
+  }
+};
+
 export const saveSatbinmasOfficialAccount = async (req, res, next) => {
   try {
     const result = await satbinmasOfficialAccountService.saveSatbinmasOfficialAccount(

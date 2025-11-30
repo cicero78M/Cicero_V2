@@ -29,6 +29,11 @@ router.get(
   authRequired,
   clientController.getSatbinmasOfficialAccounts
 );
+router.get(
+  "/:client_id/satbinmas-official/data",
+  authRequired,
+  clientController.getSatbinmasOfficialAccountData
+);
 router.put(
   "/:client_id/satbinmas-official",
   authRequired,

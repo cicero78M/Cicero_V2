@@ -1,5 +1,6 @@
 import * as clientModel from '../model/clientModel.js';
 import * as satbinmasOfficialAccountModel from '../model/satbinmasOfficialAccountModel.js';
+import * as satbinmasOfficialMediaModel from '../model/satbinmasOfficialMediaModel.js';
 
 function createError(message, statusCode) {
   const error = new Error(message);
@@ -157,6 +158,39 @@ export async function deleteSatbinmasOfficialAccount(clientId, accountId) {
   }
 
   return satbinmasOfficialAccountModel.removeById(accountId);
+}
+
+export async function getSatbinmasOfficialAccountData(clientId) {
+  const client = await clientModel.findById(clientId);
+  if (!client) {
+    throw createError('Client not found', 404);
+  }
+
+  const accounts = await satbinmasOfficialAccountModel.findByClientId(client.client_id);
+  const media = await satbinmasOfficialMediaModel.findMediaWithRelationsByClientId(
+    client.client_id
+  );
+
+  const mediaByAccount = media.reduce((acc, item) => {
+    if (!item?.satbinmas_account_id) return acc;
+    const bucket = acc[item.satbinmas_account_id] || [];
+    bucket.push(item);
+    acc[item.satbinmas_account_id] = bucket;
+    return acc;
+  }, {});
+
+  const accountsWithMedia = accounts.map((account) => ({
+    ...account,
+    media: mediaByAccount[account.satbinmas_account_id] || [],
+  }));
+
+  return {
+    client: {
+      client_id: client.client_id,
+      nama: client.nama,
+    },
+    accounts: accountsWithMedia,
+  };
 }
 
 export async function getSatbinmasOfficialAttendance() {
