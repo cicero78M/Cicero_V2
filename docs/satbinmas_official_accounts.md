@@ -148,6 +148,9 @@ Three authenticated endpoints are exposed under the client routes namespace:
 
 - `GET /api/client/:client_id/satbinmas-official` lists the existing handles for
   a client.
+- `GET /api/client/:client_id/satbinmas-official/data` (authenticated) returns
+  the client metadata, each Satbinmas Official account, and their recent media
+  (including parsed `hashtags` and `mentions`).
 - `PUT /api/client/:client_id/satbinmas-official` upserts an account. The body
   accepts `{ platform, username, display_name?, profile_url?, secUid?, is_active?, is_verified? }`.
 - `DELETE /api/client/:client_id/satbinmas-official/:account_id` removes a
@@ -196,6 +199,38 @@ for a different client) results in a `409 Conflict`:
 ```json
 {
   "message": "username already exists for this platform"
+}
+```
+
+### Aggregated Account + Media Response
+The `/satbinmas-official/data` endpoint groups all Satbinmas Official accounts
+for a client with their media and normalized caption entities. Example output:
+
+```json
+{
+  "client": {
+    "client_id": "PJJM1",
+    "nama": "Polres Jakarta Timur"
+  },
+  "accounts": [
+    {
+      "satbinmas_account_id": "...",
+      "platform": "instagram",
+      "username": "satbinmasjaktim",
+      "media": [
+        {
+          "media_id": "1234567890",
+          "code": "CzABCdef",
+          "taken_at": "2025-12-18T04:00:00.000Z",
+          "caption_text": "Sosialisasi keamanan @warga #Polres",
+          "hashtags": ["Polres"],
+          "mentions": ["warga"],
+          "like_count": 120,
+          "comment_count": 14
+        }
+      ]
+    }
+  ]
 }
 ```
 

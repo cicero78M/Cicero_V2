@@ -200,3 +200,38 @@ export async function deleteMissingMediaForDate(
   const ids = res.rows?.map((row) => row.satbinmas_media_id).filter(Boolean) || [];
   return { deleted: ids.length, ids };
 }
+
+async function findMediaWithRelations(whereClause, params = []) {
+  const res = await query(
+    `SELECT
+       media.*, 
+       COALESCE(tags.hashtags, ARRAY[]::text[]) AS hashtags,
+       COALESCE(mentions.mentions, ARRAY[]::text[]) AS mentions
+     FROM satbinmas_official_media media
+     LEFT JOIN (
+       SELECT satbinmas_media_id, ARRAY_AGG(tag ORDER BY LOWER(tag)) AS hashtags
+       FROM satbinmas_official_media_hashtags
+       GROUP BY satbinmas_media_id
+     ) tags ON tags.satbinmas_media_id = media.satbinmas_media_id
+     LEFT JOIN (
+       SELECT satbinmas_media_id, ARRAY_AGG(username ORDER BY LOWER(username)) AS mentions
+       FROM satbinmas_official_media_mentions
+       GROUP BY satbinmas_media_id
+     ) mentions ON mentions.satbinmas_media_id = media.satbinmas_media_id
+     WHERE ${whereClause}
+     ORDER BY media.taken_at DESC NULLS LAST, media.created_at DESC`,
+    params
+  );
+
+  return res.rows;
+}
+
+export async function findMediaWithRelationsByClientId(client_id) {
+  if (!client_id) return [];
+  return findMediaWithRelations('LOWER(media.client_id) = LOWER($1)', [client_id]);
+}
+
+export async function findMediaWithRelationsByAccountId(satbinmas_account_id) {
+  if (!satbinmas_account_id) return [];
+  return findMediaWithRelations('media.satbinmas_account_id = $1', [satbinmas_account_id]);
+}
