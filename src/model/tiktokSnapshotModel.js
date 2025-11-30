@@ -229,3 +229,32 @@ export async function upsertTiktokPostsSnapshot(posts = [], defaultCrawlAt = nul
 
   return { inserted, updated, total: posts.length };
 }
+
+export async function summarizeSatbinmasTiktokPostsBySecuids(authorSecuids = [], startDate, endDate) {
+  const normalizedSecuids = (authorSecuids || []).map((secuid) => secuid?.trim()).filter(Boolean);
+  if (!normalizedSecuids.length || !startDate || !endDate) return new Map();
+
+  const res = await query(
+    `SELECT author_secuid,
+            COUNT(*) AS total,
+            COALESCE(SUM(likes), 0) AS likes,
+            COALESCE(SUM(comments), 0) AS comments
+     FROM satbinmas_tiktok_posts
+     WHERE author_secuid = ANY($1)
+       AND crawl_at >= $2
+       AND crawl_at < $3
+     GROUP BY author_secuid`,
+    [normalizedSecuids, startDate, endDate]
+  );
+
+  const map = new Map();
+  res.rows.forEach((row) => {
+    map.set(row.author_secuid, {
+      total: Number(row.total) || 0,
+      likes: Number(row.likes) || 0,
+      comments: Number(row.comments) || 0,
+    });
+  });
+
+  return map;
+}
