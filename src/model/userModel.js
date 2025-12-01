@@ -5,6 +5,12 @@ import { PRIORITY_USER_NAMES } from '../utils/constants.js';
 import { normalizeEmail, normalizeUserId } from '../utils/utilsHelper.js';
 
 const NAME_PRIORITY_DEFAULT = PRIORITY_USER_NAMES.length + 1;
+const STATIC_DIVISIONS = [
+  'SUBBID MULTIMEDIA',
+  'SUBBID PENMAS',
+  'SUBBID PID',
+  'SUB BAG RENMIN',
+];
 
 function buildNamePriorityCase(alias = 'u') {
   const column = alias ? `${alias}.nama` : 'nama';
@@ -545,7 +551,16 @@ export async function getAvailableSatfung(clientId = null, roleFilter = null) {
       'SELECT DISTINCT divisi FROM "user" WHERE divisi IS NOT NULL ORDER BY divisi'
     );
   }
-  return res.rows.map((r) => r.divisi).filter(Boolean);
+  const divisions = res.rows.map((r) => r.divisi).filter(Boolean);
+  const upperSet = new Set(divisions.map((div) => div.toUpperCase()));
+  for (const staticDiv of STATIC_DIVISIONS) {
+    const upperStatic = staticDiv.toUpperCase();
+    if (!upperSet.has(upperStatic)) {
+      divisions.push(staticDiv);
+      upperSet.add(upperStatic);
+    }
+  }
+  return divisions;
 }
 
 // --- Tambahkan fungsi createUser ---
