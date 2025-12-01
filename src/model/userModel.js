@@ -5,12 +5,25 @@ import { PRIORITY_USER_NAMES } from '../utils/constants.js';
 import { normalizeEmail, normalizeUserId } from '../utils/utilsHelper.js';
 
 const NAME_PRIORITY_DEFAULT = PRIORITY_USER_NAMES.length + 1;
-const STATIC_DIVISIONS = [
+export const STATIC_DIVISIONS = [
   'SUBBID MULTIMEDIA',
   'SUBBID PENMAS',
   'SUBBID PID',
   'SUB BAG RENMIN',
 ];
+
+export function mergeStaticDivisions(divisions = []) {
+  const merged = [...divisions];
+  const upperSet = new Set(divisions.map((div) => div.toUpperCase()));
+  for (const staticDiv of STATIC_DIVISIONS) {
+    const upperStatic = staticDiv.toUpperCase();
+    if (!upperSet.has(upperStatic)) {
+      merged.push(staticDiv);
+      upperSet.add(upperStatic);
+    }
+  }
+  return merged;
+}
 
 function buildNamePriorityCase(alias = 'u') {
   const column = alias ? `${alias}.nama` : 'nama';
@@ -552,15 +565,7 @@ export async function getAvailableSatfung(clientId = null, roleFilter = null) {
     );
   }
   const divisions = res.rows.map((r) => r.divisi).filter(Boolean);
-  const upperSet = new Set(divisions.map((div) => div.toUpperCase()));
-  for (const staticDiv of STATIC_DIVISIONS) {
-    const upperStatic = staticDiv.toUpperCase();
-    if (!upperSet.has(upperStatic)) {
-      divisions.push(staticDiv);
-      upperSet.add(upperStatic);
-    }
-  }
-  return divisions;
+  return mergeStaticDivisions(divisions);
 }
 
 // --- Tambahkan fungsi createUser ---
