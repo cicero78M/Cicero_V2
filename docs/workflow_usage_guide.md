@@ -33,6 +33,12 @@ Server Express akan aktif di port yang ditentukan dan memuat semua route API ser
 Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
 - `oprrequest` → mengelola data user dan rekap link harian. Detail pada `docs/wa_operator_request.md`.
 - `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
+- *Bulk Penghapusan Status User* menggunakan format pesan
+  `Permohonan Penghapusan Data Personil – <SATKER>` yang berisi daftar ber-
+  nomor `Nama – NRP/NIP – Alasan`. Bot menonaktifkan status, mengosongkan
+  WhatsApp, dan mengirim ringkasan sukses/gagal. Header dengan penebalan
+  (mis. `📄 **Permohonan ...**`) kini juga dikenali sebagai ringkasan balasan
+  bot sehingga tidak diproses ulang jika pesan tersebut dikirim kembali.
 
 Sistem menjalankan *dua* nomor WhatsApp:
 1. **Nomor utama** menangani seluruh perintah bot seperti `oprrequest`, `dashrequest`, dan lainnya.
