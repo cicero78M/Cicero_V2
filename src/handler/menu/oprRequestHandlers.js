@@ -419,7 +419,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     session.selected_client_id = clientId;
     session.addUser.client_id = clientId;
-    const satfung = await userModel.getAvailableSatfung(clientId);
+    const satfung = userModel.mergeStaticDivisions(
+      await userModel.getAvailableSatfung(clientId)
+    );
     const sorted = sortDivisionKeys(satfung);
     let msg = "*Pilih Satfung* (ketik nomor atau nama sesuai daftar):\n";
     msg += sorted.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
@@ -433,7 +435,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, "🚫 Keluar dari proses tambah user.");
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
-    const satfungList = session.availableSatfung || [];
+    const satfungList = userModel.mergeStaticDivisions(
+      session.availableSatfung || []
+    );
     let satfung = text.trim().toUpperCase();
     const upperList = satfungList.map((s) => s.toUpperCase());
     if (/^\d+$/.test(satfung)) {
@@ -1124,7 +1128,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
       } catch (e) { console.error(e); }
-      const satfung = await userModel.getAvailableSatfung(clientId);
+      const satfung = userModel.mergeStaticDivisions(
+        await userModel.getAvailableSatfung(clientId)
+      );
       if (satfung && satfung.length) {
         const sorted = sortDivisionKeys(satfung);
         let msgList = sorted.map((s, i) => `${i + 1}. ${s}`).join("\n");
@@ -1201,7 +1207,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
       } catch (e) { console.error(e); }
-      const satfungList = session.availableSatfung || (await userModel.getAvailableSatfung(clientId));
+      const satfungList = userModel.mergeStaticDivisions(
+        session.availableSatfung || (await userModel.getAvailableSatfung(clientId))
+      );
       const normalizedSatfung = satfungList.map((s) => s.toUpperCase());
       if (/^\d+$/.test(value)) {
         const idx = parseInt(value, 10) - 1;

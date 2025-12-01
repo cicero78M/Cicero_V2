@@ -316,7 +316,9 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
       } catch (e) { console.error(e); }
-      const satfung = await userModel.getAvailableSatfung(clientId);
+      const satfung = userModel.mergeStaticDivisions(
+        await userModel.getAvailableSatfung(clientId)
+      );
       if (satfung && satfung.length) {
         const sorted = sortDivisionKeys(satfung);
         let msgList = sorted.map((s, i) => `${i + 1}. ${s}`).join("\n");
@@ -386,8 +388,9 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         const user = await userModel.findUserById(session.updateUserId);
         clientId = user?.client_id || null;
       } catch (e) { console.error(e); }
-      const satfungList =
-        session.availableSatfung || (await userModel.getAvailableSatfung(clientId));
+      const satfungList = userModel.mergeStaticDivisions(
+        session.availableSatfung || (await userModel.getAvailableSatfung(clientId))
+      );
       const normalizedSatfung = satfungList.map((s) => s.toUpperCase());
       if (/^\d+$/.test(value)) {
         const idx = parseInt(value, 10) - 1;

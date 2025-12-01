@@ -30,10 +30,12 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
   1. Masukkan NRP/NIP yang belum terdaftar.
   2. Isi nama, pangkat, satfung, dan jabatan sesuai instruksi. Untuk satfung,
      Anda dapat mengetik *nomor urut* pada daftar atau menuliskan namanya secara
-     lengkap. Daftar satfung yang ditampilkan hanya berasal dari client Anda.
-     Selain daftar tersebut, bot juga menerima satfung khusus berikut meskipun
-     belum ada di data user: **SUBBID MULTIMEDIA**, **SUBBID PENMAS**,
-     **SUBBID PID**, dan **SUB BAG RENMIN**.
+    lengkap. Daftar satfung yang ditampilkan hanya berasal dari client Anda.
+    Selain daftar tersebut, bot juga menerima satfung khusus berikut meskipun
+    belum ada di data user: **SUBBID MULTIMEDIA**, **SUBBID PENMAS**,
+    **SUBBID PID**, dan **SUB BAG RENMIN**. Daftar statis ini sekarang juga
+    dipakai untuk memvalidasi input via web dashboard, sehingga satfung seperti
+    **SUBBID MULTIMEDIA** akan selalu diterima walau belum ada di database.
   3. Bot akan menyimpan data dan mengirim ringkasan user.
 - **Ubah Status User**
   1. Masukkan NRP/NIP yang ingin diubah.
