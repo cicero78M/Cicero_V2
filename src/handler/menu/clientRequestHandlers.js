@@ -203,7 +203,8 @@ function ensureHandle(value) {
 
 const BULK_STATUS_HEADER_REGEX = /Permohonan Penghapusan Data Personil/i;
 const NUMERIC_ID_REGEX = /\b\d{6,}\b/g;
-const BOT_SUMMARY_HEADER_REGEX = /^📄\s*\*?Permohonan Penghapusan Data Personil/i;
+const BOT_SUMMARY_HEADER_REGEX =
+  /^📄\s*[*_]{0,3}\s*Permohonan Penghapusan Data Personil/i;
 const BULK_STATUS_SUMMARY_KEYWORDS = /(?:Status dinonaktifkan|entri gagal diproses)/i;
 const SATBINMAS_ROLE_CHOICES = [
   { code: "AKUN_RESMI_SATBINMAS", label: "Akun Resmi Satbinmas" },
