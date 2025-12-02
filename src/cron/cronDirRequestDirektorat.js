@@ -15,7 +15,11 @@ const CLIENT_ID = "DITBINMAS";
 export async function runCron(clientId = CLIENT_ID) {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
-    const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId);
+    const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId, {
+      includeAdmins: false,
+      includeOperator: false,
+      includeGroup: false,
+    });
     if (!recipients.size) {
       sendDebug({
         tag: "CRON DIRREQ DIREKTORAT",

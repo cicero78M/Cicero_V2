@@ -128,17 +128,16 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   dilewati jika tidak ada admin penerima yang valid.
 
 ## Penerima Cron DirRequest
-- Cron DirRequest kini mengambil nomor **Super Admin**, **Operator**, dan
-  **Group WA** langsung dari tabel `clients` berdasarkan `client_id`
-  (default `DITBINMAS`).
-- Data penerima yang kosong akan digantikan oleh daftar admin (`ADMIN_WHATSAPP`)
-  agar laporan tetap terkirim, tetapi debug log akan menandai kondisi
-  fallback tersebut.
-- Gunakan kolom `client_super`, `client_operator`, dan `client_group` di DB
-  untuk memperbarui target pengiriman tanpa mengubah kode cron.
-- Cron `cronDirRequestRekapAllSocmed` dikunci hanya ke **Group WA** Ditbinmas
-  (menonaktifkan admin, super admin, dan operator) agar broadcast rekap harian
-  tidak lagi dikirim ke nomor pribadi.
+- Cron DirRequest kini **hanya** mengirim laporan ke nomor **Super Admin** dari
+  kolom `client_super` sesuai `client_id` target (default `DITBINMAS`). Nomor
+  **Operator** maupun **Group WA** tidak lagi dipakai.
+- Jika daftar super admin kosong atau tidak valid, cron akan dilewati tanpa
+  fallback ke `ADMIN_WHATSAPP` sehingga tidak ada pesan yang terkirim.
+- Gunakan kolom `client_super` di tabel `clients` untuk memperbarui target
+  pengiriman tanpa mengubah kode cron.
+- Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
+  Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
+  rekap harian tidak lagi dikirim ke nomor pribadi.
 
 ## RapidAPI (Instagram & TikTok)
 - Opsi pengambilan konten (**3️⃣6️⃣**, **3️⃣7️⃣**, **3️⃣8️⃣**, **3️⃣9️⃣**) membutuhkan
