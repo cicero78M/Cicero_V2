@@ -128,13 +128,19 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   dilewati jika tidak ada admin penerima yang valid.
 
 ## Penerima Cron DirRequest
-- Cron DirRequest kini **hanya** mengirim laporan ke nomor **Super Admin** dari
-  kolom `client_super` sesuai `client_id` target (default `DITBINMAS`). Nomor
-  **Operator** maupun **Group WA** tidak lagi dipakai.
-- Jika daftar super admin kosong atau tidak valid, cron akan dilewati tanpa
-  fallback ke `ADMIN_WHATSAPP` sehingga tidak ada pesan yang terkirim.
-- Gunakan kolom `client_super` di tabel `clients` untuk memperbarui target
-  pengiriman tanpa mengubah kode cron.
+- Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
+  Direktorat** yang aktif dengan status **IG** dan **TikTok** aktif. Eksekusi
+  dilakukan **berurutan** mengikuti urutan `client_id` dari tabel `clients`.
+- Untuk `DITBINMAS`, laporan dikirim ke **Group WA** yang tersimpan di kolom
+  `client_group` (format wajib `@g.us`).
+- Untuk `BIDHUMAS`, laporan dikirim ke nomor **Super Admin** dan **Operator**
+  (`client_super` dan `client_operator`) yang diubah menjadi WID `@c.us`.
+- Client Direktorat lain menggunakan **Group WA** masing-masing dari
+  `client_group`. Jika kolom kosong/tidak valid maka laporan dilewati untuk
+  client tersebut.
+- Seluruh **log proses** cron tetap dikirim ke nomor **ADMIN_WHATSAPP** untuk
+  pemantauan admin, sementara pesan tugas/respons dan perubahan post hanya
+  dikirim ke penerima Group/Super Admin/Operator sesuai aturan di atas.
 - Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
   Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
   rekap harian tidak lagi dikirim ke nomor pribadi.
