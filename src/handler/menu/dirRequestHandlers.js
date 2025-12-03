@@ -953,26 +953,8 @@ function formatRekapAllSosmed(
     const num = Number.parseFloat(normalized);
     return Number.isNaN(num) ? null : num;
   };
-  const formatInteger = (value) =>
-    value == null
-      ? null
-      : Math.round(value).toLocaleString("id-ID", { maximumFractionDigits: 0 });
-  const formatPercent = (value) =>
-    value == null
-      ? null
-      : value.toLocaleString("id-ID", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        });
-
   const cleanContentLine = (line) =>
     line ? line.replace(/^\d+\.\s*/, "").trim() : null;
-
-  const combineSentences = (segments) =>
-    segments
-      .map((segment) => (segment || "").trim())
-      .filter(Boolean)
-      .join(" ");
 
   const indentParagraphs = (paragraphs) =>
     paragraphs
@@ -1254,8 +1236,37 @@ function formatRekapAllSosmed(
     return data;
   };
 
-  const ig = extractIgData(igNarrative);
-  const tt = extractTtData(ttNarrative);
+  const resolvedClientName = (clientName || "DIREKTORAT BINMAS").trim()
+    ? (clientName || "DIREKTORAT BINMAS").trim()
+    : "DIREKTORAT BINMAS";
+
+  const scopeByClient = (text) => {
+    const normalized = normalizeText(text);
+    const lines = normalized.split("\n");
+    const target = resolvedClientName.toLowerCase();
+    const startIdx = lines.findIndex((line) =>
+      line.toLowerCase().includes(target)
+    );
+    if (startIdx === -1) return normalized;
+    const clientMarker = /(direktorat|polres|polresta|polrestabes|polda)/i;
+    let endIdx = lines.length;
+    for (let i = startIdx + 1; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      const isNextClient =
+        clientMarker.test(line) && !line.toLowerCase().includes(target);
+      if (isNextClient) {
+        endIdx = i;
+        break;
+      }
+    }
+    return lines.slice(startIdx, endIdx).join("\n").trim();
+  };
+
+  const scopedIgNarrative = scopeByClient(igNarrative);
+  const scopedTtNarrative = scopeByClient(ttNarrative);
+
+  const ig = extractIgData(scopedIgNarrative);
+  const tt = extractTtData(scopedTtNarrative);
 
   const buildContentLinkList = () => {
     const linkLines = [];
@@ -1263,9 +1274,9 @@ function formatRekapAllSosmed(
       .map((line) => cleanContentLine(line))
       .filter(Boolean);
 
-    if (!igLines.length) igLines.push(...extractLinksFromText(igNarrative));
+    if (!igLines.length) igLines.push(...extractLinksFromText(scopedIgNarrative));
 
-    const ttLines = extractTiktokTasks(ttNarrative);
+    const ttLines = extractTiktokTasks(scopedTtNarrative);
 
     if (igLines.length)
       igLines.forEach((line, index) =>
@@ -1284,60 +1295,12 @@ function formatRekapAllSosmed(
     return linkLines;
   };
 
-  const resolvedClientName = (clientName || "DIREKTORAT BINMAS").trim()
-    ? (clientName || "DIREKTORAT BINMAS").trim()
-    : "DIREKTORAT BINMAS";
-
   const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
   const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
   const linkLines = buildContentLinkList();
 
-  const igParagraphs = [normalizeText(igNarrative)];
-  const ttParagraphs = [normalizeText(ttNarrative)];
-
-  const personilParagraphs = [];
-  if (ig.personilTotal != null) {
-    const channels = [];
-    if (ig.personilIgPercent != null && ig.personilIgCount != null)
-      channels.push(
-        `Instagram ${formatPercent(ig.personilIgPercent)}% (${formatInteger(
-          ig.personilIgCount
-        )})`
-      );
-    if (ig.personilTtPercent != null && ig.personilTtCount != null)
-      channels.push(
-        `TikTok ${formatPercent(ig.personilTtPercent)}% (${formatInteger(
-          ig.personilTtCount
-        )})`
-      );
-    personilParagraphs.push(
-      combineSentences([
-        `Jejaring personel DITBINMAS tercatat ${formatInteger(
-          ig.personilTotal
-        )} individu aktif, tersebar di ${channels.join(" dan ")} sebagai garda terdepan pembinaan masyarakat.`,
-      ])
-    );
-  }
-
-  if (ig.avgIg != null || ig.avgTt != null) {
-    const avgSentences = [];
-    if (ig.avgIg != null) {
-      const medianText =
-        ig.medianIg != null ? ` (median ${formatPercent(ig.medianIg)}%)` : "";
-      avgSentences.push(
-        `Rata-rata satker IG berada di ${formatPercent(ig.avgIg)}%${medianText}.`
-      );
-    }
-    if (ig.avgTt != null) {
-      const medianText =
-        ig.medianTt != null ? ` (median ${formatPercent(ig.medianTt)}%)` : "";
-      avgSentences.push(
-        `Rata-rata satker TikTok mencapai ${formatPercent(ig.avgTt)}%${medianText}.`
-      );
-    }
-    if (avgSentences.length)
-      personilParagraphs.push(combineSentences(avgSentences));
-  }
+  const igParagraphs = [normalizeText(scopedIgNarrative)];
+  const ttParagraphs = [normalizeText(scopedTtNarrative)];
 
   const buildClosing = () => {
     const igBacklog = ig.igBacklog ?? 0;
@@ -1349,12 +1312,12 @@ function formatRekapAllSosmed(
     const likeGapHigh = (ig.likeGap ?? 0) > 0;
 
     if (igGood && ttGood && !backlogModerate)
-      return "Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DITBINMAS.";
+      return `Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran ${resolvedClientName}.`;
     if (backlogHigh)
       return "Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.";
     if (likeGapHigh || !ttGood)
       return "Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.";
-    return "Progres bergerak positif; mari terus kawal pengejaran target harian dengan ritme nyaman ala DITBINMAS.";
+    return `Progres bergerak positif; mari terus kawal pengejaran target harian dengan ritme nyaman ala ${resolvedClientName}.`;
   };
 
   const sections = [];
@@ -1363,9 +1326,6 @@ function formatRekapAllSosmed(
   );
   sections.push(
     ["2. 🎵 *TikTok*", ...indentParagraphs(ttParagraphs)].join("\n")
-  );
-  sections.push(
-    ["3. 👥 *Data Personil*", ...indentParagraphs(personilParagraphs)].join("\n")
   );
 
   const closingLine = buildClosing();
@@ -1686,7 +1646,10 @@ async function performAction(
       case "21": {
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
-        const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
+        const [ig, tt] = await Promise.all([
+          lapharDitbinmas(clientId),
+          lapharTiktokDitbinmas(clientId),
+        ]);
         const client = await findClientById(clientId);
         const clientName = client?.nama || clientId;
         const narrative = formatRekapAllSosmed(

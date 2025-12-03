@@ -845,8 +845,8 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
   return msg.trim();
 }
 
-export async function lapharTiktokDitbinmas() {
-  const roleName = "ditbinmas";
+export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
+  const roleName = String(clientId || "DITBINMAS").toLowerCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -856,8 +856,8 @@ export async function lapharTiktokDitbinmas() {
   const filename = `Absensi_All_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
   const filenameBelum = `Absensi_Belum_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
 
-  const { tiktok: mainUsername, nama: clientName } = await getClientInfo(roleName);
-  const clientNameUpper = String(clientName || roleName).toUpperCase();
+  const { tiktok: mainUsername, nama: clientName } = await getClientInfo(clientId);
+  const clientNameUpper = String(clientName || clientId || roleName).toUpperCase();
 
   const posts = await getPostsTodayByClient(roleName);
   if (!posts.length)
@@ -903,8 +903,8 @@ export async function lapharTiktokDitbinmas() {
     await getClientsByRole(roleName)
   )
     .map((c) => c.toUpperCase())
-    .filter((cid) => cid !== "DITBINMAS");
-  const clientIds = ["DITBINMAS", ...polresIds];
+    .filter((cid) => cid !== clientNameUpper);
+  const clientIds = [clientNameUpper, ...polresIds];
   const allUsers = (
     await getUsersByDirektorat(roleName, clientIds)
   ).filter((u) => u.status === true);
@@ -1087,14 +1087,14 @@ export async function lapharTiktokDitbinmas() {
   }
 
   perClientStats.sort((a, b) => {
-    if (a.cid === "DITBINMAS") return -1;
-    if (b.cid === "DITBINMAS") return 1;
+    if (a.cid === clientNameUpper) return -1;
+    if (b.cid === clientNameUpper) return 1;
     if (a.comments !== b.comments) return b.comments - a.comments;
     return a.name.localeCompare(b.name);
   });
 
   const perClientBlocks = perClientStats.map((p) => p.block);
-  const satkerStats = perClientStats.filter((p) => p.cid !== "DITBINMAS");
+  const satkerStats = perClientStats.filter((p) => p.cid !== clientNameUpper);
   const fmtNum = (n) => n.toLocaleString("id-ID");
 
   const contentStats = kontenLinks.map((link, idx) => {

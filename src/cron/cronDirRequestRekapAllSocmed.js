@@ -71,8 +71,8 @@ export async function runCron() {
 
       try {
         const [igReport, ttReport] = await Promise.all([
-          lapharDitbinmas(),
-          lapharTiktokDitbinmas(),
+          lapharDitbinmas(CLIENT_ID),
+          lapharTiktokDitbinmas(CLIENT_ID),
         ]);
 
         const formattedNarrative = formatRekapAllSosmed(

@@ -15,10 +15,15 @@ export async function getClientInfo(clientId) {
   if (process.env.NODE_ENV !== "test" && clientInfoCache.has(key)) {
     return clientInfoCache.get(key);
   }
-  const res = await query(
-    "SELECT nama, client_type FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
-    [clientId]
-  );
+  let res = { rows: [] };
+  try {
+    res = await query(
+      "SELECT nama, client_type FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
+      [clientId]
+    );
+  } catch (error) {
+    if (process.env.NODE_ENV !== "test") throw error;
+  }
   const info = {
     nama: res.rows[0]?.nama || clientId,
     clientType: res.rows[0]?.client_type || null,
@@ -29,8 +34,9 @@ export async function getClientInfo(clientId) {
   return info;
 }
 
-export async function fetchDitbinmasData() {
-  const roleName = "ditbinmas";
+export async function fetchDitbinmasData(clientId = "DITBINMAS") {
+  const roleName = String(clientId || "DITBINMAS").toLowerCase();
+  const directorateId = roleName.toUpperCase();
   const shortcodes = await getShortcodesTodayByClient(roleName);
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -39,8 +45,10 @@ export async function fetchDitbinmasData() {
   const likesCounts = likesSets.map((set) => set.size);
   const { polresIds: allIds, usersByClient } =
     await groupUsersByClientDivision(roleName);
-  const polresIds = allIds.filter((cid) => cid !== "DITBINMAS");
-  const clientIds = ["DITBINMAS", ...polresIds];
+  const polresIds = allIds
+    .map((cid) => cid.toUpperCase())
+    .filter((cid) => cid !== directorateId);
+  const clientIds = [directorateId, ...polresIds];
   const kontenLinkLikes = kontenLinks.map(
     (link, idx) => `${link} : ${likesCounts[idx]}`
   );
@@ -56,6 +64,7 @@ export async function fetchDitbinmasData() {
 
 export async function calculateDitbinmasStats(data) {
   const { shortcodes, likesSets, kontenLinks, clientIds, usersByClient } = data;
+  const directorateId = clientIds[0] || "DITBINMAS";
   const pangkatOrder = [
     "KOMISARIS BESAR POLISI",
     "AKBP",
@@ -211,8 +220,8 @@ export async function calculateDitbinmasStats(data) {
     }
   }
   perClientStats.sort((a, b) => {
-    if (a.cid === "DITBINMAS") return -1;
-    if (b.cid === "DITBINMAS") return 1;
+    if (a.cid === directorateId) return -1;
+    if (b.cid === directorateId) return 1;
     if (a.likes !== b.likes) return b.likes - a.likes;
     return a.name.localeCompare(b.name);
   });
@@ -254,7 +263,7 @@ export async function calculateDitbinmasStats(data) {
       ).toFixed(1)
     : "0";
 
-  const satkerStats = perClientStats.filter((p) => p.cid !== "DITBINMAS");
+  const satkerStats = perClientStats.filter((p) => p.cid !== directorateId);
   const fmtNum = (n) => n.toLocaleString("id-ID");
   const fmtPct = (n) =>
     n.toLocaleString("id-ID", {
@@ -528,7 +537,7 @@ export function formatDitbinmasNarrative(stats) {
   );
 }
 
-export async function lapharDitbinmas() {
+export async function lapharDitbinmas(clientId = "DITBINMAS") {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -538,17 +547,20 @@ export async function lapharDitbinmas() {
   const filename = `Absensi_All_Engagement_Instagram_${hari}_${dateSafe}_${timeSafe}.txt`;
   const filenameBelum = `Absensi_Belum_Engagement_Instagram_${hari}_${dateSafe}_${timeSafe}.txt`;
 
-  const data = await fetchDitbinmasData();
+  const data = await fetchDitbinmasData(clientId);
+  const { nama: clientName } = await getClientInfo(clientId);
+  const clientLabel = String(clientName || clientId).toUpperCase();
+
   if (!data.shortcodes.length)
     return {
       filename,
-      text: "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini",
+      text: `Belum ada konten IG pada akun Official ${clientLabel} hari ini`,
     };
 
   const stats = await calculateDitbinmasStats(data);
   const metaStats = { ...stats, hari, tanggal, jam };
   const { text, textBelum } = formatDitbinmasText(metaStats);
-  const narrative = formatDitbinmasNarrative(metaStats);
+  const narrative = formatDitbinmasNarrative({ ...metaStats, clientLabel });
 
   return {
     filename,
