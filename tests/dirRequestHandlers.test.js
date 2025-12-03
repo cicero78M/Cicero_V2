@@ -708,6 +708,39 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
+  test('scopes IG/TT tasks to the selected client section', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-12-03T09:00:00Z'));
+
+    const igNarrative = `DIREKTORAT LALU LINTAS\n\n# Insight Likes Konten\n1. https://instagram.com/p/alpha — 50 likes\n\nDIREKTORAT BINMAS\n\n# Insight Likes Konten\n1. https://instagram.com/p/binmas-1 — 120 likes\n2. https://instagram.com/p/binmas-2 — 80 likes`;
+
+    const ttNarrative = `📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT LALU LINTAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@ditlantas/video/zzz — 4 komentar\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/bin-1 — 10 komentar\n2. https://www.tiktok.com/@binmas/video/bin-2 — 5 komentar`;
+
+    const message = formatRekapAllSosmed(
+      igNarrative,
+      ttNarrative,
+      'Direktorat Binmas'
+    );
+
+    const igLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('- IG'));
+    const ttLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('- TikTok'));
+
+    expect(igLines).toEqual([
+      '- IG 1. https://instagram.com/p/binmas-1 — 120 likes',
+      '- IG 2. https://instagram.com/p/binmas-2 — 80 likes',
+    ]);
+    expect(ttLines).toEqual([
+      '- TikTok 1. https://www.tiktok.com/@binmas/video/bin-1 — 10 komentar',
+      '- TikTok 2. https://www.tiktok.com/@binmas/video/bin-2 — 5 komentar',
+    ]);
+
+    jest.useRealTimers();
+  });
+
   test('adapts closing note when target tercapai dan backlog rendah', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
@@ -718,7 +751,7 @@ describe('formatRekapAllSosmed', () => {
 
     const message = formatRekapAllSosmed(igNarrative, ttNarrative);
 
-    expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DITBINMAS.');
+    expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DIREKTORAT BINMAS.');
   });
 });
 
@@ -2141,14 +2174,13 @@ test('choose_menu option 21 sends combined sosmed recap and files', async () => 
 
   await dirRequestHandlers.choose_menu(session, chatId, '21', waClient);
 
-  expect(mockLapharDitbinmas).toHaveBeenCalled();
-  expect(mockLapharTiktokDitbinmas).toHaveBeenCalled();
+  expect(mockLapharDitbinmas).toHaveBeenCalledWith('ditbinmas');
+  expect(mockLapharTiktokDitbinmas).toHaveBeenCalledWith('ditbinmas');
   const combined = waClient.sendMessage.mock.calls[0][1];
   expect(combined).toContain('*Laporan Harian Engagement');
-  expect(combined).toContain('*DIREKTORAT BINMAS*');
+  expect(combined).toContain('*ditbinmas*');
   expect(combined).toContain('1. 📸 *Instagram*');
   expect(combined).toContain('2. 🎵 *TikTok*');
-  expect(combined).toContain('3. 👥 *Data Personil*');
   expect(combined).toContain('Target harian');
   expect(mockSendWAFile).toHaveBeenNthCalledWith(
     1,
