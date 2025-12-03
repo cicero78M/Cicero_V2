@@ -1,5 +1,5 @@
 # Laporan Harian Engagement
-*Last updated: 2025-12-03 (client-scoped task lists, streamlined sections)*
+*Last updated: 2025-12-03 (task list fallback dari Top/Bottom, client-scoped sections)*
 
 Utility `formatRekapAllSosmed` menyusun narasi laporan gabungan Instagram dan
 TikTok untuk setiap klien. Bagian pembuka menyertakan nama klien (berdasarkan
@@ -23,20 +23,27 @@ berkomentar sehingga tim cepat melihat rentang performa harian.
   yang sudah berisi likes per tautan. Jika format berbeda, fallback akan
   mengekstrak tautan langsung dari narasi IG. Pada narasi lintas-klien,
   parser hanya memakai blok yang memuat nama klien terpilih sehingga
-  tautan milik klien lain tidak ikut terbaca.
+  tautan milik klien lain tidak ikut terbaca. Jika narasi hanya memuat
+  *Top 5 Likes* atau *Bottom 5 Likes* tanpa tautan, sistem otomatis
+  mengubah daftar peringkat itu menjadi list tugas (mempertahankan jumlah
+  likes) sehingga tidak lagi memunculkan pesan "Belum ada link tercatat".
 - **TikTok:** daftar dibangun langsung dari tautan tugas yang disebutkan di
   segmen `*Tugas TikTok*` atau `Daftar Link Konten TikTok` pada narasi harian.
   Sistem menyaring sorotan *Performa tertinggi* maupun *Performa terendah*,
   termasuk ketika highlight tersebut berada tepat di bawah daftar tugas tanpa
   pemisah baris. Pada narasi lintas-klien, parser otomatis memotong segmen
-  sesuai nama klien pilihan. Bila tidak ada tautan, laporan akan menampilkan
-  fallback "Belum ada link tercatat hari ini.".
+  sesuai nama klien pilihan. Bila tidak ada tautan, laporan kini memakai
+  fallback daftar *Top 5 Komentar* dan *Bottom 5 Komentar* (beserta jumlah
+  komentar) bila tersedia di narasi.
 
 ## Format narasi
 - Seksi laporan kini dipadatkan menjadi dua blok utama: **Instagram** dan
   **TikTok**. Blok *Data Personil* dihilangkan agar ringkasan lebih singkat.
 - Catatan penutup kini menyebut nama klien secara dinamis (mis. Direktorat
   tertentu) alih-alih selalu menyebut DITBINMAS.
+- Jika narasi TikTok kosong namun memiliki daftar peringkat, laporan tetap
+  menampilkan blok *Top 5 Komentar* dan *Bottom 5 Komentar* agar rekap tidak
+  kehilangan nama Polres dan jumlah komentar.
 
 Dokumen ini membantu operator memahami bagaimana daftar tautan muncul pada
 laporan harian serta menyiapkan narasi yang konsisten.

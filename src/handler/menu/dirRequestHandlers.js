@@ -1004,6 +1004,32 @@ function formatRekapAllSosmed(
     return dedupePreserveOrder(links);
   };
 
+  const extractRankingSections = (text, metricLabel = "") => {
+    const normalized = normalizeText(text);
+    const formatLine = (line) => {
+      const cleaned = cleanContentLine(line.replace(/^[-•]\s*/, ""));
+      if (!cleaned) return null;
+      if (metricLabel && !/likes|komentar/i.test(cleaned))
+        return `${cleaned} — ${metricLabel}`;
+      return cleaned;
+    };
+
+    const readSection = (regex) => {
+      const match = normalized.match(regex);
+      if (!match) return [];
+      return match[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .map(formatLine)
+        .filter(Boolean);
+    };
+
+    return {
+      top: readSection(/Top 5 [^:]*:\s*([\s\S]*?)(?=\n\s*Bottom 5|\n\s*Top 5|$)/i),
+      bottom: readSection(/Bottom 5 [^:]*:\s*([\s\S]*?)(?=\n\s*Top 5|\n\s*Bottom 5|$)/i),
+    };
+  };
+
   const extractIgData = (text) => {
     const normalized = normalizeText(text);
     const data = {};
@@ -1268,6 +1294,9 @@ function formatRekapAllSosmed(
   const ig = extractIgData(scopedIgNarrative);
   const tt = extractTtData(scopedTtNarrative);
 
+  const igRankingSections = extractRankingSections(scopedIgNarrative, "likes");
+  const ttRankingSections = extractRankingSections(scopedTtNarrative, "komentar");
+
   const buildContentLinkList = () => {
     const linkLines = [];
     const igLines = [ig.topContentLine, ...(ig.otherContentLines || [])]
@@ -1276,7 +1305,23 @@ function formatRekapAllSosmed(
 
     if (!igLines.length) igLines.push(...extractLinksFromText(scopedIgNarrative));
 
+    if (!igLines.length) {
+      const rankedIgLines = dedupePreserveOrder([
+        ...igRankingSections.top,
+        ...igRankingSections.bottom,
+      ]);
+      igLines.push(...rankedIgLines);
+    }
+
     const ttLines = extractTiktokTasks(scopedTtNarrative);
+
+    if (!ttLines.length) {
+      const rankedTtLines = dedupePreserveOrder([
+        ...ttRankingSections.top,
+        ...ttRankingSections.bottom,
+      ]);
+      ttLines.push(...rankedTtLines);
+    }
 
     if (igLines.length)
       igLines.forEach((line, index) =>
@@ -1299,8 +1344,41 @@ function formatRekapAllSosmed(
   const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
   const linkLines = buildContentLinkList();
 
-  const igParagraphs = [normalizeText(scopedIgNarrative)];
-  const ttParagraphs = [normalizeText(scopedTtNarrative)];
+  const igParagraphs = [];
+  const ttParagraphs = [];
+
+  const igNarrativeText = normalizeText(scopedIgNarrative).trim();
+  const ttNarrativeText = normalizeText(scopedTtNarrative).trim();
+
+  if (igNarrativeText) igParagraphs.push(igNarrativeText);
+  else if (igRankingSections.top.length || igRankingSections.bottom.length) {
+    igParagraphs.push(
+      [
+        "Top 5 Likes:",
+        ...igRankingSections.top.map((line) => `- ${line}`),
+        "",
+        "Bottom 5 Likes:",
+        ...igRankingSections.bottom.map((line) => `- ${line}`),
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }
+
+  if (ttNarrativeText) ttParagraphs.push(ttNarrativeText);
+  else if (ttRankingSections.top.length || ttRankingSections.bottom.length) {
+    ttParagraphs.push(
+      [
+        "Top 5 Komentar:",
+        ...ttRankingSections.top.map((line) => `- ${line}`),
+        "",
+        "Bottom 5 Komentar:",
+        ...ttRankingSections.bottom.map((line) => `- ${line}`),
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }
 
   const buildClosing = () => {
     const igBacklog = ig.igBacklog ?? 0;
