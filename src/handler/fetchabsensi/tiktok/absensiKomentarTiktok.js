@@ -532,18 +532,18 @@ export async function absensiKomentar(client_id, opts = {}) {
 }
 
 export async function absensiKomentarDitbinmasSimple(clientId = "DITBINMAS") {
-  const roleName = "ditbinmas";
   const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
+  const roleName = targetClientId.toLowerCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
+  const { tiktok: mainUsername, nama: clientName } = await getClientInfo(targetClientId);
+  const clientNameUpper = String(clientName || targetClientId).toUpperCase();
   const posts = await getPostsTodayByClient(targetClientId);
   if (!posts.length)
-    return "Tidak ada konten TikTok pada akun Official DIREKTORAT BINMAS hari ini.";
-
-  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(targetClientId);
+    return `Tidak ada konten TikTok pada akun Official ${clientNameUpper} hari ini.`;
   const kontenLinks = posts.map(
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
@@ -579,7 +579,7 @@ export async function absensiKomentarDitbinmasSimple(clientId = "DITBINMAS") {
 
   const allUsersRaw = await getUsersByDirektorat(roleName, targetClientId);
   const allUsers = allUsersRaw.filter(
-    (u) => u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
+    (u) => u.status === true && (u.client_id || "").toUpperCase() === targetClientId
   );
 
   const categorizedUsers = {
@@ -653,7 +653,7 @@ export async function absensiKomentarDitbinmasSimple(clientId = "DITBINMAS") {
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Komentar TikTok (Simple)\n` +
-    `*${dirName.toUpperCase()}*\n` +
+    `*${clientName.toUpperCase()}*\n` +
     `${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${posts.length}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.join("\n")}\n\n` +
@@ -671,18 +671,19 @@ export async function absensiKomentarDitbinmasSimple(clientId = "DITBINMAS") {
   return msg.trim();
 }
 
-export async function absensiKomentarDitbinmasReport() {
-  const roleName = "ditbinmas";
+export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
+  const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
+  const roleName = targetClientId.toLowerCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
-  const posts = await getPostsTodayByClient(roleName);
-  if (!posts.length)
-    return "Tidak ada konten TikTok pada akun Official DIREKTORAT BINMAS hari ini.";
+  const { tiktok: mainUsername, nama: clientName } = await getClientInfo(targetClientId);
 
-  const { tiktok: mainUsername, nama: dirName } = await getClientInfo(roleName);
+  const posts = await getPostsTodayByClient(targetClientId);
+  if (!posts.length)
+    return `Tidak ada konten TikTok pada akun Official ${clientName.toUpperCase()} hari ini.`;
   const kontenLinks = posts.map(
     (p) => `https://www.tiktok.com/@${mainUsername}/video/${p.video_id}`
   );
@@ -716,10 +717,10 @@ export async function absensiKomentarDitbinmasReport() {
     });
   }
 
-  const allUsersRaw = await getUsersByDirektorat(roleName, "DITBINMAS");
+  const allUsersRaw = await getUsersByDirektorat(roleName, targetClientId);
   const allUsers = allUsersRaw.filter(
     (u) =>
-      u.status === true && (u.client_id || "").toUpperCase() === "DITBINMAS"
+      u.status === true && (u.client_id || "").toUpperCase() === targetClientId
   );
 
   const usersByDiv = {};
@@ -821,10 +822,10 @@ export async function absensiKomentarDitbinmasReport() {
     return entry;
   });
 
-  let msg =
-    `Mohon ijin Komandan,\n\n` +
-    `📋 *Rekap Akumulasi Komentar TikTok*\n` +
-    `*Polres*: *${dirName}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+    let msg =
+      `Mohon ijin Komandan,\n\n` +
+      `📋 *Rekap Akumulasi Komentar TikTok*\n` +
+      `*Polres*: *${clientName}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${totalKonten}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
     `*Jumlah Total Personil:* ${totals.total} pers\n` +
@@ -855,11 +856,12 @@ export async function lapharTiktokDitbinmas() {
   const filename = `Absensi_All_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
   const filenameBelum = `Absensi_Belum_Engagement_Tiktok_${hari}_${dateSafe}_${timeSafe}.txt`;
 
+  const { tiktok: mainUsername, nama: clientName } = await getClientInfo(roleName);
+  const clientNameUpper = String(clientName || roleName).toUpperCase();
+
   const posts = await getPostsTodayByClient(roleName);
   if (!posts.length)
-    return { filename, text: "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini." };
-
-  const { tiktok: mainUsername } = await getClientInfo(roleName);
+    return { filename, text: `Tidak ada konten TikTok untuk ${clientNameUpper} hari ini.` };
   const kontenLinks = [];
   const commentSets = [];
   const commentCounts = [];
@@ -1197,8 +1199,8 @@ export async function lapharTiktokDitbinmas() {
 
   let text =
     `Mohon ijin Komandan,\n\n` +
-    `📋 Rekap Akumulasi Komentar TikTok\n` +
-    `*DIREKTORAT BINMAS*\n` +
+      `📋 Rekap Akumulasi Komentar TikTok\n` +
+    `*${clientNameUpper}*\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `Jumlah Konten: ${posts.length}\n` +
@@ -1215,7 +1217,7 @@ export async function lapharTiktokDitbinmas() {
 
   let narrative =
     `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
-    `📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n` +
+    `📊 *Ringkasan Analitik Komentar TikTok – ${clientNameUpper}*\n\n` +
     `*Ringkasan Kinerja*\n` +
     `• Konten dipantau : ${posts.length}\n` +
     `• Interaksi aktual : ${fmtNum(totalComments)}/${fmtNum(targetComments)} (${fmtPct(commentPercent)}%)\n` +
@@ -1238,7 +1240,7 @@ export async function lapharTiktokDitbinmas() {
 
   let textBelum =
     `Belum melaksanakan Komentar atau belum input username IG/Tiktok\n` +
-    `Polres: DIREKTORAT BINMAS\n` +
+    `Polres: ${clientNameUpper}\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `${perClientBelumBlocks.join("\n\n")}`;

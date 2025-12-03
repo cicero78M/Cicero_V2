@@ -52,6 +52,9 @@ ditampilkan bot.
 - Semua submenu dirrequest (rekap, absensi, monitoring Satbinmas Official,
   dan lainnya) dijalankan berdasarkan *Client ID* yang dipilih sehingga tidak
   selalu bergantung pada default `DITBINMAS`.
+- Seluruh menu pada kelompok **Absensi** (opsi 5–11) menggunakan *Client ID*
+  pilihan operator untuk rekap dan narasi, termasuk nama direktorat/klien yang
+  ditampilkan pada pesan hasil.
 
 ## Rekap data belum lengkap (Menu 3)
 - Label submenu diperbarui menjadi **Rekap data belum lengkap** tanpa
