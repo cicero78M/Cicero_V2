@@ -23,9 +23,12 @@ Mulai 10 Desember 2025, `formatRekapAllSosmed` menerima parameter opsional
 `igRankingData` dan `ttRankingData` (diisi dari `lapharDitbinmas` dan
 `lapharTiktokDitbinmas`). Jika narasi tidak memuat Top/Bottom 5 yang valid,
 ranking dibangun ulang dari metrik konten/komentar hari ini selama cap waktu
-(`generatedDateKey`) masih sama dengan tanggal laporan. Dengan guard tersebut,
+(`generatedDateKey`) masih sama dengan tanggal laporan. Guard ini memastikan
 urutan Top/Bottom selalu mengikuti hasil tugas harian tanpa tercampur data lama
-atau klien lain.
+atau klien lain. Mulai perbaikan 2025-12-10, ranking yang valid akan tetap
+disisipkan ke narasi (atau ditambahkan sebagai paragraf terpisah) meski teks
+narasi tidak menuliskannya, sehingga blok "Top 5" dan "Bottom 5" selalu
+tersaji ketika data harian tersedia.
 
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari data konten harian database (shortcode
