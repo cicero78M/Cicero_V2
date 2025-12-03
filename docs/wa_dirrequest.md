@@ -20,8 +20,10 @@ ditampilkan bot.
   ```
 - Fungsionalitas tetap sama: bot mengirim rekap personel yang belum melengkapi
   data dan mengelompokkannya per satker sesuai *Client ID* Direktorat yang aktif.
-  Urutan daftar pada rekap menempatkan client Direktorat peminta terlebih
-  dahulu, lalu seluruh client bertipe ORG.
+  Urutan daftar pada rekap kini menempatkan **hanya** client Direktorat
+  peminta yang memiliki role sama dengan permintaan di posisi pertama, lalu
+  diikuti client bertipe **ORG** yang memiliki role sama dengan *Client ID*
+  peminta (client Direktorat lain otomatis diabaikan).
 
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar

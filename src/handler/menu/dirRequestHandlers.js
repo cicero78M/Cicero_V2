@@ -300,6 +300,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
     const roleName = (filterRole || clientId).toLowerCase();
     const polresIds = (await getClientsByRole(roleName)) || [];
+    const polresIdSet = new Set(polresIds.map((id) => id.toLowerCase()));
     const clientIdLower = clientId.toLowerCase();
 
     const seen = new Set();
@@ -327,10 +328,20 @@ async function formatRekapUserData(clientId, roleFlag = null) {
       })
     );
 
-    const withData = entries.filter(
+    const filteredEntries = entries.filter((entry) => {
+      if (entry.type === "direktorat") {
+        return entry.cid === clientIdLower;
+      }
+      if (entry.type === "org") {
+        return polresIdSet.has(entry.cid);
+      }
+      return false;
+    });
+
+    const withData = filteredEntries.filter(
       (e) => e.cid === clientIdLower || e.stat.total > 0
     );
-    const noData = entries.filter(
+    const noData = filteredEntries.filter(
       (e) => e.stat.total === 0 && e.cid !== clientIdLower
     );
 
@@ -372,7 +383,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     );
     const noDataLines = noData.map((e, idx) => `${idx + 1}. ${e.name}`);
 
-    const totals = entries.reduce(
+    const totals = filteredEntries.reduce(
       (acc, e) => {
         acc.total += e.stat.total;
         acc.insta += e.stat.insta;
