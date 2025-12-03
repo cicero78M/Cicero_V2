@@ -652,11 +652,35 @@ describe('formatRekapAllSosmed', () => {
 
     const message = formatRekapAllSosmed(igNarrative, ttNarrative, clientName);
 
+    const linkLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('- IG') || line.startsWith('- TikTok'));
+
     expect(message).toContain('*Laporan Harian Engagement – Rabu, 27 Agustus 2025*');
     expect(message).toContain(`*${clientName}*`);
     expect(message).toContain('List Link Tugas Instagram dan Tiktok Hari ini :');
-    expect(message).toContain('- IG: Belum ada link tercatat hari ini.');
-    expect(message).toContain('- TikTok: Belum ada link tercatat hari ini.');
+    expect(linkLines).toEqual([
+      '- IG 1. Satker A – 500 likes',
+      '- IG 2. Satker B – 450 likes',
+      '- IG 3. Satker C – 400 likes',
+      '- IG 4. Satker D – 350 likes',
+      '- IG 5. Satker E – 300 likes',
+      '- IG 6. Satker V – 80 likes',
+      '- IG 7. Satker W – 70 likes',
+      '- IG 8. Satker X – 60 likes',
+      '- IG 9. Satker Y – 50 likes',
+      '- IG 10. Satker Z – 40 likes',
+      '- TikTok 1. Satker Alpha – 120 komentar',
+      '- TikTok 2. Satker Beta – 110 komentar',
+      '- TikTok 3. Satker Gamma – 100 komentar',
+      '- TikTok 4. Satker Delta – 90 komentar',
+      '- TikTok 5. Satker Epsilon – 80 komentar',
+      '- TikTok 6. Satker U – 12 komentar',
+      '- TikTok 7. Satker T – 11 komentar',
+      '- TikTok 8. Satker S – 10 komentar',
+      '- TikTok 9. Satker R – 9 komentar',
+      '- TikTok 10. Satker Q – 8 komentar',
+    ]);
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
     expect(message).toContain('Top 5 Likes:');
