@@ -7,6 +7,20 @@ grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
 
+## Rekap Kelengkapan data Personil Satker (Menu 1)
+- Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**
+  Contoh cuplikan bagian *Rekap Data* pada menu utama:
+
+  ```
+  📊 *Rekap Data*
+  1️⃣ Rekap Kelengkapan data Personil Satker.
+  2️⃣ Ringkasan pengisian data personel
+  3️⃣ Rekap data belum lengkap
+  4️⃣ Rekap Matriks Update Satker
+  ```
+- Fungsionalitas tetap sama: bot mengirim rekap personel yang belum melengkapi
+  data dan mengelompokkannya per satker sesuai *Client ID* Direktorat yang aktif.
+
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
   *Client ID* bertipe **Direktorat** yang berstatus aktif.
