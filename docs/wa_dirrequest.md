@@ -141,16 +141,14 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
   Direktorat** yang aktif dengan status **IG** dan **TikTok** aktif. Eksekusi
   dilakukan **berurutan** mengikuti urutan `client_id` dari tabel `clients`.
-- Untuk `DITBINMAS`, laporan dikirim ke **Group WA** yang tersimpan di kolom
-  `client_group` (format wajib `@g.us`).
-- Untuk `BIDHUMAS`, laporan dikirim ke nomor **Super Admin** dan **Operator**
-  (`client_super` dan `client_operator`) yang diubah menjadi WID `@c.us`.
-- Client Direktorat lain menggunakan **Group WA** masing-masing dari
-  `client_group`. Jika kolom kosong/tidak valid maka laporan dilewati untuk
-  client tersebut.
+- Pesan laporan tugas kini dikirim **hanya ke Group WA** milik masing-masing
+  client berdasarkan kolom `client_group` (format wajib `@g.us`). Nomor
+  **Super Admin** dan **Operator** tidak lagi dipakai untuk cron ini.
+- Client Direktorat yang tidak memiliki group valid akan dilewati sehingga
+  tidak ada pesan broadcast keluar.
 - Seluruh **log proses** cron tetap dikirim ke nomor **ADMIN_WHATSAPP** untuk
-  pemantauan admin, sementara pesan tugas/respons dan perubahan post hanya
-  dikirim ke penerima Group/Super Admin/Operator sesuai aturan di atas.
+  pemantauan admin, sementara pesan tugas/respons hanya dikirim ke Group WA
+  per client.
 - Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
   Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
   rekap harian tidak lagi dikirim ke nomor pribadi.

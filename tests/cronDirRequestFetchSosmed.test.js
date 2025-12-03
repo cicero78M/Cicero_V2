@@ -78,6 +78,7 @@ beforeEach(async () => {
   mockFindAllActiveDirektoratWithSosmed.mockResolvedValue([
     {
       client_id: 'DITBINMAS',
+      client_type: 'Direktorat',
       client_group: '120363419830216549@g.us',
       client_operator: '',
       client_super: '',
@@ -111,37 +112,38 @@ describe('normalizeGroupId', () => {
 });
 
 describe('getRecipientsForClient', () => {
-  test('accepts valid numbers and preserves suffixed WIDs', () => {
+  test('returns only WA group for directorate clients', () => {
     const recipients = getRecipientsForClient({
       client_id: 'bidhumas',
+      client_type: 'Direktorat',
       client_group: '120363419830216549@g.us',
       client_operator: '081234567890',
       client_super: '628987654321@s.whatsapp.net',
     });
 
-    expect(recipients).toEqual(
-      new Set(['6281234567890@c.us', '628987654321@s.whatsapp.net'])
-    );
+    expect(recipients).toEqual(new Set(['120363419830216549@g.us']));
   });
 
-  test('rejects too-short numbers', () => {
+  test('rejects non-directorate clients and invalid groups', () => {
     const recipients = getRecipientsForClient({
       client_id: 'BIDHUMAS',
+      client_type: 'fungsi',
       client_operator: '12345',
       client_super: '+62 81-23AB',
+      client_group: 'invalid-group@g.us',
     });
 
     expect(recipients.size).toBe(0);
   });
 
-  test('handles mixed formatting and keeps only valid WIDs', () => {
+  test('normalizes group invite links', () => {
     const recipients = getRecipientsForClient({
-      client_id: 'BIDHUMAS',
-      client_operator: ' 0812-34-5678 ',
-      client_super: 'not-a-number',
+      client_id: 'DITBINMAS',
+      client_type: 'direktorat',
+      client_group: 'https://chat.whatsapp.com/invite/120363419830216549',
     });
 
-    expect(recipients).toEqual(new Set(['62812345678@c.us']));
+    expect(recipients).toEqual(new Set(['120363419830216549@g.us']));
   });
 });
 
