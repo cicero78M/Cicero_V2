@@ -301,9 +301,20 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     const roleName = (filterRole || clientId).toLowerCase();
     const polresIds = (await getClientsByRole(roleName)) || [];
     const clientIdLower = clientId.toLowerCase();
-    const allIds = Array.from(
-      new Set([clientIdLower, ...polresIds.map((id) => id.toLowerCase()), ...Object.keys(groups)])
-    );
+
+    const seen = new Set();
+    const allIds = [];
+    const addId = (id) => {
+      const lower = (id || '').toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        allIds.push(lower);
+      }
+    };
+
+    addId(clientIdLower);
+    polresIds.forEach((id) => addId(id));
+    Object.keys(groups).forEach((id) => addId(id));
 
     const entries = await Promise.all(
       allIds.map(async (cid) => {
@@ -311,30 +322,44 @@ async function formatRekapUserData(clientId, roleFlag = null) {
           groups[cid] || { total: 0, insta: 0, tiktok: 0, complete: 0 };
         const c = await findClientById(cid);
         const name = (c?.nama || cid).toUpperCase();
-        return { cid, name, stat };
+        const type = c?.client_type?.toLowerCase() || null;
+        return { cid, name, stat, type };
       })
     );
 
     const withData = entries.filter(
-      (e) => e.cid === "ditbinmas" || e.stat.total > 0
+      (e) => e.cid === clientIdLower || e.stat.total > 0
     );
     const noData = entries.filter(
-      (e) => e.stat.total === 0 && e.cid !== "ditbinmas"
+      (e) => e.stat.total === 0 && e.cid !== clientIdLower
     );
 
-    withData.sort((a, b) => {
-      if (a.cid === "ditbinmas") return -1;
-      if (b.cid === "ditbinmas") return 1;
+    const compareEntries = (a, b) => {
+      if (a.cid === clientIdLower) return -1;
+      if (b.cid === clientIdLower) return 1;
+
+      const aOrg = a.type === "org";
+      const bOrg = b.type === "org";
+      if (aOrg !== bOrg) return aOrg ? -1 : 1;
+
       if (a.stat.complete !== b.stat.complete)
         return b.stat.complete - a.stat.complete;
       if (a.stat.total !== b.stat.total) return b.stat.total - a.stat.total;
       return a.name.localeCompare(b.name);
-    });
-    noData.sort((a, b) => {
-      if (a.cid === "ditbinmas") return -1;
-      if (b.cid === "ditbinmas") return 1;
+    };
+
+    const compareNoData = (a, b) => {
+      if (a.cid === clientIdLower) return -1;
+      if (b.cid === clientIdLower) return 1;
+
+      const aOrg = a.type === "org";
+      const bOrg = b.type === "org";
+      if (aOrg !== bOrg) return aOrg ? -1 : 1;
       return a.name.localeCompare(b.name);
-    });
+    };
+
+    withData.sort(compareEntries);
+    noData.sort(compareNoData);
 
     const withDataLines = withData.map(
       (e, idx) =>

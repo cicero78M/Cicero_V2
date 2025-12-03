@@ -20,6 +20,8 @@ ditampilkan bot.
   ```
 - Fungsionalitas tetap sama: bot mengirim rekap personel yang belum melengkapi
   data dan mengelompokkannya per satker sesuai *Client ID* Direktorat yang aktif.
+  Urutan daftar pada rekap menempatkan client Direktorat peminta terlebih
+  dahulu, lalu seluruh client bertipe ORG.
 
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
@@ -36,7 +38,9 @@ ditampilkan bot.
 - Menu ini mengeksekusi rekap berdasarkan *Client ID* bertipe **Direktorat**
   yang sedang aktif. Data yang diringkas mengikuti role direktorat tersebut
   (misalnya `DITBINMAS`, `DITLANTAS`, atau `BIDHUMAS`) tanpa mengunci hanya ke
-  Ditbinmas.
+  Ditbinmas. Ketika menggunakan role tambahan (*roleFlag*), rekap hanya
+  menghitung personel yang memiliki role tersebut dan/atau terikat ke
+  *Client ID* peminta.
 - Output tetap memuat daftar personel yang belum mengisi Instagram/TikTok per
   divisi beserta salam dan stempel waktu eksekusi.
 
