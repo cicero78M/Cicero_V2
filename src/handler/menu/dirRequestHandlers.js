@@ -960,21 +960,9 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
           minimumFractionDigits: 1,
           maximumFractionDigits: 1,
         });
-  const formatRatio = (numerator, denominator, percent) => {
-    if (numerator == null || denominator == null)
-      return null;
-    const parts = [
-      `${formatInteger(numerator)}/${formatInteger(denominator)}`,
-    ];
-    if (percent != null) parts.push(`(${formatPercent(percent)}%)`);
-    return parts.join(" ");
-  };
 
   const cleanContentLine = (line) =>
     line ? line.replace(/^\d+\.\s*/, "").trim() : null;
-
-  const stripTrailingPunctuation = (text) =>
-    text ? text.replace(/[.;:,]+\s*$/u, "").trim() : text;
 
   const combineSentences = (segments) =>
     segments
@@ -1296,116 +1284,8 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
   const linkLines = buildContentLinkList();
 
-  const likeRatio = formatRatio(ig.totalLikes, ig.totalLikesTarget, ig.likePercent);
-  const igTargetText = (() => {
-    if (ig.targetLikes == null) return null;
-    if (ig.likeGap != null && ig.likeGap > 0)
-      return `Selisih ${formatInteger(
-        ig.likeGap
-      )} dari target ${formatInteger(
-        ig.targetLikes
-      )} likes membuka ruang kolaborasi lembut untuk mengejar momentum hari ini.`;
-    return `Target ${formatInteger(
-      ig.targetLikes
-    )} likes sudah tercapai; pola sukses ini bisa menjadi contoh hangat bagi satker lain.`;
-  })();
-  const igContributorSentence = ig.topContributor
-    ? `Kontribusi utama mengalir dari ${stripTrailingPunctuation(
-        ig.topContributor
-      )}, menghadirkan energi positif bagi jajaran DITBINMAS.`
-    : null;
-  const igContentSentence = ig.topContentLine
-    ? `Konten unggulan ${cleanContentLine(
-        ig.topContentLine
-      )} memancing percakapan hangat dan menjadi jangkar perhatian publik.`
-    : null;
-  const igGapSentence = ig.contentGapLine
-    ? `Sebaran masih timpang—${ig.contentGapLine}—kita dapat menata ulang ritme distribusi agar setiap cerita ikut bersinar.`
-    : null;
-
-  const igParagraphs = [];
-  igParagraphs.push(
-    combineSentences([
-      ig.contentCount != null
-        ? `Cicero menangkap ${formatInteger(
-            ig.contentCount
-          )} konten aktif pada platform Instagram yang meramaikan etalase ruang digital pembinaan masyarakat hari ini.`
-        : null,
-      likeRatio
-        ? `Dukungan rekan dan respon warganet tercermin pada ${likeRatio}, menguatkan narasi pendampingan yang dibawa DITBINMAS.`
-        : null,
-      igTargetText,
-    ])
-  );
-  igParagraphs.push(combineSentences([igContributorSentence, igContentSentence, igGapSentence]));
-
-  const commentRatio = formatRatio(
-    tt.totalComments,
-    tt.targetComments,
-    tt.commentPercent
-  );
-  const participantRatio = formatRatio(
-    tt.hitTarget,
-    tt.eligible,
-    tt.participationPercent
-  );
-  const activationRatio = formatRatio(
-    tt.activeCount,
-    tt.activeEligible,
-    tt.activationPercent
-  );
-
-  const ttBacklogSentence =
-    tt.backlog != null
-      ? `Masih ada ${formatInteger(
-          tt.backlog
-        )} komentar yang menunggu respon (${tt.backlogFocus}); sentuhan ringan tiap hari akan mempercepat penutupan.`
-      : null;
-  const ttMissingSentence =
-    tt.missingHandle != null
-      ? `Sebanyak ${formatInteger(
-          tt.missingHandle
-        )} akun belum ter-input (${tt.missingHandleFocus}); melengkapinya akan memperkuat jangkauan komunitas.`
-      : null;
-  const ttContributorSentence = (() => {
-    if (tt.topContributor && tt.topSatkers)
-      return `Pelaksanaan Likes dan Komentar Tertinggi berurutan dipimpin oleh ${tt.topContributor}, disambut ${tt.topSatkers} yang menjaga irama komentar.`;
-    if (tt.topContributor)
-      return `Pelaksanaan Likes dan Komentar Tertinggi dipimpin oleh ${tt.topContributor}.`;
-    if (tt.topSatkers)
-      return `Pelaksanaan komentar dijaga oleh ${tt.topSatkers}.`;
-    return null;
-  })();
-
-  const ttParagraphs = [];
-  ttParagraphs.push(
-    combineSentences([
-      tt.contentCount != null
-        ? `Di platform TikTok, Cicero merekam ${formatInteger(
-            tt.contentCount
-          )} konten yang membuat lini masa DITBINMAS tetap hidup.`
-        : null,
-      commentRatio
-        ? `Gelombang interaksi ${commentRatio} menggambarkan partisipasi yang terus bergerak.`
-        : null,
-      participantRatio
-        ? `Sebaran personel yang mencapai target berada pada ${participantRatio}, menandakan kebiasaan positif mulai mengakar.`
-        : null,
-      activationRatio
-        ? `Aktivasi harian tercatat ${activationRatio}, menegaskan komunitas semakin solid.`
-        : null,
-    ])
-  );
-  ttParagraphs.push(
-    combineSentences([ttContributorSentence, ttBacklogSentence, ttMissingSentence])
-  );
-  if (tt.failureNote)
-    ttParagraphs.push(
-      combineSentences([
-        `Catatan teknis: ${tt.failureNote}.`,
-        "Tim analitik siap melakukan reset sensor jika diperlukan.",
-      ])
-    );
+  const igParagraphs = [normalizeText(igNarrative)];
+  const ttParagraphs = [normalizeText(ttNarrative)];
 
   const personilParagraphs = [];
   if (ig.personilTotal != null) {

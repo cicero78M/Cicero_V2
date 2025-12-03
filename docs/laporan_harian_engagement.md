@@ -9,7 +9,10 @@ Cron harian Ditbinmas kini otomatis memanggil narasi IG (laphar Instagram) dan
 TT (laphar TikTok), memformati keduanya dengan `formatRekapAllSosmed`, lalu
 mengirimkan narasi ke seluruh penerima WA sebelum lampiran rekap dikirim.
 Jika narasi tidak tersedia, cron tetap mengirim lampiran dan mencatat fallback
-di log debug sehingga operator mudah melakukan pengecekan.
+di log debug sehingga operator mudah melakukan pengecekan. Narasi IG kini
+hanya menampilkan daftar Top 5 dan Bottom 5 Polres berdasarkan likes, sementara
+narasi TikTok menampilkan Top 5 dan Bottom 5 Polres berdasarkan jumlah akun
+berkomentar sehingga tim cepat melihat rentang performa harian.
 
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari poin *top content* dan daftar konten lain

@@ -62,22 +62,12 @@ test('builds analytical narrative with key metrics', async () => {
 
   const result = await lapharTiktokDitbinmas();
 
-  expect(result.narrative).toMatch(/📊 \*Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS\*/);
-  expect(result.narrative).toMatch(/• Konten dipantau : 2/);
-  expect(result.narrative).toMatch(/• Interaksi aktual : 3\/8 \(37,5%\)/);
-  expect(result.narrative).toMatch(/• Personel mencapai target : 1\/3 \(33,3%\)/);
-  expect(result.narrative).toMatch(/• Personel aktif \(≥1 konten\) : 2\/3 \(66,7%\)/);
-  expect(result.narrative).toMatch(/• Partisipan unik : 2 akun/);
-  expect(result.narrative).toMatch(/• Performa tertinggi : Caption A unggulan – 2 akun/);
-  expect(result.narrative).toMatch(/• Performa terendah : Caption B evaluasi – 1 akun/);
-  expect(result.narrative).toMatch(/• Penyumbang komentar terbesar : POLRES A \(1\), POLRES B \(0\)/);
-  expect(result.narrative).toMatch(/• Personel belum komentar : 1 \(prioritas: POLRES B \(1\)\)/);
-  expect(result.narrative).toMatch(/• Belum input akun TikTok : 1 \(sumber utama: POLRES A \(1\)\)/);
+  expect(result.narrative).toMatch(/Top 5 Komentar/);
+  expect(result.narrative).toMatch(/Bottom 5 Komentar/);
+  expect(result.narrative).toMatch(/POLRES A/);
   expect(result.text).toMatch(/Distribusi komentar per konten:/);
   expect(result.text).toMatch(/1\. https:\/\/www\.tiktok\.com\/\@ditbinmas\/video\/v1 — 2 akun/);
-  expect(result.narrative).toMatch(/\*Distribusi Komentar per Konten\*/);
-  expect(result.narrative).toMatch(/1\. https:\/\/www\.tiktok\.com\/\@ditbinmas\/video\/v1 — 2 akun/);
-  expect(result.narrative).toMatch(/Demikian Komandan, terimakasih\./);
+  expect(result.narrative).toMatch(/DIREKTORAT BINMAS/);
 });
 
 afterAll(() => {
