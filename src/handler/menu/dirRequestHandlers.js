@@ -2141,13 +2141,13 @@ export const dirRequestHandlers = {
         "3️⃣ Rekap data belum lengkap\n" +
         "4️⃣ Rekap Matriks Update Satker\n\n" +
         "📅 *Absensi*\n" +
-        "5️⃣ Absensi like Ditbinmas\n" +
-        "6️⃣ Absensi like Ditbinmas Simple\n" +
+        "5️⃣ Absensi like Direktorat/Bidang\n" +
+        "6️⃣ Absensi like Direktorat/Bidang Simple\n" +
         "7️⃣ Absensi like Instagram\n" +
         "8️⃣ Absensi komentar TikTok\n" +
-        "9️⃣ Absensi komentar Ditbinmas Simple\n" +
-        "1️⃣0️⃣ Absensi komentar Ditbinmas\n" +
-        "1️⃣1️⃣ Absensi user web dashboard Ditbinmas\n\n" +
+        "9️⃣ Absensi komentar Direktorat/Bidang Simple\n" +
+        "1️⃣0️⃣ Absensi komentar Direktorat/Bidang\n" +
+        "1️⃣1️⃣ Absensi user web dashboard Direktorat/Bidang\n\n" +
         "📥 *Pengambilan Data*\n" +
         "1️⃣2️⃣ Ambil konten & like Instagram\n" +
         "1️⃣3️⃣ Ambil like Instagram saja\n" +
@@ -2155,8 +2155,8 @@ export const dirRequestHandlers = {
         "1️⃣5️⃣ Ambil komentar TikTok saja\n" +
         "1️⃣6️⃣ Ambil semua sosmed & buat tugas\n\n" +
         "📝 *Laporan*\n" +
-        "1️⃣7️⃣ Laporan harian Instagram Ditbinmas\n" +
-        "1️⃣8️⃣ Laporan harian TikTok Ditbinmas\n" +
+        "1️⃣7️⃣ Laporan harian Instagram Direktorat/Bidang\n" +
+        "1️⃣8️⃣ Laporan harian TikTok Direktorat/Bidang\n" +
         "1️⃣9️⃣ Rekap like Instagram (Excel)\n" +
         "2️⃣0️⃣ Rekap komentar TikTok (Excel)\n" +
         "2️⃣1️⃣ Rekap gabungan semua sosmed\n" +
