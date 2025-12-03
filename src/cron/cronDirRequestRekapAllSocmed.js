@@ -14,6 +14,7 @@ import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 import { formatRekapAllSosmed } from "../handler/menu/dirRequestHandlers.js";
 import { lapharDitbinmas } from "../handler/fetchabsensi/insta/absensiLikesInsta.js";
 import { lapharTiktokDitbinmas } from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
+import { findClientById } from "../service/clientService.js";
 
 const CLIENT_ID = "DITBINMAS";
 
@@ -28,6 +29,8 @@ export async function runCron() {
     includeSuper: false,
     includeOperator: false,
   });
+  const client = await findClientById(CLIENT_ID);
+  const clientName = client?.nama || CLIENT_ID;
   if (!recipients.size) {
     sendDebug({
       tag: "CRON DIRREQ ALL SOCMED",
@@ -74,7 +77,8 @@ export async function runCron() {
 
         const formattedNarrative = formatRekapAllSosmed(
           igReport?.narrative,
-          ttReport?.narrative
+          ttReport?.narrative,
+          clientName
         );
 
         narrativeMessage = formattedNarrative?.trim() || null;

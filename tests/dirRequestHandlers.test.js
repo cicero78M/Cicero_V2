@@ -644,15 +644,16 @@ describe('formatRekapAllSosmed', () => {
   test('structures report with numbered sections and backlog/closing insights', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
+    const clientName = 'Direktorat Samapta';
 
     const igNarrative = `Mohon Ijin Komandan, rekap singkat likes Instagram hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📸 Instagram\nTop 5 Likes:\n1. Satker A – 500 likes\n2. Satker B – 450 likes\n3. Satker C – 400 likes\n4. Satker D – 350 likes\n5. Satker E – 300 likes\n\nBottom 5 Likes:\n1. Satker V – 80 likes\n2. Satker W – 70 likes\n3. Satker X – 60 likes\n4. Satker Y – 50 likes\n5. Satker Z – 40 likes`;
 
     const ttNarrative = `Mohon Ijin Komandan, rekap singkat komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n🎵 TikTok\nTop 5 Komentar:\n1. Satker Alpha – 120 komentar\n2. Satker Beta – 110 komentar\n3. Satker Gamma – 100 komentar\n4. Satker Delta – 90 komentar\n5. Satker Epsilon – 80 komentar\n\nBottom 5 Komentar:\n1. Satker U – 12 komentar\n2. Satker T – 11 komentar\n3. Satker S – 10 komentar\n4. Satker R – 9 komentar\n5. Satker Q – 8 komentar`;
 
-    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+    const message = formatRekapAllSosmed(igNarrative, ttNarrative, clientName);
 
     expect(message).toContain('*Laporan Harian Engagement – Rabu, 27 Agustus 2025*');
-    expect(message).toContain('*DIREKTORAT BINMAS*');
+    expect(message).toContain(`*${clientName}*`);
     expect(message).toContain('List Link Tugas Instagram dan Tiktok Hari ini :');
     expect(message).toContain('- IG: Belum ada link tercatat hari ini.');
     expect(message).toContain('- TikTok: Belum ada link tercatat hari ini.');

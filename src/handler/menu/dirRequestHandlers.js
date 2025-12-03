@@ -933,7 +933,11 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
 return lines.join("\n").trim();
 }
 
-function formatRekapAllSosmed(igNarrative, ttNarrative) {
+function formatRekapAllSosmed(
+  igNarrative,
+  ttNarrative,
+  clientName = "DIREKTORAT BINMAS"
+) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID", {
@@ -1280,6 +1284,10 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
     return linkLines;
   };
 
+  const resolvedClientName = (clientName || "DIREKTORAT BINMAS").trim()
+    ? (clientName || "DIREKTORAT BINMAS").trim()
+    : "DIREKTORAT BINMAS";
+
   const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
   const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
   const linkLines = buildContentLinkList();
@@ -1365,7 +1373,7 @@ function formatRekapAllSosmed(igNarrative, ttNarrative) {
   return [
     header,
     "",
-    "*DIREKTORAT BINMAS*",
+    `*${resolvedClientName}*`,
     "",
     linkHeader,
     ...linkLines,
@@ -1679,7 +1687,13 @@ async function performAction(
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         const [ig, tt] = await Promise.all([lapharDitbinmas(), lapharTiktokDitbinmas()]);
-        const narrative = formatRekapAllSosmed(ig.narrative, tt.narrative);
+        const client = await findClientById(clientId);
+        const clientName = client?.nama || clientId;
+        const narrative = formatRekapAllSosmed(
+          ig.narrative,
+          tt.narrative,
+          clientName
+        );
         if (narrative) {
           await waClient.sendMessage(chatId, narrative);
         }
