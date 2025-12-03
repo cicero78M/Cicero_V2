@@ -29,10 +29,14 @@ jest.unstable_mockModule('../src/handler/fetchpost/tiktokFetchPost.js', () => ({
 jest.unstable_mockModule('../src/handler/fetchabsensi/sosmedTask.js', () => ({
   generateSosmedTaskMessage: mockGenerateMsg,
 }));
-jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
-  safeSendMessage: mockSafeSend,
-  getAdminWAIds: () => ['123@c.us'],
-}));
+jest.unstable_mockModule('../src/utils/waHelper.js', async () => {
+  const actual = await import('../src/utils/waHelper.js');
+  return {
+    ...actual,
+    safeSendMessage: mockSafeSend,
+    getAdminWAIds: () => ['123@c.us'],
+  };
+});
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
 }));
@@ -53,6 +57,7 @@ jest.unstable_mockModule('../src/model/clientModel.js', () => ({
 }));
 
 let runCron;
+let getRecipientsForClient;
 let normalizeGroupId;
 
 beforeEach(async () => {
@@ -78,7 +83,7 @@ beforeEach(async () => {
       client_super: '',
     },
   ]);
-  ({ runCron, normalizeGroupId } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
+  ({ runCron, getRecipientsForClient, normalizeGroupId } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
 });
 
 describe('normalizeGroupId', () => {
@@ -102,6 +107,41 @@ describe('normalizeGroupId', () => {
   test('rejects non group tokens even in invite url', () => {
     expect(normalizeGroupId('https://chat.whatsapp.com/invite/ABCDEFG')).toBeNull();
     expect(normalizeGroupId('invalid-group@g.us')).toBeNull();
+  });
+});
+
+describe('getRecipientsForClient', () => {
+  test('accepts valid numbers and preserves suffixed WIDs', () => {
+    const recipients = getRecipientsForClient({
+      client_id: 'bidhumas',
+      client_group: '120363419830216549@g.us',
+      client_operator: '081234567890',
+      client_super: '628987654321@s.whatsapp.net',
+    });
+
+    expect(recipients).toEqual(
+      new Set(['6281234567890@c.us', '628987654321@s.whatsapp.net'])
+    );
+  });
+
+  test('rejects too-short numbers', () => {
+    const recipients = getRecipientsForClient({
+      client_id: 'BIDHUMAS',
+      client_operator: '12345',
+      client_super: '+62 81-23AB',
+    });
+
+    expect(recipients.size).toBe(0);
+  });
+
+  test('handles mixed formatting and keeps only valid WIDs', () => {
+    const recipients = getRecipientsForClient({
+      client_id: 'BIDHUMAS',
+      client_operator: ' 0812-34-5678 ',
+      client_super: 'not-a-number',
+    });
+
+    expect(recipients).toEqual(new Set(['62812345678@c.us']));
   });
 });
 
