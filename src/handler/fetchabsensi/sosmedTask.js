@@ -129,7 +129,8 @@ export async function generateSosmedTaskMessage(
   });
 
   let msg =
-    "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media Ditbinmas.\n\n" +
+    "Mohon Ijin Komandan, Senior, Rekan Operator dan Personil pelaksana Tugas Likes dan komentar Sosial Media " +
+    `${clientName}.\n\n` +
     "Tugas Likes dan Komentar Konten Instagram dan Tiktok \n" +
     `${clientName}\n` +
     `Jumlah konten Instagram hari ini: ${shortcodes.length} \n` +

@@ -172,6 +172,11 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
   Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
   rekap harian tidak lagi dikirim ke nomor pribadi.
+- Pesan tugas **menggunakan nama client** pada salam pembuka (contoh: BID
+  HUMAS) sehingga tidak lagi terpaku pada label Ditbinmas.
+- Jika akun Direktorat belum memiliki relasi `insta_post_roles`, cron akan
+  otomatis membaca konten berdasarkan `client_id` agar daftar tugas tidak
+  kosong (misalnya pada client BID HUMAS).
 
 ### Format Nomor Super Admin & Operator
 - Kolom `client_super` dan `client_operator` menerima:
