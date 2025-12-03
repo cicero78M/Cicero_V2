@@ -24,9 +24,6 @@ ditampilkan bot.
   peminta yang memiliki role sama dengan permintaan di posisi pertama, lalu
   diikuti client bertipe **ORG** yang memiliki role sama dengan *Client ID*
   peminta (client Direktorat lain otomatis diabaikan).
-- Data rekap kini mematuhi daftar *client_id* yang diotorisasi pada dashboard
-  user (field `client_ids`). Satker yang tidak termasuk daftar tersebut tidak
-  akan muncul dalam rekap meskipun memiliki role Direktorat yang sama.
 - Filter role menyesuaikan tipe client: permintaan dari client bertipe
   **Direktorat** otomatis memakai role default setara *Client ID* ketika
   operator tidak mengirim *roleFlag*, sedangkan client **ORG** tetap menghargai
@@ -46,9 +43,6 @@ ditampilkan bot.
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
   *Client ID* bertipe **Direktorat** yang berstatus aktif.
-- Daftar client otomatis difilter berdasarkan `client_ids` yang terasosiasi
-  dengan dashboard user. Operator tidak dapat memilih client di luar daftar
-  tersebut.
 - Balas dengan angka pada daftar atau langsung mengetik *Client ID* untuk
   memilih target. Balasan `batal` menutup menu.
 - Semua submenu dirrequest (rekap, absensi, monitoring Satbinmas Official,

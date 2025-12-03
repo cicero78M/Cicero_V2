@@ -1419,38 +1419,12 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         return;
       }
 
-      const allowedClientIds = Array.isArray(du.client_ids)
-        ? Array.from(
-            new Set(
-              du.client_ids
-                .map((id) => (id ? String(id).toUpperCase() : ""))
-                .filter(Boolean)
-            )
-          )
-        : [];
-
-      const allowedDirectorateClients =
-        allowedClientIds.length > 0
-          ? activeDirectorateClients.filter((client) =>
-              allowedClientIds.includes((client.client_id || "").toUpperCase())
-            )
-          : activeDirectorateClients;
-
-      if (!allowedDirectorateClients.length) {
-        await waClient.sendMessage(
-          chatId,
-          "❌ Client Direktorat Anda belum dikonfigurasi. Silakan hubungi administrator."
-        );
-        return;
-      }
-
       setSession(chatId, {
         menu: "dirrequest",
         step: "choose_client",
         role: du.role,
         username: du.username,
-        dir_clients: allowedDirectorateClients,
-        allowedClientIds,
+        dir_clients: activeDirectorateClients,
       });
       await dirRequestHandlers.choose_client(
         getSession(chatId),
