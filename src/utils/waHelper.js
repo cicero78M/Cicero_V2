@@ -12,12 +12,23 @@ const spreadsheetMimeTypes = {
 const defaultMimeType = spreadsheetMimeTypes['.xlsx'];
 
 const validWaSuffixes = ['@c.us', '@s.whatsapp.net', '@g.us'];
+export const userWaSuffixes = ['@c.us', '@s.whatsapp.net'];
+export const minPhoneDigitLength = 8;
 
 export function isValidWid(wid) {
   return (
     typeof wid === 'string' &&
     validWaSuffixes.some(suffix => wid.endsWith(suffix))
   );
+}
+
+export function extractPhoneDigits(value) {
+  return String(value ?? '')
+    .replace(/\D/g, '');
+}
+
+export function isValidPhoneDigits(token, minLength = minPhoneDigitLength) {
+  return extractPhoneDigits(token).length >= minLength;
 }
 
 export function getAdminWhatsAppList() {
@@ -122,16 +133,34 @@ export function isAdminWhatsApp(number) {
 
 // Konversi nomor ke WhatsAppID (xxxx@c.us)
 export function formatToWhatsAppId(nohp) {
-  let number = nohp.replace(/\D/g, "");
-  if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
-  return `${number}@c.us`;
+  const number = extractPhoneDigits(nohp);
+  if (!number) return '';
+  const normalized = number.startsWith('62') ? number : '62' + number.replace(/^0/, '');
+  return `${normalized}@c.us`;
 }
 
 // Normalisasi nomor WhatsApp ke awalan 62 tanpa suffix @c.us
 export function normalizeWhatsappNumber(nohp) {
-  let number = String(nohp).replace(/\D/g, "");
+  let number = extractPhoneDigits(nohp);
   if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
   return number;
+}
+
+export function normalizeUserWhatsAppId(contact, minLength = minPhoneDigitLength) {
+  if (!contact) return null;
+
+  const trimmed = String(contact).trim();
+  if (!trimmed) return null;
+
+  const hasUserSuffix = userWaSuffixes.some((suffix) => trimmed.endsWith(suffix));
+  if (hasUserSuffix) {
+    return isValidPhoneDigits(trimmed, minLength) ? trimmed : null;
+  }
+
+  const digits = extractPhoneDigits(trimmed);
+  if (!isValidPhoneDigits(digits, minLength)) return null;
+
+  return formatToWhatsAppId(digits);
 }
 
 // Format output data client (untuk WA)

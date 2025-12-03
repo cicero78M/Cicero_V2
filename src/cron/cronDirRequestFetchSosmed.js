@@ -9,7 +9,7 @@ import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikes
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
-import { getAdminWAIds, safeSendMessage } from "../utils/waHelper.js";
+import { getAdminWAIds, normalizeUserWhatsAppId, safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getVideoIdsTodayByClient } from "../model/tiktokPostModel.js";
@@ -47,22 +47,13 @@ export function normalizeGroupId(groupId) {
   return /^\d{10,22}@g\.us$/.test(candidate) ? candidate.toLowerCase() : null;
 }
 
-function normalizeUserId(contact) {
-  if (!contact) return null;
-  const digits = String(contact).replace(/\D/g, "");
-  if (!digits) return null;
-
-  const normalized = digits.startsWith("62") ? digits : "62" + digits.replace(/^0/, "");
-  return `${normalized}@c.us`;
-}
-
-function getRecipientsForClient(client) {
+export function getRecipientsForClient(client) {
   const clientId = String(client?.client_id || "").trim().toUpperCase();
   const recipients = new Set();
 
   const waGroup = normalizeGroupId(client?.client_group);
-  const superAdmin = normalizeUserId(client?.client_super);
-  const operator = normalizeUserId(client?.client_operator);
+  const superAdmin = normalizeUserWhatsAppId(client?.client_super);
+  const operator = normalizeUserWhatsAppId(client?.client_operator);
 
   if (clientId === "BIDHUMAS") {
     [superAdmin, operator].filter(Boolean).forEach((id) => recipients.add(id));
