@@ -75,10 +75,11 @@ export async function runCron() {
           lapharTiktokDitbinmas(CLIENT_ID),
         ]);
 
-        const formattedNarrative = formatRekapAllSosmed(
+        const formattedNarrative = await formatRekapAllSosmed(
           igReport?.narrative,
           ttReport?.narrative,
-          clientName
+          clientName,
+          CLIENT_ID
         );
 
         narrativeMessage = formattedNarrative?.trim() || null;
