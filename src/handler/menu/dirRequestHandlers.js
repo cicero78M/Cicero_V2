@@ -267,10 +267,14 @@ async function formatRekapUserData(clientId, roleFlag = null) {
   const client = await findClientById(clientId);
   const normalizedRoleFlag = roleFlag?.toLowerCase();
   const clientType = client?.client_type?.toLowerCase();
-  const filterRole = directorateRoles.includes(normalizedRoleFlag)
+  const normalizedClientId = clientId?.toLowerCase();
+  const isDirectorateClient =
+    clientType === "direktorat" || directorateRoles.includes(normalizedClientId);
+
+  const filterRole = isDirectorateClient
+    ? normalizedClientId
+    : directorateRoles.includes(normalizedRoleFlag)
     ? normalizedRoleFlag
-    : clientType === "direktorat"
-    ? clientId.toLowerCase()
     : null;
   const users = await getUsersSocialByClient(clientId, filterRole);
   const salam = getGreeting();
@@ -288,7 +292,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
   const isDirektoratView =
     clientType === "direktorat" ||
-    directorateRoles.includes(clientId.toLowerCase()) ||
+    directorateRoles.includes(normalizedClientId) ||
     directorateRoles.includes(roleFlag?.toLowerCase());
   if (isDirektoratView) {
     const groups = {};

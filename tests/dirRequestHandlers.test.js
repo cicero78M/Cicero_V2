@@ -348,6 +348,22 @@ test('formatRekapUserData defaults to directorate role when none provided', asyn
   );
 });
 
+test('formatRekapUserData uses selected directorate role over mismatched roleFlag', async () => {
+  mockFindClientById.mockImplementation(async (cid) => ({
+    client_type: 'direktorat',
+    nama: cid,
+  }));
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  mockGetClientsByRole.mockResolvedValue([]);
+
+  await formatRekapUserData('BIDHUMAS', 'ditbinmas');
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith(
+    'BIDHUMAS',
+    'bidhumas'
+  );
+});
+
 test('formatRekapUserData applies roleFlag for org clients', async () => {
   mockFindClientById.mockImplementation(async (cid) => {
     const key = cid.toLowerCase();
