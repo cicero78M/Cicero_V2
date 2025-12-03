@@ -262,17 +262,30 @@ const rankIdx = (t) => {
   return i === -1 ? pangkatOrder.length : i;
 };
 
-async function formatRekapUserData(clientId, roleFlag = null) {
+async function formatRekapUserData(clientId, roleFlag = null, options = {}) {
   const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
   const client = await findClientById(clientId);
   const normalizedRoleFlag = roleFlag?.toLowerCase();
   const clientType = client?.client_type?.toLowerCase();
+  const allowedClientIds = Array.isArray(options.allowedClientIds)
+    ? new Set(
+        options.allowedClientIds
+          .map((id) => (id ? String(id).toLowerCase() : ""))
+          .filter(Boolean)
+      )
+    : null;
+  const clientIdLower = String(clientId || "").toLowerCase();
+  const isClientAllowed = (cid) =>
+    !allowedClientIds || allowedClientIds.has(cid) || cid === clientIdLower;
   const filterRole = directorateRoles.includes(normalizedRoleFlag)
     ? normalizedRoleFlag
     : clientType === "direktorat"
     ? clientId.toLowerCase()
     : null;
   const users = await getUsersSocialByClient(clientId, filterRole);
+  const usersForReport = users.filter((u) =>
+    isClientAllowed(String(u.client_id || "").toLowerCase())
+  );
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -292,7 +305,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     directorateRoles.includes(roleFlag?.toLowerCase());
   if (isDirektoratView) {
     const groups = {};
-    users.forEach((u) => {
+    usersForReport.forEach((u) => {
       const cid = (u.client_id || "").toLowerCase();
       if (!groups[cid]) groups[cid] = { total: 0, insta: 0, tiktok: 0, complete: 0 };
       groups[cid].total++;
@@ -302,9 +315,13 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     });
 
     const roleName = (filterRole || clientId).toLowerCase();
-    const polresIds = (await getClientsByRole(roleName)) || [];
-    const polresIdSet = new Set(polresIds.map((id) => id.toLowerCase()));
-    const clientIdLower = clientId.toLowerCase();
+    const polresIds = allowedClientIds
+      ? await getClientsByRole(roleName, Array.from(allowedClientIds))
+      : await getClientsByRole(roleName);
+    const filteredPolresIds = (polresIds || []).filter((id) =>
+      isClientAllowed(String(id || "").toLowerCase())
+    );
+    const polresIdSet = new Set(filteredPolresIds.map((id) => id.toLowerCase()));
 
     const seen = new Set();
     const allIds = [];
@@ -421,7 +438,7 @@ async function formatRekapUserData(clientId, roleFlag = null) {
 
   const complete = {};
   const incomplete = {};
-  users.forEach((u) => {
+  usersForReport.forEach((u) => {
     const div = u.divisi || "-";
     if (u.insta && u.tiktok) {
       if (!complete[div]) complete[div] = [];
@@ -1509,7 +1526,9 @@ async function performAction(
   const userType = userClient?.client_type?.toLowerCase();
   switch (action) {
     case "1": {
-      msg = await formatRekapUserData(clientId, roleFlag);
+      msg = await formatRekapUserData(clientId, roleFlag, {
+        allowedClientIds: context.allowedClientIds,
+      });
       break;
     }
     case "2": {
@@ -2027,6 +2046,11 @@ export const dirRequestHandlers = {
     }
     session.role = chosen.role;
     session.username = chosen.username || session.username;
+    session.allowedClientIds = Array.isArray(chosen.client_ids)
+      ? chosen.client_ids
+          .map((id) => (id ? String(id).toUpperCase() : ""))
+          .filter(Boolean)
+      : session.allowedClientIds;
     delete session.dash_users;
     session.step = "choose_client";
     await dirRequestHandlers.choose_client(session, chatId, "", waClient);
@@ -2117,7 +2141,16 @@ export const dirRequestHandlers = {
   },
 
   async choose_client(session, chatId, text, waClient) {
-    const clients = session.dir_clients || [];
+    const allowedClientIds = Array.isArray(session.allowedClientIds)
+      ? session.allowedClientIds.map((id) => (id ? String(id).toUpperCase() : "")).filter(Boolean)
+      : [];
+
+    const allowedSet = new Set(allowedClientIds);
+    const clients = (session.dir_clients || []).filter((client) => {
+      if (!allowedSet.size) return true;
+      const cid = (client.client_id || "").toUpperCase();
+      return allowedSet.has(cid);
+    });
     const choiceList = clients
       .map((client, idx) => {
         const numberLabel = DIGIT_EMOJI[String(idx + 1)] || `${idx + 1}`;
@@ -2134,6 +2167,15 @@ export const dirRequestHandlers = {
     const input = (text || "").trim();
 
     if (!clients.length) {
+      if (allowedSet.size) {
+        await waClient.sendMessage(
+          chatId,
+          "❌ Client Direktorat Anda belum dikonfigurasi. Silakan hubungi administrator."
+        );
+        session.menu = null;
+        session.step = null;
+        return;
+      }
       session.selectedClientId = DITBINMAS_CLIENT_ID;
       session.dir_client_id = DITBINMAS_CLIENT_ID;
       session.client_ids = [DITBINMAS_CLIENT_ID];
@@ -2348,7 +2390,10 @@ export const dirRequestHandlers = {
       chatId,
       session.role,
       userClientId,
-      { username: session.username || session.user?.username }
+      {
+        username: session.username || session.user?.username,
+        allowedClientIds: session.allowedClientIds,
+      }
     );
     session.step = "main";
     await dirRequestHandlers.main(session, chatId, "", waClient);
