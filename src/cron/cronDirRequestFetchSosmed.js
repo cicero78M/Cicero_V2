@@ -27,10 +27,24 @@ function getCurrentHourInJakarta(date = new Date()) {
   return Number.parseInt(hourString, 10);
 }
 
-function normalizeGroupId(groupId) {
+const GROUP_ID_PATTERN = /^(\d{10,22})(?:@g\.us)?$/i;
+
+export function normalizeGroupId(groupId) {
   if (!groupId) return null;
+
   const trimmed = String(groupId).trim();
-  return trimmed.endsWith("@g.us") ? trimmed : null;
+  if (!trimmed) return null;
+
+  const invitePrefix = /^(?:https?:\/\/)?chat\.whatsapp\.com\/(?:invite\/)?/i;
+  const withoutPrefix = invitePrefix.test(trimmed)
+    ? trimmed.replace(invitePrefix, "").split(/[?#]/)[0]
+    : trimmed;
+
+  const token = withoutPrefix.replace(/\/+$/, "");
+  const match = token.match(GROUP_ID_PATTERN);
+  const candidate = match ? `${match[1]}@g.us` : token;
+
+  return /^\d{10,22}@g\.us$/.test(candidate) ? candidate.toLowerCase() : null;
 }
 
 function normalizeUserId(contact) {
