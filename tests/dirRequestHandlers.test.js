@@ -376,6 +376,37 @@ test('formatRekapUserData applies roleFlag for org clients', async () => {
   );
 });
 
+test('formatRekapUserData filters directorate recap by allowed client IDs', async () => {
+  mockFindClientById.mockImplementation(async (cid) => {
+    const key = cid.toLowerCase();
+    if (key === 'ditbinmas') {
+      return { nama: 'DIT BINMAS', client_type: 'direktorat' };
+    }
+    if (key === 'polres_a') {
+      return { nama: 'POLRES A', client_type: 'org' };
+    }
+    if (key === 'polres_b') {
+      return { nama: 'POLRES B', client_type: 'org' };
+    }
+    return { nama: cid, client_type: 'org' };
+  });
+
+  mockGetUsersSocialByClient.mockResolvedValue([
+    { client_id: 'DITBINMAS', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_A', insta: 'x', tiktok: 'y' },
+    { client_id: 'POLRES_B', insta: 'x', tiktok: null },
+  ]);
+  mockGetClientsByRole.mockResolvedValue(['POLRES_A', 'POLRES_B']);
+
+  const msg = await formatRekapUserData('DITBINMAS', 'ditbinmas', {
+    allowedClientIds: ['POLRES_A'],
+  });
+
+  expect(mockGetClientsByRole).toHaveBeenCalledWith('ditbinmas', ['polres_a']);
+  expect(msg).toMatch(/POLRES A/);
+  expect(msg).not.toMatch(/POLRES B/);
+});
+
 test('formatRekapUserData sorts by updated then total', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
