@@ -1,6 +1,12 @@
 import { getUsersSocialByClient, getClientsByRole } from "../../model/userModel.js";
-import { getShortcodesTodayByClient } from "../../model/instaPostModel.js";
-import { getVideoIdsTodayByClient } from "../../model/tiktokPostModel.js";
+import {
+  getShortcodesTodayByClient,
+  getPostsTodayByClient as getInstaPostsTodayByClient,
+} from "../../model/instaPostModel.js";
+import {
+  getVideoIdsTodayByClient,
+  getPostsTodayByClient as getTiktokPostsTodayByClient,
+} from "../../model/tiktokPostModel.js";
 import { getRekapLikesByClient } from "../../model/instaLikeModel.js";
 import { getRekapKomentarByClient } from "../../model/tiktokCommentModel.js";
 import {
@@ -933,10 +939,11 @@ async function formatExecutiveSummary(clientId, roleFlag = null) {
 return lines.join("\n").trim();
 }
 
-function formatRekapAllSosmed(
+async function formatRekapAllSosmed(
   igNarrative,
   ttNarrative,
-  clientName = "DIREKTORAT BINMAS"
+  clientName = "DIREKTORAT BINMAS",
+  clientId = DITBINMAS_CLIENT_ID
 ) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
@@ -1297,11 +1304,84 @@ function formatRekapAllSosmed(
   const igRankingSections = extractRankingSections(scopedIgNarrative, "likes");
   const ttRankingSections = extractRankingSections(scopedTtNarrative, "komentar");
 
-  const buildContentLinkList = () => {
+  const formatUploadTime = (date) => {
+    if (!date) return null;
+    try {
+      const parsed = new Date(date);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed
+        .toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone: "Asia/Jakarta",
+        })
+        .replace(/\./g, ":");
+    } catch {
+      return null;
+    }
+  };
+
+  const buildContentLinkList = async () => {
     const linkLines = [];
-    const igLines = [ig.topContentLine, ...(ig.otherContentLines || [])]
-      .map((line) => cleanContentLine(line))
-      .filter(Boolean);
+    let igPosts = [];
+    let ttPosts = [];
+    let clientType = null;
+    let tiktokUsername = null;
+
+    const normalizedClientId = (clientId || resolvedClientName)
+      .toString()
+      .trim();
+
+    try {
+      const client = await findClientById(normalizedClientId);
+      clientType = client?.client_type?.toLowerCase() || null;
+      tiktokUsername = (client?.client_tiktok || "").replace(/^@/, "");
+    } catch {
+      clientType = null;
+    }
+
+    const shouldUseDailyContent =
+      clientType === "direktorat" || isDitbinmas(normalizedClientId);
+
+    if (shouldUseDailyContent) {
+      try {
+        igPosts = (await getInstaPostsTodayByClient(normalizedClientId)) || [];
+      } catch {
+        igPosts = [];
+      }
+      try {
+        ttPosts = (await getTiktokPostsTodayByClient(normalizedClientId)) || [];
+      } catch {
+        ttPosts = [];
+      }
+    }
+
+    const igLinesFromPosts = igPosts
+      .filter((post) => post?.shortcode)
+      .map((post) => {
+        const uploadTime = formatUploadTime(post?.created_at);
+        const uploadLabel = uploadTime ? ` — ${uploadTime} WIB` : "";
+        return `https://www.instagram.com/p/${post.shortcode}${uploadLabel}`;
+      });
+
+    const ttLinesFromPosts = ttPosts
+      .filter((post) => post?.video_id)
+      .map((post) => {
+        const link = tiktokUsername
+          ? `https://www.tiktok.com/@${tiktokUsername}/video/${post.video_id}`
+          : `https://www.tiktok.com/video/${post.video_id}`;
+        const uploadTime = formatUploadTime(post?.created_at);
+        const uploadLabel = uploadTime ? ` — ${uploadTime} WIB` : "";
+        return `${link}${uploadLabel}`;
+      });
+
+    let igLines = igLinesFromPosts;
+    if (!igLines.length) {
+      igLines = [ig.topContentLine, ...(ig.otherContentLines || [])]
+        .map((line) => cleanContentLine(line))
+        .filter(Boolean);
+    }
 
     if (!igLines.length) igLines.push(...extractLinksFromText(scopedIgNarrative));
 
@@ -1313,7 +1393,8 @@ function formatRekapAllSosmed(
       igLines.push(...rankedIgLines);
     }
 
-    const ttLines = extractTiktokTasks(scopedTtNarrative);
+    let ttLines = ttLinesFromPosts;
+    if (!ttLines.length) ttLines = extractTiktokTasks(scopedTtNarrative);
 
     if (!ttLines.length) {
       const rankedTtLines = dedupePreserveOrder([
@@ -1327,22 +1408,22 @@ function formatRekapAllSosmed(
       igLines.forEach((line, index) =>
         linkLines.push(`- IG ${index + 1}. ${line}`)
       );
-    else linkLines.push("- IG: Belum ada link tercatat hari ini.");
-
     if (ttLines.length)
       ttLines.forEach((line, index) =>
         linkLines.push(`- TikTok ${index + 1}. ${line}`)
       );
-    else {
-      linkLines.push("- TikTok: Belum ada link tercatat hari ini.");
+
+    if (!linkLines.length) {
+      linkLines.push("Tidak ada tugas hari ini.");
     }
 
-    return linkLines;
+    const hasDailyContent = igLinesFromPosts.length > 0 || ttLinesFromPosts.length > 0;
+    return { linkLines, hasDailyContent };
   };
 
   const header = `*Laporan Harian Engagement – ${hari}, ${tanggal}*`;
   const linkHeader = "List Link Tugas Instagram dan Tiktok Hari ini :";
-  const linkLines = buildContentLinkList();
+  const { linkLines, hasDailyContent } = await buildContentLinkList();
 
   const igParagraphs = [];
   const ttParagraphs = [];
@@ -1351,7 +1432,10 @@ function formatRekapAllSosmed(
   const ttNarrativeText = normalizeText(scopedTtNarrative).trim();
 
   if (igNarrativeText) igParagraphs.push(igNarrativeText);
-  else if (igRankingSections.top.length || igRankingSections.bottom.length) {
+  else if (
+    hasDailyContent &&
+    (igRankingSections.top.length || igRankingSections.bottom.length)
+  ) {
     igParagraphs.push(
       [
         "Top 5 Likes:",
@@ -1366,7 +1450,10 @@ function formatRekapAllSosmed(
   }
 
   if (ttNarrativeText) ttParagraphs.push(ttNarrativeText);
-  else if (ttRankingSections.top.length || ttRankingSections.bottom.length) {
+  else if (
+    hasDailyContent &&
+    (ttRankingSections.top.length || ttRankingSections.bottom.length)
+  ) {
     ttParagraphs.push(
       [
         "Top 5 Komentar:",
@@ -1378,6 +1465,12 @@ function formatRekapAllSosmed(
         .filter(Boolean)
         .join("\n")
     );
+  }
+
+  if (!hasDailyContent && !igParagraphs.length && !ttParagraphs.length) {
+    const noTaskNote = "Tidak ada tugas hari ini.";
+    igParagraphs.push(noTaskNote);
+    ttParagraphs.push(noTaskNote);
   }
 
   const buildClosing = () => {
@@ -1730,10 +1823,11 @@ async function performAction(
         ]);
         const client = await findClientById(clientId);
         const clientName = client?.nama || clientId;
-        const narrative = formatRekapAllSosmed(
+        const narrative = await formatRekapAllSosmed(
           ig.narrative,
           tt.narrative,
-          clientName
+          clientName,
+          clientId
         );
         if (narrative) {
           await waClient.sendMessage(chatId, narrative);

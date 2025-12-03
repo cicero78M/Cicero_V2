@@ -7,7 +7,9 @@ process.env.JWT_SECRET = 'testsecret';
 const mockGetUsersSocialByClient = jest.fn();
 const mockGetClientsByRole = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
+const mockGetInstaPostsTodayByClient = jest.fn();
 const mockGetVideoIdsTodayByClient = jest.fn();
+const mockGetTiktokPostsTodayByClient = jest.fn();
 const mockGetRekapLikesByClient = jest.fn();
 const mockGetRekapKomentarByClient = jest.fn();
 const mockAbsensiLikes = jest.fn();
@@ -59,9 +61,11 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
   getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
+  getPostsTodayByClient: mockGetInstaPostsTodayByClient,
 }));
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getVideoIdsTodayByClient: mockGetVideoIdsTodayByClient,
+  getPostsTodayByClient: mockGetTiktokPostsTodayByClient,
   findPostByVideoId: jest.fn(),
   deletePostByVideoId: jest.fn(),
 }));
@@ -216,7 +220,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFindClientById.mockReset();
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
+  mockGetInstaPostsTodayByClient.mockResolvedValue([]);
   mockGetVideoIdsTodayByClient.mockResolvedValue([]);
+  mockGetTiktokPostsTodayByClient.mockResolvedValue([]);
   mockGetRekapLikesByClient.mockReset();
   mockGetRekapKomentarByClient.mockReset();
   mockFetchTiktokSecUid.mockResolvedValue('');
@@ -641,16 +647,34 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
-  test('structures report with numbered sections and backlog/closing insights', () => {
+  test('structures report with numbered sections and backlog/closing insights', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
     const clientName = 'Direktorat Samapta';
+
+    mockFindClientById.mockResolvedValue({
+      client_type: 'direktorat',
+      client_tiktok: '@ditbinmas',
+      nama: clientName,
+    });
+    mockGetInstaPostsTodayByClient.mockResolvedValue([
+      { shortcode: 'alpha' },
+      { shortcode: 'beta' },
+    ]);
+    mockGetTiktokPostsTodayByClient.mockResolvedValue([
+      { video_id: 'vid-1' },
+    ]);
 
     const igNarrative = `Mohon Ijin Komandan, rekap singkat likes Instagram hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📸 Instagram\nTop 5 Likes:\n1. Satker A – 500 likes\n2. Satker B – 450 likes\n3. Satker C – 400 likes\n4. Satker D – 350 likes\n5. Satker E – 300 likes\n\nBottom 5 Likes:\n1. Satker V – 80 likes\n2. Satker W – 70 likes\n3. Satker X – 60 likes\n4. Satker Y – 50 likes\n5. Satker Z – 40 likes`;
 
     const ttNarrative = `Mohon Ijin Komandan, rekap singkat komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n🎵 TikTok\nTop 5 Komentar:\n1. Satker Alpha – 120 komentar\n2. Satker Beta – 110 komentar\n3. Satker Gamma – 100 komentar\n4. Satker Delta – 90 komentar\n5. Satker Epsilon – 80 komentar\n\nBottom 5 Komentar:\n1. Satker U – 12 komentar\n2. Satker T – 11 komentar\n3. Satker S – 10 komentar\n4. Satker R – 9 komentar\n5. Satker Q – 8 komentar`;
 
-    const message = formatRekapAllSosmed(igNarrative, ttNarrative, clientName);
+    const message = await formatRekapAllSosmed(
+      igNarrative,
+      ttNarrative,
+      clientName,
+      'DITSAMAPTA'
+    );
 
     const linkLines = message
       .split('\n')
@@ -660,26 +684,9 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain(`*${clientName}*`);
     expect(message).toContain('List Link Tugas Instagram dan Tiktok Hari ini :');
     expect(linkLines).toEqual([
-      '- IG 1. Satker A – 500 likes',
-      '- IG 2. Satker B – 450 likes',
-      '- IG 3. Satker C – 400 likes',
-      '- IG 4. Satker D – 350 likes',
-      '- IG 5. Satker E – 300 likes',
-      '- IG 6. Satker V – 80 likes',
-      '- IG 7. Satker W – 70 likes',
-      '- IG 8. Satker X – 60 likes',
-      '- IG 9. Satker Y – 50 likes',
-      '- IG 10. Satker Z – 40 likes',
-      '- TikTok 1. Satker Alpha – 120 komentar',
-      '- TikTok 2. Satker Beta – 110 komentar',
-      '- TikTok 3. Satker Gamma – 100 komentar',
-      '- TikTok 4. Satker Delta – 90 komentar',
-      '- TikTok 5. Satker Epsilon – 80 komentar',
-      '- TikTok 6. Satker U – 12 komentar',
-      '- TikTok 7. Satker T – 11 komentar',
-      '- TikTok 8. Satker S – 10 komentar',
-      '- TikTok 9. Satker R – 9 komentar',
-      '- TikTok 10. Satker Q – 8 komentar',
+      '- IG 1. https://www.instagram.com/p/alpha',
+      '- IG 2. https://www.instagram.com/p/beta',
+      '- TikTok 1. https://www.tiktok.com/@ditbinmas/video/vid-1',
     ]);
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
@@ -688,7 +695,7 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.');
   });
 
-  test('builds TikTok task list without mixing top/bottom highlights', () => {
+  test('builds TikTok task list without mixing top/bottom highlights', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-11-27T12:00:00Z'));
 
@@ -696,7 +703,7 @@ describe('formatRekapAllSosmed', () => {
 
     const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Kamis, 27 November 2025 pukul 19.00 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/aaa — 30 komentar\n2. https://www.tiktok.com/@binmas/video/bbb — 20 komentar\n\n*Sorotan Konten*\n• Performa tertinggi : https://www.tiktok.com/@binmas/video/aaa — 30 komentar\n• Performa terendah : https://www.tiktok.com/@binmas/video/ccc — 1 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 5 (prioritas: Satker A (2))`;
 
-    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+    const message = await formatRekapAllSosmed(igNarrative, ttNarrative);
 
     const tiktokLines = message
       .split('\n')
@@ -710,7 +717,7 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
-  test('drops performance highlights that sit inside the TikTok task section', () => {
+  test('drops performance highlights that sit inside the TikTok task section', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-11-29T08:00:00Z'));
 
@@ -718,7 +725,7 @@ describe('formatRekapAllSosmed', () => {
 
     const ttNarrative = `*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/aaa — 12 komentar\n2. https://www.tiktok.com/@binmas/video/bbb — 5 komentar\n• Performa tertinggi : https://www.tiktok.com/@binmas/video/aaa — 12 komentar\n• Performa terendah : https://www.tiktok.com/@binmas/video/ccc — 1 komentar`;
 
-    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+    const message = await formatRekapAllSosmed(igNarrative, ttNarrative);
 
     const tiktokLines = message
       .split('\n')
@@ -732,7 +739,7 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
-  test('scopes IG/TT tasks to the selected client section', () => {
+  test('scopes IG/TT tasks to the selected client section', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-12-03T09:00:00Z'));
 
@@ -740,7 +747,7 @@ describe('formatRekapAllSosmed', () => {
 
     const ttNarrative = `📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT LALU LINTAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@ditlantas/video/zzz — 4 komentar\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Tugas TikTok*\n1. https://www.tiktok.com/@binmas/video/bin-1 — 10 komentar\n2. https://www.tiktok.com/@binmas/video/bin-2 — 5 komentar`;
 
-    const message = formatRekapAllSosmed(
+    const message = await formatRekapAllSosmed(
       igNarrative,
       ttNarrative,
       'Direktorat Binmas'
@@ -765,7 +772,7 @@ describe('formatRekapAllSosmed', () => {
     jest.useRealTimers();
   });
 
-  test('adapts closing note when target tercapai dan backlog rendah', () => {
+  test('adapts closing note when target tercapai dan backlog rendah', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-08-27T16:06:00Z'));
 
@@ -773,7 +780,7 @@ describe('formatRekapAllSosmed', () => {
 
     const ttNarrative = `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari Rabu, 27 Agustus 2025 pukul 23.06 WIB.\n\n📊 *Ringkasan Analitik Komentar TikTok – DIREKTORAT BINMAS*\n\n*Ringkasan Kinerja*\n• Konten dipantau : 2\n• Interaksi aktual : 400/400 (100,0%)\n• Personel mencapai target : 100/100 (100,0%)\n• Personel aktif (≥1 konten) : 100/100 (100,0%)\n• Partisipan unik : 100 akun\n\n*Kontributor Utama*\n• Penyumbang komentar terbesar : Satker Alpha (150)\n• Top satker aktif : 1. Satker Alpha – 150 komentar; 2. Satker Beta – 120 komentar\n\n*Catatan Backlog*\n• Personel belum komentar : 3 (prioritas: Satker Solid (1))\n• Belum input akun TikTok : 1 (sumber utama: Satker Solid (1))\n\nDemikian Komandan, terimakasih.`;
 
-    const message = formatRekapAllSosmed(igNarrative, ttNarrative);
+    const message = await formatRekapAllSosmed(igNarrative, ttNarrative);
 
     expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DIREKTORAT BINMAS.');
   });
