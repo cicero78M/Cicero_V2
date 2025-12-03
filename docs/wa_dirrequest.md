@@ -39,6 +39,10 @@ ditampilkan bot.
   - Direktorat `DITLANTAS` dengan `roleFlag=DITHUMAS` → rekap menyingkirkan
     seluruh personel tanpa role `DITHUMAS`, sehingga hasil bisa terlihat kosong
     jika client tidak memiliki role tersebut.
+  - Jika operator memilih Client ID Direktorat yang tidak sama dengan
+    `roleFlag`, prioritas filter tetap mengikuti Client ID tersebut, sehingga
+    personel dari client bertipe ORG hanya dihitung bila memiliki role yang sama
+    dengan Direktorat pilihan.
 
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
