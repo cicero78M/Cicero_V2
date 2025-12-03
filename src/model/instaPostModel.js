@@ -56,10 +56,11 @@ export async function getShortcodesTodayByClient(identifier) {
   let sql;
   let params;
 
-  if (
+  const useRoleFilter =
     typeRes.rows.length === 0 ||
-    (clientType === 'direktorat' && !isDitbinmas)
-  ) {
+    (clientType === 'direktorat' && !isDitbinmas);
+
+  if (useRoleFilter) {
     sql =
       `SELECT p.shortcode FROM insta_post p\n` +
       `JOIN insta_post_roles pr ON pr.shortcode = p.shortcode\n` +
@@ -75,8 +76,17 @@ export async function getShortcodesTodayByClient(identifier) {
     params = [identifier, today];
   }
 
-  const res = await query(sql, params);
-  return res.rows.map((r) => r.shortcode);
+  let rows = (await query(sql, params)).rows;
+
+  if (useRoleFilter && clientType === 'direktorat' && rows.length === 0) {
+    const fallbackQuery =
+      `SELECT shortcode FROM insta_post\n` +
+      `WHERE LOWER(client_id) = LOWER($1) AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date\n` +
+      `ORDER BY created_at ASC, shortcode ASC`;
+    rows = (await query(fallbackQuery, [identifier, today])).rows;
+  }
+
+  return rows.map((r) => r.shortcode);
 }
 
 export async function getShortcodesYesterdayByClient(identifier) {

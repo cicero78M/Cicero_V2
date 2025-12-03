@@ -45,6 +45,21 @@ test('getShortcodesTodayByClient uses role filter for directorate', async () => 
   expect(sql).toContain('LOWER(pr.role_name) = LOWER($1)');
 });
 
+test('getShortcodesTodayByClient falls back to client filter when directorate role returns empty', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
+
+  const result = await getShortcodesTodayByClient('DITA');
+
+  expect(mockQuery).toHaveBeenCalledTimes(3);
+  const fallbackSql = mockQuery.mock.calls[2][0];
+  expect(fallbackSql).toContain('LOWER(client_id) = LOWER($1)');
+  expect(fallbackSql).not.toContain('insta_post_roles');
+  expect(result).toEqual(['abc']);
+});
+
 test('getShortcodesTodayByClient uses client filter for Ditbinmas', async () => {
   mockQuery
     .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
