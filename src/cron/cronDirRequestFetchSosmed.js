@@ -9,7 +9,7 @@ import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikes
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
-import { getAdminWAIds, normalizeUserWhatsAppId, safeSendMessage } from "../utils/waHelper.js";
+import { getAdminWAIds, safeSendMessage } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getVideoIdsTodayByClient } from "../model/tiktokPostModel.js";
@@ -48,20 +48,16 @@ export function normalizeGroupId(groupId) {
 }
 
 export function getRecipientsForClient(client) {
-  const clientId = String(client?.client_id || "").trim().toUpperCase();
   const recipients = new Set();
 
-  const waGroup = normalizeGroupId(client?.client_group);
-  const superAdmin = normalizeUserWhatsAppId(client?.client_super);
-  const operator = normalizeUserWhatsAppId(client?.client_operator);
+  const clientType = String(client?.client_type || "").trim().toLowerCase();
+  if (clientType && clientType !== "direktorat") {
+    return recipients;
+  }
 
-  if (clientId === "BIDHUMAS") {
-    [superAdmin, operator].filter(Boolean).forEach((id) => recipients.add(id));
-  } else if (clientId === "DITBINMAS") {
-    if (waGroup) {
-      recipients.add(waGroup);
-    }
-  } else if (waGroup) {
+  const waGroup = normalizeGroupId(client?.client_group);
+
+  if (waGroup) {
     recipients.add(waGroup);
   }
 
