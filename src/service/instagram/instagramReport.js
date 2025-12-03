@@ -541,6 +541,7 @@ export async function lapharDitbinmas(clientId = "DITBINMAS") {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
+  const dateKey = now.toDateString();
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
   const dateSafe = tanggal.replace(/\//g, "-");
   const timeSafe = jam.replace(/[:.]/g, "-");
@@ -562,10 +563,31 @@ export async function lapharDitbinmas(clientId = "DITBINMAS") {
   const { text, textBelum } = formatDitbinmasText(metaStats);
   const narrative = formatDitbinmasNarrative({ ...metaStats, clientLabel });
 
+  const sortedSatkers = [...stats.satkerStats].sort(
+    (a, b) => b.likes - a.likes || a.name.localeCompare(b.name)
+  );
+  const rankingData = {
+    generatedDate: tanggal,
+    generatedDateKey: dateKey,
+    metricLabel: "likes",
+    top: sortedSatkers.slice(0, 5).map((satker) => ({
+      name: satker.name,
+      score: satker.likes,
+    })),
+    bottom: [...sortedSatkers]
+      .reverse()
+      .slice(0, 5)
+      .map((satker) => ({
+        name: satker.name,
+        score: satker.likes,
+      })),
+  };
+
   return {
     filename,
     text,
     narrative,
+    rankingData,
     filenameBelum,
     textBelum,
   };

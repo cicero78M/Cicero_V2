@@ -784,6 +784,49 @@ describe('formatRekapAllSosmed', () => {
 
     expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DIREKTORAT BINMAS.');
   });
+
+  test('falls back to daily ranking data when narratives lack ranking sections', async () => {
+    jest.useFakeTimers();
+    const current = new Date('2025-12-10T03:00:00Z');
+    jest.setSystemTime(current);
+
+    const generatedDate = current.toLocaleDateString('id-ID');
+    const generatedDateKey = current.toDateString();
+
+    mockFindClientById.mockResolvedValue({
+      client_type: 'direktorat',
+      client_tiktok: '@ditbinmas',
+      nama: 'Direktorat Binmas',
+    });
+    mockGetInstaPostsTodayByClient.mockResolvedValue([
+      { shortcode: 'ig-today' },
+    ]);
+    mockGetTiktokPostsTodayByClient.mockResolvedValue([
+      { video_id: 'tt-today' },
+    ]);
+
+    const message = await formatRekapAllSosmed('', '', 'Direktorat Binmas', 'DITBINMAS', {
+      igRankingData: {
+        generatedDate,
+        generatedDateKey,
+        metricLabel: 'likes',
+        top: [{ name: 'Satker A', score: 200 }],
+        bottom: [{ name: 'Satker Z', score: 5 }],
+      },
+      ttRankingData: {
+        generatedDate,
+        generatedDateKey,
+        metricLabel: 'komentar',
+        top: [{ name: 'Satker T', score: 50 }],
+        bottom: [{ name: 'Satker Q', score: 1 }],
+      },
+    });
+
+    expect(message).toContain('Top 5 Likes:');
+    expect(message).toContain('- 1. Satker A — 200 likes');
+    expect(message).toContain('Bottom 5 Komentar:');
+    expect(message).toContain('- 1. Satker Q — 1 komentar');
+  });
 });
 
 test('choose_menu option 5 absensi likes ditbinmas', async () => {

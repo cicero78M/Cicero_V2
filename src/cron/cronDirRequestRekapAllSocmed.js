@@ -79,7 +79,11 @@ export async function runCron() {
           igReport?.narrative,
           ttReport?.narrative,
           clientName,
-          CLIENT_ID
+          CLIENT_ID,
+          {
+            igRankingData: igReport?.rankingData,
+            ttRankingData: ttReport?.rankingData,
+          }
         );
 
         narrativeMessage = formattedNarrative?.trim() || null;

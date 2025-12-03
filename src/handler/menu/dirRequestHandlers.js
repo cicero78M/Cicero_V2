@@ -943,8 +943,10 @@ async function formatRekapAllSosmed(
   igNarrative,
   ttNarrative,
   clientName = "DIREKTORAT BINMAS",
-  clientId = DITBINMAS_CLIENT_ID
+  clientId = DITBINMAS_CLIENT_ID,
+  options = {}
 ) {
+  const { igRankingData = null, ttRankingData = null } = options || {};
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID", {
@@ -952,6 +954,7 @@ async function formatRekapAllSosmed(
     month: "long",
     year: "numeric",
   });
+  const todayKey = now.toDateString();
 
   const normalizeText = (text) => (text || "").replace(/\r\n/g, "\n");
   const parseNumber = (value) => {
@@ -1035,6 +1038,38 @@ async function formatRekapAllSosmed(
       top: readSection(/Top 5 [^:]*:\s*([\s\S]*?)(?=\n\s*Bottom 5|\n\s*Top 5|$)/i),
       bottom: readSection(/Bottom 5 [^:]*:\s*([\s\S]*?)(?=\n\s*Top 5|\n\s*Bottom 5|$)/i),
     };
+  };
+
+  const buildRankingFromData = (entries = [], metricLabel = "") =>
+    entries
+      .filter((entry) => entry && entry.name)
+      .slice(0, 5)
+      .map((entry, index) => {
+        const score =
+          entry.score ?? entry.likes ?? entry.comments ?? entry.value ?? null;
+        const metric = metricLabel || entry.metricLabel || "";
+        const metricSuffix =
+          score == null
+            ? metric
+              ? ` — ${metric}`
+              : ""
+            : ` — ${score.toLocaleString("id-ID")}${metric ? ` ${metric}` : ""}`;
+        return `${index + 1}. ${entry.name}${metricSuffix}`.trim();
+      });
+
+  const resolveRankingSections = (sections, fallbackData, metricLabel = "") => {
+    const hasNarrativeRanking = sections.top.length || sections.bottom.length;
+    const metric = fallbackData?.metricLabel || metricLabel;
+    const isTodayRanking =
+      fallbackData?.generatedDateKey === todayKey ||
+      fallbackData?.generatedDate === tanggal;
+    if (hasNarrativeRanking || !isTodayRanking) return sections;
+
+    const top = buildRankingFromData(fallbackData?.top || [], metric);
+    const bottom = buildRankingFromData(fallbackData?.bottom || [], metric);
+    if (!top.length && !bottom.length) return sections;
+
+    return { top, bottom };
   };
 
   const extractIgData = (text) => {
@@ -1301,8 +1336,16 @@ async function formatRekapAllSosmed(
   const ig = extractIgData(scopedIgNarrative);
   const tt = extractTtData(scopedTtNarrative);
 
-  const igRankingSections = extractRankingSections(scopedIgNarrative, "likes");
-  const ttRankingSections = extractRankingSections(scopedTtNarrative, "komentar");
+  const igRankingSections = resolveRankingSections(
+    extractRankingSections(scopedIgNarrative, "likes"),
+    igRankingData,
+    "likes"
+  );
+  const ttRankingSections = resolveRankingSections(
+    extractRankingSections(scopedTtNarrative, "komentar"),
+    ttRankingData,
+    "komentar"
+  );
 
   const formatUploadTime = (date) => {
     if (!date) return null;
@@ -1827,7 +1870,11 @@ async function performAction(
           ig.narrative,
           tt.narrative,
           clientName,
-          clientId
+          clientId,
+          {
+            igRankingData: ig.rankingData,
+            ttRankingData: tt.rankingData,
+          }
         );
         if (narrative) {
           await waClient.sendMessage(chatId, narrative);
