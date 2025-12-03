@@ -2023,7 +2023,7 @@ export const dirRequestHandlers = {
       `Client: *${clientName}*\n` +
       "┏━━━━━━━━━━━━ *MENU DIRREQUEST* ━━━━━━━━━━━━\n" +
         "📊 *Rekap Data*\n" +
-        "1️⃣ Rekap personel belum lengkapi data\n" +
+        "1️⃣ Rekap Kelengkapan data Personil Satker.\n" +
         "2️⃣ Ringkasan pengisian data personel\n" +
         "3️⃣ Rekap data belum lengkap\n" +
         "4️⃣ Rekap Matriks Update Satker\n\n" +
