@@ -1499,12 +1499,14 @@ async function formatRekapAllSosmed(
     appendRankingBlock(igParagraphs, igRankingSections, "Likes");
   }
 
-  if (ttNarrativeText) {
-    ttParagraphs.push(ttNarrativeText);
-    if (!narrativeHasRanking(ttNarrativeText))
-      appendRankingBlock(ttParagraphs, ttRankingSections, "Komentar");
-  } else {
+  const ttHasRanking =
+    ttRankingSections.top.length || ttRankingSections.bottom.length;
+
+  if (ttHasRanking) {
+    ttParagraphs.push(`🎵 TikTok (${resolvedClientName.toUpperCase()})`);
     appendRankingBlock(ttParagraphs, ttRankingSections, "Komentar");
+  } else if (ttNarrativeText) {
+    ttParagraphs.push(ttNarrativeText);
   }
 
   if (!hasDailyContent && !igParagraphs.length && !ttParagraphs.length) {

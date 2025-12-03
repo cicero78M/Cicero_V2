@@ -28,7 +28,11 @@ urutan Top/Bottom selalu mengikuti hasil tugas harian tanpa tercampur data lama
 atau klien lain. Mulai perbaikan 2025-12-10, ranking yang valid akan tetap
 disisipkan ke narasi (atau ditambahkan sebagai paragraf terpisah) meski teks
 narasi tidak menuliskannya, sehingga blok "Top 5" dan "Bottom 5" selalu
-tersaji ketika data harian tersedia.
+tersaji ketika data harian tersedia. Perubahan Januari 2026 menambahkan header
+"🎵 TikTok (<CLIENT>)" dan memaksa segmen TikTok menampilkan list nama Polres
+Top 5 Komentar dan Bottom 5 Komentar (berdasarkan ranking harian) tanpa
+tergantung narasi bebas, sehingga operator langsung melihat daftar Polres yang
+perlu diapresiasi maupun dibantu.
 
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari data konten harian database (shortcode
@@ -51,7 +55,10 @@ tersaji ketika data harian tersedia.
   tertentu) alih-alih selalu menyebut DITBINMAS.
 - Jika narasi TikTok kosong namun memiliki daftar peringkat, laporan tetap
   menampilkan blok *Top 5 Komentar* dan *Bottom 5 Komentar* agar rekap tidak
-  kehilangan nama Polres dan jumlah komentar.
+  kehilangan nama Polres dan jumlah komentar. Kini, meskipun narasi panjang
+  tersedia, segmen TikTok diganti dengan judul "🎵 TikTok (<CLIENT>)" diikuti
+  list nama Polres Top 5 dan Bottom 5 Komentar agar fokus langsung ke ranking
+  harian.
 
 Dokumen ini membantu operator memahami bagaimana daftar tautan muncul pada
 laporan harian serta menyiapkan narasi yang konsisten.

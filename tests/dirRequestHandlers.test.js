@@ -690,8 +690,10 @@ describe('formatRekapAllSosmed', () => {
     ]);
     expect(message).toContain('1. 📸 *Instagram*');
     expect(message).toContain('2. 🎵 *TikTok*');
+    expect(message).toContain('🎵 TikTok (DIREKTORAT SAMAPTA)');
     expect(message).toContain('Top 5 Likes:');
     expect(message).toContain('Bottom 5 Komentar:');
+    expect(message).not.toContain('Mohon Ijin Komandan, rekap singkat komentar TikTok');
     expect(message).toContain('Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.');
   });
 
