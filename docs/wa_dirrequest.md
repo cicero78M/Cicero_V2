@@ -29,6 +29,16 @@ ditampilkan bot.
   operator tidak mengirim *roleFlag*, sedangkan client **ORG** tetap menghargai
   *roleFlag* Direktorat yang valid sehingga rekap hanya menghitung personel
   dengan role tersebut.
+  Perhitungan rekap **hanya** memasukkan personel yang memiliki role sesuai
+  Direktorat peminta atau role yang sedang difilter, termasuk ketika
+  Direktorat merekap client ORG.
+- Contoh perilaku filter:
+  - Direktorat `DITBINMAS` tanpa `roleFlag` → rekap menghitung personel dengan
+    role `DITBINMAS` saja, baik saat membaca client Direktorat sendiri maupun
+    client ORG.
+  - Direktorat `DITLANTAS` dengan `roleFlag=DITHUMAS` → rekap menyingkirkan
+    seluruh personel tanpa role `DITHUMAS`, sehingga hasil bisa terlihat kosong
+    jika client tidak memiliki role tersebut.
 
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar
