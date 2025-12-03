@@ -1019,6 +1019,7 @@ async function formatRekapAllSosmed(
     const formatLine = (line) => {
       const cleaned = cleanContentLine(line.replace(/^[-•]\s*/, ""));
       if (!cleaned) return null;
+      if (/^top 5\b|^bottom 5\b/i.test(cleaned)) return null;
       if (metricLabel && !/likes|komentar/i.test(cleaned))
         return `${cleaned} — ${metricLabel}`;
       return cleaned;
@@ -1057,19 +1058,28 @@ async function formatRekapAllSosmed(
         return `${index + 1}. ${entry.name}${metricSuffix}`.trim();
       });
 
+  const buildRankingSectionsFromData = (data = {}, metricLabel = "") => {
+    const metric = data?.metricLabel || metricLabel;
+    const top = buildRankingFromData(data?.top || [], metric);
+    const bottom = buildRankingFromData(data?.bottom || [], metric);
+    return { top, bottom };
+  };
+
   const resolveRankingSections = (sections, fallbackData, metricLabel = "") => {
     const hasNarrativeRanking = sections.top.length || sections.bottom.length;
-    const metric = fallbackData?.metricLabel || metricLabel;
+    const fallbackSections = buildRankingSectionsFromData(
+      fallbackData,
+      metricLabel
+    );
+    const hasFallbackRanking =
+      fallbackSections.top.length || fallbackSections.bottom.length;
     const isTodayRanking =
       fallbackData?.generatedDateKey === todayKey ||
       fallbackData?.generatedDate === tanggal;
-    if (hasNarrativeRanking || !isTodayRanking) return sections;
+    if (hasNarrativeRanking || !isTodayRanking || !hasFallbackRanking)
+      return sections;
 
-    const top = buildRankingFromData(fallbackData?.top || [], metric);
-    const bottom = buildRankingFromData(fallbackData?.bottom || [], metric);
-    if (!top.length && !bottom.length) return sections;
-
-    return { top, bottom };
+    return fallbackSections;
   };
 
   const extractIgData = (text) => {
@@ -1474,6 +1484,22 @@ async function formatRekapAllSosmed(
   const igNarrativeText = normalizeText(scopedIgNarrative).trim();
   const ttNarrativeText = normalizeText(scopedTtNarrative).trim();
 
+  const narrativeHasRanking = (text) => /Top 5|Bottom 5/i.test(text || "");
+  const ttNarrativeHasRanking = narrativeHasRanking(ttNarrativeText);
+  let resolvedTtRankingSections = ttRankingSections;
+
+  if (
+    !(ttRankingSections.top.length || ttRankingSections.bottom.length) &&
+    ttNarrativeHasRanking
+  ) {
+    const fallbackSections = buildRankingSectionsFromData(
+      ttRankingData,
+      "komentar"
+    );
+    if (fallbackSections.top.length || fallbackSections.bottom.length)
+      resolvedTtRankingSections = fallbackSections;
+  }
+
   const appendRankingBlock = (paragraphs, sections, metricLabel) => {
     if (!(sections.top.length || sections.bottom.length)) return;
     const block = [
@@ -1489,8 +1515,6 @@ async function formatRekapAllSosmed(
     if (block.trim()) paragraphs.push(block);
   };
 
-  const narrativeHasRanking = (text) => /Top 5|Bottom 5/i.test(text || "");
-
   if (igNarrativeText) {
     igParagraphs.push(igNarrativeText);
     if (!narrativeHasRanking(igNarrativeText))
@@ -1500,13 +1524,16 @@ async function formatRekapAllSosmed(
   }
 
   const ttHasRanking =
-    ttRankingSections.top.length || ttRankingSections.bottom.length;
+    resolvedTtRankingSections.top.length ||
+    resolvedTtRankingSections.bottom.length;
 
   if (ttHasRanking) {
     ttParagraphs.push(`🎵 TikTok (${resolvedClientName.toUpperCase()})`);
-    appendRankingBlock(ttParagraphs, ttRankingSections, "Komentar");
-  } else if (ttNarrativeText) {
+    appendRankingBlock(ttParagraphs, resolvedTtRankingSections, "Komentar");
+  } else if (ttNarrativeText && !ttNarrativeHasRanking) {
     ttParagraphs.push(ttNarrativeText);
+  } else if (ttNarrativeHasRanking) {
+    ttParagraphs.push("Tidak ada data peringkat komentar TikTok.");
   }
 
   if (!hasDailyContent && !igParagraphs.length && !ttParagraphs.length) {
@@ -1517,18 +1544,21 @@ async function formatRekapAllSosmed(
 
   const buildClosing = () => {
     const igBacklog = ig.igBacklog ?? 0;
-    const ttBacklog = tt.backlog ?? 0;
+    const ttBacklog = ttHasRanking ? tt.backlog ?? 0 : 0;
     const igGood = ig.targetAchieved === true || (ig.likePercent ?? 0) >= 95;
-    const ttGood = (tt.commentPercent ?? 0) >= 80;
-    const backlogHigh = igBacklog > 30 || ttBacklog > 30;
-    const backlogModerate = igBacklog > 10 || ttBacklog > 10;
+    const ttGood = ttHasRanking ? (tt.commentPercent ?? 0) >= 80 : null;
+    const backlogHigh = igBacklog > 30 || (ttHasRanking && ttBacklog > 30);
+    const backlogModerate =
+      igBacklog > 10 || (ttHasRanking && ttBacklog > 10);
     const likeGapHigh = (ig.likeGap ?? 0) > 0;
 
-    if (igGood && ttGood && !backlogModerate)
+    if (igGood && ttHasRanking && ttGood && !backlogModerate)
       return `Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran ${resolvedClientName}.`;
+    if (!ttHasRanking && igGood && !backlogModerate)
+      return `Capaian IG sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran ${resolvedClientName}.`;
     if (backlogHigh)
       return "Backlog personel masih tinggi; dukungan ekstra dari para pembina untuk satker prioritas akan sangat berarti.";
-    if (likeGapHigh || !ttGood)
+    if (likeGapHigh || (ttHasRanking && ttGood === false))
       return "Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.";
     return `Progres bergerak positif; mari terus kawal pengejaran target harian dengan ritme nyaman ala ${resolvedClientName}.`;
   };
