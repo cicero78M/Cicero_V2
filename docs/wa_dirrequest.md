@@ -24,6 +24,11 @@ ditampilkan bot.
   peminta yang memiliki role sama dengan permintaan di posisi pertama, lalu
   diikuti client bertipe **ORG** yang memiliki role sama dengan *Client ID*
   peminta (client Direktorat lain otomatis diabaikan).
+- Filter role menyesuaikan tipe client: permintaan dari client bertipe
+  **Direktorat** otomatis memakai role default setara *Client ID* ketika
+  operator tidak mengirim *roleFlag*, sedangkan client **ORG** tetap menghargai
+  *roleFlag* Direktorat yang valid sehingga rekap hanya menghitung personel
+  dengan role tersebut.
 
 ## Pemilihan Client Direktorat
 - Saat mengetik `dirrequest`, bot terlebih dahulu menampilkan daftar

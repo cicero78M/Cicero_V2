@@ -264,10 +264,14 @@ const rankIdx = (t) => {
 
 async function formatRekapUserData(clientId, roleFlag = null) {
   const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas"];
-  const filterRole = directorateRoles.includes(roleFlag?.toLowerCase())
-    ? roleFlag
-    : null;
   const client = await findClientById(clientId);
+  const normalizedRoleFlag = roleFlag?.toLowerCase();
+  const clientType = client?.client_type?.toLowerCase();
+  const filterRole = directorateRoles.includes(normalizedRoleFlag)
+    ? normalizedRoleFlag
+    : clientType === "direktorat"
+    ? clientId.toLowerCase()
+    : null;
   const users = await getUsersSocialByClient(clientId, filterRole);
   const salam = getGreeting();
   const now = new Date();
@@ -282,7 +286,6 @@ async function formatRekapUserData(clientId, roleFlag = null) {
     minute: "2-digit",
   });
 
-  const clientType = client?.client_type?.toLowerCase();
   const isDirektoratView =
     clientType === "direktorat" ||
     directorateRoles.includes(clientId.toLowerCase()) ||
