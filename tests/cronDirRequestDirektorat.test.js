@@ -5,6 +5,7 @@ const mockKomentar = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
 const mockBuildClientRecipientSet = jest.fn();
+const mockFindActiveDirektorat = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/menu/dirRequestHandlers.js', () => ({
@@ -20,6 +21,9 @@ jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
 jest.unstable_mockModule('../src/utils/recipientHelper.js', () => ({
   buildClientRecipientSet: mockBuildClientRecipientSet,
 }));
+jest.unstable_mockModule('../src/model/clientModel.js', () => ({
+  findAllActiveDirektoratWithSosmed: mockFindActiveDirektorat,
+}));
 
 let runCron;
 
@@ -31,25 +35,66 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockAbsensi.mockResolvedValue('absensi');
   mockKomentar.mockResolvedValue('komentar');
+  mockFindActiveDirektorat.mockResolvedValue([
+    { client_id: 'DIT1' },
+    { client_id: 'DIT2' },
+  ]);
   mockBuildClientRecipientSet.mockResolvedValue({
     recipients: new Set(['123@c.us', '321@c.us', 'group@g.us']),
     hasClientRecipients: true,
   });
 });
 
-test('runCron sends absensi and komentar to admin, operator, and group', async () => {
+test('runCron sends absensi and komentar sequentially to each eligible directorate super admin', async () => {
   await runCron();
 
-  expect(mockAbsensi).toHaveBeenCalledWith('DITBINMAS');
-  expect(mockKomentar).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockFindActiveDirektorat).toHaveBeenCalledTimes(1);
+  expect(mockAbsensi).toHaveBeenNthCalledWith(1, 'DIT1');
+  expect(mockAbsensi).toHaveBeenNthCalledWith(2, 'DIT2');
+  expect(mockKomentar).toHaveBeenNthCalledWith(1, 'DIT1');
+  expect(mockKomentar).toHaveBeenNthCalledWith(2, 'DIT2');
 
-  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DIT1', {
+    includeAdmins: false,
+    includeOperator: false,
+    includeGroup: false,
+    includeSuper: true,
+  });
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('DIT2', {
+    includeAdmins: false,
+    includeOperator: false,
+    includeGroup: false,
+    includeSuper: true,
+  });
+
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'absensi');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'komentar');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '321@c.us', 'absensi');
   expect(mockSafeSend).toHaveBeenCalledWith({}, '321@c.us', 'komentar');
   expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'absensi');
   expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledTimes(6);
+  expect(mockSafeSend).toHaveBeenCalledTimes(12);
+});
+
+test('runCron uses provided client IDs and skips database lookup', async () => {
+  mockFindActiveDirektorat.mockResolvedValue([]);
+
+  await runCron(['CUSTOM']);
+
+  expect(mockFindActiveDirektorat).not.toHaveBeenCalled();
+  expect(mockAbsensi).toHaveBeenCalledWith('CUSTOM');
+  expect(mockKomentar).toHaveBeenCalledWith('CUSTOM');
+});
+
+test('runCron logs when no eligible directorate clients found', async () => {
+  mockFindActiveDirektorat.mockResolvedValue([]);
+
+  await runCron();
+
+  expect(mockSendDebug).toHaveBeenCalledWith(
+    expect.objectContaining({
+      msg: 'Tidak ada client direktorat aktif dengan Instagram dan TikTok yang siap diproses',
+    })
+  );
 });
 
