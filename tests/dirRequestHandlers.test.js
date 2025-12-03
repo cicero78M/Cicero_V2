@@ -697,6 +697,62 @@ describe('formatRekapAllSosmed', () => {
     expect(message).toContain('Target harian belum sepenuhnya terpenuhi; kolaborasi halus antar satker akan membantu menutup gap likes dan komentar.');
   });
 
+  test('falls back to ranking data when TikTok narrative header lacks entries', async () => {
+    jest.useFakeTimers();
+    const currentDate = new Date('2025-12-30T10:00:00Z');
+    jest.setSystemTime(currentDate);
+
+    const ttNarrative = '🎵 TikTok\nTop 5 Komentar:\n\nBottom 5 Komentar:';
+    const ttRankingData = {
+      generatedDateKey: currentDate.toDateString(),
+      metricLabel: 'komentar',
+      top: [{ name: 'Satker Alpha', score: 120 }],
+      bottom: [{ name: 'Satker Omega', score: 5 }],
+    };
+
+    const message = await formatRekapAllSosmed(
+      '',
+      ttNarrative,
+      'Direktorat Binmas',
+      'DITBINMAS',
+      { ttRankingData }
+    );
+
+    const tikTokSection = message
+      .split('\n')
+      .slice(message.split('\n').indexOf('2. 🎵 *TikTok*'))
+      .join('\n');
+
+    expect(tikTokSection).toContain('🎵 TikTok (DIREKTORAT BINMAS)');
+    expect(tikTokSection).toContain('Top 5 Komentar:');
+    expect(tikTokSection).toContain('- 1. Satker Alpha — 120 komentar');
+    expect(tikTokSection).toContain('Bottom 5 Komentar:');
+    expect(tikTokSection).toContain('- 1. Satker Omega — 5 komentar');
+    expect(tikTokSection).not.toContain('Top 5 Komentar:\n\nBottom 5 Komentar');
+  });
+
+  test('suppresses TikTok ranking headers when no data is available', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-12-31T06:00:00Z'));
+
+    const ttNarrative = '🎵 TikTok\nTop 5 Komentar:\n\nBottom 5 Komentar:';
+
+    const message = await formatRekapAllSosmed(
+      '',
+      ttNarrative,
+      'Direktorat Binmas'
+    );
+
+    const tikTokSection = message
+      .split('\n')
+      .slice(message.split('\n').indexOf('2. 🎵 *TikTok*'))
+      .join('\n');
+
+    expect(tikTokSection).toContain('Tidak ada data peringkat komentar TikTok.');
+    expect(tikTokSection).not.toContain('Top 5 Komentar:');
+    expect(message).not.toContain('Capaian IG & TikTok sudah sesuai target');
+  });
+
   test('builds TikTok task list without mixing top/bottom highlights', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2025-11-27T12:00:00Z'));
@@ -784,7 +840,7 @@ describe('formatRekapAllSosmed', () => {
 
     const message = await formatRekapAllSosmed(igNarrative, ttNarrative);
 
-    expect(message).toContain('Capaian IG & TikTok sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DIREKTORAT BINMAS.');
+    expect(message).toContain('Capaian IG sudah sesuai target; terima kasih atas sinergi hangat seluruh pembina di jajaran DIREKTORAT BINMAS.');
   });
 
   test('falls back to daily ranking data when narratives lack ranking sections', async () => {

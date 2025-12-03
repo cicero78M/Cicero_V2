@@ -32,7 +32,11 @@ tersaji ketika data harian tersedia. Perubahan Januari 2026 menambahkan header
 "🎵 TikTok (<CLIENT>)" dan memaksa segmen TikTok menampilkan list nama Polres
 Top 5 Komentar dan Bottom 5 Komentar (berdasarkan ranking harian) tanpa
 tergantung narasi bebas, sehingga operator langsung melihat daftar Polres yang
-perlu diapresiasi maupun dibantu.
+perlu diapresiasi maupun dibantu. Januari 2027 memperketat parsing: jika
+narasi hanya berisi header Top/Bottom tanpa daftar, builder mengabaikan narasi
+mentah lalu mencoba fallback peringkat (`ttRankingData`) atau menampilkan teks
+"Tidak ada data peringkat komentar TikTok.". Header ranking tidak dicetak bila
+tidak ada entri valid agar laporan tetap ringkas.
 
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari data konten harian database (shortcode
