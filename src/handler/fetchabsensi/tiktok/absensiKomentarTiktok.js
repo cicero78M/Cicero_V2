@@ -850,6 +850,7 @@ export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
+  const dateKey = now.toDateString();
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
   const dateSafe = tanggal.replace(/\//g, "-");
   const timeSafe = jam.replace(/[:.]/g, "-");
@@ -1150,6 +1151,20 @@ export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
     `Top 5 Komentar:\n${formatSatkerList(topFiveSatker)}\n\n` +
     `Bottom 5 Komentar:\n${formatSatkerList(bottomFiveSatker)}`;
 
+  const rankingData = {
+    generatedDate: tanggal,
+    generatedDateKey: dateKey,
+    metricLabel: "komentar",
+    top: topFiveSatker.map((satker) => ({
+      name: satker.name,
+      score: satker.comments,
+    })),
+    bottom: bottomFiveSatker.map((satker) => ({
+      name: satker.name,
+      score: satker.comments,
+    })),
+  };
+
   let textBelum =
     `Belum melaksanakan Komentar atau belum input username IG/Tiktok\n` +
     `Polres: ${clientNameUpper}\n` +
@@ -1168,6 +1183,7 @@ export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
     filename,
     text: text.trim(),
     narrative,
+    rankingData,
     filenameBelum,
     textBelum: textBelum.trim(),
   };

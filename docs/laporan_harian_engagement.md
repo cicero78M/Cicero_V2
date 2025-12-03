@@ -1,5 +1,5 @@
 # Laporan Harian Engagement
-*Last updated: 2025-12-09 (prioritas data konten harian + fallback "Tidak ada tugas hari ini")*
+*Last updated: 2025-12-10 (prioritas peringkat harian dengan guard tanggal)*
 
 Utility `formatRekapAllSosmed` menyusun narasi laporan gabungan Instagram dan
 TikTok untuk setiap klien. Bagian pembuka menyertakan nama klien (berdasarkan
@@ -18,6 +18,14 @@ di log debug sehingga operator mudah melakukan pengecekan. Narasi IG kini
 hanya menampilkan daftar Top 5 dan Bottom 5 Polres berdasarkan likes, sementara
 narasi TikTok menampilkan Top 5 dan Bottom 5 Polres berdasarkan jumlah akun
 berkomentar sehingga tim cepat melihat rentang performa harian.
+
+Mulai 10 Desember 2025, `formatRekapAllSosmed` menerima parameter opsional
+`igRankingData` dan `ttRankingData` (diisi dari `lapharDitbinmas` dan
+`lapharTiktokDitbinmas`). Jika narasi tidak memuat Top/Bottom 5 yang valid,
+ranking dibangun ulang dari metrik konten/komentar hari ini selama cap waktu
+(`generatedDateKey`) masih sama dengan tanggal laporan. Dengan guard tersebut,
+urutan Top/Bottom selalu mengikuti hasil tugas harian tanpa tercampur data lama
+atau klien lain.
 
 ## Daftar tautan tugas
 - **Instagram:** daftar dibangun dari data konten harian database (shortcode
