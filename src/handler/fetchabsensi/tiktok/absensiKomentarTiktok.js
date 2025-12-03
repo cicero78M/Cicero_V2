@@ -1094,17 +1094,8 @@ export async function lapharTiktokDitbinmas() {
   });
 
   const perClientBlocks = perClientStats.map((p) => p.block);
-  const totalComments = perClientStats.reduce((acc, p) => acc + p.comments, 0);
-  const totalPossibleComments = totals.total * posts.length;
-  const commentPercent = totalPossibleComments
-    ? (totalComments / totalPossibleComments) * 100
-    : 0;
-  const targetComments = Math.ceil(totalPossibleComments * 0.95);
-
   const satkerStats = perClientStats.filter((p) => p.cid !== "DITBINMAS");
   const fmtNum = (n) => n.toLocaleString("id-ID");
-  const fmtPct = (n) =>
-    n.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   const contentStats = kontenLinks.map((link, idx) => {
     const videoId = posts[idx]?.video_id;
@@ -1113,27 +1104,6 @@ export async function lapharTiktokDitbinmas() {
     const failed = failedVideoSet.has(videoId);
     return { link, videoId, caption, commenters, failed };
   });
-  const successfulContent = contentStats.filter((c) => !c.failed);
-  const rankedContentSource = successfulContent.length ? successfulContent : contentStats;
-  const rankedContent = [...rankedContentSource].sort(
-    (a, b) =>
-      b.commenters - a.commenters ||
-      String(a.videoId || "").localeCompare(String(b.videoId || ""))
-  );
-  const bestContent = rankedContent[0] || null;
-  const worstContent =
-    rankedContent.length > 1 ? rankedContent[rankedContent.length - 1] : bestContent;
-  const formatContentHighlight = (item) => {
-    if (!item) return "-";
-    if (item.failed) return `${item.link} – data komentar gagal diambil`;
-    const snippet = item.caption
-      ? item.caption.length > 60
-        ? `${item.caption.slice(0, 57)}…`
-        : item.caption
-      : item.videoId;
-    return `${snippet} – ${fmtNum(item.commenters)} akun (${item.link})`;
-  };
-
   const komentarDistribusi = contentStats.length
     ? contentStats
         .map((item, idx) =>
@@ -1143,59 +1113,6 @@ export async function lapharTiktokDitbinmas() {
         )
         .join("\n")
     : "-";
-
-  const uniqueParticipants = new Set();
-  commentSets.forEach((set) => set.forEach((uname) => uniqueParticipants.add(uname)));
-
-  const eligibleTotal = perClientStats.reduce(
-    (acc, p) => acc + Math.max(p.eligibleUsers || 0, 0),
-    0
-  );
-  const hitTargetTotal = perClientStats.reduce(
-    (acc, p) => acc + (p.alreadyCount || 0),
-    0
-  );
-  const activeTotal = perClientStats.reduce(
-    (acc, p) => acc + (p.activeCount || 0),
-    0
-  );
-  const backlogTotal = perClientStats.reduce(
-    (acc, p) => acc + (p.noneCount || 0),
-    0
-  );
-
-  const participationPct = eligibleTotal ? (hitTargetTotal / eligibleTotal) * 100 : 0;
-  const activationPct = eligibleTotal ? (activeTotal / eligibleTotal) * 100 : 0;
-
-  const topContribArr = satkerStats
-    .slice()
-    .sort((a, b) => b.comments - a.comments)
-    .slice(0, 4);
-  const topContribSummary = topContribArr.length
-    ? topContribArr.map((p) => `${p.name} (${fmtNum(p.comments)})`).join(", ")
-    : "-";
-
-  const topSatkerList = satkerStats.slice(0, 3).map(
-    (p, idx) => `${idx + 1}. ${p.name} – ${fmtNum(p.comments)} komentar`
-  );
-  const lowSatkerList = [...satkerStats]
-    .reverse()
-    .slice(0, 3)
-    .map((p) => `${p.name} – ${fmtNum(p.comments)} komentar`);
-
-  const backlogSatkerList = satkerStats
-    .filter((p) => (p.noneCount || 0) > 0)
-    .sort((a, b) => (b.noneCount || 0) - (a.noneCount || 0))
-    .slice(0, 3)
-    .map((p) => `${p.name} (${fmtNum(p.noneCount)})`);
-
-  const missingHandleSatkers = satkerStats
-    .filter((p) => (p.noTiktok || 0) > 0)
-    .sort((a, b) => (b.noTiktok || 0) - (a.noTiktok || 0))
-    .slice(0, 3)
-    .map((p) => `${p.name} (${fmtNum(p.noTiktok)})`);
-
-  const formatList = (list) => (list.length ? list.join("; ") : "-");
 
   let text =
     `Mohon ijin Komandan,\n\n` +
@@ -1215,28 +1132,23 @@ export async function lapharTiktokDitbinmas() {
     `${perClientBlocks.join("\n\n")}` +
     `\n\nDistribusi komentar per konten:\n${komentarDistribusi}`;
 
+  const satkerRank = [...satkerStats].sort(
+    (a, b) => b.comments - a.comments || a.name.localeCompare(b.name)
+  );
+  const topFiveSatker = satkerRank.slice(0, 5);
+  const bottomFiveSatker = [...satkerRank].reverse().slice(0, 5);
+  const formatSatkerList = (arr) =>
+    arr.length
+      ? arr
+          .map((p, idx) => `${idx + 1}. ${p.name} – ${fmtNum(p.comments)} komentar`)
+          .join("\n")
+      : "-";
+
   let narrative =
-    `Mohon Ijin Komandan, melaporkan analitik pelaksanaan komentar TikTok hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
-    `📊 *Ringkasan Analitik Komentar TikTok – ${clientNameUpper}*\n\n` +
-    `*Ringkasan Kinerja*\n` +
-    `• Konten dipantau : ${posts.length}\n` +
-    `• Interaksi aktual : ${fmtNum(totalComments)}/${fmtNum(targetComments)} (${fmtPct(commentPercent)}%)\n` +
-    `• Personel mencapai target : ${fmtNum(hitTargetTotal)}/${fmtNum(eligibleTotal)} (${fmtPct(participationPct)}%)\n` +
-    `• Personel aktif (≥1 konten) : ${fmtNum(activeTotal)}/${fmtNum(eligibleTotal)} (${fmtPct(activationPct)}%)\n` +
-    `• Partisipan unik : ${fmtNum(uniqueParticipants.size)} akun\n\n` +
-    `*Sorotan Konten*\n` +
-    `• Performa tertinggi : ${formatContentHighlight(bestContent)}\n` +
-    `• Performa terendah : ${formatContentHighlight(worstContent)}\n\n` +
-    `*Kontributor Utama*\n` +
-    `• Penyumbang komentar terbesar : ${topContribSummary}\n` +
-    `• Top satker aktif : ${formatList(topSatkerList)}\n` +
-    `• Satker perlu perhatian : ${formatList(lowSatkerList)}\n\n` +
-    `*Catatan Backlog*\n` +
-    `• Personel belum komentar : ${fmtNum(backlogTotal)} (prioritas: ${formatList(backlogSatkerList)})\n` +
-    `• Belum input akun TikTok : ${fmtNum(totals.noTiktok)} (sumber utama: ${formatList(missingHandleSatkers)})\n\n` +
-    `*Distribusi Komentar per Konten*\n` +
-    `${komentarDistribusi}\n\n` +
-    `Demikian Komandan, terimakasih.`;
+    `Mohon Ijin Komandan, rekap singkat komentar TikTok hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
+    `🎵 TikTok (${clientNameUpper})\n` +
+    `Top 5 Komentar:\n${formatSatkerList(topFiveSatker)}\n\n` +
+    `Bottom 5 Komentar:\n${formatSatkerList(bottomFiveSatker)}`;
 
   let textBelum =
     `Belum melaksanakan Komentar atau belum input username IG/Tiktok\n` +

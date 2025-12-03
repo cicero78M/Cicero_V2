@@ -504,103 +504,27 @@ export function formatDitbinmasNarrative(stats) {
     hari,
     tanggal,
     jam,
-    totals,
-    totalLikes,
-    totalPossibleLikes,
-    likePercent,
-    targetLikes,
-    deficit,
-    topContrib,
-    topContribPercent,
-    igOverallPercent,
-    igUpdated,
-    tiktokOverallPercent,
-    tiktokUpdated,
-    avgIg,
-    medianIg,
-    avgTiktok,
-    medianTiktok,
-    lowSatker,
-    bestSatkerNames,
-    strongSatkerList,
-    topPerformerLines,
-    bottomPerformerLines,
-    extraUnderTen,
-    gapLines,
-    igBacklog,
-    tiktokBacklog,
-    top10IgList,
-    top10IgPercent,
-    top10TiktokList,
-    top10TiktokPercent,
-    projectedIgPercent,
-    projectedTiktokPercent,
-    notesSection,
-    contentStats,
-    avgLikesPerContent,
-    topContent,
-    bottomContent,
-    contentLikeGap,
+    satkerStats,
   } = stats;
 
   const fmtNum = (n) => n.toLocaleString("id-ID");
-  const fmtDecimal = (n) =>
-    n.toLocaleString("id-ID", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    });
-  const fmtPct = (n) =>
-    n.toLocaleString("id-ID", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    });
-  const distribusiKonten = contentStats
-    .map(
-      (item, idx) =>
-        `${idx + 1}. ${item.link} — ${fmtNum(item.likes)} likes`
-    )
-    .join("\n");
-  const gapKontenLine =
-    topContent && bottomContent && contentLikeGap > 0
-      ? `${topContent.link} unggul ${fmtNum(topContent.likes)} likes dibanding ${bottomContent.link} (${fmtNum(contentLikeGap)} selisih)`
-      : "Selisih likes antar konten relatif merata.";
-  const topContribLine = topContrib
-    ? `${topContrib} → menyumbang ${topContribPercent}% dari total likes saat ini.`
-    : "-";
-  const lowSatkerLine = lowSatker.length
-    ? lowSatker.map((p) => p.name).join(", ")
-    : "-";
-  const gapLinesBlock = gapLines.length ? gapLines.join("\n") : "-";
-  const extraUnderTenLine = extraUnderTen.length
-    ? ` (juga: ${extraUnderTen.join(", ")} berada <10% IG/TT)`
-    : "";
+  const sortedSatkers = [...satkerStats].sort(
+    (a, b) => b.likes - a.likes || a.name.localeCompare(b.name)
+  );
+  const topFive = sortedSatkers.slice(0, 5);
+  const bottomFive = [...sortedSatkers].reverse().slice(0, 5);
+  const formatList = (arr) =>
+    arr.length
+      ? arr
+          .map((p, idx) => `${idx + 1}. ${p.name} – ${fmtNum(p.likes)} likes`)
+          .join("\n")
+      : "-";
 
   return (
-    `Mohon Ijin Komandan, melaporkan perkembangan Implementasi Update data dan Absensi likes oleh personil hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
-    `DIREKTORAT BINMAS\n\n` +
-    `# Insight Likes Konten\n` +
-    `- Jumlah konten aktif: ${contentStats.length} link.\n` +
-    `- Total likes: ${fmtNum(totalLikes)} dari ${fmtNum(totalPossibleLikes)} kemungkinan likes (${fmtPct(likePercent)}% capaian).\n` +
-    `- Target harian ≥95%: ${fmtNum(targetLikes)} likes${deficit > 0 ? ` → kekurangan ${fmtNum(deficit)}` : " (target tercapai)"}.\n` +
-    `- Rata-rata likes/konten: ${fmtDecimal(avgLikesPerContent)}; ${gapKontenLine}.\n` +
-    `- Kontributor likes terbesar: ${topContribLine}\n` +
-    `- Distribusi likes per konten:\n${distribusiKonten}\n\n` +
-    `# Status Data Personel\n` +
-    `- Personil tercatat: ${fmtNum(totals.total)} → IG ${fmtPct(igOverallPercent)}% (${fmtNum(igUpdated)}), TT ${fmtPct(tiktokOverallPercent)}% (${fmtNum(tiktokUpdated)}).\n` +
-    `- Rata-rata satker: IG ${fmtPct(avgIg)}% (median ${fmtPct(medianIg)}%), TT ${fmtPct(avgTiktok)}% (median ${fmtPct(medianTiktok)}%).\n` +
-    `- Satker dengan capaian ≥90% IG & TT: ${bestSatkerNames.length ? `*${bestSatkerNames.join(', ')}*` : '-'}.\n` +
-    `- Satker di kisaran 80% (butuh dorongan akhir): ${strongSatkerList.length ? strongSatkerList.join(', ') : '-'}.\n` +
-    `- Satker perlu perhatian (<10% di kedua kanal): ${lowSatkerLine}.\n` +
-    `- Gap IG vs TikTok (≥10 poin, investigasi lanjut):\n${gapLinesBlock}\n\n` +
-    `# Backlog & Prioritas Singkat\n` +
-    `- IG belum diisi: ${fmtNum(igBacklog)} akun (Top-10 menyumbang ≈${fmtPct(top10IgPercent)}%: ${top10IgList || '-'})\n` +
-    `- TikTok belum diisi: ${fmtNum(tiktokBacklog)} akun (Top-10 menyumbang ≈${fmtPct(top10TiktokPercent)}%: ${top10TiktokList || '-'})\n` +
-    `- Proyeksi jika 70% Top-10 teratasi: IG → ~${fmtPct(projectedIgPercent)}%, TT → ~${fmtPct(projectedTiktokPercent)}%.\n\n` +
-    `# Performa Satker\n` +
-    `- Top performer rata-rata IG/TT: ${topPerformerLines}.\n` +
-    `- Bottom performer rata-rata IG/TT: ${bottomPerformerLines}${extraUnderTenLine}.\n\n` +
-    `# Catatan Tambahan\n${notesSection ? `${notesSection}\n\n` : "\n"}` +
-    `Demikian Komandan hasil analisa yang bisa kami laporkan.`
+    `Mohon Ijin Komandan, rekap singkat likes Instagram hari ${hari}, ${tanggal} pukul ${jam} WIB.\n\n` +
+    `📸 Instagram\n` +
+    `Top 5 Likes:\n${formatList(topFive)}\n\n` +
+    `Bottom 5 Likes:\n${formatList(bottomFive)}`
   );
 }
 

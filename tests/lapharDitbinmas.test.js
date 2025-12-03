@@ -53,17 +53,14 @@ test('orders clients by likes with ditbinmas first and returns narrative', async
   const result = await lapharDitbinmas();
 
   expect(result.narrative).toMatch(/Mohon Ijin Komandan/);
-  expect(result.narrative).toMatch(/# Insight Likes Konten/);
-  expect(result.narrative).toMatch(/https:\/\/www\.instagram\.com\/p\/sc1/);
+  expect(result.narrative).toMatch(/Top 5 Likes/);
+  expect(result.narrative).toMatch(/Bottom 5 Likes/);
   const idxDit = result.text.indexOf('DIREKTORAT BINMAS');
   const idxA = result.text.indexOf('POLRES A');
   const idxB = result.text.indexOf('POLRES B');
   expect(idxDit).toBeLessThan(idxA);
   expect(idxA).toBeLessThan(idxB);
-  expect(result.narrative).toMatch(/POLRES A 1/);
-  expect(result.narrative).toMatch(/Status Data Personel/);
-  expect(result.narrative).toMatch(/Backlog & Prioritas Singkat/);
-  expect(result.narrative).toMatch(/Performa Satker/);
+  expect(result.narrative).toMatch(/POLRES A/);
   expect(result.text).toMatch(/Distribusi Likes per Konten:/);
   expect(result.text).toMatch(/1\. https:\/\/www\.instagram\.com\/p\/sc1 — 2 likes/);
   expect(result.filename).toMatch(/^Absensi_All_Engagement_Instagram_/);
