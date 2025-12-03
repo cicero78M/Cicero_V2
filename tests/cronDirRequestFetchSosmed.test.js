@@ -4,12 +4,14 @@ const mockFetchInsta = jest.fn();
 const mockFetchLikes = jest.fn();
 const mockFetchTiktok = jest.fn();
 const mockGenerateMsg = jest.fn();
+const mockFetchKomentarTiktokBatch = jest.fn();
 const mockSafeSend = jest.fn();
 const mockSendDebug = jest.fn();
 const mockGetInstaPostCount = jest.fn();
 const mockGetTiktokPostCount = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetVideoIdsTodayByClient = jest.fn();
+const mockFindAllActiveDirektoratWithSosmed = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
@@ -17,6 +19,9 @@ jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
 }));
 jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
   handleFetchLikesInstagram: mockFetchLikes,
+}));
+jest.unstable_mockModule('../src/handler/fetchengagement/fetchCommentTiktok.js', () => ({
+  handleFetchKomentarTiktokBatch: mockFetchKomentarTiktokBatch,
 }));
 jest.unstable_mockModule('../src/handler/fetchpost/tiktokFetchPost.js', () => ({
   fetchAndStoreTiktokContent: mockFetchTiktok,
@@ -43,8 +48,12 @@ jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   findPostByVideoId: jest.fn(),
   deletePostByVideoId: jest.fn(),
 }));
+jest.unstable_mockModule('../src/model/clientModel.js', () => ({
+  findAllActiveDirektoratWithSosmed: mockFindAllActiveDirektoratWithSosmed,
+}));
 
 let runCron;
+let normalizeGroupId;
 
 beforeEach(async () => {
   jest.resetModules();
@@ -60,7 +69,40 @@ beforeEach(async () => {
   mockGetTiktokPostCount.mockResolvedValue(0);
   mockGetShortcodesTodayByClient.mockResolvedValue(['dbIg']);
   mockGetVideoIdsTodayByClient.mockResolvedValue(['dbTt']);
-  ({ runCron } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
+  mockFetchKomentarTiktokBatch.mockResolvedValue();
+  mockFindAllActiveDirektoratWithSosmed.mockResolvedValue([
+    {
+      client_id: 'DITBINMAS',
+      client_group: '120363419830216549@g.us',
+      client_operator: '',
+      client_super: '',
+    },
+  ]);
+  ({ runCron, normalizeGroupId } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
+});
+
+describe('normalizeGroupId', () => {
+  test('accepts valid group id with suffix', () => {
+    expect(normalizeGroupId('120363419830216549@g.us')).toBe('120363419830216549@g.us');
+  });
+
+  test('appends @g.us for bare id', () => {
+    expect(normalizeGroupId('120363419830216549')).toBe('120363419830216549@g.us');
+  });
+
+  test('strips invite url prefix and normalizes case', () => {
+    expect(normalizeGroupId('https://chat.whatsapp.com/invite/120363419830216549')).toBe(
+      '120363419830216549@g.us'
+    );
+    expect(normalizeGroupId(' HTTPS://CHAT.WHATSAPP.COM/120363419830216549 ')).toBe(
+      '120363419830216549@g.us'
+    );
+  });
+
+  test('rejects non group tokens even in invite url', () => {
+    expect(normalizeGroupId('https://chat.whatsapp.com/invite/ABCDEFG')).toBeNull();
+    expect(normalizeGroupId('invalid-group@g.us')).toBeNull();
+  });
 });
 
 test('runCron fetches sosmed and sends message to recipients', async () => {
@@ -81,12 +123,12 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
   expect(mockFetchLikes).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockFetchTiktok).toHaveBeenCalledWith('DITBINMAS');
   expect(mockGenerateMsg).toHaveBeenCalled();
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'msg');
-  expect(mockSafeSend).toHaveBeenCalledWith(
-    {},
-    '120363419830216549@g.us',
-    'msg'
-  );
+  const sentMessages = mockSafeSend.mock.calls.map(([, to, text]) => [to, text]);
+  expect(sentMessages[0][0]).toBe('123@c.us');
+  expect(sentMessages[0][1]).toContain('[CRON DIRFETCH SOSMED]');
+  expect(sentMessages[1]).toEqual(['120363419830216549@g.us', 'msg']);
+  expect(sentMessages[2][0]).toBe('123@c.us');
+  expect(sentMessages[2][1]).toContain('Laporan dikirim ke 1 penerima');
 });
 
 test('runCron skips sending when counts unchanged', async () => {
@@ -100,5 +142,9 @@ test('runCron skips sending when counts unchanged', async () => {
     skipTiktokFetch: true,
     previousState: { igShortcodes: ['dbIg2'], tiktokVideoIds: ['dbTt2'] },
   });
-  expect(mockSafeSend).not.toHaveBeenCalled();
+  const adminMessages = mockSafeSend.mock.calls.map(([, to, text]) => [to, text]);
+  expect(adminMessages).toHaveLength(2);
+  expect(adminMessages[0][0]).toBe('123@c.us');
+  expect(adminMessages[0][1]).toContain('Mulai cron dirrequest fetch sosmed');
+  expect(adminMessages[1][1]).toContain('Tidak ada perubahan post, laporan tidak dikirim');
 });

@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-11-29*
+*Last updated: 2025-12-03*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -144,6 +144,21 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
   Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
   rekap harian tidak lagi dikirim ke nomor pribadi.
+
+### Format Grup WA untuk DirRequest
+- Kolom `client_group` menerima beberapa variasi input untuk grup Ditbinmas dan
+  Direktorat lain:
+  - ID grup penuh seperti `120363419830216549@g.us` (huruf besar/kecil diabaikan).
+  - ID numerik tanpa sufiks seperti `120363419830216549`, yang otomatis akan
+    ditambahkan `@g.us` ketika pola ID grup valid.
+  - Tautan undangan WhatsApp seperti
+    `https://chat.whatsapp.com/invite/120363419830216549` atau
+    `https://chat.whatsapp.com/120363419830216549`; bagian undangan akan dibuang
+    dan token numerik di ujung akan dipakai.
+- Spasi di awal/akhir akan dihilangkan sebelum validasi. Hanya token numerik
+  sepanjang 10–22 digit yang lolos dan diubah menjadi format standar
+  `<ID>@g.us`; token lain atau undangan dengan kode huruf akan diabaikan sehingga
+  laporan untuk client tersebut tidak dikirim.
 
 ## RapidAPI (Instagram & TikTok)
 - Opsi pengambilan konten (**3️⃣6️⃣**, **3️⃣7️⃣**, **3️⃣8️⃣**, **3️⃣9️⃣**) membutuhkan
