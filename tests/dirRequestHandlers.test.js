@@ -297,12 +297,12 @@ test('choose_menu aggregates directorate data by client_id', async () => {
     'polres_sidoarjo',
   ]);
   mockFindClientById.mockImplementation(async (cid) => ({
-    ditbinmas: { nama: 'DIT BINMAS', client_type: 'org' },
+    ditbinmas: { nama: 'DIT BINMAS', client_type: 'direktorat' },
     polres_pasuruan_kota: {
       nama: 'POLRES PASURUAN KOTA',
       client_type: 'org',
     },
-    polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'polda' },
+    polres_sidoarjo: { nama: 'POLRES SIDOARJO', client_type: 'org' },
   })[cid.toLowerCase()]);
 
   const session = {
@@ -330,6 +330,50 @@ test('choose_menu aggregates directorate data by client_id', async () => {
   expect(idxBinmas).toBeLessThan(idxPasuruan);
   expect(msg).toMatch(/Client Belum Input Data:\n1\. POLRES SIDOARJO/);
   jest.useRealTimers();
+});
+
+test('formatRekapUserData defaults to directorate role when none provided', async () => {
+  mockFindClientById.mockImplementation(async (cid) => ({
+    client_type: 'direktorat',
+    nama: cid,
+  }));
+  mockGetUsersSocialByClient.mockResolvedValue([]);
+  mockGetClientsByRole.mockResolvedValue([]);
+
+  await formatRekapUserData('DITBINMAS');
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'ditbinmas'
+  );
+});
+
+test('formatRekapUserData applies roleFlag for org clients', async () => {
+  mockFindClientById.mockImplementation(async (cid) => {
+    const key = cid.toLowerCase();
+    if (key === 'polres_a') {
+      return { client_type: 'org', nama: 'POLRES A' };
+    }
+    if (key === 'ditlantas') {
+      return { client_type: 'direktorat', nama: 'DIT LANTAS' };
+    }
+    return { client_type: 'org', nama: cid };
+  });
+  mockGetUsersSocialByClient.mockResolvedValue([
+    {
+      client_id: 'POLRES_A',
+      insta: null,
+      tiktok: null,
+    },
+  ]);
+  mockGetClientsByRole.mockResolvedValue(['POLRES_A']);
+
+  await formatRekapUserData('POLRES_A', 'ditlantas');
+
+  expect(mockGetUsersSocialByClient).toHaveBeenCalledWith(
+    'POLRES_A',
+    'ditlantas'
+  );
 });
 
 test('formatRekapUserData sorts by updated then total', async () => {
