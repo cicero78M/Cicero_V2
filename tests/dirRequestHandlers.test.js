@@ -894,7 +894,7 @@ test('choose_menu option 9 absensi komentar ditbinmas simple', async () => {
   expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'komentar simple');
 });
 
-test('choose_menu option 7 absensi likes uses ditbinmas data for all users', async () => {
+test('choose_menu option 7 absensi likes mengikuti client pilihan', async () => {
   mockAbsensiLikes.mockResolvedValue('laporan');
   mockFindClientById.mockResolvedValue({ client_type: 'org', nama: 'POLRES A' });
 
@@ -909,13 +909,13 @@ test('choose_menu option 7 absensi likes uses ditbinmas data for all users', asy
 
   await dirRequestHandlers.choose_menu(session, chatId, '7', waClient);
 
-  expect(mockAbsensiLikes).toHaveBeenCalledWith('DITBINMAS', {
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('POLRES_A', {
     mode: 'all',
     roleFlag: 'ditbinmas',
   });
 });
 
-test('choose_menu option 7 skips ketika client bukan ditbinmas', async () => {
+test('choose_menu option 7 tetap berjalan untuk client polres', async () => {
   mockAbsensiLikes.mockResolvedValue('laporan');
 
   const session = {
@@ -928,11 +928,11 @@ test('choose_menu option 7 skips ketika client bukan ditbinmas', async () => {
 
   await dirRequestHandlers.choose_menu(session, chatId, '7', waClient);
 
-  expect(mockAbsensiLikes).not.toHaveBeenCalled();
-  expect(waClient.sendMessage).toHaveBeenCalledWith(
-    chatId,
-    expect.stringContaining('DITBINMAS')
-  );
+  expect(mockAbsensiLikes).toHaveBeenCalledWith('POLRES_A', {
+    mode: 'all',
+    roleFlag: 'polres',
+  });
+  expect(waClient.sendMessage).toHaveBeenCalledWith(chatId, 'laporan');
 });
 
 

@@ -521,8 +521,8 @@ export async function rekapLikesIG(client_id) {
 }
 
 export async function absensiLikesDitbinmasSimple(clientId = "DITBINMAS") {
-  const roleName = "ditbinmas";
   const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
+  const roleName = targetClientId.toLowerCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -535,8 +535,10 @@ export async function absensiLikesDitbinmasSimple(clientId = "DITBINMAS") {
     console.error(error);
     return "Maaf, gagal mengambil data konten Instagram.";
   }
+  const { nama: clientName } = await getClientInfo(targetClientId);
+
   if (!shortcodes.length)
-    return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
+    return `*Belum ada konten Instagram terbaru pada akun official ${clientName.toUpperCase()} pada hari ini.*`;
 
   const kontenLinks = shortcodes.map((sc) => `https://www.instagram.com/p/${sc}`);
   let likesSets;
@@ -619,7 +621,7 @@ export async function absensiLikesDitbinmasSimple(clientId = "DITBINMAS") {
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Likes Instagram (Simple)\n` +
-    `*DIREKTORAT BINMAS*\n` +
+    `*${clientName.toUpperCase()}*\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n` +
@@ -634,22 +636,24 @@ export async function absensiLikesDitbinmasSimple(clientId = "DITBINMAS") {
   return msg.trim();
 }
 
-export async function absensiLikesDitbinmasReport() {
-  const roleName = "ditbinmas";
+export async function absensiLikesDitbinmasReport(clientId = "DITBINMAS") {
+  const targetClientId = String(clientId || "DITBINMAS").trim().toUpperCase();
+  const roleName = targetClientId.toLowerCase();
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
+  const { nama: clientName } = await getClientInfo(targetClientId);
 
   let shortcodes;
   try {
-    shortcodes = await getShortcodesTodayByClient(roleName);
+    shortcodes = await getShortcodesTodayByClient(targetClientId);
   } catch (error) {
     console.error(error);
     return "Maaf, gagal mengambil data konten Instagram.";
   }
   if (!shortcodes.length)
-    return "*Belum ada konten Instagram terbaru pada akun official DIREKTORAT BINMAS pada hari ini.*";
+    return `*Belum ada konten Instagram terbaru pada akun official ${clientName.toUpperCase()} pada hari ini.*`;
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -664,13 +668,13 @@ export async function absensiLikesDitbinmasReport() {
   let usersByClient;
   try {
     ({ usersByClient } = await groupUsersByClientDivision(roleName, {
-      clientFilter: "DITBINMAS",
+      clientFilter: targetClientId,
     }));
   } catch (error) {
     console.error(error);
     return "Maaf, gagal mengelompokkan pengguna.";
   }
-  const allUsers = usersByClient["DITBINMAS"] || [];
+  const allUsers = usersByClient[targetClientId] || [];
   const { summary: summaryTotals, userStats } = computeDitbinmasLikesStats(
     allUsers,
     likesSets,
@@ -782,7 +786,7 @@ export async function absensiLikesDitbinmasReport() {
   let msg =
     `Mohon ijin Komandan,\n\n` +
     `📋 Rekap Akumulasi Likes Instagram\n` +
-    `*DIREKTORAT BINMAS*\n` +
+    `*${clientName.toUpperCase()}*\n` +
     `${hari}, ${tanggal}\n` +
     `Jam: ${jam}\n\n` +
     `*Jumlah Konten:* ${shortcodes.length}\n` +

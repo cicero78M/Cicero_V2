@@ -689,20 +689,20 @@ async function formatTopPolresRanking(clientId, roleFlag = null) {
   );
 }
 
-async function absensiLikesDitbinmas() {
-  return await absensiLikesDitbinmasReport();
+async function absensiLikesDitbinmas(clientId) {
+  return await absensiLikesDitbinmasReport(clientId);
 }
-async function absensiLikesDitbinmasSimple() {
-  return await absensiLikesDitbinmasSimpleReport();
+async function absensiLikesDitbinmasSimple(clientId) {
+  return await absensiLikesDitbinmasSimpleReport(clientId);
 }
-async function absensiKomentarTiktok() {
-  return await absensiKomentar("DITBINMAS", { roleFlag: "ditbinmas" });
+async function absensiKomentarTiktok(clientId, roleFlag) {
+  return await absensiKomentar(clientId, { roleFlag });
 }
-async function absensiKomentarDitbinmasSimple() {
-  return await absensiKomentarDitbinmasSimpleReport();
+async function absensiKomentarDitbinmasSimple(clientId) {
+  return await absensiKomentarDitbinmasSimpleReport(clientId);
 }
-async function absensiKomentarDitbinmas() {
-  return await absensiKomentarDitbinmasReport();
+async function absensiKomentarDitbinmas(clientId) {
+  return await absensiKomentarDitbinmasReport(clientId);
 }
 async function formatRekapBelumLengkapDirektorat(clientId) {
   const targetClientId = String(clientId || DITBINMAS_CLIENT_ID).toUpperCase();
@@ -1511,6 +1511,8 @@ async function performAction(
   let msg = "";
   const userClient = userClientId ? await findClientById(userClientId) : null;
   const userType = userClient?.client_type?.toLowerCase();
+  const attendanceClientId = String(userClientId || clientId || "").toUpperCase();
+  const normalizedRoleFlag = (roleFlag || attendanceClientId).toLowerCase();
   switch (action) {
     case "1": {
       msg = await formatRekapUserData(clientId, roleFlag);
@@ -1551,31 +1553,26 @@ async function performAction(
       }
       break;
     }
-    case "5":
-      msg = await absensiLikesDitbinmas();
-      break;
-    case "6":
-      msg = await absensiLikesDitbinmasSimple();
-      break;
-    case "7": {
-      const normalizedId = (clientId || "").toUpperCase();
-      if (normalizedId !== "DITBINMAS") {
-        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
+      case "5":
+        msg = await absensiLikesDitbinmas(attendanceClientId);
+        break;
+      case "6":
+        msg = await absensiLikesDitbinmasSimple(attendanceClientId);
+        break;
+      case "7": {
+        const opts = { mode: "all", roleFlag: normalizedRoleFlag };
+        msg = await absensiLikes(attendanceClientId, opts);
         break;
       }
-      const opts = { mode: "all", roleFlag: "ditbinmas" };
-      msg = await absensiLikes("DITBINMAS", opts);
-      break;
-    }
-    case "8":
-      msg = await absensiKomentarTiktok();
-      break;
-    case "9":
-      msg = await absensiKomentarDitbinmasSimple();
-      break;
-    case "10":
-      msg = await absensiKomentarDitbinmas();
-      break;
+      case "8":
+        msg = await absensiKomentarTiktok(attendanceClientId, normalizedRoleFlag);
+        break;
+      case "9":
+        msg = await absensiKomentarDitbinmasSimple(attendanceClientId);
+        break;
+      case "10":
+        msg = await absensiKomentarDitbinmas(attendanceClientId);
+        break;
     case "11": {
       msg = await absensiRegistrasiDashboardDirektorat(clientId || "DITBINMAS");
       break;
