@@ -1474,40 +1474,37 @@ async function formatRekapAllSosmed(
   const igNarrativeText = normalizeText(scopedIgNarrative).trim();
   const ttNarrativeText = normalizeText(scopedTtNarrative).trim();
 
-  if (igNarrativeText) igParagraphs.push(igNarrativeText);
-  else if (
-    hasDailyContent &&
-    (igRankingSections.top.length || igRankingSections.bottom.length)
-  ) {
-    igParagraphs.push(
-      [
-        "Top 5 Likes:",
-        ...igRankingSections.top.map((line) => `- ${line}`),
-        "",
-        "Bottom 5 Likes:",
-        ...igRankingSections.bottom.map((line) => `- ${line}`),
-      ]
-        .filter(Boolean)
-        .join("\n")
-    );
+  const appendRankingBlock = (paragraphs, sections, metricLabel) => {
+    if (!(sections.top.length || sections.bottom.length)) return;
+    const block = [
+      `Top 5 ${metricLabel}:`,
+      ...sections.top.map((line) => `- ${line}`),
+      "",
+      `Bottom 5 ${metricLabel}:`,
+      ...sections.bottom.map((line) => `- ${line}`),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (block.trim()) paragraphs.push(block);
+  };
+
+  const narrativeHasRanking = (text) => /Top 5|Bottom 5/i.test(text || "");
+
+  if (igNarrativeText) {
+    igParagraphs.push(igNarrativeText);
+    if (!narrativeHasRanking(igNarrativeText))
+      appendRankingBlock(igParagraphs, igRankingSections, "Likes");
+  } else {
+    appendRankingBlock(igParagraphs, igRankingSections, "Likes");
   }
 
-  if (ttNarrativeText) ttParagraphs.push(ttNarrativeText);
-  else if (
-    hasDailyContent &&
-    (ttRankingSections.top.length || ttRankingSections.bottom.length)
-  ) {
-    ttParagraphs.push(
-      [
-        "Top 5 Komentar:",
-        ...ttRankingSections.top.map((line) => `- ${line}`),
-        "",
-        "Bottom 5 Komentar:",
-        ...ttRankingSections.bottom.map((line) => `- ${line}`),
-      ]
-        .filter(Boolean)
-        .join("\n")
-    );
+  if (ttNarrativeText) {
+    ttParagraphs.push(ttNarrativeText);
+    if (!narrativeHasRanking(ttNarrativeText))
+      appendRankingBlock(ttParagraphs, ttRankingSections, "Komentar");
+  } else {
+    appendRankingBlock(ttParagraphs, ttRankingSections, "Komentar");
   }
 
   if (!hasDailyContent && !igParagraphs.length && !ttParagraphs.length) {
