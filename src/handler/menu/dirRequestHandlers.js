@@ -661,11 +661,28 @@ async function absensiKomentarDitbinmasSimple() {
 async function absensiKomentarDitbinmas() {
   return await absensiKomentarDitbinmasReport();
 }
-async function formatRekapBelumLengkapDitbinmas() {
-  const users = await getUsersSocialByClient("DITBINMAS", "ditbinmas");
-  const ditbinmasUsers = users.filter(
-    (u) => (u.client_id || "").toUpperCase() === "DITBINMAS"
-  );
+async function formatRekapBelumLengkapDirektorat(clientId) {
+  const targetClientId = String(clientId || DITBINMAS_CLIENT_ID).toUpperCase();
+  const [client, users] = await Promise.all([
+    findClientById(targetClientId),
+    getUsersSocialByClient(targetClientId, targetClientId.toLowerCase()),
+  ]);
+
+  const clientName = client?.nama || targetClientId;
+  const clientType = client?.client_type?.toLowerCase();
+
+  if (clientType && clientType !== "direktorat") {
+    return (
+      "❌ Rekap data belum lengkap hanya tersedia untuk client bertipe " +
+      `Direktorat. (${clientName})`
+    );
+  }
+
+  const targetUsers =
+    clientType === "direktorat"
+      ? users
+      : users.filter((u) => (u.client_id || "").toUpperCase() === targetClientId);
+
   const salam = getGreeting();
   const now = new Date();
   const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -679,7 +696,7 @@ async function formatRekapBelumLengkapDitbinmas() {
     minute: "2-digit",
   });
   const incomplete = {};
-  ditbinmasUsers.forEach((u) => {
+  targetUsers.forEach((u) => {
     if (u.insta && u.tiktok) return;
     const div = u.divisi || "-";
     const missing = [];
@@ -704,7 +721,7 @@ async function formatRekapBelumLengkapDitbinmas() {
     : "Seluruh personil telah melengkapi data Instagram dan TikTok.";
   return (
     `${salam},\n\n` +
-    `Mohon ijin Komandan, melaporkan personil DITBINMAS yang belum melengkapi data Instagram/TikTok pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
+    `Mohon ijin Komandan, melaporkan personil ${clientName.toUpperCase()} yang belum melengkapi data Instagram/TikTok pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
     body
   ).trim();
 }
@@ -1461,7 +1478,7 @@ async function performAction(
       break;
     }
     case "3":
-      msg = await formatRekapBelumLengkapDitbinmas();
+      msg = await formatRekapBelumLengkapDirektorat(clientId);
       break;
     case "4": {
       try {
@@ -2008,7 +2025,7 @@ export const dirRequestHandlers = {
         "📊 *Rekap Data*\n" +
         "1️⃣ Rekap personel belum lengkapi data\n" +
         "2️⃣ Ringkasan pengisian data personel\n" +
-        "3️⃣ Rekap data belum lengkap Ditbinmas\n" +
+        "3️⃣ Rekap data belum lengkap\n" +
         "4️⃣ Rekap Matriks Update Satker\n\n" +
         "📅 *Absensi*\n" +
         "5️⃣ Absensi like Ditbinmas\n" +
@@ -2933,7 +2950,7 @@ export {
   absensiKomentarDitbinmasSimple,
   absensiKomentarTiktok,
   formatExecutiveSummary,
-  formatRekapBelumLengkapDitbinmas,
+  formatRekapBelumLengkapDirektorat,
   formatRekapAllSosmed,
 };
 

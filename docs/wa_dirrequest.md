@@ -16,6 +16,16 @@ ditampilkan bot.
   dan lainnya) dijalankan berdasarkan *Client ID* yang dipilih sehingga tidak
   selalu bergantung pada default `DITBINMAS`.
 
+## Rekap data belum lengkap (Menu 3)
+- Label submenu diperbarui menjadi **Rekap data belum lengkap** tanpa
+  menyebutkan Ditbinmas.
+- Menu ini mengeksekusi rekap berdasarkan *Client ID* bertipe **Direktorat**
+  yang sedang aktif. Data yang diringkas mengikuti role direktorat tersebut
+  (misalnya `DITBINMAS`, `DITLANTAS`, atau `BIDHUMAS`) tanpa mengunci hanya ke
+  Ditbinmas.
+- Output tetap memuat daftar personel yang belum mengisi Instagram/TikTok per
+  divisi beserta salam dan stempel waktu eksekusi.
+
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
 resmi Satbinmas. Menu utama kini menampilkan rentang opsi **3️⃣6️⃣–4️⃣1️⃣** untuk
