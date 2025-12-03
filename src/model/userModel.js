@@ -301,29 +301,24 @@ export async function getUsersSocialByClient(clientId, roleFilter = null) {
   );
   const clientType = rows[0]?.client_type?.toLowerCase();
 
+  const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
+  let directorateClause = clause;
+  const directorateParams = [...params];
+
   if (clientType === 'direktorat') {
-    const res = await query(
-      `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
-       FROM "user" u
-       JOIN user_roles ur ON ur.user_id = u.user_id
-       JOIN roles r ON r.role_id = ur.role_id
-       WHERE u.status = true
-       GROUP BY u.user_id
-       HAVING
-        BOOL_OR(LOWER(r.role_name) = LOWER($1))
-       ORDER BY u.client_id, u.divisi, u.nama`,
-      [clientId]
-    );
-    return res.rows;
+    const clientPlaceholder = roleFilter ? `$${directorateParams.length + 1}` : '$1';
+    directorateClause = `(${directorateClause} OR LOWER(u.client_id) = LOWER(${clientPlaceholder}))`;
+    if (roleFilter) {
+      directorateParams.push(clientId);
+    }
   }
 
-  const { clause, params } = await buildClientFilter(clientId, 'u', 1, roleFilter);
   const res = await query(
       `SELECT u.user_id, u.nama, u.title, u.divisi, u.insta, u.tiktok, u.client_id
        FROM "user" u
-       WHERE ${clause} AND status = true
+       WHERE ${directorateClause} AND status = true
        ORDER BY u.client_id, u.divisi, u.nama`,
-    params
+    directorateParams
   );
   return res.rows;
 }
