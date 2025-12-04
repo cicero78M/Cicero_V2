@@ -2052,11 +2052,12 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 3️⃣ Kelola user (update/exception/status)
 4️⃣ Hapus WA User
 5️⃣ Penghapusan Massal Status User
+6️⃣ Refresh Aggregator Direktorat
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
 `.trim();
 
-    if (!/^[1-5]$/.test(text.trim())) {
+    if (!/^[1-6]$/.test(text.trim())) {
       session.step = "clientMenu_management";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -2068,6 +2069,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       3: "kelolaUser_choose",
       4: "hapusWAUser_start",
       5: "bulkStatus_prompt",
+      6: "refreshAggregator_chooseClient",
     };
 
     session.step = mapStep[text.trim()];

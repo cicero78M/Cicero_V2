@@ -69,4 +69,4 @@ Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga han
 
 ### Client Request Menu
 
-Menu WhatsApp *Client Request* → *Operasional Media Sosial* menyediakan opsi **7️⃣ Refresh Aggregator Direktorat** yang memanggil endpoint ini dengan mode `skipPostRefresh` aktif. Operator dapat memilih satu direktorat (atau semua) serta periode (`harian` atau riwayat lengkap). Menu ini hanya menyegarkan profil dan mengembalikan posting yang sudah ada tanpa memicu fetch posting baru dari Instagram/TikTok. Ringkasan jumlah post IG/TikTok per klien akan dikirim setelah refresh selesai.
+Menu WhatsApp *Client Request* menyediakan opsi **Refresh Aggregator Direktorat** baik di *Operasional Media Sosial* (opsi 7️⃣) maupun di *Manajemen Client & User* (opsi 6️⃣). Keduanya memanggil endpoint ini dengan mode `skipPostRefresh` aktif. Operator dapat memilih satu direktorat (atau semua) serta periode (`harian` atau riwayat lengkap). Menu ini hanya menyegarkan profil dan mengembalikan posting yang sudah ada tanpa memicu fetch posting baru dari Instagram/TikTok. Ringkasan jumlah post IG/TikTok per klien akan dikirim setelah refresh selesai.
