@@ -7,6 +7,12 @@ grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
 
+## Absensi Komentar TikTok Kasat Binmas
+- Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
+  Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
+  WIB sebelum dikirim ke query database sehingga konten di luar hari berjalan
+  tidak ikut dihitung.
+
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**
   Contoh cuplikan bagian *Rekap Data* pada menu utama:
