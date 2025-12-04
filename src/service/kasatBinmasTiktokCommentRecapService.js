@@ -5,6 +5,7 @@ import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
+const UTC_OFFSET_JAKARTA_MINUTES = 7 * 60;
 
 const STATUS_SECTIONS = [
   { key: "lengkap", icon: "✅", label: "Lengkap (sesuai target)" },
@@ -36,10 +37,16 @@ function rankWeight(rank) {
   return idx === -1 ? PANGKAT_ORDER.length : idx;
 }
 
+function toJakartaDate(baseDate = new Date()) {
+  const utcTimestamp = baseDate.getTime();
+  const jakartaTimestamp = utcTimestamp + UTC_OFFSET_JAKARTA_MINUTES * 60 * 1000;
+  return new Date(jakartaTimestamp);
+}
+
 function toDateInput(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -58,12 +65,12 @@ function formatDayLabel(date) {
 
 function resolveWeeklyRange(baseDate = new Date()) {
   const date = new Date(baseDate.getTime());
-  const day = date.getDay();
+  const day = date.getUTCDay();
   const mondayDiff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date.getTime());
-  monday.setDate(date.getDate() + mondayDiff);
+  monday.setUTCDate(date.getUTCDate() + mondayDiff);
   const sunday = new Date(monday.getTime());
-  sunday.setDate(monday.getDate() + 6);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
   return {
     start: monday,
     end: sunday,
@@ -72,7 +79,7 @@ function resolveWeeklyRange(baseDate = new Date()) {
 }
 
 function describePeriod(period = "daily") {
-  const today = new Date();
+  const today = toJakartaDate();
   if (period === "weekly") {
     const { start, end, label } = resolveWeeklyRange(today);
     return {
@@ -84,11 +91,14 @@ function describePeriod(period = "daily") {
     };
   }
   if (period === "monthly") {
-    const label = today.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+    const label = today.toLocaleDateString("id-ID", {
+      month: "long",
+      year: "numeric",
+    });
     return {
       periode: "bulanan",
       label: `Bulan ${label}`,
-      tanggal: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`,
+      tanggal: `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`,
     };
   }
   return {

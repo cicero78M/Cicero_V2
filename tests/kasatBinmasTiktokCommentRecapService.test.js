@@ -89,6 +89,40 @@ test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () =
   expect(summary).not.toMatch(/Delta/);
 });
 
+test('periode harian memakai tanggal WIB agar tidak bergeser oleh zona waktu server', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-03-01T18:30:00.000Z'));
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '10',
+      nama: 'Zulu',
+      title: 'AKP',
+      jabatan: 'Kasat Binmas',
+      client_id: 'POLREZ',
+      client_name: 'Polres Z',
+      tiktok: '@zulu',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '10', jumlah_komentar: 1, total_konten: 1 },
+  ]);
+
+  try {
+    const summary = await generateKasatBinmasTiktokCommentRecap({ period: 'daily' });
+
+    expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+      'DITBINMAS',
+      'harian',
+      '2024-03-02',
+      undefined,
+      undefined,
+      'ditbinmas'
+    );
+    expect(summary).toContain('02 Maret 2024');
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test('mengembalikan pesan ketika tidak ada Kasat Binmas', async () => {
   mockGetUsersByClient.mockResolvedValue([
     { user_id: '1', jabatan: 'Operator', tiktok: '@alpha' },
