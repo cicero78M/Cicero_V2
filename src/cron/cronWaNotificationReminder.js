@@ -14,6 +14,37 @@ const TARGET_CLIENT_ID = "DITBINMAS";
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
 
+const dailyReminderState = {
+  dateKey: null,
+  firstRunCompleted: false,
+  followup1Completed: false,
+  firstIncomplete: new Set(),
+  secondIncomplete: new Set(),
+};
+
+function getTodayKey() {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function resetDailyReminderState(todayKey) {
+  dailyReminderState.dateKey = todayKey;
+  dailyReminderState.firstRunCompleted = false;
+  dailyReminderState.followup1Completed = false;
+  dailyReminderState.firstIncomplete = new Set();
+  dailyReminderState.secondIncomplete = new Set();
+}
+
+function getRunStage() {
+  if (!dailyReminderState.firstRunCompleted) return "initial";
+  if (!dailyReminderState.followup1Completed) return "followup1";
+  return "followup2";
+}
+
 function buildGreeting(user) {
   let hour = Number.parseInt(
     new Intl.DateTimeFormat("id-ID", {
@@ -206,9 +237,21 @@ function normalizeRecipient(whatsapp) {
 }
 
 export async function runCron() {
+  const todayKey = getTodayKey();
+  if (dailyReminderState.dateKey !== todayKey) {
+    resetDailyReminderState(todayKey);
+  }
+
+  const runStage = getRunStage();
   const users = await getActiveUsersWithWhatsapp();
   const recipients = new Map();
   const recapCache = new Map();
+
+  const isTargetedFollowup = (chatId) => {
+    if (runStage === "initial") return true;
+    if (runStage === "followup1") return dailyReminderState.firstIncomplete.has(chatId);
+    return dailyReminderState.secondIncomplete.has(chatId);
+  };
 
   for (const user of users) {
     if (user?.wa_notification_opt_in !== true) continue;
@@ -216,6 +259,7 @@ export async function runCron() {
     if (clientId !== TARGET_CLIENT_ID) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId || recipients.has(chatId)) continue;
+    if (!isTargetedFollowup(chatId)) continue;
     const userWithPangkat = {
       ...user,
       pangkat: user?.pangkat ?? user?.title,
@@ -223,12 +267,18 @@ export async function runCron() {
     recipients.set(chatId, userWithPangkat);
   }
 
+  const nextIncompleteSet = new Set();
+
   for (const [chatId, user] of recipients.entries()) {
     let message;
     try {
       const recap = await getClientTaskRecap(user?.client_id, recapCache);
       const status = buildUserTaskStatus(user, recap);
       message = buildNotificationMessage(user, status);
+
+      if (!status?.allDone && (runStage === "initial" || runStage === "followup1")) {
+        nextIncompleteSet.add(chatId);
+      }
     } catch (error) {
       console.error("Failed to build WA notification reminder", error);
       message = buildGenericNotificationMessage(user);
@@ -236,5 +286,18 @@ export async function runCron() {
 
     await safeSendMessage(waGatewayClient, chatId, message);
   }
+
+  if (runStage === "initial") {
+    dailyReminderState.firstRunCompleted = true;
+    dailyReminderState.firstIncomplete = nextIncompleteSet;
+    dailyReminderState.secondIncomplete = new Set();
+  } else if (runStage === "followup1") {
+    dailyReminderState.followup1Completed = true;
+    dailyReminderState.secondIncomplete = nextIncompleteSet;
+  }
+}
+
+export function resetNotificationReminderState() {
+  resetDailyReminderState(getTodayKey());
 }
 
