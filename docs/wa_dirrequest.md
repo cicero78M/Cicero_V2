@@ -16,6 +16,11 @@ ditampilkan bot.
   **Asia/Jakarta** secara eksplisit (menggunakan `Intl.DateTimeFormat`)
   sehingga tanggal tidak akan melenceng meski server menjalankan bot dengan
   zona waktu default yang berbeda.
+- Jika rekap komentar untuk periode yang diminta kosong atau total kontennya
+  nol, bot otomatis mengambil konten TikTok Ditbinmas hari ini secara live
+  (menggunakan data komentar terkini) untuk menghitung absensi Kasat Binmas.
+  Penghitungan tetap memakai filter role aktif dan nama pengguna TikTok yang
+  sudah dinormalisasi dari handler absensi untuk menjaga konsistensi.
 
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**

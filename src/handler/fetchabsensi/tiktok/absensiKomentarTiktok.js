@@ -25,7 +25,7 @@ async function getClientInfo(client_id) {
 }
 
 // Helper ekstrak username dari komentar
-function extractUsernamesFromComments(comments) {
+export function extractUsernamesFromComments(comments) {
   return (comments || [])
     .map((x) => {
       let uname = "";
@@ -41,7 +41,7 @@ function extractUsernamesFromComments(comments) {
     .filter(Boolean);
 }
 
-function normalizeUsername(username) {
+export function normalizeUsername(username) {
   return (username || "")
     .toString()
     .trim()
