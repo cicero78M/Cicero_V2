@@ -1,5 +1,7 @@
 import { jest } from '@jest/globals';
 
+process.env.JWT_SECRET ||= 'test-secret-key';
+
 const mockGetUsersByClient = jest.fn();
 const mockGetRekapKomentarByClient = jest.fn();
 
@@ -123,6 +125,44 @@ test('periode harian memakai tanggal WIB agar tidak bergeser oleh zona waktu ser
   }
 });
 
+test('periode harian tetap memakai WIB meski zona waktu server berbeda', async () => {
+  const originalTZ = process.env.TZ;
+  process.env.TZ = 'America/New_York';
+  jest.useFakeTimers().setSystemTime(new Date('2024-06-30T17:00:00.000Z'));
+
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '11',
+      nama: 'Echo',
+      title: 'AKP',
+      jabatan: 'Kasat Binmas',
+      client_id: 'POLREE',
+      client_name: 'Polres E',
+      tiktok: '@echo',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '11', jumlah_komentar: 2, total_konten: 2 },
+  ]);
+
+  try {
+    const summary = await generateKasatBinmasTiktokCommentRecap({ period: 'daily' });
+
+    expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+      'DITBINMAS',
+      'harian',
+      '2024-07-01',
+      undefined,
+      undefined,
+      'ditbinmas'
+    );
+    expect(summary).toContain('01 Juli 2024');
+  } finally {
+    jest.useRealTimers();
+    process.env.TZ = originalTZ;
+  }
+});
+
 test('mengembalikan pesan ketika tidak ada Kasat Binmas', async () => {
   mockGetUsersByClient.mockResolvedValue([
     { user_id: '1', jabatan: 'Operator', tiktok: '@alpha' },
@@ -161,4 +201,41 @@ test('mengirim parameter minggu Senin-Minggu untuk period weekly', async () => {
     expect.any(String),
     'ditbinmas'
   );
+});
+
+test('periode mingguan mengikuti Senin–Minggu WIB di zona waktu server lain', async () => {
+  const originalTZ = process.env.TZ;
+  process.env.TZ = 'America/Los_Angeles';
+  jest.useFakeTimers().setSystemTime(new Date('2024-07-06T18:00:00.000Z'));
+
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '21',
+      jabatan: 'Kasat Binmas',
+      nama: 'Foxtrot',
+      title: 'AKP',
+      client_id: 'POLREF',
+      client_name: 'Polres F',
+      tiktok: '@foxtrot',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '21', jumlah_komentar: 3, total_konten: 3 },
+  ]);
+
+  try {
+    await generateKasatBinmasTiktokCommentRecap({ period: 'weekly' });
+
+    expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+      'DITBINMAS',
+      'mingguan',
+      expect.any(String),
+      '2024-07-01',
+      '2024-07-07',
+      'ditbinmas'
+    );
+  } finally {
+    jest.useRealTimers();
+    process.env.TZ = originalTZ;
+  }
 });

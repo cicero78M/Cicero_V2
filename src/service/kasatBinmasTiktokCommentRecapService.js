@@ -5,7 +5,7 @@ import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
-const UTC_OFFSET_JAKARTA_MINUTES = 7 * 60;
+const JAKARTA_TIMEZONE = "Asia/Jakarta";
 
 const STATUS_SECTIONS = [
   { key: "lengkap", icon: "✅", label: "Lengkap (sesuai target)" },
@@ -37,21 +37,50 @@ function rankWeight(rank) {
   return idx === -1 ? PANGKAT_ORDER.length : idx;
 }
 
+function toZonedDate(baseDate = new Date(), timeZone = JAKARTA_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(baseDate)
+    .reduce((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const year = Number(parts.year);
+  const month = Number(parts.month) - 1;
+  const day = Number(parts.day);
+  const hour = Number(parts.hour);
+  const minute = Number(parts.minute);
+  const second = Number(parts.second);
+
+  const normalizedHour = hour === 24 ? 0 : hour;
+
+  return new Date(Date.UTC(year, month, day, normalizedHour, minute, second));
+}
+
 function toJakartaDate(baseDate = new Date()) {
-  const utcTimestamp = baseDate.getTime();
-  const jakartaTimestamp = utcTimestamp + UTC_OFFSET_JAKARTA_MINUTES * 60 * 1000;
-  return new Date(jakartaTimestamp);
+  return toZonedDate(baseDate, JAKARTA_TIMEZONE);
 }
 
 function toDateInput(date) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+  const zonedDate = toZonedDate(date);
+  const year = zonedDate.getUTCFullYear();
+  const month = String(zonedDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(zonedDate.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function formatDateLong(date) {
   return date.toLocaleDateString("id-ID", {
+    timeZone: JAKARTA_TIMEZONE,
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -59,12 +88,15 @@ function formatDateLong(date) {
 }
 
 function formatDayLabel(date) {
-  const weekday = date.toLocaleDateString("id-ID", { weekday: "long" });
+  const weekday = date.toLocaleDateString("id-ID", {
+    weekday: "long",
+    timeZone: JAKARTA_TIMEZONE,
+  });
   return `${weekday}, ${formatDateLong(date)}`;
 }
 
 function resolveWeeklyRange(baseDate = new Date()) {
-  const date = new Date(baseDate.getTime());
+  const date = toJakartaDate(baseDate);
   const day = date.getUTCDay();
   const mondayDiff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date.getTime());
@@ -92,13 +124,15 @@ function describePeriod(period = "daily") {
   }
   if (period === "monthly") {
     const label = today.toLocaleDateString("id-ID", {
+      timeZone: JAKARTA_TIMEZONE,
       month: "long",
       year: "numeric",
     });
+    const zoned = toZonedDate(today);
     return {
       periode: "bulanan",
       label: `Bulan ${label}`,
-      tanggal: `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`,
+      tanggal: `${zoned.getUTCFullYear()}-${String(zoned.getUTCMonth() + 1).padStart(2, "0")}`,
     };
   }
   return {

@@ -12,6 +12,10 @@ ditampilkan bot.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
   WIB sebelum dikirim ke query database sehingga konten di luar hari berjalan
   tidak ikut dihitung.
+- Perhitungan harian/mingguan/bulanan kini memaksa konversi zona waktu ke
+  **Asia/Jakarta** secara eksplisit (menggunakan `Intl.DateTimeFormat`)
+  sehingga tanggal tidak akan melenceng meski server menjalankan bot dengan
+  zona waktu default yang berbeda.
 
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**
