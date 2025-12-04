@@ -1,7 +1,13 @@
 import { getUsersByClient } from "../model/userModel.js";
+import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
+import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
 import { getRekapKomentarByClient } from "../model/tiktokCommentModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
+import {
+  extractUsernamesFromComments,
+  normalizeUsername,
+} from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
@@ -177,6 +183,63 @@ function formatEntryLine(entry, index, totalKonten) {
   return `${index}. ${name} (${polres}) — 0/${totalKonten} konten`;
 }
 
+async function buildLiveFallbackCounts(kasatUsers) {
+  const usernameToUsers = new Map();
+  kasatUsers.forEach((user) => {
+    const normalizedUsername = normalizeUsername(user?.tiktok);
+    if (!normalizedUsername) return;
+    if (!usernameToUsers.has(normalizedUsername)) {
+      usernameToUsers.set(normalizedUsername, []);
+    }
+    usernameToUsers.get(normalizedUsername).push(user);
+  });
+
+  const commentCountByUser = new Map();
+  try {
+    const posts = await getPostsTodayByClient(DITBINMAS_CLIENT_ID);
+    const totalKonten = posts.length;
+
+    for (const post of posts) {
+      try {
+        const { comments } = await getCommentsByVideoId(post.video_id);
+        const commenters = new Set(
+          extractUsernamesFromComments(comments).map((uname) =>
+            normalizeUsername(uname)
+          )
+        );
+
+        commenters.forEach((username) => {
+          const mappedUsers = usernameToUsers.get(username) || [];
+          mappedUsers.forEach((user) => {
+            commentCountByUser.set(
+              user.user_id,
+              (commentCountByUser.get(user.user_id) || 0) + 1
+            );
+          });
+        });
+      } catch (error) {
+        return {
+          success: false,
+          totalKonten,
+          commentCountByUser,
+          error: `Gagal mengambil komentar untuk konten ${post.video_id}: ${
+            error?.message || error
+          }`,
+        };
+      }
+    }
+
+    return { success: true, totalKonten, commentCountByUser };
+  } catch (error) {
+    return {
+      success: false,
+      totalKonten: 0,
+      commentCountByUser,
+      error: error?.message || error,
+    };
+  }
+}
+
 export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" } = {}) {
   const periodInfo = describePeriod(period);
 
@@ -197,12 +260,34 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     TARGET_ROLE
   );
 
-  const commentCountByUser = new Map();
-  const totalKonten = Number(recapRows?.[0]?.total_konten ?? 0);
+  let commentCountByUser = new Map();
+  let totalKonten = Number(recapRows?.[0]?.total_konten ?? 0);
   (recapRows || []).forEach((row) => {
     if (!row) return;
     commentCountByUser.set(row.user_id, Number(row.jumlah_komentar) || 0);
   });
+
+  let warningMessage = "";
+  if (!recapRows?.length || totalKonten === 0) {
+    const fallback = await buildLiveFallbackCounts(kasatUsers);
+    if (fallback.success) {
+      commentCountByUser = fallback.commentCountByUser;
+      totalKonten = fallback.totalKonten;
+      warningMessage =
+        totalKonten === 0
+          ? "Rekap periode kosong. Tidak ada konten TikTok Ditbinmas hari ini untuk dicek secara langsung."
+          : "Rekap periode kosong. Data diambil langsung dari konten TikTok hari ini.";
+    } else if (!recapRows?.length) {
+      return (
+        "Rekap komentar periode ini tidak tersedia dan pengambilan data langsung juga gagal. " +
+        (fallback.error ? `Alasan: ${fallback.error}` : "")
+      ).trim();
+    } else {
+      warningMessage =
+        fallback.error ||
+        "Rekap komentar tidak tersedia untuk periode ini dan pengambilan data langsung gagal.";
+    }
+  }
 
   const grouped = { lengkap: [], sebagian: [], belum: [], noUsername: [] };
   const totals = {
@@ -257,6 +342,7 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     "📋 *Absensi Komentar TikTok Kasat Binmas*",
     `Periode: ${periodInfo.label}`,
     "",
+    warningMessage,
     "*Ringkasan:*",
     `- ${totalKontenLine}`,
     `- Total Kasat Binmas: ${totals.total} pers`,
