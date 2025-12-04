@@ -11,7 +11,12 @@ import { sendDebug } from "../middleware/debugHandler.js";
 import { buildClientRecipientSet } from "../utils/recipientHelper.js";
 import { findAllActiveDirektoratWithSosmed } from "../model/clientModel.js";
 
-const CLIENT_ID = "DITBINMAS";
+const DEFAULT_RECIPIENT_OPTIONS = {
+  includeAdmins: false,
+  includeOperator: false,
+  includeGroup: false,
+  includeSuper: true,
+};
 
 async function resolveTargetClientIds(clientIds) {
   if (Array.isArray(clientIds) && clientIds.length) {
@@ -26,7 +31,23 @@ async function resolveTargetClientIds(clientIds) {
   return clients.map(({ client_id }) => client_id).filter(Boolean);
 }
 
-export async function runCron(clientIds = CLIENT_ID) {
+function resolveRecipientOptions(clientId, recipientMode = "default") {
+  if (recipientMode === "groupOnly") {
+    return { ...DEFAULT_RECIPIENT_OPTIONS, includeGroup: true, includeSuper: false };
+  }
+
+  if (recipientMode === "groupAndSuper") {
+    return { ...DEFAULT_RECIPIENT_OPTIONS, includeGroup: true, includeSuper: true };
+  }
+
+  if (clientId === "BIDHUMAS") {
+    return { ...DEFAULT_RECIPIENT_OPTIONS, includeGroup: true, includeSuper: true };
+  }
+
+  return DEFAULT_RECIPIENT_OPTIONS;
+}
+
+export async function runCron({ clientIds = null, recipientMode = "default" } = {}) {
   sendDebug({ tag: "CRON DIRREQ DIREKTORAT", msg: "Mulai cron dirrequest direktorat" });
   try {
     const targetClientIds = await resolveTargetClientIds(clientIds);
@@ -41,17 +62,13 @@ export async function runCron(clientIds = CLIENT_ID) {
 
     for (const clientId of targetClientIds) {
       try {
-        const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId, {
-          includeAdmins: false,
-          includeOperator: false,
-          includeGroup: false,
-          includeSuper: true,
-        });
+        const recipientOptions = resolveRecipientOptions(clientId, recipientMode);
+        const { recipients, hasClientRecipients } = await buildClientRecipientSet(clientId, recipientOptions);
 
         if (!recipients.size) {
           sendDebug({
             tag: "CRON DIRREQ DIREKTORAT",
-            msg: `Tidak ada super admin WA yang valid untuk rekap absensi direktorat ${clientId}`,
+            msg: `Tidak ada penerima WA yang valid untuk rekap absensi direktorat ${clientId}`,
           });
           continue;
         }
@@ -64,7 +81,7 @@ export async function runCron(clientIds = CLIENT_ID) {
         }
         sendDebug({
           tag: "CRON DIRREQ DIREKTORAT",
-          msg: `Laporan ${clientId} dikirim ke ${recipients.size} super admin${
+          msg: `Laporan ${clientId} dikirim ke ${recipients.size} penerima WA${
             hasClientRecipients ? "" : " (fallback admin)"
           }`,
         });

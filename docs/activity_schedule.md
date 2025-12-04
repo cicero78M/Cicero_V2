@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-03-11*
+*Last updated: 2025-05-23*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can share the same WhatsApp gateway readiness checks and be toggled together.
 
@@ -41,7 +41,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestSosmedRank.js` | `7 15 * * *<br>40 20 * * *` | Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients. |
 | `cronDirRequestEngageRank.js` | `7 15 * * *<br>40 20 * * *` | Generate engagement ranking narratives and Excel exports for Ditbinmas. |
 | `cronDirRequestLapharKasatker.js` | `42 20 * * *<br>47 20 * * 0<br>50 20 * * *` | Send Ditbinmas kasatker daily, weekly, and monthly recaps **only to operator contacts** (no group or super admin recipients). |
-| `cronDirRequestDirektorat.js` | `32 20 * * *` | Dispatch Ditbinmas directorate attendance recaps sequentially for every active directorate client with Instagram and TikTok enabled, delivering the results only to each client’s super admins. |
+| `cronDirRequestDirektorat.js` | `5 15 * * *<br>5 18 * * *<br>32 20 * * *` | Dispatch Ditbinmas directorate attendance recaps for every active directorate client with Instagram and TikTok enabled. BIDHUMAS receives group-only blasts at 15:05 and 18:05 WIB; the nightly run sends DITBINMAS to super admins, BIDHUMAS to its group and super admins, and other directorates to their super admins. |
 | `cronDirRequestHighLow.js` | `50 20 * * 0` | Send weekly Instagram and TikTok high/low performance summaries. |
 | `cronDirRequestKasatBinmasRecap.js` | `36 20 * * *<br>42 20 * * 0<br>52 20 * * *` | Provide Ditbinmas Kasat Binmas recap messages only to super admin contacts (no operator or group delivery). |
 | `cronWaNotificationReminder.js` | `5 19 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in. |
