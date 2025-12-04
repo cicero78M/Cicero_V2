@@ -20,3 +20,53 @@ Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terh
 - `400 Bad Request` bila `client_id` atau header `x-client-id` tidak dikirim dan token tidak memiliki tepat satu `client_id`.
 - `404 Not Found` bila klien tidak ditemukan.
 - `500 Internal Server Error` untuk kegagalan tak terduga lainnya.
+
+---
+
+## Refresh Aggregator (POST `/aggregator/refresh`)
+
+Endpoint ini memicu pengambilan ulang profil dan konten untuk klien bertipe **direktorat** yang memenuhi kriteria berikut:
+
+- `client_status = true`
+- `client_insta_status = true`
+- `client_tiktok_status = true`
+
+Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga hanya klien dengan status sosial media aktif yang akan diproses.
+
+### Parameters
+
+- **client_id** (query/body) — opsional, bila kosong semua direktorat aktif akan diproses. Nilai harus cocok dengan daftar hasil `findAllActiveDirektoratWithSosmed`.
+- **periode** (query/body) — `harian` untuk mengambil konten hari ini saja, atau nilai lain (mis. `riwayat`) untuk mengambil seluruh data yang tersedia.
+- **limit** (query/body) — opsional, jumlah maksimum post yang dikembalikan per platform. Default: `10`.
+
+### Behaviour
+
+- Profil Instagram diambil dari sumber upstream (RapidAPI) dan disimpan via `instaProfileService.upsertProfile`.
+- Postingan Instagram dan TikTok diambil ulang menggunakan pipeline `fetchAndStoreInstaContent` serta `fetchAndStoreTiktokContent`. Hasil respon akan memuat data dari `instaPostService`/`instaPostModel` dan `tiktokPostService`/`tiktokPostModel` sesuai `periode`.
+- Profil TikTok terbaru diambil melalui `tiktokRapidService.fetchTiktokProfile`.
+- Semua operasi dibatasi ke `client_id` yang sesuai dengan logika resolusi direktorat pada endpoint GET.
+- Untuk pemanggilan internal tertentu (mis. menu WhatsApp *Client Request*), backend bisa mengaktifkan opsi `skipPostRefresh` agar tidak memicu ulang pengambilan posting IG/TikTok dari upstream namun tetap mengembalikan data posting yang sudah tersimpan.
+
+### Response
+
+```
+{
+  "success": true,
+  "data": {
+    "message": "Aggregator refreshed",
+    "results": [
+      {
+        "client_id": "DITA",
+        "igProfile": { ... },
+        "igPosts": [...],
+        "tiktokProfile": { ... },
+        "tiktokPosts": [...]
+      }
+    ]
+  }
+}
+```
+
+### Client Request Menu
+
+Menu WhatsApp *Client Request* → *Operasional Media Sosial* menyediakan opsi **7️⃣ Refresh Aggregator Direktorat** yang memanggil endpoint ini dengan mode `skipPostRefresh` aktif. Operator dapat memilih satu direktorat (atau semua) serta periode (`harian` atau riwayat lengkap). Menu ini hanya menyegarkan profil dan mengembalikan posting yang sudah ada tanpa memicu fetch posting baru dari Instagram/TikTok. Ringkasan jumlah post IG/TikTok per klien akan dikirim setelah refresh selesai.
