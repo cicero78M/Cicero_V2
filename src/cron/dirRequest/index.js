@@ -38,7 +38,7 @@ const dirRequestCrons = [
     description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
     schedules: [
       { cronExpression: '0 10 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 34 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 37 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
@@ -46,7 +46,7 @@ const dirRequestCrons = [
     description: 'Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients.',
     schedules: [
       { cronExpression: '7 15 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '40 20 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '47 20 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
@@ -54,16 +54,16 @@ const dirRequestCrons = [
     description: 'Generate engagement ranking narratives and Excel exports for Ditbinmas.',
     schedules: [
       { cronExpression: '7 15 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '40 20 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '52 20 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
     jobKey: KASATKER_JOB_KEY,
     description: 'Send Ditbinmas kasatker daily, weekly, and monthly recaps.',
     schedules: [
-      { cronExpression: '42 20 * * *', handler: () => runKasatkerDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '47 20 * * 0', handler: () => runKasatkerWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '50 20 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '57 20 * * *', handler: () => runKasatkerDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '12 21 * * 0', handler: () => runKasatkerWeekly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '17 21 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   { 
@@ -87,16 +87,16 @@ const dirRequestCrons = [
     jobKey: HIGH_LOW_JOB_KEY,
     description: 'Send weekly Instagram and TikTok high/low performance summaries.',
     schedules: [
-      { cronExpression: '50 20 * * 0', handler: () => runHighLow(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '7 21 * * 0', handler: () => runHighLow(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
     jobKey: KASAT_BINMAS_JOB_KEY,
     description: 'Provide Ditbinmas Kasat Binmas recap messages.',
     schedules: [
-      { cronExpression: '36 20 * * *', handler: () => runKasatBinmasDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '42 20 * * 0', handler: () => runKasatBinmasWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '52 20 * * *', handler: () => runKasatBinmasMonthly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '42 20 * * *', handler: () => runKasatBinmasDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '2 21 * * 0', handler: () => runKasatBinmasWeekly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '22 21 * * *', handler: () => runKasatBinmasMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
