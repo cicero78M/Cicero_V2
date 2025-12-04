@@ -154,4 +154,21 @@ describe('refreshAggregatorData', () => {
     expect(mockGetTiktokPostsToday).not.toHaveBeenCalled();
     expect(results[0].igPosts).toEqual([{ shortcode: 'sA' }, { shortcode: 'sB' }]);
   });
+
+  test('skips upstream post refresh when skipPostRefresh is true', async () => {
+    const results = await refreshAggregatorData({
+      clientId: 'DITA',
+      periode: 'harian',
+      limit: 3,
+      skipPostRefresh: true,
+    });
+
+    expect(mockFetchAndStoreInstaContent).not.toHaveBeenCalled();
+    expect(mockFetchAndStoreTiktokContent).not.toHaveBeenCalled();
+    expect(mockGetPostsToday).toHaveBeenCalledWith('DITA');
+    expect(mockGetTiktokPostsToday).toHaveBeenCalledWith('DITA');
+    expect(results[0]).toEqual(
+      expect.objectContaining({ client_id: 'DITA', igPosts: [{ shortcode: 's1' }] })
+    );
+  });
 });

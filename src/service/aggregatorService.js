@@ -148,7 +148,13 @@ async function refreshTiktokPosts(clientId) {
   }
 }
 
-export async function refreshAggregatorData({ clientId, periode = "harian", limit = 10, userRole } = {}) {
+export async function refreshAggregatorData({
+  clientId,
+  periode = "harian",
+  limit = 10,
+  userRole,
+  skipPostRefresh = false,
+} = {}) {
   const activeClients = await findAllActiveDirektoratWithSosmed();
   if (!activeClients.length) return [];
 
@@ -178,12 +184,14 @@ export async function refreshAggregatorData({ clientId, periode = "harian", limi
     }
 
     const igProfile = await refreshInstagramProfile(client);
-    if (client.client_insta_status) {
-      await refreshInstagramPosts(client.client_id);
-    }
+    if (!skipPostRefresh) {
+      if (client.client_insta_status) {
+        await refreshInstagramPosts(client.client_id);
+      }
 
-    if (client.client_tiktok_status) {
-      await refreshTiktokPosts(client.client_id);
+      if (client.client_tiktok_status) {
+        await refreshTiktokPosts(client.client_id);
+      }
     }
 
     let tiktokProfile = null;

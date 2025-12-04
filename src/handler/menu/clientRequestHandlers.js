@@ -4390,6 +4390,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         clientId: targetClientId,
         periode,
         limit: 10,
+        skipPostRefresh: true,
       });
 
       if (!results.length) {

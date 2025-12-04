@@ -45,6 +45,7 @@ Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga han
 - Postingan Instagram dan TikTok diambil ulang menggunakan pipeline `fetchAndStoreInstaContent` serta `fetchAndStoreTiktokContent`. Hasil respon akan memuat data dari `instaPostService`/`instaPostModel` dan `tiktokPostService`/`tiktokPostModel` sesuai `periode`.
 - Profil TikTok terbaru diambil melalui `tiktokRapidService.fetchTiktokProfile`.
 - Semua operasi dibatasi ke `client_id` yang sesuai dengan logika resolusi direktorat pada endpoint GET.
+- Untuk pemanggilan internal tertentu (mis. menu WhatsApp *Client Request*), backend bisa mengaktifkan opsi `skipPostRefresh` agar tidak memicu ulang pengambilan posting IG/TikTok dari upstream namun tetap mengembalikan data posting yang sudah tersimpan.
 
 ### Response
 
@@ -68,4 +69,4 @@ Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga han
 
 ### Client Request Menu
 
-Menu WhatsApp *Client Request* → *Operasional Media Sosial* menyediakan opsi **7️⃣ Refresh Aggregator Direktorat** yang memanggil endpoint ini. Operator dapat memilih satu direktorat (atau semua) serta periode (`harian` atau riwayat lengkap). Ringkasan jumlah post IG/TikTok per klien akan dikirim setelah refresh selesai.
+Menu WhatsApp *Client Request* → *Operasional Media Sosial* menyediakan opsi **7️⃣ Refresh Aggregator Direktorat** yang memanggil endpoint ini dengan mode `skipPostRefresh` aktif. Operator dapat memilih satu direktorat (atau semua) serta periode (`harian` atau riwayat lengkap). Menu ini hanya menyegarkan profil dan mengembalikan posting yang sudah ada tanpa memicu fetch posting baru dari Instagram/TikTok. Ringkasan jumlah post IG/TikTok per klien akan dikirim setelah refresh selesai.
