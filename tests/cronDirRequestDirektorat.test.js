@@ -39,9 +39,11 @@ beforeEach(() => {
     { client_id: 'DIT1' },
     { client_id: 'DIT2' },
   ]);
-  mockBuildClientRecipientSet.mockResolvedValue({
-    recipients: new Set(['123@c.us', '321@c.us', 'group@g.us']),
-    hasClientRecipients: true,
+  mockBuildClientRecipientSet.mockImplementation(async (_, { includeSuper, includeGroup }) => {
+    const recipients = new Set();
+    if (includeSuper) recipients.add('super@c.us');
+    if (includeGroup) recipients.add('group@g.us');
+    return { recipients, hasClientRecipients: recipients.size > 0 };
   });
 });
 
@@ -67,19 +69,15 @@ test('runCron sends absensi and komentar sequentially to each eligible directora
     includeSuper: true,
   });
 
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'absensi');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '123@c.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '321@c.us', 'absensi');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, '321@c.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'absensi');
-  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
-  expect(mockSafeSend).toHaveBeenCalledTimes(12);
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledTimes(4);
 });
 
 test('runCron uses provided client IDs and skips database lookup', async () => {
   mockFindActiveDirektorat.mockResolvedValue([]);
 
-  await runCron(['CUSTOM']);
+  await runCron({ clientIds: ['CUSTOM'] });
 
   expect(mockFindActiveDirektorat).not.toHaveBeenCalled();
   expect(mockAbsensi).toHaveBeenCalledWith('CUSTOM');
@@ -96,5 +94,37 @@ test('runCron logs when no eligible directorate clients found', async () => {
       msg: 'Tidak ada client direktorat aktif dengan Instagram dan TikTok yang siap diproses',
     })
   );
+});
+
+test('runCron sends BIDHUMAS night recap to group and super admin by default', async () => {
+  mockFindActiveDirektorat.mockResolvedValue([{ client_id: 'BIDHUMAS' }]);
+
+  await runCron();
+
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('BIDHUMAS', {
+    includeAdmins: false,
+    includeOperator: false,
+    includeGroup: true,
+    includeSuper: true,
+  });
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledTimes(4);
+});
+
+test('runCron can target BIDHUMAS group-only schedules', async () => {
+  await runCron({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' });
+
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('BIDHUMAS', {
+    includeAdmins: false,
+    includeOperator: false,
+    includeGroup: true,
+    includeSuper: false,
+  });
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledTimes(2);
 });
 

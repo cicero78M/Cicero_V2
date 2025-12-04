@@ -66,10 +66,20 @@ const dirRequestCrons = [
       { cronExpression: '50 20 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
-  {
+  { 
     jobKey: DIREKTORAT_JOB_KEY,
     description: 'Dispatch Ditbinmas directorate attendance recaps.',
     schedules: [
+      {
+        cronExpression: '5 15 * * *',
+        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
+        options: DEFAULT_CRON_OPTIONS,
+      },
+      {
+        cronExpression: '5 18 * * *',
+        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
+        options: DEFAULT_CRON_OPTIONS,
+      },
       { cronExpression: '32 20 * * *', handler: () => runDirektorat(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
