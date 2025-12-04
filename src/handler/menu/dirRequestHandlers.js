@@ -1635,7 +1635,7 @@ async function performAction(
         msg = await absensiKomentarDitbinmas(attendanceClientId);
         break;
     case "11": {
-      msg = await absensiRegistrasiDashboardDirektorat(clientId || "DITBINMAS");
+      msg = await absensiRegistrasiDashboardDirektorat(clientId);
       break;
     }
     case "12": {
