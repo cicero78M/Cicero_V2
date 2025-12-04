@@ -75,7 +75,7 @@ export async function runCron() {
 
 const JOB_KEY = "./src/cron/cronRekapLink.js";
 
-scheduleCronJob(JOB_KEY, "2 15,18,21 * * *", runCron, { timezone: "Asia/Jakarta" });
+scheduleCronJob(JOB_KEY, "5 15,18,21 * * *", runCron, { timezone: "Asia/Jakarta" });
 export { getActiveClients, getRecipients };
 
 export default null;
