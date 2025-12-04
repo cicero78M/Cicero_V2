@@ -37,7 +37,7 @@ const dirRequestCrons = [
     jobKey: REKAP_ALL_SOCMED_JOB_KEY,
     description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
     schedules: [
-      { cronExpression: '0 4 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 10 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 34 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
