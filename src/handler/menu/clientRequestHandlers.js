@@ -31,6 +31,8 @@ import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import { fetchTiktokProfile } from "../../service/tiktokRapidService.js";
+import { refreshAggregatorData } from "../../service/aggregatorService.js";
+import { findAllActiveDirektoratWithSosmed } from "../../model/clientModel.js";
 import { hasUserLikedBetween } from "../../model/instaLikeModel.js";
 import {
   hasUserCommentedBetween,
@@ -2134,11 +2136,12 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 4️⃣ Absensi Username TikTok
 5️⃣ Download Sheet Amplifikasi
 6️⃣ Download Sheet Amplifikasi Bulan sebelumnya
+7️⃣ Refresh Aggregator Direktorat
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
 `.trim();
 
-    if (!/^[1-6]$/.test(text.trim())) {
+    if (!/^[1-7]$/.test(text.trim())) {
       session.step = "clientMenu_social";
       await waClient.sendMessage(chatId, msg);
       return;
@@ -2151,6 +2154,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       4: "absensiUsernameTiktok_choose",
       5: "downloadSheet_choose",
       6: "downloadSheetPrev_choose",
+      7: "refreshAggregator_chooseClient",
     };
 
     session.step = mapStep[text.trim()];
@@ -4318,6 +4322,90 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal membuat Excel: ${err.message}`);
       console.error(err);
+    }
+  },
+
+  // ================== REFRESH AGGREGATOR DIREKTORAT ==================
+  refreshAggregator_chooseClient: async (session, chatId, _text, waClient) => {
+    const clients = await findAllActiveDirektoratWithSosmed();
+    if (!clients.length) {
+      await waClient.sendMessage(
+        chatId,
+        "Tidak ada client direktorat aktif dengan Instagram & TikTok aktif."
+      );
+      session.step = "main";
+      return;
+    }
+
+    session.clientList = clients;
+    let msg = `*Refresh Aggregator Direktorat*\nBalas angka untuk memilih client atau ketik *0* untuk semua:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama || c.client_id}\n`;
+    });
+
+    session.step = "refreshAggregator_choosePeriode";
+    await waClient.sendMessage(chatId, msg.trim());
+  },
+
+  refreshAggregator_choosePeriode: async (
+    session,
+    chatId,
+    text,
+    waClient
+  ) => {
+    const choice = text.trim();
+    const clients = session.clientList || [];
+
+    if (choice !== "0") {
+      const idx = parseInt(choice, 10) - 1;
+      if (Number.isNaN(idx) || !clients[idx]) {
+        await waClient.sendMessage(
+          chatId,
+          "Pilihan tidak valid. Balas angka sesuai daftar atau 0 untuk semua."
+        );
+        return;
+      }
+      session.refreshAggregatorClientId = clients[idx].client_id;
+    } else {
+      session.refreshAggregatorClientId = null;
+    }
+
+    session.step = "refreshAggregator_execute";
+    await waClient.sendMessage(
+      chatId,
+      "Pilih periode refresh aggregator:\n1️⃣ Harian (konten hari ini)\n2️⃣ Riwayat lengkap\nBalas angka di atas."
+    );
+  },
+
+  refreshAggregator_execute: async (session, chatId, text, waClient) => {
+    const periodeChoice = text.trim();
+    const periode = periodeChoice === "2" ? "riwayat" : "harian";
+    const targetClientId = session.refreshAggregatorClientId;
+
+    session.step = "main";
+    await waClient.sendMessage(chatId, "⏳ Menjalankan refresh aggregator...");
+
+    try {
+      const results = await refreshAggregatorData({
+        clientId: targetClientId,
+        periode,
+        limit: 10,
+      });
+
+      if (!results.length) {
+        await waClient.sendMessage(chatId, "Tidak ada data yang diperbarui.");
+        return;
+      }
+
+      let msg = "✅ Refresh selesai. Ringkasan:\n";
+      results.forEach((r) => {
+        const igCount = Array.isArray(r.igPosts) ? r.igPosts.length : 0;
+        const ttCount = Array.isArray(r.tiktokPosts) ? r.tiktokPosts.length : 0;
+        msg += `- ${r.client_id}: IG ${igCount} post, TikTok ${ttCount} post\n`;
+      });
+      await waClient.sendMessage(chatId, msg.trim());
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal refresh aggregator: ${err.message}`);
     }
   },
 
