@@ -53,16 +53,18 @@ jest.unstable_mockModule('../src/utils/likesHelper.js', () => ({
 }));
 
 let runCron;
+let resetNotificationReminderState;
 
 afterEach(() => {
   jest.clearAllMocks();
 });
 
 beforeAll(async () => {
-  ({ runCron } = await import('../src/cron/cronWaNotificationReminder.js'));
+  ({ runCron, resetNotificationReminderState } = await import('../src/cron/cronWaNotificationReminder.js'));
 });
 
 beforeEach(() => {
+  resetNotificationReminderState();
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
   mockGetLikesByShortcode.mockResolvedValue([]);
   mockGetPostsTodayByClient.mockResolvedValue([]);
@@ -106,4 +108,37 @@ test('runCron only sends reminders for DITBINMAS users', async () => {
   expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('DITBINMAS');
   expect(mockGetPostsTodayByClient).toHaveBeenCalledWith('DITBINMAS');
   expect(mockFindClientById).toHaveBeenCalledWith('DITBINMAS');
+});
+
+test('runCron sends staged follow-ups for users still incomplete', async () => {
+  mockGetActiveUsersWithWhatsapp.mockResolvedValue([
+    {
+      whatsapp: '081234567890',
+      wa_notification_opt_in: true,
+      client_id: 'DITBINMAS',
+      insta: 'user1',
+      tiktok: 'tt1',
+      nama: 'User Binmas',
+    },
+  ]);
+
+  mockGetShortcodesTodayByClient.mockResolvedValue(['abc123']);
+  mockGetLikesByShortcode.mockResolvedValue([]);
+
+  await runCron();
+
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+
+  mockSafeSendMessage.mockClear();
+  mockGetLikesByShortcode.mockResolvedValue(['user1']);
+
+  await runCron();
+
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+
+  mockSafeSendMessage.mockClear();
+
+  await runCron();
+
+  expect(mockSafeSendMessage).not.toHaveBeenCalled();
 });

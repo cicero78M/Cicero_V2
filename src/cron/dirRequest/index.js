@@ -101,9 +101,12 @@ const dirRequestCrons = [
   },
   {
     jobKey: NOTIFICATION_REMINDER_JOB_KEY,
-    description: 'Send WhatsApp task reminders to Ditbinmas users who opted in.',
+    description:
+      'Send WhatsApp task reminders to Ditbinmas users who opted in, with nightly follow-ups for incomplete tasks.',
     schedules: [
       { cronExpression: '5 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '45 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '15 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
