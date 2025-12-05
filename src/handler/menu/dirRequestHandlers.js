@@ -2977,8 +2977,11 @@ export const dirRequestHandlers = {
     }
 
     try {
+      const referenceDate =
+        session?.dirRequestReferenceDate || session?.executionDate || session?.referenceDate;
       const narrative = await generateKasatBinmasTiktokCommentRecap({
         period: option.period,
+        referenceDate,
       });
       await waClient.sendMessage(chatId, narrative);
     } catch (error) {

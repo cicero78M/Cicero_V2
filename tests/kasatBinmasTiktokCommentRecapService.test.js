@@ -3,10 +3,12 @@ import { jest } from '@jest/globals';
 process.env.JWT_SECRET ||= 'test-secret-key';
 
 const mockGetUsersByClient = jest.fn();
+const mockFindUserById = jest.fn();
 const mockGetRekapKomentarByClient = jest.fn();
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersByClient: mockGetUsersByClient,
+  findUserById: mockFindUserById,
 }));
 
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
@@ -163,6 +165,39 @@ test('periode harian tetap memakai WIB meski zona waktu server berbeda', async (
   }
 });
 
+test('periode harian memakai referenceDate untuk label dan tanggal', async () => {
+  const referenceDate = new Date('2024-12-05T10:00:00.000Z');
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '12',
+      nama: 'Golf',
+      title: 'AKP',
+      jabatan: 'Kasat Binmas',
+      client_id: 'POLREG',
+      client_name: 'Polres G',
+      tiktok: '@golf',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '12', jumlah_komentar: 2, total_konten: 2 },
+  ]);
+
+  const summary = await generateKasatBinmasTiktokCommentRecap({
+    period: 'daily',
+    referenceDate,
+  });
+
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'harian',
+    '2024-12-05',
+    undefined,
+    undefined,
+    'ditbinmas'
+  );
+  expect(summary).toContain('Kamis, 05 Desember 2024');
+});
+
 test('mengembalikan pesan ketika tidak ada Kasat Binmas', async () => {
   mockGetUsersByClient.mockResolvedValue([
     { user_id: '1', jabatan: 'Operator', tiktok: '@alpha' },
@@ -203,6 +238,40 @@ test('mengirim parameter minggu Senin-Minggu untuk period weekly', async () => {
   );
 });
 
+test('periode mingguan mengikuti referenceDate lintas tahun', async () => {
+  const referenceDate = new Date('2025-01-01T03:00:00.000Z');
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '22',
+      jabatan: 'Kasat Binmas',
+      nama: 'Hotel',
+      title: 'AKP',
+      client_id: 'POLREH',
+      client_name: 'Polres H',
+      tiktok: '@hotel',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '22', jumlah_komentar: 1, total_konten: 1 },
+  ]);
+
+  const summary = await generateKasatBinmasTiktokCommentRecap({
+    period: 'weekly',
+    referenceDate,
+  });
+
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'mingguan',
+    expect.any(String),
+    '2024-12-30',
+    '2025-01-05',
+    'ditbinmas'
+  );
+  expect(summary).toContain('30 Desember 2024');
+  expect(summary).toContain('05 Januari 2025');
+});
+
 test('periode mingguan mengikuti Senin–Minggu WIB di zona waktu server lain', async () => {
   const originalTZ = process.env.TZ;
   process.env.TZ = 'America/Los_Angeles';
@@ -238,4 +307,37 @@ test('periode mingguan mengikuti Senin–Minggu WIB di zona waktu server lain', 
     jest.useRealTimers();
     process.env.TZ = originalTZ;
   }
+});
+
+test('periode bulanan memakai referenceDate untuk label bulan dan tahun', async () => {
+  const referenceDate = new Date('2024-12-05T10:00:00.000Z');
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '23',
+      jabatan: 'Kasat Binmas',
+      nama: 'India',
+      title: 'AKP',
+      client_id: 'POLREI',
+      client_name: 'Polres I',
+      tiktok: '@india',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([
+    { user_id: '23', jumlah_komentar: 4, total_konten: 4 },
+  ]);
+
+  const summary = await generateKasatBinmasTiktokCommentRecap({
+    period: 'monthly',
+    referenceDate,
+  });
+
+  expect(mockGetRekapKomentarByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    'bulanan',
+    '2024-12',
+    undefined,
+    undefined,
+    'ditbinmas'
+  );
+  expect(summary).toContain('Bulan Desember 2024');
 });
