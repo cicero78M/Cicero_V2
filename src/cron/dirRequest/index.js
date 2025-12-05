@@ -61,9 +61,9 @@ const dirRequestCrons = [
     jobKey: KASATKER_JOB_KEY,
     description: 'Send Ditbinmas kasatker daily, weekly, and monthly recaps.',
     schedules: [
-      { cronExpression: '57 20 * * *', handler: () => runKasatkerDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '12 21 * * 0', handler: () => runKasatkerWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '17 21 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '46 20 * * *', handler: () => runKasatkerDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '48 20 * * 0', handler: () => runKasatkerWeekly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '50 20 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   { 
@@ -87,16 +87,16 @@ const dirRequestCrons = [
     jobKey: HIGH_LOW_JOB_KEY,
     description: 'Send weekly Instagram and TikTok high/low performance summaries.',
     schedules: [
-      { cronExpression: '7 21 * * 0', handler: () => runHighLow(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '45 20 * * 0', handler: () => runHighLow(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
     jobKey: KASAT_BINMAS_JOB_KEY,
     description: 'Provide Ditbinmas Kasat Binmas recap messages.',
     schedules: [
-      { cronExpression: '42 20 * * *', handler: () => runKasatBinmasDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '2 21 * * 0', handler: () => runKasatBinmasWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '22 21 * * *', handler: () => runKasatBinmasMonthly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '35 20 * * *', handler: () => runKasatBinmasDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '38 20 * * 0', handler: () => runKasatBinmasWeekly(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '42 20 * * *', handler: () => runKasatBinmasMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
