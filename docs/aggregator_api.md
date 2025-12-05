@@ -38,6 +38,8 @@ Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga han
 - **client_id** (query/body) — opsional, bila kosong semua direktorat aktif akan diproses. Nilai harus cocok dengan daftar hasil `findAllActiveDirektoratWithSosmed`.
 - **periode** (query/body) — `harian` untuk mengambil konten hari ini saja, atau nilai lain (mis. `riwayat`) untuk mengambil seluruh data yang tersedia.
 - **limit** (query/body) — opsional, jumlah maksimum post yang dikembalikan per platform. Default: `10`.
+- **skipPostRefresh** (query/body) — opsional, `true` untuk melewati pemanggilan ulang pipeline posting IG/TikTok dan hanya memuat posting yang sudah tersimpan. Berguna untuk pemanggilan internal seperti menu WhatsApp *Client Request*.
+- **x-client-id** (header) — opsional, alternatif input `client_id` bila ingin diambil dari header. Bila token hanya memiliki satu `client_id`, nilai dari token juga akan digunakan ketika parameter dan header kosong.
 
 ### Behaviour
 
