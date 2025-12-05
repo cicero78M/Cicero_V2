@@ -7,6 +7,21 @@ grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
 
+## Absensi Komentar TikTok Kasat Binmas
+- Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
+  Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
+  WIB sebelum dikirim ke query database sehingga konten di luar hari berjalan
+  tidak ikut dihitung.
+- Perhitungan harian/mingguan/bulanan kini memaksa konversi zona waktu ke
+  **Asia/Jakarta** secara eksplisit (menggunakan `Intl.DateTimeFormat`)
+  sehingga tanggal tidak akan melenceng meski server menjalankan bot dengan
+  zona waktu default yang berbeda.
+- Jika rekap komentar untuk periode yang diminta kosong atau total kontennya
+  nol, bot otomatis mengambil konten TikTok Ditbinmas hari ini secara live
+  (menggunakan data komentar terkini) untuk menghitung absensi Kasat Binmas.
+  Penghitungan tetap memakai filter role aktif dan nama pengguna TikTok yang
+  sudah dinormalisasi dari handler absensi untuk menjaga konsistensi.
+
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**
   Contoh cuplikan bagian *Rekap Data* pada menu utama:

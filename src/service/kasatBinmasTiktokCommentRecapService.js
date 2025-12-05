@@ -1,10 +1,17 @@
 import { getUsersByClient } from "../model/userModel.js";
+import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
+import { getPostsTodayByClient } from "../model/tiktokPostModel.js";
 import { getRekapKomentarByClient } from "../model/tiktokCommentModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
+import {
+  extractUsernamesFromComments,
+  normalizeUsername,
+} from "../handler/fetchabsensi/tiktok/absensiKomentarTiktok.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
+const JAKARTA_TIMEZONE = "Asia/Jakarta";
 
 const STATUS_SECTIONS = [
   { key: "lengkap", icon: "✅", label: "Lengkap (sesuai target)" },
@@ -36,15 +43,50 @@ function rankWeight(rank) {
   return idx === -1 ? PANGKAT_ORDER.length : idx;
 }
 
+function toZonedDate(baseDate = new Date(), timeZone = JAKARTA_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(baseDate)
+    .reduce((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const year = Number(parts.year);
+  const month = Number(parts.month) - 1;
+  const day = Number(parts.day);
+  const hour = Number(parts.hour);
+  const minute = Number(parts.minute);
+  const second = Number(parts.second);
+
+  const normalizedHour = hour === 24 ? 0 : hour;
+
+  return new Date(Date.UTC(year, month, day, normalizedHour, minute, second));
+}
+
+function toJakartaDate(baseDate = new Date()) {
+  return toZonedDate(baseDate, JAKARTA_TIMEZONE);
+}
+
 function toDateInput(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const zonedDate = toZonedDate(date);
+  const year = zonedDate.getUTCFullYear();
+  const month = String(zonedDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(zonedDate.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function formatDateLong(date) {
   return date.toLocaleDateString("id-ID", {
+    timeZone: JAKARTA_TIMEZONE,
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -52,18 +94,21 @@ function formatDateLong(date) {
 }
 
 function formatDayLabel(date) {
-  const weekday = date.toLocaleDateString("id-ID", { weekday: "long" });
+  const weekday = date.toLocaleDateString("id-ID", {
+    weekday: "long",
+    timeZone: JAKARTA_TIMEZONE,
+  });
   return `${weekday}, ${formatDateLong(date)}`;
 }
 
 function resolveWeeklyRange(baseDate = new Date()) {
-  const date = new Date(baseDate.getTime());
-  const day = date.getDay();
+  const date = toJakartaDate(baseDate);
+  const day = date.getUTCDay();
   const mondayDiff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date.getTime());
-  monday.setDate(date.getDate() + mondayDiff);
+  monday.setUTCDate(date.getUTCDate() + mondayDiff);
   const sunday = new Date(monday.getTime());
-  sunday.setDate(monday.getDate() + 6);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
   return {
     start: monday,
     end: sunday,
@@ -72,7 +117,7 @@ function resolveWeeklyRange(baseDate = new Date()) {
 }
 
 function describePeriod(period = "daily") {
-  const today = new Date();
+  const today = toJakartaDate();
   if (period === "weekly") {
     const { start, end, label } = resolveWeeklyRange(today);
     return {
@@ -84,11 +129,16 @@ function describePeriod(period = "daily") {
     };
   }
   if (period === "monthly") {
-    const label = today.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+    const label = today.toLocaleDateString("id-ID", {
+      timeZone: JAKARTA_TIMEZONE,
+      month: "long",
+      year: "numeric",
+    });
+    const zoned = toZonedDate(today);
     return {
       periode: "bulanan",
       label: `Bulan ${label}`,
-      tanggal: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`,
+      tanggal: `${zoned.getUTCFullYear()}-${String(zoned.getUTCMonth() + 1).padStart(2, "0")}`,
     };
   }
   return {
@@ -133,6 +183,63 @@ function formatEntryLine(entry, index, totalKonten) {
   return `${index}. ${name} (${polres}) — 0/${totalKonten} konten`;
 }
 
+async function buildLiveFallbackCounts(kasatUsers) {
+  const usernameToUsers = new Map();
+  kasatUsers.forEach((user) => {
+    const normalizedUsername = normalizeUsername(user?.tiktok);
+    if (!normalizedUsername) return;
+    if (!usernameToUsers.has(normalizedUsername)) {
+      usernameToUsers.set(normalizedUsername, []);
+    }
+    usernameToUsers.get(normalizedUsername).push(user);
+  });
+
+  const commentCountByUser = new Map();
+  try {
+    const posts = await getPostsTodayByClient(DITBINMAS_CLIENT_ID);
+    const totalKonten = posts.length;
+
+    for (const post of posts) {
+      try {
+        const { comments } = await getCommentsByVideoId(post.video_id);
+        const commenters = new Set(
+          extractUsernamesFromComments(comments).map((uname) =>
+            normalizeUsername(uname)
+          )
+        );
+
+        commenters.forEach((username) => {
+          const mappedUsers = usernameToUsers.get(username) || [];
+          mappedUsers.forEach((user) => {
+            commentCountByUser.set(
+              user.user_id,
+              (commentCountByUser.get(user.user_id) || 0) + 1
+            );
+          });
+        });
+      } catch (error) {
+        return {
+          success: false,
+          totalKonten,
+          commentCountByUser,
+          error: `Gagal mengambil komentar untuk konten ${post.video_id}: ${
+            error?.message || error
+          }`,
+        };
+      }
+    }
+
+    return { success: true, totalKonten, commentCountByUser };
+  } catch (error) {
+    return {
+      success: false,
+      totalKonten: 0,
+      commentCountByUser,
+      error: error?.message || error,
+    };
+  }
+}
+
 export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" } = {}) {
   const periodInfo = describePeriod(period);
 
@@ -153,12 +260,34 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     TARGET_ROLE
   );
 
-  const commentCountByUser = new Map();
-  const totalKonten = Number(recapRows?.[0]?.total_konten ?? 0);
+  let commentCountByUser = new Map();
+  let totalKonten = Number(recapRows?.[0]?.total_konten ?? 0);
   (recapRows || []).forEach((row) => {
     if (!row) return;
     commentCountByUser.set(row.user_id, Number(row.jumlah_komentar) || 0);
   });
+
+  let warningMessage = "";
+  if (!recapRows?.length || totalKonten === 0) {
+    const fallback = await buildLiveFallbackCounts(kasatUsers);
+    if (fallback.success) {
+      commentCountByUser = fallback.commentCountByUser;
+      totalKonten = fallback.totalKonten;
+      warningMessage =
+        totalKonten === 0
+          ? "Rekap periode kosong. Tidak ada konten TikTok Ditbinmas hari ini untuk dicek secara langsung."
+          : "Rekap periode kosong. Data diambil langsung dari konten TikTok hari ini.";
+    } else if (!recapRows?.length) {
+      return (
+        "Rekap komentar periode ini tidak tersedia dan pengambilan data langsung juga gagal. " +
+        (fallback.error ? `Alasan: ${fallback.error}` : "")
+      ).trim();
+    } else {
+      warningMessage =
+        fallback.error ||
+        "Rekap komentar tidak tersedia untuk periode ini dan pengambilan data langsung gagal.";
+    }
+  }
 
   const grouped = { lengkap: [], sebagian: [], belum: [], noUsername: [] };
   const totals = {
@@ -213,6 +342,7 @@ export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" }
     "📋 *Absensi Komentar TikTok Kasat Binmas*",
     `Periode: ${periodInfo.label}`,
     "",
+    warningMessage,
     "*Ringkasan:*",
     `- ${totalKontenLine}`,
     `- Total Kasat Binmas: ${totals.total} pers`,
