@@ -80,6 +80,11 @@ const dirRequestCrons = [
         handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
         options: DEFAULT_CRON_OPTIONS,
       },
+      {
+        cronExpression: '5 22 * * *',
+        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupAndSuper' }),
+        options: DEFAULT_CRON_OPTIONS,
+      },
       { cronExpression: '32 20 * * *', handler: () => runDirektorat(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
