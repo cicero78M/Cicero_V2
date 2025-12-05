@@ -118,7 +118,7 @@ const dirRequestCrons = [
     jobKey: SATBINMAS_OFFICIAL_MEDIA_JOB_KEY,
     description: 'Share Satbinmas official media updates with Ditbinmas recipients.',
     schedules: [
-      { cronExpression: '5 13,22 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '5 23 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
