@@ -32,6 +32,10 @@ async function resolveTargetClientIds(clientIds) {
 }
 
 function resolveRecipientOptions(clientId, recipientMode = "default") {
+  if (recipientMode === "superOnly") {
+    return DEFAULT_RECIPIENT_OPTIONS;
+  }
+
   if (recipientMode === "groupOnly") {
     return { ...DEFAULT_RECIPIENT_OPTIONS, includeGroup: true, includeSuper: false };
   }

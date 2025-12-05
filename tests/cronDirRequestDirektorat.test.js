@@ -128,3 +128,19 @@ test('runCron can target BIDHUMAS group-only schedules', async () => {
   expect(mockSafeSend).toHaveBeenCalledTimes(2);
 });
 
+test('runCron can target BIDHUMAS group-and-super schedules', async () => {
+  await runCron({ clientIds: ['BIDHUMAS'], recipientMode: 'groupAndSuper' });
+
+  expect(mockBuildClientRecipientSet).toHaveBeenCalledWith('BIDHUMAS', {
+    includeAdmins: false,
+    includeOperator: false,
+    includeGroup: true,
+    includeSuper: true,
+  });
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'super@c.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'absensi');
+  expect(mockSafeSend).toHaveBeenCalledWith({}, 'group@g.us', 'komentar');
+  expect(mockSafeSend).toHaveBeenCalledTimes(4);
+});
+
