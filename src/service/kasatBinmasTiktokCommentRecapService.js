@@ -85,7 +85,8 @@ function toDateInput(date) {
 }
 
 function formatDateLong(date) {
-  return date.toLocaleDateString("id-ID", {
+  const jakartaDate = toJakartaDate(date);
+  return jakartaDate.toLocaleDateString("id-ID", {
     timeZone: JAKARTA_TIMEZONE,
     day: "2-digit",
     month: "long",
@@ -94,11 +95,12 @@ function formatDateLong(date) {
 }
 
 function formatDayLabel(date) {
-  const weekday = date.toLocaleDateString("id-ID", {
+  const jakartaDate = toJakartaDate(date);
+  const weekday = jakartaDate.toLocaleDateString("id-ID", {
     weekday: "long",
     timeZone: JAKARTA_TIMEZONE,
   });
-  return `${weekday}, ${formatDateLong(date)}`;
+  return `${weekday}, ${formatDateLong(jakartaDate)}`;
 }
 
 function resolveWeeklyRange(baseDate = new Date()) {
@@ -116,10 +118,11 @@ function resolveWeeklyRange(baseDate = new Date()) {
   };
 }
 
-function describePeriod(period = "daily") {
-  const today = toJakartaDate();
+function describePeriod(period = "daily", referenceDate) {
+  const baseDate = referenceDate ? new Date(referenceDate) : new Date(Date.now());
+  const today = toJakartaDate(baseDate);
   if (period === "weekly") {
-    const { start, end, label } = resolveWeeklyRange(today);
+    const { start, end, label } = resolveWeeklyRange(baseDate);
     return {
       periode: "mingguan",
       label,
@@ -240,8 +243,11 @@ async function buildLiveFallbackCounts(kasatUsers) {
   }
 }
 
-export async function generateKasatBinmasTiktokCommentRecap({ period = "daily" } = {}) {
-  const periodInfo = describePeriod(period);
+export async function generateKasatBinmasTiktokCommentRecap({
+  period = "daily",
+  referenceDate,
+} = {}) {
+  const periodInfo = describePeriod(period, referenceDate);
 
   const users = await getUsersByClient(DITBINMAS_CLIENT_ID, TARGET_ROLE);
   const kasatUsers = (users || []).filter((user) => matchesKasatBinmasJabatan(user?.jabatan));

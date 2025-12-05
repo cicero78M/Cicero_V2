@@ -2018,11 +2018,40 @@ test('choose_kasat_binmas_tiktok_comment_period option 2 memanggil layanan mingg
     waClient
   );
 
-  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith({
-    period: 'weekly',
-  });
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith(
+    expect.objectContaining({ period: 'weekly' })
+  );
   const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
   expect(messages).toContain('Rekap komentar mingguan siap');
+  expect(session.step).toBe('choose_menu');
+});
+
+test('choose_kasat_binmas_tiktok_comment_period meneruskan referenceDate dari sesi', async () => {
+  mockGenerateKasatBinmasTiktokCommentRecap.mockResolvedValue(
+    'Rekap komentar bulanan siap'
+  );
+  const session = {
+    selectedClientId: 'ditbinmas',
+    referenceDate: '2024-12-05T10:00:00.000Z',
+  };
+  const chatId = '998g2';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_kasat_binmas_tiktok_comment_period(
+    session,
+    chatId,
+    '3',
+    waClient
+  );
+
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith(
+    expect.objectContaining({
+      period: 'monthly',
+      referenceDate: '2024-12-05T10:00:00.000Z',
+    })
+  );
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages).toContain('Rekap komentar bulanan siap');
   expect(session.step).toBe('choose_menu');
 });
 
@@ -2086,9 +2115,9 @@ test('choose_kasat_binmas_tiktok_comment_period menampilkan pesan error saat lay
     waClient
   );
 
-  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith({
-    period: 'daily',
-  });
+  expect(mockGenerateKasatBinmasTiktokCommentRecap).toHaveBeenCalledWith(
+    expect.objectContaining({ period: 'daily' })
+  );
   expect(session.step).toBe('choose_menu');
   const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
   expect(messages).toEqual(

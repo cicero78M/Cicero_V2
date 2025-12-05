@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-03*
+*Last updated: 2025-12-04*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -16,6 +16,10 @@ ditampilkan bot.
   **Asia/Jakarta** secara eksplisit (menggunakan `Intl.DateTimeFormat`)
   sehingga tanggal tidak akan melenceng meski server menjalankan bot dengan
   zona waktu default yang berbeda.
+- Alur menu dapat memasok `referenceDate` (mis. menyimpan `session.referenceDate`
+  atau `session.dirRequestReferenceDate`) untuk memaksa label periode, rentang
+  minggu, serta parameter query memakai tanggal eksekusi yang diinginkan. Jika
+  tidak diisi, sistem otomatis memakai `Date.now()` pada zona **Asia/Jakarta**.
 - Jika rekap komentar untuk periode yang diminta kosong atau total kontennya
   nol, bot otomatis mengambil konten TikTok Ditbinmas hari ini secara live
   (menggunakan data komentar terkini) untuk menghitung absensi Kasat Binmas.
