@@ -29,15 +29,40 @@ export function scheduleCronJob(jobKey, cronExpression, handler, options = {}) {
   return cron.schedule(
     cronExpression,
     async (...args) => {
+      let config;
+      let getCronJob;
+
       try {
-        const { getCronJob } = await loadCronJobService();
-        const config = await getCronJob(jobKey);
-        if (config && config.is_active === false) {
-          log(`Skipping job ${jobKey} because it is inactive.`);
-          return;
-        }
+        ({ getCronJob } = await loadCronJobService());
       } catch (err) {
-        logError(`Failed to check status for job ${jobKey}.`, err);
+        logError(
+          `Failed to load cron config service for job ${jobKey}. Proceeding without status check.`,
+          err,
+        );
+      }
+
+      if (getCronJob) {
+        for (let attempt = 1; attempt <= 2; attempt += 1) {
+          try {
+            config = await getCronJob(jobKey);
+            break;
+          } catch (err) {
+            logError(
+              `Failed to check status for job ${jobKey} (attempt ${attempt}).`,
+              err,
+            );
+
+            if (attempt === 2) {
+              log(
+                `Proceeding with job ${jobKey} handler after status lookup failures.`,
+              );
+            }
+          }
+        }
+      }
+
+      if (config && config.is_active === false) {
+        log(`Skipping job ${jobKey} because it is inactive.`);
         return;
       }
 
