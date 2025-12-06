@@ -38,7 +38,7 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
 ## 3. Process Flow
 
 1. **Data Collection**
-   - Cron jobs (`cronInstaService.js`, `cronDirRequestFetchSosmed.js`, etc.) fetch posts, metrics, and rankings once the relevant WhatsApp client becomes ready. Results are saved to PostgreSQL and cached in Redis.
+   - Cron jobs (`cronDirRequestFetchSosmed.js`, etc.) fetch posts, metrics, and rankings once the relevant WhatsApp client becomes ready. Results are saved to PostgreSQL and cached in Redis.
 2. **Analytics & Attendance**
    - The backend matches likes or comments with registered users to compute attendance statistics and generates aggregator summaries for dashboards.
    - Editorial submissions persist to `editorial_event` and related tables, awaiting approvals captured through WhatsApp.

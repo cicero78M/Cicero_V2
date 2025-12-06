@@ -6,12 +6,6 @@ export default [
     description: 'Backup database dump to Google Drive using service account credentials.',
   },
   {
-    jobKey: './src/cron/cronInstaService.js',
-    modulePath: './src/cron/cronInstaService.js',
-    bucket: 'waClient',
-    description: 'Fetch Instagram content and likes for active clients while sending attendance recaps.',
-  },
-  {
     jobKey: './src/cron/cronInstaLaphar.js',
     modulePath: './src/cron/cronInstaLaphar.js',
     bucket: 'waClient',

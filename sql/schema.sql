@@ -433,7 +433,6 @@ EXECUTE PROCEDURE set_cron_job_config_updated_at();
 INSERT INTO cron_job_config (job_key, display_name)
 VALUES
     ('./src/cron/cronDbBackup.js', 'Database Backup'),
-    ('./src/cron/cronInstaService.js', 'Instagram Service Aggregator'),
     ('./src/cron/cronInstaLaphar.js', 'Instagram Laphar Sync'),
     ('./src/cron/cronRekapLink.js', 'Link Recap Dispatcher'),
     ('./src/cron/cronAmplifyLinkMonthly.js', 'Monthly Amplify Link'),
