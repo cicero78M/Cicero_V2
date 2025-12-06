@@ -14,6 +14,8 @@ import { sendDebug } from "../middleware/debugHandler.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getVideoIdsTodayByClient } from "../model/tiktokPostModel.js";
 
+const LOG_TAG = "CRON DIRFETCH SOSMED";
+
 const lastStateByClient = new Map();
 const adminRecipients = new Set(getAdminWAIds());
 
@@ -64,13 +66,99 @@ export function getRecipientsForClient(client) {
   return recipients;
 }
 
-async function sendAdminLog(message) {
-  if (!message || adminRecipients.size === 0) return;
-  const text = `[CRON DIRFETCH SOSMED] ${message}`;
+function buildLogEntry({
+  phase,
+  clientId,
+  action,
+  result,
+  countsBefore,
+  countsAfter,
+  recipients,
+  message,
+  meta,
+}) {
+  return {
+    phase,
+    clientId,
+    action,
+    result,
+    countsBefore,
+    countsAfter,
+    recipients: recipients ? Array.from(recipients) : undefined,
+    message,
+    meta,
+  };
+}
+
+function formatCountsDelta(countsBefore, countsAfter) {
+  if (!countsBefore && !countsAfter) return null;
+
+  const beforeIg = Number.isFinite(countsBefore?.ig) ? countsBefore.ig : null;
+  const beforeTiktok = Number.isFinite(countsBefore?.tiktok)
+    ? countsBefore.tiktok
+    : null;
+  const afterIg = Number.isFinite(countsAfter?.ig) ? countsAfter.ig : null;
+  const afterTiktok = Number.isFinite(countsAfter?.tiktok) ? countsAfter.tiktok : null;
+
+  const parts = [];
+  if (beforeIg !== null || afterIg !== null) {
+    const delta =
+      beforeIg !== null && afterIg !== null ? `Δ${afterIg - beforeIg}` : undefined;
+    parts.push(`IG ${beforeIg ?? "?"}→${afterIg ?? "?"}${delta ? ` (${delta})` : ""}`);
+  }
+  if (beforeTiktok !== null || afterTiktok !== null) {
+    const delta =
+      beforeTiktok !== null && afterTiktok !== null
+        ? `Δ${afterTiktok - beforeTiktok}`
+        : undefined;
+    parts.push(
+      `TikTok ${beforeTiktok ?? "?"}→${afterTiktok ?? "?"}${delta ? ` (${delta})` : ""}`
+    );
+  }
+
+  return parts.length > 0 ? parts.join(" | ") : null;
+}
+
+function formatAdminLogMessage(entry) {
+  if (!entry) return null;
+  if (typeof entry === "string") return `[${LOG_TAG}] ${entry}`.trim();
+
+  const prefix =
+    `[${LOG_TAG}]` +
+    (entry.clientId ? `[${entry.clientId}]` : "") +
+    (entry.phase ? `[${entry.phase}]` : "");
+  const countText = formatCountsDelta(entry.countsBefore, entry.countsAfter);
+  const recipientText = Array.isArray(entry.recipients)
+    ? `recipients=${entry.recipients.length}`
+    : undefined;
+  const details = [
+    entry.action ? `action=${entry.action}` : null,
+    entry.result ? `result=${entry.result}` : null,
+    countText,
+    recipientText,
+    entry.message,
+    entry.meta ? `meta=${JSON.stringify(entry.meta).slice(0, 500)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  return `${prefix} ${details}`.trim();
+}
+
+async function sendAdminLog(entry) {
+  if (!entry || adminRecipients.size === 0) return;
+  const text = formatAdminLogMessage(entry);
+  if (!text) return;
 
   for (const admin of adminRecipients) {
     await safeSendMessage(waGatewayClient, admin, text.trim());
   }
+}
+
+async function sendStructuredLog(entry) {
+  const payload = typeof entry === "string" ? buildLogEntry({ message: entry }) : entry;
+  sendDebug({ tag: LOG_TAG, msg: payload });
+  await sendAdminLog(payload);
 }
 
 async function ensureClientState(clientId) {
@@ -96,28 +184,34 @@ async function ensureClientState(clientId) {
 }
 
 export async function runCron() {
-  sendDebug({ tag: "CRON DIRFETCH SOSMED", msg: "Mulai cron dirrequest fetch sosmed" });
+  await sendStructuredLog(
+    buildLogEntry({ phase: "start", action: "cron", result: "start" })
+  );
   try {
-    await sendAdminLog("Mulai cron dirrequest fetch sosmed");
-
     const jakartaHour = getCurrentHourInJakarta();
     const skipPostFetch = jakartaHour >= 17;
     const activeClients = await findAllActiveDirektoratWithSosmed();
 
     if (skipPostFetch) {
-      sendDebug({
-        tag: "CRON DIRFETCH SOSMED",
-        msg: "Lewati fetch post Instagram dan TikTok setelah pukul 17.00 WIB",
-      });
-      await sendAdminLog("Lewati fetch post Instagram dan TikTok setelah pukul 17.00 WIB");
+      await sendStructuredLog(
+        buildLogEntry({
+          phase: "prefetch",
+          action: "fetch",
+          result: "skipped",
+          message: "Lewati fetch post Instagram dan TikTok setelah pukul 17.00 WIB",
+        })
+      );
     }
 
     if (activeClients.length === 0) {
-      sendDebug({
-        tag: "CRON DIRFETCH SOSMED",
-        msg: "Tidak ada client direktorat aktif dengan IG & TikTok aktif",
-      });
-      await sendAdminLog("Tidak ada client direktorat aktif dengan IG & TikTok aktif");
+      await sendStructuredLog(
+        buildLogEntry({
+          phase: "init",
+          action: "loadClients",
+          result: "empty",
+          message: "Tidak ada client direktorat aktif dengan IG & TikTok aktif",
+        })
+      );
       return;
     }
 
@@ -127,28 +221,152 @@ export async function runCron() {
         const previousState = await ensureClientState(clientId);
         const previousIgShortcodes = await getShortcodesTodayByClient(clientId);
         const previousTiktokVideoIds = await getVideoIdsTodayByClient(clientId);
+        const countsBefore = {
+          ig: previousState.igCount,
+          tiktok: previousState.tiktokCount,
+        };
 
         if (!skipPostFetch) {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "instagramFetch",
+              clientId,
+              action: "fetchInstagram",
+              result: "start",
+              countsBefore,
+            })
+          );
           await fetchAndStoreInstaContent(
             ["shortcode", "caption", "like_count", "timestamp"],
             null,
             null,
             clientId
           );
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "instagramFetch",
+              clientId,
+              action: "fetchInstagram",
+              result: "completed",
+              countsBefore,
+            })
+          );
+
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "tiktokFetch",
+              clientId,
+              action: "fetchTiktok",
+              result: "start",
+              countsBefore,
+            })
+          );
           await fetchAndStoreTiktokContent(clientId);
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "tiktokFetch",
+              clientId,
+              action: "fetchTiktok",
+              result: "completed",
+              countsBefore,
+            })
+          );
+        } else {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "instagramFetch",
+              clientId,
+              action: "fetchInstagram",
+              result: "skipped",
+              countsBefore,
+              message: "Lewati fetch Instagram setelah pukul 17.00 WIB",
+            })
+          );
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "tiktokFetch",
+              clientId,
+              action: "fetchTiktok",
+              result: "skipped",
+              countsBefore,
+              message: "Lewati fetch TikTok setelah pukul 17.00 WIB",
+            })
+          );
         }
 
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "likesRefresh",
+            clientId,
+            action: "refreshLikes",
+            result: "start",
+            countsBefore,
+          })
+        );
         await handleFetchLikesInstagram(null, null, clientId);
-        await handleFetchKomentarTiktokBatch(null, null, clientId);
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "likesRefresh",
+            clientId,
+            action: "refreshLikes",
+            result: "completed",
+            countsBefore,
+          })
+        );
 
-        const { text, igCount, tiktokCount, state } = await generateSosmedTaskMessage(clientId, {
-          skipTiktokFetch: true,
-          skipLikesFetch: true,
-          previousState: {
-            igShortcodes: previousIgShortcodes,
-            tiktokVideoIds: previousTiktokVideoIds,
-          },
-        });
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "commentRefresh",
+            clientId,
+            action: "refreshComments",
+            result: "start",
+            countsBefore,
+          })
+        );
+        await handleFetchKomentarTiktokBatch(null, null, clientId);
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "commentRefresh",
+            clientId,
+            action: "refreshComments",
+            result: "completed",
+            countsBefore,
+          })
+        );
+
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "messageGeneration",
+            clientId,
+            action: "generateMessage",
+            result: "start",
+            countsBefore,
+          })
+        );
+        const { text, igCount, tiktokCount, state } = await generateSosmedTaskMessage(
+          clientId,
+          {
+            skipTiktokFetch: true,
+            skipLikesFetch: true,
+            previousState: {
+              igShortcodes: previousIgShortcodes,
+              tiktokVideoIds: previousTiktokVideoIds,
+            },
+          }
+        );
+
+        const countsAfter = { ig: igCount, tiktok: tiktokCount };
+
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "messageGeneration",
+            clientId,
+            action: "generateMessage",
+            result: "completed",
+            countsBefore,
+            countsAfter,
+          })
+        );
 
         const recipients = getRecipientsForClient(client);
         const hasNewCounts =
@@ -165,43 +383,93 @@ export async function runCron() {
         lastStateByClient.set(clientId, nextState);
 
         if (!hasNewCounts) {
-          await sendAdminLog(`[${clientId}] Tidak ada perubahan post, laporan tidak dikirim`);
-          continue;
-        }
-
-        if (recipients.size === 0) {
-          sendDebug({
-            tag: "CRON DIRFETCH SOSMED",
-            msg: `[${clientId}] Lewati pengiriman karena tidak ada penerima yang valid`,
-          });
-          await sendAdminLog(
-            `[${clientId}] Lewati pengiriman karena tidak ada penerima yang valid`
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "sendLoop",
+              clientId,
+              action: "sendReport",
+              result: "no_changes",
+              countsBefore,
+              countsAfter,
+              recipients,
+              message: "Tidak ada perubahan post, laporan tidak dikirim",
+            })
           );
           continue;
         }
 
+        if (recipients.size === 0) {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "sendLoop",
+              clientId,
+              action: "sendReport",
+              result: "skipped",
+              countsBefore,
+              countsAfter,
+              recipients,
+              message: "Lewati pengiriman karena tidak ada penerima yang valid",
+            })
+          );
+          continue;
+        }
+
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "sendLoop",
+            clientId,
+            action: "sendReport",
+            result: "start",
+            countsBefore,
+            countsAfter,
+            recipients,
+          })
+        );
         for (const wa of recipients) {
           await safeSendMessage(waGatewayClient, wa, text.trim());
         }
-        sendDebug({
-          tag: "CRON DIRFETCH SOSMED",
-          msg: `[${clientId}] Laporan dikirim ke ${recipients.size} penerima`,
-        });
-        await sendAdminLog(`[${clientId}] Laporan dikirim ke ${recipients.size} penerima`);
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "sendLoop",
+            clientId,
+            action: "sendReport",
+            result: "sent",
+            countsBefore,
+            countsAfter,
+            recipients,
+            message: `Laporan dikirim ke ${recipients.size} penerima`,
+          })
+        );
       } catch (clientErr) {
-        sendDebug({
-          tag: "CRON DIRFETCH SOSMED",
-          msg: `[${client.client_id}] ERROR: ${clientErr.message || clientErr}`,
-        });
-        await sendAdminLog(`[${client.client_id}] ERROR: ${clientErr.message || clientErr}`);
+        const clientId = String(client?.client_id || "").trim().toUpperCase();
+        const errorMeta = {
+          name: clientErr?.name,
+          message: clientErr?.message,
+          stack: clientErr?.stack,
+        };
+        await sendStructuredLog(
+          buildLogEntry({
+            phase: "client",
+            clientId,
+            action: "processClient",
+            result: "error",
+            message: clientErr?.message || String(clientErr),
+            meta: errorMeta,
+          })
+        );
       }
     }
   } catch (err) {
-    sendDebug({
-      tag: "CRON DIRFETCH SOSMED",
-      msg: `[ERROR] ${err.message || err}`,
-    });
-    await sendAdminLog(`[ERROR] ${err.message || err}`);
+    const errorMeta = { name: err?.name, message: err?.message, stack: err?.stack };
+    await sendStructuredLog(
+      buildLogEntry({
+        phase: "cron",
+        action: "run",
+        result: "error",
+        message: err?.message || String(err),
+        meta: errorMeta,
+      })
+    );
   }
 }
 

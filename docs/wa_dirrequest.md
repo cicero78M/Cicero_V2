@@ -198,6 +198,19 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
   dilewati jika tidak ada admin penerima yang valid.
 
+## Logging terstruktur Cron DirRequest Sosmed
+- Cron `cronDirRequestFetchSosmed` memakai helper log terstruktur dengan
+  atribut `phase`, `clientId`, `action`, `result`, `countsBefore`,
+  `countsAfter`, dan `recipients` untuk mengirim pesan yang sama ke saluran
+  debug dan admin WA.
+- Setiap tahap utama (fetch Instagram/TikTok, refresh likes/komentar, generate
+  pesan, hingga loop pengiriman) memiliki log *start* dan *completed* atau
+  *skipped* (mis. setelah pukul 17.00 WIB). Pesan *no changes* atau *sent*
+  selalu memuat delta jumlah konten (IG/TikTok) agar admin melihat perubahan
+  terbaru versus sebelumnya.
+- Error ditangkap dengan metadata (stack trace, nama error) dan dikirim ke
+  kedua saluran untuk mempermudah investigasi.
+
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
   **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed()` untuk
