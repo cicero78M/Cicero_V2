@@ -1,23 +1,6 @@
 import { env } from '../../config/env.js';
 import { scheduleCronJob } from '../../utils/cronScheduler.js';
 import { runCron as runFetchDirRequest, JOB_KEY as FETCH_SOSMED_JOB_KEY } from '../cronDirRequestFetchSosmed.js';
-import { runCron as runRekapAllSocmed, JOB_KEY as REKAP_ALL_SOCMED_JOB_KEY } from '../cronDirRequestRekapAllSocmed.js';
-import { runCron as runSosmedRank, JOB_KEY as SOSMED_RANK_JOB_KEY } from '../cronDirRequestSosmedRank.js';
-import { runCron as runEngageRank, JOB_KEY as ENGAGE_RANK_JOB_KEY } from '../cronDirRequestEngageRank.js';
-import {
-  runDailyReport as runKasatkerDaily,
-  runWeeklyReport as runKasatkerWeekly,
-  runMonthlyReport as runKasatkerMonthly,
-  JOB_KEY as KASATKER_JOB_KEY,
-} from '../cronDirRequestLapharKasatker.js';
-import { runCron as runDirektorat, JOB_KEY as DIREKTORAT_JOB_KEY } from '../cronDirRequestDirektorat.js';
-import { runCron as runHighLow, JOB_KEY as HIGH_LOW_JOB_KEY } from '../cronDirRequestHighLow.js';
-import {
-  runDailyRecap as runKasatBinmasDaily,
-  runWeeklyRecap as runKasatBinmasWeekly,
-  runMonthlyRecap as runKasatBinmasMonthly,
-  JOB_KEY as KASAT_BINMAS_JOB_KEY,
-} from '../cronDirRequestKasatBinmasRecap.js';
 import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JOB_KEY } from '../cronWaNotificationReminder.js';
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
 
@@ -33,77 +16,6 @@ const dirRequestCrons = [
       { cronExpression: '30 6 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 7-21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 22 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: DIREKTORAT_JOB_KEY,
-    description: 'Dispatch Ditbinmas directorate attendance recaps.',
-    schedules: [
-      {
-        cronExpression: '0 0 16 * * *',
-        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-      {
-        cronExpression: '0 0 18 * * *',
-        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-      {
-        cronExpression: '0 0 22 * * *',
-        handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupAndSuper' }),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-      { cronExpression: '0 0 20 * * *', handler: () => runDirektorat(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: REKAP_ALL_SOCMED_JOB_KEY,
-    description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
-    schedules: [
-      { cronExpression: '0 0 16,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 0 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: SOSMED_RANK_JOB_KEY,
-    description: 'Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients.',
-    schedules: [
-      { cronExpression: '7 16 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '37 20 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: ENGAGE_RANK_JOB_KEY,
-    description: 'Generate engagement ranking narratives and Excel exports for Ditbinmas.',
-    schedules: [
-      { cronExpression: '10 16 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '40 20 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: KASAT_BINMAS_JOB_KEY,
-    description: 'Provide Ditbinmas Kasat Binmas recap messages.',
-    schedules: [
-      { cronExpression: '38 20 * * *', handler: () => runKasatBinmasDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '39 20 * * 0', handler: () => runKasatBinmasWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '41 20 * * *', handler: () => runKasatBinmasMonthly(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: HIGH_LOW_JOB_KEY,
-    description: 'Send weekly Instagram and TikTok high/low performance summaries.',
-    schedules: [
-      { cronExpression: '42 20 * * 0', handler: () => runHighLow(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: KASATKER_JOB_KEY,
-    description: 'Send Ditbinmas kasatker daily, weekly, and monthly recaps.',
-    schedules: [
-      { cronExpression: '43 20 * * *', handler: () => runKasatkerDaily(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '44 20 * * 0', handler: () => runKasatkerWeekly(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '45 20 * * *', handler: () => runKasatkerMonthly(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {

@@ -43,7 +43,7 @@ These tables are updated regularly by scheduled jobs and form the basis for anal
    - The backend matches likes or comments with registered users to compute attendance statistics and generates aggregator summaries for dashboards.
    - Editorial submissions persist to `editorial_event` and related tables, awaiting approvals captured through WhatsApp.
 3. **Reporting & Messaging**
-   - Cron tasks (`cronInstaLaphar.js`, `cronDirRequestRekapAllSocmed.js`, `cronAmplifyLinkMonthly.js`, etc.) send recaps to administrators through `waClient` or `waGatewayClient`.
+  - Cron tasks (`cronInstaLaphar.js`, `cronDirRequestFetchSosmed.js`, `cronAmplifyLinkMonthly.js`, etc.) send recaps to administrators through `waClient` or `waGatewayClient`.
    - OTP emails and complaint confirmations are sent immediately via SMTP to reduce follow-up latency.
 4. **Queue Processing (Optional)**
    - Heavy operations can publish tasks to RabbitMQ with `rabbitMQService.js` and are processed asynchronously.
