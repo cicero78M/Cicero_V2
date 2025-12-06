@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-12-06*
+*Last updated: 2025-12-12*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can share the same WhatsApp gateway readiness checks and be toggled together.
 
@@ -39,5 +39,6 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *<br>0 22 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
 | `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in, with follow-up pings for users still marked incomplete. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
+| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Chain sosmed fetches then send dirRequest menus 6 and 9 exclusively to the BIDHUMAS group and its super admin recipients. |
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp services, and updates the system accordingly. Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
