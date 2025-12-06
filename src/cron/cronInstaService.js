@@ -14,7 +14,7 @@ const JOB_KEY = "./src/cron/cronInstaService.js";
 
 scheduleCronJob(
   JOB_KEY,
-  "30 6-21 * * *",
+  "35 6-21 * * *",
   async () => {
     sendDebug({
       tag: "CRON IG",
