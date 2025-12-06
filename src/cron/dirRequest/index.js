@@ -14,7 +14,11 @@ const dirRequestCrons = [
       'Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas.',
     schedules: [
       { cronExpression: '30 6 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0,30 7-21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0,30 7-14 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '30 15 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0,30 16-17 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '30 18 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0,30 19-21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 22 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
     ],
   },

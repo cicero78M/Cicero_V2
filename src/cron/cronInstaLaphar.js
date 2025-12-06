@@ -54,7 +54,7 @@ const JOB_KEY = "./src/cron/cronInstaLaphar.js";
 
 scheduleCronJob(
   JOB_KEY,
-  "00 15,18,21 * * *",
+  "10 15,18,21 * * *",
   async () => {
     // Step 1: Fetch post IG
     try {
