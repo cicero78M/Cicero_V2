@@ -4,6 +4,7 @@ import { findClientById } from '../service/clientService.js';
 import { splitRecipientField } from '../repository/clientContactRepository.js';
 import { safeSendMessage, getAdminWAIds } from '../utils/waHelper.js';
 import { waGatewayClient } from '../service/waService.js';
+import { delayAfterSend } from './dirRequestThrottle.js';
 import {
   normalizeGroupId,
   runCron as runDirRequestFetchSosmed,
@@ -95,8 +96,11 @@ async function executeMenuActions({
 
   const failures = [];
 
-  for (const wa of recipients) {
-    for (const actionEntry of actions) {
+  recipientsLoop: for (let recipientIndex = 0; recipientIndex < recipients.length; recipientIndex += 1) {
+    const wa = recipients[recipientIndex];
+
+    for (let actionIndex = 0; actionIndex < actions.length; actionIndex += 1) {
+      const actionEntry = actions[actionIndex];
       const normalizedAction = normalizeActionEntry(actionEntry);
       if (!normalizedAction?.action) {
         failures.push(`[${label}] action tidak valid untuk ${clientId} -> ${wa}`);
@@ -120,6 +124,15 @@ async function executeMenuActions({
         const errorMsg = `[${label}] gagal menu ${normalizedAction.action} untuk ${clientId} -> ${wa}: ${err.message || err}`;
         failures.push(errorMsg);
         sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
+        if (recipientIndex === recipients.length - 1 && actionIndex === actions.length - 1) {
+          break recipientsLoop;
+        }
+      }
+
+      const isLastRecipient = recipientIndex === recipients.length - 1;
+      const isLastAction = actionIndex === actions.length - 1;
+      if (!isLastRecipient || !isLastAction) {
+        await delayAfterSend();
       }
     }
   }
@@ -299,6 +312,9 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     });
 
     const superRecipients = getSuperAdminRecipients(ditbinmasClient);
+    if (groupRecipients.length > 0 && superRecipients.length > 0) {
+      await delayAfterSend();
+    }
     summary.superAdmins = await executeMenuActions({
       clientId: DITBINMAS_CLIENT_ID,
       actions: superActions,
@@ -309,6 +325,9 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     });
 
     const operatorRecipients = getOperatorRecipients(ditbinmasClient);
+    if (superRecipients.length > 0 && operatorRecipients.length > 0) {
+      await delayAfterSend();
+    }
     summary.operators = await executeMenuActions({
       clientId: DITBINMAS_CLIENT_ID,
       actions: operatorActions,

@@ -5,6 +5,7 @@ import { splitRecipientField } from '../repository/clientContactRepository.js';
 import { safeSendMessage, getAdminWAIds } from '../utils/waHelper.js';
 import { waGatewayClient } from '../service/waService.js';
 import { normalizeGroupId, runCron as runDirRequestFetchSosmed } from './cronDirRequestFetchSosmed.js';
+import { delayAfterSend } from './dirRequestThrottle.js';
 
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
 export const JOB_KEY = './src/cron/cronDirRequestBidhumasEvening.js';
@@ -49,8 +50,11 @@ async function executeBidhumasMenus(recipients) {
   const actions = ['6', '9'];
   const failures = [];
 
-  for (const chatId of recipients) {
-    for (const action of actions) {
+  for (let recipientIndex = 0; recipientIndex < recipients.length; recipientIndex += 1) {
+    const chatId = recipients[recipientIndex];
+
+    for (let actionIndex = 0; actionIndex < actions.length; actionIndex += 1) {
+      const action = actions[actionIndex];
       try {
         sendDebug({
           tag: 'CRON DIRREQ BIDHUMAS 22:00',
@@ -68,6 +72,12 @@ async function executeBidhumasMenus(recipients) {
         const errorMsg = `Gagal menu ${action} untuk ${chatId}: ${err.message || err}`;
         failures.push(errorMsg);
         sendDebug({ tag: 'CRON DIRREQ BIDHUMAS 22:00', msg: errorMsg });
+      }
+
+      const isLastRecipient = recipientIndex === recipients.length - 1;
+      const isLastAction = actionIndex === actions.length - 1;
+      if (!isLastRecipient || !isLastAction) {
+        await delayAfterSend();
       }
     }
   }

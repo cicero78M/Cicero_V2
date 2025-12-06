@@ -206,6 +206,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
   super admin BIDHUMAS (`client_super`). Operator atau admin WhatsApp lainnya
   tidak menerima laporan ini.
+- Pengiriman setiap pesan dibatasi jeda **3 detik** per menu/penerima agar tidak
+  membanjiri gateway WA; jeda ini hanya memblokir alur BIDHUMAS saja, bukan cron
+  lain.
 
 ## Automasi Cron DirRequest Custom
 - Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
@@ -240,6 +243,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Tidak ada client lain yang terpengaruh; cron ini hanya membaca kolom kontak
   Ditbinmas, menormalkan WID dengan `splitRecipientField`/`toWAid`, lalu
   menjalankan menu secara berurutan melalui `executeMenuActions`.
+- Setiap pesan antar menu/penerima diberi jeda **3 detik** (`delayAfterSend`)
+  untuk menghindari limitasi gateway WA tanpa menahan cron lain.
 
 ## Penerima Cron DirRequest
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
