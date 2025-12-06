@@ -13,6 +13,7 @@ const DITBINMAS_CLIENT_ID = 'DITBINMAS';
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
 export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
+export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
 
 function toWAid(id) {
   if (!id || typeof id !== 'string') return null;
@@ -131,6 +132,48 @@ async function executeMenuActions({
   return summary;
 }
 
+export async function runBidhumasMenuSequence({
+  includeFetch = false,
+  label = 'Menu 6 & 9 BIDHUMAS',
+} = {}) {
+  let fetchStatus = includeFetch ? 'pending' : 'skipped';
+  let sendStatus = 'pending';
+
+  if (includeFetch) {
+    try {
+      await runDirRequestFetchSosmed();
+      fetchStatus = 'sosmed fetch selesai';
+    } catch (err) {
+      fetchStatus = `gagal sosmed fetch: ${err.message || err}`;
+      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: fetchStatus });
+      await logToAdmins(fetchStatus);
+    }
+  }
+
+  try {
+    const bidhumasClient = await findClientById(BIDHUMAS_CLIENT_ID);
+    const recipients = buildRecipients(bidhumasClient, {
+      includeGroup: true,
+      includeSuperAdmins: true,
+    });
+
+    sendStatus = await executeMenuActions({
+      clientId: BIDHUMAS_CLIENT_ID,
+      actions: ['6', '9'],
+      recipients,
+      label,
+      userClientId: BIDHUMAS_CLIENT_ID,
+      roleFlag: BIDHUMAS_CLIENT_ID,
+    });
+  } catch (err) {
+    sendStatus = `gagal kirim BIDHUMAS: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: sendStatus });
+    await logToAdmins(sendStatus);
+  }
+
+  return { fetchStatus, sendStatus };
+}
+
 function isLastDayOfMonth(date = new Date()) {
   const checkDate = new Date(date);
   const nextDay = new Date(checkDate);
@@ -211,18 +254,8 @@ export async function runCron() {
   }
 
   try {
-    const bidhumasClient = await findClientById(BIDHUMAS_CLIENT_ID);
-    const recipients = buildRecipients(bidhumasClient, {
-      includeGroup: true,
-      includeSuperAdmins: true,
-    });
-    summary.bidhumas = await executeMenuActions({
-      clientId: BIDHUMAS_CLIENT_ID,
-      actions: ['6', '9'],
-      recipients,
-      label: 'Menu 6 & 9 BIDHUMAS',
-      userClientId: BIDHUMAS_CLIENT_ID,
-    });
+    const { sendStatus } = await runBidhumasMenuSequence({ label: 'Menu 6 & 9 BIDHUMAS' });
+    summary.bidhumas = sendStatus;
   } catch (err) {
     summary.bidhumas = `gagal kirim BIDHUMAS: ${err.message || err}`;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.bidhumas });
@@ -242,10 +275,11 @@ export async function runCron() {
 export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
   sendDebug({
     tag: 'CRON DIRREQ CUSTOM',
-    msg: 'Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)',
+    msg: 'Mulai cron rekap Ditbinmas (menu 21 + 6/9/30/34/35)',
   });
 
   const summary = {
+    menu21: 'pending',
     superAdmins: 'pending',
     operators: 'pending',
   };
@@ -254,6 +288,15 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
     const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
       buildDitbinmasRecapPlan(referenceDate);
+
+    const groupRecipients = buildRecipients(ditbinmasClient, { includeGroup: true });
+    summary.menu21 = await executeMenuActions({
+      clientId: DITBINMAS_CLIENT_ID,
+      actions: ['21'],
+      recipients: groupRecipients,
+      label: 'Ditbinmas group (21)',
+      userClientId: DITBINMAS_CLIENT_ID,
+    });
 
     const superRecipients = getSuperAdminRecipients(ditbinmasClient);
     summary.superAdmins = await executeMenuActions({
@@ -276,6 +319,7 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     });
   } catch (err) {
     const errorMsg = `gagal menjalankan cron rekap Ditbinmas: ${err.message || err}`;
+    summary.menu21 = errorMsg;
     summary.superAdmins = errorMsg;
     summary.operators = errorMsg;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
@@ -284,6 +328,7 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
 
   const logMessage =
     '[CRON DIRREQ CUSTOM] Ringkasan Ditbinmas 20:30:\n' +
+    `- Grup (21): ${summary.menu21}\n` +
     `- Super admin: ${summary.superAdmins}\n` +
     `- Operator: ${summary.operators}`;
 
