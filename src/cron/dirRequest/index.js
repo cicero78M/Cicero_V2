@@ -29,7 +29,6 @@ const dirRequestCrons = [
       { cronExpression: '0,30 16-17 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '30 18 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 19-21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 22 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
