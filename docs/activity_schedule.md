@@ -26,7 +26,6 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
 | `cronDbBackup.js` | `0 4 * * *` | Backup database dump to Google Drive using service account credentials. |
-| `cronInstaService.js` | `35 6-21 * * *` | Fetch Instagram content and likes for active clients while sending attendance recaps. |
 | `cronInstaLaphar.js` | `00 15,18,21 * * *` | Send Instagram laphar updates, likes, and amplifikasi summaries to operators and admins. |
 | `cronRekapLink.js` | `5 15,18,21 * * *` | Distribute amplification link recaps to all active amplification clients. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
