@@ -2116,9 +2116,42 @@ async function performAction(
   }
   await waClient.sendMessage(chatId, msg.trim());
   if (action === "12" || action === "14" || action === "16") {
-      await safeSendMessage(waClient, dirRequestGroup, msg.trim());
-    }
+    await safeSendMessage(waClient, dirRequestGroup, msg.trim());
   }
+}
+
+export async function runDirRequestAction({
+  action,
+  clientId,
+  chatId,
+  roleFlag,
+  userClientId,
+  waClient,
+  context,
+} = {}) {
+  if (!action) {
+    throw new Error("Action menu wajib diisi");
+  }
+  if (!waClient) {
+    throw new Error("Instans WA client wajib diisi untuk menjalankan menu");
+  }
+  if (!chatId) {
+    throw new Error("chatId penerima wajib diisi untuk menjalankan menu");
+  }
+
+  const normalizedAction = String(action).trim();
+  const normalizedClient = (clientId || "").trim();
+
+  return performAction(
+    normalizedAction,
+    normalizedClient,
+    waClient,
+    chatId,
+    roleFlag,
+    userClientId,
+    context
+  );
+}
 
 export const dirRequestHandlers = {
   async choose_dash_user(session, chatId, _text, waClient) {
