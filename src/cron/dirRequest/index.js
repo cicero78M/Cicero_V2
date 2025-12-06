@@ -22,6 +22,7 @@ import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JO
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
+const READINESS_GRACE_MS = 60000;
 
 const dirRequestCrons = [
   {
@@ -140,6 +141,7 @@ export function registerDirRequestCrons(waGatewayClient) {
   }
 
   let activated = false;
+  let readinessFallbackTimer;
   const scheduledJobs = [];
 
   const activateGroup = () => {
@@ -149,6 +151,7 @@ export function registerDirRequestCrons(waGatewayClient) {
     }
 
     activated = true;
+    clearTimeout(readinessFallbackTimer);
 
     dirRequestCrons.forEach(({ jobKey, description, schedules }) => {
       schedules.forEach(({ cronExpression, handler, options }) => {
@@ -160,10 +163,26 @@ export function registerDirRequestCrons(waGatewayClient) {
     return scheduledJobs;
   };
 
+  const deferWithGracePeriod = reason => {
+    if (readinessFallbackTimer || activated) return;
+    console.log(
+      `[CRON] dirRequest cron registration deferred (${reason}); will auto-activate after ${READINESS_GRACE_MS}ms grace period`,
+    );
+    readinessFallbackTimer = setTimeout(() => {
+      if (activated) return;
+      console.warn(
+        '[CRON] Activating dirRequest cron group after WA readiness grace period elapsed; WA ready event/promise missing',
+      );
+      activateGroup();
+    }, READINESS_GRACE_MS);
+  };
+
   waGatewayClient.on('ready', () => {
     console.log('[CRON] WA gateway client ready event for dirRequest bucket');
     activateGroup();
   });
+
+  deferWithGracePeriod('waiting for WA gateway readiness');
 
   waGatewayClient
     .waitForWaReady()
@@ -171,7 +190,10 @@ export function registerDirRequestCrons(waGatewayClient) {
       console.log('[CRON] WA gateway client ready for dirRequest bucket');
       return activateGroup();
     })
-    .catch(err => console.error('[CRON] Error waiting for WA gateway readiness', err));
+    .catch(err => {
+      console.error('[CRON] Error waiting for WA gateway readiness, will rely on grace-period activation', err);
+      deferWithGracePeriod('waGatewayClient.waitForWaReady rejected');
+    });
 
   return scheduledJobs;
 }

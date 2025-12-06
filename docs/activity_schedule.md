@@ -9,6 +9,8 @@ Every cron file calls `scheduleCronJob`, which delegates to `src/utils/cronSched
 
 The configuration data lives in the migration `sql/migrations/20251022_create_cron_job_config.sql` and is surfaced in the cron configuration menu, keeping this schedule synchronized with the controls that ops staff use to enable or pause jobs.【F:sql/migrations/20251022_create_cron_job_config.sql†L1-L34】
 
+dirRequest cron registration now waits for the WhatsApp gateway to emit `ready`, but also installs a 60-second grace-period fallback. If `waGatewayClient.waitForWaReady()` rejects or no ready event ever arrives, the group logs the deferral and auto-activates after the grace window so daily recaps do not get stuck waiting on the gateway.【F:src/cron/dirRequest/index.js†L129-L179】
+
 ## Cron Jobs
 
 Use the helper script below to regenerate the manifest-driven table so that schedules stay aligned with the manifest and source files:
