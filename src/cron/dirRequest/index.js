@@ -40,7 +40,7 @@ const dirRequestCrons = [
     description: 'Dispatch Ditbinmas directorate attendance recaps.',
     schedules: [
       {
-        cronExpression: '0 0 15 * * *',
+        cronExpression: '0 0 16 * * *',
         handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
         options: DEFAULT_CRON_OPTIONS,
       },
@@ -61,7 +61,7 @@ const dirRequestCrons = [
     jobKey: REKAP_ALL_SOCMED_JOB_KEY,
     description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
     schedules: [
-      { cronExpression: '0 0 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 0 16,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 0 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
@@ -69,7 +69,7 @@ const dirRequestCrons = [
     jobKey: SOSMED_RANK_JOB_KEY,
     description: 'Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients.',
     schedules: [
-      { cronExpression: '7 15 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '7 16 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '37 20 * * *', handler: () => runSosmedRank(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
@@ -77,7 +77,7 @@ const dirRequestCrons = [
     jobKey: ENGAGE_RANK_JOB_KEY,
     description: 'Generate engagement ranking narratives and Excel exports for Ditbinmas.',
     schedules: [
-      { cronExpression: '10 15 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '10 16 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 20 * * *', handler: () => runEngageRank(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
