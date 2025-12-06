@@ -53,3 +53,37 @@ test('executes handler when job is active', async () => {
 
   expect(handler).toHaveBeenCalledWith('foo');
 });
+
+test('retries status lookup once and still honors inactive flag when retry succeeds', async () => {
+  const handler = jest.fn();
+  let scheduledHandler;
+  mockSchedule.mockImplementation((expr, callback) => {
+    scheduledHandler = callback;
+    return { stop: jest.fn() };
+  });
+  mockGetCronJob
+    .mockRejectedValueOnce(new Error('temporary connection error'))
+    .mockResolvedValueOnce({ job_key: 'job1', is_active: false });
+
+  scheduleCronJob('job1', '* * * * *', handler);
+  await scheduledHandler();
+
+  expect(mockGetCronJob).toHaveBeenCalledTimes(2);
+  expect(handler).not.toHaveBeenCalled();
+});
+
+test('executes handler when status lookup keeps failing', async () => {
+  const handler = jest.fn();
+  let scheduledHandler;
+  mockSchedule.mockImplementation((expr, callback) => {
+    scheduledHandler = callback;
+    return { stop: jest.fn() };
+  });
+  mockGetCronJob.mockRejectedValue(new Error('database offline'));
+
+  scheduleCronJob('job1', '* * * * *', handler);
+  await scheduledHandler();
+
+  expect(mockGetCronJob).toHaveBeenCalledTimes(2);
+  expect(handler).toHaveBeenCalled();
+});
