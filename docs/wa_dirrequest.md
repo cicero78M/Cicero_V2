@@ -198,6 +198,15 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
   dilewati jika tidak ada admin penerima yang valid.
 
+## Automasi Cron BIDHUMAS Malam
+- Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
+  **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed()` untuk
+  memperbarui data sosmed, lalu menjalankan menu **6** (Instagram likes) dan
+  **9** (komentar TikTok) khusus untuk client `BIDHUMAS`.
+- Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
+  super admin BIDHUMAS (`client_super`). Operator atau admin WhatsApp lainnya
+  tidak menerima laporan ini.
+
 ## Automasi Cron DirRequest Custom
 - Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
   harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
