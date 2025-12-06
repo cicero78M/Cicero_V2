@@ -232,6 +232,25 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   *Client ID*, aksi yang dijalankan, delta sebelum/sesudah, daftar penerima,
   dan alasan skip jika berlaku.
 
+## Logging real-time Cron Custom DirRequest
+- `cronDirRequestCustomSequence` kini mengirim log progres per penerima dan
+  per aksi menu secara bertahap ke admin WhatsApp menggunakan `logToAdmins`.
+- Format pesan progres per aksi: `[<label>] clientId=<id> recipient=<wa>
+  action=<nomor> mulai|sukses|gagal (context={...})`. Setiap pesan selalu
+  menyertakan `clientId`, nomor menu, WA penerima, dan konteks tambahan jika
+  ada (mis. periode rekap) sehingga admin tahu aksi mana yang sedang berjalan.
+- Kegagalan langsung dikirim ketika terjadi dengan detail error singkat, lalu
+  tetap dirangkum pada pesan akhir.
+- Blok besar memiliki log pembuka dan penutup:
+  - `runDirRequestFetchSosmed` (baik di alur utama maupun BIDHUMAS).
+  - Eksekusi menu 21 Ditbinmas.
+  - Sekuens BIDHUMAS (menu 6 & 9).
+  - Cron rekap Ditbinmas (menu 21, super admin 6/9/34/35, operator 30).
+- Urutan log WA yang diterima admin mencerminkan eksekusi nyata: pesan pembuka
+  blok → progres per aksi/penerima (mulai/sukses/gagal) → pesan penutup blok →
+  ringkasan akhir. Dengan pola ini admin dapat memantau status cron secara
+  real-time tanpa menunggu ringkasan terakhir.
+
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
   **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed()` untuk
