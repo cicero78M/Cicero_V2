@@ -3,6 +3,10 @@ import { scheduleCronJob } from '../../utils/cronScheduler.js';
 import { runCron as runFetchDirRequest, JOB_KEY as FETCH_SOSMED_JOB_KEY } from '../cronDirRequestFetchSosmed.js';
 import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JOB_KEY } from '../cronWaNotificationReminder.js';
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
+import {
+  runCron as runDirRequestCustomSequence,
+  JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
+} from '../cronDirRequestCustomSequence.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const READINESS_GRACE_MS = 60000;
@@ -37,6 +41,15 @@ const dirRequestCrons = [
     description: 'Share Satbinmas official media updates with Ditbinmas recipients.',
     schedules: [
       { cronExpression: '5 23 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
+    description:
+      'Run dirRequest custom sequence: sosmed fetch, Ditbinmas combined recap (menu 21), then Bidhumas menus 6 & 9 to group + super admin.',
+    schedules: [
+      { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];

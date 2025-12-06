@@ -188,6 +188,8 @@ A cron job (`src/cron/cronDbBackup.js`) runs daily at **04:00** (Asia/Jakarta), 
 
 Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Manifest entries in `src/cron/cronManifest.js` drive the always/`waClient` buckets, while all Ditbinmas dirRequest jobs are bundled in `src/cron/dirRequest/index.js` and registered via `registerDirRequestCrons(waGatewayClient)` so they share the same gateway context and can be toggled with `ENABLE_DIRREQUEST_GROUP`.
 
+- `src/cron/cronDirRequestCustomSequence.js` registers its own dirRequest job key with schedules at **15:00** and **18:00** (Asia/Jakarta). Each run chains the social-media fetch (posts/likes/comments), dispatches the Ditbinmas menu 21 combined recap to the Ditbinmas WhatsApp group, then sends the Bidhumas menu 6 (IG likes) and menu 9 (TikTok comments) reports to both the Bidhumas group and any configured super admin recipients. Admin WhatsApp numbers receive a short status summary after the sequence finishes.
+
 The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP emails are sent synchronously via SMTP to minimise delays.
 
 ---
