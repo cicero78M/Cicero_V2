@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-04*
+*Last updated: 2025-05-23*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -197,6 +197,24 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Rekap dikirim hanya ke daftar admin WhatsApp (`ADMIN_WHATSAPP`). Cron ini
   tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
   dilewati jika tidak ada admin penerima yang valid.
+
+## Automasi Cron DirRequest Custom
+- Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
+  harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
+- Urutan otomatis yang dijalankan:
+  1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
+     Instagram dan TikTok seluruh direktorat aktif.
+  2. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
+     `DITBINMAS` dan mengirimkan narasi, file teks, serta Excel rekap ke grup
+     WA Ditbinmas yang terkonfigurasi di `client_group`.
+  3. Memicu menu **6️⃣** dan **9️⃣** (absensi likes & komentar sederhana) untuk
+     *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target sekaligus:
+     grup WA `client_group` dan daftar Super Admin dari kolom `client_super`.
+- Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
+  ID WA yang valid yang akan dipakai.
+- Debug dan kegagalan menu dicatat lewat `sendDebug` serta dikirim ke daftar
+  admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
+  membuka dashboard.
 
 ## Penerima Cron DirRequest
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
