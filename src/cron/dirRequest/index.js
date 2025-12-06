@@ -40,29 +40,29 @@ const dirRequestCrons = [
     description: 'Dispatch Ditbinmas directorate attendance recaps.',
     schedules: [
       {
-        cronExpression: '5 15 * * *',
+        cronExpression: '0 0 15 * * *',
         handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
         options: DEFAULT_CRON_OPTIONS,
       },
       {
-        cronExpression: '5 18 * * *',
+        cronExpression: '0 0 18 * * *',
         handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupOnly' }),
         options: DEFAULT_CRON_OPTIONS,
       },
       {
-        cronExpression: '5 22 * * *',
+        cronExpression: '0 0 22 * * *',
         handler: () => runDirektorat({ clientIds: ['BIDHUMAS'], recipientMode: 'groupAndSuper' }),
         options: DEFAULT_CRON_OPTIONS,
       },
-      { cronExpression: '35 20 * * *', handler: () => runDirektorat(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 0 20 * * *', handler: () => runDirektorat(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
     jobKey: REKAP_ALL_SOCMED_JOB_KEY,
     description: 'Send Ditbinmas laphar narratives and recap attachments for daily runs.',
     schedules: [
-      { cronExpression: '0 6 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 36 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 0 15,18 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '0 0 20 * * *', handler: () => runRekapAllSocmed(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
