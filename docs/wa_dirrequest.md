@@ -201,15 +201,36 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Logging terstruktur Cron DirRequest Sosmed
 - Cron `cronDirRequestFetchSosmed` memakai helper log terstruktur dengan
   atribut `phase`, `clientId`, `action`, `result`, `countsBefore`,
-  `countsAfter`, dan `recipients` untuk mengirim pesan yang sama ke saluran
-  debug dan admin WA.
-- Setiap tahap utama (fetch Instagram/TikTok, refresh likes/komentar, generate
-  pesan, hingga loop pengiriman) memiliki log *start* dan *completed* atau
-  *skipped* (mis. setelah pukul 17.00 WIB). Pesan *no changes* atau *sent*
-  selalu memuat delta jumlah konten (IG/TikTok) agar admin melihat perubahan
-  terbaru versus sebelumnya.
+  `countsAfter`, `recipients`, dan `skipReason` untuk mengirim pesan yang sama
+  ke saluran debug dan admin WA.
+- Tahap logging utama yang dicetak berurutan:
+  1. **start**: memuat *Client ID* target dan penerima grup WA yang valid.
+  2. **fetchPosts**: menarik konten baru IG/TikTok (dilewati otomatis setelah
+     **17:00 WIB**; cron hanya melakukan refresh engagement pada malam hari).
+  3. **refreshEngagement**: memperbarui likes/komentar tanpa menarik konten
+     baru jika sudah lewat 17:00 WIB.
+  4. **buildMessage**: merangkum aksi (fetch/refresh saja), delta konten, dan
+     total penerima.
+  5. **sendToRecipients**: mengirim narasi ke grup WA per client dan saluran
+     debug dengan status `sent` atau `skipped`.
+- Pesan *no changes* tetap dicetak ketika tidak ada konten baru atau ketika
+  seluruh akun tidak berubah; log tersebut memuat `action=refresh_only` atau
+  `result=no_change` sehingga admin tahu cron berjalan tetapi tidak ada delta.
+- Contoh log WhatsApp/debug:
+  - **Sukses kirim** ke grup: `cronDirRequestFetchSosmed | clientId=DITBINMAS`
+    `action=fetch_dirrequest result=sent countsBefore=ig:12/tk:9`
+    `countsAfter=ig:15/tk:10 recipients=120363419830216549@g.us`.
+  - **Lewat 17:00** (skip fetch, hanya refresh): `cronDirRequestFetchSosmed |`
+    `clientId=DITHUMAS action=refresh_only result=skipped`
+    `skipReason=after_17_wib countsBefore=ig:8/tk:5 countsAfter=ig:8/tk:5`
+    `recipients=120363419830216549@g.us`.
+  - **Error** pada refresh: `cronDirRequestFetchSosmed | clientId=BIDHUMAS`
+    `action=refreshEngagement result=error message="RapidAPI 429"`
+    `recipients=admin@c.us` (stack trace dicetak di log debug).
 - Error ditangkap dengan metadata (stack trace, nama error) dan dikirim ke
-  kedua saluran untuk mempermudah investigasi.
+  kedua saluran untuk mempermudah investigasi. Seluruh log selalu mencantumkan
+  *Client ID*, aksi yang dijalankan, delta sebelum/sesudah, daftar penerima,
+  dan alasan skip jika berlaku.
 
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
