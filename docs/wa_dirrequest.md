@@ -259,6 +259,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
   super admin BIDHUMAS (`client_super`). Operator atau admin WhatsApp lainnya
   tidak menerima laporan ini.
+- Log progres dikirim ke admin WhatsApp untuk setiap fase: pembuka cron,
+  status fetch sosmed, daftar penerima valid, progres per menu/penerima, hingga
+  ringkasan akhir. Pesan memakai label `[CRON DIRREQ BIDHUMAS 22:00]` agar
+  mudah difilter.
 - Pengiriman setiap pesan dibatasi jeda **3 detik** per menu/penerima agar tidak
   membanjiri gateway WA; jeda ini hanya memblokir alur BIDHUMAS saja, bukan cron
   lain.

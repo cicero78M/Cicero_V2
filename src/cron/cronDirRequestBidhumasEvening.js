@@ -11,6 +11,7 @@ const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
 export const JOB_KEY = './src/cron/cronDirRequestBidhumasEvening.js';
 
 const adminRecipients = new Set(getAdminWAIds());
+const CRON_LABEL = 'CRON DIRREQ BIDHUMAS 22:00';
 
 function toWAid(value) {
   if (!value || typeof value !== 'string') return null;
@@ -46,6 +47,11 @@ async function logToAdmins(message) {
   }
 }
 
+async function logPhase(message) {
+  await logToAdmins(message);
+  sendDebug({ tag: CRON_LABEL, msg: message });
+}
+
 async function executeBidhumasMenus(recipients) {
   const actions = ['6', '9'];
   const failures = [];
@@ -56,10 +62,7 @@ async function executeBidhumasMenus(recipients) {
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex += 1) {
       const action = actions[actionIndex];
       try {
-        sendDebug({
-          tag: 'CRON DIRREQ BIDHUMAS 22:00',
-          msg: `Jalankan menu ${action} untuk BIDHUMAS -> ${chatId}`,
-        });
+        await logPhase(`Mulai jalankan menu ${action} untuk BIDHUMAS -> ${chatId}`);
         await runDirRequestAction({
           action,
           clientId: BIDHUMAS_CLIENT_ID,
@@ -68,10 +71,11 @@ async function executeBidhumasMenus(recipients) {
           userClientId: BIDHUMAS_CLIENT_ID,
           waClient: waGatewayClient,
         });
+        await logPhase(`Menu ${action} selesai untuk ${chatId}`);
       } catch (err) {
         const errorMsg = `Gagal menu ${action} untuk ${chatId}: ${err.message || err}`;
         failures.push(errorMsg);
-        sendDebug({ tag: 'CRON DIRREQ BIDHUMAS 22:00', msg: errorMsg });
+        await logPhase(errorMsg);
       }
 
       const isLastRecipient = recipientIndex === recipients.length - 1;
@@ -86,7 +90,7 @@ async function executeBidhumasMenus(recipients) {
 }
 
 export async function runCron() {
-  sendDebug({ tag: 'CRON DIRREQ BIDHUMAS 22:00', msg: 'Mulai cron BIDHUMAS malam' });
+  await logPhase('Mulai cron BIDHUMAS malam: persiapan fetch sosmed');
 
   let fetchStatus = 'pending';
   let sendStatus = 'pending';
@@ -94,12 +98,14 @@ export async function runCron() {
   try {
     await runDirRequestFetchSosmed();
     fetchStatus = 'sosmed fetch selesai';
+    await logPhase('Fetch sosmed selesai untuk cron BIDHUMAS malam');
   } catch (err) {
     fetchStatus = `gagal sosmed fetch: ${err.message || err}`;
     await logToAdmins(fetchStatus);
   }
 
   try {
+    await logPhase('Ambil data BIDHUMAS dan daftar penerima WA');
     const client = await findClientById(BIDHUMAS_CLIENT_ID);
     const recipients = buildRecipients(client);
 
@@ -107,6 +113,7 @@ export async function runCron() {
       sendStatus = 'tidak ada penerima valid untuk BIDHUMAS';
       await logToAdmins(sendStatus);
     } else {
+      await logPhase(`Daftar penerima valid BIDHUMAS: ${recipients.join(', ')}`);
       const failures = await executeBidhumasMenus(recipients);
       sendStatus =
         failures.length === 0
@@ -123,7 +130,7 @@ export async function runCron() {
   }
 
   await logToAdmins(`Ringkasan: ${fetchStatus}; ${sendStatus}`);
-  sendDebug({ tag: 'CRON DIRREQ BIDHUMAS 22:00', msg: { fetchStatus, sendStatus } });
+  sendDebug({ tag: CRON_LABEL, msg: { fetchStatus, sendStatus } });
 }
 
 export default null;
