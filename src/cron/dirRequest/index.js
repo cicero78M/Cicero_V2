@@ -6,6 +6,8 @@ import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MED
 import {
   runCron as runDirRequestCustomSequence,
   JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
+  runDitbinmasRecapSequence,
+  DITBINMAS_RECAP_JOB_KEY,
 } from '../cronDirRequestCustomSequence.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
@@ -50,6 +52,14 @@ const dirRequestCrons = [
     schedules: [
       { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DITBINMAS_RECAP_JOB_KEY,
+    description:
+      'Send Ditbinmas evening recap: menus 6, 9, 34, 35 to super admins and menu 30 to operators with weekly/monthly add-ons.',
+    schedules: [
+      { cronExpression: '30 20 * * *', handler: () => runDitbinmasRecapSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
