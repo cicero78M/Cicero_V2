@@ -216,6 +216,22 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
   membuka dashboard.
 
+## Automasi Rekap Ditbinmas 20:30
+- Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
+  (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**.
+- Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
+  - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
+  - Menu **30** dikirim hanya ke `client_operator`.
+- Periode rekap mengikuti tanggal eksekusi:
+  - Hari biasa menjalankan rekap harian.
+  - Hari Minggu menambahkan rekap mingguan (periode `weekly` untuk menu 34/35
+    dan `this_week` untuk menu 30).
+  - Hari terakhir bulan menambahkan rekap bulanan (periode `monthly` untuk menu
+    34/35 dan `this_month` untuk menu 30).
+- Tidak ada client lain yang terpengaruh; cron ini hanya membaca kolom kontak
+  Ditbinmas, menormalkan WID dengan `splitRecipientField`/`toWAid`, lalu
+  menjalankan menu secara berurutan melalui `executeMenuActions`.
+
 ## Penerima Cron DirRequest
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
   Direktorat** yang aktif dengan status **IG** dan **TikTok** aktif. Eksekusi

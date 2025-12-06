@@ -2068,51 +2068,116 @@ async function performAction(
         msg = "✅ File Excel dikirim.";
         break;
       }
-    case "29": {
-      const recapData = await collectKomentarRecap(clientId);
-      if (!recapData?.videoIds?.length) {
-        msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+      case "29": {
+        const recapData = await collectKomentarRecap(clientId);
+        if (!recapData?.videoIds?.length) {
+          msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+          break;
+        }
+        const filePath = await saveCommentRecapPerContentExcel(recapData, clientId);
+        const buffer = await readFile(filePath);
+        await sendWAFile(
+          waClient,
+          buffer,
+          basename(filePath),
+          chatId,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        await unlink(filePath);
+        msg = "✅ File Excel dikirim.";
         break;
       }
-      const filePath = await saveCommentRecapPerContentExcel(recapData, clientId);
-      const buffer = await readFile(filePath);
-      await sendWAFile(
-        waClient,
-        buffer,
-        basename(filePath),
-        chatId,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      await unlink(filePath);
-      msg = "✅ File Excel dikirim.";
-      break;
-    }
-    case "31": {
-      try {
-        msg = await formatTopPersonnelRanking(clientId, roleFlag);
-      } catch (error) {
-        console.error(
-          "Gagal membuat ranking like/komentar personel:",
-          error
-        );
-        msg = "❌ Gagal membuat ranking like/komentar personel.";
+      case "30": {
+        try {
+          const period = context?.period || "today";
+          msg = await generateKasatkerReport({
+            clientId,
+            roleFlag,
+            period,
+          });
+        } catch (error) {
+          console.error("Gagal membuat Laporan Kasatker:", error);
+          const suffix = context?.period ? ` (${context.period})` : "";
+          msg =
+            error?.message &&
+            (error.message.includes("direktorat") ||
+              error.message.includes("Client tidak ditemukan") ||
+              error.message.includes("Tidak ada data"))
+              ? error.message
+              : `❌ Gagal membuat Laporan Kasatker${suffix}.`;
+        }
+        break;
       }
-      break;
-    }
-    case "32": {
-      try {
-        msg = await formatTopPolresRanking(clientId, roleFlag);
-      } catch (error) {
-        console.error(
-          "Gagal membuat ranking like/komentar polres:",
-          error
-        );
-        msg = "❌ Gagal membuat ranking like/komentar polres.";
+      case "31": {
+        try {
+          msg = await formatTopPersonnelRanking(clientId, roleFlag);
+        } catch (error) {
+          console.error(
+            "Gagal membuat ranking like/komentar personel:",
+            error
+          );
+          msg = "❌ Gagal membuat ranking like/komentar personel.";
+        }
+        break;
       }
-      break;
-    }
-    default:
-      msg = "Menu tidak dikenal.";
+      case "32": {
+        try {
+          msg = await formatTopPolresRanking(clientId, roleFlag);
+        } catch (error) {
+          console.error(
+            "Gagal membuat ranking like/komentar polres:",
+            error
+          );
+          msg = "❌ Gagal membuat ranking like/komentar polres.";
+        }
+        break;
+      }
+      case "34": {
+        try {
+          const period = context?.period || "daily";
+          msg = await generateKasatBinmasLikesRecap({ period });
+        } catch (error) {
+          console.error(
+            "Gagal membuat rekap Absensi Likes Kasat Binmas:",
+            error
+          );
+          const suffix = context?.period ? ` (${context.period})` : "";
+          msg =
+            error?.message &&
+            (error.message.includes("direktorat") ||
+              error.message.includes("Client tidak ditemukan") ||
+              error.message.includes("Tidak ada data"))
+              ? error.message
+              : `❌ Gagal membuat rekap Absensi Likes Kasat Binmas${suffix}.`;
+        }
+        break;
+      }
+      case "35": {
+        try {
+          const period = context?.period || "daily";
+          const referenceDate = context?.referenceDate;
+          msg = await generateKasatBinmasTiktokCommentRecap({
+            period,
+            referenceDate,
+          });
+        } catch (error) {
+          console.error(
+            "Gagal membuat rekap Absensi Komentar TikTok Kasat Binmas:",
+            error,
+          );
+          const suffix = context?.period ? ` (${context.period})` : "";
+          msg =
+            error?.message &&
+            (error.message.includes("direktorat") ||
+              error.message.includes("Client tidak ditemukan") ||
+              error.message.includes("Tidak ada data"))
+              ? error.message
+              : `❌ Gagal membuat rekap Absensi Komentar TikTok Kasat Binmas${suffix}.`;
+        }
+        break;
+      }
+      default:
+        msg = "Menu tidak dikenal.";
   }
   await waClient.sendMessage(chatId, msg.trim());
   if (action === "12" || action === "14" || action === "16") {

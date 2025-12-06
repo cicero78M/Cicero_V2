@@ -12,6 +12,7 @@ import {
 const DITBINMAS_CLIENT_ID = 'DITBINMAS';
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
+export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
 
 function toWAid(id) {
   if (!id || typeof id !== 'string') return null;
@@ -25,8 +26,16 @@ function getGroupRecipient(client) {
   return normalizeGroupId(client?.client_group);
 }
 
+function getRecipientsFromField(rawValue) {
+  return splitRecipientField(rawValue).map(toWAid).filter(Boolean);
+}
+
 function getSuperAdminRecipients(client) {
-  return splitRecipientField(client?.client_super).map(toWAid).filter(Boolean);
+  return getRecipientsFromField(client?.client_super);
+}
+
+function getOperatorRecipients(client) {
+  return getRecipientsFromField(client?.client_operator);
 }
 
 function buildRecipients(client, { includeGroup = false, includeSuperAdmins = false } = {}) {
@@ -57,6 +66,17 @@ async function logToAdmins(message) {
   }
 }
 
+function normalizeActionEntry(entry) {
+  if (!entry) return null;
+  if (typeof entry === 'string') {
+    return { action: entry, context: undefined };
+  }
+  if (typeof entry === 'object' && entry.action) {
+    return { action: String(entry.action), context: entry.context };
+  }
+  return null;
+}
+
 async function executeMenuActions({
   clientId,
   actions,
@@ -75,22 +95,28 @@ async function executeMenuActions({
   const failures = [];
 
   for (const wa of recipients) {
-    for (const action of actions) {
+    for (const actionEntry of actions) {
+      const normalizedAction = normalizeActionEntry(actionEntry);
+      if (!normalizedAction?.action) {
+        failures.push(`[${label}] action tidak valid untuk ${clientId} -> ${wa}`);
+        continue;
+      }
       try {
         sendDebug({
           tag: 'CRON DIRREQ CUSTOM',
-          msg: `[${label}] jalankan menu ${action} untuk ${clientId} -> ${wa}`,
+          msg: `[${label}] jalankan menu ${normalizedAction.action} untuk ${clientId} -> ${wa}`,
         });
         await runDirRequestAction({
-          action,
+          action: normalizedAction.action,
           clientId,
           chatId: wa,
           roleFlag,
           userClientId,
           waClient: waGatewayClient,
+          context: normalizedAction.context,
         });
       } catch (err) {
-        const errorMsg = `[${label}] gagal menu ${action} untuk ${clientId} -> ${wa}: ${err.message || err}`;
+        const errorMsg = `[${label}] gagal menu ${normalizedAction.action} untuk ${clientId} -> ${wa}: ${err.message || err}`;
         failures.push(errorMsg);
         sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
       }
@@ -103,6 +129,51 @@ async function executeMenuActions({
 
   await logToAdmins(failures.length ? `${summary}\n${failures.join('\n')}` : summary);
   return summary;
+}
+
+function isLastDayOfMonth(date = new Date()) {
+  const checkDate = new Date(date);
+  const nextDay = new Date(checkDate);
+  nextDay.setDate(checkDate.getDate() + 1);
+  return checkDate.getMonth() !== nextDay.getMonth();
+}
+
+function buildDitbinmasRecapPlan(referenceDate = new Date()) {
+  const recapPeriods = new Set(['daily']);
+  const kasatkerPeriods = new Set(['today']);
+
+  if (referenceDate.getDay() === 0) {
+    recapPeriods.add('weekly');
+    kasatkerPeriods.add('this_week');
+  }
+
+  if (isLastDayOfMonth(referenceDate)) {
+    recapPeriods.add('monthly');
+    kasatkerPeriods.add('this_month');
+  }
+
+  const contextByPeriod = (period) => ({ period, referenceDate });
+
+  return {
+    recapPeriods: Array.from(recapPeriods),
+    kasatkerPeriods: Array.from(kasatkerPeriods),
+    superActions: [
+      { action: '6' },
+      { action: '9' },
+      ...Array.from(recapPeriods).map((period) => ({
+        action: '34',
+        context: contextByPeriod(period),
+      })),
+      ...Array.from(recapPeriods).map((period) => ({
+        action: '35',
+        context: contextByPeriod(period),
+      })),
+    ],
+    operatorActions: Array.from(kasatkerPeriods).map((period) => ({
+      action: '30',
+      context: { period },
+    })),
+  };
 }
 
 export async function runCron() {
@@ -163,6 +234,58 @@ export async function runCron() {
     `- Fetch sosmed: ${summary.fetch}\n` +
     `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
     `- Menu 6 & 9 BIDHUMAS: ${summary.bidhumas}`;
+
+  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
+  await logToAdmins(logMessage);
+}
+
+export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
+  sendDebug({
+    tag: 'CRON DIRREQ CUSTOM',
+    msg: 'Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)',
+  });
+
+  const summary = {
+    superAdmins: 'pending',
+    operators: 'pending',
+  };
+
+  try {
+    const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
+    const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
+      buildDitbinmasRecapPlan(referenceDate);
+
+    const superRecipients = getSuperAdminRecipients(ditbinmasClient);
+    summary.superAdmins = await executeMenuActions({
+      clientId: DITBINMAS_CLIENT_ID,
+      actions: superActions,
+      recipients: superRecipients,
+      label: `Ditbinmas super admin (6,9,34,35 ${recapPeriods.join('/')})`,
+      roleFlag: DITBINMAS_CLIENT_ID,
+      userClientId: DITBINMAS_CLIENT_ID,
+    });
+
+    const operatorRecipients = getOperatorRecipients(ditbinmasClient);
+    summary.operators = await executeMenuActions({
+      clientId: DITBINMAS_CLIENT_ID,
+      actions: operatorActions,
+      recipients: operatorRecipients,
+      label: `Ditbinmas operator (30 ${kasatkerPeriods.join('/')})`,
+      roleFlag: DITBINMAS_CLIENT_ID,
+      userClientId: DITBINMAS_CLIENT_ID,
+    });
+  } catch (err) {
+    const errorMsg = `gagal menjalankan cron rekap Ditbinmas: ${err.message || err}`;
+    summary.superAdmins = errorMsg;
+    summary.operators = errorMsg;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
+    await logToAdmins(errorMsg);
+  }
+
+  const logMessage =
+    '[CRON DIRREQ CUSTOM] Ringkasan Ditbinmas 20:30:\n' +
+    `- Super admin: ${summary.superAdmins}\n` +
+    `- Operator: ${summary.operators}`;
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);
