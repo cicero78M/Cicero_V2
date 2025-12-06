@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-12-05*
+*Last updated: 2025-12-06*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can share the same WhatsApp gateway readiness checks and be toggled together.
 
@@ -26,7 +26,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
 | `cronDbBackup.js` | `0 4 * * *` | Backup database dump to Google Drive using service account credentials. |
-| `cronInstaService.js` | `30 6-21 * * *` | Fetch Instagram content and likes for active clients while sending attendance recaps. |
+| `cronInstaService.js` | `35 6-21 * * *` | Fetch Instagram content and likes for active clients while sending attendance recaps. |
 | `cronInstaLaphar.js` | `00 15,18,21 * * *` | Send Instagram laphar updates, likes, and amplifikasi summaries to operators and admins. |
 | `cronRekapLink.js` | `5 15,18,21 * * *` | Distribute amplification link recaps to all active amplification clients. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
@@ -38,14 +38,14 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
-| `cronDirRequestDirektorat.js` | `5 15 * * *<br>5 18 * * *<br>3 22 * * *<br>32 20 * * *` | Dispatch Ditbinmas directorate attendance recaps for every active directorate client with Instagram and TikTok enabled. BIDHUMAS receives group-only blasts at 15:05 and 18:05 WIB, a group-and-super-admin drop at 22:03 WIB, and the nightly run sends DITBINMAS to super admins, BIDHUMAS to its group and super admins, and other directorates to their super admins. |
-| `cronDirRequestRekapAllSocmed.js` | `0 10 15,18 * * *<br>0 37 20 * * *` | Send Ditbinmas laphar narratives with Instagram like and TikTok comment recap attachments (no new post fetch). |
-| `cronDirRequestSosmedRank.js` | `7 15 * * *<br>47 20 * * *` | Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients, staggered ahead of other 20:00 block jobs. |
-| `cronDirRequestEngageRank.js` | `12 15 * * *<br>52 20 * * *` | Generate engagement ranking narratives and Excel exports for Ditbinmas, following the ranking drop spacing. |
-| `cronDirRequestKasatBinmasRecap.js` | `35 20 * * *<br>38 20 * * 0<br>42 20 * * *` | Provide Ditbinmas Kasat Binmas daily, weekly, and month-end recaps to super admin contacts (no operator or group delivery). |
-| `cronDirRequestHighLow.js` | `45 20 * * 0` | Send weekly Instagram and TikTok high/low performance summaries after Kasat Binmas recaps. |
-| `cronDirRequestLapharKasatker.js` | `46 20 * * *<br>48 20 * * 0<br>50 20 * * *` | Send Ditbinmas kasatker daily, weekly, and month-end recaps **only to operator contacts**, spaced after weekly high/low. |
+| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *<br>0 22 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
+| `cronDirRequestDirektorat.js` | `0 0 15 * * *<br>0 0 18 * * *<br>0 0 22 * * *<br>0 0 20 * * *` | Dispatch Ditbinmas directorate attendance recaps for every active directorate client with Instagram and TikTok enabled. BIDHUMAS receives group-only blasts at 15:00 and 18:00 WIB, a group-and-super-admin drop at 22:00 WIB, and the nightly run sends DITBINMAS to super admins, BIDHUMAS to its group and super admins, and other directorates to their super admins. |
+| `cronDirRequestRekapAllSocmed.js` | `0 0 15,18 * * *<br>0 0 20 * * *` | Send Ditbinmas laphar narratives with Instagram like and TikTok comment recap attachments (no new post fetch). |
+| `cronDirRequestSosmedRank.js` | `7 15 * * *<br>37 20 * * *` | Deliver Instagram like and TikTok comment rankings for Ditbinmas recipients, staggered ahead of other 20:00 block jobs. |
+| `cronDirRequestEngageRank.js` | `10 15 * * *<br>40 20 * * *` | Generate engagement ranking narratives and Excel exports for Ditbinmas, following the ranking drop spacing. |
+| `cronDirRequestKasatBinmasRecap.js` | `38 20 * * *<br>39 20 * * 0<br>41 20 * * *` | Provide Ditbinmas Kasat Binmas daily, weekly, and month-end recaps to super admin contacts (no operator or group delivery). |
+| `cronDirRequestHighLow.js` | `42 20 * * 0` | Send weekly Instagram and TikTok high/low performance summaries after Kasat Binmas recaps. |
+| `cronDirRequestLapharKasatker.js` | `43 20 * * *<br>44 20 * * 0<br>45 20 * * *` | Send Ditbinmas kasatker daily, weekly, and month-end recaps **only to operator contacts**, spaced after weekly high/low. |
 | `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in, with follow-up pings for users still marked incomplete. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 
