@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2025-12-07*
+*Last updated: 2025-12-08*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can share the same WhatsApp gateway readiness checks and be toggled together.
 
@@ -21,12 +21,13 @@ node docs/scripts/renderCronSchedule.js > /tmp/cron-jobs.md
 
 Then paste the output into this section. The table is sourced from `src/cron/cronManifest.js` and each module's `scheduleCronJob` call.
 
+`cronInstaService.js` has been removed from the manifest; Instagram data collection now relies on other specialized jobs such as `cronInstaLaphar.js` and the Ditbinmas fetchers.
+
 ### Core cron jobs (manifest-driven)
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
 | `cronDbBackup.js` | `0 4 * * *` | Backup database dump to Google Drive using service account credentials. |
-| `cronInstaService.js` | `35 6-21 * * *` | Fetch Instagram content and likes for active clients while sending attendance recaps. |
 | `cronInstaLaphar.js` | `00 15,18,21 * * *` | Send Instagram laphar updates, likes, and amplifikasi summaries to operators and admins. |
 | `cronRekapLink.js` | `5 15,18,21 * * *` | Distribute amplification link recaps to all active amplification clients. |
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
