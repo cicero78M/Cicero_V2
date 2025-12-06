@@ -85,7 +85,7 @@ const dirRequestCrons = [
     description:
       'Run dirRequest fetch sosmed then send BIDHUMAS menus 6 & 9 to the BIDHUMAS group and super admins at 22:00 WIB.',
     schedules: [
-      { cronExpression: '0 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '30 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
