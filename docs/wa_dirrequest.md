@@ -210,14 +210,18 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Seluruh **log proses** cron tetap dikirim ke nomor **ADMIN_WHATSAPP** untuk
   pemantauan admin, sementara pesan tugas/respons hanya dikirim ke Group WA
   per client.
-- Cron `cronDirRequestRekapAllSocmed` tetap dikunci hanya ke **Group WA**
-  Ditbinmas (menonaktifkan admin, super admin, dan operator) agar broadcast
-  rekap harian tidak lagi dikirim ke nomor pribadi.
 - Pesan tugas **menggunakan nama client** pada salam pembuka (contoh: BID
   HUMAS) sehingga tidak lagi terpaku pada label Ditbinmas.
 - Jika akun Direktorat belum memiliki relasi `insta_post_roles`, cron akan
   otomatis membaca konten berdasarkan `client_id` agar daftar tugas tidak
   kosong (misalnya pada client BID HUMAS).
+- Cron peringkat, rekap, serta kirim ulang tugas (Engage Rank, Sosmed Rank,
+  High/Low, Kasat Binmas, Kasatker, dan Rekap All Sosmed) **dihentikan** sehingga
+  hanya pengambilan konten dasar dan pengingat tugas otomatis yang berjalan
+  dari bucket dirRequest.
+- Pengingat otomatis `cronWaNotificationReminder` tetap berjalan untuk pengguna
+  yang mendaftar melalui `notifwa#on` dan masih dikirim ke nomor personal sesuai
+  preferensi opt-in.
 
 ### Format Nomor Super Admin & Operator
 - Kolom `client_super` dan `client_operator` menerima:

@@ -30,10 +30,6 @@ VALUES
     ('./src/cron/cronAmplifyLinkMonthly.js', 'Monthly Amplify Link'),
     ('./src/cron/cronDirRequestRekapUpdate.js', 'Directorate Rekap Update'),
     ('./src/cron/cronDirRequestFetchSosmed.js', 'Directorate Fetch Sosmed'),
-    ('./src/cron/cronDirRequestRekapAllSocmed.js', 'Directorate Rekap All Sosmed'),
-    ('./src/cron/cronDirRequestSosmedRank.js', 'Directorate Sosmed Rank'),
-    ('./src/cron/cronDirRequestEngageRank.js', 'Directorate Engage Rank'),
-    ('./src/cron/cronDirRequestLapharKasatker.js', 'Directorate Laphar Kasatker'),
-    ('./src/cron/cronDirRequestDirektorat.js', 'Directorate Report Dispatcher'),
-    ('./src/cron/cronDirRequestHighLow.js', 'Directorate High Low Ranking')
+    ('./src/cron/cronWaNotificationReminder.js', 'Ditbinmas Task Reminder'),
+    ('./src/cron/cronDirRequestSatbinmasOfficialMedia.js', 'Satbinmas Official Media Recap')
 ON CONFLICT (job_key) DO NOTHING;
