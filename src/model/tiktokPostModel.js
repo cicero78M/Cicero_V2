@@ -11,6 +11,12 @@ function toInteger(value) {
   return Math.trunc(numeric);
 }
 
+function resolveJakartaDate(referenceDate) {
+  const baseDate = referenceDate ? new Date(referenceDate) : new Date();
+  const validDate = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
+  return validDate.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+}
+
 /**
  * Ambil satu post TikTok berdasarkan video_id.
  * @param {string} video_id
@@ -127,16 +133,14 @@ export async function upsertTiktokPostWithStatus({
  * @param {string} client_id
  * @returns {Array} Array of video_id
  */
-export async function getVideoIdsTodayByClient(client_id) {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
+export async function getVideoIdsTodayByClient(client_id, referenceDate) {
+  const targetDate = resolveJakartaDate(referenceDate);
   const normalizedId = normalizeClientId(client_id);
   const res = await query(
     `SELECT video_id FROM tiktok_post
-     WHERE LOWER(TRIM(client_id)) = $1 AND DATE(created_at) = $2`,
-    [normalizedId, `${yyyy}-${mm}-${dd}`]
+     WHERE LOWER(TRIM(client_id)) = $1
+     AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`,
+    [normalizedId, targetDate]
   );
   return res.rows.map((r) => r.video_id);
 }
@@ -146,11 +150,12 @@ export async function getVideoIdsTodayByClient(client_id) {
  * @param {string} client_id
  * @returns {Array} Array of post object
  */
-export async function getPostsTodayByClient(client_id) {
+export async function getPostsTodayByClient(client_id, referenceDate) {
   const normalizedId = normalizeClientId(client_id);
+  const targetDate = resolveJakartaDate(referenceDate);
   const res = await query(
-    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND created_at::date = NOW()::date ORDER BY created_at ASC, video_id ASC`,
-    [normalizedId]
+    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date ORDER BY created_at ASC, video_id ASC`,
+    [normalizedId, targetDate]
   );
   return res.rows;
 }

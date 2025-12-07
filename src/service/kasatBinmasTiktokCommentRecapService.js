@@ -186,7 +186,7 @@ function formatEntryLine(entry, index, totalKonten) {
   return `${index}. ${name} (${polres}) — 0/${totalKonten} konten`;
 }
 
-async function buildLiveFallbackCounts(kasatUsers) {
+async function buildLiveFallbackCounts(kasatUsers, referenceDate) {
   const usernameToUsers = new Map();
   kasatUsers.forEach((user) => {
     const normalizedUsername = normalizeUsername(user?.tiktok);
@@ -199,7 +199,10 @@ async function buildLiveFallbackCounts(kasatUsers) {
 
   const commentCountByUser = new Map();
   try {
-    const posts = await getPostsTodayByClient(DITBINMAS_CLIENT_ID);
+    const posts = await getPostsTodayByClient(
+      DITBINMAS_CLIENT_ID,
+      referenceDate
+    );
     const totalKonten = posts.length;
 
     for (const post of posts) {
@@ -275,7 +278,7 @@ export async function generateKasatBinmasTiktokCommentRecap({
 
   let warningMessage = "";
   if (!recapRows?.length || totalKonten === 0) {
-    const fallback = await buildLiveFallbackCounts(kasatUsers);
+    const fallback = await buildLiveFallbackCounts(kasatUsers, periodInfo.tanggal);
     if (fallback.success) {
       commentCountByUser = fallback.commentCountByUser;
       totalKonten = fallback.totalKonten;

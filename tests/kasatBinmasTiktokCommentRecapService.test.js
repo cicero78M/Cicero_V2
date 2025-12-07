@@ -5,6 +5,11 @@ process.env.JWT_SECRET ||= 'test-secret-key';
 const mockGetUsersByClient = jest.fn();
 const mockFindUserById = jest.fn();
 const mockGetRekapKomentarByClient = jest.fn();
+const mockGetCommentsByVideoId = jest.fn();
+const mockGetPostsTodayByClient = jest.fn();
+
+const toJakartaDateInput = (date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(date);
 
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getUsersByClient: mockGetUsersByClient,
@@ -13,6 +18,11 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
 
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getRekapKomentarByClient: mockGetRekapKomentarByClient,
+  getCommentsByVideoId: mockGetCommentsByVideoId,
+}));
+
+jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
+  getPostsTodayByClient: mockGetPostsTodayByClient,
 }));
 
 let generateKasatBinmasTiktokCommentRecap;
@@ -25,6 +35,10 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 test('menyusun ringkasan absensi komentar TikTok untuk Kasat Binmas', async () => {
@@ -196,6 +210,35 @@ test('periode harian memakai referenceDate untuk label dan tanggal', async () =>
     'ditbinmas'
   );
   expect(summary).toContain('Kamis, 05 Desember 2024');
+});
+
+test('fallback live recap memanfaatkan tanggal Jakarta ketika rekap kosong', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2024-09-10T18:30:00.000Z'));
+  mockGetUsersByClient.mockResolvedValue([
+    {
+      user_id: '21',
+      nama: 'Foxtrot',
+      title: 'AKP',
+      jabatan: 'Kasat Binmas',
+      client_id: 'POLREF',
+      client_name: 'Polres F',
+      tiktok: '@foxtrot',
+    },
+  ]);
+  mockGetRekapKomentarByClient.mockResolvedValue([]);
+  mockGetPostsTodayByClient.mockResolvedValue([{ video_id: 'VID-22' }]);
+  mockGetCommentsByVideoId.mockResolvedValue({
+    comments: [{ username: '@foxtrot' }],
+  });
+
+  const summary = await generateKasatBinmasTiktokCommentRecap({ period: 'daily' });
+
+  expect(mockGetPostsTodayByClient).toHaveBeenCalledWith(
+    'DITBINMAS',
+    toJakartaDateInput(new Date('2024-09-10T18:30:00.000Z'))
+  );
+  expect(summary).toContain('11 September 2024');
+  expect(summary).toContain('Total konten periode: 1 video');
 });
 
 test('mengembalikan pesan ketika tidak ada Kasat Binmas', async () => {

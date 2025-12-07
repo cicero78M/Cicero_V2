@@ -11,6 +11,15 @@ import { groupByDivision, sortDivisionKeys, formatNama } from "../../../utils/ut
 import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { sendDebug } from "../../../middleware/debugHandler.js";
 
+const JAKARTA_TIMEZONE = "Asia/Jakarta";
+
+function toJakartaDateInput(referenceDate) {
+  if (!referenceDate) return undefined;
+  const baseDate = new Date(referenceDate);
+  if (Number.isNaN(baseDate.getTime())) return undefined;
+  return baseDate.toLocaleDateString("en-CA", { timeZone: JAKARTA_TIMEZONE });
+}
+
 // Dapatkan nama dan username tiktok client
 async function getClientInfo(client_id) {
   const res = await query(
@@ -85,8 +94,11 @@ const sortUsersByRankAndName = (users = []) =>
     });
 
 export async function collectKomentarRecap(clientId, opts = {}) {
-  const { selfOnly, clientFilter } = opts;
-  const posts = await getPostsTodayByClient(clientId);
+  const { selfOnly, clientFilter, referenceDate } = opts;
+  const posts = await getPostsTodayByClient(
+    clientId,
+    toJakartaDateInput(referenceDate)
+  );
   const videoIds = posts.map((p) => p.video_id);
   const commentSets = [];
   const failedVideoIds = [];

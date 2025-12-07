@@ -16,6 +16,10 @@ ditampilkan bot.
   **Asia/Jakarta** secara eksplisit (menggunakan `Intl.DateTimeFormat`)
   sehingga tanggal tidak akan melenceng meski server menjalankan bot dengan
   zona waktu default yang berbeda.
+- Filter database harian untuk konten TikTok sudah menggunakan `(created_at AT
+  TIME ZONE 'Asia/Jakarta')::date` dengan parameter *reference date* opsional
+  (default ke *Jakarta now*) sehingga label periode dan filter query selalu
+  selaras, termasuk ketika server berjalan di luar WIB.
 - Alur menu dapat memasok `referenceDate` (mis. menyimpan `session.referenceDate`
   atau `session.dirRequestReferenceDate`) untuk memaksa label periode, rentang
   minggu, serta parameter query memakai tanggal eksekusi yang diinginkan. Jika
