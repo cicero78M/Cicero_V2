@@ -47,7 +47,10 @@ import { saveEngagementRankingExcel } from "../../service/engagementRankingExcel
 import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
 import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttendanceService.js";
 import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRecapService.js";
-import { generateKasatBinmasTiktokCommentRecap } from "../../service/kasatBinmasTiktokCommentRecapService.js";
+import {
+  generateKasatBinmasTiktokCommentRecap,
+  resolveBaseDate,
+} from "../../service/kasatBinmasTiktokCommentRecapService.js";
 import { hariIndo } from "../../utils/constants.js";
 import { fetchInstagramInfo } from "../../service/instaRapidService.js";
 import {
@@ -2156,9 +2159,13 @@ async function performAction(
         try {
           const period = context?.period || "daily";
           const referenceDate = context?.referenceDate;
+          const normalizedReferenceDate =
+            referenceDate !== undefined && referenceDate !== null
+              ? resolveBaseDate(referenceDate)
+              : undefined;
           msg = await generateKasatBinmasTiktokCommentRecap({
             period,
-            referenceDate,
+            referenceDate: normalizedReferenceDate,
           });
         } catch (error) {
           console.error(
@@ -3074,12 +3081,17 @@ export const dirRequestHandlers = {
       return;
     }
 
+    const referenceDate =
+      session?.dirRequestReferenceDate || session?.executionDate || session?.referenceDate;
+    const normalizedReferenceDate =
+      referenceDate !== undefined && referenceDate !== null
+        ? resolveBaseDate(referenceDate)
+        : undefined;
+
     try {
-      const referenceDate =
-        session?.dirRequestReferenceDate || session?.executionDate || session?.referenceDate;
       const narrative = await generateKasatBinmasTiktokCommentRecap({
         period: option.period,
-        referenceDate,
+        referenceDate: normalizedReferenceDate,
       });
       await waClient.sendMessage(chatId, narrative);
     } catch (error) {
@@ -3095,6 +3107,10 @@ export const dirRequestHandlers = {
           ? error.message
           : `❌ Gagal membuat rekap Absensi Komentar TikTok Kasat Binmas (${option.description}).`;
       await waClient.sendMessage(chatId, msg);
+    } finally {
+      session.dirRequestReferenceDate = undefined;
+      session.executionDate = undefined;
+      session.referenceDate = undefined;
     }
 
     session.step = "main";

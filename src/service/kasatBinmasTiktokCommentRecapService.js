@@ -76,7 +76,7 @@ function toJakartaDate(baseDate = new Date()) {
   return toZonedDate(baseDate, JAKARTA_TIMEZONE);
 }
 
-function resolveBaseDate(referenceDate) {
+export function resolveBaseDate(referenceDate) {
   if (!referenceDate) {
     return toJakartaDate(new Date());
   }
@@ -395,4 +395,4 @@ export async function generateKasatBinmasTiktokCommentRecap({
   ].join("\n");
 }
 
-export default { generateKasatBinmasTiktokCommentRecap };
+export default { generateKasatBinmasTiktokCommentRecap, resolveBaseDate };
