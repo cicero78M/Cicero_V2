@@ -76,6 +76,25 @@ function toJakartaDate(baseDate = new Date()) {
   return toZonedDate(baseDate, JAKARTA_TIMEZONE);
 }
 
+function resolveBaseDate(referenceDate) {
+  if (!referenceDate) {
+    return toJakartaDate(new Date());
+  }
+
+  const candidateDate = new Date(referenceDate);
+  if (Number.isNaN(candidateDate.getTime())) {
+    return toJakartaDate(new Date());
+  }
+
+  const jakartaCandidate = toJakartaDate(candidateDate);
+  const todayJakarta = toJakartaDate(new Date());
+  if (jakartaCandidate.getTime() > todayJakarta.getTime()) {
+    return todayJakarta;
+  }
+
+  return jakartaCandidate;
+}
+
 function toDateInput(date) {
   const zonedDate = toZonedDate(date);
   const year = zonedDate.getUTCFullYear();
@@ -119,10 +138,9 @@ function resolveWeeklyRange(baseDate = new Date()) {
 }
 
 function describePeriod(period = "daily", referenceDate) {
-  const baseDate = referenceDate ? new Date(referenceDate) : new Date(Date.now());
-  const today = toJakartaDate(baseDate);
+  const today = resolveBaseDate(referenceDate);
   if (period === "weekly") {
-    const { start, end, label } = resolveWeeklyRange(baseDate);
+    const { start, end, label } = resolveWeeklyRange(today);
     return {
       periode: "mingguan",
       label,
@@ -276,25 +294,31 @@ export async function generateKasatBinmasTiktokCommentRecap({
     commentCountByUser.set(row.user_id, Number(row.jumlah_komentar) || 0);
   });
 
+  const allowLiveFallback = periodInfo.periode === "harian";
   let warningMessage = "";
   if (!recapRows?.length || totalKonten === 0) {
-    const fallback = await buildLiveFallbackCounts(kasatUsers, periodInfo.tanggal);
-    if (fallback.success) {
-      commentCountByUser = fallback.commentCountByUser;
-      totalKonten = fallback.totalKonten;
-      warningMessage =
-        totalKonten === 0
-          ? "Rekap periode kosong. Tidak ada konten TikTok Ditbinmas hari ini untuk dicek secara langsung."
-          : "Rekap periode kosong. Data diambil langsung dari konten TikTok hari ini.";
+    if (allowLiveFallback) {
+      const fallback = await buildLiveFallbackCounts(kasatUsers, periodInfo.tanggal);
+      if (fallback.success) {
+        commentCountByUser = fallback.commentCountByUser;
+        totalKonten = fallback.totalKonten;
+        warningMessage =
+          totalKonten === 0
+            ? "Rekap periode kosong. Tidak ada konten TikTok Ditbinmas hari ini untuk dicek secara langsung."
+            : "Rekap periode kosong. Data diambil langsung dari konten TikTok hari ini.";
+      } else if (!recapRows?.length) {
+        return (
+          "Rekap komentar periode ini tidak tersedia dan pengambilan data langsung juga gagal. " +
+          (fallback.error ? `Alasan: ${fallback.error}` : "")
+        ).trim();
+      } else {
+        warningMessage =
+          fallback.error ||
+          "Rekap komentar tidak tersedia untuk periode ini dan pengambilan data langsung gagal.";
+      }
     } else if (!recapRows?.length) {
-      return (
-        "Rekap komentar periode ini tidak tersedia dan pengambilan data langsung juga gagal. " +
-        (fallback.error ? `Alasan: ${fallback.error}` : "")
-      ).trim();
-    } else {
       warningMessage =
-        fallback.error ||
-        "Rekap komentar tidak tersedia untuk periode ini dan pengambilan data langsung gagal.";
+        "Rekap periode kosong. Tidak ada data komentar TikTok yang tersimpan untuk periode ini.";
     }
   }
 
@@ -349,9 +373,10 @@ export async function generateKasatBinmasTiktokCommentRecap({
 
   const summaryLines = [
     "📋 *Absensi Komentar TikTok Kasat Binmas*",
-    `Periode: ${periodInfo.label}`,
     "",
+    `🗓️ Periode: ${periodInfo.label}`,
     warningMessage,
+    "",
     "*Ringkasan:*",
     `- ${totalKontenLine}`,
     `- Total Kasat Binmas: ${totals.total} pers`,
