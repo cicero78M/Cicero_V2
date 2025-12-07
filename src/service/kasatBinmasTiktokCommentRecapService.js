@@ -96,7 +96,7 @@ export function resolveBaseDate(referenceDate) {
 }
 
 function toDateInput(date) {
-  const zonedDate = toZonedDate(date);
+  const zonedDate = date instanceof Date ? date : toJakartaDate(date);
   const year = zonedDate.getUTCFullYear();
   const month = String(zonedDate.getUTCMonth() + 1).padStart(2, "0");
   const day = String(zonedDate.getUTCDate()).padStart(2, "0");
@@ -104,9 +104,9 @@ function toDateInput(date) {
 }
 
 function formatDateLong(date) {
-  const jakartaDate = toJakartaDate(date);
+  const jakartaDate = date instanceof Date ? date : toJakartaDate(date);
   return jakartaDate.toLocaleDateString("id-ID", {
-    timeZone: JAKARTA_TIMEZONE,
+    timeZone: "UTC",
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -114,16 +114,16 @@ function formatDateLong(date) {
 }
 
 function formatDayLabel(date) {
-  const jakartaDate = toJakartaDate(date);
+  const jakartaDate = date instanceof Date ? date : toJakartaDate(date);
   const weekday = jakartaDate.toLocaleDateString("id-ID", {
     weekday: "long",
-    timeZone: JAKARTA_TIMEZONE,
+    timeZone: "UTC",
   });
   return `${weekday}, ${formatDateLong(jakartaDate)}`;
 }
 
 function resolveWeeklyRange(baseDate = new Date()) {
-  const date = toJakartaDate(baseDate);
+  const date = baseDate instanceof Date ? baseDate : toJakartaDate(baseDate);
   const day = date.getUTCDay();
   const mondayDiff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date.getTime());
@@ -151,11 +151,11 @@ function describePeriod(period = "daily", referenceDate) {
   }
   if (period === "monthly") {
     const label = today.toLocaleDateString("id-ID", {
-      timeZone: JAKARTA_TIMEZONE,
+      timeZone: "UTC",
       month: "long",
       year: "numeric",
     });
-    const zoned = toZonedDate(today);
+    const zoned = today instanceof Date ? today : toJakartaDate(today);
     return {
       periode: "bulanan",
       label: `Bulan ${label}`,
