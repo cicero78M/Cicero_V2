@@ -32,6 +32,9 @@ ditampilkan bot.
   di sesi `dirrequest` juga otomatis dibersihkan setelah digunakan sehingga
   pemanggilan manual berikutnya kembali memakai hari berjalan, kecuali operator
   secara eksplisit mengirim tanggal lampau yang valid.
+- Perhitungan harian membaca tanggal Asia/Jakarta tanpa konversi ganda sehingga
+  label periode tidak lagi lompat ke hari berikutnya (contoh: Senin dini hari
+  tetap menggunakan Minggu jika rekap dijalankan sebelum pukul 24.00 WIB).
 - Pengambilan data langsung (live fallback) kini khusus untuk periode harian.
   Rekap mingguan/bulanan akan menampilkan peringatan jika database belum
   memiliki data pada rentang tersebut, sehingga label periode dan sumber data
