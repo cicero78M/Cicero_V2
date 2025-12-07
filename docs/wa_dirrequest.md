@@ -26,6 +26,12 @@ ditampilkan bot.
   Nilai yang berada di masa depan otomatis diabaikan agar rekap tidak memakai
   tanggal yang belum terjadi; fallbacknya memakai tanggal **Asia/Jakarta**
   saat ini sehingga selaras dengan menu 3️⃣4️⃣ *Absensi Likes Instagram Kasat Binmas*.
+- Nilai `referenceDate` yang dikirim lewat menu 3️⃣5️⃣ kini dinormalisasi lebih
+  dulu menggunakan helper `resolveBaseDate` agar tanggal tidak valid atau
+  tanggal di masa depan langsung digeser ke hari ini (WIB). Override tanggal
+  di sesi `dirrequest` juga otomatis dibersihkan setelah digunakan sehingga
+  pemanggilan manual berikutnya kembali memakai hari berjalan, kecuali operator
+  secara eksplisit mengirim tanggal lampau yang valid.
 - Pengambilan data langsung (live fallback) kini khusus untuk periode harian.
   Rekap mingguan/bulanan akan menampilkan peringatan jika database belum
   memiliki data pada rentang tersebut, sehingga label periode dan sumber data
