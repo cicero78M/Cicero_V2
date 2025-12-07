@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-05-23*
+*Last updated: 2025-12-07*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -22,13 +22,14 @@ ditampilkan bot.
   selaras, termasuk ketika server berjalan di luar WIB.
 - Alur menu dapat memasok `referenceDate` (mis. menyimpan `session.referenceDate`
   atau `session.dirRequestReferenceDate`) untuk memaksa label periode, rentang
-  minggu, serta parameter query memakai tanggal eksekusi yang diinginkan. Jika
-  tidak diisi, sistem otomatis memakai `Date.now()` pada zona **Asia/Jakarta**.
-- Jika rekap komentar untuk periode yang diminta kosong atau total kontennya
-  nol, bot otomatis mengambil konten TikTok Ditbinmas hari ini secara live
-  (menggunakan data komentar terkini) untuk menghitung absensi Kasat Binmas.
-  Penghitungan tetap memakai filter role aktif dan nama pengguna TikTok yang
-  sudah dinormalisasi dari handler absensi untuk menjaga konsistensi.
+  minggu, serta parameter query memakai tanggal eksekusi yang diinginkan.
+  Nilai yang berada di masa depan otomatis diabaikan agar rekap tidak memakai
+  tanggal yang belum terjadi; fallbacknya memakai tanggal **Asia/Jakarta**
+  saat ini sehingga selaras dengan menu 3️⃣4️⃣ *Absensi Likes Instagram Kasat Binmas*.
+- Pengambilan data langsung (live fallback) kini khusus untuk periode harian.
+  Rekap mingguan/bulanan akan menampilkan peringatan jika database belum
+  memiliki data pada rentang tersebut, sehingga label periode dan sumber data
+  tetap konsisten dengan format laporan di menu 3️⃣4️⃣.
 
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**
