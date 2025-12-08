@@ -218,12 +218,8 @@ export async function getRekapKomentarByClient(
       postRoleJoin = `LEFT JOIN tiktok_post_roles pr
         ON pr.video_id = p.video_id
        AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
-      postRoleFilter = `AND (
-        pr.video_id IS NOT NULL
-        OR NOT EXISTS (
-          SELECT 1 FROM tiktok_post_roles pr_all WHERE pr_all.video_id = p.video_id
-        )
-      )`;
+      const roleFilterCondition = `LOWER(p.client_id) = LOWER($${roleParamIndex}) OR LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleFilter = `AND (${roleFilterCondition})`;
     }
   } else if (roleLower && roleLower !== "operator") {
     roleParamIndex = params.push(roleLower);

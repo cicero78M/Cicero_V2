@@ -66,3 +66,13 @@ tidak ada entri valid agar laporan tetap ringkas.
 
 Dokumen ini membantu operator memahami bagaimana daftar tautan muncul pada
 laporan harian serta menyiapkan narasi yang konsisten.
+
+## Filter rekap komentar TikTok Ditbinmas
+- Rekap komentar TikTok harian Ditbinmas hanya menghitung konten yang
+  bersumber dari klien Ditbinmas **atau** memiliki role Ditbinmas di
+  `tiktok_post_roles`. Postingan yang tidak memiliki role tidak ikut dihitung
+  sehingga total_konten dan jumlah komentar tidak tercampur dengan satker lain.
+- Filter tanggal memakai zona waktu "Asia/Jakarta" untuk kedua sumber data
+  (konten dan komentar). Parameter `tanggal`, `start_date`, atau `end_date`
+  akan langsung mengisi filter `created_at`/`updated_at` di query sehingga
+  rekap harian Ditbinmas tidak menyertakan post di luar rentang yang diminta.
