@@ -51,12 +51,28 @@ test('getRekapKomentarByClient filters directorate users by ditbinmas role only'
   expect(sql).toContain('LOWER(r.role_name) = LOWER(');
   expect(sql).toContain('LEFT JOIN tiktok_post_roles pr');
   expect(sql).toMatch(/LOWER\(pr\.role_name\) = LOWER\(\$\d+\)/);
-  expect(sql).toContain('pr.video_id IS NOT NULL');
-  expect(sql).toContain('NOT EXISTS (');
+  expect(sql).toContain('LOWER(p.client_id) = LOWER(');
+  expect(sql).toContain('OR LOWER(pr.role_name) = LOWER(');
+  expect(sql).not.toContain('NOT EXISTS (');
   expect(sql).not.toContain('LOWER(u.client_id) = ANY');
   const params = mockQuery.mock.calls[1][1];
   expect(params.slice(0, 1)).toEqual(['ditbinmas']);
   expectPriorityParams(params, 1);
+});
+
+test('ditbinmas recap counts only ditbinmas-scoped posts and respects tanggal filter', async () => {
+  mockClientType('direktorat');
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await getRekapKomentarByClient('ditbinmas', 'harian', '2024-02-10', undefined, undefined, 'ditbinmas');
+
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('LOWER(p.client_id) = LOWER($2) OR LOWER(pr.role_name) = LOWER($2)');
+  expect(sql).toContain('p.created_at AT TIME ZONE');
+  expect(sql).toContain('::date = $1::date');
+  const params = mockQuery.mock.calls[1][1];
+  expect(params.slice(0, 2)).toEqual(['2024-02-10', 'ditbinmas']);
+  expectPriorityParams(params, 2);
 });
 
 test('getRekapKomentarByClient orders nama by priority list', async () => {
