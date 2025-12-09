@@ -64,6 +64,7 @@ test('operator adds user with defaults', async () => {
     ditbinmas: false,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
     operator: true,
   });
   expect(status).toHaveBeenCalledWith(201);
@@ -111,6 +112,7 @@ test('operator assigns multiple roles simultaneously', async () => {
     ditbinmas: true,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
   });
   expect(status).toHaveBeenCalledWith(201);
 });
@@ -132,6 +134,7 @@ test('operator reactivates existing user and attaches operator role', async () =
     ditbinmas: false,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
     operator: true
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
@@ -169,6 +172,7 @@ test('operator reactivates existing user with multiple roles', async () => {
     ditbinmas: false,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
     operator: true
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
@@ -193,6 +197,7 @@ test('updateUserRoles updates roles based on array', async () => {
     ditbinmas: true,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
   });
   const req = { params: { id: '1' }, body: { roles: ['operator', 'ditbinmas'] } };
   const json = jest.fn();
@@ -206,19 +211,21 @@ test('updateUserRoles updates roles based on array', async () => {
     ditbinmas: true,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
   });
-  expect(status).toHaveBeenCalledWith(200);
-  expect(json).toHaveBeenCalledWith({
-    success: true,
-    data: {
-      user_id: '1',
-      operator: true,
-      ditbinmas: true,
-      ditlantas: false,
-      bidhumas: false,
-    },
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        user_id: '1',
+        operator: true,
+        ditbinmas: true,
+        ditlantas: false,
+        bidhumas: false,
+        ditsamapta: false,
+      },
+    });
   });
-});
 
 test('updateUserRoleIds updates user_roles mapping', async () => {
   const req = { body: { old_user_id: '1', new_user_id: '2' } };
@@ -252,6 +259,7 @@ test('reactivates existing user and attaches ditbinmas role', async () => {
     ditbinmas: true,
     ditlantas: false,
     bidhumas: false,
+    ditsamapta: false,
     operator: false
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
@@ -343,6 +351,24 @@ test('ditbinmas role with different client_id filters users by client', async ()
   expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditbinmas', 'c1');
   expect(status).toHaveBeenCalledWith(200);
   expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '2', ditbinmas: true }] });
+});
+
+test('ditsamapta client routes to direktorate handler with token client filter', async () => {
+  mockGetUsersByDirektorat.mockResolvedValue([{ user_id: '4', ditsamapta: true }]);
+  const req = {
+    user: { role: 'admin', client_id: 'ORG1' },
+    query: { client_id: 'DITSAMAPTA' }
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await getUserList(req, res, () => {});
+
+  expect(mockFindClientById).not.toHaveBeenCalled();
+  expect(mockGetUsersByDirektorat).toHaveBeenCalledWith('ditsamapta', 'ORG1');
+  expect(status).toHaveBeenCalledWith(200);
+  expect(json).toHaveBeenCalledWith({ success: true, data: [{ user_id: '4', ditsamapta: true }] });
 });
 
 test('non-operator role with org client uses client id and role', async () => {
