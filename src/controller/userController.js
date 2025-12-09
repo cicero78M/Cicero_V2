@@ -31,6 +31,7 @@ export const createUser = async (req, res, next) => {
       ditbinmas: false,
       ditlantas: false,
       bidhumas: false,
+      ditsamapta: false,
       operator: false,
     };
 
@@ -39,14 +40,22 @@ export const createUser = async (req, res, next) => {
       if (role === 'ditbinmas') return { ...defaultRoleFlags, ditbinmas: true };
       if (role === 'ditlantas') return { ...defaultRoleFlags, ditlantas: true };
       if (role === 'bidhumas') return { ...defaultRoleFlags, bidhumas: true };
+      if (role === 'ditsamapta')
+        return { ...defaultRoleFlags, ditsamapta: true };
       return {};
     };
 
-    if (role === 'ditbinmas' || role === 'ditlantas' || role === 'bidhumas') {
+    if (
+      role === 'ditbinmas' ||
+      role === 'ditlantas' ||
+      role === 'bidhumas' ||
+      role === 'ditsamapta'
+    ) {
       if (adminClientId) data.client_id = adminClientId;
       if (role === 'ditbinmas') data.ditbinmas = true;
       if (role === 'ditlantas') data.ditlantas = true;
       if (role === 'bidhumas') data.bidhumas = true;
+      if (role === 'ditsamapta') data.ditsamapta = true;
     }
 
     if (role === 'operator') {
@@ -68,6 +77,8 @@ export const createUser = async (req, res, next) => {
           data.ditlantas = false;
         if (!roles.includes('bidhumas') && data.bidhumas === undefined)
           data.bidhumas = false;
+        if (!roles.includes('ditsamapta') && data.ditsamapta === undefined)
+          data.ditsamapta = false;
       }
 
       const existing = await userModel.findUserById(data.user_id);
@@ -105,7 +116,8 @@ export const createUser = async (req, res, next) => {
         if (
           role === 'ditbinmas' ||
           role === 'ditlantas' ||
-          role === 'bidhumas'
+          role === 'bidhumas' ||
+          role === 'ditsamapta'
         ) {
           rolesToAdd.push(role);
         }
@@ -205,7 +217,7 @@ export const updateUserRoles = async (req, res, next) => {
     const roles = Array.isArray(req.body.roles)
       ? req.body.roles.map((r) => r.toLowerCase())
       : [];
-    const allowed = ['ditbinmas', 'ditlantas', 'bidhumas', 'operator'];
+    const allowed = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'operator'];
     const data = {};
     for (const r of allowed) {
       data[r] = roles.includes(r);
@@ -242,7 +254,10 @@ export const getUsersByClient = async (req, res, next) => {
     const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
     let clientId = req.params.client_id;
-    if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role) && tokenClientId) {
+    if (
+      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
+      tokenClientId
+    ) {
       clientId = tokenClientId;
     }
     const users = await userModel.getUsersByClient(clientId, role);
@@ -258,9 +273,12 @@ export const getUsersByClientFull = async (req, res, next) => {
     const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
     let clientId = req.params.client_id;
-    if (['ditbinmas', 'ditlantas', 'bidhumas'].includes(role) && tokenClientId) {
-      clientId = tokenClientId;
-    }
+      if (
+        ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
+        tokenClientId
+      ) {
+        clientId = tokenClientId;
+      }
     const users = await userModel.getUsersByClientFull(clientId, role);
     sendSuccess(res, users);
   } catch (err) {
@@ -290,7 +308,7 @@ export const getUserList = async (req, res, next) => {
           .json({ success: false, message: 'client_id wajib diisi' });
       }
       const loweredClientId = clientId.toLowerCase();
-      const direktorateRoles = ['ditbinmas', 'ditlantas', 'bidhumas'];
+      const direktorateRoles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
 
       if (direktorateRoles.includes(loweredClientId)) {
         const filterClientId =
