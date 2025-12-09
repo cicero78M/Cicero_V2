@@ -7,6 +7,7 @@ This guide outlines how session roles map to client data and how the `roleFlag` 
 - **admin** – unrestricted; can request data for any client. Rekap handlers receive `roleFlag: 'admin'` and treat it as unfiltered access.
 - **Directorate roles** (e.g. `DITBINMAS`, `DITLANTAS`, `BIDHUMAS`) – `session.role` equals the directorate ID. Rekap handlers aggregate across subordinate clients and use `roleFlag` to query with `getUsersByDirektorat`.
 - **Client roles** – regular users tied to specific clients. Their `session.role` is forwarded as `roleFlag` so rekap handlers call `getUsersByClient(clientId, roleFlag)` and limit results to that role.
+- **Special BIDHUMAS override** – dashboard users whose sole `client_id` adalah `DITSAMAPTA` namun perannya `BIDHUMAS` akan mempertahankan `session.role = 'bidhumas'` agar pemetaan downstream tetap merujuk ke BIDHUMAS. Kombinasi lain tetap mengikuti aturan di atas.
 
 ## Dashboard flow
 

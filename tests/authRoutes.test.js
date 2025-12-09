@@ -513,6 +513,44 @@ describe('POST /dashboard-login', () => {
     });
   });
 
+  test('maps DITSAMAPTA + BIDHUMAS to BIDHUMAS role without changing client_ids', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'd1',
+            username: 'dash',
+            password_hash: await bcrypt.hash('pass', 10),
+            role: 'BIDHUMAS',
+            role_id: 2,
+            status: true,
+            client_ids: ['DITSAMAPTA'],
+            user_id: null
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toEqual({
+      dashboard_user_id: 'd1',
+      user_id: null,
+      role: 'bidhumas',
+      role_id: 2,
+      client_ids: ['DITSAMAPTA'],
+      client_id: 'DITSAMAPTA'
+    });
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'dashboard:d1',
+      { EX: 2 * 60 * 60 }
+    );
+  });
+
   test('returns 400 when operator has no allowed clients', async () => {
       mockQuery.mockResolvedValueOnce({
         rows: [
