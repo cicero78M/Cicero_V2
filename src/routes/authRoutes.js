@@ -445,7 +445,10 @@ router.post('/dashboard-login', async (req, res) => {
     const normalizedClientId = String(singleClientId || '').toUpperCase();
     const normalizedRole = String(user.role || '').toUpperCase();
 
-    if (normalizedClientId === 'DITSAMAPTA' && normalizedRole === 'BIDHUMAS') {
+    const isBidhumasDitsamapta =
+      normalizedClientId === 'DITSAMAPTA' && normalizedRole === 'BIDHUMAS';
+
+    if (isBidhumasDitsamapta) {
       roleName = 'bidhumas';
     } else {
       const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [singleClientId]);

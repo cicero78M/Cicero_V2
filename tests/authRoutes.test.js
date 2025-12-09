@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const mockQuery = jest.fn();
 const mockRedis = { sAdd: jest.fn(), set: jest.fn(), sMembers: jest.fn(), del: jest.fn() };
@@ -544,11 +545,42 @@ describe('POST /dashboard-login', () => {
       client_ids: ['DITSAMAPTA'],
       client_id: 'DITSAMAPTA'
     });
+    const decoded = jwt.verify(res.body.token, 'testsecret');
+    expect(decoded.role).toBe('bidhumas');
+    expect(decoded.client_id).toBe('DITSAMAPTA');
     expect(mockRedis.set).toHaveBeenCalledWith(
       `login_token:${res.body.token}`,
       'dashboard:d1',
       { EX: 2 * 60 * 60 }
     );
+  });
+
+  test('handles case-insensitive BIDHUMAS role override when client is DITSAMAPTA', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'd2',
+            username: 'dash2',
+            password_hash: await bcrypt.hash('pass', 10),
+            role: 'bidhumas',
+            role_id: 4,
+            status: true,
+            client_ids: ['ditsamapta'],
+            user_id: null
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash2', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('bidhumas');
+    const decoded = jwt.verify(res.body.token, 'testsecret');
+    expect(decoded.role).toBe('bidhumas');
   });
 
   test('returns 400 when operator has no allowed clients', async () => {

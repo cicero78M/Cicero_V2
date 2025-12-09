@@ -27,9 +27,22 @@ describe('resolveAggregatorClient', () => {
       client: { client_id: 'BIDHUMAS', client_type: 'org' },
       resolvedClientId: 'BIDHUMAS',
       requestedClientId: 'DITSAMAPTA',
-      reason: 'ditsamapta-bidhumas-override',
+      reason: 'bidhumas-org-override',
     });
     expect(mockFindById).toHaveBeenCalledWith('BIDHUMAS');
+  });
+
+  test('forces BIDHUMAS org resolution in a case-insensitive manner', async () => {
+    mockFindById.mockImplementation(async (id) => {
+      if (id === 'BIDHUMAS') return { client_id: 'BIDHUMAS', client_type: 'org' };
+      if (id === 'DITSAMAPTA') return { client_id: 'DITSAMAPTA', client_type: 'direktorat' };
+      return null;
+    });
+
+    const result = await resolveAggregatorClient('ditsamapta', 'bidhumas');
+
+    expect(result?.resolvedClientId).toBe('BIDHUMAS');
+    expect(result?.reason).toBe('bidhumas-org-override');
   });
 
   test('keeps directorate resolution for other roles', async () => {

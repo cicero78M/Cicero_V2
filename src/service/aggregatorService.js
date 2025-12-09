@@ -21,7 +21,7 @@ export async function resolveAggregatorClient(clientId, userRole) {
         client: bidhumasOrg,
         resolvedClientId: bidhumasOrg.client_id,
         requestedClientId: normalizedClientId,
-        reason: "ditsamapta-bidhumas-override",
+        reason: "bidhumas-org-override",
       };
     }
   }
