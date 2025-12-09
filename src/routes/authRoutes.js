@@ -441,9 +441,17 @@ router.post('/dashboard-login', async (req, res) => {
   }
   let roleName = user.role;
   if (user.client_ids.length === 1) {
-    const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [user.client_ids[0]]);
-    if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
-      roleName = user.client_ids[0].toLowerCase();
+    const [singleClientId] = user.client_ids;
+    const normalizedClientId = String(singleClientId || '').toUpperCase();
+    const normalizedRole = String(user.role || '').toUpperCase();
+
+    if (normalizedClientId === 'DITSAMAPTA' && normalizedRole === 'BIDHUMAS') {
+      roleName = 'bidhumas';
+    } else {
+      const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [singleClientId]);
+      if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
+        roleName = singleClientId.toLowerCase();
+      }
     }
   }
   const payload = {

@@ -11,7 +11,23 @@ import { fetchTiktokProfile } from "./tiktokRapidService.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 export async function resolveAggregatorClient(clientId, userRole) {
-  const requestedClient = await findById(clientId);
+  const normalizedClientId = String(clientId || "").trim().toUpperCase();
+  const normalizedUserRole = String(userRole || "").trim().toUpperCase();
+
+  if (normalizedClientId === "DITSAMAPTA" && normalizedUserRole === "BIDHUMAS") {
+    const bidhumasOrg = await findById("BIDHUMAS");
+    if (bidhumasOrg?.client_type?.toLowerCase() === "org") {
+      return {
+        client: bidhumasOrg,
+        resolvedClientId: bidhumasOrg.client_id,
+        requestedClientId: normalizedClientId,
+        reason: "ditsamapta-bidhumas-override",
+      };
+    }
+  }
+
+  const requestedClientId = normalizedClientId || clientId;
+  const requestedClient = await findById(requestedClientId);
   if (!requestedClient) return null;
 
   const clientType = requestedClient.client_type?.toLowerCase();
