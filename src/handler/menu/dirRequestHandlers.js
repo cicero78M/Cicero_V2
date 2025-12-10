@@ -768,9 +768,10 @@ async function formatRekapBelumLengkapDirektorat(clientId) {
       .join("\n\n");
     return `*${d.toUpperCase()}* (${incomplete[d].length})\n\n${list}`;
   });
-  const body = lines.length
-    ? lines.join("\n\n")
-    : "Seluruh personil telah melengkapi data Instagram dan TikTok.";
+  if (!lines.length) {
+    return null;
+  }
+  const body = lines.join("\n\n");
   return (
     `${salam},\n\n` +
     `Mohon ijin Komandan, melaporkan personil ${clientName.toUpperCase()} yang belum melengkapi data Instagram/TikTok pada hari ${hari}, ${tanggal}, pukul ${jam} WIB, sebagai berikut:\n\n` +
@@ -2186,9 +2187,14 @@ async function performAction(
       default:
         msg = "Menu tidak dikenal.";
   }
-  await waClient.sendMessage(chatId, msg.trim());
+  const normalizedMsg = typeof msg === "string" ? msg.trim() : "";
+  if (!normalizedMsg) {
+    return;
+  }
+
+  await waClient.sendMessage(chatId, normalizedMsg);
   if (action === "12" || action === "14" || action === "16") {
-    await safeSendMessage(waClient, dirRequestGroup, msg.trim());
+    await safeSendMessage(waClient, dirRequestGroup, normalizedMsg);
   }
 }
 
