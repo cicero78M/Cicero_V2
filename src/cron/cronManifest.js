@@ -23,4 +23,10 @@ export default [
     bucket: 'waClient',
     description: 'Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups.',
   },
+  {
+    jobKey: './src/cron/cronDirRequestRekapBelumLengkapDitsamapta.js',
+    modulePath: './src/cron/cronDirRequestRekapBelumLengkapDitsamapta.js',
+    bucket: 'waClient',
+    description: 'Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only.',
+  },
 ];

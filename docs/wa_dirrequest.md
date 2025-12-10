@@ -212,6 +212,17 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
   dilewati jika tidak ada admin penerima yang valid.
 
+## Rekap personel yang belum melengkapi Instagram/TikTok Ditsamapta
+- Cron `cronDirRequestRekapBelumLengkapDitsamapta` memanggil helper
+  `formatRekapBelumLengkapDirektorat("DITSAMAPTA")` setiap pukul **menit 15**
+  pada jam **07:00–21:00 WIB**.
+- Target penerima hanya kanal super admin dan operator admin yang sudah
+  terdaftar pada konfigurasi admin (termasuk `ADMIN_WHATSAPP` untuk routing
+  admin dan kontak super/operator milik client), tanpa broadcast ke grup WA.
+- Jika hasil format menyatakan seluruh personel sudah lengkap, cron berhenti
+  tanpa mengirim pesan apa pun sehingga tidak membanjiri admin dengan laporan
+  kosong.
+
 ## Logging terstruktur Cron DirRequest Sosmed
 - Cron `cronDirRequestFetchSosmed` memakai helper log terstruktur dengan
   atribut `phase`, `clientId`, `action`, `result`, `countsBefore`,
