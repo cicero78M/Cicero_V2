@@ -12,12 +12,6 @@ const TARGET_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestRekapBelumLengkapDitsamapta.js';
 const CRON_EXPRESSION = '15 7-21 * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
-const COMPLETED_MESSAGE = 'Seluruh personil telah melengkapi data Instagram dan TikTok.';
-
-function shouldSkipReport(report) {
-  return typeof report === 'string' && report.includes(COMPLETED_MESSAGE);
-}
-
 export async function runCron() {
   sendDebug({
     tag: 'CRON DIRREQ DITSAMAPTA',
@@ -27,7 +21,7 @@ export async function runCron() {
   try {
     const report = await formatRekapBelumLengkapDirektorat(TARGET_CLIENT_ID);
 
-    if (shouldSkipReport(report)) {
+    if (!report) {
       sendDebug({
         tag: 'CRON DIRREQ DITSAMAPTA',
         msg: 'Lewati pengiriman: seluruh personel telah melengkapi data.',

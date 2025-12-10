@@ -100,6 +100,9 @@ ditampilkan bot.
   *Client ID* peminta.
 - Output tetap memuat daftar personel yang belum mengisi Instagram/TikTok per
   divisi beserta salam dan stempel waktu eksekusi.
+- Jika seluruh personel sudah melengkapi Instagram/TikTok, helper rekap
+  mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
+  kembali ke menu tanpa menampilkan pesan kosong.
 
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
@@ -219,9 +222,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Target penerima hanya kanal super admin dan operator admin yang sudah
   terdaftar pada konfigurasi admin (termasuk `ADMIN_WHATSAPP` untuk routing
   admin dan kontak super/operator milik client), tanpa broadcast ke grup WA.
-- Jika hasil format menyatakan seluruh personel sudah lengkap, cron berhenti
-  tanpa mengirim pesan apa pun sehingga tidak membanjiri admin dengan laporan
-  kosong.
+- Jika hasil format menyatakan seluruh personel sudah lengkap (helper
+  mengembalikan nilai kosong), cron berhenti tanpa mengirim pesan apa pun
+  sehingga tidak membanjiri admin dengan laporan kosong.
 
 ## Logging terstruktur Cron DirRequest Sosmed
 - Cron `cronDirRequestFetchSosmed` memakai helper log terstruktur dengan
