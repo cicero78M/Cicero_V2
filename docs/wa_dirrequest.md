@@ -263,7 +263,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Logging real-time Cron Custom DirRequest
 - `cronDirRequestCustomSequence` kini mengirim log progres per penerima dan
   per aksi menu (termasuk recap likes per konten di menu 28) secara bertahap
-  ke admin WhatsApp menggunakan `logToAdmins`.
+  ke admin WhatsApp menggunakan `logToAdmins`, lengkap dengan daftar target
+  (grup, super admin, operator) yang sedang diproses per direktorat.
 - Format pesan progres per aksi: `[<label>] clientId=<id> recipient=<wa>
   action=<nomor> mulai|sukses|gagal (context={...})`. Setiap pesan selalu
   menyertakan `clientId`, nomor menu, WA penerima, dan konteks tambahan jika
@@ -272,8 +273,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tetap dirangkum pada pesan akhir.
 - Blok besar memiliki log pembuka dan penutup:
   - `runDirRequestFetchSosmed` (baik di alur utama maupun BIDHUMAS).
+  - Sekuens DITSAMAPTA (menu 6, 9, & 28) yang dikirim ke grup, super admin,
+    dan operator direktorat.
   - Eksekusi menu 21 Ditbinmas.
-  - Sekuens BIDHUMAS (menu 6, 9, & 28).
+  - Sekuens BIDHUMAS (menu 6, 9, & 28) untuk grup dan super admin BIDHUMAS.
   - Cron rekap Ditbinmas (menu 21, super admin 6/9/34/35, operator 30).
 - Urutan log WA yang diterima admin mencerminkan eksekusi nyata: pesan pembuka
   blok → progres per aksi/penerima (mulai/sukses/gagal) → pesan penutup blok →
@@ -302,10 +305,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Urutan otomatis yang dijalankan:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
      Instagram dan TikTok seluruh direktorat aktif.
-  2. Menjalankan menu **6️⃣** dan **9️⃣** untuk *Client ID* `DITSAMAPTA`
-     (ditambah menu ekstra dari `DITSAMAPTA_EXTRA_ACTIONS` bila diset) ke tiga
-     target sekaligus: grup WA `client_group`, nomor super admin `client_super`,
-     dan operator di `client_operator`.
+  2. Menjalankan menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** untuk *Client ID*
+     `DITSAMAPTA` (ditambah menu ekstra dari `DITSAMAPTA_EXTRA_ACTIONS` bila
+     diset) ke tiga target sekaligus: grup WA `client_group`, nomor super admin
+     `client_super`, dan operator di `client_operator`.
   3. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
      `DITBINMAS` dan mengirimkan narasi, file teks, serta Excel rekap ke grup
      WA Ditbinmas yang terkonfigurasi di `client_group`.
