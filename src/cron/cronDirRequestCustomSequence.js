@@ -191,7 +191,7 @@ async function executeMenuActions({
 
 export async function runBidhumasMenuSequence({
   includeFetch = false,
-  label = 'Menu 6 & 9 BIDHUMAS',
+  label = 'Menu 6, 9, & 28 BIDHUMAS',
 } = {}) {
   let fetchStatus = includeFetch ? 'pending' : 'skipped';
   let sendStatus = 'pending';
@@ -210,7 +210,7 @@ export async function runBidhumasMenuSequence({
   }
 
   try {
-    await logToAdmins('Mulai sekuens BIDHUMAS (menu 6 & 9)');
+    await logToAdmins('Mulai sekuens BIDHUMAS (menu 6, 9, & 28)');
     const bidhumasClient = await findClientById(BIDHUMAS_CLIENT_ID);
     const recipients = buildRecipients(bidhumasClient, {
       includeGroup: true,
@@ -219,7 +219,7 @@ export async function runBidhumasMenuSequence({
 
     sendStatus = await executeMenuActions({
       clientId: BIDHUMAS_CLIENT_ID,
-      actions: ['6', '9'],
+      actions: ['6', '9', '28'],
       recipients,
       label,
       userClientId: BIDHUMAS_CLIENT_ID,
@@ -361,10 +361,10 @@ export async function runCron() {
   }
 
   try {
-    await logToAdmins('Mulai blok sekuens BIDHUMAS (menu 6 & 9)');
-    const { sendStatus } = await runBidhumasMenuSequence({ label: 'Menu 6 & 9 BIDHUMAS' });
+    await logToAdmins('Mulai blok sekuens BIDHUMAS (menu 6, 9, & 28)');
+    const { sendStatus } = await runBidhumasMenuSequence({ label: 'Menu 6, 9, & 28 BIDHUMAS' });
     summary.bidhumas = sendStatus;
-    await logToAdmins(`Selesai blok sekuens BIDHUMAS (menu 6 & 9): ${sendStatus}`);
+    await logToAdmins(`Selesai blok sekuens BIDHUMAS (menu 6, 9, & 28): ${sendStatus}`);
   } catch (err) {
     summary.bidhumas = `gagal kirim BIDHUMAS: ${err.message || err}`;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.bidhumas });
@@ -376,7 +376,7 @@ export async function runCron() {
     `- Fetch sosmed: ${summary.fetch}\n` +
     `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
     `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
-    `- Menu 6 & 9 BIDHUMAS: ${summary.bidhumas}`;
+    `- Menu 6/9/28 BIDHUMAS: ${summary.bidhumas}`;
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);

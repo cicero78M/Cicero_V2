@@ -262,7 +262,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Logging real-time Cron Custom DirRequest
 - `cronDirRequestCustomSequence` kini mengirim log progres per penerima dan
-  per aksi menu secara bertahap ke admin WhatsApp menggunakan `logToAdmins`.
+  per aksi menu (termasuk recap likes per konten di menu 28) secara bertahap
+  ke admin WhatsApp menggunakan `logToAdmins`.
 - Format pesan progres per aksi: `[<label>] clientId=<id> recipient=<wa>
   action=<nomor> mulai|sukses|gagal (context={...})`. Setiap pesan selalu
   menyertakan `clientId`, nomor menu, WA penerima, dan konteks tambahan jika
@@ -272,7 +273,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Blok besar memiliki log pembuka dan penutup:
   - `runDirRequestFetchSosmed` (baik di alur utama maupun BIDHUMAS).
   - Eksekusi menu 21 Ditbinmas.
-  - Sekuens BIDHUMAS (menu 6 & 9).
+  - Sekuens BIDHUMAS (menu 6, 9, & 28).
   - Cron rekap Ditbinmas (menu 21, super admin 6/9/34/35, operator 30).
 - Urutan log WA yang diterima admin mencerminkan eksekusi nyata: pesan pembuka
   blok → progres per aksi/penerima (mulai/sukses/gagal) → pesan penutup blok →
@@ -308,9 +309,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   3. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
      `DITBINMAS` dan mengirimkan narasi, file teks, serta Excel rekap ke grup
      WA Ditbinmas yang terkonfigurasi di `client_group`.
-  4. Memicu menu **6️⃣** dan **9️⃣** (absensi likes & komentar sederhana) untuk
-     *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target sekaligus:
-     grup WA `client_group` dan daftar Super Admin dari kolom `client_super`.
+  4. Memicu menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** (rekap likes per konten dalam
+     Excel) untuk *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target
+     sekaligus: grup WA `client_group` dan daftar Super Admin dari kolom
+     `client_super`.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
   ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
   aktif bertipe Direktorat sebelum mengirim.
