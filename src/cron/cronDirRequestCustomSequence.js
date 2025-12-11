@@ -12,9 +12,29 @@ import {
 
 const DITBINMAS_CLIENT_ID = 'DITBINMAS';
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
+const DITSAMAPTA_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
 export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
 export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
+
+function validateDirektoratClient(client, clientId) {
+  if (!client) {
+    return { valid: false, reason: `Client ${clientId} tidak ditemukan` };
+  }
+
+  if (!client.client_status) {
+    return { valid: false, reason: `Client ${clientId} tidak aktif` };
+  }
+
+  if (String(client.client_type || '').toLowerCase() !== 'direktorat') {
+    return {
+      valid: false,
+      reason: `Client ${clientId} bukan bertipe direktorat (${client.client_type})`,
+    };
+  }
+
+  return { valid: true, reason: null };
+}
 
 function toWAid(id) {
   if (!id || typeof id !== 'string') return null;
@@ -40,7 +60,10 @@ function getOperatorRecipients(client) {
   return getRecipientsFromField(client?.client_operator);
 }
 
-function buildRecipients(client, { includeGroup = false, includeSuperAdmins = false } = {}) {
+function buildRecipients(
+  client,
+  { includeGroup = false, includeSuperAdmins = false, includeOperators = false } = {}
+) {
   const recipients = new Set();
 
   if (includeGroup) {
@@ -52,6 +75,10 @@ function buildRecipients(client, { includeGroup = false, includeSuperAdmins = fa
 
   if (includeSuperAdmins) {
     getSuperAdminRecipients(client).forEach((wa) => recipients.add(wa));
+  }
+
+  if (includeOperators) {
+    getOperatorRecipients(client).forEach((wa) => recipients.add(wa));
   }
 
   return Array.from(recipients);
@@ -208,6 +235,15 @@ export async function runBidhumasMenuSequence({
   return { fetchStatus, sendStatus };
 }
 
+function buildDitsamaptaActions() {
+  const baseActions = ['6', '9'];
+  const extraActions = splitRecipientField(process.env.DITSAMAPTA_EXTRA_ACTIONS || '')
+    .map((action) => action.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([...baseActions, ...extraActions]));
+}
+
 function isLastDayOfMonth(date = new Date()) {
   const checkDate = new Date(date);
   const nextDay = new Date(checkDate);
@@ -259,6 +295,7 @@ export async function runCron() {
 
   const summary = {
     fetch: 'pending',
+    ditsamapta: 'pending',
     ditbinmas: 'pending',
     bidhumas: 'pending',
   };
@@ -271,6 +308,38 @@ export async function runCron() {
     summary.fetch = `gagal sosmed fetch: ${err.message || err}`;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.fetch });
     await logToAdmins(summary.fetch);
+  }
+
+  try {
+    await logToAdmins('Mulai blok sekuens DITSAMAPTA (menu 6/9 + ekstra)');
+    const ditsamaptaClient = await findClientById(DITSAMAPTA_CLIENT_ID);
+    const { valid, reason } = validateDirektoratClient(ditsamaptaClient, DITSAMAPTA_CLIENT_ID);
+
+    if (!valid) {
+      summary.ditsamapta = reason;
+      await logToAdmins(`Lewati blok DITSAMAPTA: ${reason}`);
+    } else {
+      const recipients = buildRecipients(ditsamaptaClient, {
+        includeGroup: true,
+        includeSuperAdmins: true,
+        includeOperators: true,
+      });
+
+      const actions = buildDitsamaptaActions();
+      summary.ditsamapta = await executeMenuActions({
+        clientId: DITSAMAPTA_CLIENT_ID,
+        actions,
+        recipients,
+        label: 'Menu recap DITSAMAPTA',
+        roleFlag: DITSAMAPTA_CLIENT_ID,
+        userClientId: DITSAMAPTA_CLIENT_ID,
+      });
+      await logToAdmins(`Selesai blok DITSAMAPTA: ${summary.ditsamapta}`);
+    }
+  } catch (err) {
+    summary.ditsamapta = `gagal kirim DITSAMAPTA: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditsamapta });
+    await logToAdmins(summary.ditsamapta);
   }
 
   try {
@@ -305,6 +374,7 @@ export async function runCron() {
   const logMessage =
     '[CRON DIRREQ CUSTOM] Ringkasan:\n' +
     `- Fetch sosmed: ${summary.fetch}\n` +
+    `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
     `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
     `- Menu 6 & 9 BIDHUMAS: ${summary.bidhumas}`;
 
