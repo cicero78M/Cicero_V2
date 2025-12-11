@@ -301,17 +301,23 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Urutan otomatis yang dijalankan:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
      Instagram dan TikTok seluruh direktorat aktif.
-  2. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
+  2. Menjalankan menu **6️⃣** dan **9️⃣** untuk *Client ID* `DITSAMAPTA`
+     (ditambah menu ekstra dari `DITSAMAPTA_EXTRA_ACTIONS` bila diset) ke tiga
+     target sekaligus: grup WA `client_group`, nomor super admin `client_super`,
+     dan operator di `client_operator`.
+  3. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
      `DITBINMAS` dan mengirimkan narasi, file teks, serta Excel rekap ke grup
      WA Ditbinmas yang terkonfigurasi di `client_group`.
-  3. Memicu menu **6️⃣** dan **9️⃣** (absensi likes & komentar sederhana) untuk
+  4. Memicu menu **6️⃣** dan **9️⃣** (absensi likes & komentar sederhana) untuk
      *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target sekaligus:
      grup WA `client_group` dan daftar Super Admin dari kolom `client_super`.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
-  ID WA yang valid yang akan dipakai.
+  ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
+  aktif bertipe Direktorat sebelum mengirim.
 - Debug dan kegagalan menu dicatat lewat `sendDebug` serta dikirim ke daftar
   admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
-  membuka dashboard.
+  membuka dashboard. Ringkasan akhir kini mencantumkan status Ditsamapta, Ditbinmas,
+  dan BIDHUMAS secara terpisah.
 
 ## Automasi Rekap Ditbinmas 20:30
 - Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
