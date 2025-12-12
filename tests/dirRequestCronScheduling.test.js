@@ -109,16 +109,14 @@ async function loadModules() {
   };
 }
 
-test('registerDirRequestCrons keeps Ditbinmas recap and adds 20:30 BIDHUMAS run', async () => {
+test('registerDirRequestCrons schedules only Ditbinmas recap and BIDHUMAS run at 20:30', async () => {
   const { registerDirRequestCrons, BIDHUMAS_2030_JOB_KEY, DITBINMAS_RECAP_JOB_KEY } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
 
   const jobsAt2030 = scheduledJobs.filter((job) => job.cronExpression === '30 20 * * *');
 
-  expect(jobsAt2030.map((job) => job.jobKey)).toEqual(
-    expect.arrayContaining([DITBINMAS_RECAP_JOB_KEY, BIDHUMAS_2030_JOB_KEY]),
-  );
+  expect(jobsAt2030.map((job) => job.jobKey)).toEqual([DITBINMAS_RECAP_JOB_KEY, BIDHUMAS_2030_JOB_KEY]);
 });
 
 test('20:30 BIDHUMAS handler targets BIDHUMAS recipients', async () => {

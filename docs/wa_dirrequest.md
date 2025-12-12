@@ -333,7 +333,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Automasi Rekap Ditbinmas 20:30
 - Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
-  (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**.
+  (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**. Slot
+  **20:30** kini dilepas dari `cronDirRequestCustomSequence` agar recap
+  dan kiriman BIDHUMAS tidak terkirim ganda.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
   - Menu **30** dikirim hanya ke `client_operator`.
