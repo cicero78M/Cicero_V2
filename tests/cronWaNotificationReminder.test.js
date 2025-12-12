@@ -10,6 +10,9 @@ const mockGetPostsTodayByClient = jest.fn();
 const mockGetCommentsByVideoId = jest.fn();
 const mockFindClientById = jest.fn();
 const mockNormalizeInsta = jest.fn((username) => (username || '').toLowerCase());
+const mockGetReminderStateMapForDate = jest.fn();
+const mockUpsertReminderState = jest.fn();
+const mockDeleteReminderStateForDate = jest.fn();
 
 jest.unstable_mockModule('../src/utils/cronScheduler.js', () => ({
   scheduleCronJob: mockScheduleCronJob,
@@ -52,8 +55,15 @@ jest.unstable_mockModule('../src/utils/likesHelper.js', () => ({
   normalizeUsername: mockNormalizeInsta,
 }));
 
+jest.unstable_mockModule('../src/model/waNotificationReminderStateModel.js', () => ({
+  getReminderStateMapForDate: mockGetReminderStateMapForDate,
+  upsertReminderState: mockUpsertReminderState,
+  deleteReminderStateForDate: mockDeleteReminderStateForDate,
+}));
+
 let runCron;
 let resetNotificationReminderState;
+let reminderStateStore;
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -63,13 +73,23 @@ beforeAll(async () => {
   ({ runCron, resetNotificationReminderState } = await import('../src/cron/cronWaNotificationReminder.js'));
 });
 
-beforeEach(() => {
-  resetNotificationReminderState();
+beforeEach(async () => {
+  reminderStateStore = new Map();
+  mockGetReminderStateMapForDate.mockImplementation(async () => new Map(reminderStateStore));
+  mockUpsertReminderState.mockImplementation(async ({ chatId, lastStage, isComplete }) => {
+    reminderStateStore.set(chatId, { lastStage, isComplete });
+  });
+  mockDeleteReminderStateForDate.mockImplementation(async () => {
+    reminderStateStore.clear();
+  });
+
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
   mockGetLikesByShortcode.mockResolvedValue([]);
   mockGetPostsTodayByClient.mockResolvedValue([]);
   mockGetCommentsByVideoId.mockResolvedValue({ comments: [] });
   mockFindClientById.mockResolvedValue({ client_tiktok: '@ditbinmas' });
+
+  await resetNotificationReminderState();
 });
 
 test('runCron only sends reminders for DITBINMAS users', async () => {
@@ -128,6 +148,10 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
   await runCron();
 
   expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+    lastStage: 'initial',
+    isComplete: false,
+  });
 
   mockSafeSendMessage.mockClear();
   mockGetLikesByShortcode.mockResolvedValue(['user1']);
@@ -135,10 +159,54 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
   await runCron();
 
   expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+    lastStage: 'completed',
+    isComplete: true,
+  });
 
   mockSafeSendMessage.mockClear();
 
   await runCron();
 
   expect(mockSafeSendMessage).not.toHaveBeenCalled();
+});
+
+test('cron skips completed recipients but keeps following up with pending users after a restart', async () => {
+  reminderStateStore.set('081234567890@c.us', { lastStage: 'completed', isComplete: true });
+  reminderStateStore.set('089876543210@c.us', { lastStage: 'followup1', isComplete: false });
+
+  mockGetActiveUsersWithWhatsapp.mockResolvedValue([
+    {
+      whatsapp: '081234567890',
+      wa_notification_opt_in: true,
+      client_id: 'DITBINMAS',
+      insta: 'user1',
+      tiktok: 'tt1',
+      nama: 'Completed User',
+    },
+    {
+      whatsapp: '089876543210',
+      wa_notification_opt_in: true,
+      client_id: 'DITBINMAS',
+      insta: 'user2',
+      tiktok: 'tt2',
+      nama: 'Pending User',
+    },
+  ]);
+
+  mockGetShortcodesTodayByClient.mockResolvedValue(['abc123']);
+  mockGetLikesByShortcode.mockResolvedValue([]);
+
+  await runCron();
+
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '089876543210@c.us', expect.any(String));
+  expect(reminderStateStore.get('089876543210@c.us')).toEqual({
+    lastStage: 'followup2',
+    isComplete: false,
+  });
+  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+    lastStage: 'completed',
+    isComplete: true,
+  });
 });

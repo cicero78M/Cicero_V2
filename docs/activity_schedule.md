@@ -38,11 +38,16 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
 | `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
-| `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in, with follow-up pings for users still marked incomplete. |
+| `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas users who opted in, persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 | `cronDirRequestCustomSequence.js` (custom menus) | `0 15 * * *<br>0 18 * * *<br>30 20 * * *<br>0 22 * * *` | Chain sosmed fetches, run Ditsamapta menus 6/9/28/29 (plus optional extras) to the Ditsamapta group, super admins, and operators, deliver Ditbinmas menu 21 to the Ditbinmas group, then send BIDHUMAS menus 6, 9, 28, and 29 to the BIDHUMAS group and its super admins. | 
 | `cronDirRequestCustomSequence.js` (Ditbinmas recap) | `30 20 * * *` | Send Ditbinmas menu 21 to the Ditbinmas group, menus 6, 9, 34, and 35 to super admins, plus menu 30 to Ditbinmas operators, adding weekly recaps on Sundays and monthly recaps on the last day of the month. |
-| `cronDirRequestCustomSequence.js` (BIDHUMAS 20:30) | `30 20 * * *` | Deliver BIDHUMAS menus 6, 9, 28, and 29 at the same time as the Ditbinmas recap without blocking it, targeting the BIDHUMAS group and super admins. | 
+| `cronDirRequestCustomSequence.js` (BIDHUMAS 20:30) | `30 20 * * *` | Deliver BIDHUMAS menus 6, 9, 28, and 29 at the same time as the Ditbinmas recap without blocking it, targeting the BIDHUMAS group and super admins. |
 | `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Chain sosmed fetches then send dirRequest menus 6 and 9 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
+
+#### Ditbinmas WA reminder persistence
+
+- `cronWaNotificationReminder` now writes the per-date, per-`chat_id` reminder state into the `wa_notification_reminder_state` table (primary key: `date_key`, `chat_id`) so the worker can recover after restarts without re-sending completed users. Columns include `last_stage` (`initial`, `followup1`, `followup2`, `completed`) and `is_complete` to gate follow-up sends per recipient.
+- On each run the job reads the stored state to pick the correct stage, skips rows where `is_complete=true`, and only advances the stage for recipients whose previously stored stage is behind the current run. This keeps once-per-day delivery guarantees for completions while still pushing pending recipients forward to their next follow-up slot.
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp services, and updates the system accordingly. Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
