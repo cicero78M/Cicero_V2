@@ -11,7 +11,7 @@ const mockGetInstaPostCount = jest.fn();
 const mockGetTiktokPostCount = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetVideoIdsTodayByClient = jest.fn();
-const mockFindAllActiveDirektoratWithSosmed = jest.fn();
+const mockFindAllActiveDirektoratWithTiktok = jest.fn();
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
@@ -53,7 +53,7 @@ jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   deletePostByVideoId: jest.fn(),
 }));
 jest.unstable_mockModule('../src/model/clientModel.js', () => ({
-  findAllActiveDirektoratWithSosmed: mockFindAllActiveDirektoratWithSosmed,
+  findAllActiveDirektoratWithTiktok: mockFindAllActiveDirektoratWithTiktok,
 }));
 
 let runCron;
@@ -75,13 +75,15 @@ beforeEach(async () => {
   mockGetShortcodesTodayByClient.mockResolvedValue(['dbIg']);
   mockGetVideoIdsTodayByClient.mockResolvedValue(['dbTt']);
   mockFetchKomentarTiktokBatch.mockResolvedValue();
-  mockFindAllActiveDirektoratWithSosmed.mockResolvedValue([
+  mockFindAllActiveDirektoratWithTiktok.mockResolvedValue([
     {
       client_id: 'DITBINMAS',
       client_type: 'Direktorat',
       client_group: '120363419830216549@g.us',
       client_operator: '',
       client_super: '',
+      client_insta_status: true,
+      client_tiktok_status: true,
     },
   ]);
   ({ runCron, getRecipientsForClient, normalizeGroupId } = await import('../src/cron/cronDirRequestFetchSosmed.js'));
@@ -171,6 +173,26 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
   expect(sentMessages[1]).toEqual(['120363419830216549@g.us', 'msg']);
   expect(sentMessages[2][0]).toBe('123@c.us');
   expect(sentMessages[2][1]).toContain('Laporan dikirim ke 1 penerima');
+});
+
+test('runCron skips Instagram fetch when Instagram disabled but keeps TikTok', async () => {
+  mockFindAllActiveDirektoratWithTiktok.mockResolvedValueOnce([
+    {
+      client_id: 'DITSAMAPTA',
+      client_type: 'Direktorat',
+      client_group: '120363419830216549@g.us',
+      client_operator: '',
+      client_super: '',
+      client_insta_status: false,
+      client_tiktok_status: true,
+    },
+  ]);
+
+  await runCron();
+
+  expect(mockFetchInsta).not.toHaveBeenCalled();
+  expect(mockFetchLikes).not.toHaveBeenCalled();
+  expect(mockFetchTiktok).toHaveBeenCalledWith('DITSAMAPTA');
 });
 
 test('runCron skips sending when counts unchanged', async () => {

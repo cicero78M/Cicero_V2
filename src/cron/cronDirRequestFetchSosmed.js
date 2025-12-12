@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { waGatewayClient } from "../service/waService.js";
-import { findAllActiveDirektoratWithSosmed } from "../model/clientModel.js";
+import { findAllActiveDirektoratWithTiktok } from "../model/clientModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
@@ -190,7 +190,7 @@ export async function runCron() {
   try {
     const jakartaHour = getCurrentHourInJakarta();
     const skipPostFetch = jakartaHour >= 17;
-    const activeClients = await findAllActiveDirektoratWithSosmed();
+    const activeClients = await findAllActiveDirektoratWithTiktok();
 
     if (skipPostFetch) {
       await sendStructuredLog(
@@ -209,7 +209,7 @@ export async function runCron() {
           phase: "init",
           action: "loadClients",
           result: "empty",
-          message: "Tidak ada client direktorat aktif dengan IG & TikTok aktif",
+          message: "Tidak ada client direktorat aktif dengan TikTok aktif",
         })
       );
       return;
@@ -218,6 +218,8 @@ export async function runCron() {
     for (const client of activeClients) {
       try {
         const clientId = String(client.client_id || "").trim().toUpperCase();
+        const hasInstagram = client?.client_insta_status !== false;
+        const hasTiktok = client?.client_tiktok_status !== false;
         const previousState = await ensureClientState(clientId);
         const previousIgShortcodes = await getShortcodesTodayByClient(clientId);
         const previousTiktokVideoIds = await getVideoIdsTodayByClient(clientId);
@@ -226,7 +228,7 @@ export async function runCron() {
           tiktok: previousState.tiktokCount,
         };
 
-        if (!skipPostFetch) {
+        if (!skipPostFetch && hasInstagram) {
           await sendStructuredLog(
             buildLogEntry({
               phase: "instagramFetch",
@@ -251,7 +253,22 @@ export async function runCron() {
               countsBefore,
             })
           );
+        } else {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "instagramFetch",
+              clientId,
+              action: "fetchInstagram",
+              result: "skipped",
+              countsBefore,
+              message: !hasInstagram
+                ? "Lewati fetch Instagram karena status akun nonaktif"
+                : "Lewati fetch Instagram setelah pukul 17.00 WIB",
+            })
+          );
+        }
 
+        if (!skipPostFetch && hasTiktok) {
           await sendStructuredLog(
             buildLogEntry({
               phase: "tiktokFetch",
@@ -274,45 +291,50 @@ export async function runCron() {
         } else {
           await sendStructuredLog(
             buildLogEntry({
-              phase: "instagramFetch",
-              clientId,
-              action: "fetchInstagram",
-              result: "skipped",
-              countsBefore,
-              message: "Lewati fetch Instagram setelah pukul 17.00 WIB",
-            })
-          );
-          await sendStructuredLog(
-            buildLogEntry({
               phase: "tiktokFetch",
               clientId,
               action: "fetchTiktok",
               result: "skipped",
               countsBefore,
-              message: "Lewati fetch TikTok setelah pukul 17.00 WIB",
+              message: !hasTiktok
+                ? "Lewati fetch TikTok karena status akun nonaktif"
+                : "Lewati fetch TikTok setelah pukul 17.00 WIB",
             })
           );
         }
 
-        await sendStructuredLog(
-          buildLogEntry({
-            phase: "likesRefresh",
-            clientId,
-            action: "refreshLikes",
-            result: "start",
-            countsBefore,
-          })
-        );
-        await handleFetchLikesInstagram(null, null, clientId);
-        await sendStructuredLog(
-          buildLogEntry({
-            phase: "likesRefresh",
-            clientId,
-            action: "refreshLikes",
-            result: "completed",
-            countsBefore,
-          })
-        );
+        if (hasInstagram) {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "likesRefresh",
+              clientId,
+              action: "refreshLikes",
+              result: "start",
+              countsBefore,
+            })
+          );
+          await handleFetchLikesInstagram(null, null, clientId);
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "likesRefresh",
+              clientId,
+              action: "refreshLikes",
+              result: "completed",
+              countsBefore,
+            })
+          );
+        } else {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "likesRefresh",
+              clientId,
+              action: "refreshLikes",
+              result: "skipped",
+              countsBefore,
+              message: "Lewati refresh likes karena status Instagram nonaktif",
+            })
+          );
+        }
 
         await sendStructuredLog(
           buildLogEntry({

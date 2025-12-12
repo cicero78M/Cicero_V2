@@ -38,6 +38,19 @@ export const findAllActiveDirektoratWithSosmed = async () => {
   return res.rows;
 };
 
+export const findAllActiveDirektoratWithTiktok = async () => {
+  const res = await query(
+    `SELECT client_id, nama, client_group, client_operator, client_super,
+            client_insta_status, client_tiktok_status
+     FROM clients
+     WHERE client_status = true
+       AND LOWER(client_type) = LOWER('direktorat')
+       AND client_tiktok_status = true
+     ORDER BY client_id`
+  );
+  return res.rows;
+};
+
 // Ambil client by client_id (case-insensitive)
 export const findById = async (client_id) => {
   const res = await query(
