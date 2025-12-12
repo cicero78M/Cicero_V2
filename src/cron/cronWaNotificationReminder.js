@@ -7,6 +7,11 @@ import { getPostsTodayByClient as getTiktokPostsToday } from "../model/tiktokPos
 import { getCommentsByVideoId } from "../model/tiktokCommentModel.js";
 import { findClientById } from "../service/clientService.js";
 import { normalizeUsername as normalizeInsta } from "../utils/likesHelper.js";
+import {
+  deleteReminderStateForDate,
+  getReminderStateMapForDate,
+  upsertReminderState,
+} from "../model/waNotificationReminderStateModel.js";
 
 export const JOB_KEY = "./src/cron/cronWaNotificationReminder.js";
 const TARGET_CLIENT_ID = "DITBINMAS";
@@ -14,35 +19,13 @@ const TARGET_CLIENT_ID = "DITBINMAS";
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
 
-const dailyReminderState = {
-  dateKey: null,
-  firstRunCompleted: false,
-  followup1Completed: false,
-  firstIncomplete: new Set(),
-  secondIncomplete: new Set(),
-};
-
 function getTodayKey() {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-}
-
-function resetDailyReminderState(todayKey) {
-  dailyReminderState.dateKey = todayKey;
-  dailyReminderState.firstRunCompleted = false;
-  dailyReminderState.followup1Completed = false;
-  dailyReminderState.firstIncomplete = new Set();
-  dailyReminderState.secondIncomplete = new Set();
-}
-
-function getRunStage() {
-  if (!dailyReminderState.firstRunCompleted) return "initial";
-  if (!dailyReminderState.followup1Completed) return "followup1";
-  return "followup2";
 }
 
 function buildGreeting(user) {
@@ -236,22 +219,70 @@ function normalizeRecipient(whatsapp) {
   return formatToWhatsAppId(digits);
 }
 
+const stageWeights = {
+  initial: 0,
+  followup1: 1,
+  followup2: 2,
+  completed: 3,
+};
+
+function getStageWeight(stage) {
+  if (!stage) return -1;
+  return stageWeights[stage] ?? -1;
+}
+
+function resolveRunStage(reminderStateMap) {
+  if (!reminderStateMap?.size) return "initial";
+
+  const pendingStates = Array.from(reminderStateMap.values()).filter(
+    (state) => !state?.isComplete
+  );
+
+  if (!pendingStates.length) return null;
+
+  const highestStage = Math.max(
+    ...pendingStates.map((state) => getStageWeight(state?.lastStage))
+  );
+
+  if (highestStage < getStageWeight("followup1")) return "followup1";
+  if (highestStage < getStageWeight("followup2")) return "followup2";
+  return "followup2";
+}
+
+function determineRecipientStage(runStage, state) {
+  if (!runStage) return null;
+  if (!state) return "initial";
+  if (state?.isComplete) return null;
+
+  const runWeight = getStageWeight(runStage);
+  const stateWeight = getStageWeight(state?.lastStage);
+
+  if (runStage === "followup2" && runWeight >= stateWeight) return "followup2";
+  if (runWeight > stateWeight) return runStage;
+  return null;
+}
+
+function buildNextState(existingState, recipientStage, status) {
+  const hasCompleted = Boolean(status?.allDone) || Boolean(existingState?.isComplete);
+  const desiredStage = hasCompleted ? "completed" : recipientStage;
+  const nextStage =
+    getStageWeight(desiredStage) >= getStageWeight(existingState?.lastStage)
+      ? desiredStage
+      : existingState?.lastStage;
+
+  return {
+    lastStage: nextStage,
+    isComplete: hasCompleted,
+  };
+}
+
 export async function runCron() {
   const todayKey = getTodayKey();
-  if (dailyReminderState.dateKey !== todayKey) {
-    resetDailyReminderState(todayKey);
-  }
-
-  const runStage = getRunStage();
+  const reminderStateMap = await getReminderStateMapForDate(todayKey);
+  const runStage = resolveRunStage(reminderStateMap) || "initial";
   const users = await getActiveUsersWithWhatsapp();
   const recipients = new Map();
   const recapCache = new Map();
-
-  const isTargetedFollowup = (chatId) => {
-    if (runStage === "initial") return true;
-    if (runStage === "followup1") return dailyReminderState.firstIncomplete.has(chatId);
-    return dailyReminderState.secondIncomplete.has(chatId);
-  };
 
   for (const user of users) {
     if (user?.wa_notification_opt_in !== true) continue;
@@ -259,45 +290,53 @@ export async function runCron() {
     if (clientId !== TARGET_CLIENT_ID) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId || recipients.has(chatId)) continue;
-    if (!isTargetedFollowup(chatId)) continue;
+
+    const state = reminderStateMap.get(chatId);
+    const recipientStage = determineRecipientStage(runStage, state);
+    if (!recipientStage) continue;
+
     const userWithPangkat = {
       ...user,
       pangkat: user?.pangkat ?? user?.title,
     };
-    recipients.set(chatId, userWithPangkat);
+    recipients.set(chatId, { user: userWithPangkat, stage: recipientStage });
   }
 
-  const nextIncompleteSet = new Set();
-
-  for (const [chatId, user] of recipients.entries()) {
+  for (const [chatId, recipient] of recipients.entries()) {
+    const { user, stage } = recipient;
     let message;
+    let status;
     try {
       const recap = await getClientTaskRecap(user?.client_id, recapCache);
-      const status = buildUserTaskStatus(user, recap);
+      status = buildUserTaskStatus(user, recap);
       message = buildNotificationMessage(user, status);
-
-      if (!status?.allDone && (runStage === "initial" || runStage === "followup1")) {
-        nextIncompleteSet.add(chatId);
-      }
     } catch (error) {
       console.error("Failed to build WA notification reminder", error);
       message = buildGenericNotificationMessage(user);
+      status = null;
     }
 
     await safeSendMessage(waGatewayClient, chatId, message);
-  }
 
-  if (runStage === "initial") {
-    dailyReminderState.firstRunCompleted = true;
-    dailyReminderState.firstIncomplete = nextIncompleteSet;
-    dailyReminderState.secondIncomplete = new Set();
-  } else if (runStage === "followup1") {
-    dailyReminderState.followup1Completed = true;
-    dailyReminderState.secondIncomplete = nextIncompleteSet;
+    const nextState = buildNextState(
+      reminderStateMap.get(chatId),
+      stage,
+      status
+    );
+
+    await upsertReminderState({
+      dateKey: todayKey,
+      chatId,
+      lastStage: nextState.lastStage,
+      isComplete: nextState.isComplete,
+    });
+
+    reminderStateMap.set(chatId, nextState);
   }
 }
 
-export function resetNotificationReminderState() {
-  resetDailyReminderState(getTodayKey());
+export async function resetNotificationReminderState() {
+  const todayKey = getTodayKey();
+  await deleteReminderStateForDate(todayKey);
 }
 
