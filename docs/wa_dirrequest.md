@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-07*
+*Last updated: 2025-12-12*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -88,6 +88,13 @@ ditampilkan bot.
 - Seluruh menu pada kelompok **Absensi** (opsi 5–11) menggunakan *Client ID*
   pilihan operator untuk rekap dan narasi, termasuk nama direktorat/klien yang
   ditampilkan pada pesan hasil.
+- Submenu **Pengambilan Data** untuk likes/konten (opsi 12–15) kini sepenuhnya
+  mengikuti direktorat yang dipilih pada awal alur `dirrequest`. RapidAPI dan
+  pipeline penyimpanan akan menerima *Client ID* yang dipilih, sehingga fetch
+  konten/engagement Instagram maupun TikTok dapat dijalankan untuk direktorat
+  lain tanpa harus mengganti konfigurasi default. Pesan sukses/gagal yang
+  dikirim bot juga menyertakan nama/ID direktorat target agar operator tahu
+  dengan jelas sasaran eksekusi.
 
 ## Rekap data belum lengkap (Menu 3)
 - Label submenu diperbarui menjadi **Rekap data belum lengkap** tanpa
