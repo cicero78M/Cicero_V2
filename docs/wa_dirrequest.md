@@ -344,8 +344,11 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Penerima Cron DirRequest
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
-  Direktorat** yang aktif dengan status **IG** dan **TikTok** aktif. Eksekusi
-  dilakukan **berurutan** mengikuti urutan `client_id` dari tabel `clients`.
+  Direktorat** yang aktif dan memiliki status **TikTok** aktif. Instagram
+  bersifat opsional; jika `client_insta_status` nonaktif, cron otomatis
+  melewati fetch/refresh Instagram tapi tetap memproses TikTok.
+- Eksekusi dilakukan **berurutan** mengikuti urutan `client_id` dari tabel
+  `clients`.
 - Pesan laporan tugas kini dikirim **hanya ke Group WA** milik masing-masing
   client berdasarkan kolom `client_group` (format wajib `@g.us`). Nomor
   **Super Admin** dan **Operator** tidak lagi dipakai untuk cron ini.
