@@ -43,6 +43,6 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestCustomSequence.js` (custom menus) | `0 15 * * *<br>0 18 * * *<br>30 20 * * *<br>0 22 * * *` | Chain sosmed fetches, run Ditsamapta menus 6/9/28 (plus optional extras) to the Ditsamapta group, super admins, and operators, deliver Ditbinmas menu 21 to the Ditbinmas group, then send BIDHUMAS menus 6, 9, and 28 to the BIDHUMAS group and its super admins. |
 | `cronDirRequestCustomSequence.js` (Ditbinmas recap) | `30 20 * * *` | Send Ditbinmas menu 21 to the Ditbinmas group, menus 6, 9, 34, and 35 to super admins, plus menu 30 to Ditbinmas operators, adding weekly recaps on Sundays and monthly recaps on the last day of the month. |
 | `cronDirRequestCustomSequence.js` (BIDHUMAS 20:30) | `30 20 * * *` | Deliver BIDHUMAS menus 6, 9, and 28 at the same time as the Ditbinmas recap without blocking it, targeting the BIDHUMAS group and super admins. |
-| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Chain sosmed fetches then send dirRequest menus 6 and 9 exclusively to the BIDHUMAS group and its super admin recipients. |
+| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Chain sosmed fetches then send dirRequest menus 6 and 9 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp services, and updates the system accordingly. Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.
