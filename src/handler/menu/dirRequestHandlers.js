@@ -1676,47 +1676,62 @@ async function performAction(
       const { fetchAndStoreInstaContent } = await import("../fetchpost/instaFetchPost.js");
       const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
       const { rekapLikesIG } = await import("../fetchabsensi/insta/absensiLikesInsta.js");
+      const targetId = (clientId || DITBINMAS_CLIENT_ID).toUpperCase();
+      const targetClient = await findClientById(targetId);
+      const targetLabel = targetClient?.nama
+        ? `${formatNama(targetClient.nama)} (${targetId})`
+        : targetId;
       await fetchAndStoreInstaContent([
         "shortcode",
         "caption",
         "like_count",
         "timestamp",
-      ], waClient, chatId, "DITBINMAS");
-      await handleFetchLikesInstagram(null, null, "DITBINMAS");
-      const rekapMsg = await rekapLikesIG("DITBINMAS");
+      ], waClient, chatId, targetId);
+      await handleFetchLikesInstagram(null, null, targetId);
+      const rekapMsg = await rekapLikesIG(targetId);
       msg =
         rekapMsg ||
-        "Belum ada konten IG pada akun Official DIREKTORAT BINMAS hari ini";
+        `Belum ada konten IG pada akun Official ${targetLabel} hari ini.`;
       break;
     }
     case "13": {
       const { handleFetchLikesInstagram } = await import("../fetchengagement/fetchLikesInstagram.js");
-      await handleFetchLikesInstagram(waClient, chatId, "DITBINMAS");
-      msg = "✅ Selesai fetch likes Instagram DITBINMAS.";
+      const targetId = (clientId || DITBINMAS_CLIENT_ID).toUpperCase();
+      const targetClient = await findClientById(targetId);
+      const targetLabel = targetClient?.nama
+        ? `${formatNama(targetClient.nama)} (${targetId})`
+        : targetId;
+      await handleFetchLikesInstagram(waClient, chatId, targetId);
+      msg = `✅ Selesai fetch likes Instagram ${targetLabel}.`;
       break;
     }
     case "14": {
-      const normalizedId = (clientId || "").toUpperCase();
-      if (normalizedId !== "DITBINMAS") {
-        msg = "Menu ini hanya tersedia untuk client DITBINMAS.";
-        break;
-      }
       const { fetchAndStoreTiktokContent } = await import("../fetchpost/tiktokFetchPost.js");
       const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
-      await fetchAndStoreTiktokContent("DITBINMAS", waClient, chatId);
-      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
+      const targetId = (clientId || DITBINMAS_CLIENT_ID).toUpperCase();
+      const targetClient = await findClientById(targetId);
+      const targetLabel = targetClient?.nama
+        ? `${formatNama(targetClient.nama)} (${targetId})`
+        : targetId;
+      await fetchAndStoreTiktokContent(targetId, waClient, chatId);
+      await handleFetchKomentarTiktokBatch(waClient, chatId, targetId);
       const rekapTiktok = await absensiKomentarDitbinmasReport(
         userType === "org" ? { clientFilter: userClientId } : {}
       );
       msg =
         rekapTiktok ||
-        "Tidak ada konten TikTok untuk DIREKTORAT BINMAS hari ini.";
+        `Tidak ada konten TikTok untuk ${targetLabel} hari ini.`;
       break;
     }
     case "15": {
       const { handleFetchKomentarTiktokBatch } = await import("../fetchengagement/fetchCommentTiktok.js");
-      await handleFetchKomentarTiktokBatch(waClient, chatId, "DITBINMAS");
-      msg = "✅ Selesai fetch komentar TikTok DITBINMAS.";
+      const targetId = (clientId || DITBINMAS_CLIENT_ID).toUpperCase();
+      const targetClient = await findClientById(targetId);
+      const targetLabel = targetClient?.nama
+        ? `${formatNama(targetClient.nama)} (${targetId})`
+        : targetId;
+      await handleFetchKomentarTiktokBatch(waClient, chatId, targetId);
+      msg = `✅ Selesai fetch komentar TikTok ${targetLabel}.`;
       break;
     }
     case "16": {
