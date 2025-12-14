@@ -309,7 +309,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Cron DirRequest Custom
 - Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
   harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
-- Urutan otomatis yang dijalankan:
+- Jadwal **15:00** dan **18:00** menjalankan urutan penuh:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
      Instagram dan TikTok seluruh direktorat aktif.
   2. Menjalankan menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** untuk *Client ID*
@@ -323,13 +323,20 @@ berpindah ke dashboard web atau menjalankan skrip manual.
      Excel) untuk *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target
      sekaligus: grup WA `client_group` dan daftar Super Admin dari kolom
      `client_super`.
+- Jadwal **20:30** tetap dipisah dari recap Ditbinmas/BIDHUMAS, tetapi kembali
+  membuka blok fetch sosmed sebelum menjalankan Ditsamapta:
+  - Menjalankan `cronDirRequestFetchSosmed` lalu memproses menu **6**, **9**,
+    **28**, dan **29** untuk Ditsamapta.
+  - Tidak memicu menu 21 Ditbinmas maupun blok BIDHUMAS.
+  - Menu ekstra pada `DITSAMAPTA_EXTRA_ACTIONS` diabaikan agar fokus pada empat
+    menu utama yang wajib.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
   ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
   aktif bertipe Direktorat sebelum mengirim.
 - Debug dan kegagalan menu dicatat lewat `sendDebug` serta dikirim ke daftar
   admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
   membuka dashboard. Ringkasan akhir kini mencantumkan status Ditsamapta, Ditbinmas,
-  dan BIDHUMAS secara terpisah.
+  dan BIDHUMAS secara terpisah, termasuk penanda ketika suatu blok dilewati.
 
 ## Automasi Rekap Ditbinmas 20:30
 - Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
