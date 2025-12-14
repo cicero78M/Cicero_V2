@@ -397,7 +397,7 @@ export async function runCron({
 export function runDitsamaptaOnlySequence() {
   const baseDitsamaptaActions = ['6', '9', '28', '29'];
   return runCron({
-    includeFetch: true,
+    includeFetch: false,
     includeDitbinmas: false,
     includeBidhumas: false,
     ditsamaptaActions: baseDitsamaptaActions,

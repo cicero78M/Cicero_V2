@@ -323,11 +323,11 @@ berpindah ke dashboard web atau menjalankan skrip manual.
      Excel) untuk *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target
      sekaligus: grup WA `client_group` dan daftar Super Admin dari kolom
      `client_super`.
-- Jadwal **20:30** tetap dipisah dari recap Ditbinmas/BIDHUMAS, tetapi kembali
-  membuka blok fetch sosmed sebelum menjalankan Ditsamapta:
-  - Menjalankan `cronDirRequestFetchSosmed` lalu memproses menu **6**, **9**,
-    **28**, dan **29** untuk Ditsamapta.
-  - Tidak memicu menu 21 Ditbinmas maupun blok BIDHUMAS.
+- Jadwal **20:30** kini dikurangi agar tidak menabrak recap Ditbinmas/BIDHUMAS:
+  - Hanya menjalankan blok Ditsamapta dengan menu **6**, **9**, **28**, dan
+    **29**.
+  - Tidak memicu `cronDirRequestFetchSosmed`, menu 21 Ditbinmas, maupun blok
+    BIDHUMAS.
   - Menu ekstra pada `DITSAMAPTA_EXTRA_ACTIONS` diabaikan agar fokus pada empat
     menu utama yang wajib.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
