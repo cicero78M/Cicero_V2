@@ -6,11 +6,11 @@ import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MED
 import {
   runCron as runDirRequestCustomSequence,
   JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-  runDitsamaptaOnlySequence,
   runDitbinmasRecapSequence,
   DITBINMAS_RECAP_JOB_KEY,
   runBidhumasMenuSequence,
   BIDHUMAS_2030_JOB_KEY,
+  runDitsamaptaOnlySequence,
 } from '../cronDirRequestCustomSequence.js';
 import {
   runCron as runBidhumasEvening,
@@ -55,11 +55,12 @@ const dirRequestCrons = [
   {
     jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
     description:
-      'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin. The 20:30 slot is limited to Ditsamapta menus 6/9/28/29 without sosmed fetch.',
+      'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
     schedules: [
       { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '30 20 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '00 22 * * *', handler: () => runDitsamaptaOnlySequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
@@ -68,26 +69,6 @@ const dirRequestCrons = [
       'Send Ditbinmas evening recap: menu 21 to the Ditbinmas group, menus 6, 9, 34, 35 to super admins, and menu 30 to operators with weekly/monthly add-ons.',
     schedules: [
       { cronExpression: '30 20 * * *', handler: () => runDitbinmasRecapSequence(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: BIDHUMAS_2030_JOB_KEY,
-    description:
-      'Send BIDHUMAS menus 6, 9, 28, and 29 at 20:30 WIB alongside the Ditbinmas recap without blocking its delivery.',
-    schedules: [
-      {
-        cronExpression: '30 20 * * *',
-        handler: () => runBidhumasMenuSequence({ label: 'Menu 6, 9, 28, & 29 BIDHUMAS (20:30)' }),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-    ],
-  },
-  {
-    jobKey: BIDHUMAS_EVENING_JOB_KEY,
-    description:
-      'Run dirRequest fetch sosmed then send BIDHUMAS menus 6 & 9 to the BIDHUMAS group and super admins at 22:00 WIB.',
-    schedules: [
-      { cronExpression: '0 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];

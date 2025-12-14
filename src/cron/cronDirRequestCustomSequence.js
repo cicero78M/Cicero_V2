@@ -190,7 +190,7 @@ async function executeMenuActions({
 }
 
 export async function runBidhumasMenuSequence({
-  includeFetch = false,
+  includeFetch = true,
   label = 'Menu 6, 9, 28, & 29 BIDHUMAS',
 } = {}) {
   let fetchStatus = includeFetch ? 'pending' : 'skipped';
@@ -397,12 +397,12 @@ export async function runCron({
 export function runDitsamaptaOnlySequence() {
   const baseDitsamaptaActions = ['6', '9', '28', '29'];
   return runCron({
-    includeFetch: false,
+    includeFetch: true,
     includeDitbinmas: false,
-    includeBidhumas: false,
+    includeBidhumas: true,
     ditsamaptaActions: baseDitsamaptaActions,
     ditsamaptaLabel: 'Menu DITSAMAPTA 20:30 (6/9/28/29)',
-    summaryTitle: '[CRON DIRREQ CUSTOM] Ringkasan DITSAMAPTA 20:30',
+    summaryTitle: '[CRON DIRREQ CUSTOM] Ringkasan DITSAMAPTA 22:00',
   });
 }
 
