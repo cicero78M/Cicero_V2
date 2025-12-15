@@ -36,10 +36,11 @@ const dirRequestCrons = [
     description:
       'Send WhatsApp task reminders to Ditbinmas users who opted in, with nightly follow-ups for incomplete tasks.',
     schedules: [
-      { cronExpression: '10 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '5 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '45 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '15 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '20 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '50 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '20 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '50 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '20 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
