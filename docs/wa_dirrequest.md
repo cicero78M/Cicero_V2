@@ -346,6 +346,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
   - Menu **30** dikirim hanya ke `client_operator`.
+  - Menu **21** tidak lagi dijalankan; slot ini tidak mengirim rekap ke grup Ditbinmas.
 - Periode rekap mengikuti tanggal eksekusi:
   - Hari biasa menjalankan rekap harian.
   - Hari Minggu menambahkan rekap mingguan (periode `weekly` untuk menu 34/35

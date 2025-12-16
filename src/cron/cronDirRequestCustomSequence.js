@@ -409,12 +409,11 @@ export function runDitsamaptaOnlySequence() {
 export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
   sendDebug({
     tag: 'CRON DIRREQ CUSTOM',
-    msg: 'Mulai cron rekap Ditbinmas (menu 21 + 6/9/30/34/35)',
+    msg: 'Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)',
   });
-  await logToAdmins('Mulai cron rekap Ditbinmas (menu 21 + 6/9/30/34/35)');
+  await logToAdmins('Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)');
 
   const summary = {
-    menu21: 'pending',
     superAdmins: 'pending',
     operators: 'pending',
   };
@@ -424,21 +423,7 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
       buildDitbinmasRecapPlan(referenceDate);
 
-    const groupRecipients = buildRecipients(ditbinmasClient, { includeGroup: true });
-    await logToAdmins('Mulai blok Ditbinmas group (menu 21)');
-    summary.menu21 = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: ['21'],
-      recipients: groupRecipients,
-      label: 'Ditbinmas group (21)',
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas group (menu 21): ${summary.menu21}`);
-
     const superRecipients = getSuperAdminRecipients(ditbinmasClient);
-    if (groupRecipients.length > 0 && superRecipients.length > 0) {
-      await delayAfterSend();
-    }
     await logToAdmins('Mulai blok Ditbinmas super admin (6/9/34/35)');
     summary.superAdmins = await executeMenuActions({
       clientId: DITBINMAS_CLIENT_ID,
@@ -466,7 +451,6 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     await logToAdmins(`Selesai blok Ditbinmas operator: ${summary.operators}`);
   } catch (err) {
     const errorMsg = `gagal menjalankan cron rekap Ditbinmas: ${err.message || err}`;
-    summary.menu21 = errorMsg;
     summary.superAdmins = errorMsg;
     summary.operators = errorMsg;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
@@ -475,7 +459,6 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
 
   const logMessage =
     '[CRON DIRREQ CUSTOM] Ringkasan Ditbinmas 20:30:\n' +
-    `- Grup (21): ${summary.menu21}\n` +
     `- Super admin: ${summary.superAdmins}\n` +
     `- Operator: ${summary.operators}`;
 
