@@ -14,7 +14,7 @@ import {
 } from "../model/waNotificationReminderStateModel.js";
 
 export const JOB_KEY = "./src/cron/cronWaNotificationReminder.js";
-const TARGET_CLIENT_ID = "DITBINMAS";
+const TARGET_CLIENT_IDS = new Set(["DITBINMAS", "BIDHUMAS"]);
 
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
@@ -287,7 +287,7 @@ export async function runCron() {
   for (const user of users) {
     if (user?.wa_notification_opt_in !== true) continue;
     const clientId = (user?.client_id || "").toString().trim().toUpperCase();
-    if (clientId !== TARGET_CLIENT_ID) continue;
+    if (!TARGET_CLIENT_IDS.has(clientId)) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
     if (!chatId || recipients.has(chatId)) continue;
 
@@ -339,4 +339,3 @@ export async function resetNotificationReminderState() {
   const todayKey = getTodayKey();
   await deleteReminderStateForDate(todayKey);
 }
-

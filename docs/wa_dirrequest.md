@@ -446,8 +446,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   hanya pengambilan konten dasar dan pengingat tugas otomatis yang berjalan
   dari bucket dirRequest.
 - Pengingat otomatis `cronWaNotificationReminder` tetap berjalan untuk pengguna
-  yang mendaftar melalui `notifwa#on` dan masih dikirim ke nomor personal sesuai
-  preferensi opt-in. Status pengiriman harian disimpan di tabel
+  Ditbinmas maupun BIDHUMAS yang mendaftar melalui `notifwa#on` dan masih
+  dikirim ke nomor personal sesuai preferensi opt-in. Status pengiriman harian disimpan di tabel
   `wa_notification_reminder_state` (key: `date_key`, `chat_id`) sehingga penerima
   yang sudah tercatat selesai tidak dikirimi ulang pada eksekusi berikutnya di
   hari yang sama, sementara penerima yang belum lengkap tetap maju ke tahap
