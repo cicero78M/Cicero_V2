@@ -170,6 +170,7 @@ jest.unstable_mockModule(
   '../src/service/kasatBinmasTiktokCommentRecapService.js',
   () => ({
     generateKasatBinmasTiktokCommentRecap: mockGenerateKasatBinmasTiktokCommentRecap,
+    resolveBaseDate: (date) => date || new Date('2025-12-16T00:00:00Z'),
   })
 );
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({

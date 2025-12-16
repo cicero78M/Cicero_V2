@@ -7,6 +7,18 @@ grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
 
+Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
+
+```
+📦 *Rekap All Data*
+4️⃣2️⃣ Instagram all data
+```
+
+Opsi tersebut menjalankan generator Excel rekap likes Instagram lintas polres
+(per client Direktorat yang aktif) dan mengirimkan berkasnya via WhatsApp.
+File sementara disimpan di `export_data/dirrequest` dengan nama berisi
+client, tanggal, serta jam eksekusi sebelum dihapus setelah dikirim.
+
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
@@ -123,7 +135,7 @@ rekap.
      memakai *Client ID* aktif (default `DITBINMAS`).
   3. Balas dengan format `username` atau `CLIENT_ID username` jika ingin
      mengecek akun Satbinmas milik client lain. Contoh: `satbinmas_official`
-     atau `MKS01 satbinmas_official`.
+  atau `MKS01 satbinmas_official`.
   4. Bot memanggil layanan RapidAPI (`fetchInstagramInfo`) untuk menarik
      metadata profil Instagram (nama, followers, postingan, status verifikasi,
      dan privasi).
@@ -203,7 +215,7 @@ rekap.
      (total konten, likes, komentar per akun) dan tetap menandai akun yang
      belum memiliki `secUid` tersinkron.
   4. Hasil dikirim sebagai pesan ringkasan ke operator. Balasan `batal`, `0`,
-     atau `kembali` akan menutup submenu dan kembali ke menu utama.
+  atau `kembali` akan menutup submenu dan kembali ke menu utama.
 
 - **Catatan pemanggilan data**
   - Menu **3️⃣7️⃣** dan **3️⃣9️⃣** tetap menjalankan pengambilan konten via
@@ -213,6 +225,26 @@ rekap.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
+
+## Rekap Instagram All Data (Menu 4️⃣2️⃣)
+- Rentang bulan selalu dimulai dari **September** (tahun berjalan) dan
+  otomatis mundur ke September tahun sebelumnya bila bulan saat ini belum
+  memasuki September. Rekap berhenti pada bulan berjalan.
+- Setiap bulan memanggil `getRekapLikesByClient(clientId, 'bulanan', <YYYY-MM>,
+  null, null, roleFlag)` dan mengakumulasikan `jumlah_like` per `client_name`
+  (polres). Nama polres dipakai langsung dari kolom `client_name` hasil query.
+- Excel disusun sebagai array-of-arrays dengan kolom: `Polres`, satu kolom per
+  bulan (nama bulan Indonesia + tahun), serta kolom `Total` per polres. Baris
+  `TOTAL` di bagian akhir menjumlahkan seluruh polres per bulan sekaligus
+  grand total.
+- Judul dan periode pada baris pertama serta kedua digabung (merged), header
+  dibekukan (`freeze`) bersama kolom Polres, dan `!cols` dihitung dari panjang
+  teks terpanjang di setiap kolom agar lebar menyesuaikan isi.
+- Sel angka diformat memakai `#,##0` (locale Indonesia) sehingga ribuan
+  menggunakan pemisah yang mudah dibaca, termasuk pada kolom total.
+- Berkas disimpan di `export_data/dirrequest` dengan format nama
+  `<CLIENT>_Rekap_Instagram_All_Data_<tanggal>_<jam>.xlsx`, dikirim ke WA via
+  `sendWAFile`, lalu dihapus begitu pengiriman selesai.
 
 ## Automasi Cron Satbinmas Official
 - Cron `cronDirRequestSatbinmasOfficialMedia` menjalankan menu **3️⃣7️⃣** dan
