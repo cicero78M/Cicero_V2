@@ -60,6 +60,7 @@ import {
   buildSatbinmasOfficialTiktokDbRecap,
 } from "../../service/satbinmasOfficialReportService.js";
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
+import { generateInstagramAllDataRecap } from "../../service/instagramAllDataRecapService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -2199,6 +2200,35 @@ async function performAction(
         }
         break;
       }
+      case "42": {
+        try {
+          const client = await findClientById(clientId);
+          const { filePath } = await generateInstagramAllDataRecap({
+            clientId,
+            roleFlag,
+            clientName: client?.nama || clientId,
+          });
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          await unlink(filePath);
+          msg = "✅ File Excel Instagram all data dikirim.";
+        } catch (error) {
+          console.error("Gagal membuat rekap Instagram all data:", error);
+          msg =
+            error?.message &&
+            (error.message.includes("Tidak ada data") ||
+              error.message.includes("Client tidak ditemukan"))
+              ? error.message
+              : "❌ Gagal membuat rekap Instagram all data.";
+        }
+        break;
+      }
       default:
         msg = "Menu tidak dikenal.";
   }
@@ -2328,6 +2358,8 @@ export const dirRequestHandlers = {
         "2️⃣7️⃣ Rekap file Instagram bulanan\n" +
         "2️⃣8️⃣ Rekap like Instagram per konten (Excel)\n" +
         "2️⃣9️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "📦 *Rekap All Data*\n" +
+        "4️⃣2️⃣ Instagram all data\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
         "3️⃣0️⃣ Laporan Kasatker\n" +
         "3️⃣1️⃣ Top ranking like/komentar personel\n" +
@@ -2473,6 +2505,7 @@ export const dirRequestHandlers = {
           "39",
           "40",
           "41",
+          "42",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -3238,4 +3271,3 @@ export {
 };
 
 export default dirRequestHandlers;
-
