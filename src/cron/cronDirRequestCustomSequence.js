@@ -425,17 +425,20 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
       buildDitbinmasRecapPlan(referenceDate);
 
     const groupRecipients = buildRecipients(ditbinmasClient, { includeGroup: true });
-    await logToAdmins('Mulai blok Ditbinmas group (menu 21)');
-    summary.menu21 = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: ['21'],
-      recipients: groupRecipients,
-      label: 'Ditbinmas group (21)',
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas group (menu 21): ${summary.menu21}`);
+    
+    // await logToAdmins('Mulai blok Ditbinmas group (menu 21)');
+    // summary.menu21 = await executeMenuActions({
+    //   clientId: DITBINMAS_CLIENT_ID,
+    //   actions: ['21'],
+    //   recipients: groupRecipients,
+    //   label: 'Ditbinmas group (21)',
+    //   userClientId: DITBINMAS_CLIENT_ID,
+    // });
+
+    // await logToAdmins(`Selesai blok Ditbinmas group (menu 21): ${summary.menu21}`);
 
     const superRecipients = getSuperAdminRecipients(ditbinmasClient);
+    
     if (groupRecipients.length > 0 && superRecipients.length > 0) {
       await delayAfterSend();
     }
