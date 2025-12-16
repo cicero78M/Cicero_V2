@@ -12,14 +12,20 @@ Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
 ```
 📦 *Rekap All Data*
 4️⃣2️⃣ Instagram all data
+4️⃣3️⃣ TikTok all data
 ```
 
-Opsi tersebut menjalankan generator Excel rekap likes Instagram lintas polres
+Opsi **4️⃣2️⃣** menjalankan generator Excel rekap likes Instagram lintas polres
 (per client Direktorat yang aktif) dan mengirimkan berkasnya via WhatsApp.
-Urutan polres pada rekap kini otomatis disusun dari total akumulasi likes
-tertinggi ke terendah agar polres paling aktif muncul di bagian atas.
-File sementara disimpan di `export_data/dirrequest` dengan nama berisi
-client, tanggal, serta jam eksekusi sebelum dihapus setelah dikirim.
+Urutan polres pada rekap otomatis disusun dari total akumulasi likes tertinggi
+ke terendah agar polres paling aktif muncul di bagian atas. File sementara
+disimpan di `export_data/dirrequest` dengan nama berisi client, tanggal, serta
+jam eksekusi sebelum dihapus setelah dikirim.
+
+Opsi **4️⃣3️⃣** menyiapkan rekap komentar TikTok lintas polres dengan pola bulan
+yang sama (September–bulan berjalan) dan mengirimkan Excel ke WA. Struktur
+kolomnya mengikuti rekap Instagram: deretan bulan per kolom, total per polres,
+dan baris grand total di bagian bawah.
 
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
@@ -247,6 +253,24 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Berkas disimpan di `export_data/dirrequest` dengan format nama
   `<CLIENT>_Rekap_Instagram_All_Data_<tanggal>_<jam>.xlsx`, dikirim ke WA via
   `sendWAFile`, lalu dihapus begitu pengiriman selesai.
+
+## Rekap TikTok All Data (Menu 4️⃣3️⃣)
+- Tujuan: merangkum jumlah komentar TikTok per polres untuk setiap bulan mulai
+  **September** hingga bulan saat ini dengan otomatis mundur ke September tahun
+  sebelumnya bila eksekusi dilakukan sebelum September.
+- Per bulan, layanan memanggil
+  `getRekapKomentarByClient(clientId, 'bulanan', <YYYY-MM>, null, null, roleFlag)`
+  dan menjumlahkan `jumlah_komentar` per `client_name` (polres) untuk menghasilkan
+  kolom **Total** per polres.
+- Baris polres diurutkan berdasarkan total komentar terbanyak ke paling sedikit,
+  lalu diurutkan alfabetis jika totalnya sama. Baris terakhir adalah `TOTAL` yang
+  menjumlahkan setiap kolom bulan serta grand total komentar.
+- Struktur Excel mengikuti rekap Instagram all data: baris judul dan periode
+  digabung (merged), header dibekukan (`freeze`) bersama kolom `Polres`, dan
+  lebar kolom dihitung dari isi terpanjang agar mudah dibaca.
+- Sel angka memakai format `#,##0` (locale Indonesia). Nama file mengikuti pola
+  `<CLIENT>_Rekap_TikTok_All_Data_<tanggal>_<jam>.xlsx` dan dikirim ke WA lewat
+  `sendWAFile` sebelum berkas sementara dihapus.
 
 ## Automasi Cron Satbinmas Official
 - Cron `cronDirRequestSatbinmasOfficialMedia` menjalankan menu **3️⃣7️⃣** dan
