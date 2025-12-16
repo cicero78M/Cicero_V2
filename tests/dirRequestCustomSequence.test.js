@@ -4,14 +4,22 @@ const sendDebug = jest.fn();
 const safeSendMessage = jest.fn();
 const runDirRequestAction = jest.fn();
 const findClientById = jest.fn(async () => ({
+  client_group: '120363025123456789@g.us',
   client_super: '08123456789',
   client_operator: '081987654321',
   client_status: true,
   client_type: 'direktorat',
 }));
 const splitRecipientField = jest.fn((value) => (value ? value.split(',') : []));
+const normalizeGroupId = jest.fn((value) => value);
 const runDirRequestFetchSosmed = jest.fn(async () => {});
 const delayAfterSend = jest.fn(async () => {});
+
+const originalExtraActions = process.env.DITSAMAPTA_EXTRA_ACTIONS;
+
+afterAll(() => {
+  process.env.DITSAMAPTA_EXTRA_ACTIONS = originalExtraActions;
+});
 
 beforeEach(() => {
   jest.resetModules();
@@ -20,8 +28,10 @@ beforeEach(() => {
   runDirRequestAction.mockClear();
   findClientById.mockClear();
   splitRecipientField.mockClear();
+  normalizeGroupId.mockClear();
   runDirRequestFetchSosmed.mockClear();
   delayAfterSend.mockClear();
+  process.env.DITSAMAPTA_EXTRA_ACTIONS = '';
 });
 
 async function loadModules() {
@@ -51,6 +61,7 @@ async function loadModules() {
   }));
 
   jest.unstable_mockModule('../src/cron/cronDirRequestFetchSosmed.js', () => ({
+    normalizeGroupId,
     runCron: runDirRequestFetchSosmed,
   }));
 
@@ -59,31 +70,31 @@ async function loadModules() {
   }));
 
   const module = await import('../src/cron/cronDirRequestCustomSequence.js');
-  return { runCron: module.runCron, runDitbinmasRecapSequence: module.runDitbinmasRecapSequence };
+  return { runCron: module.runCron, runBidhumasMenuSequence: module.runBidhumasMenuSequence };
 }
 
-test('runCron fetches sosmed and dispatches Ditbinmas menus 6/9/30/34/35 only', async () => {
+test('runCron dispatches DITSAMAPTA menus including 28 and 29', async () => {
   const { runCron } = await loadModules();
 
   await runCron();
 
   expect(runDirRequestFetchSosmed).toHaveBeenCalled();
 
-  const ditbinmasActions = runDirRequestAction.mock.calls
-    .filter(([args]) => args.clientId === 'DITBINMAS')
+  const ditsamaptaActions = runDirRequestAction.mock.calls
+    .filter(([args]) => args.clientId === 'DITSAMAPTA')
     .map(([args]) => args.action);
 
-  expect(ditbinmasActions).toEqual(expect.arrayContaining(['6', '9', '30', '34', '35']));
-  expect(ditbinmasActions).not.toContain('21');
-  expect(runDirRequestAction.mock.calls.every(([args]) => args.clientId === 'DITBINMAS')).toBe(true);
+  expect(ditsamaptaActions).toEqual(expect.arrayContaining(['6', '9', '28', '29']));
 });
 
-test('runDitbinmasRecapSequence skips menu 21 and sends operator recap', async () => {
-  const { runDitbinmasRecapSequence } = await loadModules();
+test('runBidhumasMenuSequence includes recap menus 28 and 29', async () => {
+  const { runBidhumasMenuSequence } = await loadModules();
 
-  await runDitbinmasRecapSequence(new Date('2024-06-03T13:30:00+07:00'));
+  await runBidhumasMenuSequence();
 
-  const actions = runDirRequestAction.mock.calls.map(([args]) => args.action);
-  expect(actions).toEqual(expect.arrayContaining(['6', '9', '30', '34', '35']));
-  expect(actions).not.toContain('21');
+  const bidhumasActions = runDirRequestAction.mock.calls
+    .filter(([args]) => args.clientId === 'BIDHUMAS')
+    .map(([args]) => args.action);
+
+  expect(bidhumasActions).toEqual(expect.arrayContaining(['6', '9', '28', '29']));
 });

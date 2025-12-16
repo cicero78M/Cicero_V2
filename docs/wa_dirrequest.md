@@ -279,10 +279,12 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Kegagalan langsung dikirim ketika terjadi dengan detail error singkat, lalu
   tetap dirangkum pada pesan akhir.
 - Blok besar memiliki log pembuka dan penutup:
-  - `runDirRequestFetchSosmed`.
-  - Sekuens Ditbinmas super admin (menu 6/9/34/35) dan operator (menu 30) yang
-    berjalan berurutan.
-  - Cron rekap Ditbinmas (super admin 6/9/34/35, operator 30).
+  - `runDirRequestFetchSosmed` (baik di alur utama maupun BIDHUMAS).
+  - Sekuens DITSAMAPTA (menu 6, 9, & 28) yang dikirim ke grup, super admin,
+    dan operator direktorat.
+  - Eksekusi menu 21 Ditbinmas.
+  - Sekuens BIDHUMAS (menu 6, 9, & 28) untuk grup dan super admin BIDHUMAS.
+  - Cron rekap Ditbinmas (menu 21, super admin 6/9/34/35, operator 30).
 - Urutan log WA yang diterima admin mencerminkan eksekusi nyata: pesan pembuka
   blok → progres per aksi/penerima (mulai/sukses/gagal) → pesan penutup blok →
   ringkasan akhir. Dengan pola ini admin dapat memantau status cron secara
@@ -306,28 +308,41 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Automasi Cron DirRequest Custom
 - Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
-  harian dengan kiriman otomatis Ditbinmas tanpa perlu input operator.
-- Jadwal **15:00**, **18:00**, dan **20:30** menjalankan urutan yang sama:
+  harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
+- Jadwal **15:00** dan **18:00** menjalankan urutan penuh:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
      Instagram dan TikTok seluruh direktorat aktif.
-  2. Mengirim menu **6️⃣** (IG likes), **9️⃣** (komentar TikTok), **3️⃣4️⃣**
-     (rekap narasi, periode mengikuti harian/mingguan/bulanan), dan **3️⃣5️⃣**
-     (rekap Excel) ke daftar super admin Ditbinmas (`client_super`).
-  3. Mengirim menu **3️⃣0️⃣** (rekap kasatker dengan konteks harian/mingguan/
-     bulanan) ke daftar operator Ditbinmas (`client_operator`).
-- Seluruh aksi hanya menargetkan *Client ID* `DITBINMAS`; menu **21** serta
-  blok Ditsamapta/BIDHUMAS tidak lagi dieksekusi di cron ini.
-- Penerima difilter dengan `toWAid`/`splitRecipientField` sehingga hanya WID
-  valid yang dipakai sebelum pengiriman.
+  2. Menjalankan menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** untuk *Client ID*
+     `DITSAMAPTA` (ditambah menu ekstra dari `DITSAMAPTA_EXTRA_ACTIONS` bila
+     diset) ke tiga target sekaligus: grup WA `client_group`, nomor super admin
+     `client_super`, dan operator di `client_operator`.
+  3. Memicu menu **2️⃣1️⃣** (rekap gabungan Ditbinmas) untuk *Client ID*
+     `DITBINMAS` dan mengirimkan narasi, file teks, serta Excel rekap ke grup
+     WA Ditbinmas yang terkonfigurasi di `client_group`.
+  4. Memicu menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** (rekap likes per konten dalam
+     Excel) untuk *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target
+     sekaligus: grup WA `client_group` dan daftar Super Admin dari kolom
+     `client_super`.
+- Jadwal **20:30** kini dikurangi agar tidak menabrak recap Ditbinmas/BIDHUMAS:
+  - Hanya menjalankan blok Ditsamapta dengan menu **6**, **9**, **28**, dan
+    **29**.
+  - Tidak memicu `cronDirRequestFetchSosmed`, menu 21 Ditbinmas, maupun blok
+    BIDHUMAS.
+  - Menu ekstra pada `DITSAMAPTA_EXTRA_ACTIONS` diabaikan agar fokus pada empat
+    menu utama yang wajib.
+- Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
+  ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
+  aktif bertipe Direktorat sebelum mengirim.
 - Debug dan kegagalan menu dicatat lewat `sendDebug` serta dikirim ke daftar
   admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
-  membuka dashboard. Ringkasan akhir mencantumkan status fetch sosmed,
-  eksekusi super admin, dan operator secara terpisah.
+  membuka dashboard. Ringkasan akhir kini mencantumkan status Ditsamapta, Ditbinmas,
+  dan BIDHUMAS secara terpisah, termasuk penanda ketika suatu blok dilewati.
 
 ## Automasi Rekap Ditbinmas 20:30
 - Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
-  (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**, menggunakan
-  set menu **6/9/30/34/35** yang sama dengan cron custom.
+  (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**. Slot
+  **20:30** kini dilepas dari `cronDirRequestCustomSequence` agar recap
+  dan kiriman BIDHUMAS tidak terkirim ganda.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
   - Menu **30** dikirim hanya ke `client_operator`.
