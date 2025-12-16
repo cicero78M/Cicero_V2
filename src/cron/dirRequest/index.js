@@ -65,7 +65,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas evening recap: menus 6, 9, 34, 35 to super admins and menu 30 to operators with weekly/monthly add-ons.',
     schedules: [
-      { cronExpression: '30 20 * * *', handler: () => runDitbinmasRecapSequence(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '33 20 * * *', handler: () => runDitbinmasRecapSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 
