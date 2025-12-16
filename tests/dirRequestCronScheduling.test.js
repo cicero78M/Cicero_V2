@@ -105,47 +105,24 @@ async function loadModules() {
   return {
     registerDirRequestCrons: dirRequest.registerDirRequestCrons,
     DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY: customSequence.JOB_KEY,
-    BIDHUMAS_2030_JOB_KEY: customSequence.BIDHUMAS_2030_JOB_KEY,
     DITBINMAS_RECAP_JOB_KEY: customSequence.DITBINMAS_RECAP_JOB_KEY,
   };
 }
 
-test('registerDirRequestCrons schedules Ditbinmas recap, BIDHUMAS, and custom sequence at 20:30', async () => {
-  const {
-    registerDirRequestCrons,
-    DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    BIDHUMAS_2030_JOB_KEY,
-    DITBINMAS_RECAP_JOB_KEY,
-  } = await loadModules();
+test('registerDirRequestCrons schedules Ditbinmas custom and recap sequences at 20:30', async () => {
+  const { registerDirRequestCrons, DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY, DITBINMAS_RECAP_JOB_KEY } =
+    await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
 
   const jobsAt2030 = scheduledJobs.filter((job) => job.cronExpression === '30 20 * * *');
 
-  expect(jobsAt2030.map((job) => job.jobKey)).toEqual([
-    DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    DITBINMAS_RECAP_JOB_KEY,
-    BIDHUMAS_2030_JOB_KEY,
-  ]);
-});
-
-test('20:30 BIDHUMAS handler targets BIDHUMAS recipients', async () => {
-  const { registerDirRequestCrons, BIDHUMAS_2030_JOB_KEY } = await loadModules();
-
-  registerDirRequestCrons(waGatewayClient);
-
-  const bidhumasJob = scheduledJobs.find((job) => job.jobKey === BIDHUMAS_2030_JOB_KEY);
-  expect(bidhumasJob).toBeDefined();
-
-  await bidhumasJob.handler();
-
-  expect(findClientById).toHaveBeenCalledWith('BIDHUMAS');
-  expect(runDirRequestAction).toHaveBeenCalledWith(
-    expect.objectContaining({ clientId: 'BIDHUMAS', userClientId: 'BIDHUMAS' }),
+  expect(jobsAt2030.map((job) => job.jobKey).sort()).toEqual(
+    ['fetch-job', DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY, DITBINMAS_RECAP_JOB_KEY].sort()
   );
 });
 
-test('20:30 Ditbinmas recap also sends menu 21 to the Ditbinmas group', async () => {
+test('20:30 Ditbinmas recap omits menu 21 and targets Ditbinmas recipients only', async () => {
   const { registerDirRequestCrons, DITBINMAS_RECAP_JOB_KEY } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
@@ -155,7 +132,8 @@ test('20:30 Ditbinmas recap also sends menu 21 to the Ditbinmas group', async ()
 
   await ditbinmasRecapJob.handler();
 
-  expect(runDirRequestAction).toHaveBeenCalledWith(
-    expect.objectContaining({ clientId: 'DITBINMAS', action: '21' }),
-  );
+  expect(findClientById).toHaveBeenCalledWith('DITBINMAS');
+  const actions = runDirRequestAction.mock.calls.map(([args]) => args.action);
+  expect(actions).toEqual(expect.arrayContaining(['6', '9', '30', '34', '35']));
+  expect(actions).not.toContain('21');
 });
