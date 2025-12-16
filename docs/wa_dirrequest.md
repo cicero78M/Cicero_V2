@@ -27,6 +27,10 @@ yang sama (September–bulan berjalan) dan mengirimkan Excel ke WA. Struktur
 kolomnya mengikuti rekap Instagram: deretan bulan per kolom, total per polres,
 dan baris grand total di bagian bawah.
 
+Input **4️⃣3️⃣** kini dikenali langsung oleh bot tanpa balasan *"Pilihan tidak
+valid"*, sehingga operator dapat memicu rekap TikTok all data dari menu utama
+dirrequest tanpa langkah tambahan.
+
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
