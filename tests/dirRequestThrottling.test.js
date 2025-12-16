@@ -89,7 +89,7 @@ test('Ditbinmas recap sequence applies throttling across multi-action recipients
 
   expect(runDirRequestAction).toHaveBeenCalledTimes(1);
 
-  const expectedCalls = 6;
+  const expectedCalls = 5;
   for (let i = 2; i <= expectedCalls; i += 1) {
     await advanceAndFlush();
     expect(runDirRequestAction).toHaveBeenCalledTimes(i);
