@@ -5,17 +5,11 @@ import { splitRecipientField } from '../repository/clientContactRepository.js';
 import { safeSendMessage, getAdminWAIds } from '../utils/waHelper.js';
 import { waGatewayClient } from '../service/waService.js';
 import { delayAfterSend } from './dirRequestThrottle.js';
-import {
-  normalizeGroupId,
-  runCron as runDirRequestFetchSosmed,
-} from './cronDirRequestFetchSosmed.js';
+import { runCron as runDirRequestFetchSosmed } from './cronDirRequestFetchSosmed.js';
 
 const DITBINMAS_CLIENT_ID = 'DITBINMAS';
-const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
-const DITSAMAPTA_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
 export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
-export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
 
 function validateDirektoratClient(client, clientId) {
   if (!client) {
@@ -44,10 +38,6 @@ function toWAid(id) {
   return trimmed.replace(/\D/g, '') + '@c.us';
 }
 
-function getGroupRecipient(client) {
-  return normalizeGroupId(client?.client_group);
-}
-
 function getRecipientsFromField(rawValue) {
   return splitRecipientField(rawValue).map(toWAid).filter(Boolean);
 }
@@ -58,30 +48,6 @@ function getSuperAdminRecipients(client) {
 
 function getOperatorRecipients(client) {
   return getRecipientsFromField(client?.client_operator);
-}
-
-function buildRecipients(
-  client,
-  { includeGroup = false, includeSuperAdmins = false, includeOperators = false } = {}
-) {
-  const recipients = new Set();
-
-  if (includeGroup) {
-    const groupId = getGroupRecipient(client);
-    if (groupId) {
-      recipients.add(groupId);
-    }
-  }
-
-  if (includeSuperAdmins) {
-    getSuperAdminRecipients(client).forEach((wa) => recipients.add(wa));
-  }
-
-  if (includeOperators) {
-    getOperatorRecipients(client).forEach((wa) => recipients.add(wa));
-  }
-
-  return Array.from(recipients);
 }
 
 const adminRecipients = new Set(getAdminWAIds());
@@ -189,61 +155,6 @@ async function executeMenuActions({
   return summary;
 }
 
-export async function runBidhumasMenuSequence({
-  includeFetch = true,
-  label = 'Menu 6, 9, 28, & 29 BIDHUMAS',
-} = {}) {
-  let fetchStatus = includeFetch ? 'pending' : 'skipped';
-  let sendStatus = 'pending';
-
-  if (includeFetch) {
-    try {
-      await logToAdmins('Mulai blok runDirRequestFetchSosmed (BIDHUMAS)');
-      await runDirRequestFetchSosmed();
-      fetchStatus = 'sosmed fetch selesai';
-      await logToAdmins('Selesai blok runDirRequestFetchSosmed (BIDHUMAS)');
-    } catch (err) {
-      fetchStatus = `gagal sosmed fetch: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: fetchStatus });
-      await logToAdmins(fetchStatus);
-    }
-  }
-
-  try {
-    await logToAdmins('Mulai sekuens BIDHUMAS (menu 6, 9, 28, & 29)');
-    const bidhumasClient = await findClientById(BIDHUMAS_CLIENT_ID);
-    const recipients = buildRecipients(bidhumasClient, {
-      includeGroup: true,
-      includeSuperAdmins: true,
-    });
-
-    sendStatus = await executeMenuActions({
-      clientId: BIDHUMAS_CLIENT_ID,
-      actions: ['6', '9', '28', '29'],
-      recipients,
-      label,
-      userClientId: BIDHUMAS_CLIENT_ID,
-      roleFlag: BIDHUMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai sekuens BIDHUMAS: ${sendStatus}`);
-  } catch (err) {
-    sendStatus = `gagal kirim BIDHUMAS: ${err.message || err}`;
-    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: sendStatus });
-    await logToAdmins(sendStatus);
-  }
-
-  return { fetchStatus, sendStatus };
-}
-
-function buildDitsamaptaActions() {
-  const baseActions = ['6', '9', '28', '29'];
-  const extraActions = splitRecipientField(process.env.DITSAMAPTA_EXTRA_ACTIONS || '')
-    .map((action) => action.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set([...baseActions, ...extraActions]));
-}
-
 function isLastDayOfMonth(date = new Date()) {
   const checkDate = new Date(date);
   const nextDay = new Date(checkDate);
@@ -289,21 +200,70 @@ function buildDitbinmasRecapPlan(referenceDate = new Date()) {
   };
 }
 
+async function runDitbinmasActions({ referenceDate = new Date(), labelPrefix = 'Ditbinmas' } = {}) {
+  const summary = {
+    superAdmins: 'pending',
+    operators: 'pending',
+  };
+
+  const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
+  const { valid, reason } = validateDirektoratClient(ditbinmasClient, DITBINMAS_CLIENT_ID);
+
+  if (!valid) {
+    const invalidMsg = `${labelPrefix}: ${reason}`;
+    summary.superAdmins = reason;
+    summary.operators = reason;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: invalidMsg });
+    await logToAdmins(invalidMsg);
+    return summary;
+  }
+
+  const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
+    buildDitbinmasRecapPlan(referenceDate);
+
+  const superRecipients = getSuperAdminRecipients(ditbinmasClient);
+  await logToAdmins(
+    `${labelPrefix}: mulai blok super admin (6/9/34/35 ${recapPeriods.join('/')})`
+  );
+  summary.superAdmins = await executeMenuActions({
+    clientId: DITBINMAS_CLIENT_ID,
+    actions: superActions,
+    recipients: superRecipients,
+    label: `${labelPrefix} super admin (6,9,34,35 ${recapPeriods.join('/')})`,
+    roleFlag: DITBINMAS_CLIENT_ID,
+    userClientId: DITBINMAS_CLIENT_ID,
+  });
+  await logToAdmins(`${labelPrefix}: selesai blok super admin: ${summary.superAdmins}`);
+
+  const operatorRecipients = getOperatorRecipients(ditbinmasClient);
+  if (superRecipients.length > 0 && operatorRecipients.length > 0) {
+    await delayAfterSend();
+  }
+  await logToAdmins(`${labelPrefix}: mulai blok operator (30 ${kasatkerPeriods.join('/')})`);
+  summary.operators = await executeMenuActions({
+    clientId: DITBINMAS_CLIENT_ID,
+    actions: operatorActions,
+    recipients: operatorRecipients,
+    label: `${labelPrefix} operator (30 ${kasatkerPeriods.join('/')})`,
+    roleFlag: DITBINMAS_CLIENT_ID,
+    userClientId: DITBINMAS_CLIENT_ID,
+  });
+  await logToAdmins(`${labelPrefix}: selesai blok operator: ${summary.operators}`);
+
+  return summary;
+}
+
 export async function runCron({
   includeFetch = true,
-  includeDitbinmas = true,
-  includeBidhumas = true,
-  ditsamaptaActions = buildDitsamaptaActions(),
-  ditsamaptaLabel = 'Menu recap DITSAMAPTA',
-  summaryTitle = '[CRON DIRREQ CUSTOM] Ringkasan',
+  referenceDate = new Date(),
+  summaryTitle = '[CRON DIRREQ CUSTOM] Ringkasan Ditbinmas',
 } = {}) {
-  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai urutan cron custom dirrequest' });
+  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai urutan cron custom dirrequest (Ditbinmas-only)' });
 
   const summary = {
     fetch: includeFetch ? 'pending' : 'dilewati (tidak dijadwalkan)',
-    ditsamapta: 'pending',
-    ditbinmas: includeDitbinmas ? 'pending' : 'dilewati (tidak dijadwalkan)',
-    bidhumas: includeBidhumas ? 'pending' : 'dilewati (tidak dijadwalkan)',
+    superAdmins: 'pending',
+    operators: 'pending',
   };
 
   if (includeFetch) {
@@ -320,153 +280,51 @@ export async function runCron({
   }
 
   try {
-    await logToAdmins(`Mulai blok sekuens DITSAMAPTA (${ditsamaptaActions.join('/')})`);
-    const ditsamaptaClient = await findClientById(DITSAMAPTA_CLIENT_ID);
-    const { valid, reason } = validateDirektoratClient(ditsamaptaClient, DITSAMAPTA_CLIENT_ID);
-
-    if (!valid) {
-      summary.ditsamapta = reason;
-      await logToAdmins(`Lewati blok DITSAMAPTA: ${reason}`);
-    } else {
-      const recipients = buildRecipients(ditsamaptaClient, {
-        includeGroup: true,
-        includeSuperAdmins: true,
-        includeOperators: true,
-      });
-
-      summary.ditsamapta = await executeMenuActions({
-        clientId: DITSAMAPTA_CLIENT_ID,
-        actions: ditsamaptaActions,
-        recipients,
-        label: ditsamaptaLabel,
-        roleFlag: DITSAMAPTA_CLIENT_ID,
-        userClientId: DITSAMAPTA_CLIENT_ID,
-      });
-      await logToAdmins(`Selesai blok DITSAMAPTA: ${summary.ditsamapta}`);
-    }
+    const { superAdmins, operators } = await runDitbinmasActions({
+      referenceDate,
+      labelPrefix: 'Ditbinmas (6/9/30/34/35)',
+    });
+    summary.superAdmins = superAdmins;
+    summary.operators = operators;
   } catch (err) {
-    summary.ditsamapta = `gagal kirim DITSAMAPTA: ${err.message || err}`;
-    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditsamapta });
-    await logToAdmins(summary.ditsamapta);
-  }
-
-  if (includeDitbinmas) {
-    try {
-      await logToAdmins('Mulai blok Menu 21 DITBINMAS');
-      const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
-      const recipients = buildRecipients(ditbinmasClient, { includeGroup: true });
-      summary.ditbinmas = await executeMenuActions({
-        clientId: DITBINMAS_CLIENT_ID,
-        actions: ['21'],
-        recipients,
-        label: 'Menu 21 DITBINMAS',
-        userClientId: DITBINMAS_CLIENT_ID,
-      });
-      await logToAdmins(`Selesai blok Menu 21 DITBINMAS: ${summary.ditbinmas}`);
-    } catch (err) {
-      summary.ditbinmas = `gagal rekap DITBINMAS: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmas });
-      await logToAdmins(summary.ditbinmas);
-    }
-  }
-
-  if (includeBidhumas) {
-    try {
-      await logToAdmins('Mulai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29)');
-      const { sendStatus } = await runBidhumasMenuSequence({ label: 'Menu 6, 9, 28, & 29 BIDHUMAS' });
-      summary.bidhumas = sendStatus;
-      await logToAdmins(`Selesai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29): ${sendStatus}`);
-    } catch (err) {
-      summary.bidhumas = `gagal kirim BIDHUMAS: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.bidhumas });
-      await logToAdmins(summary.bidhumas);
-    }
+    const errorMsg = `gagal kirim Ditbinmas: ${err.message || err}`;
+    summary.superAdmins = errorMsg;
+    summary.operators = errorMsg;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
+    await logToAdmins(errorMsg);
   }
 
   const logMessage =
     `${summaryTitle}:\n` +
     `- Fetch sosmed: ${summary.fetch}\n` +
-    `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
-    `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
-    `- Menu 6/9/28/29 BIDHUMAS: ${summary.bidhumas}`;
+    `- Ditbinmas super admin (6/9/34/35): ${summary.superAdmins}\n` +
+    `- Ditbinmas operator (30): ${summary.operators}`;
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);
 }
 
-export function runDitsamaptaOnlySequence() {
-  const baseDitsamaptaActions = ['6', '9', '28', '29'];
-  return runCron({
-    includeFetch: true,
-    includeDitbinmas: true,
-    includeBidhumas: true,
-    ditsamaptaActions: baseDitsamaptaActions,
-    ditsamaptaLabel: 'Menu DITSAMAPTA 20:30 (6/9/28/29)',
-    summaryTitle: '[CRON DIRREQ CUSTOM] Ringkasan DITSAMAPTA 22:00',
-  });
-}
-
 export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
   sendDebug({
     tag: 'CRON DIRREQ CUSTOM',
-    msg: 'Mulai cron rekap Ditbinmas (menu 21 + 6/9/30/34/35)',
+    msg: 'Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)',
   });
-  await logToAdmins('Mulai cron rekap Ditbinmas (menu 21 + 6/9/30/34/35)');
+  await logToAdmins('Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)');
 
   const summary = {
-    menu21: 'pending',
     superAdmins: 'pending',
     operators: 'pending',
   };
 
   try {
-    const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
-    const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
-      buildDitbinmasRecapPlan(referenceDate);
-
-    const groupRecipients = buildRecipients(ditbinmasClient, { includeGroup: true });
-    await logToAdmins('Mulai blok Ditbinmas group (menu 21)');
-    summary.menu21 = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: ['21'],
-      recipients: groupRecipients,
-      label: 'Ditbinmas group (21)',
-      userClientId: DITBINMAS_CLIENT_ID,
+    const { superAdmins, operators } = await runDitbinmasActions({
+      referenceDate,
+      labelPrefix: 'Ditbinmas 20:30',
     });
-    await logToAdmins(`Selesai blok Ditbinmas group (menu 21): ${summary.menu21}`);
-
-    const superRecipients = getSuperAdminRecipients(ditbinmasClient);
-    if (groupRecipients.length > 0 && superRecipients.length > 0) {
-      await delayAfterSend();
-    }
-    await logToAdmins('Mulai blok Ditbinmas super admin (6/9/34/35)');
-    summary.superAdmins = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: superActions,
-      recipients: superRecipients,
-      label: `Ditbinmas super admin (6,9,34,35 ${recapPeriods.join('/')})`,
-      roleFlag: DITBINMAS_CLIENT_ID,
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas super admin: ${summary.superAdmins}`);
-
-    const operatorRecipients = getOperatorRecipients(ditbinmasClient);
-    if (superRecipients.length > 0 && operatorRecipients.length > 0) {
-      await delayAfterSend();
-    }
-    await logToAdmins('Mulai blok Ditbinmas operator (30)');
-    summary.operators = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: operatorActions,
-      recipients: operatorRecipients,
-      label: `Ditbinmas operator (30 ${kasatkerPeriods.join('/')})`,
-      roleFlag: DITBINMAS_CLIENT_ID,
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas operator: ${summary.operators}`);
+    summary.superAdmins = superAdmins;
+    summary.operators = operators;
   } catch (err) {
     const errorMsg = `gagal menjalankan cron rekap Ditbinmas: ${err.message || err}`;
-    summary.menu21 = errorMsg;
     summary.superAdmins = errorMsg;
     summary.operators = errorMsg;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: errorMsg });
@@ -475,9 +333,8 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
 
   const logMessage =
     '[CRON DIRREQ CUSTOM] Ringkasan Ditbinmas 20:30:\n' +
-    `- Grup (21): ${summary.menu21}\n` +
-    `- Super admin: ${summary.superAdmins}\n` +
-    `- Operator: ${summary.operators}`;
+    `- Super admin (6/9/34/35): ${summary.superAdmins}\n` +
+    `- Operator (30): ${summary.operators}`;
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);
