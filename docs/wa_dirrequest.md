@@ -16,6 +16,8 @@ Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
 
 Opsi tersebut menjalankan generator Excel rekap likes Instagram lintas polres
 (per client Direktorat yang aktif) dan mengirimkan berkasnya via WhatsApp.
+Urutan polres pada rekap kini otomatis disusun dari total akumulasi likes
+tertinggi ke terendah agar polres paling aktif muncul di bagian atas.
 File sementara disimpan di `export_data/dirrequest` dengan nama berisi
 client, tanggal, serta jam eksekusi sebelum dihapus setelah dikirim.
 

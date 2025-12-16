@@ -128,9 +128,12 @@ export async function generateInstagramAllDataRecap({
     });
   }
 
-  const polresRows = Array.from(polresMap.values()).sort((a, b) =>
-    a.polres.localeCompare(b.polres, 'id')
-  );
+  const polresRows = Array.from(polresMap.values()).sort((a, b) => {
+    if (a.total !== b.total) {
+      return b.total - a.total;
+    }
+    return a.polres.localeCompare(b.polres, 'id');
+  });
   const hasData = polresRows.some(
     (row) => row.total > 0 || row.monthly.some((value) => value > 0)
   );
