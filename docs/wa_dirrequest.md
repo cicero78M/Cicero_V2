@@ -135,6 +135,25 @@ dirrequest tanpa langkah tambahan.
   mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
   kembali ke menu tanpa menampilkan pesan kosong.
 
+## Monitoring Kasatker – Rekap Likes IG Kasat Binmas (Excel)
+- Blok Monitoring Kasatker kini menambahkan entri **4️⃣4️⃣ Rekap likes Instagram
+  Kasat Binmas (Excel)**. Opsi ini berjalan berdampingan dengan menu absensi
+  naratif (3️⃣4️⃣) dan komentar TikTok (3️⃣5️⃣), namun langsung menyiapkan file
+  Excel tanpa menampilkan rangkuman teks.
+- Setelah memilih **4️⃣4️⃣**, bot meminta periode rekap: **1. Harian**, **2.
+  Mingguan** (Senin–Minggu berjalan), atau **3. Bulanan**. Balas angka 1–3
+  atau ketik *batal* untuk kembali ke menu utama Monitoring Kasatker.
+- File Excel yang dikirim berisi kolom **Polres**, **Pangkat dan Nama**, dan
+  **Total Likes (akumulatif)**. Baris diurutkan dari total likes tertinggi,
+  lalu pangkat (mengikuti urutan PANGKAT_ORDER Kasat Binmas), lalu nama agar
+  rekap mudah dipantau oleh pimpinan.
+- Label periode pada baris kedua sheet mengikuti format submenu (contoh: harian
+  "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
+  bulanan "Bulan Mei 2024").
+- Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
+  dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
+  direktori kerja tetap bersih.
+
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
 resmi Satbinmas. Menu utama kini menampilkan rentang opsi **3️⃣6️⃣–4️⃣1️⃣** untuk
