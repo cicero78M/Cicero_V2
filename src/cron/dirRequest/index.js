@@ -8,6 +8,8 @@ import {
   JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
   runDitbinmasRecapSequence,
   DITBINMAS_RECAP_JOB_KEY,
+  runDitbinmasRecapAndCustomSequence,
+  DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
 } from '../cronDirRequestCustomSequence.js';
 import {
   runCron as runBidhumasEvening,
@@ -61,6 +63,18 @@ const dirRequestCrons = [
     ],
   },
   {
+    jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
+    description:
+      'Fetch sosmed, run Ditbinmas recap, lalu jalankan urutan custom dirrequest lengkap pada slot 20:30.',
+    schedules: [
+      {
+        cronExpression: '30 20 * * *',
+        handler: () => runDitbinmasRecapAndCustomSequence(),
+        options: DEFAULT_CRON_OPTIONS,
+      },
+    ],
+  },
+  {
     jobKey: DITBINMAS_RECAP_JOB_KEY,
     description:
       'Send Ditbinmas evening recap: menu 21 to the Ditbinmas group, menus 6, 9, 34, 35 to super admins, and menu 30 to operators with weekly/monthly add-ons.',
@@ -69,7 +83,7 @@ const dirRequestCrons = [
     ],
   },
 
-    {
+  {
     jobKey: BIDHUMAS_EVENING_JOB_KEY,
     description:
       'Send Bidhumas 22.00 evening recap..',
