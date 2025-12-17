@@ -14,7 +14,6 @@ const DITBINMAS_CLIENT_ID = 'DITBINMAS';
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
 const DITSAMAPTA_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
-export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
 export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
 export const DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY = `${JOB_KEY}#ditbinmas-recap-and-custom`;
 
