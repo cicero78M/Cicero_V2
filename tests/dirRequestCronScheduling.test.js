@@ -11,6 +11,7 @@ const runDirRequestAction = jest.fn();
 const findClientById = jest.fn(async () => ({
   client_group: '120363025123456789@g.us',
   client_super: '08123456789',
+  client_operator: '081987654321',
 }));
 const splitRecipientField = jest.fn((value) => (value ? value.split(',') : []));
 const normalizeGroupId = jest.fn((value) => value);
@@ -105,17 +106,17 @@ async function loadModules() {
   return {
     registerDirRequestCrons: dirRequest.registerDirRequestCrons,
     DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY: customSequence.JOB_KEY,
+    DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY: customSequence.DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
     BIDHUMAS_2030_JOB_KEY: customSequence.BIDHUMAS_2030_JOB_KEY,
     DITBINMAS_RECAP_JOB_KEY: customSequence.DITBINMAS_RECAP_JOB_KEY,
   };
 }
 
-test('registerDirRequestCrons schedules Ditbinmas recap, BIDHUMAS, and custom sequence at 20:30', async () => {
+test('registerDirRequestCrons schedules custom and combined Ditbinmas recap at 20:30', async () => {
   const {
     registerDirRequestCrons,
     DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    BIDHUMAS_2030_JOB_KEY,
-    DITBINMAS_RECAP_JOB_KEY,
+    DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
   } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
@@ -124,28 +125,27 @@ test('registerDirRequestCrons schedules Ditbinmas recap, BIDHUMAS, and custom se
 
   expect(jobsAt2030.map((job) => job.jobKey)).toEqual([
     DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    DITBINMAS_RECAP_JOB_KEY,
-    BIDHUMAS_2030_JOB_KEY,
+    DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
   ]);
 });
 
-test('20:30 BIDHUMAS handler targets BIDHUMAS recipients', async () => {
-  const { registerDirRequestCrons, BIDHUMAS_2030_JOB_KEY } = await loadModules();
+test('20:30 Ditbinmas recap + custom job runs Ditbinmas recap before custom sequence', async () => {
+  const { registerDirRequestCrons, DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
 
-  const bidhumasJob = scheduledJobs.find((job) => job.jobKey === BIDHUMAS_2030_JOB_KEY);
-  expect(bidhumasJob).toBeDefined();
+  const combinedJob = scheduledJobs.find((job) => job.jobKey === DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY);
+  expect(combinedJob).toBeDefined();
 
-  await bidhumasJob.handler();
+  await combinedJob.handler();
 
-  expect(findClientById).toHaveBeenCalledWith('BIDHUMAS');
   expect(runDirRequestAction).toHaveBeenCalledWith(
-    expect.objectContaining({ clientId: 'BIDHUMAS', userClientId: 'BIDHUMAS' }),
+    expect.objectContaining({ clientId: 'DITBINMAS', action: '6' }),
   );
+  expect(runDirRequestAction).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'BIDHUMAS' }));
 });
 
-test('20:30 Ditbinmas recap also sends menu 21 to the Ditbinmas group', async () => {
+test('Ditbinmas recap job schedules super admin and operator actions', async () => {
   const { registerDirRequestCrons, DITBINMAS_RECAP_JOB_KEY } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
@@ -156,6 +156,7 @@ test('20:30 Ditbinmas recap also sends menu 21 to the Ditbinmas group', async ()
   await ditbinmasRecapJob.handler();
 
   expect(runDirRequestAction).toHaveBeenCalledWith(
-    expect.objectContaining({ clientId: 'DITBINMAS', action: '21' }),
+    expect.objectContaining({ clientId: 'DITBINMAS', action: '6' }),
   );
+  expect(runDirRequestAction).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'DITBINMAS', action: '30' }));
 });

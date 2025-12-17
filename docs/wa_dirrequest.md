@@ -438,9 +438,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   dan BIDHUMAS secara terpisah, termasuk penanda ketika suatu blok dilewati.
 
 ## Automasi Gabungan Fetch + Recap Ditbinmas + Cron Custom
-- Fungsi baru `runDitbinmasRecapAndCustomSequence` pada
-  `src/cron/cronDirRequestCustomSequence.js` menjalankan tiga tahap berurutan
-  tanpa menduplikasi pengambilan data:
+- Fungsi `runDitbinmasRecapAndCustomSequence` pada
+  `src/cron/cronDirRequestCustomSequence.js` kini terjadwal otomatis pada
+  pukul **20:30** (job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan menjalankan
+  tiga tahap berurutan tanpa menduplikasi pengambilan data:
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
      TikTok sekaligus menyegarkan likes serta komentar di awal alur.
   2. Menjalankan `runDitbinmasRecapSequence()` agar recap Ditbinmas selesai
@@ -452,11 +453,11 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   supaya ketahuan bila salah satu langkah gagal namun langkah berikutnya tetap
   dieksekusi.
 
-## Automasi Rekap Ditbinmas 20:30
-- Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
+## Automasi Rekap Ditbinmas 20:33
+- Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:33**
   (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**. Slot
-  **20:30** kini dilepas dari `cronDirRequestCustomSequence` agar recap
-  dan kiriman BIDHUMAS tidak terkirim ganda.
+  **20:30** dipakai untuk alur gabungan (fetch + recap + custom) sehingga recap
+  mandiri berjalan beberapa menit setelahnya untuk menjaga jeda antrean kirim.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
   - Menu **30** dikirim hanya ke `client_operator`.
