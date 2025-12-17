@@ -440,14 +440,13 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Gabungan Fetch + Recap Ditbinmas + Cron Custom
 - Fungsi `runDitbinmasRecapAndCustomSequence` pada
   `src/cron/cronDirRequestCustomSequence.js` kini terjadwal otomatis pada
-  pukul **20:30** (job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`). Job key yang
-  sama juga dipakai untuk memicu `runDitbinmasRecapSequence` pukul **20:33**
-  sehingga tidak ada duplikasi job untuk recap Ditbinmas terpisah. Urutan
-  tahapannya menjaga fetch hanya dilakukan sekali:
+  pukul **20:30** (job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
+  mencakup seluruh logika `runDitbinmasRecapSequence`, sehingga tidak ada job
+  terpisah khusus recap. Urutan tahapannya menjaga fetch hanya dilakukan sekali:
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
      TikTok sekaligus menyegarkan likes serta komentar di awal alur.
   2. Menjalankan `runDitbinmasRecapSequence()` agar recap Ditbinmas selesai
-     lebih dulu.
+     lebih dulu dalam slot yang sama.
   3. Memanggil `runCron({ includeFetch: false })` sehingga blok custom
      dirrequest berjalan tanpa fetch ulang.
 - Setiap tahap mencatat progres ke admin WhatsApp; ringkasan gabungan
@@ -455,12 +454,11 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   supaya ketahuan bila salah satu langkah gagal namun langkah berikutnya tetap
   dieksekusi.
 
-## Automasi Rekap Ditbinmas 20:33
-- Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:33**
-  (Asia/Jakarta) melalui job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY` yang sama
-  dengan slot **20:30**. Dengan begitu, recap tidak terdaftar sebagai job
-  terpisah dan tetap menjaga jeda antrean kirim beberapa menit setelah alur
-  gabungan.
+## Logika Recap Ditbinmas dalam Slot 20:30
+- `runDitbinmasRecapSequence` tidak lagi dijadwalkan terpisah; ia dijalankan
+  di tengah alur `runDitbinmasRecapAndCustomSequence` pada pukul **20:30**.
+  Pemanggilan manual tetap bisa dilakukan bila diperlukan, tetapi cron hanya
+  berjalan sekali di slot tersebut.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
   - Menu **30** dikirim hanya ke `client_operator`.

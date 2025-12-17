@@ -6,7 +6,6 @@ import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MED
 import {
   runCron as runDirRequestCustomSequence,
   JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-  runDitbinmasRecapSequence,
   runDitbinmasRecapAndCustomSequence,
   DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
 } from '../cronDirRequestCustomSequence.js';
@@ -64,16 +63,11 @@ const dirRequestCrons = [
   {
     jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
     description:
-      'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30, lalu recap Ditbinmas follow-up pada 20:33 dengan job key yang sama.',
+      'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
     schedules: [
       {
         cronExpression: '30 20 * * *',
         handler: () => runDitbinmasRecapAndCustomSequence(),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-      {
-        cronExpression: '33 20 * * *',
-        handler: () => runDitbinmasRecapSequence(),
         options: DEFAULT_CRON_OPTIONS,
       },
     ],
