@@ -113,6 +113,7 @@ async function executeMenuActions({
   label,
   roleFlag,
   userClientId,
+  delayMs,
 }) {
   if (!recipients?.length) {
     const msg = `${label}: tidak ada penerima yang valid`;
@@ -176,7 +177,7 @@ async function executeMenuActions({
       const isLastRecipient = recipientIndex === recipients.length - 1;
       const isLastAction = actionIndex === actions.length - 1;
       if (!isLastRecipient || !isLastAction) {
-        await delayAfterSend();
+        await delayAfterSend(delayMs);
       }
     }
   }
@@ -394,13 +395,14 @@ export async function runCron({
   await logToAdmins(logMessage);
 }
 
-export async function runDitbinmasRecapAndCustomSequence() {
+export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Date()) {
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai gabungan fetch, recap Ditbinmas, dan cron custom' });
   await logToAdmins('Mulai gabungan fetch konten/engagement, recap Ditbinmas, lalu cron custom dirrequest');
 
   const summary = {
     fetch: 'pending',
-    ditbinmasRecap: 'pending',
+    ditbinmasSuperAdmins: 'pending',
+    ditbinmasOperators: 'pending',
     customSequence: 'pending',
   };
 
@@ -416,12 +418,17 @@ export async function runDitbinmasRecapAndCustomSequence() {
   }
 
   try {
-    await runDitbinmasRecapSequence();
-    summary.ditbinmasRecap = 'Ditbinmas recap selesai';
+    const recapSummary = await runDitbinmasRecapSequence(referenceDate, {
+      includeOperators: false,
+      superAdminDelayMs: 20000,
+    });
+    summary.ditbinmasSuperAdmins = recapSummary?.superAdmins || 'Ditbinmas super admin selesai';
+    summary.ditbinmasOperators = recapSummary?.operators || 'operator dilewati';
   } catch (err) {
-    summary.ditbinmasRecap = `gagal menjalankan recap Ditbinmas: ${err.message || err}`;
-    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmasRecap });
-    await logToAdmins(summary.ditbinmasRecap);
+    summary.ditbinmasSuperAdmins = `gagal menjalankan recap Ditbinmas super admin: ${err.message || err}`;
+    summary.ditbinmasOperators = `operator dilewati karena error: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmasSuperAdmins });
+    await logToAdmins(summary.ditbinmasSuperAdmins);
   }
 
   try {
@@ -436,7 +443,8 @@ export async function runDitbinmasRecapAndCustomSequence() {
   const logMessage =
     '[CRON DIRREQ CUSTOM] Ringkasan gabungan fetch + recap Ditbinmas + cron custom:\n' +
     `- Fetch konten/engagement: ${summary.fetch}\n` +
-    `- Recap Ditbinmas: ${summary.ditbinmasRecap}\n` +
+    `- Recap Ditbinmas (super admin): ${summary.ditbinmasSuperAdmins}\n` +
+    `- Recap Ditbinmas (operator): ${summary.ditbinmasOperators}\n` +
     `- Cron custom dirrequest: ${summary.customSequence}`;
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
@@ -457,7 +465,15 @@ export function runDitsamaptaOnlySequence() {
   });
 }
 
-export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
+export async function runDitbinmasRecapSequence(
+  referenceDate = new Date(),
+  {
+    includeSuperAdmins = true,
+    includeOperators = true,
+    superAdminDelayMs,
+    operatorDelayMs,
+  } = {},
+) {
   sendDebug({
     tag: 'CRON DIRREQ CUSTOM',
     msg: 'Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)',
@@ -465,8 +481,8 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
   await logToAdmins('Mulai cron rekap Ditbinmas (menu 6/9/30/34/35)');
 
   const summary = {
-    superAdmins: 'pending',
-    operators: 'pending',
+    superAdmins: includeSuperAdmins ? 'pending' : 'dilewati (super admin recap tidak dijadwalkan)',
+    operators: includeOperators ? 'pending' : 'dilewati (operator recap tidak dijadwalkan)',
   };
 
   try {
@@ -474,32 +490,39 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
     const { recapPeriods, kasatkerPeriods, superActions, operatorActions } =
       buildDitbinmasRecapPlan(referenceDate);
 
-    const superRecipients = getSuperAdminRecipients(ditbinmasClient);
-    await logToAdmins('Mulai blok Ditbinmas super admin (6/9/34/35)');
-    summary.superAdmins = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: superActions,
-      recipients: superRecipients,
-      label: `Ditbinmas super admin (6,9,34,35 ${recapPeriods.join('/')})`,
-      roleFlag: DITBINMAS_CLIENT_ID,
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas super admin: ${summary.superAdmins}`);
-
-    const operatorRecipients = getOperatorRecipients(ditbinmasClient);
-    if (superRecipients.length > 0 && operatorRecipients.length > 0) {
-      await delayAfterSend();
+    const superRecipients = includeSuperAdmins ? getSuperAdminRecipients(ditbinmasClient) : [];
+    if (includeSuperAdmins) {
+      await logToAdmins('Mulai blok Ditbinmas super admin (6/9/34/35)');
+      summary.superAdmins = await executeMenuActions({
+        clientId: DITBINMAS_CLIENT_ID,
+        actions: superActions,
+        recipients: superRecipients,
+        label: `Ditbinmas super admin (6,9,34,35 ${recapPeriods.join('/')})`,
+        roleFlag: DITBINMAS_CLIENT_ID,
+        userClientId: DITBINMAS_CLIENT_ID,
+        delayMs: superAdminDelayMs,
+      });
+      await logToAdmins(`Selesai blok Ditbinmas super admin: ${summary.superAdmins}`);
     }
-    await logToAdmins('Mulai blok Ditbinmas operator (30)');
-    summary.operators = await executeMenuActions({
-      clientId: DITBINMAS_CLIENT_ID,
-      actions: operatorActions,
-      recipients: operatorRecipients,
-      label: `Ditbinmas operator (30 ${kasatkerPeriods.join('/')})`,
-      roleFlag: DITBINMAS_CLIENT_ID,
-      userClientId: DITBINMAS_CLIENT_ID,
-    });
-    await logToAdmins(`Selesai blok Ditbinmas operator: ${summary.operators}`);
+
+    const operatorRecipients = includeOperators ? getOperatorRecipients(ditbinmasClient) : [];
+    if (includeSuperAdmins && includeOperators && superRecipients.length > 0 && operatorRecipients.length > 0) {
+      await delayAfterSend(superAdminDelayMs);
+    }
+
+    if (includeOperators) {
+      await logToAdmins('Mulai blok Ditbinmas operator (30)');
+      summary.operators = await executeMenuActions({
+        clientId: DITBINMAS_CLIENT_ID,
+        actions: operatorActions,
+        recipients: operatorRecipients,
+        label: `Ditbinmas operator (30 ${kasatkerPeriods.join('/')})`,
+        roleFlag: DITBINMAS_CLIENT_ID,
+        userClientId: DITBINMAS_CLIENT_ID,
+        delayMs: operatorDelayMs,
+      });
+      await logToAdmins(`Selesai blok Ditbinmas operator: ${summary.operators}`);
+    }
   } catch (err) {
     const errorMsg = `gagal menjalankan cron rekap Ditbinmas: ${err.message || err}`;
     summary.superAdmins = errorMsg;
@@ -515,6 +538,8 @@ export async function runDitbinmasRecapSequence(referenceDate = new Date()) {
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);
+
+  return summary;
 }
 
 export default null;
