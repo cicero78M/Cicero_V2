@@ -70,7 +70,11 @@ async function loadModules() {
   }));
 
   const module = await import('../src/cron/cronDirRequestCustomSequence.js');
-  return { runCron: module.runCron, runBidhumasMenuSequence: module.runBidhumasMenuSequence };
+  return {
+    runCron: module.runCron,
+    runBidhumasMenuSequence: module.runBidhumasMenuSequence,
+    runDitbinmasRecapAndCustomSequence: module.runDitbinmasRecapAndCustomSequence,
+  };
 }
 
 test('runCron dispatches DITSAMAPTA menus including 28 and 29', async () => {
@@ -97,4 +101,21 @@ test('runBidhumasMenuSequence includes recap menus 28 and 29', async () => {
     .map(([args]) => args.action);
 
   expect(bidhumasActions).toEqual(expect.arrayContaining(['6', '9', '28', '29']));
+});
+
+test('runDitbinmasRecapAndCustomSequence sends Ditbinmas recap menus to super admin only with 20s delay', async () => {
+  const { runDitbinmasRecapAndCustomSequence } = await loadModules();
+
+  await runDitbinmasRecapAndCustomSequence(new Date('2024-06-03T13:30:00+07:00'));
+
+  const ditbinmasRecapCalls = runDirRequestAction.mock.calls.filter(
+    ([args]) =>
+      args.clientId === 'DITBINMAS' && ['6', '9', '34', '35'].includes(String(args.action)),
+  );
+
+  expect(ditbinmasRecapCalls).toHaveLength(4);
+  const recipients = new Set(ditbinmasRecapCalls.map(([args]) => args.chatId));
+  expect(Array.from(recipients)).toEqual(['08123456789@c.us']);
+
+  expect(delayAfterSend).toHaveBeenCalledWith(20000);
 });
