@@ -16,6 +16,7 @@ const DITSAMAPTA_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
 export const DITBINMAS_RECAP_JOB_KEY = `${JOB_KEY}#ditbinmas-recap`;
 export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
+export const DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY = `${JOB_KEY}#ditbinmas-recap-and-custom`;
 
 function validateDirektoratClient(client, clientId) {
   if (!client) {
@@ -392,6 +393,57 @@ export async function runCron({
 
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
   await logToAdmins(logMessage);
+}
+
+export async function runDitbinmasRecapAndCustomSequence() {
+  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai gabungan fetch, recap Ditbinmas, dan cron custom' });
+  await logToAdmins('Mulai gabungan fetch konten/engagement, recap Ditbinmas, lalu cron custom dirrequest');
+
+  const summary = {
+    fetch: 'pending',
+    ditbinmasRecap: 'pending',
+    customSequence: 'pending',
+  };
+
+  try {
+    await logToAdmins('Mulai blok fetch konten dan engagement (likes + komentar)');
+    await runDirRequestFetchSosmed();
+    summary.fetch = 'fetch konten dan engagement selesai';
+    await logToAdmins('Selesai blok fetch konten dan engagement');
+  } catch (err) {
+    summary.fetch = `gagal fetch konten/engagement: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.fetch });
+    await logToAdmins(summary.fetch);
+  }
+
+  try {
+    await runDitbinmasRecapSequence();
+    summary.ditbinmasRecap = 'Ditbinmas recap selesai';
+  } catch (err) {
+    summary.ditbinmasRecap = `gagal menjalankan recap Ditbinmas: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmasRecap });
+    await logToAdmins(summary.ditbinmasRecap);
+  }
+
+  try {
+    await runCron({ includeFetch: false });
+    summary.customSequence = 'cron custom selesai';
+  } catch (err) {
+    summary.customSequence = `gagal menjalankan cron custom: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.customSequence });
+    await logToAdmins(summary.customSequence);
+  }
+
+  const logMessage =
+    '[CRON DIRREQ CUSTOM] Ringkasan gabungan fetch + recap Ditbinmas + cron custom:\n' +
+    `- Fetch konten/engagement: ${summary.fetch}\n` +
+    `- Recap Ditbinmas: ${summary.ditbinmasRecap}\n` +
+    `- Cron custom dirrequest: ${summary.customSequence}`;
+
+  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
+  await logToAdmins(logMessage);
+
+  return summary;
 }
 
 export function runDitsamaptaOnlySequence() {
