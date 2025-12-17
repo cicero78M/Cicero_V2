@@ -108,7 +108,6 @@ async function loadModules() {
     DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY: customSequence.JOB_KEY,
     DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY: customSequence.DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
     BIDHUMAS_2030_JOB_KEY: customSequence.BIDHUMAS_2030_JOB_KEY,
-    DITBINMAS_RECAP_JOB_KEY: customSequence.DITBINMAS_RECAP_JOB_KEY,
   };
 }
 
@@ -146,12 +145,15 @@ test('20:30 Ditbinmas recap + custom job runs Ditbinmas recap before custom sequ
 });
 
 test('Ditbinmas recap job schedules super admin and operator actions', async () => {
-  const { registerDirRequestCrons, DITBINMAS_RECAP_JOB_KEY } = await loadModules();
+  const { registerDirRequestCrons, DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY } = await loadModules();
 
   registerDirRequestCrons(waGatewayClient);
 
-  const ditbinmasRecapJob = scheduledJobs.find((job) => job.jobKey === DITBINMAS_RECAP_JOB_KEY);
-  expect(ditbinmasRecapJob).toBeDefined();
+  const recapSlots = scheduledJobs.filter((job) => job.cronExpression === '33 20 * * *');
+  expect(recapSlots).toHaveLength(1);
+  expect(recapSlots[0]?.jobKey).toBe(DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY);
+
+  const ditbinmasRecapJob = recapSlots[0];
 
   await ditbinmasRecapJob.handler();
 
