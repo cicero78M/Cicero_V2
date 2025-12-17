@@ -43,6 +43,8 @@ const mockGenerateKasatkerReport = jest.fn();
 const mockGenerateKasatkerAttendanceSummary = jest.fn();
 const mockGenerateKasatBinmasLikesRecap = jest.fn();
 const mockGenerateKasatBinmasTiktokCommentRecap = jest.fn();
+const mockGenerateInstagramAllDataRecap = jest.fn();
+const mockGenerateTiktokAllDataRecap = jest.fn();
 const mockFetchTodaySatbinmasOfficialTiktokMediaForOrgClients = jest.fn();
 const mockSyncSatbinmasOfficialTiktokSecUidForOrgClients = jest.fn();
 const mockWriteFile = jest.fn();
@@ -164,14 +166,26 @@ jest.unstable_mockModule(
   '../src/service/kasatBinmasLikesRecapService.js',
   () => ({
     generateKasatBinmasLikesRecap: mockGenerateKasatBinmasLikesRecap,
+    describeKasatBinmasLikesPeriod: () => ({
+      type: 'harian',
+      label: 'Hari ini',
+    }),
+    kasatBinmasRankWeight: () => 0,
   })
 );
 jest.unstable_mockModule(
   '../src/service/kasatBinmasTiktokCommentRecapService.js',
   () => ({
     generateKasatBinmasTiktokCommentRecap: mockGenerateKasatBinmasTiktokCommentRecap,
+    resolveBaseDate: (date) => date || new Date('2025-12-16T00:00:00Z'),
   })
 );
+jest.unstable_mockModule('../src/service/instagramAllDataRecapService.js', () => ({
+  generateInstagramAllDataRecap: mockGenerateInstagramAllDataRecap,
+}));
+jest.unstable_mockModule('../src/service/tiktokAllDataRecapService.js', () => ({
+  generateTiktokAllDataRecap: mockGenerateTiktokAllDataRecap,
+}));
 jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   getGreeting: () => 'Selamat malam',
   sortDivisionKeys: (arr) => arr.sort(),
@@ -256,6 +270,14 @@ beforeEach(() => {
   mockSaveEngagementRankingExcel.mockResolvedValue({
     filePath: '/tmp/ranking.xlsx',
     fileName: 'Ranking.xlsx',
+  });
+  mockGenerateInstagramAllDataRecap.mockResolvedValue({
+    filePath: '/tmp/ig-all.xlsx',
+    fileName: 'ig-all.xlsx',
+  });
+  mockGenerateTiktokAllDataRecap.mockResolvedValue({
+    filePath: '/tmp/tiktok-all.xlsx',
+    fileName: 'tiktok-all.xlsx',
   });
   mockGenerateKasatkerReport.mockResolvedValue('Narasi Kasatker');
   mockGenerateKasatkerAttendanceSummary.mockResolvedValue('Narasi Absensi Kasatker');
@@ -1456,6 +1478,40 @@ test('choose_menu option 29 reports no TikTok content when recap empty', async (
     chatId,
     expect.stringContaining('Tidak ada konten TikTok')
   );
+});
+
+test('choose_menu option 43 generates TikTok all data excel and sends file', async () => {
+  mockFindClientById.mockResolvedValue({ nama: 'DIT BINMAS' });
+  mockReadFile.mockResolvedValue(Buffer.from('excel'));
+  mockUnlink.mockResolvedValue();
+  const session = {
+    selectedClientId: 'ditbinmas',
+    dir_client_id: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+    role: 'ditbinmas',
+  };
+  const chatId = '43-menu';
+  const waClient = { sendMessage: jest.fn() };
+
+  await dirRequestHandlers.choose_menu(session, chatId, '43', waClient);
+
+  expect(mockFindClientById).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGenerateTiktokAllDataRecap).toHaveBeenCalledWith({
+    clientId: 'ditbinmas',
+    roleFlag: 'ditbinmas',
+    clientName: 'DIT BINMAS',
+  });
+  expect(mockReadFile).toHaveBeenCalledWith('/tmp/tiktok-all.xlsx');
+  expect(mockSendWAFile).toHaveBeenCalledWith(
+    waClient,
+    expect.any(Buffer),
+    path.basename('/tmp/tiktok-all.xlsx'),
+    chatId,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  expect(mockUnlink).toHaveBeenCalledWith('/tmp/tiktok-all.xlsx');
+  const messages = waClient.sendMessage.mock.calls.map((call) => call[1]);
+  expect(messages.some((message) => message.includes('TikTok all data dikirim'))).toBe(true);
 });
 
 test('choose_menu option 20 generates TikTok comment recap excel and sends file', async () => {

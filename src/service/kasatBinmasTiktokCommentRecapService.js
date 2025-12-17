@@ -169,6 +169,10 @@ function describePeriod(period = "daily", referenceDate) {
   };
 }
 
+export function describeKasatBinmasTiktokCommentPeriod(period = "daily", referenceDate) {
+  return describePeriod(period, referenceDate);
+}
+
 function sortKasatEntries(entries) {
   return entries.slice().sort((a, b) => {
     const countA = Number(a.count) || 0;

@@ -92,7 +92,7 @@ beforeEach(async () => {
   await resetNotificationReminderState();
 });
 
-test('runCron only sends reminders for DITBINMAS users', async () => {
+test('runCron only sends reminders for DITBINMAS and BIDHUMAS users', async () => {
   mockGetActiveUsersWithWhatsapp.mockResolvedValue([
     {
       whatsapp: '081234567890',
@@ -111,6 +111,14 @@ test('runCron only sends reminders for DITBINMAS users', async () => {
       nama: 'User Other',
     },
     {
+      whatsapp: '082233445566',
+      wa_notification_opt_in: true,
+      client_id: 'BIDHUMAS',
+      insta: 'user3',
+      tiktok: 'tt3',
+      nama: 'User Bidhumas',
+    },
+    {
       whatsapp: '081234567890',
       wa_notification_opt_in: true,
       client_id: 'DITBINMAS',
@@ -123,11 +131,15 @@ test('runCron only sends reminders for DITBINMAS users', async () => {
   await runCron();
 
   expect(mockGetActiveUsersWithWhatsapp).toHaveBeenCalledTimes(1);
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(mockSafeSendMessage).toHaveBeenCalledTimes(2);
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '081234567890@c.us', expect.any(String));
+  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '082233445566@c.us', expect.any(String));
   expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('BIDHUMAS');
   expect(mockGetPostsTodayByClient).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockGetPostsTodayByClient).toHaveBeenCalledWith('BIDHUMAS');
   expect(mockFindClientById).toHaveBeenCalledWith('DITBINMAS');
+  expect(mockFindClientById).toHaveBeenCalledWith('BIDHUMAS');
 });
 
 test('runCron sends staged follow-ups for users still incomplete', async () => {

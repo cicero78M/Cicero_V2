@@ -47,6 +47,8 @@ import { saveEngagementRankingExcel } from "../../service/engagementRankingExcel
 import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
 import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttendanceService.js";
 import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRecapService.js";
+import { sendKasatBinmasLikesRecapExcel } from "../../service/kasatBinmasLikesRecapExcelService.js";
+import { sendKasatBinmasTiktokCommentRecapExcel } from "../../service/kasatBinmasTiktokCommentRecapExcelService.js";
 import {
   generateKasatBinmasTiktokCommentRecap,
   resolveBaseDate,
@@ -60,6 +62,8 @@ import {
   buildSatbinmasOfficialTiktokDbRecap,
 } from "../../service/satbinmasOfficialReportService.js";
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
+import { generateInstagramAllDataRecap } from "../../service/instagramAllDataRecapService.js";
+import { generateTiktokAllDataRecap } from "../../service/tiktokAllDataRecapService.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -174,6 +178,13 @@ const KASAT_BINMAS_LIKES_MENU_TEXT =
     .join("\n") +
   "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
 
+const KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT =
+  "Silakan pilih rekap Likes Instagram Kasat Binmas (Excel):\n" +
+  Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
 const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
   "1": {
     period: "daily",
@@ -191,6 +202,13 @@ const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
 
 const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT =
   "Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:\n" +
+  Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT =
+  "Silakan pilih rekap Komentar TikTok Kasat Binmas (Excel):\n" +
   Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
@@ -2199,6 +2217,64 @@ async function performAction(
         }
         break;
       }
+      case "42": {
+        try {
+          const client = await findClientById(clientId);
+          const { filePath } = await generateInstagramAllDataRecap({
+            clientId,
+            roleFlag,
+            clientName: client?.nama || clientId,
+          });
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          await unlink(filePath);
+          msg = "✅ File Excel Instagram all data dikirim.";
+        } catch (error) {
+          console.error("Gagal membuat rekap Instagram all data:", error);
+          msg =
+            error?.message &&
+            (error.message.includes("Tidak ada data") ||
+              error.message.includes("Client tidak ditemukan"))
+              ? error.message
+              : "❌ Gagal membuat rekap Instagram all data.";
+        }
+        break;
+      }
+      case "43": {
+        try {
+          const client = await findClientById(clientId);
+          const { filePath } = await generateTiktokAllDataRecap({
+            clientId,
+            roleFlag,
+            clientName: client?.nama || clientId,
+          });
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          await unlink(filePath);
+          msg = "✅ File Excel TikTok all data dikirim.";
+        } catch (error) {
+          console.error("Gagal membuat rekap TikTok all data:", error);
+          msg =
+            error?.message &&
+            (error.message.includes("Tidak ada data") ||
+              error.message.includes("Client tidak ditemukan"))
+              ? error.message
+              : "❌ Gagal membuat rekap TikTok all data.";
+        }
+        break;
+      }
       default:
         msg = "Menu tidak dikenal.";
   }
@@ -2328,13 +2404,18 @@ export const dirRequestHandlers = {
         "2️⃣7️⃣ Rekap file Instagram bulanan\n" +
         "2️⃣8️⃣ Rekap like Instagram per konten (Excel)\n" +
         "2️⃣9️⃣ Rekap komentar TikTok per konten (Excel)\n\n" +
+        "📦 *Rekap All Data*\n" +
+        "4️⃣2️⃣ Instagram all data\n" +
+        "4️⃣3️⃣ TikTok all data\n\n" +
         "🛡️ *Monitoring Kasatker*\n" +
         "3️⃣0️⃣ Laporan Kasatker\n" +
         "3️⃣1️⃣ Top ranking like/komentar personel\n" +
         "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n" +
         "3️⃣3️⃣ Absensi Kasatker\n" +
         "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n" +
-        "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
+        "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n" +
+        "4️⃣4️⃣ Rekap likes Instagram Kasat Binmas (Excel)\n" +
+        "4️⃣5️⃣ Rekap komentar TikTok Kasat Binmas (Excel)\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
         "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n" +
@@ -2473,6 +2554,10 @@ export const dirRequestHandlers = {
           "39",
           "40",
           "41",
+          "42",
+          "43",
+          "44",
+          "45",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2514,6 +2599,18 @@ export const dirRequestHandlers = {
     if (choice === "35") {
       session.step = "choose_kasat_binmas_tiktok_comment_period";
       await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "44") {
+      session.step = "choose_kasat_binmas_likes_excel_period";
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "45") {
+      session.step = "choose_kasat_binmas_tiktok_comment_excel_period";
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT);
       return;
     }
 
@@ -3075,6 +3172,127 @@ export const dirRequestHandlers = {
     await dirRequestHandlers.main(session, chatId, "", waClient);
   },
 
+  async choose_kasat_binmas_likes_excel_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu Rekap Likes Instagram Kasat Binmas (Excel) ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = KASAT_BINMAS_LIKES_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    try {
+      await sendKasatBinmasLikesRecapExcel({
+        period: option.period,
+        chatId,
+        waClient,
+      });
+    } catch (error) {
+      console.error(
+        "Gagal membuat rekap Likes Kasat Binmas (Excel):",
+        error
+      );
+      const msg =
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+          ? error.message
+          : `❌ Gagal mengirim rekap Likes Kasat Binmas (Excel) (${option.description}).`;
+      await waClient.sendMessage(chatId, msg);
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_kasat_binmas_tiktok_comment_excel_period(
+    session,
+    chatId,
+    text,
+    waClient
+  ) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu Rekap Komentar TikTok Kasat Binmas (Excel) ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    const referenceDate =
+      session?.dirRequestReferenceDate || session?.executionDate || session?.referenceDate;
+    const normalizedReferenceDate =
+      referenceDate !== undefined && referenceDate !== null
+        ? resolveBaseDate(referenceDate)
+        : undefined;
+
+    try {
+      await sendKasatBinmasTiktokCommentRecapExcel({
+        period: option.period,
+        referenceDate: normalizedReferenceDate,
+        chatId,
+        waClient,
+      });
+    } catch (error) {
+      console.error(
+        "Gagal membuat rekap komentar TikTok Kasat Binmas (Excel):",
+        error
+      );
+      const msg =
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+          ? error.message
+          : `❌ Gagal mengirim rekap komentar TikTok Kasat Binmas (Excel) (${option.description}).`;
+      await waClient.sendMessage(chatId, msg);
+    } finally {
+      session.dirRequestReferenceDate = undefined;
+      session.executionDate = undefined;
+      session.referenceDate = undefined;
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
   async choose_kasat_binmas_tiktok_comment_period(session, chatId, text, waClient) {
     const input = (text || "").trim();
     if (!input) {
@@ -3238,4 +3456,3 @@ export {
 };
 
 export default dirRequestHandlers;
-

@@ -7,6 +7,30 @@ grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
 
+Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
+
+```
+📦 *Rekap All Data*
+4️⃣2️⃣ Instagram all data
+4️⃣3️⃣ TikTok all data
+```
+
+Opsi **4️⃣2️⃣** menjalankan generator Excel rekap likes Instagram lintas polres
+(per client Direktorat yang aktif) dan mengirimkan berkasnya via WhatsApp.
+Urutan polres pada rekap otomatis disusun dari total akumulasi likes tertinggi
+ke terendah agar polres paling aktif muncul di bagian atas. File sementara
+disimpan di `export_data/dirrequest` dengan nama berisi client, tanggal, serta
+jam eksekusi sebelum dihapus setelah dikirim.
+
+Opsi **4️⃣3️⃣** menyiapkan rekap komentar TikTok lintas polres dengan pola bulan
+yang sama (September–bulan berjalan) dan mengirimkan Excel ke WA. Struktur
+kolomnya mengikuti rekap Instagram: deretan bulan per kolom, total per polres,
+dan baris grand total di bagian bawah.
+
+Input **4️⃣3️⃣** kini dikenali langsung oleh bot tanpa balasan *"Pilihan tidak
+valid"*, sehingga operator dapat memicu rekap TikTok all data dari menu utama
+dirrequest tanpa langkah tambahan.
+
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
@@ -111,6 +135,43 @@ ditampilkan bot.
   mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
   kembali ke menu tanpa menampilkan pesan kosong.
 
+## Monitoring Kasatker – Rekap Likes IG Kasat Binmas (Excel)
+- Blok Monitoring Kasatker kini menambahkan entri **4️⃣4️⃣ Rekap likes Instagram
+  Kasat Binmas (Excel)**. Opsi ini berjalan berdampingan dengan menu absensi
+  naratif (3️⃣4️⃣) dan komentar TikTok (3️⃣5️⃣), namun langsung menyiapkan file
+  Excel tanpa menampilkan rangkuman teks.
+- Setelah memilih **4️⃣4️⃣**, bot meminta periode rekap: **1. Harian**, **2.
+  Mingguan** (Senin–Minggu berjalan), atau **3. Bulanan**. Balas angka 1–3
+  atau ketik *batal* untuk kembali ke menu utama Monitoring Kasatker.
+- File Excel yang dikirim berisi kolom **Polres**, **Pangkat dan Nama**, dan
+  **Total Likes (akumulatif)**. Baris diurutkan dari total likes tertinggi,
+  lalu pangkat (mengikuti urutan PANGKAT_ORDER Kasat Binmas), lalu nama agar
+  rekap mudah dipantau oleh pimpinan.
+- Label periode pada baris kedua sheet mengikuti format submenu (contoh: harian
+  "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
+  bulanan "Bulan Mei 2024").
+- Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
+  dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
+  direktori kerja tetap bersih.
+
+## Monitoring Kasatker – Rekap Komentar TikTok Kasat Binmas (Excel)
+- Grup Monitoring Kasatker menambahkan menu **4️⃣5️⃣ Rekap komentar TikTok Kasat
+  Binmas (Excel)**. Opsi ini menyajikan rekap akumulasi komentar langsung dalam
+  format Excel tanpa narasi teks panjang.
+- Setelah memilih **4️⃣5️⃣**, bot menampilkan pilihan periode rekap: **1. Harian**,
+  **2. Mingguan** (Senin–Minggu), atau **3. Bulanan**. Operator bisa membalas
+  angka 1–3 atau ketik *batal* untuk kembali ke menu Monitoring Kasatker.
+- File Excel memuat kolom **Polres**, **Pangkat dan Nama**, dan **Total
+  Komentar**. Baris diurutkan berdasarkan total komentar terbanyak, lalu pangkat
+  (sesuai urutan PANGKAT_ORDER Kasat Binmas), kemudian nama pengguna untuk
+  memudahkan pemetaan capaian.
+- Label periode pada baris kedua sheet mengikuti pilihan submenu (contoh: harian
+  "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
+  bulanan "Bulan Mei 2024").
+- Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
+  dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
+  direktori tetap bersih.
+
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
 resmi Satbinmas. Menu utama kini menampilkan rentang opsi **3️⃣6️⃣–4️⃣1️⃣** untuk
@@ -123,7 +184,7 @@ rekap.
      memakai *Client ID* aktif (default `DITBINMAS`).
   3. Balas dengan format `username` atau `CLIENT_ID username` jika ingin
      mengecek akun Satbinmas milik client lain. Contoh: `satbinmas_official`
-     atau `MKS01 satbinmas_official`.
+  atau `MKS01 satbinmas_official`.
   4. Bot memanggil layanan RapidAPI (`fetchInstagramInfo`) untuk menarik
      metadata profil Instagram (nama, followers, postingan, status verifikasi,
      dan privasi).
@@ -203,7 +264,7 @@ rekap.
      (total konten, likes, komentar per akun) dan tetap menandai akun yang
      belum memiliki `secUid` tersinkron.
   4. Hasil dikirim sebagai pesan ringkasan ke operator. Balasan `batal`, `0`,
-     atau `kembali` akan menutup submenu dan kembali ke menu utama.
+  atau `kembali` akan menutup submenu dan kembali ke menu utama.
 
 - **Catatan pemanggilan data**
   - Menu **3️⃣7️⃣** dan **3️⃣9️⃣** tetap menjalankan pengambilan konten via
@@ -213,6 +274,44 @@ rekap.
 
 Opsi ini membantu Ditbinmas memantau kesiapan akun resmi Satbinmas tanpa harus
 berpindah ke dashboard web atau menjalankan skrip manual.
+
+## Rekap Instagram All Data (Menu 4️⃣2️⃣)
+- Rentang bulan selalu dimulai dari **September** (tahun berjalan) dan
+  otomatis mundur ke September tahun sebelumnya bila bulan saat ini belum
+  memasuki September. Rekap berhenti pada bulan berjalan.
+- Setiap bulan memanggil `getRekapLikesByClient(clientId, 'bulanan', <YYYY-MM>,
+  null, null, roleFlag)` dan mengakumulasikan `jumlah_like` per `client_name`
+  (polres). Nama polres dipakai langsung dari kolom `client_name` hasil query.
+- Excel disusun sebagai array-of-arrays dengan kolom: `Polres`, satu kolom per
+  bulan (nama bulan Indonesia + tahun), serta kolom `Total` per polres. Baris
+  `TOTAL` di bagian akhir menjumlahkan seluruh polres per bulan sekaligus
+  grand total.
+- Judul dan periode pada baris pertama serta kedua digabung (merged), header
+  dibekukan (`freeze`) bersama kolom Polres, dan `!cols` dihitung dari panjang
+  teks terpanjang di setiap kolom agar lebar menyesuaikan isi.
+- Sel angka diformat memakai `#,##0` (locale Indonesia) sehingga ribuan
+  menggunakan pemisah yang mudah dibaca, termasuk pada kolom total.
+- Berkas disimpan di `export_data/dirrequest` dengan format nama
+  `<CLIENT>_Rekap_Instagram_All_Data_<tanggal>_<jam>.xlsx`, dikirim ke WA via
+  `sendWAFile`, lalu dihapus begitu pengiriman selesai.
+
+## Rekap TikTok All Data (Menu 4️⃣3️⃣)
+- Tujuan: merangkum jumlah komentar TikTok per polres untuk setiap bulan mulai
+  **September** hingga bulan saat ini dengan otomatis mundur ke September tahun
+  sebelumnya bila eksekusi dilakukan sebelum September.
+- Per bulan, layanan memanggil
+  `getRekapKomentarByClient(clientId, 'bulanan', <YYYY-MM>, null, null, roleFlag)`
+  dan menjumlahkan `jumlah_komentar` per `client_name` (polres) untuk menghasilkan
+  kolom **Total** per polres.
+- Baris polres diurutkan berdasarkan total komentar terbanyak ke paling sedikit,
+  lalu diurutkan alfabetis jika totalnya sama. Baris terakhir adalah `TOTAL` yang
+  menjumlahkan setiap kolom bulan serta grand total komentar.
+- Struktur Excel mengikuti rekap Instagram all data: baris judul dan periode
+  digabung (merged), header dibekukan (`freeze`) bersama kolom `Polres`, dan
+  lebar kolom dihitung dari isi terpanjang agar mudah dibaca.
+- Sel angka memakai format `#,##0` (locale Indonesia). Nama file mengikuti pola
+  `<CLIENT>_Rekap_TikTok_All_Data_<tanggal>_<jam>.xlsx` dan dikirim ke WA lewat
+  `sendWAFile` sebelum berkas sementara dihapus.
 
 ## Automasi Cron Satbinmas Official
 - Cron `cronDirRequestSatbinmasOfficialMedia` menjalankan menu **3️⃣7️⃣** dan
@@ -384,8 +483,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   hanya pengambilan konten dasar dan pengingat tugas otomatis yang berjalan
   dari bucket dirRequest.
 - Pengingat otomatis `cronWaNotificationReminder` tetap berjalan untuk pengguna
-  yang mendaftar melalui `notifwa#on` dan masih dikirim ke nomor personal sesuai
-  preferensi opt-in. Status pengiriman harian disimpan di tabel
+  Ditbinmas maupun BIDHUMAS yang mendaftar melalui `notifwa#on` dan masih
+  dikirim ke nomor personal sesuai preferensi opt-in. Status pengiriman harian disimpan di tabel
   `wa_notification_reminder_state` (key: `date_key`, `chat_id`) sehingga penerima
   yang sudah tercatat selesai tidak dikirimi ulang pada eksekusi berikutnya di
   hari yang sama, sementara penerima yang belum lengkap tetap maju ke tahap
