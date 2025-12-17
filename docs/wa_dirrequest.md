@@ -437,6 +437,21 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   membuka dashboard. Ringkasan akhir kini mencantumkan status Ditsamapta, Ditbinmas,
   dan BIDHUMAS secara terpisah, termasuk penanda ketika suatu blok dilewati.
 
+## Automasi Gabungan Fetch + Recap Ditbinmas + Cron Custom
+- Fungsi baru `runDitbinmasRecapAndCustomSequence` pada
+  `src/cron/cronDirRequestCustomSequence.js` menjalankan tiga tahap berurutan
+  tanpa menduplikasi pengambilan data:
+  1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
+     TikTok sekaligus menyegarkan likes serta komentar di awal alur.
+  2. Menjalankan `runDitbinmasRecapSequence()` agar recap Ditbinmas selesai
+     lebih dulu.
+  3. Memanggil `runCron({ includeFetch: false })` sehingga blok custom
+     dirrequest berjalan tanpa fetch ulang.
+- Setiap tahap mencatat progres ke admin WhatsApp; ringkasan gabungan
+  menampilkan status fetch, recap Ditbinmas, dan cron custom secara terpisah
+  supaya ketahuan bila salah satu langkah gagal namun langkah berikutnya tetap
+  dieksekusi.
+
 ## Automasi Rekap Ditbinmas 20:30
 - Cron `runDitbinmasRecapSequence` berjalan setiap hari pukul **20:30**
   (Asia/Jakarta) dan hanya memproses *Client ID* **DITBINMAS**. Slot
