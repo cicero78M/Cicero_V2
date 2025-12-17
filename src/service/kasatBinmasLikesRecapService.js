@@ -6,7 +6,7 @@ import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
 
-const PANGKAT_ORDER = [
+export const PANGKAT_ORDER = [
   "KOMISARIS BESAR POLISI",
   "AKBP",
   "KOMPOL",
@@ -65,13 +65,13 @@ function resolveWeeklyRange(baseDate = new Date()) {
   };
 }
 
-function rankWeight(rank) {
+export function kasatBinmasRankWeight(rank) {
   const normalized = String(rank || "").toUpperCase();
   const idx = PANGKAT_ORDER.indexOf(normalized);
   return idx === -1 ? PANGKAT_ORDER.length : idx;
 }
 
-function describePeriod(period = "daily") {
+export function describeKasatBinmasLikesPeriod(period = "daily") {
   const today = new Date();
   if (period === "weekly") {
     const { start, end, label } = resolveWeeklyRange(today);
@@ -148,7 +148,8 @@ function sortKasatList(entries) {
   return entries.slice().sort((a, b) => {
     const countDiff = (b.count || 0) - (a.count || 0);
     if (countDiff !== 0) return countDiff;
-    const rankDiff = rankWeight(a.user?.title) - rankWeight(b.user?.title);
+    const rankDiff =
+      kasatBinmasRankWeight(a.user?.title) - kasatBinmasRankWeight(b.user?.title);
     if (rankDiff !== 0) return rankDiff;
     const nameA = formatNama(a.user) || "";
     const nameB = formatNama(b.user) || "";
@@ -157,7 +158,7 @@ function sortKasatList(entries) {
 }
 
 export async function generateKasatBinmasLikesRecap({ period = "daily" } = {}) {
-  const periodInfo = describePeriod(period);
+  const periodInfo = describeKasatBinmasLikesPeriod(period);
 
   const users = await getUsersByClient(DITBINMAS_CLIENT_ID, TARGET_ROLE);
   const kasatUsers = (users || []).filter((user) =>

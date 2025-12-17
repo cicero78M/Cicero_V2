@@ -47,6 +47,7 @@ import { saveEngagementRankingExcel } from "../../service/engagementRankingExcel
 import { generateKasatkerReport } from "../../service/kasatkerReportService.js";
 import { generateKasatkerAttendanceSummary } from "../../service/kasatkerAttendanceService.js";
 import { generateKasatBinmasLikesRecap } from "../../service/kasatBinmasLikesRecapService.js";
+import { sendKasatBinmasLikesRecapExcel } from "../../service/kasatBinmasLikesRecapExcelService.js";
 import {
   generateKasatBinmasTiktokCommentRecap,
   resolveBaseDate,
@@ -171,6 +172,13 @@ const KASAT_BINMAS_LIKES_PERIOD_MAP = {
 
 const KASAT_BINMAS_LIKES_MENU_TEXT =
   "Silakan pilih rekap Absensi Likes Kasat Binmas:\n" +
+  Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
+    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+    .join("\n") +
+  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+
+const KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT =
+  "Silakan pilih rekap Likes Instagram Kasat Binmas (Excel):\n" +
   Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
     .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
     .join("\n") +
@@ -2397,7 +2405,8 @@ export const dirRequestHandlers = {
         "3️⃣2️⃣ Top ranking like/komentar polres tertinggi\n" +
         "3️⃣3️⃣ Absensi Kasatker\n" +
         "3️⃣4️⃣ Absensi likes Instagram Kasat Binmas\n" +
-        "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n\n" +
+        "3️⃣5️⃣ Absensi komentar TikTok Kasat Binmas\n" +
+        "4️⃣4️⃣ Rekap likes Instagram Kasat Binmas (Excel)\n\n" +
         "📡 *Monitoring Satbinmas Official*\n" +
         "3️⃣6️⃣ Ambil metadata harian IG Satbinmas Official\n" +
         "3️⃣7️⃣ Ambil konten harian IG Satbinmas Official (semua akun ORG)\n" +
@@ -2538,6 +2547,7 @@ export const dirRequestHandlers = {
           "41",
           "42",
           "43",
+          "44",
         ].includes(choice)
     ) {
       await waClient.sendMessage(chatId, "Pilihan tidak valid. Ketik angka menu.");
@@ -2579,6 +2589,12 @@ export const dirRequestHandlers = {
     if (choice === "35") {
       session.step = "choose_kasat_binmas_tiktok_comment_period";
       await waClient.sendMessage(chatId, KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT);
+      return;
+    }
+
+    if (choice === "44") {
+      session.step = "choose_kasat_binmas_likes_excel_period";
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
       return;
     }
 
@@ -3133,6 +3149,58 @@ export const dirRequestHandlers = {
           error.message.includes("Tidak ada data"))
           ? error.message
           : `❌ Gagal membuat rekap Absensi Likes Kasat Binmas (${option.description}).`;
+      await waClient.sendMessage(chatId, msg);
+    }
+
+    session.step = "main";
+    await dirRequestHandlers.main(session, chatId, "", waClient);
+  },
+
+  async choose_kasat_binmas_likes_excel_period(session, chatId, text, waClient) {
+    const input = (text || "").trim();
+    if (!input) {
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    if (input.toLowerCase() === "batal") {
+      await waClient.sendMessage(
+        chatId,
+        "✅ Menu Rekap Likes Instagram Kasat Binmas (Excel) ditutup."
+      );
+      session.step = "main";
+      await dirRequestHandlers.main(session, chatId, "", waClient);
+      return;
+    }
+
+    const option = KASAT_BINMAS_LIKES_PERIOD_MAP[input];
+    if (!option) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
+      );
+      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
+    }
+
+    try {
+      await sendKasatBinmasLikesRecapExcel({
+        period: option.period,
+        chatId,
+        waClient,
+      });
+    } catch (error) {
+      console.error(
+        "Gagal membuat rekap Likes Kasat Binmas (Excel):",
+        error
+      );
+      const msg =
+        error?.message &&
+        (error.message.includes("direktorat") ||
+          error.message.includes("Client tidak ditemukan") ||
+          error.message.includes("Tidak ada data"))
+          ? error.message
+          : `❌ Gagal mengirim rekap Likes Kasat Binmas (Excel) (${option.description}).`;
       await waClient.sendMessage(chatId, msg);
     }
 

@@ -166,6 +166,11 @@ jest.unstable_mockModule(
   '../src/service/kasatBinmasLikesRecapService.js',
   () => ({
     generateKasatBinmasLikesRecap: mockGenerateKasatBinmasLikesRecap,
+    describeKasatBinmasLikesPeriod: () => ({
+      type: 'harian',
+      label: 'Hari ini',
+    }),
+    kasatBinmasRankWeight: () => 0,
   })
 );
 jest.unstable_mockModule(
