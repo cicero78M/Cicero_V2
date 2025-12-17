@@ -154,6 +154,24 @@ dirrequest tanpa langkah tambahan.
   dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
   direktori kerja tetap bersih.
 
+## Monitoring Kasatker – Rekap Komentar TikTok Kasat Binmas (Excel)
+- Grup Monitoring Kasatker menambahkan menu **4️⃣5️⃣ Rekap komentar TikTok Kasat
+  Binmas (Excel)**. Opsi ini menyajikan rekap akumulasi komentar langsung dalam
+  format Excel tanpa narasi teks panjang.
+- Setelah memilih **4️⃣5️⃣**, bot menampilkan pilihan periode rekap: **1. Harian**,
+  **2. Mingguan** (Senin–Minggu), atau **3. Bulanan**. Operator bisa membalas
+  angka 1–3 atau ketik *batal* untuk kembali ke menu Monitoring Kasatker.
+- File Excel memuat kolom **Polres**, **Pangkat dan Nama**, dan **Total
+  Komentar**. Baris diurutkan berdasarkan total komentar terbanyak, lalu pangkat
+  (sesuai urutan PANGKAT_ORDER Kasat Binmas), kemudian nama pengguna untuk
+  memudahkan pemetaan capaian.
+- Label periode pada baris kedua sheet mengikuti pilihan submenu (contoh: harian
+  "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
+  bulanan "Bulan Mei 2024").
+- Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
+  dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
+  direktori tetap bersih.
+
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
 resmi Satbinmas. Menu utama kini menampilkan rentang opsi **3️⃣6️⃣–4️⃣1️⃣** untuk
