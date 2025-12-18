@@ -379,10 +379,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tetap dirangkum pada pesan akhir.
 - Blok besar memiliki log pembuka dan penutup:
   - `runDirRequestFetchSosmed` (baik di alur utama maupun BIDHUMAS).
-  - Sekuens DITSAMAPTA (menu 6, 9, & 28) yang dikirim ke grup, super admin,
+  - Sekuens DITSAMAPTA (menu 6, 9, 28, & 29) yang dikirim ke grup, super admin,
     dan operator direktorat.
   - Eksekusi menu 21 Ditbinmas.
-  - Sekuens BIDHUMAS (menu 6, 9, & 28) untuk grup dan super admin BIDHUMAS.
+  - Sekuens BIDHUMAS (menu 6, 9, 28, & 29) untuk grup dan super admin BIDHUMAS.
   - Cron rekap Ditbinmas (menu 21, super admin 6/9/34/35, operator 30).
 - Urutan log WA yang diterima admin mencerminkan eksekusi nyata: pesan pembuka
   blok → progres per aksi/penerima (mulai/sukses/gagal) → pesan penutup blok →
@@ -392,8 +392,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
   **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed()` untuk
-  memperbarui data sosmed, lalu menjalankan menu **6** (Instagram likes) dan
-  **9** (komentar TikTok) khusus untuk client `BIDHUMAS`.
+  memperbarui data sosmed, lalu menjalankan menu **6** (Instagram likes),
+  **9** (komentar TikTok), **2️⃣8️⃣** (rekap likes per konten), dan **2️⃣9️⃣**
+  (rekap komentar per konten) khusus untuk client `BIDHUMAS`.
 - Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
   super admin BIDHUMAS (`client_super`). Operator atau admin WhatsApp lainnya
   tidak menerima laporan ini.
