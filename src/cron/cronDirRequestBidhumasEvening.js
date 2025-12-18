@@ -53,7 +53,7 @@ async function logPhase(message) {
 }
 
 async function executeBidhumasMenus(recipients) {
-  const actions = ['6', '9'];
+  const actions = ['6', '9', '28', '29'];
   const failures = [];
 
   for (let recipientIndex = 0; recipientIndex < recipients.length; recipientIndex += 1) {
@@ -117,8 +117,8 @@ export async function runCron() {
       const failures = await executeBidhumasMenus(recipients);
       sendStatus =
         failures.length === 0
-          ? `menu 6 & 9 dikirim ke ${recipients.length} penerima`
-          : `menu 6 & 9 selesai dengan ${failures.length} kegagalan`;
+          ? `menu 6, 9, 28, dan 29 dikirim ke ${recipients.length} penerima`
+          : `menu 6, 9, 28, dan 29 selesai dengan ${failures.length} kegagalan`;
 
       if (failures.length > 0) {
         await logToAdmins(`${sendStatus}\n${failures.join('\n')}`);

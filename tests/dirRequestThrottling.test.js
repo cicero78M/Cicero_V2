@@ -64,7 +64,7 @@ test('BIDHUMAS evening cron throttles messages between actions', async () => {
 
   expect(runDirRequestAction).toHaveBeenCalledTimes(1);
 
-  const expectedCalls = 6;
+  const expectedCalls = 12;
   for (let i = 2; i <= expectedCalls; i += 1) {
     await advanceAndFlush();
     expect(runDirRequestAction).toHaveBeenCalledTimes(i);
