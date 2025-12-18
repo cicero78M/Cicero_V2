@@ -87,6 +87,8 @@ This allows operators to scope responses to the correct client.
     APP_SESSION_NAME=wa-admin
     USER_WA_CLIENT_ID=wa-userrequest
     GATEWAY_WA_CLIENT_ID=wa-gateway
+    WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json
+    WA_WEB_VERSION=
     ENABLE_DIRREQUEST_GROUP=true
     CORS_ORIGIN=http://localhost:3000
     ALLOW_DUPLICATE_REQUESTS=false
@@ -117,6 +119,7 @@ This allows operators to scope responses to the correct client.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
    `APP_SESSION_NAME` is the session folder name used for the main WhatsApp client; override it when running multiple instances on the same host.
+   `WA_WEB_VERSION_CACHE_URL` points to a remote JSON document that whatsapp-web.js reads to align with the latest WhatsApp Web build; keep the default to avoid "update WhatsApp" browser errors, or swap in your own mirror if GitHub access is blocked. Set `WA_WEB_VERSION` to pin a specific version string from the JSON when the automatic cache path is unavailable.
    `ENABLE_DIRREQUEST_GROUP=false` disables all Ditbinmas dirRequest cron jobs at once while leaving other schedules intact.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
@@ -206,7 +209,7 @@ The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP 
 ## Troubleshooting
 
 - **DB connection errors** – check database credentials and PostgreSQL status.
-- **WhatsApp not connected** – rescan the QR code, confirm session folders (`APP_SESSION_NAME`, `USER_WA_CLIENT_ID`, `GATEWAY_WA_CLIENT_ID`), and check for unsupported version logs.
+- **WhatsApp not connected** – rescan the QR code, confirm session folders (`APP_SESSION_NAME`, `USER_WA_CLIENT_ID`, `GATEWAY_WA_CLIENT_ID`), and check for unsupported version logs. If browser traces include `static.whatsapp.net` stack frames that mention updating WhatsApp, point `WA_WEB_VERSION_CACHE_URL` to a reachable mirror or pin `WA_WEB_VERSION` to the latest release from the cache JSON.
 - **Email OTP delivery failed** – verify `SMTP_*` variables and network egress.
 - **External API errors** – verify `RAPIDAPI_KEY` and check application logs.
 - **Cron jobs not running** – confirm cron buckets activated after WhatsApp readiness and verify timezone settings (`Asia/Jakarta`).

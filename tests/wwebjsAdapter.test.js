@@ -13,11 +13,13 @@ const mockClient = {
 };
 
 const MessageMedia = jest.fn();
+const ClientMock = jest.fn(() => mockClient);
+const LocalAuthMock = jest.fn().mockImplementation(() => ({}));
 
 jest.unstable_mockModule('whatsapp-web.js', () => ({
   default: {
-    Client: jest.fn(() => mockClient),
-    LocalAuth: jest.fn().mockImplementation(() => ({})),
+    Client: ClientMock,
+    LocalAuth: LocalAuthMock,
     MessageMedia,
   },
 }));
@@ -26,6 +28,8 @@ const { createWwebjsClient } = await import('../src/service/wwebjsAdapter.js');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  delete process.env.WA_WEB_VERSION;
+  delete process.env.WA_WEB_VERSION_CACHE_URL;
 });
 
 test('wwebjs adapter relays messages', async () => {
@@ -41,6 +45,23 @@ test('wwebjs adapter relays messages', async () => {
   expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {});
   await client.disconnect();
   expect(mockClient.destroy).toHaveBeenCalled();
+});
+
+test('wwebjs adapter configures web version cache and overrides', async () => {
+  process.env.WA_WEB_VERSION_CACHE_URL = 'https://example.com/wa.json';
+  process.env.WA_WEB_VERSION = '2.3000.0';
+
+  await createWwebjsClient('custom-client');
+
+  expect(ClientMock).toHaveBeenCalledWith(
+    expect.objectContaining({
+      authStrategy: expect.anything(),
+      puppeteer: { args: ['--no-sandbox'], headless: true },
+      webVersionCache: { type: 'remote', remotePath: 'https://example.com/wa.json' },
+      webVersion: '2.3000.0',
+    })
+  );
+  expect(LocalAuthMock).toHaveBeenCalledWith({ clientId: 'custom-client' });
 });
 
 test('wwebjs adapter sends documents as MessageMedia', async () => {
@@ -67,4 +88,3 @@ test('wwebjs adapter sends documents as MessageMedia', async () => {
     sendMediaAsDocument: true,
   });
 });
-

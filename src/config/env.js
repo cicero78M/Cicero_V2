@@ -22,6 +22,10 @@ export const env = cleanEnv(process.env, {
   APP_SESSION_NAME: str({ default: '' }),
   USER_WA_CLIENT_ID: str({ default: 'wa-userrequest' }),
   GATEWAY_WA_CLIENT_ID: str({ default: 'wa-gateway' }),
+  WA_WEB_VERSION: str({ default: '' }),
+  WA_WEB_VERSION_CACHE_URL: str({
+    default: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json'
+  }),
   ENABLE_DIRREQUEST_GROUP: bool({ default: true }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' }),

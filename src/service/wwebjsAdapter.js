@@ -1,6 +1,25 @@
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
+const DEFAULT_WEB_VERSION_CACHE_URL =
+  'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json';
+
+function resolveWebVersionOptions() {
+  const cacheUrl =
+    process.env.WA_WEB_VERSION_CACHE_URL || DEFAULT_WEB_VERSION_CACHE_URL;
+  const pinnedVersion = (process.env.WA_WEB_VERSION || '').trim();
+
+  const versionOptions = {
+    webVersionCache: { type: 'remote', remotePath: cacheUrl },
+  };
+
+  if (pinnedVersion) {
+    versionOptions.webVersion = pinnedVersion;
+  }
+
+  return versionOptions;
+}
+
 const { Client, LocalAuth, MessageMedia } = pkg;
 
 /**
@@ -15,6 +34,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const client = new Client({
     authStrategy: new LocalAuth({ clientId }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
+    ...resolveWebVersionOptions(),
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
