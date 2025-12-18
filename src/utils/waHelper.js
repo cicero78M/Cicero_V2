@@ -139,6 +139,56 @@ export function formatToWhatsAppId(nohp) {
   return `${normalized}@c.us`;
 }
 
+function normalizeChatId(chatId) {
+  const normalized = typeof chatId === 'string' ? chatId.trim() : '';
+  if (!normalized) return '';
+  if (isValidWid(normalized)) return normalized;
+  const digits = extractPhoneDigits(normalized);
+  if (!digits) return normalized;
+  return `${digits}@c.us`;
+}
+
+async function resolveChatId(waClient, chatId) {
+  const normalized = normalizeChatId(chatId);
+  if (!normalized) return '';
+  const isGroup = normalized.endsWith('@g.us');
+
+  if (!isGroup && typeof waClient?.getNumberId === 'function') {
+    try {
+      const numberId = await waClient.getNumberId(extractPhoneDigits(normalized));
+      if (numberId?._serialized) {
+        return numberId._serialized;
+      }
+    } catch (err) {
+      console.warn('[WA] getNumberId failed:', err?.message || err);
+    }
+  }
+
+  if (typeof waClient?.getContact === 'function') {
+    try {
+      const contact = await waClient.getContact(normalized);
+      if (contact?.id?._serialized) {
+        return contact.id._serialized;
+      }
+    } catch (err) {
+      console.warn('[WA] getContact failed:', err?.message || err);
+    }
+  }
+
+  if (!isGroup && typeof waClient?.getChat === 'function') {
+    try {
+      const chat = await waClient.getChat(normalized);
+      if (chat?.id?._serialized) {
+        return chat.id._serialized;
+      }
+    } catch (err) {
+      console.warn('[WA] getChat failed:', err?.message || err);
+    }
+  }
+
+  return normalized;
+}
+
 // Normalisasi nomor WhatsApp ke awalan 62 tanpa suffix @c.us
 export function normalizeWhatsappNumber(nohp) {
   let number = extractPhoneDigits(nohp);
@@ -368,18 +418,28 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     }
   };
 
+  let resolvedChatId = null;
+
   try {
     await sendWithRetry(async () => {
       await ensureClientReady();
-      await waClient.sendMessage(chatId, message, sendOptions);
+      resolvedChatId = await resolveChatId(waClient, chatId);
+      if (!resolvedChatId) {
+        const error = new Error('chatId penerima tidak valid');
+        error.retryable = false;
+        throw error;
+      }
+      await waClient.sendMessage(resolvedChatId, message, sendOptions);
     }, retryConfig);
 
     console.log(
-      `[WA] Sent message to ${chatId}: ${String(message).substring(0, 64)}`
+      `[WA] Sent message to ${resolvedChatId || chatId}: ${String(message).substring(0, 64)}`
     );
     return true;
   } catch (err) {
-    console.error(`[WA] Failed to send message to ${chatId}:`, err.message);
+    console.error(
+      `[WA] Failed to send message to ${resolvedChatId || chatId}: ${err?.message || err}`
+    );
     return false;
   }
 }

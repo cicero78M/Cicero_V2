@@ -81,6 +81,24 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     await client.destroy();
   };
 
+  emitter.getNumberId = async (phone) => {
+    try {
+      return await client.getNumberId(phone);
+    } catch (err) {
+      console.warn('[WWEBJS] getNumberId failed:', err?.message || err);
+      return null;
+    }
+  };
+
+  emitter.getChat = async (jid) => {
+    try {
+      return await client.getChatById(jid);
+    } catch (err) {
+      console.warn('[WWEBJS] getChat failed:', err?.message || err);
+      return null;
+    }
+  };
+
   emitter.sendMessage = async (jid, content, options = {}) => {
     let message;
     if (
