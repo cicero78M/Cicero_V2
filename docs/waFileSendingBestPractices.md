@@ -11,13 +11,16 @@ Pengiriman file melalui bot WhatsApp memerlukan beberapa langkah agar aman dan d
 3. **Verifikasi Kontak**  
    Jika `waClient` menyediakan fungsi `onWhatsApp`, panggil fungsi ini untuk memastikan nomor terdaftar sebelum mengirim file. Lewati proses pengiriman jika kontak tidak ada.
 
-4. **Tentukan MIME Type**  
+4. **Normalisasi Chat ID Sebelum Kirim Pesan**  
+   Untuk pesan teks yang mengiringi pengiriman file atau broadcast cron, gunakan `safeSendMessage`. Helper ini sekarang mencoba `getNumberId`, `getContact`, dan `getChat` untuk menghasilkan chat ID terserialisasi (lengkap dengan *lid*) sebelum memanggil `sendMessage`, sehingga error seperti `Lid is missing in chat table` dapat dihindari.
+
+5. **Tentukan MIME Type**  
    Tentukan MIME type secara eksplisit atau biarkan helper mendeteksinya menggunakan `mime-types`. Ini membantu WhatsApp menampilkan file dengan benar.
 
-5. **Tangani Error**  
+6. **Tangani Error**  
    Bungkus proses pengiriman dalam blok `try/catch` dan log error untuk memudahkan debugging jika pengiriman gagal.
 
-6. **Batasi Ukuran File**  
+7. **Batasi Ukuran File**  
    Hindari mengirim file yang terlalu besar agar tidak menghabiskan memori. Pertimbangkan untuk mengompres atau membagi file bila perlu.
 
 Contoh penggunaan sederhana:

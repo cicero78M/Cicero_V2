@@ -5,6 +5,7 @@ process.env.TZ = 'Asia/Jakarta';
 process.env.JWT_SECRET = 'testsecret';
 
 const mockGetUsersSocialByClient = jest.fn();
+const mockGetUsersByClient = jest.fn();
 const mockGetClientsByRole = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetInstaPostsTodayByClient = jest.fn();
@@ -56,11 +57,58 @@ const mockSafeSendMessage = jest.fn();
 const mockFetchAndStoreTiktokContent = jest.fn();
 const mockHandleFetchKomentarTiktokBatch = jest.fn();
 const mockGenerateSosmedTaskMessage = jest.fn();
+const mockMatchesKasatBinmasJabatan = jest.fn();
 
-jest.unstable_mockModule('../src/model/userModel.js', () => ({
-  getUsersSocialByClient: mockGetUsersSocialByClient,
-  getClientsByRole: mockGetClientsByRole,
-}));
+const createAsyncStub = (value) => jest.fn().mockResolvedValue(value);
+const stubEmptyArray = () => createAsyncStub([]);
+const stubNull = () => createAsyncStub(null);
+const stubVoid = () => jest.fn().mockResolvedValue();
+
+jest.unstable_mockModule('../src/model/userModel.js', () => {
+  const asyncEmpty = stubEmptyArray;
+  const asyncNull = stubNull;
+  const asyncVoid = stubVoid;
+
+  return {
+    STATIC_DIVISIONS: [],
+    mergeStaticDivisions: (divisions = []) => divisions,
+    getClientsByRole: mockGetClientsByRole,
+    getUsersByClient: mockGetUsersByClient,
+    getOperatorsByClient: asyncEmpty(),
+    getUsersByClientFull: asyncEmpty(),
+    getAllUsers: asyncEmpty(),
+    getInstaFilledUsersByClient: asyncEmpty(),
+    getInstaEmptyUsersByClient: asyncEmpty(),
+    getTiktokFilledUsersByClient: asyncEmpty(),
+    getTiktokEmptyUsersByClient: asyncEmpty(),
+    getUsersWithWaByClient: asyncEmpty(),
+    getActiveUsersWithWhatsapp: asyncEmpty(),
+    getUsersMissingDataByClient: asyncEmpty(),
+    getUsersSocialByClient: mockGetUsersSocialByClient,
+    findUserById: asyncNull(),
+    findUserByEmail: asyncNull(),
+    findUserByIdAndClient: asyncNull(),
+    updatePremiumStatus: asyncVoid(),
+    updateUserField: asyncVoid(),
+    getAllExceptionUsers: asyncEmpty(),
+    getExceptionUsersByClient: asyncEmpty(),
+    getDirektoratUsers: asyncEmpty(),
+    getUsersByDirektorat: asyncEmpty(),
+    findUserByInsta: asyncNull(),
+    findUserByTiktok: asyncNull(),
+    findUserByWhatsApp: asyncNull(),
+    findUserByIdAndWhatsApp: asyncNull(),
+    getAvailableTitles: asyncEmpty(),
+    getAvailableSatfung: asyncEmpty(),
+    createUser: asyncVoid(),
+    updateUser: asyncVoid(),
+    updateUserRolesUserId: asyncVoid(),
+    deleteUser: asyncVoid(),
+    clearUsersWithAdminWA: asyncVoid(),
+    findUsersByClientId: mockGetUsersByClient,
+    findUserByWA: asyncNull(),
+  };
+});
 jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
   getShortcodesTodayByClient: mockGetShortcodesTodayByClient,
   getPostsTodayByClient: mockGetInstaPostsTodayByClient,
@@ -161,6 +209,7 @@ jest.unstable_mockModule('../src/service/kasatkerReportService.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/kasatkerAttendanceService.js', () => ({
   generateKasatkerAttendanceSummary: mockGenerateKasatkerAttendanceSummary,
+  matchesKasatBinmasJabatan: mockMatchesKasatBinmasJabatan,
 }));
 jest.unstable_mockModule(
   '../src/service/kasatBinmasLikesRecapService.js',
@@ -178,6 +227,10 @@ jest.unstable_mockModule(
   () => ({
     generateKasatBinmasTiktokCommentRecap: mockGenerateKasatBinmasTiktokCommentRecap,
     resolveBaseDate: (date) => date || new Date('2025-12-16T00:00:00Z'),
+    describeKasatBinmasTiktokCommentPeriod: () => ({
+      label: 'hari ini',
+      dateRange: 'today',
+    }),
   })
 );
 jest.unstable_mockModule('../src/service/instagramAllDataRecapService.js', () => ({
