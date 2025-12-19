@@ -56,6 +56,8 @@ Cicero_V2/
 
 The API exposes endpoints for managing clients and users, fetching Instagram and TikTok data, handling OAuth callbacks, orchestrating editorial events, and providing dashboard statistics. Dedicated routers cover aggregator widgets, directorate recap exports, complaint handling, Penmas press releases, premium requests, link amplification (regular and khusus), and OTP-powered data-claim flows. Detailed documentation for each route is available in the source code comments (`src/routes/**/*.js`).
 
+Basic health checks are available without authentication. `GET` or `POST /` returns `{ "status": "ok" }` for load balancers or uptime probes, and `/_next/dev/` responds the same to keep Next.js dev proxies from spamming logs.
+
 When a request requires data for a particular client, include the client's identifier as a query parameter:
 
 ```

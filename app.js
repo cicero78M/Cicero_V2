@@ -92,6 +92,9 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(dedupRequest);
 
+app.all('/', (req, res) => res.status(200).json({ status: 'ok' }));
+app.all('/_next/dev/', (req, res) => res.status(200).json({ status: 'ok' }));
+
 // ===== ROUTE LOGIN (TANPA TOKEN) =====
 app.use('/api/auth', authRoutes);
 app.use('/api/claim', claimRoutes);
