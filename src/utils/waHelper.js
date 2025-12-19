@@ -159,6 +159,9 @@ async function resolveChatId(waClient, chatId) {
       if (numberId?._serialized) {
         return numberId._serialized;
       }
+      if (numberId == null) {
+        return '';
+      }
     } catch (err) {
       console.warn('[WA] getNumberId failed:', err?.message || err);
     }
@@ -340,7 +343,8 @@ function defaultShouldRetry(err) {
     message.includes('parameter invalid') ||
     message.includes('invalid recipient') ||
     message.includes('not a valid') ||
-    message.includes('bad request')
+    message.includes('bad request') ||
+    message.includes('lid is missing in chat table')
   ) {
     return false;
   }
