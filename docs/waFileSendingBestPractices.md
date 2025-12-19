@@ -11,8 +11,8 @@ Pengiriman file melalui bot WhatsApp memerlukan beberapa langkah agar aman dan d
 3. **Verifikasi Kontak**  
    Jika `waClient` menyediakan fungsi `onWhatsApp`, panggil fungsi ini untuk memastikan nomor terdaftar sebelum mengirim file. Lewati proses pengiriman jika kontak tidak ada.
 
-4. **Normalisasi Chat ID Sebelum Kirim Pesan**  
-   Untuk pesan teks yang mengiringi pengiriman file atau broadcast cron, gunakan `safeSendMessage`. Helper ini mencoba `getNumberId`, `getContact`, dan `getChat` untuk menghasilkan chat ID terserialisasi (lengkap dengan *lid*). Jika `getNumberId` mengembalikan `null` (nomor tidak terdaftar), pengiriman akan dibatalkan agar error seperti `Lid is missing in chat table` dapat dihindari.
+4. **Normalisasi & Hidratasi Chat ID Sebelum Kirim Pesan**  
+   Untuk pesan teks yang mengiringi pengiriman file atau broadcast cron, gunakan `safeSendMessage`. Helper ini mencoba `getNumberId`, `getContact`, dan `getChat` untuk menghasilkan chat ID terserialisasi (lengkap dengan *lid*), lalu melakukan *hydration* chat agar metadata tersimpan di cache. Jika `getNumberId` mengembalikan `null` (nomor tidak terdaftar), pengiriman akan dibatalkan agar error seperti `Lid is missing in chat table` dapat dihindari. Jika error *lid* masih terjadi, `safeSendMessage` akan melakukan *retry* setelah memuat ulang chat.
 
 5. **Tentukan MIME Type**  
    Tentukan MIME type secara eksplisit atau biarkan helper mendeteksinya menggunakan `mime-types`. Ini membantu WhatsApp menampilkan file dengan benar.

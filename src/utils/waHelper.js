@@ -148,6 +148,37 @@ function normalizeChatId(chatId) {
   return `${digits}@c.us`;
 }
 
+function isMissingLidError(err) {
+  const message = String(err?.message || '').toLowerCase();
+  return message.includes('lid is missing in chat table');
+}
+
+async function hydrateChat(waClient, chatId) {
+  if (!chatId) return null;
+  let chat = null;
+
+  if (typeof waClient?.getChat === 'function') {
+    try {
+      chat = await waClient.getChat(chatId);
+    } catch (err) {
+      console.warn('[WA] getChat failed:', err?.message || err);
+    }
+  }
+
+  if (!chat && typeof waClient?.getContact === 'function') {
+    try {
+      const contact = await waClient.getContact(chatId);
+      if (contact?.id?._serialized && typeof waClient?.getChat === 'function') {
+        chat = await waClient.getChat(contact.id._serialized);
+      }
+    } catch (err) {
+      console.warn('[WA] getContact failed:', err?.message || err);
+    }
+  }
+
+  return chat;
+}
+
 async function resolveChatId(waClient, chatId) {
   const normalized = normalizeChatId(chatId);
   if (!normalized) return '';
@@ -157,7 +188,8 @@ async function resolveChatId(waClient, chatId) {
     try {
       const numberId = await waClient.getNumberId(extractPhoneDigits(normalized));
       if (numberId?._serialized) {
-        return numberId._serialized;
+        const chat = await hydrateChat(waClient, numberId._serialized);
+        return chat?.id?._serialized || numberId._serialized;
       }
       if (numberId == null) {
         return '';
@@ -171,7 +203,8 @@ async function resolveChatId(waClient, chatId) {
     try {
       const contact = await waClient.getContact(normalized);
       if (contact?.id?._serialized) {
-        return contact.id._serialized;
+        const chat = await hydrateChat(waClient, contact.id._serialized);
+        return chat?.id?._serialized || contact.id._serialized;
       }
     } catch (err) {
       console.warn('[WA] getContact failed:', err?.message || err);
@@ -406,6 +439,12 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     baseDelayMs: 500,
     maxDelayMs: 5000,
     jitterRatio: 0.2,
+    shouldRetry: (err, attempt) => {
+      if (isMissingLidError(err) && attempt < 2) {
+        return true;
+      }
+      return defaultShouldRetry(err, attempt);
+    },
     ...retryOptions,
   };
 
@@ -433,7 +472,15 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
         error.retryable = false;
         throw error;
       }
-      await waClient.sendMessage(resolvedChatId, message, sendOptions);
+      await hydrateChat(waClient, resolvedChatId);
+      try {
+        await waClient.sendMessage(resolvedChatId, message, sendOptions);
+      } catch (err) {
+        if (isMissingLidError(err)) {
+          await hydrateChat(waClient, resolvedChatId);
+        }
+        throw err;
+      }
     }, retryConfig);
 
     console.log(
