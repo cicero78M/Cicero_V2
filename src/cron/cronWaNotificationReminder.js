@@ -316,7 +316,13 @@ export async function runCron() {
       status = null;
     }
 
-    await safeSendMessage(waGatewayClient, chatId, message);
+    const sent = await safeSendMessage(waGatewayClient, chatId, message);
+    if (!sent) {
+      console.error(
+        `[WA] Skip reminder state update for ${chatId} because message delivery failed.`
+      );
+      continue;
+    }
 
     const nextState = buildNextState(
       reminderStateMap.get(chatId),
