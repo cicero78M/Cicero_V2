@@ -103,7 +103,7 @@ test('runBidhumasMenuSequence includes recap menus 28 and 29', async () => {
   expect(bidhumasActions).toEqual(expect.arrayContaining(['6', '9', '28', '29']));
 });
 
-test('runDitbinmasRecapAndCustomSequence sends Ditbinmas recap menus to super admin only with 20s delay', async () => {
+test('runDitbinmasRecapAndCustomSequence sends Ditbinmas recap menus to super admin and operator', async () => {
   const { runDitbinmasRecapAndCustomSequence } = await loadModules();
 
   await runDitbinmasRecapAndCustomSequence(new Date('2024-06-03T13:30:00+07:00'));
@@ -117,5 +117,11 @@ test('runDitbinmasRecapAndCustomSequence sends Ditbinmas recap menus to super ad
   const recipients = new Set(ditbinmasRecapCalls.map(([args]) => args.chatId));
   expect(Array.from(recipients)).toEqual(['08123456789@c.us']);
 
-  expect(delayAfterSend).toHaveBeenCalledWith(20000);
+  const operatorCalls = runDirRequestAction.mock.calls.filter(
+    ([args]) => args.clientId === 'DITBINMAS' && String(args.action) === '30',
+  );
+  expect(operatorCalls).toHaveLength(1);
+  expect(operatorCalls[0][0].chatId).toBe('081987654321@c.us');
+
+  expect(delayAfterSend).toHaveBeenCalledWith(10000);
 });

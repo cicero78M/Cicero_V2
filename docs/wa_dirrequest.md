@@ -447,9 +447,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
      TikTok sekaligus menyegarkan likes serta komentar di awal alur.
   2. Menjalankan `runDitbinmasRecapSequence()` hanya untuk menu **6/9/34/35**
-     ke Super Admin Ditbinmas (kolom `client_super`) dengan jeda **20 detik**
-     antar eksekusi agar gateway WA tidak kelebihan beban; menu operator
-     **30** sengaja dilewati pada slot ini.
+     ke Super Admin Ditbinmas (kolom `client_super`) dengan jeda **10 detik**
+     antar eksekusi agar gateway WA tidak kelebihan beban, lalu mengeksekusi
+     menu operator **30** ke kontak `client_operator` setelah blok super admin.
   3. Memanggil `runCron({ includeFetch: false })` sehingga blok custom
      dirrequest berjalan tanpa fetch ulang.
 - Setiap tahap mencatat progres ke admin WhatsApp; ringkasan gabungan
@@ -464,9 +464,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   berjalan sekali di slot tersebut.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
-  - Menu **30** dikirim hanya ke `client_operator` bila opsi operator tidak
-    dilompati. Slot 20:30 secara default melewati menu ini supaya tidak
-    membebani operator.
+  - Menu **30** dikirim hanya ke `client_operator` pada slot 20:30 setelah
+    menu super admin selesai.
   - Menu **21** tidak lagi dijalankan; slot ini tidak mengirim rekap ke grup Ditbinmas.
 - Periode rekap mengikuti tanggal eksekusi:
   - Hari biasa menjalankan rekap harian.
@@ -479,7 +478,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   menjalankan menu secara berurutan melalui `executeMenuActions`.
 - Setiap pesan antar menu/penerima diberi jeda **2 detik** (`delayAfterSend`)
   pada alur standar, tetapi slot 20:30 untuk Super Admin Ditbinmas memakai jeda
-  **20 detik** per eksekusi menu agar tidak menabrak batas pengiriman WhatsApp.
+  **10 detik** per eksekusi menu agar tidak menabrak batas pengiriman WhatsApp.
 
 ## Penerima Cron DirRequest
 - Cron `cronDirRequestFetchSosmed` kini mengeksekusi **seluruh client bertipe
