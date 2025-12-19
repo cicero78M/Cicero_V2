@@ -628,14 +628,15 @@ router.post('/user-register', async (req, res) => {
 });
 
 router.post('/user-login', async (req, res) => {
-  const { nrp, whatsapp } = req.body;
-  if (!nrp || !whatsapp) {
+  const { nrp, whatsapp, password } = req.body;
+  const waInput = whatsapp || password;
+  if (!nrp || !waInput) {
     return res
       .status(400)
       .json({ success: false, message: 'nrp dan whatsapp wajib diisi' });
   }
-  const wa = normalizeWhatsappNumber(whatsapp);
-  const rawWa = String(whatsapp).replace(/\D/g, "");
+  const wa = normalizeWhatsappNumber(waInput);
+  const rawWa = String(waInput).replace(/\D/g, "");
   const { rows } = await query(
     'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
     [nrp, wa, rawWa]
