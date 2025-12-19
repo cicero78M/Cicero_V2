@@ -508,10 +508,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Pengingat otomatis `cronWaNotificationReminder` tetap berjalan untuk pengguna
   Ditbinmas maupun BIDHUMAS yang mendaftar melalui `notifwa#on` dan masih
   dikirim ke nomor personal sesuai preferensi opt-in. Status pengiriman harian disimpan di tabel
-  `wa_notification_reminder_state` (key: `date_key`, `chat_id`) sehingga penerima
-  yang sudah tercatat selesai tidak dikirimi ulang pada eksekusi berikutnya di
+  `wa_notification_reminder_state` (key: `date_key`, `chat_id`) **hanya setelah pesan berhasil terkirim**,
+  sehingga penerima yang sudah tercatat selesai tidak dikirimi ulang pada eksekusi berikutnya di
   hari yang sama, sementara penerima yang belum lengkap tetap maju ke tahap
-  follow-up berikutnya.
+  follow-up berikutnya dan pengiriman yang gagal akan dicoba kembali pada run berikutnya.
 
 ### Format Nomor Super Admin & Operator
 - Kolom `client_super` dan `client_operator` menerima:
