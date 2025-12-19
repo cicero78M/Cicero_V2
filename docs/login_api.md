@@ -1,6 +1,6 @@
 # Login API Guide
 
-*Last updated: 2025-10-21*
+*Last updated: 2025-03-08*
 
 This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
 - `/api/auth/login` for client operators,
@@ -29,8 +29,6 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests u
   "whatsapp": "628123456789"
 }
 ```
-
-> **Note:** For legacy Android clients, the `password` field may be used instead of `whatsapp`. Both are treated equivalently.
 
 ### User Registration
 `POST /api/auth/user-register`
