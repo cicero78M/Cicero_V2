@@ -670,15 +670,35 @@ describe('POST /user-login', () => {
     );
   });
 
-  test('rejects login without whatsapp', async () => {
+  test('logs in user using password field', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ user_id: 'u2', nama: 'User2' }]
+    });
+
     const res = await request(app)
       .post('/api/auth/user-login')
-      .send({ nrp: 'u2' });
+      .send({ nrp: 'u2', password: '0812' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.message).toBe('nrp dan whatsapp wajib diisi');
-    expect(mockQuery).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT user_id, nama FROM "user" WHERE user_id = $1 AND (whatsapp = $2 OR whatsapp = $3)',
+      ['u2', '62812', '0812']
+    );
+    expect(mockRedis.sAdd).toHaveBeenCalledWith('user_login:u2', res.body.token);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      `login_token:${res.body.token}`,
+      'user:u2',
+      { EX: 2 * 60 * 60 }
+    );
+    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      actorId: 'u2',
+      loginType: 'user',
+      loginSource: 'mobile'
+    });
+    expect(mockQueueAdminNotification).toHaveBeenCalledWith(
+      expect.stringContaining('Login user: u2 - User2')
+    );
   });
 });
 
