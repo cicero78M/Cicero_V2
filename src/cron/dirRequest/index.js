@@ -15,7 +15,7 @@ import {
 } from '../cronDirRequestBidhumasEvening.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
-const READINESS_GRACE_MS = 15000;
+const READINESS_GRACE_MS = 10000;
 
 const dirRequestCrons = [
   {
