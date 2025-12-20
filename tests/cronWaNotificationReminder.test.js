@@ -76,12 +76,13 @@ beforeAll(async () => {
 beforeEach(async () => {
   reminderStateStore = new Map();
   mockGetReminderStateMapForDate.mockImplementation(async () => new Map(reminderStateStore));
-  mockUpsertReminderState.mockImplementation(async ({ chatId, lastStage, isComplete }) => {
-    reminderStateStore.set(chatId, { lastStage, isComplete });
+  mockUpsertReminderState.mockImplementation(async ({ chatId, clientId, lastStage, isComplete }) => {
+    reminderStateStore.set(`${chatId}:${clientId}`, { lastStage, isComplete });
   });
   mockDeleteReminderStateForDate.mockImplementation(async () => {
     reminderStateStore.clear();
   });
+  mockSafeSendMessage.mockResolvedValue(true);
 
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
   mockGetLikesByShortcode.mockResolvedValue([]);
@@ -160,7 +161,7 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
   await runCron();
 
   expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
-  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+  expect(reminderStateStore.get('081234567890@c.us:DITBINMAS')).toEqual({
     lastStage: 'initial',
     isComplete: false,
   });
@@ -171,7 +172,7 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
   await runCron();
 
   expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
-  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+  expect(reminderStateStore.get('081234567890@c.us:DITBINMAS')).toEqual({
     lastStage: 'completed',
     isComplete: true,
   });
@@ -184,8 +185,8 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
 });
 
 test('cron skips completed recipients but keeps following up with pending users after a restart', async () => {
-  reminderStateStore.set('081234567890@c.us', { lastStage: 'completed', isComplete: true });
-  reminderStateStore.set('089876543210@c.us', { lastStage: 'followup1', isComplete: false });
+  reminderStateStore.set('081234567890@c.us:DITBINMAS', { lastStage: 'completed', isComplete: true });
+  reminderStateStore.set('089876543210@c.us:DITBINMAS', { lastStage: 'followup1', isComplete: false });
 
   mockGetActiveUsersWithWhatsapp.mockResolvedValue([
     {
@@ -213,11 +214,11 @@ test('cron skips completed recipients but keeps following up with pending users 
 
   expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
   expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '089876543210@c.us', expect.any(String));
-  expect(reminderStateStore.get('089876543210@c.us')).toEqual({
+  expect(reminderStateStore.get('089876543210@c.us:DITBINMAS')).toEqual({
     lastStage: 'followup2',
     isComplete: false,
   });
-  expect(reminderStateStore.get('081234567890@c.us')).toEqual({
+  expect(reminderStateStore.get('081234567890@c.us:DITBINMAS')).toEqual({
     lastStage: 'completed',
     isComplete: true,
   });
