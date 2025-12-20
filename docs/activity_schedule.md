@@ -48,7 +48,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 
 #### Ditbinmas WA reminder persistence
 
-- `cronWaNotificationReminder` writes the per-date, per-`chat_id` reminder state into the `wa_notification_reminder_state` table (primary key: `date_key`, `chat_id`) only after a successful WhatsApp delivery, so the worker can recover after restarts without re-sending completed users while failed deliveries are retried on the next run. Columns include `last_stage` (`initial`, `followup1`, `followup2`, `completed`) and `is_complete` to gate follow-up sends per recipient.
+- `cronWaNotificationReminder` writes the per-date, per-`chat_id` + `client_id` reminder state into the `wa_notification_reminder_state` table (primary key: `date_key`, `chat_id`, `client_id`) only after a successful WhatsApp delivery, so the worker can recover after restarts without re-sending completed users while failed deliveries are retried on the next run. Columns include `last_stage` (`initial`, `followup1`, `followup2`, `completed`) and `is_complete` to gate follow-up sends per recipient.
 - On each run the job reads the stored state to pick the correct stage, skips rows where `is_complete=true`, and only advances the stage for recipients whose previously stored stage is behind the current run. This keeps once-per-day delivery guarantees for completions while still pushing pending recipients forward to their next follow-up slot.
 
 Each job collects data from the database, interacts with RapidAPI or WhatsApp services, and updates the system accordingly. Refer to [docs/naming_conventions.md](naming_conventions.md) for code style guidelines.

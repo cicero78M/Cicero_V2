@@ -219,6 +219,15 @@ function normalizeRecipient(whatsapp) {
   return formatToWhatsAppId(digits);
 }
 
+function normalizeClientId(clientId) {
+  return (clientId || "").toString().trim().toUpperCase();
+}
+
+function buildReminderStateKey(chatId, clientId) {
+  if (!chatId || !clientId) return null;
+  return `${chatId}:${normalizeClientId(clientId)}`;
+}
+
 const stageWeights = {
   initial: 0,
   followup1: 1,
@@ -286,12 +295,13 @@ export async function runCron() {
 
   for (const user of users) {
     if (user?.wa_notification_opt_in !== true) continue;
-    const clientId = (user?.client_id || "").toString().trim().toUpperCase();
+    const clientId = normalizeClientId(user?.client_id);
     if (!TARGET_CLIENT_IDS.has(clientId)) continue;
     const chatId = normalizeRecipient(user?.whatsapp);
-    if (!chatId || recipients.has(chatId)) continue;
+    const recipientKey = buildReminderStateKey(chatId, clientId);
+    if (!chatId || !recipientKey || recipients.has(recipientKey)) continue;
 
-    const state = reminderStateMap.get(chatId);
+    const state = reminderStateMap.get(recipientKey);
     const recipientStage = determineRecipientStage(runStage, state);
     if (!recipientStage) continue;
 
@@ -299,15 +309,20 @@ export async function runCron() {
       ...user,
       pangkat: user?.pangkat ?? user?.title,
     };
-    recipients.set(chatId, { user: userWithPangkat, stage: recipientStage });
+    recipients.set(recipientKey, {
+      user: userWithPangkat,
+      stage: recipientStage,
+      chatId,
+      clientId,
+    });
   }
 
-  for (const [chatId, recipient] of recipients.entries()) {
-    const { user, stage } = recipient;
+  for (const [recipientKey, recipient] of recipients.entries()) {
+    const { user, stage, chatId, clientId } = recipient;
     let message;
     let status;
     try {
-      const recap = await getClientTaskRecap(user?.client_id, recapCache);
+      const recap = await getClientTaskRecap(clientId, recapCache);
       status = buildUserTaskStatus(user, recap);
       message = buildNotificationMessage(user, status);
     } catch (error) {
@@ -325,7 +340,7 @@ export async function runCron() {
     }
 
     const nextState = buildNextState(
-      reminderStateMap.get(chatId),
+      reminderStateMap.get(recipientKey),
       stage,
       status
     );
@@ -333,11 +348,12 @@ export async function runCron() {
     await upsertReminderState({
       dateKey: todayKey,
       chatId,
+      clientId,
       lastStage: nextState.lastStage,
       isComplete: nextState.isComplete,
     });
 
-    reminderStateMap.set(chatId, nextState);
+    reminderStateMap.set(recipientKey, nextState);
   }
 }
 
