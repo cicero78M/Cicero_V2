@@ -420,7 +420,7 @@ export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Dat
   try {
     const recapSummary = await runDitbinmasRecapSequence(referenceDate, {
       includeOperators: true,
-      superAdminDelayMs: 10000,
+      superAdminDelayMs: 5000,
     });
     summary.ditbinmasSuperAdmins = recapSummary?.superAdmins || 'Ditbinmas super admin selesai';
     summary.ditbinmasOperators = recapSummary?.operators || 'operator dilewati';
