@@ -18,6 +18,15 @@ const TARGET_CLIENT_IDS = new Set(["DITBINMAS", "BIDHUMAS"]);
 
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
+const DEFAULT_SEND_DELAY_MS = 3000;
+const WHATSAPP_SEND_DELAY_MS =
+  process.env.NODE_ENV === "test" ? 0 : DEFAULT_SEND_DELAY_MS;
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function getTodayKey() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -336,6 +345,7 @@ export async function runCron() {
       console.error(
         `[WA] Skip reminder state update for ${chatId} because message delivery failed.`
       );
+      await delay(WHATSAPP_SEND_DELAY_MS);
       continue;
     }
 
@@ -354,6 +364,7 @@ export async function runCron() {
     });
 
     reminderStateMap.set(recipientKey, nextState);
+    await delay(WHATSAPP_SEND_DELAY_MS);
   }
 }
 
