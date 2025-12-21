@@ -7,6 +7,7 @@ const operatorAllowlist = [
   { path: '/dashboard/stats', type: 'exact' },
   { path: '/dashboard/login-web/recap', type: 'exact' },
   { path: '/dashboard/social-media/instagram/analysis', type: 'exact' },
+  { path: '/users/list', type: 'exact' },
 ];
 
 function isOperatorAllowedPath(pathname) {
@@ -33,4 +34,3 @@ export function authRequired(req, res, next) {
     return res.status(401).json({ success: false, message: 'Invalid token', error: err.message });
   }
 }
-
