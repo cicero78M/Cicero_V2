@@ -7,7 +7,9 @@ import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
 export async function getDashboardStats(req, res) {
   try {
-    const client_id = req.query.client_id || req.user?.client_id || req.headers["x-client-id"];
+    const client_id = req.user?.role === "operator"
+      ? req.user?.client_id
+      : (req.query.client_id || req.user?.client_id || req.headers["x-client-id"]);
     if (!client_id) return res.status(400).json({ success: false, message: "client_id wajib diisi" });
 
     const periode = req.query.periode || 'harian';
@@ -41,4 +43,3 @@ export async function getDashboardStats(req, res) {
     res.status(500).json({ success: false, message: err.message });
   }
 }
-
