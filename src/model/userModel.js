@@ -106,7 +106,13 @@ async function buildClientFilter(
       ))`;
     params.push(clientId);
 
-    const allowedRoles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
+    const allowedRoles = [
+      'ditbinmas',
+      'ditlantas',
+      'bidhumas',
+      'ditsamapta',
+      'operator',
+    ];
     if (roleFilter && allowedRoles.includes(roleFilter.toLowerCase())) {
       const rolePlaceholder = `$${index + 1}`;
       clause += ` AND EXISTS (
