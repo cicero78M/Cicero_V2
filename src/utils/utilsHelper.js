@@ -17,6 +17,11 @@ export function normalizeUserId(value) {
   return String(value).trim().replace(/[^0-9]/g, "");
 }
 
+export function normalizeClientId(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim().toUpperCase();
+}
+
 export function normalizeEmail(value) {
   if (value === undefined || value === null) return "";
   return String(value).trim().toLowerCase();

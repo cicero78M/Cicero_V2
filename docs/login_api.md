@@ -199,3 +199,5 @@ Allowlist saat ini:
 - `/api/dashboard/social-media/instagram/analysis`
 
 Jika operator membutuhkan endpoint lain, pastikan endpoint tersebut ditambahkan ke allowlist agar tidak terblokir.
+
+Untuk endpoint yang menerima parameter `client_id` (terutama `/api/clients/profile` dan `/api/aggregator`), role **operator** hanya boleh menggunakan `client_id` yang ada di daftar `client_ids` pada token (pemeriksaan case-insensitive). Permintaan di luar daftar akan ditolak dengan status `403`.

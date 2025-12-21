@@ -6,6 +6,7 @@ import * as tiktokPostService from '../service/tiktokPostService.js';
 import * as tiktokCommentService from '../service/tiktokCommentService.js';
 import * as satbinmasOfficialAccountService from '../service/satbinmasOfficialAccountService.js';
 import { sendSuccess } from '../utils/response.js';
+import { normalizeClientId } from '../utils/utilsHelper.js';
 
 // List semua client (bisa filter by group)
 export const getAllClients = async (req, res, next) => {
@@ -210,29 +211,46 @@ export const deleteSatbinmasOfficialAccount = async (req, res, next) => {
 
 export const getClientProfile = async (req, res, next) => {
   try {
-    const client_id =
+    const clientId =
       req.params.client_id ||
       req.query.client_id ||
       req.body.client_id ||
       req.user?.client_id;
-    if (!client_id) {
+    const normalizedClientId = normalizeClientId(clientId);
+    if (!normalizedClientId) {
       return res.status(400).json({ error: "client_id required" });
+    }
+
+    const role = req.user?.role?.toLowerCase();
+    const clientIdsFromUser = Array.isArray(req.user?.client_ids)
+      ? req.user.client_ids
+      : [];
+    const normalizedUserClientIds = clientIdsFromUser
+      .map((value) => normalizeClientId(value))
+      .filter(Boolean);
+    if (
+      role === "operator" &&
+      !normalizedUserClientIds.includes(normalizedClientId)
+    ) {
+      return res.status(403).json({
+        error:
+          "client_id tidak terdaftar untuk operator ini. Gunakan client_id yang ada di token.",
+      });
     }
 
     console.log("[GET CLIENT PROFILE]", {
       ip: req.ip,
       userId: req.user?.user_id,
       userAgent: req.headers?.["user-agent"],
-      clientId: client_id,
+      clientId: normalizedClientId,
     });
 
-    const client = await clientService.findClientById(client_id);
+    const client = await clientService.findClientById(normalizedClientId);
 
     if (!client) {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    const role = req.user?.role?.toLowerCase();
     if (
       role &&
       role !== "operator" &&

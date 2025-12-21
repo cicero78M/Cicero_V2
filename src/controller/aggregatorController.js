@@ -5,19 +5,24 @@ import {
 } from "../service/aggregatorService.js";
 import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
+import { normalizeClientId } from "../utils/utilsHelper.js";
 
 export async function getAggregator(req, res) {
   try {
     const clientIdsFromUser = Array.isArray(req.user?.client_ids)
       ? req.user.client_ids
       : [];
+    const normalizedUserClientIds = clientIdsFromUser
+      .map((clientId) => normalizeClientId(clientId))
+      .filter(Boolean);
     const clientId =
       req.query.client_id ||
       req.headers["x-client-id"] ||
       req.user?.client_id ||
-      (clientIdsFromUser.length === 1 ? clientIdsFromUser[0] : null);
+      (normalizedUserClientIds.length === 1 ? normalizedUserClientIds[0] : null);
+    const normalizedClientId = normalizeClientId(clientId);
 
-    if (!clientId) {
+    if (!normalizedClientId) {
       sendConsoleDebug({
         tag: "AGG",
         msg: "getAggregator missing client identifier",
@@ -30,7 +35,23 @@ export async function getAggregator(req, res) {
             "client_id atau header x-client-id wajib diisi (atau gunakan token dengan satu client_id)",
         });
     }
-    const resolution = await resolveAggregatorClient(clientId, req.user?.role);
+
+    const role = req.user?.role?.toLowerCase();
+    if (
+      role === "operator" &&
+      !normalizedUserClientIds.includes(normalizedClientId)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "client_id tidak terdaftar untuk operator ini. Gunakan client_id yang ada di token.",
+      });
+    }
+
+    const resolution = await resolveAggregatorClient(
+      normalizedClientId,
+      req.user?.role
+    );
     if (!resolution) {
       return res
         .status(404)
@@ -108,4 +129,3 @@ export async function refreshAggregator(req, res) {
     res.status(500).json({ success: false, message: err.message });
   }
 }
-
