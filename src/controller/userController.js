@@ -253,7 +253,30 @@ export const getUsersByClient = async (req, res, next) => {
   try {
     const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
+    const tokenClientIds = Array.isArray(req.user?.client_ids)
+      ? req.user.client_ids
+      : req.user?.client_id
+        ? [req.user.client_id]
+        : [];
     let clientId = req.params.client_id;
+    if (role === 'operator') {
+      const normalizedTokenClientIds = tokenClientIds.map((clientIdValue) =>
+        String(clientIdValue).toLowerCase()
+      );
+      const normalizedRequestedId = String(clientId).toLowerCase();
+      const matchedIndex = normalizedTokenClientIds.indexOf(
+        normalizedRequestedId
+      );
+
+      if (matchedIndex === -1) {
+        return res.status(403).json({
+          success: false,
+          message: 'client_id tidak diizinkan',
+        });
+      }
+
+      clientId = tokenClientIds[matchedIndex];
+    }
     if (
       ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
       tokenClientId
@@ -272,13 +295,36 @@ export const getUsersByClientFull = async (req, res, next) => {
   try {
     const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
+    const tokenClientIds = Array.isArray(req.user?.client_ids)
+      ? req.user.client_ids
+      : req.user?.client_id
+        ? [req.user.client_id]
+        : [];
     let clientId = req.params.client_id;
-      if (
-        ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
-        tokenClientId
-      ) {
-        clientId = tokenClientId;
+    if (role === 'operator') {
+      const normalizedTokenClientIds = tokenClientIds.map((clientIdValue) =>
+        String(clientIdValue).toLowerCase()
+      );
+      const normalizedRequestedId = String(clientId).toLowerCase();
+      const matchedIndex = normalizedTokenClientIds.indexOf(
+        normalizedRequestedId
+      );
+
+      if (matchedIndex === -1) {
+        return res.status(403).json({
+          success: false,
+          message: 'client_id tidak diizinkan',
+        });
       }
+
+      clientId = tokenClientIds[matchedIndex];
+    }
+    if (
+      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
+      tokenClientId
+    ) {
+      clientId = tokenClientId;
+    }
     const users = await userModel.getUsersByClientFull(clientId, role);
     sendSuccess(res, users);
   } catch (err) {
