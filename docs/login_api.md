@@ -1,6 +1,6 @@
 # Login API Guide
 
-*Last updated: 2025-10-21*
+*Last updated: 2025-10-24*
 
 This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
 - `/api/auth/login` for client operators,
@@ -186,3 +186,16 @@ The token is also delivered as an HTTP-only cookie named `token`.
 5. Every successful login event is reported to the WhatsApp administrators.
 6. When the token expires or is removed from Redis, a new login is required.
 7. Dashboard password resets invalidate existing dashboard login sessions before returning a success response.
+
+## 4. Operator Access Allowlist
+
+Role `operator` hanya diperbolehkan mengakses endpoint tertentu di bawah `/api`. Permintaan ke endpoint lain akan tetap diblokir dengan status `403` untuk menjaga keamanan.
+
+Allowlist saat ini:
+- `/api/clients/profile`
+- `/api/aggregator` (termasuk sub-path seperti `/api/aggregator/refresh`)
+- `/api/dashboard/stats`
+- `/api/dashboard/login-web/recap`
+- `/api/dashboard/social-media/instagram/analysis`
+
+Jika operator membutuhkan endpoint lain, pastikan endpoint tersebut ditambahkan ke allowlist agar tidak terblokir.
