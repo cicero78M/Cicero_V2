@@ -291,15 +291,44 @@ export const getUserList = async (req, res, next) => {
   try {
     const role = req.user?.role?.toLowerCase();
     const tokenClientId = req.user?.client_id;
+    const tokenClientIds = Array.isArray(req.user?.client_ids)
+      ? req.user.client_ids
+      : req.user?.client_id
+        ? [req.user.client_id]
+        : [];
     let users;
 
     if (role === 'operator') {
-      if (!tokenClientId) {
+      const requestedClientId = req.query.client_id;
+      const normalizedTokenClientIds = tokenClientIds.map((clientId) =>
+        String(clientId).toLowerCase()
+      );
+      let selectedClientId;
+
+      if (requestedClientId) {
+        const normalizedRequestedId = String(requestedClientId).toLowerCase();
+        const matchedIndex = normalizedTokenClientIds.indexOf(
+          normalizedRequestedId
+        );
+
+        if (matchedIndex === -1) {
+          return res.status(403).json({
+            success: false,
+            message: 'client_id tidak diizinkan',
+          });
+        }
+
+        selectedClientId = tokenClientIds[matchedIndex];
+      } else if (tokenClientIds.length === 1) {
+        selectedClientId = tokenClientIds[0];
+      }
+
+      if (!selectedClientId) {
         return res
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      users = await userModel.getUsersByClient(tokenClientId, role);
+      users = await userModel.getUsersByClient(selectedClientId, role);
     } else {
       const clientId = req.query.client_id;
       if (!clientId) {
