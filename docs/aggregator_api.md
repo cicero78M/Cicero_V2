@@ -6,7 +6,7 @@ Endpoint: `GET /aggregator`
 Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terhubung ke klien tertentu.
 
 ## Parameters
-- **client_id** (query) atau **x-client-id** (header). Bila token autentikasi hanya memiliki satu `client_id`, parameter ini boleh dikosongkan karena nilai akan diambil otomatis dari token tersebut. Jika token memiliki lebih dari satu `client_id`, salah satu di antaranya harus dikirim sebagai parameter. Untuk permintaan yang diautentikasi memakai `client_id` bertipe **direktorat**, backend akan memilih `client_id` default bertipe **direktorat** berdasarkan peran pengguna (misal login direktorat dengan peran `bidhumas` akan diarahkan ke klien direktorat `bidhumas`). Untuk permintaan yang diautentikasi memakai `client_id` bertipe **ORG**, backend akan mengganti `client_id` dengan klien bertipe **direktorat** yang memiliki nama peran sama dengan `client_id` login (misal login ORG dengan peran `ditlantas` akan diarahkan ke klien direktorat `ditlantas`). Permintaan khusus dengan kombinasi `client_id` **DITSAMAPTA** dan peran **BIDHUMAS** akan dipaksa menggunakan klien ORG **BIDHUMAS** sebelum aturan pemetaan lainnya diterapkan.
+- **client_id** (query) atau **x-client-id** (header). Bila token autentikasi hanya memiliki satu `client_id`, parameter ini boleh dikosongkan karena nilai akan diambil otomatis dari token tersebut. Jika token memiliki lebih dari satu `client_id`, salah satu di antaranya harus dikirim sebagai parameter. Untuk permintaan yang diautentikasi memakai `client_id` bertipe **direktorat**, backend akan memilih `client_id` default bertipe **direktorat** berdasarkan peran pengguna (misal login direktorat dengan peran `bidhumas` akan diarahkan ke klien direktorat `bidhumas`). Untuk permintaan yang diautentikasi memakai `client_id` bertipe **ORG**, backend akan mengganti `client_id` dengan klien bertipe **direktorat** yang memiliki nama peran sama dengan `client_id` login (misal login ORG dengan peran `ditlantas` akan diarahkan ke klien direktorat `ditlantas`). Permintaan khusus dengan kombinasi `client_id` **DITSAMAPTA** dan peran **BIDHUMAS** akan dipaksa menggunakan klien ORG **BIDHUMAS** sebelum aturan pemetaan lainnya diterapkan. Untuk role **operator**, `client_id` wajib termasuk dalam daftar `client_ids` di token (pemeriksaan dilakukan tanpa memedulikan huruf besar/kecil); jika tidak, server akan menolak permintaan dengan `403`.
 - **limit** (query) — opsional, jumlah maksimum posting yang dikembalikan per platform. Nilai non-numerik akan diganti menjadi `10`. Default: `10`.
 - **periode** (query) — opsional, `harian` untuk hanya mengambil posting hari ini, selain itu akan mengambil seluruh riwayat yang tersedia.
 
@@ -18,6 +18,7 @@ Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terh
 
 ## Error Cases
 - `400 Bad Request` bila `client_id` atau header `x-client-id` tidak dikirim dan token tidak memiliki tepat satu `client_id`.
+- `403 Forbidden` bila role **operator** mengirim `client_id` di luar daftar `client_ids` pada token (case-insensitive).
 - `404 Not Found` bila klien tidak ditemukan.
 - `500 Internal Server Error` untuk kegagalan tak terduga lainnya.
 
