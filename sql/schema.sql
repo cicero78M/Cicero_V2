@@ -44,7 +44,9 @@ CREATE TABLE "user" (
   status BOOLEAN DEFAULT TRUE,
   wa_notification_opt_in BOOLEAN NOT NULL DEFAULT FALSE,
   premium_status BOOLEAN DEFAULT FALSE,
-  premium_end_date DATE
+  premium_end_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE roles (
@@ -57,6 +59,20 @@ CREATE TABLE user_roles (
   role_id INTEGER REFERENCES roles(role_id),
   PRIMARY KEY (user_id, role_id)
 );
+
+CREATE OR REPLACE FUNCTION set_user_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS user_set_updated_at ON "user";
+CREATE TRIGGER user_set_updated_at
+BEFORE UPDATE ON "user"
+FOR EACH ROW
+EXECUTE PROCEDURE set_user_updated_at();
 
 CREATE TABLE penmas_user (
   user_id TEXT PRIMARY KEY,

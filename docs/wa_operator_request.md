@@ -36,11 +36,11 @@ Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp
     **SUBBID PID**, dan **SUB BAG RENMIN**. Daftar statis ini sekarang juga
     dipakai untuk memvalidasi input via web dashboard, sehingga satfung seperti
     **SUBBID MULTIMEDIA** akan selalu diterima walau belum ada di database.
-  3. Bot akan menyimpan data dan mengirim ringkasan user.
+  3. Bot akan menyimpan data, mencatat `created_at`/`updated_at` otomatis, lalu mengirim ringkasan user.
 - **Ubah Status User**
   1. Masukkan NRP/NIP yang ingin diubah.
   2. Pilih status baru: 1 untuk aktif, 2 untuk nonaktif.
-  3. Bot mengonfirmasi perubahan status.
+  3. Bot mengonfirmasi perubahan status dan memperbarui `updated_at`.
  - **Cek Data User**
   1. Masukkan NRP/NIP user milik client Anda.
   2. Bot menampilkan detail user beserta statusnya jika ditemukan pada client yang sama.

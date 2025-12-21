@@ -388,6 +388,10 @@ export async function updateUserField(user_id, field, value) {
   if (roleFields.includes(field)) {
     if (value) await addRole(uid, field);
     else await removeRole(uid, field);
+    await query(
+      'UPDATE "user" SET updated_at=NOW() WHERE user_id=$1',
+      [uid]
+    );
     return findUserById(uid);
   }
   if (field === 'client_id') {
@@ -398,13 +402,13 @@ export async function updateUserField(user_id, field, value) {
     );
     if (!rows.length) throw new Error('client_id tidak ditemukan');
     await query(
-      `UPDATE "user" SET client_id=$1 WHERE user_id=$2`,
+      `UPDATE "user" SET client_id=$1, updated_at=NOW() WHERE user_id=$2`,
       [normalizedClientId, uid]
     );
     return findUserById(uid);
   }
   await query(
-    `UPDATE "user" SET ${field}=$1 WHERE user_id=$2`,
+    `UPDATE "user" SET ${field}=$1, updated_at=NOW() WHERE user_id=$2`,
     [value, uid]
   );
   return findUserById(uid);
@@ -614,9 +618,11 @@ export async function updateUser(userId, userData) {
 
   const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'operator'];
   const roles = {};
+  let hasRoleUpdates = false;
   for (const rf of roleFields) {
     if (rf in userData) {
       roles[rf] = userData[rf];
+      hasRoleUpdates = true;
       delete userData[rf];
     }
   }
@@ -627,8 +633,13 @@ export async function updateUser(userId, userData) {
     const params = columns.map((c) => userData[c]);
     params.push(uid);
     await query(
-      `UPDATE "user" SET ${setClause} WHERE user_id=$${columns.length + 1}`,
+      `UPDATE "user" SET ${setClause}, updated_at=NOW() WHERE user_id=$${columns.length + 1}`,
       params
+    );
+  } else if (hasRoleUpdates) {
+    await query(
+      'UPDATE "user" SET updated_at=NOW() WHERE user_id=$1',
+      [uid]
     );
   }
 
@@ -646,7 +657,7 @@ export async function updateUserRolesUserId(oldUserId, newUserId) {
   try {
     const { rows } = await query('SELECT role_id FROM user_roles WHERE user_id=$1', [oldUid]);
     await query('DELETE FROM user_roles WHERE user_id=$1', [oldUid]);
-    await query('UPDATE "user" SET user_id=$1 WHERE user_id=$2', [newUid, oldUid]);
+    await query('UPDATE "user" SET user_id=$1, updated_at=NOW() WHERE user_id=$2', [newUid, oldUid]);
     for (const r of rows) {
       await query('INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)', [newUid, r.role_id]);
     }
