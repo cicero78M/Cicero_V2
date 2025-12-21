@@ -110,18 +110,18 @@ test('getUsersByClient adds role filter for instansi when role provided', async 
   expect(mockQuery.mock.calls[1][1]).toEqual(['C2', 'ditbinmas']);
 });
 
-test('getUsersSocialByClient uses HAVING for directorate', async () => {
+test('getUsersSocialByClient expands directorate clause to include client_id', async () => {
   mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
     .mockResolvedValueOnce({ rows: [{ client_type: 'direktorat' }] })
     .mockResolvedValueOnce({ rows: [{ user_id: 'u1' }] });
   const users = await getUsersSocialByClient('ditlantas');
   expect(users).toEqual([{ user_id: 'u1' }]);
-  const sql = mockQuery.mock.calls[1][0];
-  expect(sql).toContain('GROUP BY');
-  expect(sql).toContain('HAVING');
-  expect(sql).toContain('BOOL_OR');
-  expect(sql).not.toContain('operator');
-  expect(mockQuery.mock.calls[1][1]).toEqual(['ditlantas']);
+  const sql = mockQuery.mock.calls[2][0];
+  expect(sql).toContain('WHERE (');
+  expect(sql).toContain('OR LOWER(u.client_id) = LOWER($1)');
+  expect(sql).toContain('status = true');
+  expect(mockQuery.mock.calls[2][1]).toEqual(['ditlantas']);
 });
 
 test('getUsersSocialByClient filters by client or role for non-direktorat', async () => {
@@ -191,10 +191,12 @@ test('updateUserField updates ditbinmas field', async () => {
   mockQuery
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
     .mockResolvedValueOnce({ rows: [{ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false }] });
   const row = await updateUserField('1', 'ditbinmas', true);
   expect(row).toEqual({ user_id: '1', ditbinmas: true, ditlantas: false, bidhumas: false, operator: false });
   expect(mockQuery.mock.calls[1][0]).toContain('user_roles');
+  expect(mockQuery.mock.calls[2][0]).toContain('UPDATE "user" SET updated_at=NOW()');
 });
 
 test('updateUserField updates client_id when valid', async () => {
@@ -227,7 +229,7 @@ test('updateUserRolesUserId migrates roles and updates user_id', async () => {
     'DELETE FROM user_roles WHERE user_id=$1'
   );
   expect(mockQuery.mock.calls[3][0]).toContain(
-    'UPDATE "user" SET user_id=$1 WHERE user_id=$2'
+    'UPDATE "user" SET user_id=$1, updated_at=NOW() WHERE user_id=$2'
   );
   expect(mockQuery.mock.calls[4][0]).toContain(
     'INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)'
@@ -263,7 +265,7 @@ test('updateUser updates user_id and migrates roles', async () => {
     'DELETE FROM user_roles WHERE user_id=$1'
   );
   expect(mockQuery.mock.calls[3][0]).toContain(
-    'UPDATE "user" SET user_id=$1 WHERE user_id=$2'
+    'UPDATE "user" SET user_id=$1, updated_at=NOW() WHERE user_id=$2'
   );
   expect(mockQuery.mock.calls[4][0]).toContain(
     'INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2)'
@@ -283,7 +285,7 @@ test('updateUserField updates desa field', async () => {
     .mockResolvedValueOnce({ rows: [{ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false }] });
   const row = await updateUserField('1', 'desa', 'ABC');
   expect(row).toEqual({ user_id: '1', desa: 'ABC', ditbinmas: false, ditlantas: false, bidhumas: false, operator: false });
-  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE "user" SET desa=$1 WHERE user_id=$2');
+  expect(mockQuery.mock.calls[0][0]).toContain('UPDATE "user" SET desa=$1, updated_at=NOW() WHERE user_id=$2');
 });
 
 test('updatePremiumStatus updates fields', async () => {
