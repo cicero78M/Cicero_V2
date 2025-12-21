@@ -22,3 +22,5 @@ Maintaining this mapping guarantees that each dashboard user sees only the conte
 ### User directory and listing endpoints
 
 `GET /users/list` now recognizes `client_id=DITSAMAPTA` the same way as other directorate clients. Requests targeting `DITSAMAPTA` are routed through `getUsersByDirektorat`, so admins and directorate users can pull directory listings for DITSAMAPTA-flagged accounts without using the ORG client alias.
+
+Operators are also allowed to call `GET /users/list`, but the handler still enforces the operator's `client_id` scope so listings remain limited to their assigned client.
