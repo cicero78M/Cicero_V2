@@ -65,6 +65,7 @@ Holds users belonging to a client.
 - `status` – boolean flag
 - `premium_status` – boolean flag indicating active subscription
 - `premium_end_date` – date the premium access expires
+- `created_at`, `updated_at` – timestamps managed by the database trigger
 - roles are assigned through the `user_roles` pivot table
 
 ### `roles`
@@ -380,4 +381,3 @@ Stores per-post metadata fetched daily from RapidAPI for Instagram Satbinmas Off
 Companion tables `satbinmas_official_media_hashtags` and `satbinmas_official_media_mentions` store parsed hashtags and mentions
 per media row with unique constraints on `(satbinmas_media_id, LOWER(tag))` and `(satbinmas_media_id, LOWER(username))` so
 caption tokens stay queryable without string parsing at read time.【F:sql/migrations/20251208_create_satbinmas_official_media.sql†L1-L89】
-
