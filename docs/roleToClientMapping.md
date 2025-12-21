@@ -25,4 +25,13 @@ Maintaining this mapping guarantees that each dashboard user sees only the conte
 
 Operators are also allowed to call `GET /users/list`. The handler now supports multi-client operator tokens: if a `client_id` query param is provided it must match (case-insensitive) one of the `req.user.client_ids`, otherwise a single `client_id` in the token is used as the default. Requests for a `client_id` outside the token list are rejected with HTTP 403 (`client_id tidak diizinkan`) to keep listings scoped to authorized clients.
 
-`GET /users/by-client/:client_id` and `GET /users/by-client-full/:client_id` always pass the authenticated `role` as `roleFilter`. For operator logins this forces the user query to require `role_name = 'operator'` in `user_roles`, ensuring the response only includes operator personnel tied to the requested client.
+`GET /users/by-client/:client_id` and `GET /users/by-client-full/:client_id` always pass the authenticated `role` as `roleFilter`. For operator logins this forces the user query to require `role_name = 'operator'` in `user_roles`, ensuring the response only includes operator personnel tied to the requested client. Operator requests must also target a `client_id` that exists in `req.user.client_id` or `req.user.client_ids`; otherwise the API returns HTTP 403.
+
+Example error response:
+
+```json
+{
+  "success": false,
+  "message": "client_id tidak diizinkan"
+}
+```
