@@ -14,21 +14,24 @@ describe('authRequired middleware', () => {
     router.get('/claim/ok', (req, res) => res.json({ success: true }));
     router.get('/clients/data', (req, res) => res.json({ success: true }));
     router.get('/clients/profile', (req, res) => res.json({ success: true }));
+    router.get('/aggregator', (req, res) => res.json({ success: true }));
+    router.post('/aggregator/refresh', (req, res) => res.json({ success: true }));
     router.get('/users/list', (req, res) => res.json({ success: true }));
     router.post('/users/list', (req, res) => res.json({ success: true }));
     router.get('/dashboard/stats', (req, res) => res.json({ success: true }));
+    router.get('/dashboard/login-web/recap', (req, res) => res.json({ success: true }));
     router.get('/amplify/rekap', (req, res) => res.json({ success: true }));
     router.get('/other', (req, res) => res.json({ success: true }));
     app.use('/api', authRequired, router);
   });
 
-  test('allows operator role on claim routes', async () => {
+  test('blocks operator role on claim routes when protected by authRequired', async () => {
     const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/claim/ok')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
   });
 
   test('allows operator role on client profile route', async () => {
@@ -36,8 +39,8 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/clients/profile')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(403);
-    expect(res.body.success).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 
   test('allows operator role on user directory route', async () => {
@@ -54,8 +57,26 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/dashboard/stats')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(403);
-    expect(res.body.success).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role on dashboard login recap route', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .get('/api/dashboard/login-web/recap')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role on aggregator route', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .get('/api/aggregator')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 
   test('allows operator role on amplify rekap route', async () => {
