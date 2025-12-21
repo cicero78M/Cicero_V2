@@ -15,7 +15,7 @@ import {
 } from '../cronDirRequestBidhumasEvening.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
-const READINESS_GRACE_MS = 5000;
+const READINESS_GRACE_MS = 4000;
 
 const dirRequestCrons = [
   {
@@ -36,6 +36,7 @@ const dirRequestCrons = [
     description:
       'Send WhatsApp task reminders to Ditbinmas users who opted in, with nightly follow-ups for incomplete tasks.',
     schedules: [
+      { cronExpression: '10 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '10 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
