@@ -70,6 +70,8 @@ Dashboard Next.js (`Cicero_Web`) menggunakan variabel `NEXT_PUBLIC_API_URL` untu
 2. Melihat statistik Instagram/TikTok pada halaman analytics.
 3. Mengelola data client dan user melalui antarmuka atau endpoint REST.
 
+Catatan: untuk role **operator**, endpoint statistik dashboard selalu menggunakan `client_id` dari sesi pengguna. Parameter `client_id` dari query string atau header akan diabaikan, dan permintaan ditolak jika sesi tidak memiliki `client_id`.
+
 ## 6. Tips Penggunaan
 
 - Jalankan `npm run lint` dan `npm test` sebelum melakukan commit.
@@ -78,4 +80,3 @@ Dashboard Next.js (`Cicero_Web`) menggunakan variabel `NEXT_PUBLIC_API_URL` untu
 - Cadangkan database secara rutin (lihat `docs/pg_backup_gdrive.md`).
 
 Dokumen lain seperti `enterprise_architecture.md`, `business_process.md`, dan `metadata_flow.md` dapat dijadikan referensi untuk memahami detail alur data.
-
