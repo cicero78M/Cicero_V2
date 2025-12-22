@@ -7,6 +7,7 @@ Mengambil gabungan profil dan daftar posting akun Instagram dan TikTok yang terh
 
 ## Parameters
 - **client_id** (query) atau **x-client-id** (header). Bila token autentikasi hanya memiliki satu `client_id`, parameter ini boleh dikosongkan karena nilai akan diambil otomatis dari token tersebut. Jika token memiliki lebih dari satu `client_id`, salah satu di antaranya harus dikirim sebagai parameter. Untuk permintaan yang diautentikasi memakai `client_id` bertipe **direktorat**, backend akan memilih `client_id` default bertipe **direktorat** berdasarkan peran pengguna (misal login direktorat dengan peran `bidhumas` akan diarahkan ke klien direktorat `bidhumas`). Untuk permintaan yang diautentikasi memakai `client_id` bertipe **ORG**, backend akan mengganti `client_id` dengan klien bertipe **direktorat** yang memiliki nama peran sama dengan `client_id` login (misal login ORG dengan peran `ditlantas` akan diarahkan ke klien direktorat `ditlantas`). Permintaan khusus dengan kombinasi `client_id` **DITSAMAPTA** dan peran **BIDHUMAS** akan dipaksa menggunakan klien ORG **BIDHUMAS** sebelum aturan pemetaan lainnya diterapkan. Untuk role **operator**, `client_id` wajib termasuk dalam daftar `client_ids` di token (pemeriksaan dilakukan tanpa memedulikan huruf besar/kecil); jika tidak, server akan menolak permintaan dengan `403`.
+- **regional_id** (query) — opsional, membatasi hasil ke regional tertentu (mis. `JATIM`). Jika token pengguna memiliki scope **Polda Jatim**, backend otomatis membatasi ke `regional_id = JATIM` dan hanya menerima klien yang parent-nya masih berada pada struktur regional tersebut.
 - **limit** (query) — opsional, jumlah maksimum posting yang dikembalikan per platform. Nilai non-numerik akan diganti menjadi `10`. Default: `10`.
 - **periode** (query) — opsional, `harian` untuk hanya mengambil posting hari ini, selain itu akan mengambil seluruh riwayat yang tersedia.
 
@@ -37,6 +38,7 @@ Backend menggunakan filter awal `findAllActiveDirektoratWithSosmed` sehingga han
 ### Parameters
 
 - **client_id** (query/body) — opsional, bila kosong semua direktorat aktif akan diproses. Nilai harus cocok dengan daftar hasil `findAllActiveDirektoratWithSosmed`.
+- **regional_id** (query/body) — opsional, membatasi refresh hanya untuk klien dengan `regional_id` yang sama. Jika scope pengguna adalah **Polda Jatim**, backend otomatis membatasi `regional_id` ke `JATIM` dan memastikan `parent_client_id` masih dalam struktur regional tersebut.
 - **periode** (query/body) — `harian` untuk mengambil konten hari ini saja, atau nilai lain (mis. `riwayat`) untuk mengambil seluruh data yang tersedia.
 - **limit** (query/body) — opsional, jumlah maksimum post yang dikembalikan per platform. Default: `10`.
 - **skipPostRefresh** (query/body) — opsional, `true` untuk melewati pemanggilan ulang pipeline posting IG/TikTok dan hanya memuat posting yang sudah tersimpan. Berguna untuk pemanggilan internal seperti menu WhatsApp *Client Request*.

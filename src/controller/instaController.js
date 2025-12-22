@@ -25,6 +25,10 @@ export async function getInstaRekapLikes(req, res) {
   const endDate = req.query.end_date || req.query.tanggal_selesai;
   const requestedRole = req.query.role || req.user?.role;
   const requestedScope = req.query.scope;
+  const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+  const regionalId = requestedRegionalId
+    ? String(requestedRegionalId).trim().toUpperCase()
+    : null;
   const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
   const scopeLower = requestedScope
     ? String(requestedScope).toLowerCase()
@@ -71,7 +75,7 @@ export async function getInstaRekapLikes(req, res) {
       .json({ success: false, message: "client_id tidak diizinkan" });
   }
   try {
-    let rekapOptions = {};
+    let rekapOptions = { regionalId };
     let roleForQuery = requestedRole;
 
     if (usesStandardPayload) {
@@ -124,6 +128,7 @@ export async function getInstaRekapLikes(req, res) {
         userRoleFilter,
         includePostRoleFilter,
         matchLikeClientId,
+        regionalId,
       };
       roleForQuery = resolvedRole;
     }

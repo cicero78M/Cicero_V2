@@ -160,7 +160,11 @@ export async function getRekapLikesByClient(
     includePostRoleFilter = null,
     postRoleFilterName = null,
     matchLikeClientId = true,
+    regionalId = null,
   } = options;
+  const normalizedRegionalId = regionalId
+    ? String(regionalId).trim().toUpperCase()
+    : null;
   const params = [];
   const addParam = value => {
     params.push(value);
@@ -187,6 +191,9 @@ export async function getRekapLikesByClient(
   if (resolvedUserClientId) {
     userClientParamIdx = addParam(resolvedUserClientId);
   }
+  const regionalParamIdx = normalizedRegionalId
+    ? addParam(normalizedRegionalId)
+    : null;
   const normalizedPostClientId = resolvedPostClientId
     ? String(resolvedPostClientId).toLowerCase()
     : null;
@@ -248,6 +255,8 @@ export async function getRekapLikesByClient(
     let postClientFilter = '1=1';
     let postRoleJoin = '';
     let postRoleFilter = '';
+    let postRegionalJoin = '';
+    let postRegionalFilter = '';
 
     if (resolvedPostClientId) {
       const postClientIdx =
@@ -263,18 +272,34 @@ export async function getRekapLikesByClient(
       postRoleFilter = `AND (${roleFilterCondition})`;
     }
 
-    return { postClientFilter, postRoleJoin, postRoleFilter };
+    if (normalizedRegionalId) {
+      const regionalIdx = addParamFn(normalizedRegionalId);
+      postRegionalJoin = 'JOIN clients cp ON cp.client_id = p.client_id';
+      postRegionalFilter = `AND UPPER(cp.regional_id) = UPPER($${regionalIdx})`;
+    }
+
+    return {
+      postClientFilter,
+      postRoleJoin,
+      postRoleFilter,
+      postRegionalJoin,
+      postRegionalFilter,
+    };
   };
 
   const {
     postClientFilter,
     postRoleJoin: postRoleJoinLikes,
     postRoleFilter,
+    postRegionalJoin: postRegionalJoinLikes,
+    postRegionalFilter: postRegionalFilterLikes,
   } = buildPostFilters(addParam, sharedClientParamIdx, sharedRoleParamIdx);
   const {
     postClientFilter: postClientFilterPosts,
     postRoleJoin: postRoleJoinPosts,
     postRoleFilter: postRoleFilterPosts,
+    postRegionalJoin: postRegionalJoinPosts,
+    postRegionalFilter: postRegionalFilterPosts,
   } = buildPostFilters(addPostParam);
 
   let userWhere = '1=1';
@@ -311,6 +336,13 @@ export async function getRekapLikesByClient(
       : `${userWhere} AND ${roleFilterCondition}`;
   }
 
+  if (regionalParamIdx !== null) {
+    const regionalFilter = `UPPER(c.regional_id) = UPPER($${regionalParamIdx})`;
+    userWhere = userWhere === '1=1'
+      ? regionalFilter
+      : `${userWhere} AND ${regionalFilter}`;
+  }
+
   
 
   const likeParams = [...params];
@@ -330,6 +362,7 @@ export async function getRekapLikesByClient(
         lower(replace(trim(lk.username), '@', '')) AS username
       FROM insta_like l
       JOIN insta_post p ON p.shortcode = l.shortcode
+      ${postRegionalJoinLikes}
       ${postRoleJoinLikes}
       JOIN LATERAL (
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
@@ -337,6 +370,7 @@ export async function getRekapLikesByClient(
       ) AS lk ON TRUE
       WHERE ${postClientFilter}
         ${postRoleFilter}
+        ${postRegionalFilterLikes}
         AND ${tanggalFilter}
     ),
     like_counts AS (
@@ -373,9 +407,11 @@ export async function getRekapLikesByClient(
     `WITH posts AS (
       SELECT p.shortcode
       FROM insta_post p
+      ${postRegionalJoinPosts}
       ${postRoleJoinPosts}
       WHERE ${postClientFilterPosts}
         ${postRoleFilterPosts}
+        ${postRegionalFilterPosts}
         AND ${postTanggalFilter}
     )
     SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,

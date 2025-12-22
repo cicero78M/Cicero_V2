@@ -90,6 +90,7 @@ export async function generateInstagramAllDataRecap({
   clientId,
   roleFlag,
   clientName,
+  regionalId,
 } = {}) {
   if (!clientId) {
     throw new Error('Client ID wajib diisi untuk membuat rekap Instagram all data.');
@@ -108,7 +109,8 @@ export async function generateInstagramAllDataRecap({
       monthKey,
       null,
       null,
-      roleFlag
+      roleFlag,
+      { regionalId }
     );
 
     rows.forEach((row) => {

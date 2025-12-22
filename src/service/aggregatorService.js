@@ -1,4 +1,8 @@
-import { findAllActiveDirektoratWithSosmed, findById } from "../model/clientModel.js";
+import {
+  findAllActiveDirektoratWithSosmed,
+  findById,
+  findByRegionalId,
+} from "../model/clientModel.js";
 import * as instaProfileService from "./instaProfileService.js";
 import * as instaPostService from "./instaPostService.js";
 import * as tiktokPostService from "./tiktokPostService.js";
@@ -10,7 +14,57 @@ import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost
 import { fetchTiktokProfile } from "./tiktokRapidService.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
-export async function resolveAggregatorClient(clientId, userRole) {
+function normalizeRegionalId(value) {
+  const normalized = String(value || "").trim();
+  return normalized ? normalized.toUpperCase() : null;
+}
+
+function normalizeClientId(value) {
+  const normalized = String(value || "").trim();
+  return normalized ? normalized.toUpperCase() : null;
+}
+
+function resolveRegionalScope({ userScope, regionalId }) {
+  const directRegionalId = normalizeRegionalId(regionalId);
+  if (directRegionalId) return directRegionalId;
+  const scopeText = String(userScope || "").trim().toUpperCase();
+  if (!scopeText) return null;
+  if (scopeText === "JATIM") return "JATIM";
+  if (scopeText === "POLDA JATIM" || scopeText === "POLDA_JATIM") return "JATIM";
+  if (scopeText.includes("POLDA JATIM")) return "JATIM";
+  return null;
+}
+
+async function buildRegionalClientScope(scopedRegionalId) {
+  if (!scopedRegionalId) return null;
+  const regionalClients = await findByRegionalId(scopedRegionalId);
+  const regionalClientIds = new Set(
+    regionalClients
+      .map((client) => normalizeClientId(client.client_id))
+      .filter(Boolean)
+  );
+  return {
+    regionalClientIds,
+    scopedRegionalId,
+  };
+}
+
+function isRegionalClientAllowed(client, regionalScope) {
+  if (!regionalScope) return true;
+  if (!client) return false;
+  const clientRegionalId = normalizeRegionalId(client.regional_id);
+  if (clientRegionalId !== regionalScope.scopedRegionalId) return false;
+  if (client.parent_client_id) {
+    const parentId = normalizeClientId(client.parent_client_id);
+    if (!regionalScope.regionalClientIds.has(parentId)) return false;
+  }
+  return true;
+}
+
+export async function resolveAggregatorClient(clientId, userRole, options = {}) {
+  const regionalScope = await buildRegionalClientScope(
+    resolveRegionalScope(options)
+  );
   const normalizedClientId = String(clientId || "").trim().toUpperCase();
   const normalizedUserRole = String(userRole || "").trim().toUpperCase();
 
@@ -29,6 +83,7 @@ export async function resolveAggregatorClient(clientId, userRole) {
   const requestedClientId = normalizedClientId || clientId;
   const requestedClient = await findById(requestedClientId);
   if (!requestedClient) return null;
+  if (!isRegionalClientAllowed(requestedClient, regionalScope)) return null;
 
   const clientType = requestedClient.client_type?.toLowerCase();
   if (clientType === "direktorat") {
@@ -38,6 +93,7 @@ export async function resolveAggregatorClient(clientId, userRole) {
       roleClient?.client_type?.toLowerCase() === "direktorat"
         ? roleClient
         : requestedClient;
+    if (!isRegionalClientAllowed(defaultClient, regionalScope)) return null;
     return {
       client: defaultClient,
       resolvedClientId: defaultClient.client_id,
@@ -54,6 +110,7 @@ export async function resolveAggregatorClient(clientId, userRole) {
     if (directorateRole) {
       const directorateClient = await findById(directorateRole);
       if (directorateClient?.client_type?.toLowerCase() === "direktorat") {
+        if (!isRegionalClientAllowed(directorateClient, regionalScope)) return null;
         return {
           client: directorateClient,
           resolvedClientId: directorateClient.client_id,
@@ -169,18 +226,30 @@ export async function refreshAggregatorData({
   periode = "harian",
   limit = 10,
   userRole,
+  userScope,
+  regionalId,
   skipPostRefresh = false,
 } = {}) {
   const activeClients = await findAllActiveDirektoratWithSosmed();
   if (!activeClients.length) return [];
 
+  const regionalScope = await buildRegionalClientScope(
+    resolveRegionalScope({ userScope, regionalId })
+  );
+  const scopedActiveClients = regionalScope
+    ? activeClients.filter((client) => isRegionalClientAllowed(client, regionalScope))
+    : activeClients;
+
   const allowedClientIds = new Set(
-    activeClients.map((c) => String(c.client_id || "").trim().toUpperCase())
+    scopedActiveClients.map((c) => String(c.client_id || "").trim().toUpperCase())
   );
 
   let targetClientIds = Array.from(allowedClientIds);
   if (clientId) {
-    const resolution = await resolveAggregatorClient(clientId, userRole);
+    const resolution = await resolveAggregatorClient(clientId, userRole, {
+      userScope,
+      regionalId,
+    });
     if (!resolution) {
       throw new Error("client not found");
     }
