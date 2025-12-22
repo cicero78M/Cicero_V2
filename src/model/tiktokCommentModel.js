@@ -150,27 +150,60 @@ export async function getRekapKomentarByClient(
   tanggal,
   start_date,
   end_date,
-  role
+  role,
+  options = {}
 ) {
-  const clientTypeRes = await query(
-    "SELECT client_type FROM clients WHERE client_id = $1",
-    [client_id]
-  );
-  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
   const roleLower = typeof role === 'string' ? role.toLowerCase() : null;
+  const hasOption = (key) =>
+    Object.prototype.hasOwnProperty.call(options, key);
+  const postClientIdOverride = hasOption('postClientId')
+    ? options.postClientId
+    : undefined;
+  const userClientIdOverride = hasOption('userClientId')
+    ? options.userClientId
+    : undefined;
+  const userRoleFilterOverride = hasOption('userRoleFilter')
+    ? options.userRoleFilter
+    : undefined;
+  const includePostRoleFilterOverride = hasOption('includePostRoleFilter')
+    ? options.includePostRoleFilter
+    : undefined;
+  const postRoleFilterNameOverride = hasOption('postRoleFilterName')
+    ? options.postRoleFilterName
+    : undefined;
+  const usesOverrides = [
+    postClientIdOverride,
+    userClientIdOverride,
+    userRoleFilterOverride,
+    includePostRoleFilterOverride,
+    postRoleFilterNameOverride,
+  ].some((value) => value !== undefined);
 
-  const params = clientType === "direktorat" ? [] : [client_id];
+  let clientType = null;
+  if (!usesOverrides) {
+    const clientTypeRes = await query(
+      "SELECT client_type FROM clients WHERE client_id = $1",
+      [client_id]
+    );
+    clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase() || null;
+  }
+
+  const params = [];
+  const addParam = (value) => {
+    params.push(value);
+    return params.length;
+  };
   let tanggalFilter =
     "__DATE_FIELD__::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
-    const startIdx = params.push(start_date);
-    const endIdx = params.push(end_date);
+    const startIdx = addParam(start_date);
+    const endIdx = addParam(end_date);
     tanggalFilter = `(__DATE_FIELD__)::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === "semua") {
     tanggalFilter = "1=1";
   } else if (periode === "mingguan") {
     if (tanggal) {
-      const idx = params.push(tanggal);
+      const idx = addParam(tanggal);
       tanggalFilter = `date_trunc('week', __DATE_FIELD__) = date_trunc('week', $${idx}::date)`;
     } else {
       tanggalFilter = "date_trunc('week', __DATE_FIELD__) = date_trunc('week', NOW())";
@@ -178,14 +211,14 @@ export async function getRekapKomentarByClient(
   } else if (periode === "bulanan") {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      const idx = params.push(monthDate);
+      const idx = addParam(monthDate);
       tanggalFilter = `date_trunc('month', __DATE_FIELD__) = date_trunc('month', $${idx}::date)`;
     } else {
       tanggalFilter =
         "date_trunc('month', __DATE_FIELD__) = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
-    const idx = params.push(tanggal);
+    const idx = addParam(tanggal);
     tanggalFilter = `__DATE_FIELD__::date = $${idx}::date`;
   }
 
@@ -200,44 +233,96 @@ export async function getRekapKomentarByClient(
     postDateField
   );
 
-  let postClientFilter = "LOWER(p.client_id) = LOWER($1)";
-  let userWhere = "LOWER(u.client_id) = LOWER($1)";
+  let resolvedPostClientId = postClientIdOverride;
+  let resolvedUserClientId = userClientIdOverride;
+  let resolvedUserRole = userRoleFilterOverride;
+  let shouldIncludeRoleFilter = includePostRoleFilterOverride;
+  let resolvedPostRoleName = postRoleFilterNameOverride;
+  let postRoleFilterMode = 'match_role';
+
+  if (!usesOverrides) {
+    const effectiveRole = (roleLower || String(client_id || "")).toLowerCase();
+    if (clientType === "direktorat") {
+      resolvedPostClientId = null;
+      resolvedUserClientId = null;
+      resolvedUserRole = effectiveRole;
+      shouldIncludeRoleFilter = effectiveRole === "ditbinmas";
+      resolvedPostRoleName = shouldIncludeRoleFilter ? effectiveRole : null;
+    } else if (roleLower && roleLower !== "operator") {
+      resolvedPostClientId = client_id;
+      resolvedUserClientId = client_id;
+      resolvedUserRole = roleLower;
+      shouldIncludeRoleFilter = roleLower === "ditbinmas";
+      resolvedPostRoleName = shouldIncludeRoleFilter ? roleLower : null;
+      if (roleLower === "ditbinmas") {
+        postRoleFilterMode = 'include_unscoped';
+      }
+    } else {
+      resolvedPostClientId = client_id;
+      resolvedUserClientId = client_id;
+      resolvedUserRole = null;
+      shouldIncludeRoleFilter = false;
+      resolvedPostRoleName = null;
+    }
+  } else {
+    resolvedPostClientId =
+      postClientIdOverride !== undefined ? postClientIdOverride : client_id;
+    resolvedUserClientId =
+      userClientIdOverride !== undefined ? userClientIdOverride : client_id;
+    resolvedUserRole =
+      userRoleFilterOverride !== undefined ? userRoleFilterOverride : null;
+    shouldIncludeRoleFilter =
+      includePostRoleFilterOverride !== undefined
+        ? includePostRoleFilterOverride
+        : false;
+    resolvedPostRoleName =
+      postRoleFilterNameOverride !== undefined
+        ? postRoleFilterNameOverride
+        : shouldIncludeRoleFilter
+          ? resolvedUserRole
+          : null;
+  }
+
+  let postClientFilter = "1=1";
+  if (resolvedPostClientId) {
+    const postClientIdx = addParam(resolvedPostClientId);
+    postClientFilter = `LOWER(p.client_id) = LOWER($${postClientIdx})`;
+  }
+
+  let userWhere = "1=1";
+  if (resolvedUserClientId) {
+    const userClientIdx = addParam(resolvedUserClientId);
+    userWhere = `LOWER(u.client_id) = LOWER($${userClientIdx})`;
+  }
+
+  if (resolvedUserRole) {
+    const roleParamIndex = addParam(resolvedUserRole);
+    const roleFilter = `EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
+    )`;
+    userWhere = userWhere === "1=1" ? roleFilter : `${userWhere} AND ${roleFilter}`;
+  }
+
   let postRoleJoin = "";
   let postRoleFilter = "";
-  let roleParamIndex = null;
-  if (clientType === "direktorat") {
-    postClientFilter = "1=1";
-    const effectiveRole = (roleLower || String(client_id || "")).toLowerCase();
-    roleParamIndex = params.push(effectiveRole);
-    userWhere = `EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
-    )`;
-    if (effectiveRole === "ditbinmas") {
-      postRoleJoin = `LEFT JOIN tiktok_post_roles pr
-        ON pr.video_id = p.video_id
-       AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
-      const roleFilterCondition = `LOWER(p.client_id) = LOWER($${roleParamIndex}) OR LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
-      postRoleFilter = `AND (${roleFilterCondition})`;
-    }
-  } else if (roleLower && roleLower !== "operator") {
-    roleParamIndex = params.push(roleLower);
-    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
-    )`;
-    if (roleLower === "ditbinmas") {
-      postRoleJoin = `LEFT JOIN tiktok_post_roles pr
-        ON pr.video_id = p.video_id
-       AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+  if (shouldIncludeRoleFilter && resolvedPostRoleName) {
+    const roleParamIndex = addParam(resolvedPostRoleName);
+    postRoleJoin = `LEFT JOIN tiktok_post_roles pr
+      ON pr.video_id = p.video_id
+     AND LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+    if (postRoleFilterMode === 'include_unscoped') {
       postRoleFilter = `AND (
         pr.video_id IS NOT NULL
         OR NOT EXISTS (
           SELECT 1 FROM tiktok_post_roles pr_all WHERE pr_all.video_id = p.video_id
         )
       )`;
+    } else {
+      const roleFilterCondition =
+        `LOWER(p.client_id) = LOWER($${roleParamIndex}) OR LOWER(pr.role_name) = LOWER($${roleParamIndex})`;
+      postRoleFilter = `AND (${roleFilterCondition})`;
     }
   }
 
@@ -305,5 +390,4 @@ export async function getRekapKomentarByClient(
 
   return rows;
 }
-
 
