@@ -342,6 +342,27 @@ export const getUserList = async (req, res, next) => {
       : req.user?.client_id
         ? [req.user.client_id]
         : [];
+    const requestedRole = req.query.role
+      ? String(req.query.role).toLowerCase()
+      : role;
+    const requestedScope = req.query.scope
+      ? String(req.query.scope).toLowerCase()
+      : null;
+    const validDirektoratRoles = [
+      'ditbinmas',
+      'ditlantas',
+      'bidhumas',
+      'ditsamapta',
+    ];
+    if (
+      requestedScope === 'direktorat' &&
+      !validDirektoratRoles.includes(requestedRole)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'role direktorat tidak valid',
+      });
+    }
     let users;
 
     if (role === 'operator') {
@@ -374,7 +395,17 @@ export const getUserList = async (req, res, next) => {
           .status(400)
           .json({ success: false, message: 'client_id wajib diisi' });
       }
-      users = await userModel.getUsersByClient(selectedClientId, role);
+      if (requestedScope === 'direktorat') {
+        users = await userModel.getUsersByDirektorat(
+          requestedRole,
+          selectedClientId
+        );
+      } else {
+        users = await userModel.getUsersByClientAndRole(
+          selectedClientId,
+          requestedRole
+        );
+      }
     } else {
       const clientId = req.query.client_id;
       if (!clientId) {
@@ -385,7 +416,25 @@ export const getUserList = async (req, res, next) => {
       const loweredClientId = clientId.toLowerCase();
       const direktorateRoles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
 
-      if (direktorateRoles.includes(loweredClientId)) {
+      if (requestedScope === 'direktorat') {
+        const filterClientId =
+          tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
+            ? tokenClientId
+            : null;
+        if (filterClientId) {
+          users = await userModel.getUsersByDirektorat(
+            requestedRole,
+            filterClientId
+          );
+        } else {
+          users = await userModel.getUsersByDirektorat(requestedRole);
+        }
+      } else if (requestedScope === 'org') {
+        users = await userModel.getUsersByClientAndRole(
+          clientId,
+          requestedRole
+        );
+      } else if (direktorateRoles.includes(loweredClientId)) {
         const filterClientId =
           tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
             ? tokenClientId
@@ -416,7 +465,7 @@ export const getUserList = async (req, res, next) => {
             users = await userModel.getUsersByDirektorat(loweredClientId);
           }
         } else {
-          users = await userModel.getUsersByClient(clientId, role);
+          users = await userModel.getUsersByClient(clientId, requestedRole);
         }
       }
     }

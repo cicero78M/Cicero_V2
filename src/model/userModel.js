@@ -164,6 +164,30 @@ export async function getUsersByClient(client_id, roleFilter = null) {
   return res.rows;
 }
 
+// Ambil semua user aktif berdasarkan client_id yang spesifik dan role tertentu
+export async function getUsersByClientAndRole(client_id, roleFilter = null) {
+  const params = [client_id];
+  let sql = `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
+            u.client_id, c.nama AS client_name
+     FROM "user" u
+     LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
+     WHERE LOWER(u.client_id) = LOWER($1)`;
+
+  if (roleFilter) {
+    sql += ` AND EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($2)
+      )`;
+    params.push(roleFilter);
+  }
+
+  sql += ' AND status = true';
+
+  const res = await query(sql, params);
+  return res.rows;
+}
+
 export async function getOperatorsByClient(client_id) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1);
   const res = await query(
