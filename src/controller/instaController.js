@@ -23,10 +23,21 @@ export async function getInstaRekapLikes(req, res) {
   const startDate =
     req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
-  const role = req.user?.role;
-  const roleLower = role?.toLowerCase();
+  const requestedRole = req.query.role || req.user?.role;
+  const requestedScope = req.query.scope;
+  const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
+  const scopeLower = requestedScope
+    ? String(requestedScope).toLowerCase()
+    : null;
+  const directorateRoles = [
+    "ditbinmas",
+    "ditlantas",
+    "bidhumas",
+    "ditsamapta",
+  ];
+  const usesStandardPayload = Boolean(requestedScope || req.query.role);
 
-  if (roleLower === "ditbinmas") {
+  if (!usesStandardPayload && roleLower === "ditbinmas") {
     client_id = "ditbinmas";
   }
 
@@ -60,14 +71,67 @@ export async function getInstaRekapLikes(req, res) {
       .json({ success: false, message: "client_id tidak diizinkan" });
   }
   try {
-    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''}` });
+    let rekapOptions = {};
+    let roleForQuery = requestedRole;
+
+    if (usesStandardPayload) {
+      const resolvedRole = roleLower || null;
+      if (!resolvedRole) {
+        return res
+          .status(400)
+          .json({ success: false, message: "role wajib diisi" });
+      }
+      const resolvedScope = scopeLower || "org";
+      if (!["org", "direktorat"].includes(resolvedScope)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "scope tidak valid" });
+      }
+
+      let postClientId = client_id;
+      let userClientId = client_id;
+      let userRoleFilter = null;
+      let includePostRoleFilter = false;
+
+      if (resolvedScope === "direktorat") {
+        postClientId = client_id;
+        userClientId = null;
+        userRoleFilter = resolvedRole;
+      } else if (resolvedScope === "org") {
+        if (resolvedRole === "operator") {
+          const tokenClientId = req.user?.client_id;
+          if (!tokenClientId) {
+            return res.status(400).json({
+              success: false,
+              message: "client_id pengguna tidak ditemukan",
+            });
+          }
+          postClientId = tokenClientId;
+          userClientId = tokenClientId;
+          userRoleFilter = "operator";
+        } else if (directorateRoles.includes(resolvedRole)) {
+          postClientId = resolvedRole;
+        }
+      }
+
+      rekapOptions = {
+        postClientId,
+        userClientId,
+        userRoleFilter,
+        includePostRoleFilter,
+      };
+      roleForQuery = resolvedRole;
+    }
+
+    sendConsoleDebug({ tag: "INSTA", msg: `getInstaRekapLikes ${client_id} ${periode} ${tanggal || ''} ${startDate || ''} ${endDate || ''} ${roleLower || ''} ${scopeLower || ''}` });
     const { rows, totalKonten } = await getRekapLikesByClient(
       client_id,
       periode,
       tanggal,
       startDate,
       endDate,
-      role
+      roleForQuery,
+      rekapOptions
     );
 
     const payload = formatLikesRecapResponse(rows, totalKonten);
@@ -433,4 +497,3 @@ export async function getInstagramUser(req, res) {
     res.status(code).json({ success: false, message: err.message });
   }
 }
-

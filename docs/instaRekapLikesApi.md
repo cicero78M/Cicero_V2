@@ -2,6 +2,25 @@
 
 The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 
+## Request
+
+`GET /api/insta/rekap-likes`
+
+### Query Parameters
+
+- `client_id` (required)
+- `periode` (optional, default: `harian`)
+- `tanggal` (optional)
+- `start_date` / `end_date` (optional, date range)
+- `role` (recommended; used for standardized scope handling)
+- `scope` (recommended; values: `direktorat` or `org`)
+
+Example:
+
+```
+/api/insta/rekap-likes?client_id=DITBINMAS&periode=harian&tanggal=2025-12-22&role=ditbinmas&scope=direktorat
+```
+
 ## Response
 
 ```
@@ -90,18 +109,25 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 - **statusLegend** – legenda status supaya warna/ikon di UI konsisten.
 - **noUsernameUsersDetails** – daftar akun yang perlu dibantu melengkapi username Instagram.
 
-### Directorate Clients
+## Scope Handling
 
-When `client_id` refers to a directorate client, the endpoint aggregates user data
-across **all** client IDs that have a user role matching the directorate name.
-For example, requesting rekap likes for `ditbinmas` will include users from every
-client who has the role `ditbinmas`.
+When `role` and `scope` are provided, the endpoint follows these rules:
 
-### Organization Clients with Non-Operator Roles
+### `scope=direktorat`
 
-When requesting data for a regular organization and the authenticated user role is
-not `operator`, only users having the same role as the requester are included in
-the response.
+- **Data tugas (post)** diambil berdasarkan `client_id`.
+- **Data personil** direkap berdasarkan **role yang sama** (`role`), lintas client.
+
+### `scope=org`
+
+- Jika `role` adalah direktorat (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`):
+  - **Data tugas** diambil berdasarkan `client_id` direktorat (nilai `role`).
+  - **Data personil** mengikuti `client_id` yang diminta.
+- Jika `role` adalah `operator`:
+  - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
+  - **Data personil** dibatasi pada role `operator`.
+- Selain kondisi di atas:
+  - **Data tugas** dan **personil** mengikuti `client_id` yang diminta.
 
 ## Ditbinmas Shortcut
 
