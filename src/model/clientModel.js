@@ -17,7 +17,7 @@ export const findAllActive = async () => {
 // Ambil semua client Direktorat yang aktif
 export const findAllActiveDirektorat = async () => {
   const res = await query(
-    `SELECT client_id, nama, client_type, client_status
+    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
      FROM clients
      WHERE client_status = true AND LOWER(client_type) = LOWER('direktorat')
      ORDER BY client_id`
@@ -27,7 +27,8 @@ export const findAllActiveDirektorat = async () => {
 
 export const findAllActiveDirektoratWithSosmed = async () => {
   const res = await query(
-    `SELECT client_id, nama, client_group, client_operator, client_super
+    `SELECT client_id, nama, client_group, client_operator, client_super,
+            regional_id, parent_client_id, client_level
      FROM clients
      WHERE client_status = true
        AND LOWER(client_type) = LOWER('direktorat')
@@ -41,7 +42,8 @@ export const findAllActiveDirektoratWithSosmed = async () => {
 export const findAllActiveDirektoratWithTiktok = async () => {
   const res = await query(
     `SELECT client_id, nama, client_group, client_operator, client_super,
-            client_insta_status, client_tiktok_status
+            client_insta_status, client_tiktok_status,
+            regional_id, parent_client_id, client_level
      FROM clients
      WHERE client_status = true
        AND LOWER(client_type) = LOWER('direktorat')
@@ -134,9 +136,9 @@ export const findBySuperAdmin = async (waNumber) => {
 export const create = async (client) => {
   const q = `
     INSERT INTO clients
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_amplify_status, client_operator, client_group, tiktok_secuid, client_super)
+      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_amplify_status, client_operator, client_group, regional_id, parent_client_id, client_level, tiktok_secuid, client_super)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *
   `;
   const values = [
@@ -151,6 +153,9 @@ export const create = async (client) => {
     client.client_amplify_status ?? true,
     client.client_operator || '',
     client.client_group || '',
+    client.regional_id || null,
+    client.parent_client_id || null,
+    client.client_level || null,
     client.tiktok_secuid || '',
     client.client_super || ''
   ];
@@ -176,8 +181,11 @@ export const update = async (client_id, clientData) => {
       client_amplify_status = $9,
       client_operator = $10,
       client_group = $11,
-      tiktok_secuid = $12,
-      client_super = $13
+      regional_id = $12,
+      parent_client_id = $13,
+      client_level = $14,
+      tiktok_secuid = $15,
+      client_super = $16
     WHERE client_id = $1
     RETURNING *
   `;
@@ -193,6 +201,9 @@ export const update = async (client_id, clientData) => {
     merged.client_amplify_status,
     merged.client_operator,
     merged.client_group,
+    merged.regional_id || null,
+    merged.parent_client_id || null,
+    merged.client_level || null,
     merged.tiktok_secuid || '',
     merged.client_super || ''
   ];
@@ -236,17 +247,23 @@ export async function updateClientSecUid(client_id, secUid) {
 }
 
 export async function getAllClientIds() {
-  const rows = await query("SELECT client_id, nama, client_status FROM clients ORDER BY client_id");
+  const rows = await query(
+    "SELECT client_id, nama, client_status, regional_id, parent_client_id, client_level FROM clients ORDER BY client_id"
+  );
   return rows.rows.map(r => ({
     client_id: r.client_id,
     nama: r.nama,
     status: r.client_status,
+    regional_id: r.regional_id,
+    parent_client_id: r.parent_client_id,
+    client_level: r.client_level,
   }));
 }
 
 export async function findAllOrgClients() {
   const res = await query(
-    `SELECT client_id, nama, client_status FROM clients WHERE client_type = 'ORG' ORDER BY client_id`
+    `SELECT client_id, nama, client_status, regional_id, parent_client_id, client_level
+     FROM clients WHERE client_type = 'ORG' ORDER BY client_id`
   );
   return res.rows;
 }
