@@ -92,6 +92,10 @@ export async function getTiktokRekapKomentar(req, res) {
   const endDate = req.query.end_date || req.query.tanggal_selesai;
   const requestedRole = req.query.role || req.user?.role;
   const requestedScope = req.query.scope;
+  const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+  const regionalId = requestedRegionalId
+    ? String(requestedRegionalId).trim().toUpperCase()
+    : null;
   const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
   const scopeLower = requestedScope
     ? String(requestedScope).toLowerCase()
@@ -139,7 +143,7 @@ export async function getTiktokRekapKomentar(req, res) {
   }
 
   try {
-    let rekapOptions = null;
+    let rekapOptions = { regionalId };
     let roleForQuery = requestedRole;
 
     if (usesStandardPayload) {
@@ -188,6 +192,7 @@ export async function getTiktokRekapKomentar(req, res) {
         userClientId,
         userRoleFilter,
         includePostRoleFilter: false,
+        regionalId,
       };
       roleForQuery = resolvedRole;
     }

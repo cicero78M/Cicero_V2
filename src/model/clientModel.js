@@ -267,3 +267,27 @@ export async function findAllOrgClients() {
   );
   return res.rows;
 }
+
+export async function findByRegionalId(regionalId) {
+  if (!regionalId) return [];
+  const res = await query(
+    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
+     FROM clients
+     WHERE UPPER(regional_id) = UPPER($1)
+     ORDER BY client_id`,
+    [regionalId]
+  );
+  return res.rows;
+}
+
+export async function findChildrenByParent(parentClientId) {
+  if (!parentClientId) return [];
+  const res = await query(
+    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
+     FROM clients
+     WHERE LOWER(parent_client_id) = LOWER($1)
+     ORDER BY client_id`,
+    [parentClientId]
+  );
+  return res.rows;
+}

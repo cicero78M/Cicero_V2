@@ -213,9 +213,13 @@ export async function countPostsByClient(
   tanggal,
   start_date,
   end_date,
-  role
+  role,
+  regionalId
 ) {
   const normalizedId = normalizeClientId(client_id);
+  const normalizedRegionalId = regionalId
+    ? String(regionalId).trim().toUpperCase()
+    : null;
   let clientType = null;
   if (normalizedId) {
     const clientTypeRes = await query(
@@ -248,6 +252,15 @@ export async function countPostsByClient(
           AND LOWER(TRIM(r.role_name)) = ${roleIdx}
       )`);
     }
+  }
+  if (normalizedRegionalId) {
+    const regionalIdx = addParam(normalizedRegionalId);
+    whereClauses.push(`EXISTS (
+      SELECT 1
+      FROM clients c
+      WHERE c.client_id = p.client_id
+        AND UPPER(c.regional_id) = UPPER(${regionalIdx})
+    )`);
   }
 
   let dateFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";

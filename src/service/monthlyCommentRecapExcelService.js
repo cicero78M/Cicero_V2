@@ -29,7 +29,7 @@ function rankWeight(rank) {
   return idx === -1 ? RANK_ORDER.length : idx;
 }
 
-export async function saveMonthlyCommentRecapExcel(clientId) {
+export async function saveMonthlyCommentRecapExcel(clientId, { regionalId } = {}) {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   const endDate = new Date(now);
@@ -61,7 +61,8 @@ export async function saveMonthlyCommentRecapExcel(clientId) {
         dateStr,
         undefined,
         undefined,
-        roleFilter
+        roleFilter,
+        { regionalId }
       ),
       countPostsByClient(
         clientId,
@@ -69,7 +70,8 @@ export async function saveMonthlyCommentRecapExcel(clientId) {
         dateStr,
         undefined,
         undefined,
-        roleFilter
+        roleFilter,
+        regionalId
       ),
     ]);
     dailyPosts[dateStr] = totalPosts;

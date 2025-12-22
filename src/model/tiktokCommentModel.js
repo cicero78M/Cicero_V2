@@ -171,6 +171,9 @@ export async function getRekapKomentarByClient(
   const postRoleFilterNameOverride = hasOption('postRoleFilterName')
     ? options.postRoleFilterName
     : undefined;
+  const regionalIdOverride = hasOption('regionalId')
+    ? options.regionalId
+    : null;
   const usesOverrides = [
     postClientIdOverride,
     userClientIdOverride,
@@ -193,6 +196,12 @@ export async function getRekapKomentarByClient(
     params.push(value);
     return params.length;
   };
+  const normalizedRegionalId = regionalIdOverride
+    ? String(regionalIdOverride).trim().toUpperCase()
+    : null;
+  const regionalParamIdx = normalizedRegionalId
+    ? addParam(normalizedRegionalId)
+    : null;
   let tanggalFilter =
     "__DATE_FIELD__::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
@@ -305,8 +314,17 @@ export async function getRekapKomentarByClient(
     userWhere = userWhere === "1=1" ? roleFilter : `${userWhere} AND ${roleFilter}`;
   }
 
+  if (regionalParamIdx !== null) {
+    const regionalFilter = `UPPER(cl.regional_id) = UPPER($${regionalParamIdx})`;
+    userWhere = userWhere === "1=1"
+      ? regionalFilter
+      : `${userWhere} AND ${regionalFilter}`;
+  }
+
   let postRoleJoin = "";
   let postRoleFilter = "";
+  let postRegionalJoin = "";
+  let postRegionalFilter = "";
   if (shouldIncludeRoleFilter && resolvedPostRoleName) {
     const roleParamIndex = addParam(resolvedPostRoleName);
     postRoleJoin = `LEFT JOIN tiktok_post_roles pr
@@ -325,6 +343,11 @@ export async function getRekapKomentarByClient(
       postRoleFilter = `AND (${roleFilterCondition})`;
     }
   }
+  if (normalizedRegionalId) {
+    const regionalIdx = addParam(normalizedRegionalId);
+    postRegionalJoin = 'JOIN clients cp ON cp.client_id = p.client_id';
+    postRegionalFilter = `AND UPPER(cp.regional_id) = UPPER($${regionalIdx})`;
+  }
 
   const commentParams = [...params];
   const addPriorityParam = value => {
@@ -341,18 +364,22 @@ export async function getRekapKomentarByClient(
              lower(replace(trim(cmt), '@', '')) AS username
       FROM tiktok_comment c
       JOIN tiktok_post p ON p.video_id = c.video_id
+      ${postRegionalJoin}
       ${postRoleJoin}
       JOIN LATERAL jsonb_array_elements_text(c.comments) cmt ON TRUE
       WHERE ${postClientFilter}
         ${postRoleFilter}
+        ${postRegionalFilter}
         AND ${commentTanggalFilter}
     ),
     total_posts AS (
       SELECT COUNT(DISTINCT p.video_id) AS total_konten
       FROM tiktok_post p
+      ${postRegionalJoin}
       ${postRoleJoin}
       WHERE ${postClientFilter}
         ${postRoleFilter}
+        ${postRegionalFilter}
         AND ${postTanggalFilter}
     ),
     comment_counts AS (
@@ -390,4 +417,3 @@ export async function getRekapKomentarByClient(
 
   return rows;
 }
-

@@ -51,7 +51,7 @@ function rankWeight(rank) {
   return idx === -1 ? RANK_ORDER.length : idx;
 }
 
-export async function saveWeeklyCommentRecapExcel(clientId) {
+export async function saveWeeklyCommentRecapExcel(clientId, { regionalId } = {}) {
   const today = new Date();
   const isoToday = jakartaIsoFormatter.format(today);
   const weekdayIdx = WEEKDAY_ABBR.indexOf(jakartaWeekdayFormatter.format(today));
@@ -106,7 +106,8 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
           dateStr,
           undefined,
           undefined,
-          roleFilter
+          roleFilter,
+          { regionalId }
         );
         return { dateStr, rows };
       } catch (error) {
@@ -173,14 +174,15 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
   if (roleFilter) {
     const aggregateTasks = dateList.map(async (dateStr) => {
       try {
-        const count = await countPostsByClient(
-          clientId,
-          'harian',
-          dateStr,
-          undefined,
-          undefined,
-          roleFilter
-        );
+            const count = await countPostsByClient(
+              clientId,
+              'harian',
+              dateStr,
+              undefined,
+              undefined,
+              roleFilter,
+              regionalId
+            );
         return { dateStr, count };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -215,7 +217,11 @@ export async function saveWeeklyCommentRecapExcel(clientId) {
               const count = await countPostsByClient(
                 targetClientId,
                 'harian',
-                dateStr
+                dateStr,
+                undefined,
+                undefined,
+                undefined,
+                regionalId
               );
               return { satkerKey, dateStr, count };
             } catch (error) {

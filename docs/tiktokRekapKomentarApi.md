@@ -15,6 +15,7 @@ client tertentu.
 - `start_date` / `end_date` (optional, date range)
 - `role` (recommended; dipakai untuk standardisasi scope)
 - `scope` (recommended; value: `direktorat` atau `org`)
+- `regional_id` (optional; filter hasil hanya untuk client dengan `regional_id` tertentu, mis. `JATIM`)
 
 Example:
 
@@ -134,3 +135,7 @@ Ketika `role` dan `scope` dikirim, filter mengikuti aturan berikut:
   - **Data personil** dibatasi pada role `operator`.
 - Selain kondisi di atas:
   - **Data tugas** dan **personil** mengikuti `client_id` yang diminta.
+
+## Regional Filter
+
+Jika `regional_id` dikirim, data post dan personil hanya akan dihitung untuk client yang berada pada regional tersebut. Contoh: `regional_id=JATIM` membatasi rekap ke struktur Polda Jatim.

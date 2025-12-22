@@ -50,7 +50,11 @@ export async function getAggregator(req, res) {
 
     const resolution = await resolveAggregatorClient(
       normalizedClientId,
-      req.user?.role
+      req.user?.role,
+      {
+        userScope: req.user?.scope,
+        regionalId: req.query.regional_id || req.user?.regional_id,
+      }
     );
     if (!resolution) {
       return res
@@ -101,6 +105,8 @@ export async function refreshAggregator(req, res) {
       periode,
       limit,
       userRole: req.user?.role,
+      userScope: req.user?.scope,
+      regionalId: req.body?.regional_id || req.query.regional_id || req.user?.regional_id,
       skipPostRefresh,
     });
 

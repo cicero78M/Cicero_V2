@@ -90,6 +90,7 @@ export async function generateTiktokAllDataRecap({
   clientId,
   roleFlag,
   clientName,
+  regionalId,
 } = {}) {
   if (!clientId) {
     throw new Error('Client ID wajib diisi untuk membuat rekap TikTok all data.');
@@ -108,7 +109,8 @@ export async function generateTiktokAllDataRecap({
       monthKey,
       null,
       null,
-      roleFlag
+      roleFlag,
+      { regionalId }
     );
 
     const monthRows = Array.isArray(rows) ? rows : [];
