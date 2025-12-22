@@ -122,7 +122,7 @@ When `role` and `scope` are provided, the endpoint follows these rules:
 
 - Jika `role` adalah direktorat (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`):
   - **Data tugas** diambil berdasarkan `client_id` direktorat (nilai `role`).
-  - **Data personil** mengikuti `client_id` yang diminta.
+  - **Data personil** mengikuti `client_id` pengguna yang sedang login (token) dan dibatasi pada role direktorat yang sama.
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
   - **Data personil** dibatasi pada role `operator`.
