@@ -57,6 +57,18 @@ Official Satbinmas accounts for each client are stored in the dedicated
 per-platform handles—along with display names, profile links, and verification
 state—without mutating legacy `client_*` columns.
 
+#### Regional scoping & hierarchy (Polda Jatim)
+Migration `sql/migrations/20251222_regionalScopingJatim.sql` standardises the
+initial regional scope for existing data with the following rules:
+- All existing `clients` rows are assigned `regional_id = 'JATIM'`.
+- The Polda Jatim client is ensured to exist as `client_id = 'POLDA_JATIM'` with
+  `client_level = 'polda'`.
+- Directorate and satker clients in the Jatim region (`client_level` or
+  `client_type` in `direktorat`/`satker`) are linked via
+  `parent_client_id = 'POLDA_JATIM'`.
+- Any users already associated to the Polda Jatim client are normalised to the
+  `POLDA_JATIM` client id so `user.client_id` remains valid.
+
 ### `user`
 Holds users belonging to a client.
 - `user_id` – primary key (NRP/NIP string)
