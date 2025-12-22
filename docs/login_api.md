@@ -1,6 +1,6 @@
 # Login API Guide
 
-*Last updated: 2025-10-24*
+*Last updated: 2025-12-22*
 
 This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
 - `/api/auth/login` for client operators,
@@ -194,6 +194,7 @@ Role `operator` hanya diperbolehkan mengakses endpoint tertentu di bawah `/api`.
 Allowlist saat ini:
 - `/api/clients/profile`
 - `/api/aggregator` (termasuk sub-path seperti `/api/aggregator/refresh`)
+- `/api/amplify/rekap`
 - `/api/dashboard/stats`
 - `/api/dashboard/login-web/recap`
 - `/api/dashboard/social-media/instagram/analysis`
