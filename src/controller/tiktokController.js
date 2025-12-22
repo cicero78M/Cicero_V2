@@ -178,7 +178,8 @@ export async function getTiktokRekapKomentar(req, res) {
           userRoleFilter = 'operator';
         } else if (directorateRoles.includes(resolvedRole)) {
           postClientId = resolvedRole;
-          userClientId = client_id;
+          userClientId = req.user?.client_id || client_id;
+          userRoleFilter = resolvedRole;
         }
       }
 
