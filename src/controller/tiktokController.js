@@ -81,20 +81,123 @@ export async function getTiktokPosts(req, res) {
 import { getRekapKomentarByClient } from '../model/tiktokCommentModel.js';
 
 export async function getTiktokRekapKomentar(req, res) {
-  const client_id = 'DITBINMAS';
+  let client_id =
+    req.query.client_id ||
+    req.user?.client_id ||
+    req.headers['x-client-id'];
   const periode = req.query.periode || 'harian';
   const tanggal = req.query.tanggal;
   const startDate = req.query.start_date || req.query.tanggal_mulai;
   const endDate = req.query.end_date || req.query.tanggal_selesai;
+  const requestedRole = req.query.role || req.user?.role;
+  const requestedScope = req.query.scope;
+  const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
+  const scopeLower = requestedScope
+    ? String(requestedScope).toLowerCase()
+    : null;
+  const directorateRoles = [
+    'ditbinmas',
+    'ditlantas',
+    'bidhumas',
+    'ditsamapta',
+  ];
+  const usesStandardPayload = Boolean(requestedScope || req.query.role);
+
+  if (!usesStandardPayload && roleLower === 'ditbinmas') {
+    client_id = 'ditbinmas';
+  }
+
+  if (!client_id) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'client_id wajib diisi' });
+  }
+
+  if (req.user?.client_ids) {
+    const userClientIds = Array.isArray(req.user.client_ids)
+      ? req.user.client_ids
+      : [req.user.client_ids];
+    const idsLower = userClientIds.map((c) => c.toLowerCase());
+    if (
+      !idsLower.includes(client_id.toLowerCase()) &&
+      roleLower !== client_id.toLowerCase()
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: 'client_id tidak diizinkan' });
+    }
+  }
+  if (
+    req.user?.client_id &&
+    req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
+    roleLower !== client_id.toLowerCase()
+  ) {
+    return res
+      .status(403)
+      .json({ success: false, message: 'client_id tidak diizinkan' });
+  }
+
   try {
-    const role = req.user?.role;
+    let rekapOptions = null;
+    let roleForQuery = requestedRole;
+
+    if (usesStandardPayload) {
+      const resolvedRole = roleLower || null;
+      if (!resolvedRole) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'role wajib diisi' });
+      }
+      const resolvedScope = scopeLower || 'org';
+      if (!['org', 'direktorat'].includes(resolvedScope)) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'scope tidak valid' });
+      }
+
+      let postClientId = client_id;
+      let userClientId = client_id;
+      let userRoleFilter = null;
+
+      if (resolvedScope === 'direktorat') {
+        postClientId = client_id;
+        userClientId = null;
+        userRoleFilter = resolvedRole;
+      } else if (resolvedScope === 'org') {
+        if (resolvedRole === 'operator') {
+          const tokenClientId = req.user?.client_id;
+          if (!tokenClientId) {
+            return res.status(400).json({
+              success: false,
+              message: 'client_id pengguna tidak ditemukan',
+            });
+          }
+          postClientId = tokenClientId;
+          userClientId = tokenClientId;
+          userRoleFilter = 'operator';
+        } else if (directorateRoles.includes(resolvedRole)) {
+          postClientId = resolvedRole;
+          userClientId = client_id;
+        }
+      }
+
+      rekapOptions = {
+        postClientId,
+        userClientId,
+        userRoleFilter,
+        includePostRoleFilter: false,
+      };
+      roleForQuery = resolvedRole;
+    }
+
     const data = await getRekapKomentarByClient(
       client_id,
       periode,
       tanggal,
       startDate,
       endDate,
-      role
+      roleForQuery,
+      rekapOptions || {}
     );
     const length = Array.isArray(data) ? data.length : 0;
     const chartHeight = Math.max(length * 30, 300);
