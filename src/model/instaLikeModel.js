@@ -149,53 +149,133 @@ export async function getRekapLikesByClient(
   tanggal,
   start_date,
   end_date,
-  role
+  role,
+  options = {}
 ) {
   const roleLower = role ? role.toLowerCase() : null;
+  const {
+    postClientId: postClientIdOverride = null,
+    userClientId: userClientIdOverride = null,
+    userRoleFilter = null,
+    includePostRoleFilter = null,
+    postRoleFilterName = null,
+  } = options;
   const params = [];
   const addParam = value => {
     params.push(value);
     return params.length;
   };
+  const postParams = [];
+  const addPostParam = value => {
+    postParams.push(value);
+    return postParams.length;
+  };
 
-  let clientParamIdx = null;
-  if (roleLower !== 'ditbinmas') {
-    clientParamIdx = addParam(client_id);
+  const shouldIncludeRoleFilter =
+    includePostRoleFilter !== null ? includePostRoleFilter : roleLower === 'ditbinmas';
+  const resolvedPostRoleName =
+    postRoleFilterName ?? (roleLower === 'ditbinmas' ? roleLower : null);
+  const resolvedPostClientId =
+    postClientIdOverride ?? (roleLower === 'ditbinmas' ? null : client_id);
+  const resolvedUserClientId =
+    userClientIdOverride ?? (roleLower === 'ditbinmas' ? null : client_id);
+  const resolvedUserRole =
+    userRoleFilter ?? (roleLower === 'ditbinmas' ? roleLower : null);
+
+  let userClientParamIdx = null;
+  if (resolvedUserClientId) {
+    userClientParamIdx = addParam(resolvedUserClientId);
   }
+  const normalizedPostClientId = resolvedPostClientId
+    ? String(resolvedPostClientId).toLowerCase()
+    : null;
+  const normalizedUserClientId = resolvedUserClientId
+    ? String(resolvedUserClientId).toLowerCase()
+    : null;
+  const sharedClientParamIdx =
+    normalizedPostClientId &&
+    normalizedUserClientId &&
+    normalizedPostClientId === normalizedUserClientId
+      ? userClientParamIdx
+      : null;
+  const hasSharedRoleParam =
+    resolvedUserRole &&
+    shouldIncludeRoleFilter &&
+    resolvedPostRoleName &&
+    String(resolvedUserRole).toLowerCase() === String(resolvedPostRoleName).toLowerCase();
+  const sharedRoleParamIdx = hasSharedRoleParam ? addParam(resolvedUserRole) : null;
 
-  let tanggalFilter =
-    "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  if (start_date && end_date) {
-    const startIdx = addParam(start_date);
-    const endIdx = addParam(end_date);
-    tanggalFilter =
-      `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
-  } else if (periode === 'bulanan') {
-    if (tanggal) {
-      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      const idx = addParam(monthDate);
-      tanggalFilter =
-        `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
-    } else {
-      tanggalFilter =
-        "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+  const buildTanggalFilter = addParamFn => {
+    let filter =
+      "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    if (start_date && end_date) {
+      const startIdx = addParamFn(start_date);
+      const endIdx = addParamFn(end_date);
+      filter =
+        `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
+    } else if (periode === 'bulanan') {
+      if (tanggal) {
+        const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+        const idx = addParamFn(monthDate);
+        filter =
+          `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
+      } else {
+        filter =
+          "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      }
+    } else if (periode === 'mingguan') {
+      if (tanggal) {
+        const idx = addParamFn(tanggal);
+        filter =
+          `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
+      } else {
+        filter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+      }
+    } else if (periode === 'semua') {
+      filter = '1=1';
+    } else if (tanggal) {
+      const idx = addParamFn(tanggal);
+      filter = `p.created_at::date = $${idx}::date`;
     }
-  } else if (periode === 'mingguan') {
-    if (tanggal) {
-      const idx = addParam(tanggal);
-      tanggalFilter =
-        `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
-    } else {
-      tanggalFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
-    }
-  } else if (periode === 'semua') {
-    tanggalFilter = '1=1';
-  } else if (tanggal) {
-    const idx = addParam(tanggal);
-    tanggalFilter = `p.created_at::date = $${idx}::date`;
-  }
+    return filter;
+  };
 
-  let postClientFilter = '1=1';
+  const tanggalFilter = buildTanggalFilter(addParam);
+  const postTanggalFilter = buildTanggalFilter(addPostParam);
+
+  const buildPostFilters = (addParamFn, sharedClientIdx = null, sharedRoleIdx = null) => {
+    let postClientFilter = '1=1';
+    let postRoleJoin = '';
+    let postRoleFilter = '';
+
+    if (resolvedPostClientId) {
+      const postClientIdx =
+        sharedClientIdx ?? addParamFn(resolvedPostClientId);
+      postClientFilter = `LOWER(p.client_id) = LOWER($${postClientIdx})`;
+    }
+
+    if (shouldIncludeRoleFilter && resolvedPostRoleName) {
+      const roleIdx = sharedRoleIdx ?? addParamFn(resolvedPostRoleName);
+      const roleFilterCondition =
+        `LOWER(p.client_id) = LOWER($${roleIdx}) OR LOWER(pr.role_name) = LOWER($${roleIdx})`;
+      postRoleJoin = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+      postRoleFilter = `AND (${roleFilterCondition})`;
+    }
+
+    return { postClientFilter, postRoleJoin, postRoleFilter };
+  };
+
+  const {
+    postClientFilter,
+    postRoleJoin: postRoleJoinLikes,
+    postRoleFilter,
+  } = buildPostFilters(addParam, sharedClientParamIdx, sharedRoleParamIdx);
+  const {
+    postClientFilter: postClientFilterPosts,
+    postRoleJoin: postRoleJoinPosts,
+    postRoleFilter: postRoleFilterPosts,
+  } = buildPostFilters(addPostParam);
+
   let userWhere = '1=1';
   let likeCountsSelect = `
     SELECT username, client_id, COUNT(DISTINCT shortcode) AS jumlah_like
@@ -206,33 +286,30 @@ export async function getRekapLikesByClient(
     lower(replace(trim(u.insta), '@', '')) = lc.username
     AND LOWER(u.client_id) = LOWER(lc.client_id)
   `;
-  let postRoleJoinLikes = '';
-  let postRoleJoinPosts = '';
-  let postRoleFilter = '';
-  if (clientParamIdx !== null) {
-    postClientFilter = `LOWER(p.client_id) = LOWER($${clientParamIdx})`;
-    userWhere = `LOWER(u.client_id) = LOWER($${clientParamIdx})`;
+  if (userClientParamIdx !== null) {
+    userWhere = `LOWER(u.client_id) = LOWER($${userClientParamIdx})`;
   } else {
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
-  }
-
-  if (roleLower === 'ditbinmas') {
-    const roleIdx = addParam(roleLower);
-    userWhere = `EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
-    )`;
     likeCountsSelect = `
       SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
       FROM valid_likes
       GROUP BY username
     `;
-    const roleFilterCondition = `LOWER(p.client_id) = LOWER($${roleIdx}) OR LOWER(pr.role_name) = LOWER($${roleIdx})`;
-    postRoleJoinLikes = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleJoinPosts = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND (${roleFilterCondition})`;
   }
+
+  if (resolvedUserRole || sharedRoleParamIdx) {
+    const roleIdx = sharedRoleParamIdx ?? addParam(resolvedUserRole);
+    const roleFilterCondition = `EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
+    )`;
+    userWhere = userWhere === '1=1'
+      ? roleFilterCondition
+      : `${userWhere} AND ${roleFilterCondition}`;
+  }
+
+  
 
   const likeParams = [...params];
   const addPriorityParam = value => {
@@ -295,12 +372,12 @@ export async function getRekapLikesByClient(
       SELECT p.shortcode
       FROM insta_post p
       ${postRoleJoinPosts}
-      WHERE ${postClientFilter}
-        ${postRoleFilter}
-        AND ${tanggalFilter}
+      WHERE ${postClientFilterPosts}
+        ${postRoleFilterPosts}
+        AND ${postTanggalFilter}
     )
     SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,
-    params
+    postParams
   );
   const totalKonten = parseInt(postRows[0]?.total_post || '0', 10);
 
