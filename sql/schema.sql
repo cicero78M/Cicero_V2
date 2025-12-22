@@ -12,9 +12,15 @@ CREATE TABLE clients (
   client_amplify_status BOOLEAN DEFAULT TRUE,
   client_operator VARCHAR,
   client_group VARCHAR,
+  regional_id VARCHAR,
+  parent_client_id VARCHAR REFERENCES clients(client_id),
+  client_level VARCHAR,
   tiktok_secuid VARCHAR,
   client_super VARCHAR
 );
+
+CREATE INDEX IF NOT EXISTS idx_clients_regional_id ON clients (regional_id);
+CREATE INDEX IF NOT EXISTS idx_clients_parent_client_id ON clients (parent_client_id);
 
 CREATE TABLE satbinmas_official_accounts (
   satbinmas_account_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
