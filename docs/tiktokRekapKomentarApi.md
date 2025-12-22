@@ -128,7 +128,7 @@ Ketika `role` dan `scope` dikirim, filter mengikuti aturan berikut:
 
 - Jika `role` adalah direktorat (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`):
   - **Data tugas** diambil berdasarkan `client_id` direktorat (nilai `role`).
-  - **Data personil** mengikuti `client_id` yang diminta.
+  - **Data personil** mengikuti `client_id` pengguna (token) jika tersedia, fallback ke `client_id` yang diminta, dan dibatasi pada `role` direktorat tersebut.
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
   - **Data personil** dibatasi pada role `operator`.
