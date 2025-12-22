@@ -92,6 +92,7 @@ export async function getInstaRekapLikes(req, res) {
       let userClientId = client_id;
       let userRoleFilter = null;
       let includePostRoleFilter = false;
+      let matchLikeClientId = true;
 
       if (resolvedScope === "direktorat") {
         postClientId = client_id;
@@ -113,6 +114,7 @@ export async function getInstaRekapLikes(req, res) {
           postClientId = resolvedRole;
           userClientId = req.user?.client_id || client_id;
           userRoleFilter = resolvedRole;
+          matchLikeClientId = false;
         }
       }
 
@@ -121,6 +123,7 @@ export async function getInstaRekapLikes(req, res) {
         userClientId,
         userRoleFilter,
         includePostRoleFilter,
+        matchLikeClientId,
       };
       roleForQuery = resolvedRole;
     }

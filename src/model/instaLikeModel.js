@@ -159,6 +159,7 @@ export async function getRekapLikesByClient(
     userRoleFilter = null,
     includePostRoleFilter = null,
     postRoleFilterName = null,
+    matchLikeClientId = true,
   } = options;
   const params = [];
   const addParam = value => {
@@ -288,7 +289,8 @@ export async function getRekapLikesByClient(
   `;
   if (userClientParamIdx !== null) {
     userWhere = `LOWER(u.client_id) = LOWER($${userClientParamIdx})`;
-  } else {
+  }
+  if (userClientParamIdx === null || !matchLikeClientId) {
     likeJoin = "lower(replace(trim(u.insta), '@', '')) = lc.username";
     likeCountsSelect = `
       SELECT username, COUNT(DISTINCT shortcode) AS jumlah_like
