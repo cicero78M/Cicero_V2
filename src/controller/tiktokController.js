@@ -9,6 +9,7 @@ import {
   fetchTiktokInfo
 } from '../service/tiktokApi.js';
 import * as profileCache from '../service/profileCacheService.js';
+import { formatTiktokCommentRecapResponse } from '../utils/tiktokCommentRecapFormatter.js';
 
 const TIKTOK_PROFILE_URL_REGEX =
   /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i;
@@ -199,23 +200,23 @@ export async function getTiktokRekapKomentar(req, res) {
       roleForQuery,
       rekapOptions || {}
     );
-    const length = Array.isArray(data) ? data.length : 0;
-    const chartHeight = Math.max(length * 30, 300);
-    const usersWithComments = data
+    const totalPosts = Array.isArray(data) && data.length > 0
+      ? data[0]?.total_konten
+      : 0;
+    const payload = formatTiktokCommentRecapResponse(data, totalPosts);
+    const usersWithComments = payload.data
       .filter((u) => u.jumlah_komentar > 0)
       .map((u) => u.username);
-    const usersWithoutComments = data
+    const usersWithoutComments = payload.data
       .filter((u) => u.jumlah_komentar === 0)
       .map((u) => u.username);
     res.json({
       success: true,
-      data,
-      chartHeight,
+      ...payload,
       usersWithComments,
       usersWithoutComments,
       usersWithCommentsCount: usersWithComments.length,
       usersWithoutCommentsCount: usersWithoutComments.length,
-      usersCount: length,
     });
   } catch (err) {
     const code = err.statusCode || err.response?.status || 500;
