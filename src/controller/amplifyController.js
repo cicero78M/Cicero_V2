@@ -1,8 +1,10 @@
 import { getRekapLinkByClient } from '../model/linkReportModel.js';
 import { sendConsoleDebug } from '../middleware/debugHandler.js';
+import { normalizeClientId } from '../utils/utilsHelper.js';
 
 export async function getAmplifyRekap(req, res) {
-  const client_id = req.query.client_id;
+  const rawClientId = req.query.client_id;
+  const client_id = normalizeClientId(rawClientId);
   const periode = req.query.periode || 'harian';
   const tanggal = req.query.tanggal;
   const startDate =
@@ -11,10 +13,13 @@ export async function getAmplifyRekap(req, res) {
   if (!client_id) {
     return res.status(400).json({ success: false, message: 'client_id wajib diisi' });
   }
-  if (req.user?.client_ids && !req.user.client_ids.includes(client_id)) {
+  const authorizedClientIds = Array.isArray(req.user?.client_ids)
+    ? req.user.client_ids.map(normalizeClientId)
+    : null;
+  if (authorizedClientIds && !authorizedClientIds.includes(client_id)) {
     return res.status(403).json({ success: false, message: 'client_id tidak diizinkan' });
   }
-  if (req.user?.client_id && req.user.client_id !== client_id) {
+  if (req.user?.client_id && normalizeClientId(req.user.client_id) !== client_id) {
     return res.status(403).json({ success: false, message: 'client_id tidak diizinkan' });
   }
   try {
@@ -40,5 +45,4 @@ export async function getAmplifyRekap(req, res) {
     res.status(code).json({ success: false, message: err.message });
   }
 }
-
 

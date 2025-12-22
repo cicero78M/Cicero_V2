@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 const operatorAllowlist = [
   { path: '/clients/profile', type: 'exact' },
   { path: '/aggregator', type: 'prefix' },
+  { path: '/amplify/rekap', type: 'exact' },
   { path: '/dashboard/stats', type: 'exact' },
   { path: '/dashboard/login-web/recap', type: 'exact' },
   { path: '/dashboard/social-media/instagram/analysis', type: 'exact' },
