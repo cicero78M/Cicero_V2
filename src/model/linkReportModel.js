@@ -345,6 +345,21 @@ export async function getRekapLinkByClient(
     postRegionalFilter
   } = buildPostFilters(sharedClientParamIdx, sharedRoleParamIdx);
 
+  const shouldMatchLinkClientId = matchLinkClientId && userClientParamIdx !== null;
+  const linkSumUserJoin = shouldMatchLinkClientId
+    ? 'JOIN "user" lu ON lu.user_id = r.user_id'
+    : '';
+  const linkSumUserFilter = shouldMatchLinkClientId
+    ? `AND LOWER(lu.client_id) = LOWER($${userClientParamIdx})`
+    : '';
+
+  const { rows: postRows } = await query(
+    `SELECT COUNT(*) AS jumlah_post FROM insta_post p ${postRegionalJoin} ${postRoleJoin}
+     WHERE ${postClientFilter} ${postRoleFilter} ${postRegionalFilter} AND ${dateFilterPost}`,
+    params
+  );
+  const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
+
   let userWhere = '1=1';
   if (userClientParamIdx !== null) {
     userWhere = `LOWER(u.client_id) = LOWER($${userClientParamIdx})`;
@@ -367,21 +382,6 @@ export async function getRekapLinkByClient(
       ? regionalFilter
       : `${userWhere} AND ${regionalFilter}`;
   }
-
-  const shouldMatchLinkClientId = matchLinkClientId && userClientParamIdx !== null;
-  const linkSumUserJoin = shouldMatchLinkClientId
-    ? 'JOIN "user" lu ON lu.user_id = r.user_id'
-    : '';
-  const linkSumUserFilter = shouldMatchLinkClientId
-    ? `AND LOWER(lu.client_id) = LOWER($${userClientParamIdx})`
-    : '';
-
-  const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM insta_post p ${postRegionalJoin} ${postRoleJoin}
-     WHERE ${postClientFilter} ${postRoleFilter} ${postRegionalFilter} AND ${dateFilterPost}`,
-    params
-  );
-  const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
 
   const linkParams = [...params];
   const addPriorityParam = value => {
