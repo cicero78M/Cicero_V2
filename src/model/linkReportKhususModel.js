@@ -39,12 +39,29 @@ export async function createLinkReport(data) {
   return res.rows[0];
 }
 
-export async function getLinkReports() {
+export async function getLinkReports({ userId, postId } = {}) {
+  const params = [];
+  const conditions = [];
+
+  if (userId) {
+    params.push(userId);
+    conditions.push(`r.user_id = $${params.length}`);
+  }
+
+  if (postId) {
+    params.push(postId);
+    conditions.push(`r.shortcode = $${params.length}`);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
   const res = await query(
     `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
      FROM link_report_khusus r
      LEFT JOIN insta_post_khusus p ON p.shortcode = r.shortcode
-     ORDER BY r.created_at DESC`
+     ${whereClause}
+     ORDER BY r.created_at DESC`,
+    params
   );
   return res.rows;
 }
