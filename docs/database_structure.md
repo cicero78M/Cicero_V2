@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-12-22*
+*Last updated: 2025-12-23*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -49,7 +49,7 @@ Represents each organisation using the system.
 - `client_insta` / `client_tiktok` – usernames of the client accounts
 - `client_operator`, `client_group`, `tiktok_secuid`, `client_super` – optional metadata
 - `regional_id` – regional scope identifier (e.g. `JATIM`)
-- `parent_client_id` – optional parent client reference for hierarchy
+- `parent_client_id` – optional parent client reference for hierarchy (nullable, and older deployments may not have the column until the regional scoping migration is applied)
 - `client_level` – hierarchy level (e.g. `mabes`, `polda`, `direktorat`, `satker`)
 
 Official Satbinmas accounts for each client are stored in the dedicated
