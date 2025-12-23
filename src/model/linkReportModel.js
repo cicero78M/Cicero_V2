@@ -59,20 +59,46 @@ export async function createLinkReport(data) {
   return res.rows[0];
 }
 
-export async function getLinkReports({ limit = 20, offset = 0 } = {}) {
+export async function getLinkReports({
+  limit = 20,
+  offset = 0,
+  userId = null,
+  postId = null
+} = {}) {
   const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 20;
   const safeOffset = Number.isInteger(offset) && offset >= 0 ? offset : 0;
+
+  const conditions = [];
+  const params = [];
+  const addParam = value => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  if (userId) {
+    conditions.push(`r.user_id = ${addParam(userId)}`);
+  }
+
+  if (postId) {
+    conditions.push(`r.shortcode = ${addParam(postId)}`);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [rowsResult, countResult] = await Promise.all([
     query(
       `SELECT r.*, p.caption, p.image_url, p.thumbnail_url
        FROM link_report r
        LEFT JOIN insta_post p ON p.shortcode = r.shortcode
+       ${whereClause}
        ORDER BY r.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [safeLimit, safeOffset]
+       LIMIT ${addParam(safeLimit)} OFFSET ${addParam(safeOffset)}`,
+      params
     ),
-    query('SELECT COUNT(*)::int AS count FROM link_report')
+    query(
+      `SELECT COUNT(*)::int AS count FROM link_report r ${whereClause}`,
+      params.slice(0, conditions.length)
+    )
   ]);
 
   return {
