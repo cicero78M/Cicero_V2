@@ -205,21 +205,71 @@ export async function getRekapLinkByClient(
   tanggal,
   start_date,
   end_date,
-  role
+  role,
+  options = {}
 ) {
-  const clientTypeRes = await query(
-    'SELECT client_type FROM clients WHERE client_id = $1',
-    [client_id]
-  );
-  const clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase();
   const roleLower = role ? role.toLowerCase() : null;
+  const {
+    postClientId: postClientIdOverride = null,
+    userClientId: userClientIdOverride = null,
+    userRoleFilter = null,
+    includePostRoleFilter = null,
+    postRoleFilterName = null,
+    matchLinkClientId = true,
+    regionalId = null
+  } = options;
+  const normalizedRegionalId = regionalId
+    ? String(regionalId).trim().toUpperCase()
+    : null;
 
-  const params = clientType === 'direktorat' ? [] : [client_id];
+  const params = [];
+  const addParam = value => {
+    params.push(value);
+    return params.length;
+  };
+
+  const shouldIncludeRoleFilter =
+    includePostRoleFilter !== null ? includePostRoleFilter : roleLower === 'ditbinmas';
+  const resolvedPostRoleName =
+    postRoleFilterName ?? (roleLower === 'ditbinmas' ? roleLower : null);
+  const resolvedPostClientId =
+    postClientIdOverride ?? (roleLower === 'ditbinmas' ? null : client_id);
+  const resolvedUserClientId =
+    userClientIdOverride ?? (roleLower === 'ditbinmas' ? null : client_id);
+  const resolvedUserRole =
+    userRoleFilter ?? (roleLower === 'ditbinmas' ? roleLower : null);
+
+  let userClientParamIdx = null;
+  if (resolvedUserClientId) {
+    userClientParamIdx = addParam(resolvedUserClientId);
+  }
+  const regionalParamIdx = normalizedRegionalId
+    ? addParam(normalizedRegionalId)
+    : null;
+  const normalizedPostClientId = resolvedPostClientId
+    ? String(resolvedPostClientId).toLowerCase()
+    : null;
+  const normalizedUserClientId = resolvedUserClientId
+    ? String(resolvedUserClientId).toLowerCase()
+    : null;
+  const sharedClientParamIdx =
+    normalizedPostClientId &&
+    normalizedUserClientId &&
+    normalizedPostClientId === normalizedUserClientId
+      ? userClientParamIdx
+      : null;
+  const hasSharedRoleParam =
+    resolvedUserRole &&
+    shouldIncludeRoleFilter &&
+    resolvedPostRoleName &&
+    String(resolvedUserRole).toLowerCase() === String(resolvedPostRoleName).toLowerCase();
+  const sharedRoleParamIdx = hasSharedRoleParam ? addParam(resolvedUserRole) : null;
+
   let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   if (start_date && end_date) {
-    const startIdx = params.push(start_date);
-    const endIdx = params.push(end_date);
+    const startIdx = addParam(start_date);
+    const endIdx = addParam(end_date);
     dateFilterPost = `(p.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
     dateFilterReport = `(r.created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $${startIdx}::date AND $${endIdx}::date`;
   } else if (periode === 'semua') {
@@ -227,7 +277,7 @@ export async function getRekapLinkByClient(
     dateFilterReport = '1=1';
   } else if (periode === 'mingguan') {
     if (tanggal) {
-      const idx = params.push(tanggal);
+      const idx = addParam(tanggal);
       dateFilterPost = `date_trunc('week', p.created_at) = date_trunc('week', $${idx}::date)`;
       dateFilterReport = `date_trunc('week', r.created_at) = date_trunc('week', $${idx}::date)`;
     } else {
@@ -237,7 +287,7 @@ export async function getRekapLinkByClient(
   } else if (periode === 'bulanan') {
     if (tanggal) {
       const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      const idx = params.push(monthDate);
+      const idx = addParam(monthDate);
       dateFilterPost = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
       dateFilterReport = `date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', $${idx}::date)`;
     } else {
@@ -247,38 +297,88 @@ export async function getRekapLinkByClient(
         "date_trunc('month', r.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
     }
   } else if (tanggal) {
-    const idx = params.push(tanggal);
+    const idx = addParam(tanggal);
     dateFilterPost = `p.created_at::date = $${idx}::date`;
     dateFilterReport = `r.created_at::date = $${idx}::date`;
   }
 
-  let postClientFilter = 'LOWER(p.client_id) = LOWER($1)';
-  let userWhere = 'LOWER(u.client_id) = LOWER($1)';
-  let postRoleJoin = '';
-  let postRoleFilter = '';
-  if (clientType === 'direktorat') {
-    postClientFilter = '1=1';
-    const roleIdx = params.push(roleLower || client_id);
-    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
-    userWhere = `EXISTS (
+  const buildPostFilters = (sharedClientIdx = null, sharedRoleIdx = null) => {
+    let postClientFilter = '1=1';
+    let postRoleJoin = '';
+    let postRoleFilter = '';
+    let postRegionalJoin = '';
+    let postRegionalFilter = '';
+
+    if (resolvedPostClientId) {
+      const postClientIdx =
+        sharedClientIdx ?? addParam(resolvedPostClientId);
+      postClientFilter = `LOWER(p.client_id) = LOWER($${postClientIdx})`;
+    }
+
+    if (shouldIncludeRoleFilter && resolvedPostRoleName) {
+      const roleIdx = sharedRoleIdx ?? addParam(resolvedPostRoleName);
+      const roleFilterCondition =
+        `LOWER(p.client_id) = LOWER($${roleIdx}) OR LOWER(pr.role_name) = LOWER($${roleIdx})`;
+      postRoleJoin = 'LEFT JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
+      postRoleFilter = `AND (${roleFilterCondition})`;
+    }
+
+    if (regionalParamIdx !== null) {
+      postRegionalJoin = 'JOIN clients cp ON cp.client_id = p.client_id';
+      postRegionalFilter = `AND UPPER(cp.regional_id) = UPPER($${regionalParamIdx})`;
+    }
+
+    return {
+      postClientFilter,
+      postRoleJoin,
+      postRoleFilter,
+      postRegionalJoin,
+      postRegionalFilter
+    };
+  };
+
+  const {
+    postClientFilter,
+    postRoleJoin,
+    postRoleFilter,
+    postRegionalJoin,
+    postRegionalFilter
+  } = buildPostFilters(sharedClientParamIdx, sharedRoleParamIdx);
+
+  let userWhere = '1=1';
+  if (userClientParamIdx !== null) {
+    userWhere = `LOWER(u.client_id) = LOWER($${userClientParamIdx})`;
+  }
+  if (resolvedUserRole || sharedRoleParamIdx) {
+    const roleIdx = sharedRoleParamIdx ?? addParam(resolvedUserRole);
+    const roleFilterCondition = `EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
     )`;
-  } else if (roleLower && roleLower !== 'operator') {
-    const roleIdx = params.push(roleLower);
-    postRoleJoin = 'JOIN insta_post_roles pr ON pr.shortcode = p.shortcode';
-    postRoleFilter = `AND LOWER(pr.role_name) = LOWER($${roleIdx})`;
-    userWhere = `LOWER(u.client_id) = LOWER($1) AND EXISTS (
-      SELECT 1 FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleIdx})
-    )`;
+    userWhere = userWhere === '1=1'
+      ? roleFilterCondition
+      : `${userWhere} AND ${roleFilterCondition}`;
   }
 
+  if (regionalParamIdx !== null) {
+    const regionalFilter = `UPPER(c.regional_id) = UPPER($${regionalParamIdx})`;
+    userWhere = userWhere === '1=1'
+      ? regionalFilter
+      : `${userWhere} AND ${regionalFilter}`;
+  }
+
+  const shouldMatchLinkClientId = matchLinkClientId && userClientParamIdx !== null;
+  const linkSumUserJoin = shouldMatchLinkClientId
+    ? 'JOIN "user" lu ON lu.user_id = r.user_id'
+    : '';
+  const linkSumUserFilter = shouldMatchLinkClientId
+    ? `AND LOWER(lu.client_id) = LOWER($${userClientParamIdx})`
+    : '';
+
   const { rows: postRows } = await query(
-    `SELECT COUNT(*) AS jumlah_post FROM insta_post p ${postRoleJoin} WHERE ${postClientFilter} ${postRoleFilter} AND ${dateFilterPost}`,
+    `SELECT COUNT(*) AS jumlah_post FROM insta_post p ${postRegionalJoin} ${postRoleJoin}
+     WHERE ${postClientFilter} ${postRoleFilter} ${postRegionalFilter} AND ${dateFilterPost}`,
     params
   );
   const maxLink = parseInt(postRows[0]?.jumlah_post || '0', 10) * 5;
@@ -304,7 +404,11 @@ export async function getRekapLinkByClient(
       FROM link_report r
       JOIN insta_post p ON p.shortcode = r.shortcode
       ${postRoleJoin}
+      ${postRegionalJoin}
+      ${linkSumUserJoin}
       WHERE ${postClientFilter} ${postRoleFilter} AND ${dateFilterPost} AND ${dateFilterReport}
+      ${postRegionalFilter}
+      ${linkSumUserFilter}
       GROUP BY r.user_id
     )
     SELECT
@@ -313,10 +417,11 @@ export async function getRekapLinkByClient(
       u.title,
       u.nama,
       u.insta AS username,
-      u.divisi,
-      u.exception,
+     u.divisi,
+     u.exception,
       COALESCE(ls.jumlah_link, 0) AS jumlah_link
      FROM "user" u
+     JOIN clients c ON c.client_id = u.client_id
      LEFT JOIN link_sum ls ON ls.user_id = u.user_id
      WHERE u.status = true
      AND ${userWhere}
