@@ -66,6 +66,10 @@ GET /api/analytics?client_id=demo_client
 
 This allows operators to scope responses to the correct client.
 
+## Logging Timezone
+
+Application logs are timestamped using the Asia/Jakarta timezone by the console wrapper in `src/utils/logger.js`. Expect log prefixes in the format `YYYY-MM-DDTHH:mm:ss.SSS+07:00` for consistent Jakarta-local monitoring.
+
 ## Deployment & Environment
 
 1. **Clone and install dependencies**
