@@ -395,6 +395,7 @@ export async function getRekapKomentarByClient(
       u.tiktok AS username,
       u.divisi,
       cl.nama AS client_name,
+      cl.regional_id,
       COALESCE(cc.jumlah_komentar, 0) AS jumlah_komentar,
       tp.total_konten
     FROM "user" u
