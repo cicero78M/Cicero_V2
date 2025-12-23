@@ -27,6 +27,8 @@ Operators are also allowed to call `GET /users/list`. The handler now supports m
 
 `GET /users/list` also honors the `scope` and `role` query params when present. Use `scope=DIREKTORAT` to return all personnel who carry the requested directorate role (`role=ditbinmas`, `role=ditlantas`, `role=bidhumas`, or `role=ditsamapta`). Use `scope=ORG` to return personnel whose `client_id` matches the request and who also have the requested role. Invalid directorate roles return HTTP 400.
 
+The listing payload now includes `regional_id` (sourced from the matched `clients` row) for each user entry, so directory consumers can identify the regional scope alongside `client_id`.
+
 `GET /users/by-client/:client_id` and `GET /users/by-client-full/:client_id` always pass the authenticated `role` as `roleFilter`. For operator logins this forces the user query to require `role_name = 'operator'` in `user_roles`, ensuring the response only includes operator personnel tied to the requested client. Operator requests must also target a `client_id` that exists in `req.user.client_id` or `req.user.client_ids`; otherwise the API returns HTTP 403.
 
 Example error response:
