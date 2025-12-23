@@ -14,6 +14,8 @@ export async function getAllLinkReports(req, res, next) {
   try {
     const DEFAULT_LIMIT = 20;
     const DEFAULT_PAGE = 1;
+    const userId = req.query.user_id;
+    const postId = req.query.post_id || req.query.shortcode;
 
     const requestedLimit = parseInt(req.query.limit, 10);
     const limit =
@@ -34,7 +36,12 @@ export async function getAllLinkReports(req, res, next) {
       offset = (page - 1) * limit;
     }
 
-    const result = await linkReportModel.getLinkReports({ limit, offset });
+    const result = await linkReportModel.getLinkReports({
+      limit,
+      offset,
+      userId,
+      postId
+    });
 
     const page = Math.floor(result.offset / result.limit) + 1;
     const totalPages = result.totalCount > 0 ? Math.ceil(result.totalCount / result.limit) : 0;
