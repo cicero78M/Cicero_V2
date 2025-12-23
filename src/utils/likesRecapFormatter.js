@@ -126,6 +126,7 @@ export function formatLikesRecapResponse(rowsInput, totalPostsInput) {
           name: user?.nama ?? null,
           division: user?.divisi ?? null,
           clientId: user?.client_id ?? null,
+          regionalId: user?.regional_id ?? null,
         });
         break;
       case "no_posts":
