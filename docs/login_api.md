@@ -209,3 +209,32 @@ Untuk endpoint yang menerima parameter `client_id` (terutama `/api/clients/profi
 - Memastikan `regional_id` (dari query atau token) cocok dengan `regional_id` client yang dikembalikan.
 
 Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, `periode`, `tanggal`, `start_date`/`end_date`, `role`, `scope`, dan `regional_id`) tersedia di `docs/amplifyRekapApi.md`.
+
+## 5. Dashboard Stats (`/api/dashboard/stats`)
+
+Endpoint ini menerima parameter query:
+- `client_id` (wajib jika token tidak berisi `client_id`)
+- `periode` (`harian` default)
+- `tanggal`
+- `start_date`/`tanggal_mulai`
+- `end_date`/`tanggal_selesai`
+- `role` (opsional; default dari token)
+- `scope` (opsional; default dari token)
+- `regional_id` (opsional; default dari token)
+
+Contoh response:
+```json
+{
+  "success": true,
+  "data": {
+    "client_id": "DITBINMAS",
+    "role": "operator",
+    "scope": "org",
+    "regional_id": "JATIM",
+    "clients": 12,
+    "users": 150,
+    "igPosts": 5,
+    "ttPosts": 7
+  }
+}
+```
