@@ -33,6 +33,7 @@ Example:
       "user_id": "U-01",
       "nama": "Alice",
       "username": "@alice",
+      "regional_id": "JATIM",
       "jumlah_komentar": 4,
       "ranking": 1,
       "completionRate": 1,
@@ -45,6 +46,7 @@ Example:
       "user_id": "U-02",
       "nama": "Bob",
       "username": "@bob",
+      "regional_id": "JATIM",
       "jumlah_komentar": 1,
       "ranking": 2,
       "completionRate": 0.25,
@@ -96,7 +98,7 @@ Example:
     { "status": "no_posts", "label": "No Posts", "description": "Tidak ada konten untuk periode yang dipilih." }
   ],
   "noUsernameUsersDetails": [
-    { "userId": "U-04", "name": "Diana", "division": "Bidang", "clientId": "ditbinmas" }
+    { "userId": "U-04", "name": "Diana", "division": "Bidang", "clientId": "ditbinmas", "regionalId": "JATIM" }
   ],
   "usersWithComments": ["@alice"],
   "usersWithoutComments": ["@diana"],
@@ -114,6 +116,7 @@ Example:
 - **insights** – teks rekomendasi yang bisa langsung ditampilkan sebagai highlight.
 - **statusLegend** – legenda status supaya warna/ikon di UI konsisten.
 - **noUsernameUsersDetails** – daftar akun yang perlu dibantu melengkapi username TikTok.
+- **regional_id** – atribut regional dari client yang ditampilkan untuk setiap user.
 - **usersWithComments / usersWithoutComments** – field lama yang tetap disediakan untuk kompatibilitas klien.
 
 ## Scope Handling
