@@ -155,7 +155,7 @@ export async function getUsersByClient(client_id, roleFilter = null) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1, roleFilter);
   const res = await query(
     `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
-            u.client_id, c.nama AS client_name
+            u.client_id, c.nama AS client_name, c.regional_id AS regional_id
      FROM "user" u
      LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
      WHERE ${clause} AND status = true`,
@@ -168,7 +168,7 @@ export async function getUsersByClient(client_id, roleFilter = null) {
 export async function getUsersByClientAndRole(client_id, roleFilter = null) {
   const params = [client_id];
   let sql = `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
-            u.client_id, c.nama AS client_name
+            u.client_id, c.nama AS client_name, c.regional_id AS regional_id
      FROM "user" u
      LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
      WHERE LOWER(u.client_id) = LOWER($1)`;
@@ -491,6 +491,7 @@ export async function getUsersByDirektorat(flag, clientId = null) {
 
   let sql = `SELECT
       u.*,
+      c.regional_id AS regional_id,
       bool_or(r.role_name='ditbinmas') AS ditbinmas,
       bool_or(r.role_name='ditlantas') AS ditlantas,
       bool_or(r.role_name='bidhumas') AS bidhumas,
@@ -498,6 +499,7 @@ export async function getUsersByDirektorat(flag, clientId = null) {
     FROM "user" u
     LEFT JOIN user_roles ur ON ur.user_id = u.user_id
     LEFT JOIN roles r ON r.role_id = ur.role_id
+    LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
     WHERE EXISTS (
       SELECT 1
       FROM user_roles ur1
@@ -522,7 +524,7 @@ export async function getUsersByDirektorat(flag, clientId = null) {
     }
   }
 
-  sql += ' GROUP BY u.user_id';
+  sql += ' GROUP BY u.user_id, c.regional_id';
   console.log('[USER MODEL] getUsersByDirektorat SQL:', sql);
   console.log('[USER MODEL] getUsersByDirektorat Params:', params);
   const { rows } = await query(sql, params);
