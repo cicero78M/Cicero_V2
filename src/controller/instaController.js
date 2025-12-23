@@ -179,7 +179,7 @@ export async function getInstaRekapLikes(req, res) {
           .json({ success: false, message: "client_id tidak diizinkan" });
       }
       sendConsoleDebug({ tag: "INSTA", msg: `getInstaPosts ${client_id}` });
-      const posts = await instaPostService.findByClientId(client_id);
+      const posts = await instaPostService.findTodayByClientId(client_id);
       sendSuccess(res, posts);
     } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getInstaPosts: ${err.message}` });
