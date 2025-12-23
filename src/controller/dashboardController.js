@@ -17,6 +17,9 @@ export async function getDashboardStats(req, res) {
     const start_date =
       req.query.start_date || req.query.tanggal_mulai;
     const end_date = req.query.end_date || req.query.tanggal_selesai;
+    const role = req.query.role || req.user?.role || null;
+    const scope = req.query.scope || req.user?.scope || null;
+    const regionalId = req.query.regional_id || req.user?.regional_id || null;
 
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
@@ -32,6 +35,9 @@ export async function getDashboardStats(req, res) {
       success: true,
       data: {
         client_id,
+        role,
+        scope,
+        regional_id: regionalId,
         clients: Array.isArray(clients) ? clients.length : 0,
         users: activeUsers.length,        // HANYA YANG AKTIF
         igPosts: igPostCount,
