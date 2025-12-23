@@ -202,3 +202,5 @@ Allowlist saat ini:
 Jika operator membutuhkan endpoint lain, pastikan endpoint tersebut ditambahkan ke allowlist agar tidak terblokir.
 
 Untuk endpoint yang menerima parameter `client_id` (terutama `/api/clients/profile` dan `/api/aggregator`), role **operator** hanya boleh menggunakan `client_id` yang ada di daftar `client_ids` pada token (pemeriksaan case-insensitive). Permintaan di luar daftar akan ditolak dengan status `403`.
+
+Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, `periode`, `tanggal`, `start_date`/`end_date`, `role`, `scope`, dan `regional_id`) tersedia di `docs/amplifyRekapApi.md`.
