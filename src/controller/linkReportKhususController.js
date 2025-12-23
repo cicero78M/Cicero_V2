@@ -4,7 +4,9 @@ import { extractFirstUrl } from '../utils/utilsHelper.js';
 
 export async function getAllLinkReports(req, res, next) {
   try {
-    const data = await linkReportModel.getLinkReports();
+    const userId = req.query.user_id;
+    const postId = req.query.post_id || req.query.shortcode;
+    const data = await linkReportModel.getLinkReports({ userId, postId });
     sendSuccess(res, data);
   } catch (err) {
     next(err);
