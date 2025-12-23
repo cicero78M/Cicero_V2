@@ -2,6 +2,30 @@
 
 import { query } from '../repository/db.js';
 
+let parentClientIdColumnSupported;
+
+async function hasParentClientIdColumn() {
+  if (parentClientIdColumnSupported !== undefined) {
+    return parentClientIdColumnSupported;
+  }
+  const res = await query(
+    "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'clients' AND column_name = 'parent_client_id'"
+  );
+  parentClientIdColumnSupported = res.rowCount > 0;
+  return parentClientIdColumnSupported;
+}
+
+async function buildClientSelect(columns, { includeParentClientId = false } = {}) {
+  const selectColumns = [...columns];
+  if (includeParentClientId) {
+    const hasParent = await hasParentClientIdColumn();
+    selectColumns.push(
+      hasParent ? "parent_client_id" : "NULL::varchar AS parent_client_id"
+    );
+  }
+  return selectColumns.join(", ");
+}
+
 // Ambil semua client
 export const findAll = async () => {
   const res = await query('SELECT * FROM clients');
@@ -16,8 +40,12 @@ export const findAllActive = async () => {
 
 // Ambil semua client Direktorat yang aktif
 export const findAllActiveDirektorat = async () => {
+  const selectColumns = await buildClientSelect(
+    ["client_id", "nama", "client_type", "client_status", "regional_id", "client_level"],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients
      WHERE client_status = true AND LOWER(client_type) = LOWER('direktorat')
      ORDER BY client_id`
@@ -26,9 +54,20 @@ export const findAllActiveDirektorat = async () => {
 };
 
 export const findAllActiveDirektoratWithSosmed = async () => {
+  const selectColumns = await buildClientSelect(
+    [
+      "client_id",
+      "nama",
+      "client_group",
+      "client_operator",
+      "client_super",
+      "regional_id",
+      "client_level",
+    ],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_group, client_operator, client_super,
-            regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients
      WHERE client_status = true
        AND LOWER(client_type) = LOWER('direktorat')
@@ -40,10 +79,22 @@ export const findAllActiveDirektoratWithSosmed = async () => {
 };
 
 export const findAllActiveDirektoratWithTiktok = async () => {
+  const selectColumns = await buildClientSelect(
+    [
+      "client_id",
+      "nama",
+      "client_group",
+      "client_operator",
+      "client_super",
+      "client_insta_status",
+      "client_tiktok_status",
+      "regional_id",
+      "client_level",
+    ],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_group, client_operator, client_super,
-            client_insta_status, client_tiktok_status,
-            regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients
      WHERE client_status = true
        AND LOWER(client_type) = LOWER('direktorat')
@@ -134,13 +185,25 @@ export const findBySuperAdmin = async (waNumber) => {
 
 // Buat client baru
 export const create = async (client) => {
-  const q = `
-    INSERT INTO clients
-      (client_id, nama, client_type, client_status, client_insta, client_insta_status, client_tiktok, client_tiktok_status, client_amplify_status, client_operator, client_group, regional_id, parent_client_id, client_level, tiktok_secuid, client_super)
-    VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-    RETURNING *
-  `;
+  const includeParentClientId = await hasParentClientIdColumn();
+  const columns = [
+    "client_id",
+    "nama",
+    "client_type",
+    "client_status",
+    "client_insta",
+    "client_insta_status",
+    "client_tiktok",
+    "client_tiktok_status",
+    "client_amplify_status",
+    "client_operator",
+    "client_group",
+    "regional_id",
+    ...(includeParentClientId ? ["parent_client_id"] : []),
+    "client_level",
+    "tiktok_secuid",
+    "client_super",
+  ];
   const values = [
     client.client_id,
     client.nama,
@@ -154,11 +217,19 @@ export const create = async (client) => {
     client.client_operator || '',
     client.client_group || '',
     client.regional_id || null,
-    client.parent_client_id || null,
+    ...(includeParentClientId ? [client.parent_client_id || null] : []),
     client.client_level || null,
     client.tiktok_secuid || '',
     client.client_super || ''
   ];
+  const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
+  const q = `
+    INSERT INTO clients
+      (${columns.join(", ")})
+    VALUES
+      (${placeholders})
+    RETURNING *
+  `;
   const res = await query(q, values);
   return res.rows[0];
 };
@@ -169,44 +240,36 @@ export const update = async (client_id, clientData) => {
   if (!old) return null;
   const merged = { ...old, ...clientData };
 
+  const includeParentClientId = await hasParentClientIdColumn();
+  const updates = [
+    { column: "nama", value: merged.nama },
+    { column: "client_type", value: merged.client_type },
+    { column: "client_status", value: merged.client_status },
+    { column: "client_insta", value: merged.client_insta || "" },
+    { column: "client_insta_status", value: merged.client_insta_status },
+    { column: "client_tiktok", value: merged.client_tiktok || "" },
+    { column: "client_tiktok_status", value: merged.client_tiktok_status },
+    { column: "client_amplify_status", value: merged.client_amplify_status },
+    { column: "client_operator", value: merged.client_operator },
+    { column: "client_group", value: merged.client_group },
+    { column: "regional_id", value: merged.regional_id || null },
+    ...(includeParentClientId
+      ? [{ column: "parent_client_id", value: merged.parent_client_id || null }]
+      : []),
+    { column: "client_level", value: merged.client_level || null },
+    { column: "tiktok_secuid", value: merged.tiktok_secuid || "" },
+    { column: "client_super", value: merged.client_super || "" },
+  ];
+  const setClause = updates
+    .map((updateItem, index) => `${updateItem.column} = $${index + 2}`)
+    .join(", ");
   const q = `
     UPDATE clients SET
-      nama = $2,
-      client_type = $3,
-      client_status = $4,
-      client_insta = $5,
-      client_insta_status = $6,
-      client_tiktok = $7,
-      client_tiktok_status = $8,
-      client_amplify_status = $9,
-      client_operator = $10,
-      client_group = $11,
-      regional_id = $12,
-      parent_client_id = $13,
-      client_level = $14,
-      tiktok_secuid = $15,
-      client_super = $16
+      ${setClause}
     WHERE client_id = $1
     RETURNING *
   `;
-  const values = [
-    old.client_id,
-    merged.nama,
-    merged.client_type,
-    merged.client_status,
-    merged.client_insta || '',
-    merged.client_insta_status,
-    merged.client_tiktok || '',
-    merged.client_tiktok_status,
-    merged.client_amplify_status,
-    merged.client_operator,
-    merged.client_group,
-    merged.regional_id || null,
-    merged.parent_client_id || null,
-    merged.client_level || null,
-    merged.tiktok_secuid || '',
-    merged.client_super || ''
-  ];
+  const values = [old.client_id, ...updates.map((updateItem) => updateItem.value)];
   const res = await query(q, values);
   return res.rows[0];
 };
@@ -247,8 +310,12 @@ export async function updateClientSecUid(client_id, secUid) {
 }
 
 export async function getAllClientIds() {
+  const selectColumns = await buildClientSelect(
+    ["client_id", "nama", "client_status", "regional_id", "client_level"],
+    { includeParentClientId: true }
+  );
   const rows = await query(
-    "SELECT client_id, nama, client_status, regional_id, parent_client_id, client_level FROM clients ORDER BY client_id"
+    `SELECT ${selectColumns} FROM clients ORDER BY client_id`
   );
   return rows.rows.map(r => ({
     client_id: r.client_id,
@@ -261,8 +328,12 @@ export async function getAllClientIds() {
 }
 
 export async function findAllOrgClients() {
+  const selectColumns = await buildClientSelect(
+    ["client_id", "nama", "client_status", "regional_id", "client_level"],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_status, regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients WHERE client_type = 'ORG' ORDER BY client_id`
   );
   return res.rows;
@@ -270,8 +341,12 @@ export async function findAllOrgClients() {
 
 export async function findByRegionalId(regionalId) {
   if (!regionalId) return [];
+  const selectColumns = await buildClientSelect(
+    ["client_id", "nama", "client_type", "client_status", "regional_id", "client_level"],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients
      WHERE UPPER(regional_id) = UPPER($1)
      ORDER BY client_id`,
@@ -282,8 +357,14 @@ export async function findByRegionalId(regionalId) {
 
 export async function findChildrenByParent(parentClientId) {
   if (!parentClientId) return [];
+  const hasParent = await hasParentClientIdColumn();
+  if (!hasParent) return [];
+  const selectColumns = await buildClientSelect(
+    ["client_id", "nama", "client_type", "client_status", "regional_id", "client_level"],
+    { includeParentClientId: true }
+  );
   const res = await query(
-    `SELECT client_id, nama, client_type, client_status, regional_id, parent_client_id, client_level
+    `SELECT ${selectColumns}
      FROM clients
      WHERE LOWER(parent_client_id) = LOWER($1)
      ORDER BY client_id`,
