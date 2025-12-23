@@ -203,4 +203,9 @@ Jika operator membutuhkan endpoint lain, pastikan endpoint tersebut ditambahkan 
 
 Untuk endpoint yang menerima parameter `client_id` (terutama `/api/clients/profile` dan `/api/aggregator`), role **operator** hanya boleh menggunakan `client_id` yang ada di daftar `client_ids` pada token (pemeriksaan case-insensitive). Permintaan di luar daftar akan ditolak dengan status `403`.
 
+`/api/clients/profile` sekarang menerima parameter `role`, `scope`, dan `regional_id` untuk memastikan profil yang diambil sesuai dengan konteks akses. Jika salah satu parameter tersebut dikirim, backend akan:
+- Mewajibkan `role` dan memvalidasi `scope` (`org` atau `direktorat`).
+- Menolak role direktorat yang tidak dikenal untuk `scope=direktorat`.
+- Memastikan `regional_id` (dari query atau token) cocok dengan `regional_id` client yang dikembalikan.
+
 Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, `periode`, `tanggal`, `start_date`/`end_date`, `role`, `scope`, dan `regional_id`) tersedia di `docs/amplifyRekapApi.md`.
