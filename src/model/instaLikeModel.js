@@ -385,6 +385,7 @@ export async function getRekapLikesByClient(
       u.exception,
       u.client_id,
       c.nama AS client_name,
+      c.regional_id AS regional_id,
       COALESCE(lc.jumlah_like, 0) AS jumlah_like
     FROM "user" u
     JOIN clients c ON c.client_id = u.client_id
