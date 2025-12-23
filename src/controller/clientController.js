@@ -221,7 +221,38 @@ export const getClientProfile = async (req, res, next) => {
       return res.status(400).json({ error: "client_id required" });
     }
 
-    const role = req.user?.role?.toLowerCase();
+    const requestedRole = req.query.role || req.user?.role;
+    const requestedScope = req.query.scope;
+    const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+    const role = requestedRole ? String(requestedRole).toLowerCase() : null;
+    const scopeLower = requestedScope
+      ? String(requestedScope).toLowerCase()
+      : null;
+    const regionalId = requestedRegionalId
+      ? String(requestedRegionalId).trim().toUpperCase()
+      : null;
+    const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta"];
+    const usesStandardPayload = Boolean(
+      req.query.role || req.query.scope || req.query.regional_id
+    );
+
+    let resolvedScope = scopeLower;
+    if (usesStandardPayload) {
+      if (!role) {
+        return res.status(400).json({ error: "role wajib diisi" });
+      }
+      resolvedScope = scopeLower || "org";
+      if (!["org", "direktorat"].includes(resolvedScope)) {
+        return res.status(400).json({ error: "scope tidak valid" });
+      }
+      if (
+        resolvedScope === "direktorat" &&
+        !directorateRoles.includes(role)
+      ) {
+        return res.status(400).json({ error: "role direktorat tidak valid" });
+      }
+    }
+
     const clientIdsFromUser = Array.isArray(req.user?.client_ids)
       ? req.user.client_ids
       : [];
@@ -245,9 +276,27 @@ export const getClientProfile = async (req, res, next) => {
       clientId: normalizedClientId,
     });
 
-    const client = await clientService.findClientById(normalizedClientId);
+    let client = await clientService.findClientById(normalizedClientId);
 
     if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    if (usesStandardPayload && resolvedScope === "direktorat") {
+      const roleClientId = role?.toUpperCase();
+      const roleClient = roleClientId
+        ? await clientService.findClientById(roleClientId)
+        : null;
+      if (!roleClient || roleClient.client_type?.toLowerCase() !== "direktorat") {
+        return res.status(404).json({ error: "Client not found" });
+      }
+      client = roleClient;
+    }
+
+    if (
+      regionalId &&
+      normalizeClientId(client.regional_id) !== regionalId
+    ) {
       return res.status(404).json({ error: "Client not found" });
     }
 
@@ -259,6 +308,12 @@ export const getClientProfile = async (req, res, next) => {
     ) {
       const roleClient = await clientService.findClientById(role.toUpperCase());
       if (roleClient) {
+        if (
+          regionalId &&
+          normalizeClientId(roleClient.regional_id) !== regionalId
+        ) {
+          return res.status(404).json({ error: "Client not found" });
+        }
         client.client_insta = roleClient.client_insta;
         client.client_insta_status = roleClient.client_insta_status;
         client.client_tiktok = roleClient.client_tiktok;
