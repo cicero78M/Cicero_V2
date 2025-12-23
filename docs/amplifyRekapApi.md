@@ -82,6 +82,8 @@ When `role` and `scope` are provided, the endpoint follows these rules:
 - Selain kondisi di atas:
   - **Data post** dan **personil** mengikuti `client_id` yang diminta.
 
+Catatan: filter role pada personil hanya mempengaruhi daftar user yang direkap. Perhitungan jumlah post (dasar `maxLink`) tetap mengikuti filter data post (client_id/role post/regional/tanggal).
+
 ### Default (tanpa `role`/`scope`)
 
 - Menggunakan `client_id` yang diminta.

@@ -225,48 +225,45 @@ test('getReportsPrevMonthByClient selects previous month rows', async () => {
 });
 
 test('getRekapLinkByClient uses provided date', async () => {
-  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('POLRES', 'harian', '2024-01-02');
   expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
+    1,
     expect.stringContaining('FROM insta_post p'),
     ['POLRES', '2024-01-02']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
-    3,
+    2,
     expect.stringContaining('link_sum AS'),
     expect.any(Array)
   );
-  expect(mockQuery.mock.calls[2][1].slice(0, 2)).toEqual(['POLRES', '2024-01-02']);
-  expectPriorityTail(mockQuery.mock.calls[2][1], 2);
+  expect(mockQuery.mock.calls[1][1].slice(0, 2)).toEqual(['POLRES', '2024-01-02']);
+  expectPriorityTail(mockQuery.mock.calls[1][1], 2);
 });
 
 test('getRekapLinkByClient handles start_date and end_date', async () => {
-  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '2' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('POLRES', 'harian', null, '2024-01-01', '2024-01-31');
-  expect(mockQuery).toHaveBeenCalledTimes(3);
+  expect(mockQuery).toHaveBeenCalledTimes(2);
   expect(mockQuery).toHaveBeenNthCalledWith(
-    2,
+    1,
     expect.stringContaining('BETWEEN $2::date AND $3::date'),
     ['POLRES', '2024-01-01', '2024-01-31']
   );
   expect(mockQuery).toHaveBeenNthCalledWith(
-    3,
+    2,
     expect.stringContaining('BETWEEN $2::date AND $3::date'),
     expect.any(Array)
   );
-  expect(mockQuery.mock.calls[2][1].slice(0, 3)).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
-  expectPriorityTail(mockQuery.mock.calls[2][1], 3);
+  expect(mockQuery.mock.calls[1][1].slice(0, 3)).toEqual(['POLRES', '2024-01-01', '2024-01-31']);
+  expectPriorityTail(mockQuery.mock.calls[1][1], 3);
 });
 
 test('getRekapLinkByClient applies post date filter in link_sum', async () => {
-  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
     .mockResolvedValueOnce({
@@ -283,14 +280,13 @@ test('getRekapLinkByClient applies post date filter in link_sum', async () => {
       ]
     });
   await getRekapLinkByClient('POLRES');
-  const sql = mockQuery.mock.calls[2][0];
+  const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('p.created_at');
   expect(sql).toContain('r.created_at');
-  expectPriorityTail(mockQuery.mock.calls[2][1], 1);
+  expectPriorityTail(mockQuery.mock.calls[1][1], 1);
 });
 
 test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async () => {
-  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '1' }] })
     .mockResolvedValueOnce({
@@ -311,12 +307,11 @@ test('getRekapLinkByClient marks sudahMelaksanakan when user has links', async (
 });
 
 test('getRekapLinkByClient applies priority ordering to nama', async () => {
-  mockClientType();
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('POLRES');
-  const sql = mockQuery.mock.calls[2][0];
+  const sql = mockQuery.mock.calls[1][0];
   const matches = sql.match(/WHEN UPPER\(u\.nama\) = \$\d+/g) || [];
   expect(matches.length).toBeGreaterThanOrEqual(PRIORITY_UPPER.length);
   expect(sql).toContain('CASE WHEN');
@@ -324,13 +319,11 @@ test('getRekapLinkByClient applies priority ordering to nama', async () => {
 });
 
 test('getRekapLinkByClient includes directorate role filter for ditbinmas', async () => {
-  mockClientType('direktorat');
   mockQuery
     .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
     .mockResolvedValueOnce({ rows: [] });
   await getRekapLinkByClient('ditbinmas', 'harian', undefined, undefined, undefined, 'ditbinmas');
-  expect(mockQuery.mock.calls[0][0]).toContain('SELECT client_type FROM clients');
-  const sql = mockQuery.mock.calls[2][0];
+  const sql = mockQuery.mock.calls[1][0];
   expect(sql).toContain('insta_post_roles');
   expect(sql).toContain('user_roles');
 });
