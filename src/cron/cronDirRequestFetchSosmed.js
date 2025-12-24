@@ -145,6 +145,24 @@ function formatAdminLogMessage(entry) {
   return `${prefix} ${details}`.trim();
 }
 
+function hasLinkDifference(prevLinks = [], nextLinks = []) {
+  const prev = Array.isArray(prevLinks) ? prevLinks : [];
+  const next = Array.isArray(nextLinks) ? nextLinks : [];
+
+  const prevSet = new Set(prev);
+  const nextSet = new Set(next);
+  if (prevSet.size !== nextSet.size) return true;
+
+  for (const link of prevSet) {
+    if (!nextSet.has(link)) return true;
+  }
+  for (const link of nextSet) {
+    if (!prevSet.has(link)) return true;
+  }
+
+  return false;
+}
+
 async function sendAdminLog(entry) {
   if (!entry || adminRecipients.size === 0) return;
   const text = formatAdminLogMessage(entry);
@@ -402,9 +420,13 @@ export async function runCron() {
             state?.tiktokVideoIds ?? previousTiktokVideoIds ?? previousState.tiktokVideoIds,
         };
 
+        const hasLinkChanges =
+          hasLinkDifference(previousState.igShortcodes, nextState.igShortcodes) ||
+          hasLinkDifference(previousState.tiktokVideoIds, nextState.tiktokVideoIds);
+
         lastStateByClient.set(clientId, nextState);
 
-        if (!hasNewCounts) {
+        if (!hasNewCounts && !hasLinkChanges) {
           await sendStructuredLog(
             buildLogEntry({
               phase: "sendLoop",
@@ -414,7 +436,7 @@ export async function runCron() {
               countsBefore,
               countsAfter,
               recipients,
-              message: "Tidak ada perubahan post, laporan tidak dikirim",
+              message: "Tidak ada perubahan post atau link, laporan tidak dikirim",
             })
           );
           continue;
@@ -445,6 +467,9 @@ export async function runCron() {
             countsBefore,
             countsAfter,
             recipients,
+            meta: {
+              reason: hasNewCounts ? "post_count_changed" : "link_changed",
+            },
           })
         );
         for (const wa of recipients) {
