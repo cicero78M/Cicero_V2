@@ -37,7 +37,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
+| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas; delivery now triggers when the Instagram/TikTok link set changes even if post counts stay flat (runs after 17.00 WIB skip new post fetches and only refresh likes/comments). |
 | `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas and BIDHUMAS users who opted in, spacing each WhatsApp delivery by 3 seconds and persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 | `cronDirRequestCustomSequence.js` (custom menus) | `0 15 * * *<br>0 18 * * *<br>30 20 * * *` | Chain sosmed fetches, run Ditsamapta menus 6/9/28/29 (plus optional extras) to the Ditsamapta group, super admins, and operators, deliver Ditbinmas menu 21 to the Ditbinmas group, then send BIDHUMAS menus 6, 9, 28, and 29 to the BIDHUMAS group and its super admins. The 20:30 slot now aligns with the Ditbinmas recap and BIDHUMAS 20:30 dispatch without blocking either flow. |
