@@ -76,13 +76,73 @@ export function getGreeting() {
   return "Selamat malam";
 }
 
+const REGIONAL_POLDAS = {
+  ACEH: "Polda Aceh",
+  SUMUT: "Polda Sumatera Utara",
+  SUMBAR: "Polda Sumatera Barat",
+  RIAU: "Polda Riau",
+  KEPRI: "Polda Kepulauan Riau",
+  JAMBI: "Polda Jambi",
+  BENGKULU: "Polda Bengkulu",
+  SUMSEL: "Polda Sumatera Selatan",
+  BABEL: "Polda Bangka Belitung",
+  LAMPUNG: "Polda Lampung",
+  BANTEN: "Polda Banten",
+  DKI: "Polda Metro Jaya",
+  METRO: "Polda Metro Jaya",
+  DKI_JAKARTA: "Polda Metro Jaya",
+  JABAR: "Polda Jawa Barat",
+  JATENG: "Polda Jawa Tengah",
+  DIY: "Polda Daerah Istimewa Yogyakarta",
+  JATIM: "Polda Jawa Timur",
+  BALI: "Polda Bali",
+  NTB: "Polda Nusa Tenggara Barat",
+  NTT: "Polda Nusa Tenggara Timur",
+  KALBAR: "Polda Kalimantan Barat",
+  KALTENG: "Polda Kalimantan Tengah",
+  KALSEL: "Polda Kalimantan Selatan",
+  KALTIM: "Polda Kalimantan Timur",
+  KALTARA: "Polda Kalimantan Utara",
+  SULUT: "Polda Sulawesi Utara",
+  SULTENG: "Polda Sulawesi Tengah",
+  SULTRA: "Polda Sulawesi Tenggara",
+  SULSEL: "Polda Sulawesi Selatan",
+  SULBAR: "Polda Sulawesi Barat",
+  GORONTALO: "Polda Gorontalo",
+  MALUKU: "Polda Maluku",
+  MALUKU_UTARA: "Polda Maluku Utara",
+  MALUT: "Polda Maluku Utara",
+  PAPUA: "Polda Papua",
+  PAPUA_BARAT: "Polda Papua Barat",
+  PAPUA_BARAT_DAYA: "Polda Papua Barat Daya",
+  PAPUA_SELATAN: "Polda Papua Selatan",
+  PAPUA_TENGAH: "Polda Papua Tengah",
+  PAPUA_PEGUNUNGAN: "Polda Papua Pegunungan",
+};
+
+function formatPoldaName(regionalId) {
+  if (!regionalId) return "";
+  const normalized = String(regionalId || "")
+    .trim()
+    .toUpperCase();
+  const normalizedKey = normalized.replace(/[\s-]+/g, "_");
+  return REGIONAL_POLDAS[normalizedKey] || REGIONAL_POLDAS[normalized] || "";
+}
+
 // Helper untuk formatting info client
 export function formatClientInfo(client) {
+  const poldaName = formatPoldaName(client.regional_id);
+  const regionalLabel = client.regional_id
+    ? poldaName
+      ? `${client.regional_id} (${poldaName})`
+      : client.regional_id
+    : "-";
   const lines = [
     `Client ID       : ${client.client_id || "-"}`,
     `Nama            : ${client.nama || "-"}`,
     `Tipe            : ${client.client_type || "-"}`,
     `Status          : ${client.client_status ? "✅ Aktif" : "❌ Tidak aktif"}`,
+    `Regional/Polda  : ${regionalLabel}`,
     `Instagram       : ${client.client_insta ? "@" + client.client_insta : "-"}`,
     `IG Aktif        : ${client.client_insta_status ? "✅ Aktif" : "❌ Tidak aktif"}`,
     `TikTok          : ${client.client_tiktok ? "@" + client.client_tiktok : "-"}`,
