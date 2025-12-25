@@ -45,6 +45,11 @@ dirrequest tanpa langkah tambahan.
 - Operator dapat menggunakan rentang ini ketika meninjau hasil fetch per shift
   atau ketika menyusun laporan khusus yang membutuhkan sumber data dengan
   timestamp eksekusi fetch yang eksplisit.
+- Setelah pukul **17.00 WIB**, cron fetch sosmed hanya menjalankan refresh
+  likes Instagram dan komentar TikTok tanpa menarik postingan baru. Slot
+  malam (mis. 18.00, 19.00, 20.00, 21.00, dan 20:30 gabungan) tetap aktif
+  untuk menjaga pembaruan engagement, tetapi pengambilan konten baru
+  dilewati kecuali dipaksa manual sebelum 17.00 WIB.
 
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.

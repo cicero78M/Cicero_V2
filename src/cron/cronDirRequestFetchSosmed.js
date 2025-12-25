@@ -201,13 +201,23 @@ async function ensureClientState(clientId) {
   return initialState;
 }
 
-export async function runCron() {
+export async function runCron(options = {}) {
+  const { forceEngagementOnly = false } = options;
+
   await sendStructuredLog(
-    buildLogEntry({ phase: "start", action: "cron", result: "start" })
+    buildLogEntry({
+      phase: "start",
+      action: "cron",
+      result: "start",
+      meta: { forceEngagementOnly },
+    })
   );
   try {
     const jakartaHour = getCurrentHourInJakarta();
-    const skipPostFetch = jakartaHour >= 17;
+    const skipPostFetch = forceEngagementOnly || jakartaHour >= 17;
+    const skipReason = forceEngagementOnly
+      ? "Lewati fetch post karena forceEngagementOnly=true"
+      : "Lewati fetch post setelah pukul 17.00 WIB";
     const activeClients = await findAllActiveDirektoratWithTiktok();
 
     if (skipPostFetch) {
@@ -216,7 +226,7 @@ export async function runCron() {
           phase: "prefetch",
           action: "fetch",
           result: "skipped",
-          message: "Lewati fetch post Instagram dan TikTok setelah pukul 17.00 WIB",
+          message: skipReason,
         })
       );
     }
@@ -281,7 +291,7 @@ export async function runCron() {
               countsBefore,
               message: !hasInstagram
                 ? "Lewati fetch Instagram karena status akun nonaktif"
-                : "Lewati fetch Instagram setelah pukul 17.00 WIB",
+                : skipReason,
             })
           );
         }
@@ -316,7 +326,7 @@ export async function runCron() {
               countsBefore,
               message: !hasTiktok
                 ? "Lewati fetch TikTok karena status akun nonaktif"
-                : "Lewati fetch TikTok setelah pukul 17.00 WIB",
+                : skipReason,
             })
           );
         }
