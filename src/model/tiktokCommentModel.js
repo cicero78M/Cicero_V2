@@ -33,6 +33,23 @@ function toTimestampParam(value) {
   return date.toISOString();
 }
 
+function normalizeUsernamePayload(payload) {
+  if (Array.isArray(payload)) {
+    return payload.map((val) => normalizeUsername(val)).filter(Boolean);
+  }
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload);
+      if (Array.isArray(parsed)) {
+        return parsed.map((val) => normalizeUsername(val)).filter(Boolean);
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /**
  * Simpan/Update komentar TikTok untuk video tertentu.
  * Yang disimpan ke DB: hanya array username unik (string) dengan awalan "@",
@@ -142,6 +159,85 @@ export async function hasUserCommentedBetween(
 }
 
 export const findByVideoId = getCommentsByVideoId;
+
+/**
+ * Simpan snapshot komentar TikTok ke tabel audit.
+ *
+ * @param {Object} params
+ * @param {string} params.video_id - ID video TikTok.
+ * @param {Array<string>} params.usernames - Hasil normalize username komentar.
+ * @param {string|Date} params.snapshotWindowStart - Awal jendela snapshot.
+ * @param {string|Date} params.snapshotWindowEnd - Akhir jendela snapshot.
+ * @param {string|Date} [params.capturedAt=new Date()] - Timestamp penyimpanan snapshot.
+ * @returns {Promise<number>} rowCount insert (0 jika parameter tidak lengkap).
+ */
+export async function saveCommentSnapshotAudit({
+  video_id,
+  usernames = [],
+  snapshotWindowStart,
+  snapshotWindowEnd,
+  capturedAt = new Date(),
+}) {
+  const startParam = toTimestampParam(snapshotWindowStart);
+  const endParam = toTimestampParam(snapshotWindowEnd);
+  const capturedParam = toTimestampParam(capturedAt) || new Date().toISOString();
+  if (!video_id || !startParam || !endParam) {
+    return 0;
+  }
+  const normalizedUsernames = Array.isArray(usernames)
+    ? usernames.filter(Boolean)
+    : [];
+  const result = await query(
+    `INSERT INTO tiktok_comment_audit (video_id, usernames, snapshot_window_start, snapshot_window_end, captured_at)
+     VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5::timestamptz)`,
+    [video_id, JSON.stringify(normalizedUsernames), startParam, endParam, capturedParam]
+  );
+  return result.rowCount || 0;
+}
+
+/**
+ * Ambil snapshot audit komentar TikTok berdasarkan jendela waktu tertentu.
+ *
+ * @param {Array<string>} videoIds - Daftar video_id target.
+ * @param {string|Date} snapshotWindowStart - Awal jendela snapshot.
+ * @param {string|Date} snapshotWindowEnd - Akhir jendela snapshot.
+ * @returns {Promise<Array<{video_id: string, usernames: Array<string>}>>}
+ */
+export async function getLatestCommentAuditByWindow(
+  videoIds,
+  snapshotWindowStart,
+  snapshotWindowEnd
+) {
+  if (!Array.isArray(videoIds) || videoIds.length === 0) return [];
+  const startParam = toTimestampParam(snapshotWindowStart);
+  const endParam = toTimestampParam(snapshotWindowEnd);
+  if (!startParam || !endParam) return [];
+
+  const { rows } = await query(
+    `
+    SELECT DISTINCT ON (video_id)
+      video_id,
+      usernames,
+      snapshot_window_start,
+      snapshot_window_end,
+      captured_at
+    FROM tiktok_comment_audit
+    WHERE video_id = ANY($1)
+      AND snapshot_window_start = $2::timestamptz
+      AND snapshot_window_end = $3::timestamptz
+    ORDER BY video_id, captured_at DESC
+    `,
+    [videoIds, startParam, endParam]
+  );
+
+  return rows.map((row) => ({
+    video_id: row.video_id,
+    usernames: normalizeUsernamePayload(row.usernames),
+    snapshot_window_start: row.snapshot_window_start,
+    snapshot_window_end: row.snapshot_window_end,
+    captured_at: row.captured_at,
+  }));
+}
 
 
 export async function getRekapKomentarByClient(

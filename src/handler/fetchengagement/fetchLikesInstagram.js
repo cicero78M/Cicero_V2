@@ -4,6 +4,32 @@ import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllInstagramLikes } from "../../service/instagramApi.js";
 import { getAllExceptionUsers } from "../../model/userModel.js";
+import { saveLikeSnapshotAudit } from "../../model/instaLikeModel.js";
+
+const SNAPSHOT_INTERVAL_MS = 30 * 60 * 1000;
+
+function normalizeDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveSnapshotWindow(windowOverrides = {}) {
+  const now = new Date();
+  const snapshotWindowEnd =
+    normalizeDateInput(windowOverrides.snapshotWindowEnd || windowOverrides.end) || now;
+  const defaultStart = new Date(snapshotWindowEnd.getTime() - SNAPSHOT_INTERVAL_MS);
+  const snapshotWindowStart =
+    normalizeDateInput(windowOverrides.snapshotWindowStart || windowOverrides.start) || defaultStart;
+  const capturedAt =
+    normalizeDateInput(windowOverrides.capturedAt) ||
+    normalizeDateInput(windowOverrides.captured_at) ||
+    now;
+  return { snapshotWindowStart, snapshotWindowEnd, capturedAt };
+}
 
 function normalizeUsername(username) {
   return (username || "")
@@ -40,7 +66,7 @@ async function getExistingLikes(shortcode) {
  * @param {string} shortcode
  * @param {string|null} client_id
  */
-async function fetchAndStoreLikes(shortcode, client_id = null) {
+async function fetchAndStoreLikes(shortcode, client_id = null, snapshotWindow = {}) {
   const allLikes = await fetchAllInstagramLikes(shortcode);
   const uniqueLikes = [...new Set(allLikes.map(normalizeUsername))];
   const exceptionUsers = await getAllExceptionUsers();
@@ -76,6 +102,29 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
     msg: `[DB] Sukses upsert likes IG: ${shortcode} | Total likes disimpan: ${mergedLikes.length}`,
     client_id: client_id || shortcode,
   });
+
+  const { snapshotWindowStart, snapshotWindowEnd, capturedAt } =
+    resolveSnapshotWindow(snapshotWindow);
+  try {
+    await saveLikeSnapshotAudit({
+      shortcode,
+      usernames: mergedLikes,
+      snapshotWindowStart,
+      snapshotWindowEnd,
+      capturedAt,
+    });
+    sendDebug({
+      tag: "IG FETCH",
+      msg: `[DB] Audit likes IG tersimpan untuk ${shortcode} (${snapshotWindowStart.toISOString()} - ${snapshotWindowEnd.toISOString()})`,
+      client_id: client_id || shortcode,
+    });
+  } catch (auditErr) {
+    sendDebug({
+      tag: "IG FETCH AUDIT ERROR",
+      msg: `Gagal menyimpan audit likes IG ${shortcode}: ${(auditErr && auditErr.message) || String(auditErr)}`,
+      client_id: client_id || shortcode,
+    });
+  }
 }
 
 /**
@@ -86,7 +135,7 @@ async function fetchAndStoreLikes(shortcode, client_id = null) {
  * @param {*} chatId - WhatsApp chatId (untuk notifikasi)
  * @param {*} client_id - client yang ingin di-fetch likes-nya
  */
-export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
+export async function handleFetchLikesInstagram(waClient, chatId, client_id, options = {}) {
   try {
     // Ambil semua post IG milik client hari ini
     const today = new Date();
@@ -108,10 +157,22 @@ export async function handleFetchLikesInstagram(waClient, chatId, client_id) {
       return;
     }
 
+    const snapshotWindow = resolveSnapshotWindow({
+      snapshotWindowStart:
+        options.snapshotWindowStart ||
+        options.snapshotWindow?.snapshotWindowStart ||
+        options.snapshotWindow?.start,
+      snapshotWindowEnd:
+        options.snapshotWindowEnd ||
+        options.snapshotWindow?.snapshotWindowEnd ||
+        options.snapshotWindow?.end,
+      capturedAt: options.capturedAt || options.snapshotWindow?.capturedAt,
+    });
+
     let sukses = 0, gagal = 0;
     for (const r of rows) {
       try {
-        await fetchAndStoreLikes(r.shortcode, client_id);
+        await fetchAndStoreLikes(r.shortcode, client_id, snapshotWindow);
         sukses++;
       } catch (err) {
         sendDebug({

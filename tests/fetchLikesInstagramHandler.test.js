@@ -6,6 +6,7 @@ const mockQuery = jest.fn();
 const mockFetchAllInstagramLikes = jest.fn();
 const mockGetAllExceptionUsers = jest.fn();
 const mockSendDebug = jest.fn();
+const mockSaveLikeSnapshotAudit = jest.fn();
 
 jest.unstable_mockModule('../src/db/index.js', () => ({ query: mockQuery }));
 jest.unstable_mockModule('../src/service/instagramApi.js', () => ({
@@ -13,6 +14,9 @@ jest.unstable_mockModule('../src/service/instagramApi.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/userModel.js', () => ({
   getAllExceptionUsers: mockGetAllExceptionUsers,
+}));
+jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
+  saveLikeSnapshotAudit: mockSaveLikeSnapshotAudit,
 }));
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendDebug: mockSendDebug,
@@ -26,6 +30,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSaveLikeSnapshotAudit.mockResolvedValue(1);
 });
 
 test('adds missing exception usernames to likes result', async () => {

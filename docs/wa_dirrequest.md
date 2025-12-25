@@ -31,6 +31,21 @@ Input **4️⃣3️⃣** kini dikenali langsung oleh bot tanpa balasan *"Pilihan
 valid"*, sehingga operator dapat memicu rekap TikTok all data dari menu utama
 dirrequest tanpa langkah tambahan.
 
+## Rekaman Snapshot Engagement per 30 Menit
+- Setiap pengambilan likes Instagram dan komentar TikTok yang berjalan lewat
+  jadwal 30 menit kini juga menyimpan salinan ke tabel arsip
+  `insta_like_audit` dan `tiktok_comment_audit`. Kolom yang dicatat mencakup
+  `shortcode`/`video_id`, `usernames` (JSONB), `snapshot_window_start`,
+  `snapshot_window_end`, dan `captured_at` (default `NOW()`).
+- Generator pesan tugas sosmed dapat menerima rentang waktu (mis. 30 menit
+  terakhir). Jika rentang diberikan, generator lebih dulu membaca snapshot
+  terbaru dari tabel audit dan menampilkan label **"Data rentang HH–HH WIB"**.
+  Jika arsip untuk rentang tersebut kosong, perhitungan otomatis jatuh ke
+  tabel utama seperti sebelumnya sehingga pesan tetap terisi.
+- Operator dapat menggunakan rentang ini ketika meninjau hasil fetch per shift
+  atau ketika menyusun laporan khusus yang membutuhkan sumber data dengan
+  timestamp eksekusi fetch yang eksplisit.
+
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
