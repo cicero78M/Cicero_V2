@@ -2,12 +2,20 @@ import {
   getShortcodesTodayByClient,
   getPostsTodayByClient as getInstaPostsTodayByClient,
 } from "../../model/instaPostModel.js";
-import { getLikesByShortcode } from "../../model/instaLikeModel.js";
+import {
+  getLikesByShortcode,
+  getLatestLikeAuditByWindow,
+} from "../../model/instaLikeModel.js";
 import { getPostsTodayByClient as getTiktokPostsToday } from "../../model/tiktokPostModel.js";
-import { getCommentsByVideoId } from "../../model/tiktokCommentModel.js";
+import {
+  getCommentsByVideoId,
+  getLatestCommentAuditByWindow,
+} from "../../model/tiktokCommentModel.js";
 import { findClientById } from "../../service/clientService.js";
 import { handleFetchLikesInstagram } from "../fetchengagement/fetchLikesInstagram.js";
 import { handleFetchKomentarTiktokBatch } from "../fetchengagement/fetchCommentTiktok.js";
+
+const DEFAULT_WINDOW_MS = 30 * 60 * 1000;
 
 function formatUploadTime(date) {
   if (!date) return null;
@@ -28,6 +36,144 @@ function formatUploadTime(date) {
   }
 }
 
+function normalizeDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function normalizeUsernamesArray(raw) {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((val) => {
+        if (typeof val === "string") return val;
+        if (val && typeof val === "object") {
+          if (typeof val.username === "string") return val.username;
+          if (typeof val.user === "string") return val.user;
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? normalizeUsernamesArray(parsed) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function normalizeSnapshotWindow(snapshotWindowStart, snapshotWindowEnd) {
+  const start = normalizeDateInput(snapshotWindowStart);
+  const end = normalizeDateInput(snapshotWindowEnd);
+  if (start && !end) {
+    const computedEnd = new Date(start.getTime() + DEFAULT_WINDOW_MS);
+    return { start, end: computedEnd };
+  }
+  if (end && !start) {
+    const computedStart = new Date(end.getTime() - DEFAULT_WINDOW_MS);
+    return { start: computedStart, end };
+  }
+  if (!start || !end) return null;
+  return { start, end };
+}
+
+function formatWibTime(date) {
+  try {
+    const formatted = date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Jakarta",
+    });
+    return formatted.replace(/\./g, ":");
+  } catch {
+    return null;
+  }
+}
+
+function formatSnapshotWindowLabel(snapshotWindow) {
+  if (!snapshotWindow?.start || !snapshotWindow?.end) return null;
+  const startLabel = formatWibTime(snapshotWindow.start);
+  const endLabel = formatWibTime(snapshotWindow.end);
+  if (!startLabel || !endLabel) return null;
+  return `Data rentang ${startLabel}–${endLabel} WIB`;
+}
+
+async function fetchLikesWithAudit(shortcodes, snapshotWindow) {
+  if (!Array.isArray(shortcodes) || shortcodes.length === 0) {
+    return { likesList: [], auditUsed: false };
+  }
+  if (!snapshotWindow) {
+    const likesList = await Promise.all(
+      shortcodes.map((sc) => getLikesByShortcode(sc).catch(() => []))
+    );
+    return { likesList: likesList.map(normalizeUsernamesArray), auditUsed: false };
+  }
+  const auditRows = await getLatestLikeAuditByWindow(
+    shortcodes,
+    snapshotWindow.start,
+    snapshotWindow.end
+  );
+  const auditMap = new Map(
+    auditRows.map((row) => [row.shortcode, normalizeUsernamesArray(row.usernames)])
+  );
+  const likesList = [];
+  for (const sc of shortcodes) {
+    if (auditMap.has(sc)) {
+      likesList.push(auditMap.get(sc));
+      continue;
+    }
+    const fallback = await getLikesByShortcode(sc).catch(() => []);
+    likesList.push(normalizeUsernamesArray(fallback));
+  }
+  return { likesList, auditUsed: auditMap.size > 0 };
+}
+
+async function fetchCommentsWithAudit(posts, snapshotWindow) {
+  if (!Array.isArray(posts) || posts.length === 0) {
+    return { commentList: [], auditUsed: false };
+  }
+  const videoIds = posts.map((post) => post.video_id);
+  if (!snapshotWindow) {
+    const commentList = await Promise.all(
+      videoIds.map((vid) =>
+        getCommentsByVideoId(vid).catch(() => ({ comments: [] }))
+      )
+    );
+    return {
+      commentList: commentList.map((entry) =>
+        normalizeUsernamesArray(entry?.comments || [])
+      ),
+      auditUsed: false,
+    };
+  }
+  const auditRows = await getLatestCommentAuditByWindow(
+    videoIds,
+    snapshotWindow.start,
+    snapshotWindow.end
+  );
+  const auditMap = new Map(
+    auditRows.map((row) => [row.video_id, normalizeUsernamesArray(row.usernames)])
+  );
+  const commentList = [];
+  for (const vid of videoIds) {
+    if (auditMap.has(vid)) {
+      commentList.push(auditMap.get(vid));
+      continue;
+    }
+    const fallback = await getCommentsByVideoId(vid).catch(() => ({ comments: [] }));
+    commentList.push(normalizeUsernamesArray(fallback?.comments || []));
+  }
+  return { commentList, auditUsed: auditMap.size > 0 };
+}
+
 export async function generateSosmedTaskMessage(
   clientId = "DITBINMAS",
   options = {}
@@ -40,6 +186,15 @@ export async function generateSosmedTaskMessage(
     skipLikesFetch = false,
     previousState = {},
   } = options;
+  const snapshotWindow = normalizeSnapshotWindow(
+    options.snapshotWindowStart ||
+      options.snapshotWindow?.snapshotWindowStart ||
+      options.snapshotWindow?.start,
+    options.snapshotWindowEnd ||
+      options.snapshotWindow?.snapshotWindowEnd ||
+      options.snapshotWindow?.end
+  );
+  const snapshotWindowLabel = formatSnapshotWindowLabel(snapshotWindow);
 
   const previousIgShortcodes = Array.isArray(previousState.igShortcodes)
     ? previousState.igShortcodes
@@ -65,7 +220,11 @@ export async function generateSosmedTaskMessage(
     shortcodes = await getShortcodesTodayByClient(clientId);
     instaPosts = await getInstaPostsTodayByClient(clientId);
     if (!skipLikesFetch) {
-      await handleFetchLikesInstagram(null, null, clientId);
+      await handleFetchLikesInstagram(null, null, clientId, {
+        snapshotWindow: snapshotWindow
+          ? { start: snapshotWindow.start, end: snapshotWindow.end }
+          : undefined,
+      });
     }
   } catch {
     shortcodes = [];
@@ -76,8 +235,9 @@ export async function generateSosmedTaskMessage(
     (instaPosts || []).map((post) => [post.shortcode, post])
   );
 
-  const likeResults = await Promise.all(
-    shortcodes.map((sc) => getLikesByShortcode(sc).catch(() => []))
+  const { likesList: likeResults } = await fetchLikesWithAudit(
+    shortcodes,
+    snapshotWindow
   );
 
   let totalLikes = 0;
@@ -99,21 +259,24 @@ export async function generateSosmedTaskMessage(
   try {
     tiktokPosts = await getTiktokPostsToday(clientId);
     if (!skipTiktokFetch) {
-      await handleFetchKomentarTiktokBatch(null, null, clientId);
+      await handleFetchKomentarTiktokBatch(null, null, clientId, {
+        snapshotWindow: snapshotWindow
+          ? { start: snapshotWindow.start, end: snapshotWindow.end }
+          : undefined,
+      });
     }
   } catch {
     tiktokPosts = [];
   }
 
-  const commentResults = await Promise.all(
-    tiktokPosts.map((post) =>
-      getCommentsByVideoId(post.video_id).catch(() => ({ comments: [] }))
-    )
+  const { commentList: commentResults } = await fetchCommentsWithAudit(
+    tiktokPosts,
+    snapshotWindow
   );
 
   let totalComments = 0;
   const tiktokDetails = tiktokPosts.map((post, idx) => {
-    const { comments } = commentResults[idx];
+    const comments = commentResults[idx] || [];
     const count = Array.isArray(comments) ? comments.length : 0;
     totalComments += count;
     const link = tiktokUsername
@@ -142,6 +305,9 @@ export async function generateSosmedTaskMessage(
     `Total komentar semua konten: ${totalComments}\n\n` +
     "Rincian:\n";
   msg += tiktokDetails.length ? tiktokDetails.join("\n") : "-";
+  if (snapshotWindowLabel) {
+    msg += `\n\n${snapshotWindowLabel}`;
+  }
   msg += "\n\nSilahkan Melaksanakan Likes, Komentar dan Share.";
   return {
     text: msg.trim(),

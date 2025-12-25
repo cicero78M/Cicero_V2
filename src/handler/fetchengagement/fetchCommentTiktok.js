@@ -4,9 +4,11 @@ import pLimit from "p-limit";
 import { query } from "../../db/index.js";
 import { sendDebug } from "../../middleware/debugHandler.js";
 import { fetchAllTiktokComments } from "../../service/tiktokApi.js";
+import { saveCommentSnapshotAudit } from "../../model/tiktokCommentModel.js";
 
 const MAX_COMMENT_FETCH_ATTEMPTS = 3;
 const COMMENT_FETCH_RETRY_DELAY_MS = 2000;
+const SNAPSHOT_INTERVAL_MS = 30 * 60 * 1000;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,6 +24,29 @@ function normalizeUsername(uname) {
   if (typeof uname !== "string" || uname.length === 0) return null;
   const lower = uname.trim().toLowerCase();
   return lower.startsWith("@") ? lower : `@${lower}`;
+}
+
+function normalizeDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveSnapshotWindow(windowOverrides = {}) {
+  const now = new Date();
+  const snapshotWindowEnd =
+    normalizeDateInput(windowOverrides.snapshotWindowEnd || windowOverrides.end) || now;
+  const defaultStart = new Date(snapshotWindowEnd.getTime() - SNAPSHOT_INTERVAL_MS);
+  const snapshotWindowStart =
+    normalizeDateInput(windowOverrides.snapshotWindowStart || windowOverrides.start) || defaultStart;
+  const capturedAt =
+    normalizeDateInput(windowOverrides.capturedAt) ||
+    normalizeDateInput(windowOverrides.captured_at) ||
+    now;
+  return { snapshotWindowStart, snapshotWindowEnd, capturedAt };
 }
 
 /**
@@ -88,7 +113,7 @@ async function upsertTiktokUserComments(video_id, usernamesArr) {
  * Handler: Fetch komentar semua video TikTok hari ini (per client)
  * Simpan ke DB: hanya array username unik!
  */
-export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = null, client_id = null) {
+export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = null, client_id = null, options = {}) {
   try {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -125,6 +150,18 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
       return;
     }
 
+    const snapshotWindow = resolveSnapshotWindow({
+      snapshotWindowStart:
+        options.snapshotWindowStart ||
+        options.snapshotWindow?.snapshotWindowStart ||
+        options.snapshotWindow?.start,
+      snapshotWindowEnd:
+        options.snapshotWindowEnd ||
+        options.snapshotWindow?.snapshotWindowEnd ||
+        options.snapshotWindow?.end,
+      capturedAt: options.capturedAt || options.snapshotWindow?.capturedAt,
+    });
+
     let sukses = 0, gagal = 0;
     for (const video_id of videoIds) {
       await limit(async () => {
@@ -154,6 +191,26 @@ export async function handleFetchKomentarTiktokBatch(waClient = null, chatId = n
             video_id,
             allUsernames
           );
+          try {
+            await saveCommentSnapshotAudit({
+              video_id,
+              usernames: mergedUsernames,
+              snapshotWindowStart: snapshotWindow.snapshotWindowStart,
+              snapshotWindowEnd: snapshotWindow.snapshotWindowEnd,
+              capturedAt: snapshotWindow.capturedAt,
+            });
+            sendDebug({
+              tag: "TTK COMMENT AUDIT",
+              msg: `Snapshot komentar tersimpan untuk ${video_id} (${snapshotWindow.snapshotWindowStart.toISOString()} - ${snapshotWindow.snapshotWindowEnd.toISOString()})`,
+              client_id: video_id,
+            });
+          } catch (auditErr) {
+            sendDebug({
+              tag: "TTK COMMENT AUDIT ERROR",
+              msg: `Gagal menyimpan audit komentar ${video_id}: ${(auditErr && auditErr.message) || String(auditErr)}`,
+              client_id: video_id,
+            });
+          }
           sukses++;
           sendDebug({
             tag: "TTK COMMENT MERGE",

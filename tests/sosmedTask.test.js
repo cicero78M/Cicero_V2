@@ -3,8 +3,10 @@ import { jest } from '@jest/globals';
 const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetInstaPostsTodayByClient = jest.fn();
 const mockGetLikesByShortcode = jest.fn();
+const mockGetLatestLikeAuditByWindow = jest.fn();
 const mockGetTiktokPostsToday = jest.fn();
 const mockGetCommentsByVideoId = jest.fn();
+const mockGetLatestCommentAuditByWindow = jest.fn();
 const mockFindClientById = jest.fn();
 const mockHandleFetchLikesInstagram = jest.fn();
 const mockHandleFetchKomentarTiktokBatch = jest.fn();
@@ -15,6 +17,7 @@ jest.unstable_mockModule('../src/model/instaPostModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
   getLikesByShortcode: mockGetLikesByShortcode,
+  getLatestLikeAuditByWindow: mockGetLatestLikeAuditByWindow,
 }));
 jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
   getPostsTodayByClient: mockGetTiktokPostsToday,
@@ -23,6 +26,7 @@ jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
 }));
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   getCommentsByVideoId: mockGetCommentsByVideoId,
+  getLatestCommentAuditByWindow: mockGetLatestCommentAuditByWindow,
   deleteCommentsByVideoId: jest.fn(),
 }));
 jest.unstable_mockModule('../src/service/clientService.js', () => ({
@@ -42,6 +46,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetLatestLikeAuditByWindow.mockResolvedValue([]);
+  mockGetLatestCommentAuditByWindow.mockResolvedValue([]);
 });
 
 test('generateSosmedTaskMessage formats message correctly', async () => {
@@ -50,11 +56,11 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   mockGetInstaPostsTodayByClient.mockResolvedValue([
     { shortcode: 'abc', created_at: '2024-01-01T07:30:00+07:00' },
   ]);
-  mockGetLikesByShortcode.mockResolvedValue([{}, {}]);
+  mockGetLikesByShortcode.mockResolvedValue(['user-a', 'user-b']);
   mockGetTiktokPostsToday.mockResolvedValue([
     { video_id: '123', created_at: '2024-01-01T08:00:00+07:00' },
   ]);
-  mockGetCommentsByVideoId.mockResolvedValue({ comments: [{}] });
+  mockGetCommentsByVideoId.mockResolvedValue({ comments: ['@user'] });
   mockHandleFetchLikesInstagram.mockResolvedValue();
   mockHandleFetchKomentarTiktokBatch.mockResolvedValue();
 
@@ -69,8 +75,18 @@ test('generateSosmedTaskMessage formats message correctly', async () => {
   expect(igCount).toBe(1);
   expect(tiktokCount).toBe(1);
   expect(state).toEqual({ igShortcodes: ['abc'], tiktokVideoIds: ['123'] });
-  expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(null, null, 'DITBINMAS');
-  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(null, null, 'DITBINMAS');
+  expect(mockHandleFetchLikesInstagram).toHaveBeenCalledWith(
+    null,
+    null,
+    'DITBINMAS',
+    expect.objectContaining({ snapshotWindow: undefined }),
+  );
+  expect(mockHandleFetchKomentarTiktokBatch).toHaveBeenCalledWith(
+    null,
+    null,
+    'DITBINMAS',
+    expect.objectContaining({ snapshotWindow: undefined }),
+  );
 });
 
 test('generateSosmedTaskMessage can skip internal fetches', async () => {
@@ -100,15 +116,15 @@ test('generateSosmedTaskMessage preserves ordering from sources', async () => {
     { shortcode: 'earlier', created_at: '2024-01-01T05:00:00+07:00' },
   ]);
   mockGetLikesByShortcode
-    .mockResolvedValueOnce([{}])
-    .mockResolvedValueOnce([{}, {}]);
+    .mockResolvedValueOnce(['u-latest'])
+    .mockResolvedValueOnce(['u-earlier-1', 'u-earlier-2']);
   mockGetTiktokPostsToday.mockResolvedValue([
     { video_id: 'vid-b', created_at: '2024-01-01T09:00:00+07:00' },
     { video_id: 'vid-a', created_at: '2024-01-01T10:00:00+07:00' },
   ]);
   mockGetCommentsByVideoId
-    .mockResolvedValueOnce({ comments: [{}, {}] })
-    .mockResolvedValueOnce({ comments: [{}] });
+    .mockResolvedValueOnce({ comments: ['@vid-b-1', '@vid-b-2'] })
+    .mockResolvedValueOnce({ comments: ['@vid-a'] });
 
   const { text } = await generateSosmedTaskMessage('CLIENT', {
     skipLikesFetch: true,
@@ -145,15 +161,15 @@ test('generateSosmedTaskMessage labels new content against previous state', asyn
     { shortcode: 'beta', created_at: '2024-01-01T07:00:00+07:00' },
   ]);
   mockGetLikesByShortcode
-    .mockResolvedValueOnce([{}])
-    .mockResolvedValueOnce([{}, {}]);
+    .mockResolvedValueOnce(['alpha-like'])
+    .mockResolvedValueOnce(['beta-1', 'beta-2']);
   mockGetTiktokPostsToday.mockResolvedValue([
     { video_id: '111', created_at: '2024-01-01T08:00:00+07:00' },
     { video_id: '222', created_at: '2024-01-01T09:00:00+07:00' },
   ]);
   mockGetCommentsByVideoId
-    .mockResolvedValueOnce({ comments: [{}] })
-    .mockResolvedValueOnce({ comments: [{}, {}] });
+    .mockResolvedValueOnce({ comments: ['@existing'] })
+    .mockResolvedValueOnce({ comments: ['@beta-1', '@beta-2'] });
 
   const { text } = await generateSosmedTaskMessage('CLIENT', {
     skipLikesFetch: true,
@@ -168,4 +184,38 @@ test('generateSosmedTaskMessage labels new content against previous state', asyn
   expect(text).toContain('2. [BARU] https://www.instagram.com/p/beta');
   expect(text).toContain('1. https://www.tiktok.com/@operator/video/111');
   expect(text).toContain('2. [BARU] https://www.tiktok.com/@operator/video/222');
+});
+
+test('generateSosmedTaskMessage prefers audit data and labels window when provided', async () => {
+  const snapshotStart = new Date('2024-01-01T00:00:00+07:00');
+  const snapshotEnd = new Date('2024-01-01T00:30:00+07:00');
+  mockFindClientById.mockResolvedValue({ nama: 'Unit', client_tiktok: '' });
+  mockGetShortcodesTodayByClient.mockResolvedValue(['windowed']);
+  mockGetInstaPostsTodayByClient.mockResolvedValue([
+    { shortcode: 'windowed', created_at: '2024-01-01T06:00:00+07:00' },
+  ]);
+  mockGetLatestLikeAuditByWindow.mockResolvedValue([
+    { shortcode: 'windowed', usernames: ['audit_user'] },
+  ]);
+  mockGetLikesByShortcode.mockResolvedValue(['fallback_like']);
+  mockGetTiktokPostsToday.mockResolvedValue([
+    { video_id: 'vid-window', created_at: '2024-01-01T07:00:00+07:00' },
+  ]);
+  mockGetLatestCommentAuditByWindow.mockResolvedValue([
+    { video_id: 'vid-window', usernames: ['@audit'] },
+  ]);
+  mockGetCommentsByVideoId.mockResolvedValue({ comments: ['@fallback'] });
+
+  const { text } = await generateSosmedTaskMessage('CLIENT', {
+    skipLikesFetch: true,
+    skipTiktokFetch: true,
+    snapshotWindowStart: snapshotStart,
+    snapshotWindowEnd: snapshotEnd,
+  });
+
+  expect(text).toContain('Total likes semua konten: 1');
+  expect(text).toContain('Total komentar semua konten: 1');
+  expect(text).toContain('Data rentang 00:00–00:30 WIB');
+  expect(mockGetLikesByShortcode).not.toHaveBeenCalled();
+  expect(mockGetCommentsByVideoId).not.toHaveBeenCalled();
 });

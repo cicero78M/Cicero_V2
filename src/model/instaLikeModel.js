@@ -28,6 +28,23 @@ function toTimestampParam(value) {
   return date.toISOString();
 }
 
+function normalizeLikeUsernamesPayload(payload) {
+  if (Array.isArray(payload)) {
+    return payload.map((val) => normalizeLikeUsername(val)).filter(Boolean);
+  }
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload);
+      if (Array.isArray(parsed)) {
+        return parsed.map((val) => normalizeLikeUsername(val)).filter(Boolean);
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /**
  * Upsert (insert/update) daftar username likes untuk sebuah shortcode.
  * Disarankan kolom likes bertipe JSONB.
@@ -97,6 +114,86 @@ export async function getAllShortcodesToday() {
 export async function getLikesByShortcode(shortcode) {
   // alias untuk backward compatibility
   return getLikeUsernamesByShortcode(shortcode);
+}
+
+/**
+ * Simpan snapshot hasil fetch likes ke tabel audit tanpa memengaruhi tabel utama.
+ *
+ * @param {Object} params
+ * @param {string} params.shortcode - Shortcode konten Instagram.
+ * @param {Array<string>} params.usernames - Daftar username hasil fetch setelah dinormalisasi.
+ * @param {string|Date} params.snapshotWindowStart - Awal jendela waktu (timestamptz).
+ * @param {string|Date} params.snapshotWindowEnd - Akhir jendela waktu (timestamptz).
+ * @param {string|Date} [params.capturedAt=new Date()] - Timestamp penyimpanan snapshot.
+ * @returns {Promise<number>} rowCount hasil insert (0 jika parameter kurang lengkap).
+ */
+export async function saveLikeSnapshotAudit({
+  shortcode,
+  usernames = [],
+  snapshotWindowStart,
+  snapshotWindowEnd,
+  capturedAt = new Date(),
+}) {
+  const startParam = toTimestampParam(snapshotWindowStart);
+  const endParam = toTimestampParam(snapshotWindowEnd);
+  const capturedParam = toTimestampParam(capturedAt) || new Date().toISOString();
+  if (!shortcode || !startParam || !endParam) {
+    return 0;
+  }
+  const normalizedUsernames = Array.isArray(usernames)
+    ? usernames.filter(Boolean)
+    : [];
+  const result = await query(
+    `INSERT INTO insta_like_audit (shortcode, usernames, snapshot_window_start, snapshot_window_end, captured_at)
+     VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5::timestamptz)`,
+    [shortcode, JSON.stringify(normalizedUsernames), startParam, endParam, capturedParam]
+  );
+  return result.rowCount || 0;
+}
+
+/**
+ * Ambil snapshot audit terbaru untuk kumpulan shortcode pada rentang tertentu.
+ * Jika kombinasi start/end tidak valid, fungsi akan mengembalikan array kosong.
+ *
+ * @param {Array<string>} shortcodes - Daftar shortcode yang ingin diambil snapshot-nya.
+ * @param {string|Date} snapshotWindowStart - Awal jendela waktu.
+ * @param {string|Date} snapshotWindowEnd - Akhir jendela waktu.
+ * @returns {Promise<Array<{shortcode: string, usernames: Array<string>}>>}
+ */
+export async function getLatestLikeAuditByWindow(
+  shortcodes,
+  snapshotWindowStart,
+  snapshotWindowEnd
+) {
+  if (!Array.isArray(shortcodes) || shortcodes.length === 0) return [];
+  const startParam = toTimestampParam(snapshotWindowStart);
+  const endParam = toTimestampParam(snapshotWindowEnd);
+  if (!startParam || !endParam) return [];
+
+  const { rows } = await query(
+    `
+    SELECT DISTINCT ON (shortcode)
+      shortcode,
+      usernames,
+      snapshot_window_start,
+      snapshot_window_end,
+      captured_at
+    FROM insta_like_audit
+    WHERE shortcode = ANY($1)
+      AND snapshot_window_start = $2::timestamptz
+      AND snapshot_window_end = $3::timestamptz
+    ORDER BY shortcode, captured_at DESC
+    `,
+    [shortcodes, startParam, endParam]
+  );
+
+  return rows.map((row) => ({
+    shortcode: row.shortcode,
+    usernames: normalizeLikeUsernamesPayload(row.usernames),
+    snapshot_window_start: row.snapshot_window_start,
+    snapshot_window_end: row.snapshot_window_end,
+    captured_at: row.captured_at,
+  }));
 }
 
 export async function hasUserLikedBetween(
