@@ -214,97 +214,122 @@ export async function countPostsByClient(
   start_date,
   end_date,
   roleOrOptions,
+  scopeOrOptions,
   regionalIdArg
 ) {
   const options =
     typeof roleOrOptions === 'object' && roleOrOptions !== null && !Array.isArray(roleOrOptions)
       ? roleOrOptions
-      : { role: roleOrOptions, regionalId: regionalIdArg };
-  const role = options.role;
-  const regionalId = options.regionalId;
-  const normalizedId = normalizeClientId(client_id);
-  const normalizedRegionalId = regionalId
-    ? String(regionalId).trim().toUpperCase()
+      : typeof scopeOrOptions === 'object' && scopeOrOptions !== null && !Array.isArray(scopeOrOptions)
+        ? { ...scopeOrOptions, role: roleOrOptions }
+        : {
+            role: roleOrOptions,
+            scope: scopeOrOptions,
+            regionalId: regionalIdArg,
+          };
+
+  const normalizedClientId = client_id ? String(client_id).trim() : null;
+  const normalizedRole = options.role ? String(options.role).trim().toLowerCase() : null;
+  const normalizedScope = options.scope ? String(options.scope).trim().toLowerCase() : null;
+  const normalizedRegionalId = options.regionalId
+    ? String(options.regionalId).trim().toUpperCase()
     : null;
+
   let clientType = null;
-  if (normalizedId) {
+  if (normalizedClientId) {
     const clientTypeRes = await query(
       `SELECT client_type FROM clients WHERE LOWER(TRIM(client_id)) = $1 LIMIT 1`,
-      [normalizedId]
+      [normalizedClientId.toLowerCase()]
     );
     clientType = clientTypeRes.rows[0]?.client_type?.toLowerCase() || null;
   }
 
-  const params = [];
-  const addParam = (value) => {
-    params.push(value);
-    return `$${params.length}`;
+  const addDateFilter = (addParamFn) => {
+    let filter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    if (start_date && end_date) {
+      const startIdx = addParamFn(start_date);
+      const endIdx = addParamFn(end_date);
+      filter = `p.created_at::date BETWEEN ${startIdx}::date AND ${endIdx}::date`;
+    } else if (periode === 'semua') {
+      filter = '1=1';
+    } else if (periode === 'mingguan') {
+      if (tanggal) {
+        const tanggalIdx = addParamFn(tanggal);
+        filter = `date_trunc('week', p.created_at) = date_trunc('week', ${tanggalIdx}::date)`;
+      } else {
+        filter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+      }
+    } else if (periode === 'bulanan') {
+      if (tanggal) {
+        const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+        const monthIdx = addParamFn(monthDate);
+        filter = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', ${monthIdx}::date)`;
+      } else {
+        filter =
+          "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      }
+    } else if (tanggal) {
+      const tanggalIdx = addParamFn(tanggal);
+      filter = `p.created_at::date = ${tanggalIdx}::date`;
+    }
+    return filter;
   };
 
-  const whereClauses = [];
-  if (clientType !== 'direktorat' && normalizedId) {
-    const idx = addParam(normalizedId);
-    whereClauses.push(`LOWER(TRIM(p.client_id)) = ${idx}`);
-  } else if (clientType === 'direktorat') {
-    const effectiveRole = normalizeClientId(role) || normalizedId;
-    if (effectiveRole) {
-      const roleIdx = addParam(effectiveRole);
-      whereClauses.push(`EXISTS (
-        SELECT 1
-        FROM "user" u
-        JOIN user_roles ur ON ur.user_id = u.user_id
-        JOIN roles r ON r.role_id = ur.role_id
-        WHERE LOWER(TRIM(u.client_id)) = LOWER(TRIM(p.client_id))
-          AND LOWER(TRIM(r.role_name)) = ${roleIdx}
-      )`);
+  const shouldUseRoleFilter =
+    Boolean(normalizedRole) && (normalizedScope === 'direktorat' || clientType === 'direktorat');
+
+  const executeCount = async (useRoleFilter) => {
+    const params = [];
+    const addParam = (value) => {
+      params.push(value);
+      return `$${params.length}`;
+    };
+
+    const joins = [];
+    const whereClauses = [];
+
+    if (useRoleFilter && normalizedRole) {
+      joins.push('LEFT JOIN tiktok_post_roles pr ON pr.video_id = p.video_id');
+      const roleIdx = addParam(normalizedRole);
+      const roleFilter =
+        `LOWER(TRIM(p.client_id)) = LOWER(${roleIdx}) OR LOWER(TRIM(pr.role_name)) = LOWER(${roleIdx})`;
+      whereClauses.push(`(${roleFilter})`);
+    } else if (normalizedClientId) {
+      const clientIdx = addParam(normalizedClientId);
+      whereClauses.push(`LOWER(TRIM(p.client_id)) = LOWER(${clientIdx})`);
     }
-  }
-  if (normalizedRegionalId) {
-    const regionalIdx = addParam(normalizedRegionalId);
-    whereClauses.push(`EXISTS (
-      SELECT 1
-      FROM clients c
-      WHERE c.client_id = p.client_id
-        AND UPPER(c.regional_id) = UPPER(${regionalIdx})
-    )`);
-  }
 
-  let dateFilter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
-  if (start_date && end_date) {
-    const startIdx = addParam(start_date);
-    const endIdx = addParam(end_date);
-    dateFilter = `p.created_at::date BETWEEN ${startIdx}::date AND ${endIdx}::date`;
-  } else if (periode === 'semua') {
-    dateFilter = '1=1';
-  } else if (periode === 'mingguan') {
-    if (tanggal) {
-      const tanggalIdx = addParam(tanggal);
-      dateFilter = `date_trunc('week', p.created_at) = date_trunc('week', ${tanggalIdx}::date)`;
-    } else {
-      dateFilter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+    if (normalizedRegionalId) {
+      joins.push('JOIN clients c ON c.client_id = p.client_id');
+      const regionalIdx = addParam(normalizedRegionalId);
+      whereClauses.push(`UPPER(c.regional_id) = ${regionalIdx}`);
     }
-  } else if (periode === 'bulanan') {
-    if (tanggal) {
-      const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
-      const monthIdx = addParam(monthDate);
-      dateFilter = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', ${monthIdx}::date)`;
-    } else {
-      dateFilter = "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+
+    const dateFilter = addDateFilter(addParam);
+    if (dateFilter) {
+      whereClauses.push(dateFilter);
     }
-  } else if (tanggal) {
-    const tanggalIdx = addParam(tanggal);
-    dateFilter = `p.created_at::date = ${tanggalIdx}::date`;
+
+    const whereSql = whereClauses.length ? whereClauses.join(' AND ') : '1=1';
+    const joinSql = joins.length ? ` ${joins.join(' ')}` : '';
+
+    const { rows } = await query(
+      `SELECT COUNT(DISTINCT p.video_id) AS jumlah_post FROM tiktok_post p${joinSql} WHERE ${whereSql}`,
+      params
+    );
+    return parseInt(rows[0]?.jumlah_post || '0', 10);
+  };
+
+  const initialCount = await executeCount(shouldUseRoleFilter);
+
+  if (
+    initialCount === 0 &&
+    shouldUseRoleFilter &&
+    normalizedClientId &&
+    clientType === 'direktorat'
+  ) {
+    return executeCount(false);
   }
 
-  if (dateFilter) {
-    whereClauses.push(dateFilter);
-  }
-
-  const whereSql = whereClauses.length ? whereClauses.join(' AND ') : '1=1';
-
-  const { rows } = await query(
-    `SELECT COUNT(DISTINCT p.video_id) AS jumlah_post FROM tiktok_post p WHERE ${whereSql}`,
-    params
-  );
-  return parseInt(rows[0]?.jumlah_post || '0', 10);
+  return initialCount;
 }

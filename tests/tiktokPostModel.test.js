@@ -8,12 +8,13 @@ jest.unstable_mockModule('../src/repository/db.js', () => ({
 
 let getPostsTodayByClient;
 let getVideoIdsTodayByClient;
+let countPostsByClient;
 
 const toJakartaDateInput = (date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(date);
 
 beforeAll(async () => {
-  ({ getPostsTodayByClient, getVideoIdsTodayByClient } = await import(
+  ({ getPostsTodayByClient, getVideoIdsTodayByClient, countPostsByClient } = await import(
     '../src/model/tiktokPostModel.js'
   ));
 });
@@ -74,3 +75,67 @@ test('getVideoIdsTodayByClient applies Jakarta date filter for reference date', 
   );
 });
 
+function mockClientType(type = 'instansi') {
+  mockQuery.mockResolvedValueOnce({ rows: [{ client_type: type }] });
+}
+
+test('countPostsByClient filters by client_id when no scope supplied', async () => {
+  mockClientType('instansi');
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '4' }] });
+
+  const result = await countPostsByClient('C1', 'harian', undefined, undefined, undefined, {});
+
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('COUNT(DISTINCT p.video_id)');
+  expect(sql).toContain('LOWER(TRIM(p.client_id)) = LOWER($1)');
+  expect(result).toBe(4);
+});
+
+test('countPostsByClient applies role join for directorate scope', async () => {
+  mockClientType('direktorat');
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '2' }] });
+
+  await countPostsByClient('DITA', 'harian', undefined, undefined, undefined, {
+    role: 'dita',
+    scope: 'direktorat',
+  });
+
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('LEFT JOIN tiktok_post_roles pr ON pr.video_id = p.video_id');
+  expect(sql).toContain('LOWER(TRIM(p.client_id)) = LOWER($1)');
+  expect(sql).toContain('OR LOWER(TRIM(pr.role_name)) = LOWER($1)');
+});
+
+test('countPostsByClient filters by regional_id when provided', async () => {
+  mockClientType('instansi');
+  mockQuery.mockResolvedValueOnce({ rows: [{ jumlah_post: '3' }] });
+
+  await countPostsByClient('C1', 'harian', undefined, undefined, undefined, {
+    regionalId: 'jatim',
+  });
+
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('JOIN clients c ON c.client_id = p.client_id');
+  expect(sql).toContain('UPPER(c.regional_id) = $2');
+});
+
+test('countPostsByClient falls back to client filter when role-scope returns zero', async () => {
+  mockClientType('direktorat');
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '0' }] })
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '5' }] });
+
+  const result = await countPostsByClient('DITA', 'harian', undefined, undefined, undefined, {
+    role: 'dita',
+    scope: 'direktorat',
+  });
+
+  expect(mockQuery).toHaveBeenCalledTimes(3);
+  const fallbackSql = mockQuery.mock.calls[2][0];
+  expect(fallbackSql).toContain('LOWER(TRIM(p.client_id)) = LOWER($1)');
+  expect(fallbackSql).not.toContain('tiktok_post_roles');
+  expect(result).toBe(5);
+});
