@@ -20,6 +20,7 @@ import pressReleaseDetailRoutes from './pressReleaseDetailRoutes.js';
 import premiumRequestRoutes from './premiumRequestRoutes.js';
 import likesRoutes from './likesRoutes.js';
 import userRolesRoutes from './userRolesRoutes.js';
+import instagramRoutes from './instagramRoutes.js';
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.use('/users', userRoutes);
 router.use('/auth', authRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/insta", instaRoutes);
+router.use("/instagram", instagramRoutes);
 router.use("/tiktok", tiktokRoutes);
 router.use("/aggregator", aggregatorRoutes);
 router.use('/likes', likesRoutes);
@@ -45,5 +47,4 @@ router.use('/amplify-khusus', amplifyKhususRoutes);
 router.use('/premium-requests', premiumRequestRoutes);
 router.use('/user_roles', userRolesRoutes);
 export default router;
-
 

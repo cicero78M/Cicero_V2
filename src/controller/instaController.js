@@ -188,6 +188,129 @@ export async function getInstaRekapLikes(req, res) {
   }
 }
 
+export async function getInstagramPostsFiltered(req, res) {
+  try {
+    let client_id =
+      req.query.client_id ||
+      req.user?.client_id ||
+      req.headers["x-client-id"];
+    const periode = req.query.periode || "harian";
+    const tanggal = req.query.tanggal;
+    const startDate = req.query.start_date || req.query.tanggal_mulai;
+    const endDate = req.query.end_date || req.query.tanggal_selesai;
+    const requestedRole = req.query.role || req.user?.role;
+    const requestedScope = req.query.scope;
+    const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+    const regionalId = requestedRegionalId
+      ? String(requestedRegionalId).trim().toUpperCase()
+      : null;
+    const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
+    const scopeLower = requestedScope
+      ? String(requestedScope).toLowerCase()
+      : null;
+    const directorateRoles = [
+      "ditbinmas",
+      "ditlantas",
+      "bidhumas",
+      "ditsamapta",
+    ];
+    const usesStandardPayload = Boolean(requestedScope || req.query.role);
+
+    if (!usesStandardPayload && roleLower === "ditbinmas") {
+      client_id = "ditbinmas";
+    }
+
+    if (!client_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "client_id wajib diisi" });
+    }
+
+    if (req.user?.client_ids) {
+      const userClientIds = Array.isArray(req.user.client_ids)
+        ? req.user.client_ids
+        : [req.user.client_ids];
+      const idsLower = userClientIds.map((c) => c.toLowerCase());
+      if (
+        !idsLower.includes(client_id.toLowerCase()) &&
+        roleLower !== client_id.toLowerCase()
+      ) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+    }
+    if (
+      req.user?.client_id &&
+      req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
+      roleLower !== client_id.toLowerCase()
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "client_id tidak diizinkan" });
+    }
+
+    let roleForQuery = roleLower;
+    let scopeForQuery = scopeLower;
+    if (usesStandardPayload) {
+      const resolvedRole = roleLower || null;
+      if (!resolvedRole) {
+        return res
+          .status(400)
+          .json({ success: false, message: "role wajib diisi" });
+      }
+      const resolvedScope = scopeLower || "org";
+      if (!["org", "direktorat"].includes(resolvedScope)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "scope tidak valid" });
+      }
+
+      if (resolvedScope === "org") {
+        if (resolvedRole === "operator") {
+          const tokenClientId = req.user?.client_id;
+          if (!tokenClientId) {
+            return res.status(400).json({
+              success: false,
+              message: "client_id pengguna tidak ditemukan",
+            });
+          }
+          client_id = tokenClientId;
+        } else if (directorateRoles.includes(resolvedRole)) {
+          client_id = resolvedRole;
+        }
+      }
+
+      roleForQuery = resolvedRole;
+      scopeForQuery = resolvedScope;
+    }
+
+    sendConsoleDebug({
+      tag: "INSTA",
+      msg: `getInstagramPostsFiltered ${client_id} ${periode} ${tanggal || ""} ${startDate || ""} ${endDate || ""} ${roleForQuery || ""} ${scopeForQuery || ""} ${regionalId || ""}`,
+    });
+
+    const posts = await instaPostService.findByFilters(client_id, {
+      periode,
+      tanggal,
+      startDate,
+      endDate,
+      role: roleForQuery,
+      scope: scopeForQuery,
+      regionalId,
+    });
+
+    sendSuccess(res, posts);
+  } catch (err) {
+    sendConsoleDebug({
+      tag: "INSTA",
+      msg: `Error getInstagramPostsFiltered: ${err.message}`,
+    });
+    const code = err.statusCode || err.response?.status || 500;
+    res.status(code).json({ success: false, message: err.message });
+  }
+}
+
 export async function getRapidInstagramPosts(req, res) {
   try {
     const username = req.query.username;
