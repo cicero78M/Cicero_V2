@@ -212,7 +212,7 @@ Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, 
 
 ## 5. Dashboard Stats (`/api/dashboard/stats`)
 
-Endpoint ini sekarang mengikuti aturan `role`/`scope`/`regional_id` yang sama dengan endpoint rekap Instagram/TikTok, sehingga jumlah post menyesuaikan konteks akses pengguna. Parameter query yang tersedia:
+Endpoint ini sekarang mengikuti aturan `role`/`scope`/`regional_id` yang sama dengan endpoint rekap Instagram/TikTok, sehingga jumlah post menyesuaikan konteks akses pengguna. **Hitungan TikTok memakai filter `scope`/`role`/`regional_id` yang sama dengan recap komentar TikTok**, sehingga dashboard tidak menampilkan jumlah yang lebih luas dibandingkan narasi recap. Parameter query yang tersedia:
 - `client_id` (wajib jika token tidak berisi `client_id`; diabaikan ketika scope/role memaksa konteks tertentu)
 - `periode` (`harian` default)
 - `tanggal`
