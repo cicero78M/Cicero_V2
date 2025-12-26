@@ -213,9 +213,15 @@ export async function countPostsByClient(
   tanggal,
   start_date,
   end_date,
-  role,
-  regionalId
+  roleOrOptions,
+  regionalIdArg
 ) {
+  const options =
+    typeof roleOrOptions === 'object' && roleOrOptions !== null && !Array.isArray(roleOrOptions)
+      ? roleOrOptions
+      : { role: roleOrOptions, regionalId: regionalIdArg };
+  const role = options.role;
+  const regionalId = options.regionalId;
   const normalizedId = normalizeClientId(client_id);
   const normalizedRegionalId = regionalId
     ? String(regionalId).trim().toUpperCase()
