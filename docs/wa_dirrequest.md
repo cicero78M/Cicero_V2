@@ -359,9 +359,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   ke saluran debug dan admin WA.
 - Tahap logging utama yang dicetak berurutan:
   1. **start**: memuat *Client ID* target dan penerima grup WA yang valid.
-  2. **timeCheck**: jika waktu Jakarta melewati **17:15 WIB**, cron langsung
-     berhenti untuk mencegah spam laporan; tidak ada fetch, refresh, atau
-     pesan yang dikirim ke penerima.
+  2. **timeCheck**: jika waktu Jakarta melewati **17:15 WIB**, cron tetap
+     melanjutkan refresh likes dan komentar, tetapi pengambilan post baru
+     serta pengiriman laporan ke grup dikunci untuk mencegah spam malam hari.
   3. **fetchPosts**: menarik konten baru IG/TikTok (dilewati otomatis setelah
      **17:00 WIB**; cron hanya melakukan refresh engagement pada malam hari).
   4. **refreshEngagement**: memperbarui likes/komentar tanpa menarik konten
@@ -377,9 +377,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   - **Sukses kirim** ke grup: `cronDirRequestFetchSosmed | clientId=DITBINMAS`
     `action=fetch_dirrequest result=sent countsBefore=ig:12/tk:9`
     `countsAfter=ig:15/tk:10 recipients=120363419830216549@g.us`.
-  - **Lewat 17:15** (cron dilewati sepenuhnya): `cronDirRequestFetchSosmed |`
-    `action=timeCheck result=skipped message="Cron dilewati setelah pukul 17:15 WIB untuk mencegah spam laporan"`
-    `meta={"jakartaTime":"17:16"}`.
+  - **Lewat 17:15** (kirim grup dikunci, refresh tetap jalan):
+    `cronDirRequestFetchSosmed | action=timeCheck result=limited`
+    `message="Setelah 17:15 WIB hanya refresh likes/komentar; fetch post dan broadcast grup ditahan"`
+    `meta={"jakartaTime":"17:16"}` diikuti log `sendReport result=suppressed`.
   - **Lewat 17:00** (skip fetch, hanya refresh): `cronDirRequestFetchSosmed |`
     `clientId=DITHUMAS action=refresh_only result=skipped`
     `skipReason=after_17_wib countsBefore=ig:8/tk:5 countsAfter=ig:8/tk:5`
