@@ -359,13 +359,16 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   ke saluran debug dan admin WA.
 - Tahap logging utama yang dicetak berurutan:
   1. **start**: memuat *Client ID* target dan penerima grup WA yang valid.
-  2. **fetchPosts**: menarik konten baru IG/TikTok (dilewati otomatis setelah
+  2. **timeCheck**: jika waktu Jakarta melewati **17:15 WIB**, cron langsung
+     berhenti untuk mencegah spam laporan; tidak ada fetch, refresh, atau
+     pesan yang dikirim ke penerima.
+  3. **fetchPosts**: menarik konten baru IG/TikTok (dilewati otomatis setelah
      **17:00 WIB**; cron hanya melakukan refresh engagement pada malam hari).
-  3. **refreshEngagement**: memperbarui likes/komentar tanpa menarik konten
+  4. **refreshEngagement**: memperbarui likes/komentar tanpa menarik konten
      baru jika sudah lewat 17:00 WIB.
-  4. **buildMessage**: merangkum aksi (fetch/refresh saja), delta konten, dan
+  5. **buildMessage**: merangkum aksi (fetch/refresh saja), delta konten, dan
      total penerima.
-  5. **sendToRecipients**: mengirim narasi ke grup WA per client dan saluran
+  6. **sendToRecipients**: mengirim narasi ke grup WA per client dan saluran
      debug dengan status `sent` atau `skipped`.
 - Pesan *no changes* tetap dicetak ketika tidak ada konten baru atau ketika
   seluruh akun tidak berubah; log tersebut memuat `action=refresh_only` atau
@@ -374,6 +377,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   - **Sukses kirim** ke grup: `cronDirRequestFetchSosmed | clientId=DITBINMAS`
     `action=fetch_dirrequest result=sent countsBefore=ig:12/tk:9`
     `countsAfter=ig:15/tk:10 recipients=120363419830216549@g.us`.
+  - **Lewat 17:15** (cron dilewati sepenuhnya): `cronDirRequestFetchSosmed |`
+    `action=timeCheck result=skipped message="Cron dilewati setelah pukul 17:15 WIB untuk mencegah spam laporan"`
+    `meta={"jakartaTime":"17:16"}`.
   - **Lewat 17:00** (skip fetch, hanya refresh): `cronDirRequestFetchSosmed |`
     `clientId=DITHUMAS action=refresh_only result=skipped`
     `skipReason=after_17_wib countsBefore=ig:8/tk:5 countsAfter=ig:8/tk:5`

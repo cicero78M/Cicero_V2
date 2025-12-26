@@ -19,14 +19,25 @@ const LOG_TAG = "CRON DIRFETCH SOSMED";
 const lastStateByClient = new Map();
 const adminRecipients = new Set(getAdminWAIds());
 
-function getCurrentHourInJakarta(date = new Date()) {
-  const hourString = new Intl.DateTimeFormat("en-US", {
+function getCurrentJakartaTime(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Jakarta",
     hour: "numeric",
+    minute: "numeric",
     hour12: false,
-  }).format(date);
+  }).formatToParts(date);
 
-  return Number.parseInt(hourString, 10);
+  const hour = Number.parseInt(parts.find((part) => part.type === "hour")?.value ?? "0", 10);
+  const minute = Number.parseInt(
+    parts.find((part) => part.type === "minute")?.value ?? "0",
+    10
+  );
+
+  return {
+    hour,
+    minute,
+    label: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+  };
 }
 
 const GROUP_ID_PATTERN = /^(\d{10,22})(?:@g\.us)?$/i;
@@ -213,8 +224,24 @@ export async function runCron(options = {}) {
     })
   );
   try {
-    const jakartaHour = getCurrentHourInJakarta();
-    const skipPostFetch = forceEngagementOnly || jakartaHour >= 17;
+    const jakartaTime = getCurrentJakartaTime();
+    const isAfterCutoff =
+      jakartaTime.hour > 17 || (jakartaTime.hour === 17 && jakartaTime.minute >= 15);
+
+    if (isAfterCutoff) {
+      await sendStructuredLog(
+        buildLogEntry({
+          phase: "init",
+          action: "timeCheck",
+          result: "skipped",
+          message: "Cron dilewati setelah pukul 17:15 WIB untuk mencegah spam laporan",
+          meta: { jakartaTime: jakartaTime.label },
+        })
+      );
+      return;
+    }
+
+    const skipPostFetch = forceEngagementOnly || jakartaTime.hour >= 17;
     const skipReason = forceEngagementOnly
       ? "Lewati fetch post karena forceEngagementOnly=true"
       : "Lewati fetch post setelah pukul 17.00 WIB";
