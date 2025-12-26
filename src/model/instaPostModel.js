@@ -229,8 +229,21 @@ export async function countPostsByClient(
   tanggal,
   start_date,
   end_date,
-  options = {}
+  roleOrOptions,
+  scopeOrOptions,
+  regionalIdArg
 ) {
+  const options =
+    typeof roleOrOptions === 'object' && roleOrOptions !== null && !Array.isArray(roleOrOptions)
+      ? roleOrOptions
+      : typeof scopeOrOptions === 'object' && scopeOrOptions !== null && !Array.isArray(scopeOrOptions)
+        ? { ...scopeOrOptions, role: roleOrOptions }
+        : {
+            role: roleOrOptions,
+            scope: scopeOrOptions,
+            regionalId: regionalIdArg
+          };
+
   const normalizedClientId = client_id ? String(client_id).trim() : null;
   const normalizedRole = options.role ? String(options.role).trim().toLowerCase() : null;
   const normalizedScope = options.scope ? String(options.scope).trim().toLowerCase() : null;
@@ -280,7 +293,7 @@ export async function countPostsByClient(
   };
 
   const shouldUseRoleFilter =
-    normalizedScope === 'direktorat' && Boolean(normalizedRole);
+    Boolean(normalizedRole) && (normalizedScope === 'direktorat' || clientType === 'direktorat');
 
   const executeCount = async (useRoleFilter) => {
     const params = [];
