@@ -22,6 +22,20 @@ function buildKey(platform, clientId, periode, tanggal, startDate, endDate, role
   ].join(':');
 }
 
+function normalizeOptions(roleOrOptions, scopeOrOptions, regionalIdArg) {
+  if (typeof roleOrOptions === 'object' && roleOrOptions !== null && !Array.isArray(roleOrOptions)) {
+    return roleOrOptions;
+  }
+  if (typeof scopeOrOptions === 'object' && scopeOrOptions !== null && !Array.isArray(scopeOrOptions)) {
+    return { ...scopeOrOptions, role: roleOrOptions };
+  }
+  return {
+    role: roleOrOptions ?? null,
+    scope: scopeOrOptions ?? null,
+    regionalId: regionalIdArg ?? null,
+  };
+}
+
 async function getCachedCount(platform, clientId, periode, tanggal, startDate, endDate, options, fetchFn) {
   const { role = null, scope = null, regionalId = null } = options || {};
   const key = buildKey(platform, clientId, periode, tanggal, startDate, endDate, role, scope, regionalId);
@@ -32,7 +46,8 @@ async function getCachedCount(platform, clientId, periode, tanggal, startDate, e
   return count;
 }
 
-export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate, options = {}) {
+export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate, roleOrOptions, scopeOrOptions, regionalIdArg) {
+  const options = normalizeOptions(roleOrOptions, scopeOrOptions, regionalIdArg);
   return getCachedCount(
     'instagram',
     clientId,
@@ -46,7 +61,8 @@ export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate
   );
 }
 
-export function getTiktokPostCount(clientId, periode, tanggal, startDate, endDate, options = {}) {
+export function getTiktokPostCount(clientId, periode, tanggal, startDate, endDate, roleOrOptions, scopeOrOptions, regionalIdArg) {
+  const options = normalizeOptions(roleOrOptions, scopeOrOptions, regionalIdArg);
   return getCachedCount(
     'tiktok',
     clientId,
