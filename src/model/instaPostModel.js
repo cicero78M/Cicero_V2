@@ -223,6 +223,128 @@ export async function findByClientId(clientId) {
   return getPostsByClientId(clientId);
 }
 
+export async function getPostsByFilters(
+  client_id,
+  {
+    periode = 'harian',
+    tanggal = null,
+    startDate = null,
+    endDate = null,
+    role = null,
+    scope = null,
+    regionalId = null,
+  } = {}
+) {
+  const normalizedClientId = client_id ? String(client_id).trim() : null;
+  const normalizedRole = role ? String(role).trim().toLowerCase() : null;
+  const normalizedScope = scope ? String(scope).trim().toLowerCase() : null;
+  const normalizedRegionalId = regionalId
+    ? String(regionalId).trim().toUpperCase()
+    : null;
+
+  let clientType = null;
+  if (normalizedClientId) {
+    const typeRes = await query(
+      'SELECT client_type FROM clients WHERE LOWER(TRIM(client_id)) = $1 LIMIT 1',
+      [normalizedClientId.toLowerCase()]
+    );
+    clientType = typeRes.rows[0]?.client_type?.toLowerCase() || null;
+  }
+
+  const addDateFilter = (addParamFn) => {
+    let filter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    if (startDate && endDate) {
+      const startIdx = addParamFn(startDate);
+      const endIdx = addParamFn(endDate);
+      filter = `p.created_at::date BETWEEN ${startIdx}::date AND ${endIdx}::date`;
+    } else if (periode === 'semua') {
+      filter = '1=1';
+    } else if (periode === 'mingguan') {
+      if (tanggal) {
+        const tanggalIdx = addParamFn(tanggal);
+        filter = `date_trunc('week', p.created_at) = date_trunc('week', ${tanggalIdx}::date)`;
+      } else {
+        filter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+      }
+    } else if (periode === 'bulanan') {
+      if (tanggal) {
+        const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
+        const monthIdx = addParamFn(monthDate);
+        filter =
+          `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', ${monthIdx}::date)`;
+      } else {
+        filter =
+          "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+      }
+    } else if (tanggal) {
+      const tanggalIdx = addParamFn(tanggal);
+      filter = `p.created_at::date = ${tanggalIdx}::date`;
+    }
+    return filter;
+  };
+
+  const shouldUseRoleFilter =
+    Boolean(normalizedRole) &&
+    (normalizedScope === 'direktorat' || clientType === 'direktorat');
+
+  const executeQuery = async (useRoleFilter) => {
+    const params = [];
+    const addParam = (value) => {
+      params.push(value);
+      return `$${params.length}`;
+    };
+
+    const joins = [];
+    const whereClauses = [];
+
+    if (useRoleFilter && normalizedRole) {
+      joins.push('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
+      const roleIdx = addParam(normalizedRole);
+      whereClauses.push(`LOWER(TRIM(pr.role_name)) = LOWER(${roleIdx})`);
+    } else if (normalizedClientId) {
+      const clientIdx = addParam(normalizedClientId);
+      whereClauses.push(`LOWER(TRIM(p.client_id)) = LOWER(${clientIdx})`);
+    }
+
+    if (normalizedRegionalId) {
+      joins.push('JOIN clients c ON c.client_id = p.client_id');
+      const regionalIdx = addParam(normalizedRegionalId);
+      whereClauses.push(`UPPER(c.regional_id) = ${regionalIdx}`);
+    }
+
+    const dateFilter = addDateFilter(addParam);
+    if (dateFilter) {
+      whereClauses.push(dateFilter);
+    }
+
+    const whereSql = whereClauses.length ? whereClauses.join(' AND ') : '1=1';
+    const joinSql = joins.length ? ` ${joins.join(' ')}` : '';
+
+    const { rows } = await query(
+      `SELECT DISTINCT ON (p.shortcode) p.*
+       FROM insta_post p${joinSql}
+       WHERE ${whereSql}
+       ORDER BY p.shortcode, p.created_at ASC`,
+      params
+    );
+
+    return rows;
+  };
+
+  const initialRows = await executeQuery(shouldUseRoleFilter);
+
+  if (
+    initialRows.length === 0 &&
+    shouldUseRoleFilter &&
+    normalizedClientId &&
+    clientType === 'direktorat'
+  ) {
+    return executeQuery(false);
+  }
+
+  return initialRows;
+}
+
 export async function countPostsByClient(
   client_id,
   periode = 'harian',
