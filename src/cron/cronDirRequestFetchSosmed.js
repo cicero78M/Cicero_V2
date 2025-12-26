@@ -225,20 +225,20 @@ export async function runCron(options = {}) {
   );
   try {
     const jakartaTime = getCurrentJakartaTime();
-    const isAfterCutoff =
+    const isAfterSendCutoff =
       jakartaTime.hour > 17 || (jakartaTime.hour === 17 && jakartaTime.minute >= 15);
 
-    if (isAfterCutoff) {
+    if (isAfterSendCutoff) {
       await sendStructuredLog(
         buildLogEntry({
           phase: "init",
           action: "timeCheck",
-          result: "skipped",
-          message: "Cron dilewati setelah pukul 17:15 WIB untuk mencegah spam laporan",
+          result: "limited",
+          message:
+            "Setelah 17:15 WIB hanya refresh likes/komentar; fetch post dan broadcast grup ditahan",
           meta: { jakartaTime: jakartaTime.label },
         })
       );
-      return;
     }
 
     const skipPostFetch = forceEngagementOnly || jakartaTime.hour >= 17;
@@ -490,6 +490,23 @@ export async function runCron(options = {}) {
               countsAfter,
               recipients,
               message: "Lewati pengiriman karena tidak ada penerima yang valid",
+            })
+          );
+          continue;
+        }
+
+        if (isAfterSendCutoff) {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "sendLoop",
+              clientId,
+              action: "sendReport",
+              result: "suppressed",
+              countsBefore,
+              countsAfter,
+              recipients,
+              message: "Pengiriman laporan ke grup dikunci setelah 17:15 WIB",
+              meta: { jakartaTime: jakartaTime.label },
             })
           );
           continue;
