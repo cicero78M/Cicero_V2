@@ -4,24 +4,58 @@ import { countPostsByClient as countTiktokPostsByClient } from '../model/tiktokP
 
 const TTL_SEC = 60; // cache 1 minute
 
-function buildKey(platform, clientId, periode, tanggal, startDate, endDate) {
-  return `${platform}:post_count:${clientId}:${periode}:${tanggal || ''}:${startDate || ''}:${endDate || ''}`;
+function buildKey(platform, clientId, periode, tanggal, startDate, endDate, role, scope, regionalId) {
+  const normalizedRole = role ? String(role).toLowerCase() : '';
+  const normalizedScope = scope ? String(scope).toLowerCase() : '';
+  const normalizedRegionalId = regionalId ? String(regionalId).toUpperCase() : '';
+  return [
+    platform,
+    'post_count',
+    clientId,
+    periode,
+    tanggal || '',
+    startDate || '',
+    endDate || '',
+    normalizedRole,
+    normalizedScope,
+    normalizedRegionalId,
+  ].join(':');
 }
 
-async function getCachedCount(platform, clientId, periode, tanggal, startDate, endDate, fetchFn) {
-  const key = buildKey(platform, clientId, periode, tanggal, startDate, endDate);
+async function getCachedCount(platform, clientId, periode, tanggal, startDate, endDate, options, fetchFn) {
+  const { role = null, scope = null, regionalId = null } = options || {};
+  const key = buildKey(platform, clientId, periode, tanggal, startDate, endDate, role, scope, regionalId);
   const cached = await redis.get(key);
   if (cached !== null) return parseInt(cached, 10);
-  const count = await fetchFn(clientId, periode, tanggal, startDate, endDate);
+  const count = await fetchFn(clientId, periode, tanggal, startDate, endDate, options || {});
   await redis.set(key, String(count), { EX: TTL_SEC });
   return count;
 }
 
-export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate) {
-  return getCachedCount('instagram', clientId, periode, tanggal, startDate, endDate, countInstaPostsByClient);
+export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate, options = {}) {
+  return getCachedCount(
+    'instagram',
+    clientId,
+    periode,
+    tanggal,
+    startDate,
+    endDate,
+    options,
+    (id, per, tgl, start, end, opts) =>
+      countInstaPostsByClient(id, per, tgl, start, end, opts)
+  );
 }
 
-export function getTiktokPostCount(clientId, periode, tanggal, startDate, endDate) {
-  return getCachedCount('tiktok', clientId, periode, tanggal, startDate, endDate, countTiktokPostsByClient);
+export function getTiktokPostCount(clientId, periode, tanggal, startDate, endDate, options = {}) {
+  return getCachedCount(
+    'tiktok',
+    clientId,
+    periode,
+    tanggal,
+    startDate,
+    endDate,
+    options,
+    (id, per, tgl, start, end, opts) =>
+      countTiktokPostsByClient(id, per, tgl, start, end, opts)
+  );
 }
-

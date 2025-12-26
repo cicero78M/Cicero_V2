@@ -212,15 +212,22 @@ Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, 
 
 ## 5. Dashboard Stats (`/api/dashboard/stats`)
 
-Endpoint ini menerima parameter query:
-- `client_id` (wajib jika token tidak berisi `client_id`)
+Endpoint ini sekarang mengikuti aturan `role`/`scope`/`regional_id` yang sama dengan endpoint rekap Instagram/TikTok, sehingga jumlah post menyesuaikan konteks akses pengguna. Parameter query yang tersedia:
+- `client_id` (wajib jika token tidak berisi `client_id`; diabaikan ketika scope/role memaksa konteks tertentu)
 - `periode` (`harian` default)
 - `tanggal`
 - `start_date`/`tanggal_mulai`
 - `end_date`/`tanggal_selesai`
-- `role` (opsional; default dari token)
-- `scope` (opsional; default dari token)
-- `regional_id` (opsional; default dari token)
+- `role` (opsional; default dari token, **wajib** jika `scope` dikirim)
+- `scope` (`org` atau `direktorat`—default `org` bila dikirim tanpa nilai)
+- `regional_id` (opsional; default dari token, disamakan ke huruf besar)
+
+Resolusi konteks:
+- Jika `scope`/`role` dikirim, backend akan mewajibkan `role` dan memvalidasi `scope` (`org`/`direktorat`).
+- `scope=org` dengan `role=operator` selalu memakai `client_id` dari token (bukan dari query/header).
+- `scope=org` dengan role direktorat (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`) menghitung post berdasarkan role tersebut sebagai `client_id` efektif.
+- `scope=direktorat` memakai `role` dan `regional_id` sebagai filter tambahan pada data post.
+- Jika `role`/`scope` tidak dikirim, perilaku lama dipertahankan (mis. fallback `client_id=ditbinmas` bila token ber-role `ditbinmas`), tetapi perhitungan post tetap membawa `regional_id` dari token jika ada.
 
 Contoh response:
 ```json
@@ -228,7 +235,7 @@ Contoh response:
   "success": true,
   "data": {
     "client_id": "DITBINMAS",
-    "role": "operator",
+    "role": "ditbinmas",
     "scope": "org",
     "regional_id": "JATIM",
     "clients": 12,

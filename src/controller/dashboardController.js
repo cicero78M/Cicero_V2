@@ -4,48 +4,131 @@ import { getAllUsers } from "../model/userModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
+const DIRECTORATE_ROLES = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta"];
 
 export async function getDashboardStats(req, res) {
   try {
-    const client_id = req.user?.role === "operator"
-      ? req.user?.client_id
-      : (req.query.client_id || req.user?.client_id || req.headers["x-client-id"]);
-    if (!client_id) return res.status(400).json({ success: false, message: "client_id wajib diisi" });
+    const requestedScope = req.query.scope;
+    const requestedRole = req.query.role || req.user?.role;
+    const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+    const roleLower = requestedRole ? String(requestedRole).toLowerCase() : null;
+    const scopeLower = requestedScope ? String(requestedScope).toLowerCase() : null;
+    const regionalId = requestedRegionalId
+      ? String(requestedRegionalId).trim().toUpperCase()
+      : null;
+    const usesStandardPayload = Boolean(req.query.role || req.query.scope);
 
-    const periode = req.query.periode || 'harian';
+    let client_id =
+      req.user?.role === "operator"
+        ? req.user?.client_id
+        : req.query.client_id || req.user?.client_id || req.headers["x-client-id"];
+
+    if (!usesStandardPayload && roleLower === "ditbinmas") {
+      client_id = "ditbinmas";
+    }
+
+    if (!client_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "client_id wajib diisi" });
+    }
+
+    if (req.user?.client_ids) {
+      const userClientIds = Array.isArray(req.user.client_ids)
+        ? req.user.client_ids
+        : [req.user.client_ids];
+      const idsLower = userClientIds.map((c) => String(c).toLowerCase());
+      if (
+        !idsLower.includes(client_id.toLowerCase()) &&
+        roleLower !== client_id.toLowerCase()
+      ) {
+        return res
+          .status(403)
+          .json({ success: false, message: "client_id tidak diizinkan" });
+      }
+    }
+    if (
+      req.user?.client_id &&
+      req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
+      roleLower !== client_id.toLowerCase()
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "client_id tidak diizinkan" });
+    }
+
+    const periode = req.query.periode || "harian";
     const tanggal = req.query.tanggal;
-    const start_date =
-      req.query.start_date || req.query.tanggal_mulai;
+    const start_date = req.query.start_date || req.query.tanggal_mulai;
     const end_date = req.query.end_date || req.query.tanggal_selesai;
-    const role = req.query.role || req.user?.role || null;
-    const scope = req.query.scope || req.user?.scope || null;
-    const regionalId = req.query.regional_id || req.user?.regional_id || null;
+
+    let resolvedRole = roleLower || null;
+    let resolvedScope = scopeLower || req.user?.scope || null;
+    let postClientId = client_id;
+
+    if (usesStandardPayload) {
+      resolvedScope = scopeLower || "org";
+      if (!["org", "direktorat"].includes(resolvedScope)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "scope tidak valid" });
+      }
+      if (!resolvedRole) {
+        return res
+          .status(400)
+          .json({ success: false, message: "role wajib diisi" });
+      }
+
+      if (resolvedScope === "direktorat") {
+        postClientId = client_id;
+      } else if (resolvedScope === "org") {
+        if (resolvedRole === "operator") {
+          const tokenClientId = req.user?.client_id;
+          if (!tokenClientId) {
+            return res.status(400).json({
+              success: false,
+              message: "client_id pengguna tidak ditemukan",
+            });
+          }
+          postClientId = tokenClientId;
+        } else if (DIRECTORATE_ROLES.includes(resolvedRole)) {
+          postClientId = resolvedRole;
+        }
+      }
+    }
 
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
-      getAllUsers(client_id), // <- ini
-      getInstaPostCount(client_id, periode, tanggal, start_date, end_date),
-      getTiktokPostCount(client_id, periode, tanggal, start_date, end_date),
+      getAllUsers(postClientId),
+      getInstaPostCount(postClientId, periode, tanggal, start_date, end_date, {
+        role: resolvedRole,
+        scope: resolvedScope,
+        regionalId,
+      }),
+      getTiktokPostCount(postClientId, periode, tanggal, start_date, end_date, {
+        role: resolvedRole,
+        scope: resolvedScope,
+        regionalId,
+      }),
     ]);
 
-    // === FILTER HANYA USER AKTIF
-    const activeUsers = Array.isArray(users) ? users.filter(u => u.status === true) : [];
+    const activeUsers = Array.isArray(users) ? users.filter((u) => u.status === true) : [];
 
     res.json({
       success: true,
       data: {
-        client_id,
-        role,
-        scope,
+        client_id: postClientId,
+        role: resolvedRole,
+        scope: resolvedScope,
         regional_id: regionalId,
         clients: Array.isArray(clients) ? clients.length : 0,
-        users: activeUsers.length,        // HANYA YANG AKTIF
+        users: activeUsers.length,
         igPosts: igPostCount,
         ttPosts: ttPostCount,
       },
     });
   } catch (err) {
-    sendConsoleDebug({ tag: 'DASHBOARD', msg: `Error getDashboardStats: ${err.message}` });
+    sendConsoleDebug({ tag: "DASHBOARD", msg: `Error getDashboardStats: ${err.message}` });
     res.status(500).json({ success: false, message: err.message });
   }
 }
