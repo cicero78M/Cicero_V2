@@ -63,3 +63,46 @@ administrators via WhatsApp.
  
 Administrators approve by replying `grantsub#<id>` or reject with
 `denysub#<id>`. Approval sets `premium_status` to `true` for the user.
+
+## Dashboard premium access requests
+
+Dashboard operators can now submit premium access requests directly from the
+web dashboard via the protected endpoint:
+
+- `POST /dashboard/premium-access/requests`
+  - Requires a valid `verifyDashboardToken` cookie/header.
+  - Body parameters:
+    - `bank_name` – originating bank for the transfer (string, required).
+    - `account_number` – destination account number (string, required).
+    - `sender_name` – name on the sending account (string, required).
+    - `transfer_amount` – amount transferred in rupiah (number, required).
+  - On success, the API stores a row in `dashboard_premium_request` that
+    includes the dashboard user's `username`, `whatsapp`, and identifiers for
+    traceability. The response returns the saved record alongside metadata about
+    WhatsApp delivery attempts to administrators.
+
+### WhatsApp notification format
+
+When a request is created, the system waits for the WhatsApp client to be
+ready (`waitForWaReady`) and notifies admins (using `safeSendMessage` and
+`formatToWhatsAppId`) with a payload shaped like:
+
+```
+📢 permintaan akses premium
+
+User dashboard:
+- Username: <username>
+- WhatsApp: <62xxxx@c.us>
+- Dashboard User ID: <uuid>
+
+Detail transfer:
+- Bank: <bank>
+- Nomor Rekening: <account_number>
+- Nama Pengirim: <sender_name>
+- Jumlah Transfer: RpXXX.XXX
+
+Request ID: <request_id>
+```
+
+Admins receive the message on the numbers configured in `ADMIN_WHATSAPP` and
+can use the included identifiers to continue the premium enablement flow.
