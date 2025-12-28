@@ -106,3 +106,18 @@ Request ID: <request_id>
 
 Admins receive the message on the numbers configured in `ADMIN_WHATSAPP` and
 can use the included identifiers to continue the premium enablement flow.
+
+### WhatsApp admin commands for dashboard requests
+
+Dashboard premium requests can now be approved or rejected directly from
+WhatsApp:
+
+- `grantaccess#<username>` – approves the latest pending dashboard premium
+  request for `<username>`, creates a 30-day `dashboard_user_subscriptions`
+  record with tier `premium`, updates the cached premium fields on
+  `dashboard_user`, and notifies the requester via WhatsApp.
+- `dennyaccess#<username>` / `denyaccess#<username>` – rejects the pending
+  request and alerts the requester via WhatsApp.
+
+Every admin action inserts a row into `dashboard_premium_request_audit`
+including the admin's WhatsApp number and chat ID for traceability.

@@ -36,10 +36,61 @@ export async function createRequest(payload) {
   return res.rows[0];
 }
 
+export async function findLatestPendingByUsername(username) {
+  const res = await query(
+    `SELECT *
+     FROM dashboard_premium_request
+     WHERE LOWER(username) = LOWER($1)
+       AND status = 'pending'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [username],
+  );
+
+  return res.rows[0] || null;
+}
+
 export async function findById(requestId) {
   const res = await query(
     `SELECT * FROM dashboard_premium_request WHERE request_id = $1`,
     [requestId],
   );
+  return res.rows[0] || null;
+}
+
+export async function updateStatus(requestId, status, updatedAt = null) {
+  const res = await query(
+    `UPDATE dashboard_premium_request
+     SET status = $2,
+         updated_at = COALESCE($3, NOW())
+     WHERE request_id = $1
+     RETURNING *`,
+    [requestId, status, updatedAt],
+  );
+
+  return res.rows[0] || null;
+}
+
+export async function insertAuditLog({
+  requestId,
+  action,
+  adminWhatsapp,
+  adminChatId,
+  note = null,
+  createdAt = null,
+}) {
+  const res = await query(
+    `INSERT INTO dashboard_premium_request_audit (
+      request_id,
+      action,
+      admin_whatsapp,
+      admin_chat_id,
+      note,
+      created_at
+    ) VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+    RETURNING *`,
+    [requestId, action, adminWhatsapp || null, adminChatId || null, note, createdAt],
+  );
+
   return res.rows[0] || null;
 }
