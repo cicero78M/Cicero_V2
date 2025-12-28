@@ -1,5 +1,11 @@
 import { query } from '../repository/db.js';
 
+function normalizeNumeric(value) {
+  if (value == null) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 export async function createRequest(payload) {
   const res = await query(
     `INSERT INTO dashboard_premium_request (
@@ -12,10 +18,19 @@ export async function createRequest(payload) {
       sender_name,
       transfer_amount,
       status,
+      request_token,
+      expired_at,
+      responded_at,
+      admin_whatsapp,
       created_at,
       updated_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, 'pending'), COALESCE($10, NOW()), COALESCE($11, NOW())
+      $1, $2, $3, $4, $5, $6, $7, $8,
+      COALESCE($9, 'pending'),
+      COALESCE($10, gen_random_uuid()),
+      $11, $12, $13,
+      COALESCE($14, NOW()),
+      COALESCE($15, NOW())
     )
     RETURNING *`,
     [
@@ -26,8 +41,12 @@ export async function createRequest(payload) {
       payload.bankName,
       payload.accountNumber,
       payload.senderName,
-      payload.transferAmount != null ? Number(payload.transferAmount) : null,
+      normalizeNumeric(payload.transferAmount),
       payload.status,
+      payload.requestToken || null,
+      payload.expiredAt || null,
+      payload.respondedAt || null,
+      payload.adminWhatsapp || null,
       payload.createdAt || null,
       payload.updatedAt || null,
     ],
@@ -42,6 +61,7 @@ export async function findLatestPendingByUsername(username) {
      FROM dashboard_premium_request
      WHERE LOWER(username) = LOWER($1)
        AND status = 'pending'
+       AND expired_at IS NULL
      ORDER BY created_at DESC
      LIMIT 1`,
     [username],
@@ -58,28 +78,56 @@ export async function findById(requestId) {
   return res.rows[0] || null;
 }
 
-export async function updateStatus(requestId, status, updatedAt = null) {
+export async function findByToken(requestToken) {
+  const res = await query(
+    `SELECT * FROM dashboard_premium_request WHERE request_token = $1`,
+    [requestToken],
+  );
+  return res.rows[0] || null;
+}
+
+export async function updateStatus({
+  requestId,
+  status,
+  adminWhatsapp = null,
+  respondedAt = null,
+  expiredAt = null,
+  updatedAt = null,
+}) {
   const res = await query(
     `UPDATE dashboard_premium_request
      SET status = $2,
-         updated_at = COALESCE($3, NOW())
+         responded_at = COALESCE($3, responded_at),
+         expired_at = COALESCE($4, expired_at),
+         admin_whatsapp = COALESCE($5, admin_whatsapp),
+         updated_at = COALESCE($6, NOW())
      WHERE request_id = $1
      RETURNING *`,
-    [requestId, status, updatedAt],
+    [requestId, status, respondedAt, expiredAt, adminWhatsapp, updatedAt],
   );
 
   return res.rows[0] || null;
 }
 
-export async function updateStatusIfPending(requestId, status, updatedAt = null) {
+export async function updateStatusIfPending({
+  requestId,
+  status,
+  adminWhatsapp = null,
+  respondedAt = null,
+  expiredAt = null,
+  updatedAt = null,
+}) {
   const res = await query(
     `UPDATE dashboard_premium_request
      SET status = $2,
-         updated_at = COALESCE($3, NOW())
+         responded_at = COALESCE($3, responded_at),
+         expired_at = COALESCE($4, expired_at),
+         admin_whatsapp = COALESCE($5, admin_whatsapp),
+         updated_at = COALESCE($6, NOW())
      WHERE request_id = $1
        AND status = 'pending'
      RETURNING *`,
-    [requestId, status, updatedAt],
+    [requestId, status, respondedAt, expiredAt, adminWhatsapp, updatedAt],
   );
 
   return res.rows[0] || null;
@@ -90,34 +138,11 @@ export async function findPendingOlderThanMinutes(minutes = 60) {
     `SELECT *
      FROM dashboard_premium_request
      WHERE status = 'pending'
+       AND expired_at IS NULL
        AND created_at <= NOW() - ($1 * INTERVAL '1 minute')
      ORDER BY created_at ASC`,
     [minutes],
   );
 
   return res.rows || [];
-}
-
-export async function insertAuditLog({
-  requestId,
-  action,
-  adminWhatsapp,
-  adminChatId,
-  note = null,
-  createdAt = null,
-}) {
-  const res = await query(
-    `INSERT INTO dashboard_premium_request_audit (
-      request_id,
-      action,
-      admin_whatsapp,
-      admin_chat_id,
-      note,
-      created_at
-    ) VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
-    RETURNING *`,
-    [requestId, action, adminWhatsapp || null, adminChatId || null, note, createdAt],
-  );
-
-  return res.rows[0] || null;
 }

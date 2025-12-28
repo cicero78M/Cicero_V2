@@ -2,6 +2,7 @@ import * as dashboardPremiumRequestModel from '../model/dashboardPremiumRequestM
 import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 import { waGatewayClient, waitForWaReady } from './waService.js';
+import { recordStatusChange } from './dashboardPremiumRequestService.js';
 
 const DEFAULT_THRESHOLD_MINUTES = 60;
 
@@ -70,22 +71,17 @@ export async function expirePendingRequests({ thresholdMinutes = DEFAULT_THRESHO
   for (const request of pendingRequests) {
     try {
       const dashboardUser = await resolveDashboardUser(request);
-      const updatedRequest = await dashboardPremiumRequestModel.updateStatusIfPending(
-        request.request_id,
-        'expired',
-      );
+      const { request: updatedRequest } = await recordStatusChange({
+        request,
+        nextStatus: 'expired',
+        actor: 'system-cron:dashboard_premium_expiry',
+        reason: `Auto-expired after ${thresholdMinutes} minutes tanpa tindak lanjut admin`,
+        enforcePending: true,
+      });
 
       if (!updatedRequest) {
         continue;
       }
-
-      await dashboardPremiumRequestModel.insertAuditLog({
-        requestId: request.request_id,
-        action: 'expired',
-        adminWhatsapp: null,
-        adminChatId: null,
-        note: `Auto-expired after ${thresholdMinutes} minutes without admin action`,
-      });
 
       const sent = await notifyApplicant(updatedRequest, dashboardUser, thresholdMinutes);
       if (sent) {

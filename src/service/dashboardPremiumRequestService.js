@@ -1,4 +1,5 @@
 import * as dashboardPremiumRequestModel from '../model/dashboardPremiumRequestModel.js';
+import * as dashboardPremiumAuditModel from '../model/dashboardPremiumAuditModel.js';
 import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import * as dashboardSubscriptionService from './dashboardSubscriptionService.js';
 import waClient, { waitForWaReady } from './waService.js';
@@ -86,6 +87,16 @@ function computeExpiresAt(durationDays = DEFAULT_DURATION_DAYS) {
   return expiresAt.toISOString();
 }
 
+function nowISOString() {
+  return new Date().toISOString();
+}
+
+function resolveActorLabel({ adminChatId, adminWhatsapp, fallback = 'system' } = {}) {
+  if (adminChatId) return `wa_admin:${adminChatId}`;
+  if (adminWhatsapp) return `wa_admin:${adminWhatsapp}`;
+  return fallback;
+}
+
 function resolveDashboardWhatsapp(request, dashboardUser) {
   return dashboardUser?.whatsapp || request?.whatsapp || null;
 }
@@ -101,6 +112,52 @@ function formatExpiryLabel(expiresAt) {
   } catch (err) {
     return expiresAt;
   }
+}
+
+export async function recordStatusChange({
+  request,
+  nextStatus,
+  actor,
+  reason,
+  adminWhatsapp = null,
+  respondedAt = null,
+  expiredAt = null,
+  enforcePending = false,
+}) {
+  if (!request?.request_id) {
+    return { request: null, audit: null };
+  }
+
+  const updatePayload = {
+    requestId: request.request_id,
+    status: nextStatus,
+    adminWhatsapp,
+    respondedAt: respondedAt || (nextStatus !== 'pending' ? nowISOString() : null),
+    expiredAt: expiredAt || (nextStatus === 'expired' ? nowISOString() : null),
+  };
+
+  const updateFn = enforcePending
+    ? dashboardPremiumRequestModel.updateStatusIfPending
+    : dashboardPremiumRequestModel.updateStatus;
+
+  const updatedRequest = await updateFn(updatePayload);
+
+  if (!updatedRequest) {
+    return { request: null, audit: null };
+  }
+
+  const audit = await dashboardPremiumAuditModel.insertAuditEntry({
+    requestId: updatedRequest.request_id,
+    dashboardUserId: updatedRequest.dashboard_user_id,
+    action: 'status_change',
+    actor: actor || 'system',
+    reason,
+    statusFrom: request.status,
+    statusTo: nextStatus,
+    adminWhatsapp,
+  });
+
+  return { request: updatedRequest, audit };
 }
 
 export async function createPremiumAccessRequest({
@@ -120,6 +177,17 @@ export async function createPremiumAccessRequest({
     senderName,
     transferAmount,
     status: 'pending',
+  });
+
+  await dashboardPremiumAuditModel.insertAuditEntry({
+    requestId: request.request_id,
+    dashboardUserId: request.dashboard_user_id,
+    action: 'created',
+    actor: dashboardUser?.username ? `dashboard_user:${dashboardUser.username}` : 'dashboard_user',
+    reason: 'Permintaan premium dikirim melalui dashboard',
+    statusFrom: null,
+    statusTo: request.status,
+    adminWhatsapp: dashboardUser?.whatsapp || request?.whatsapp || null,
   });
 
   const message = buildAdminNotification({ dashboardUser, request });
@@ -179,21 +247,17 @@ export async function approvePendingRequest({
     },
   });
 
-  const updatedRequest = await dashboardPremiumRequestModel.updateStatus(
-    request.request_id,
-    'approved',
-  );
-
-  await dashboardPremiumRequestModel.insertAuditLog({
-    requestId: request.request_id,
-    action: 'approved',
+  const { request: updatedRequest } = await recordStatusChange({
+    request,
+    nextStatus: 'approved',
+    actor: resolveActorLabel({ adminChatId, adminWhatsapp, fallback: 'wa_admin' }),
+    reason: `Approved via WA (${tier})`,
     adminWhatsapp,
-    adminChatId,
-    note: `Approved via WA (${tier})`,
+    enforcePending: true,
   });
 
   return {
-    status: 'approved',
+    status: updatedRequest ? 'approved' : 'already_processed',
     request: updatedRequest,
     dashboardUser,
     subscription,
@@ -209,23 +273,19 @@ export async function rejectPendingRequest({ username, adminWhatsapp, adminChatI
     return { status: 'not_found', request: null, dashboardUser: null };
   }
 
-  const updatedRequest = await dashboardPremiumRequestModel.updateStatus(
-    request.request_id,
-    'rejected',
-  );
-
-  await dashboardPremiumRequestModel.insertAuditLog({
-    requestId: request.request_id,
-    action: 'rejected',
+  const { request: updatedRequest } = await recordStatusChange({
+    request,
+    nextStatus: 'rejected',
+    actor: resolveActorLabel({ adminChatId, adminWhatsapp, fallback: 'wa_admin' }),
+    reason: 'Rejected via WA',
     adminWhatsapp,
-    adminChatId,
-    note: 'Rejected via WA',
+    enforcePending: true,
   });
 
   const applicantWhatsapp = resolveDashboardWhatsapp(request, dashboardUser);
 
   return {
-    status: 'rejected',
+    status: updatedRequest ? 'rejected' : 'already_processed',
     request: updatedRequest,
     dashboardUser,
     applicantWhatsapp,
