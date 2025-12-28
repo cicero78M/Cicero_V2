@@ -186,14 +186,14 @@ CREATE TABLE tiktok_post (
 );
 
 CREATE TABLE tiktok_comment (
-  video_id VARCHAR PRIMARY KEY REFERENCES tiktok_post(video_id),
+  video_id VARCHAR PRIMARY KEY REFERENCES tiktok_post(video_id) ON DELETE CASCADE,
   comments JSONB,
   updated_at TIMESTAMP
 );
 
 CREATE TABLE tiktok_comment_audit (
   audit_id BIGSERIAL PRIMARY KEY,
-  video_id VARCHAR REFERENCES tiktok_post(video_id),
+  video_id VARCHAR REFERENCES tiktok_post(video_id) ON DELETE CASCADE,
   usernames JSONB NOT NULL DEFAULT '[]'::jsonb,
   snapshot_window_start TIMESTAMPTZ NOT NULL,
   snapshot_window_end TIMESTAMPTZ NOT NULL,

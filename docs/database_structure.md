@@ -176,9 +176,20 @@ Restricts TikTok post visibility by role.
 
 ### `tiktok_comment`
 Comments for a TikTok video.
-- `video_id` – primary key and foreign key to `tiktok_post(video_id)`
+- `video_id` – primary key and foreign key to `tiktok_post(video_id)` with cascade
+  delete to remove cached comments when the source post is deleted
 - `comments` – JSON array of comments
 - `updated_at`
+
+### `tiktok_comment_audit`
+Historical snapshots of usernames that commented on a TikTok video.
+- `audit_id` – serial primary key
+- `video_id` – references `tiktok_post(video_id)` with cascade delete so audit rows
+  are cleaned up automatically when a post is removed
+- `usernames` – JSON array of normalized usernames at capture time
+- `snapshot_window_start`, `snapshot_window_end` – window boundaries recorded per
+  snapshot
+- `captured_at` – timestamp when the snapshot was saved
 
 ### `satbinmas_tiktok_accounts`
 Snapshots of TikTok profiles keyed by `secUid` so Satbinmas fetches can persist
@@ -330,6 +341,7 @@ erDiagram
     satbinmas_tiktok_posts ||--o{ satbinmas_tiktok_post_hashtags : "hashtags"
     insta_post ||--|| insta_like : "likes"
     tiktok_post ||--|| tiktok_comment : "comments"
+    tiktok_post ||--o{ tiktok_comment_audit : "audit snapshots"
     editorial_event ||--|| press_release_detail : "detail"
     editorial_event ||--o{ approval_request : "approvals"
     editorial_event ||--o{ change_log : "history"
