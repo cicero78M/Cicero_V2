@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-02-17*
+*Last updated: 2025-12-28*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -36,6 +36,8 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | approval_request | approval workflow for editorial events |
 | change_log | mutation history for editorial events |
 | premium_request | premium subscription requests |
+| dashboard_premium_request | premium submissions created by dashboard users |
+| dashboard_premium_audit | audit log for dashboard premium status changes |
 | login_log | history of login events |
 | saved_contact | Google People API cache used for WhatsApp messaging |
 
@@ -298,6 +300,37 @@ Records premium subscription requests sent from the mobile app.
 - `screenshot_url` – optional path to proof of payment
 - `status` – `pending`, `approved`, `rejected` or `expired`
 - `created_at`, `updated_at` – timestamps
+
+### `dashboard_premium_request`
+Premium upgrade submissions coming directly from dashboard users.
+- `request_id` – serial primary key
+- `dashboard_user_id` – references `dashboard_user(dashboard_user_id)`
+- `user_id`, `username`, `whatsapp` – optional requestor metadata for backward compatibility with legacy flows
+- `bank_name`, `account_number`, `sender_name`, `transfer_amount` – payment evidence fields
+- `status` – `pending`, `approved`, `rejected`, or `expired`
+- `request_token` – unique UUID used to track the request externally
+- `expired_at` – timestamp when the cron marks a stale request as expired
+- `responded_at` – when an admin last changed the status away from `pending`
+- `admin_whatsapp` – contact number of the admin handling the latest status change
+- `created_at`, `updated_at` – timestamps maintained by the trigger
+
+Indexes:
+- `idx_dashboard_premium_request_token` enforces uniqueness for `request_token`.
+- `idx_dashboard_premium_request_status_expired_at` accelerates the expiry cron that finds `pending` rows whose `expired_at` is still `NULL`.
+
+### `dashboard_premium_audit`
+Audit trail for every significant change to dashboard premium requests.
+- `audit_id` – bigserial primary key
+- `request_id` – references `dashboard_premium_request` with cascade delete
+- `dashboard_user_id` – mirrors the associated dashboard user for easier joins
+- `action` – `created` or `status_change`
+- `actor` – source of the change (e.g. `dashboard_user:<username>`, `wa_admin:<chatId>`, `system-cron:dashboard_premium_expiry`)
+- `reason` – descriptive reason or admin note
+- `status_from`, `status_to` – previous and new statuses for status changes
+- `admin_whatsapp` – WhatsApp number used by the acting admin (if any)
+- `created_at`, `updated_at`
+
+API controllers, cron jobs, and WhatsApp handlers route status transitions through `dashboardPremiumRequestService.recordStatusChange` to ensure an audit row is written every time `status` changes. Request creation also records a `created` audit entry so the lifecycle is traceable end-to-end.
 
 ### `visitor_logs`
 Stores anonymised request metadata for auditing.
