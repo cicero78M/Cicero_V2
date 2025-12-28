@@ -71,6 +71,33 @@ export async function updateStatus(requestId, status, updatedAt = null) {
   return res.rows[0] || null;
 }
 
+export async function updateStatusIfPending(requestId, status, updatedAt = null) {
+  const res = await query(
+    `UPDATE dashboard_premium_request
+     SET status = $2,
+         updated_at = COALESCE($3, NOW())
+     WHERE request_id = $1
+       AND status = 'pending'
+     RETURNING *`,
+    [requestId, status, updatedAt],
+  );
+
+  return res.rows[0] || null;
+}
+
+export async function findPendingOlderThanMinutes(minutes = 60) {
+  const res = await query(
+    `SELECT *
+     FROM dashboard_premium_request
+     WHERE status = 'pending'
+       AND created_at <= NOW() - ($1 * INTERVAL '1 minute')
+     ORDER BY created_at ASC`,
+    [minutes],
+  );
+
+  return res.rows || [];
+}
+
 export async function insertAuditLog({
   requestId,
   action,

@@ -121,3 +121,17 @@ WhatsApp:
 
 Every admin action inserts a row into `dashboard_premium_request_audit`
 including the admin's WhatsApp number and chat ID for traceability.
+
+### Auto-expiry for unattended dashboard requests
+
+Pending dashboard premium requests now expire automatically after 60 minutes:
+
+- `src/service/dashboardPremiumRequestExpiryService.js` queries pending
+  `dashboard_premium_request` rows older than the threshold, updates the status
+  to `expired` only if the row is still pending, and writes an
+  `dashboard_premium_request_audit` entry with the action `expired` for
+  traceability. When a WhatsApp number is available, the service attempts to
+  inform the applicant via the gateway client so they can resubmit.
+- `src/cron/cronDashboardPremiumRequestExpiry.js` schedules the sweep every 10
+  minutes (Asia/Jakarta) through `scheduleCronJob` and reports how many stale
+  requests were checked, expired, and notified.

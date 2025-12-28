@@ -30,6 +30,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
 | `cronDirRequestRekapUpdate.js` | `0 8-18/4 * * *` | Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups. |
 | `cronDirRequestRekapBelumLengkapDitsamapta.js` | `15 7-21 * * *` | Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only. |
+| `cronDashboardPremiumRequestExpiry.js` | `*/10 * * * *` | Mark pending dashboard premium access requests older than 60 minutes as expired and optionally notify applicants via WhatsApp. |
 | `cronDashboardSubscriptionExpiry.js` | `*/30 * * * *` | Mark overdue dashboard subscriptions as expired and send WhatsApp reminders when a destination number is available. |
 
 ### Ditbinmas dirRequest group (registered via `registerDirRequestCrons`)
