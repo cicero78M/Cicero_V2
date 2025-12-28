@@ -97,6 +97,9 @@ CREATE TABLE dashboard_user (
   status BOOLEAN DEFAULT TRUE,
   user_id VARCHAR REFERENCES "user"(user_id),
   whatsapp VARCHAR,
+  premium_status BOOLEAN DEFAULT FALSE,
+  premium_tier TEXT,
+  premium_expires_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -106,6 +109,19 @@ CREATE TABLE dashboard_user_clients (
   client_id VARCHAR REFERENCES clients(client_id),
   PRIMARY KEY (dashboard_user_id, client_id)
 );
+
+CREATE TABLE dashboard_user_subscriptions (
+  subscription_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dashboard_user_id UUID NOT NULL REFERENCES dashboard_user(dashboard_user_id) ON DELETE CASCADE,
+  tier TEXT NOT NULL,
+  status TEXT NOT NULL,
+  started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  canceled_at TIMESTAMP WITH TIME ZONE,
+  metadata JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_dashboard_user_subscriptions_user_status_expires ON dashboard_user_subscriptions (dashboard_user_id, status, expires_at);
 
 CREATE TABLE insta_post (
   shortcode VARCHAR PRIMARY KEY,
