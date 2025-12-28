@@ -1,6 +1,6 @@
 # Frontend Login Scaling Scenario
 
-*Last updated: 2025-07-18*
+*Last updated: 2025-02-17*
 
 This guide describes a secure approach for handling login and registration on the web dashboard. It introduces a dedicated table `dashboard_user` so credentials are separated from the existing `user` table. The workflow aligns with the current JWT authentication model used across Cicero_V2.
 
@@ -46,9 +46,20 @@ Expose `/api/auth/dashboard-login`:
 
 1. Validate `username` and `password`.
 2. Fetch the record from `dashboard_user` and verify the password with `bcrypt.compare`.
-3. On success generate a JWT containing `user_id` and `role`.
-4. Store the token in Redis with a two-hour expiry and return it in the response and as a `token` cookie.
-5. Every successful login is reported to administrators via WhatsApp for auditing purposes.
+3. Load premium cache columns (`premium_status`, `premium_tier`, `premium_expires_at`)
+   from `dashboard_user`. If the cache is empty or expired, fetch the latest
+   `active` record from `dashboard_user_subscriptions` to refresh the cache before
+   proceeding.
+4. If `premium_status` is `false` or `premium_expires_at` is in the past, reject
+   the login with a `402 Payment Required` payload that contains the user id,
+   detected tier, and suggested renewal steps.
+5. On success generate a JWT containing `user_id`, `role`, and the premium fields
+   so the frontend can gate premium-only pages without another lookup.
+6. Store the token in Redis with a two-hour expiry and return it in the response
+   and as a `token` cookie. Add the premium fields to the JSON response body.
+7. Every successful login is reported to administrators via WhatsApp for auditing
+   purposes. Include the premium tier and expiry in the audit text for quick
+   triage when a renewal is close to expiration.
 
 ## 4. Middleware
 
@@ -68,7 +79,23 @@ GET /api/analytics?client_id=demo_client
 
 This parameter lets the dashboard switch contexts without requiring separate logins.
 
-## 6. Scaling Notes
+## 6. Premium Login Flow
+
+Premium checks extend the login endpoint so dashboards can enforce entitlements:
+
+1. Read cached premium flags from `dashboard_user`. If `premium_status` is `true`
+   and `premium_expires_at` is in the future, continue without extra lookups.
+2. Otherwise, query `dashboard_user_subscriptions` for the latest `active`
+   interval ordered by `expires_at DESC`. Refresh the cache columns from the row
+   when found; if none are active mark the cache as inactive.
+3. If the refreshed data shows an expired or missing subscription, return a
+   `402` error that includes `premium_status`, `premium_tier`, `premium_expires_at`,
+   and a `renewal_url` so the frontend can redirect users to the billing page.
+4. When the subscription is valid but expires within seven days, attach
+   `premium_renewal_hint` to the login response so the UI can display a warning
+   banner without blocking access.
+
+## 7. Scaling Notes
 
 - Use HTTPS in production and enforce rate limiting on the login routes.
 - Store active tokens in Redis so the backend can invalidate sessions at any time.
