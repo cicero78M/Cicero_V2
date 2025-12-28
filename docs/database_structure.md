@@ -1,6 +1,6 @@
 # Database Structure
 
-*Last updated: 2025-12-23*
+*Last updated: 2025-02-17*
 
 This document describes the main tables inside Cicero_V2 and their relationships.
 The SQL schema is located at [sql/schema.sql](../sql/schema.sql) and is designed
@@ -17,6 +17,7 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | roles / user_roles | role catalogue and pivot for users |
 | dashboard_user | login credentials for dashboard access |
 | dashboard_user_clients | mapping between dashboard users and permitted clients |
+| dashboard_user_subscriptions | premium tier history and cache source for dashboard logins |
 | penmas_user | credentials for Penmas editorial operators |
 | insta_post / insta_post_khusus | Instagram posts fetched for each client (regular & khusus feeds) |
 | insta_like / insta_comment | cached likes and comments for Instagram posts |
@@ -118,6 +119,25 @@ Link table assigning dashboard accounts to the clients they can view.
 - `dashboard_user_id` – references `dashboard_user(dashboard_user_id)`
 - `client_id` – references `clients(client_id)`
 - composite primary key `(dashboard_user_id, client_id)`
+
+### `dashboard_user_subscriptions`
+Premium subscription ledger for dashboard logins. Each row represents a tier
+interval and feeds the cached premium columns in `dashboard_user`.
+- `subscription_id` – UUID primary key generated with `gen_random_uuid()`
+- `dashboard_user_id` – references `dashboard_user(dashboard_user_id)` with
+  cascade delete so history is removed when the account is dropped
+- `tier` – subscription tier label (`basic`, `pro`, `enterprise`, etc.)
+- `status` – current state (`active`, `pending`, `canceled`, `expired`)
+- `started_at` – start timestamp (defaults to `NOW()`)
+- `expires_at` – expiration timestamp for the interval
+- `canceled_at` – optional cancellation timestamp
+- `metadata` – JSONB payload for provider or payment evidence (e.g. invoice ID)
+
+Index `idx_dashboard_user_subscriptions_user_status_expires` accelerates queries
+that fetch the latest active record per user. When a subscription is renewed,
+service code updates `dashboard_user.premium_status`, `premium_tier`, and
+`premium_expires_at` from the most recent active interval so login responses
+can attach premium context without scanning historical rows.
 
 ### `insta_post`
 Stores Instagram posts fetched for a client.
