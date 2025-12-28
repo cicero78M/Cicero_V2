@@ -29,4 +29,10 @@ export default [
     bucket: 'waClient',
     description: 'Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only.',
   },
+  {
+    jobKey: './src/cron/cronDashboardSubscriptionExpiry.js',
+    modulePath: './src/cron/cronDashboardSubscriptionExpiry.js',
+    bucket: 'waClient',
+    description: 'Expire overdue dashboard subscriptions and notify users via WhatsApp.',
+  },
 ];

@@ -42,6 +42,16 @@ when detailed history is required.
 During dashboard login, premium status, tier, and expiry are attached to
 the JWT payload using the cached columns or the latest active subscription.
 
+## Expiry enforcement
+
+- `src/service/dashboardSubscriptionExpiryService.js` filters active subscription
+  rows whose `expires_at` is past the current time, expires them through
+  `expireSubscription`, refreshes the dashboard cache, and sends a WhatsApp
+  alert via the gateway client when a destination number is available.
+- `src/cron/cronDashboardSubscriptionExpiry.js` schedules the expiry sweep every
+  30 minutes (Asia/Jakarta) using `scheduleCronJob`; the module is loaded through
+  the cron manifest so WhatsApp readiness checks are honored before delivery.
+
 ## Premium Request Workflow
 
 Mobile users from the `pegiat_medsos_apps` can request a premium
