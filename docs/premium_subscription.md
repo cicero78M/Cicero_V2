@@ -30,6 +30,18 @@ Routes that validate dashboard-user access should first read the cached
 `dashboard_user` columns and only fall back to `dashboard_user_subscriptions`
 when detailed history is required.
 
+## Data Access Helpers
+
+- `src/model/dashboardSubscriptionModel.js` provides basic CRUD helpers:
+  - `create`, `findActiveByUser`, `expire`, `cancel`, and `renew` rely on
+    parameterized queries.
+- `src/service/dashboardSubscriptionService.js` wraps subscription mutations
+  in lightweight transactions and updates the cached premium fields on
+  `dashboard_user` to keep login responses aligned with the latest state.
+
+During dashboard login, premium status, tier, and expiry are attached to
+the JWT payload using the cached columns or the latest active subscription.
+
 ## Premium Request Workflow
 
 Mobile users from the `pegiat_medsos_apps` can request a premium

@@ -15,6 +15,7 @@ const mockWAClient = {
   off: jest.fn(),
 };
 const mockQueueAdminNotification = jest.fn();
+const mockGetPremiumSnapshot = jest.fn();
 const actualWaHelper = await import('../src/utils/waHelper.js');
 
 jest.unstable_mockModule('../src/db/index.js', () => ({
@@ -40,6 +41,10 @@ jest.unstable_mockModule('../src/service/waService.js', () => ({
   default: mockWAClient,
   waitForWaReady: () => Promise.resolve(),
   queueAdminNotification: mockQueueAdminNotification,
+}));
+
+jest.unstable_mockModule('../src/service/dashboardSubscriptionService.js', () => ({
+  getPremiumSnapshot: mockGetPremiumSnapshot,
 }));
 
 let app;
@@ -69,6 +74,12 @@ beforeEach(() => {
   mockInsertLoginLog.mockReset();
   mockWAClient.sendMessage.mockReset();
   mockQueueAdminNotification.mockReset();
+  mockGetPremiumSnapshot.mockReset();
+  mockGetPremiumSnapshot.mockResolvedValue({
+    premiumStatus: false,
+    premiumTier: null,
+    premiumExpiresAt: null,
+  });
 });
 
 describe('POST /login', () => {
@@ -466,7 +477,10 @@ describe('POST /dashboard-login', () => {
       role: 'admin',
       role_id: 2,
       client_ids: ['c1'],
-      client_id: 'c1'
+      client_id: 'c1',
+      premium_status: false,
+      premium_tier: null,
+      premium_expires_at: null
     });
     expect(mockRedis.sAdd).toHaveBeenCalledWith('dashboard_login:d1', res.body.token);
     expect(mockRedis.set).toHaveBeenCalledWith(
@@ -474,11 +488,14 @@ describe('POST /dashboard-login', () => {
       'dashboard:d1',
       { EX: 2 * 60 * 60 }
     );
-    expect(mockInsertLoginLog).toHaveBeenCalledWith({
+      expect(mockInsertLoginLog).toHaveBeenCalledWith({
       actorId: 'd1',
       loginType: 'operator',
       loginSource: 'web'
     });
+    expect(mockGetPremiumSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ dashboard_user_id: 'd1' })
+    );
   });
 
   test('sets role to client_id for direktorat client', async () => {
@@ -510,8 +527,47 @@ describe('POST /dashboard-login', () => {
       role: 'dit1',
       role_id: 2,
       client_ids: ['DIT1'],
-      client_id: 'DIT1'
+      client_id: 'DIT1',
+      premium_status: false,
+      premium_tier: null,
+      premium_expires_at: null
     });
+  });
+
+  test('includes premium info from active subscription snapshot', async () => {
+    mockGetPremiumSnapshot.mockResolvedValueOnce({
+      premiumStatus: true,
+      premiumTier: 'gold',
+      premiumExpiresAt: '2025-01-01T00:00:00.000Z',
+    });
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            dashboard_user_id: 'd1',
+            username: 'dash',
+            password_hash: await bcrypt.hash('pass', 10),
+            role: 'admin',
+            role_id: 2,
+            status: true,
+            client_ids: ['c1'],
+            user_id: null
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] });
+
+    const res = await request(app)
+      .post('/api/auth/dashboard-login')
+      .send({ username: 'dash', password: 'pass' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.premium_status).toBe(true);
+    expect(res.body.user.premium_tier).toBe('gold');
+    expect(res.body.user.premium_expires_at).toBe('2025-01-01T00:00:00.000Z');
+    const decoded = jwt.verify(res.body.token, 'testsecret');
+    expect(decoded.premium_status).toBe(true);
+    expect(decoded.premium_tier).toBe('gold');
   });
 
   test('maps DITSAMAPTA + BIDHUMAS to BIDHUMAS role without changing client_ids', async () => {
@@ -543,7 +599,10 @@ describe('POST /dashboard-login', () => {
       role: 'bidhumas',
       role_id: 2,
       client_ids: ['DITSAMAPTA'],
-      client_id: 'DITSAMAPTA'
+      client_id: 'DITSAMAPTA',
+      premium_status: false,
+      premium_tier: null,
+      premium_expires_at: null
     });
     const decoded = jwt.verify(res.body.token, 'testsecret');
     expect(decoded.role).toBe('bidhumas');
@@ -579,6 +638,7 @@ describe('POST /dashboard-login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.user.role).toBe('bidhumas');
+    expect(res.body.user.premium_status).toBe(false);
     const decoded = jwt.verify(res.body.token, 'testsecret');
     expect(decoded.role).toBe('bidhumas');
   });

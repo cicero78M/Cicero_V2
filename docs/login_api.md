@@ -68,6 +68,23 @@ The `whatsapp` field should contain digits only; any non-numeric characters will
 
 Every new dashboard account is created with `status` set to `false` and an approval request containing the username, ID, role, WhatsApp number, and client ID is sent to the WhatsApp administrators. They can approve using `approvedash#<username>` or reject with `denydash#<username>`.
 
+Successful dashboard login responses now include premium metadata when available:
+
+```json
+{
+  "success": true,
+  "token": "<JWT>",
+  "user": {
+    "dashboard_user_id": "du-123",
+    "role": "operator",
+    "client_ids": ["CLIENT_A"],
+    "premium_status": true,
+    "premium_tier": "gold",
+    "premium_expires_at": "2025-01-01T00:00:00.000Z"
+  }
+}
+```
+
 ### Dashboard Password Reset Request
 `POST /api/auth/dashboard-password-reset/request`
 *(aliases: `/api/auth/password-reset/request`, `/api/password-reset/request` — the last one requires no token)*

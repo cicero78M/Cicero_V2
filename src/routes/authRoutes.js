@@ -7,6 +7,7 @@ import * as penmasUserModel from "../model/penmasUserModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import * as dashboardPasswordResetModel from "../model/dashboardPasswordResetModel.js";
 import * as userModel from "../model/userModel.js";
+import * as dashboardSubscriptionService from "../service/dashboardSubscriptionService.js";
 import {
   isAdminWhatsApp,
   formatToWhatsAppId,
@@ -439,6 +440,7 @@ router.post('/dashboard-login', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'Operator belum memiliki klien yang diizinkan' });
   }
+  const premiumSnapshot = await dashboardSubscriptionService.getPremiumSnapshot(user);
   let roleName = user.role;
   if (user.client_ids.length === 1) {
     const [singleClientId] = user.client_ids;
@@ -462,7 +464,10 @@ router.post('/dashboard-login', async (req, res) => {
     user_id: user.user_id,
     role: roleName,
     role_id: user.role_id,
-    client_ids: user.client_ids
+    client_ids: user.client_ids,
+    premium_status: premiumSnapshot.premiumStatus,
+    premium_tier: premiumSnapshot.premiumTier,
+    premium_expires_at: premiumSnapshot.premiumExpiresAt
   };
   if (user.client_ids.length === 1) {
     payload.client_id = user.client_ids[0];
