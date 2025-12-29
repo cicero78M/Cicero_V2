@@ -5,6 +5,56 @@ function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+function normalizeClientId(value) {
+  return typeof value === 'string' ? value.trim() : null;
+}
+
+function resolveClientId({
+  requestedClientId,
+  tokenClientId,
+  tokenClientIds = [],
+  dashboardUserClientIds = [],
+}) {
+  const normalizedRequest = normalizeClientId(requestedClientId);
+  if (normalizedRequest) {
+    return normalizedRequest;
+  }
+
+  const normalizedTokenClientId = normalizeClientId(tokenClientId);
+  if (normalizedTokenClientId) {
+    return normalizedTokenClientId;
+  }
+
+  const normalizedTokenClientIds = Array.isArray(tokenClientIds)
+    ? tokenClientIds.map(normalizeClientId).filter(Boolean)
+    : [];
+  if (normalizedTokenClientIds.length === 1) {
+    return normalizedTokenClientIds[0];
+  }
+
+  const normalizedDashboardClientIds = Array.isArray(dashboardUserClientIds)
+    ? dashboardUserClientIds.map(normalizeClientId).filter(Boolean)
+    : [];
+  if (normalizedDashboardClientIds.length === 1) {
+    return normalizedDashboardClientIds[0];
+  }
+
+  return null;
+}
+
+function isClientAllowed(clientId, allowedClientIds = []) {
+  if (!clientId) {
+    return false;
+  }
+
+  const normalizedClientId = clientId.toLowerCase();
+  const normalizedAllowed = Array.isArray(allowedClientIds)
+    ? allowedClientIds.map(normalizeClientId).filter(Boolean).map(id => id.toLowerCase())
+    : [];
+
+  return normalizedAllowed.includes(normalizedClientId);
+}
+
 export async function getDashboardPremiumRequestContext(req, res, next) {
   try {
     const dashboardUserId = req.dashboardUser?.dashboard_user_id;
@@ -66,6 +116,36 @@ export async function createDashboardPremiumRequest(req, res, next) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
 
+    const resolvedClientId = resolveClientId({
+      requestedClientId: clientId,
+      tokenClientId: req.dashboardUser?.client_id,
+      tokenClientIds: req.dashboardUser?.client_ids,
+      dashboardUserClientIds: dashboardUser?.client_ids,
+    });
+
+    const allowedClientIds = Array.from(
+      new Set(
+        [
+          ...(Array.isArray(req.dashboardUser?.client_ids) ? req.dashboardUser.client_ids : []),
+          ...(Array.isArray(dashboardUser?.client_ids) ? dashboardUser.client_ids : []),
+        ].filter(Boolean),
+      ),
+    );
+
+    if (!resolvedClientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'client_id wajib diisi atau akun dashboard harus memiliki satu client aktif',
+      });
+    }
+
+    if (!isClientAllowed(resolvedClientId, allowedClientIds)) {
+      return res.status(403).json({
+        success: false,
+        message: 'client_id tidak sesuai dengan akses dashboard user',
+      });
+    }
+
     const userId =
       normalizeString(req.body.user_id || req.body.userId) ||
       dashboardUser.user_id ||
@@ -79,7 +159,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
       senderName,
       transferAmount,
       premiumTier,
-      clientId,
+      clientId: resolvedClientId,
       userId,
       submittedUsername,
       rawAmountField: transferAmountRaw,
