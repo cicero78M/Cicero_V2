@@ -204,3 +204,37 @@ Pending dashboard premium requests now expire automatically after 60 minutes:
 - `src/cron/cronDashboardPremiumRequestExpiry.js` schedules the sweep every 10
   minutes (Asia/Jakarta) through `scheduleCronJob` and reports how many stale
   requests were checked, expired, and notified.
+
+### Client ID validation and RLS session settings
+
+- The dashboard premium request controller now sets Postgres session settings
+  (`app.current_client_id`, `app.current_dashboard_user_id`, `app.current_user_id`,
+  `app.current_user_uuid`, and `app.current_username`) before selecting dashboard
+  users and their `client_ids`. This keeps `dashboard_user_clients` lookups RLS
+  compliant even when older dashboard tokens do not include `client_id` claims,
+  preventing 42501 errors during these reads.
+- `client_id` resolution follows the stricter validation flow:
+  - Missing `client_id` across the request body, token claims, and dashboard profile:
+    `400` with `client_id wajib diisi atau akun dashboard harus memiliki satu client aktif`.
+  - `client_id` not in the authenticated dashboard user's allowed list: `403`
+    with `client_id tidak sesuai dengan akses dashboard user` and a warning log
+    containing the token and resolved context for traceability.
+  - Submitted `username` mismatching the authenticated dashboard user: `403`
+    with `username tidak sesuai dengan akun dashboard yang aktif`.
+- Invalid or absent dashboard tokens continue to return `401` with `Token dashboard tidak valid`
+  or `Token required` prior to any database calls.
+
+### Token testing notes and troubleshooting
+
+- When testing with older dashboard tokens lacking the `client_id` claim, confirm the middleware
+  still sets `app.current_dashboard_user_id` from the token payload; the controller now injects
+  this into session settings so selecting `dashboard_user` and `dashboard_user_clients` remains
+  compliant with RLS policies.
+- For new tokens containing `client_id` or `client_ids`, the session settings mirror the claims
+  and the controller intersects them with the database assignments before allowing inserts,
+  keeping select and insert paths aligned.
+- If an unexpected `42501` appears during manual calls, verify:
+  - The token is stored in Redis with the `dashboard:` prefix (required by `verifyDashboardToken`).
+  - `DB_DRIVER` is set to a Postgres-compatible value so `set_config` calls run.
+  - The token's `client_id(s)` match the `dashboard_user_clients` rows for the authenticated
+    dashboard user.
