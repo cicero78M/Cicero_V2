@@ -9,6 +9,23 @@ function normalizeClientId(value) {
   return typeof value === 'string' ? value.trim() : null;
 }
 
+function normalizeDashboardUserId(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  return value;
+}
+
+function isUuid(value) {
+  if (!value || typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed);
+}
+
 function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload = {}) {
   const clientIds = Array.isArray(dashboardUserPayload.client_ids)
     ? dashboardUserPayload.client_ids
@@ -134,6 +151,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
       ? req.dashboardUser.client_ids.map(normalizeClientId).filter(Boolean)
       : [],
     dashboardUserId: dashboardUserIdFromToken,
+    dashboardUserIdIsUuid: isUuid(req.body?.dashboard_user_id || ''),
   };
 
   let dashboardUser = null;
@@ -171,9 +189,20 @@ export async function createDashboardPremiumRequest(req, res, next) {
       });
     }
 
+    const normalizedDashboardUserId =
+      normalizeDashboardUserId(dashboardUserIdFromToken) ||
+      normalizeDashboardUserId(req.body?.dashboard_user_id);
+
+    if (req.body?.dashboard_user_id && !isUuid(req.body.dashboard_user_id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'dashboard_user_id tidak valid',
+      });
+    }
+
     sessionSettings = buildSessionSettingsFromRequest(dashboardUserIdFromToken, req.dashboardUser);
     dashboardUser = await dashboardUserModel.findByIdWithSessionSettings(
-      dashboardUserIdFromToken,
+      normalizedDashboardUserId || dashboardUserIdFromToken,
       sessionSettings,
     );
     if (!dashboardUser) {
