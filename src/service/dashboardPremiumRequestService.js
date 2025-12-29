@@ -41,18 +41,20 @@ export function buildAdminNotification({ dashboardUser, request }) {
   const requestId = request?.request_id || request?.id || '-';
   const tier = request?.premium_tier || request?.premiumTier || '-';
   const clientId = request?.client_id || request?.clientId;
-  const userUuid = request?.user_uuid || request?.userUuid;
+  const userId = request?.user_id || request?.userId || '-';
+  const dashboardUserId = request?.dashboard_user_id || request?.dashboardUserId || '-';
 
   return (
     `📢 ${header}\n\n` +
     `User dashboard:\n` +
     `- Username: ${dashboardUser?.username || '-'}\n` +
     `- WhatsApp: ${whatsappId}\n` +
-    `- Dashboard User ID: ${dashboardUser?.dashboard_user_id || '-'}\n\n` +
+    `- Dashboard User ID: ${dashboardUser?.dashboard_user_id || dashboardUserId}\n\n` +
     `Detail permintaan:\n` +
     `- Tier: ${tier}\n` +
     `- Client ID: ${clientId || '-'}\n` +
-    `- User UUID: ${userUuid || '-'}\n\n` +
+    `- User ID: ${userId}\n` +
+    `- Dashboard User ID (request): ${dashboardUserId}\n\n` +
     `Detail transfer:\n` +
     `- Bank: ${request?.bank_name || request?.bankName || '-'}\n` +
     `- Nomor Rekening: ${request?.account_number || request?.accountNumber || '-'}\n` +
@@ -175,7 +177,7 @@ export async function createPremiumAccessRequest({
   transferAmount,
   premiumTier,
   clientId,
-  userUuid,
+  userId,
   submittedUsername,
   rawAmountField,
 }) {
@@ -184,7 +186,8 @@ export async function createPremiumAccessRequest({
     submitted_username: submittedUsername || null,
     submitted_amount_field: rawAmountField ?? null,
     client_id: clientId || null,
-    user_uuid: userUuid || null,
+    user_id: userId || null,
+    dashboard_user_id: dashboardUser.dashboard_user_id || null,
     premium_tier: premiumTier || null,
   };
 
@@ -199,7 +202,7 @@ export async function createPremiumAccessRequest({
     transferAmount,
     premiumTier,
     clientId,
-    userUuid,
+    userId,
     metadata,
     status: 'pending',
   });
