@@ -180,10 +180,13 @@ export async function createPremiumAccessRequest({
   userId,
   submittedUsername,
   rawAmountField,
+  submittedUserId = null,
+  sessionContext = {},
 }) {
   const username = submittedUsername || dashboardUser.username;
   const metadata = {
     submitted_username: submittedUsername || null,
+    submitted_user_id: submittedUserId || null,
     submitted_amount_field: rawAmountField ?? null,
     client_id: clientId || null,
     user_id: userId || null,
@@ -205,6 +208,7 @@ export async function createPremiumAccessRequest({
     userId,
     metadata,
     status: 'pending',
+    sessionContext,
   });
 
   await dashboardPremiumAuditModel.insertAuditEntry({

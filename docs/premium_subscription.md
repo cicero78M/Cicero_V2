@@ -159,6 +159,11 @@ accepts the updated payload from the UI:
     associated with the authenticated dashboard user return `403`. This
     validation ensures the insert complies with database row-level security
     policies.
+  - The API pairs the resolved `client_id` with the authenticated
+    `dashboard_user_id` and linked `user_id` to build Postgres session
+    settings. Mismatched `user_id` payloads now fail fast with `403` instead of
+    reaching the database, and RLS violations on insert are translated to a
+    `403` response so dashboard operators receive actionable feedback.
   - The endpoint stores `premium_tier`, `client_id`, `user_id`, and the submitted
     amount field name inside `dashboard_premium_request.metadata` for
     traceability, while also persisting normalized columns for filtering.
