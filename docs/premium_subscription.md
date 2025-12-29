@@ -170,7 +170,10 @@ accepts the updated payload from the UI:
     `app.current_dashboard_user_id`, `app.current_user_id`, and
     `app.current_user_uuid`) inside a transaction via
     `dashboardPremiumRequestModel.createRequest`. Keep these up to date when
-    adding new RLS-protected fields so row-level security stays satisfied.
+    adding new RLS-protected fields so row-level security stays satisfied. The
+    transaction uses `set_config` with parameter binding to avoid raw string
+    concatenation in `SET` statements and prevent Postgres parse errors on bound
+    values.
 
 ### Auto-expiry for unattended dashboard requests
 

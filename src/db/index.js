@@ -30,7 +30,8 @@ async function applySessionSettings(client, sessionSettings = {}) {
   );
   for (const [key, value] of entries) {
     if (!isValidSettingKey(key)) continue;
-    await client.query(`SET LOCAL ${key} = $1`, [value]);
+    const serializedValue = typeof value === 'string' ? value : String(value);
+    await client.query('SELECT set_config($1, $2, true)', [key, serializedValue]);
   }
 }
 
