@@ -127,6 +127,14 @@ including the admin's WhatsApp number and chat ID for traceability.
 Dashboard web users can submit the premium form through a dedicated route that
 accepts the updated payload from the UI:
 
+- `GET /premium/request/context`
+  - Requires a dashboard session token validated by `verifyDashboardToken`.
+  - Returns the authenticated dashboard username and the preferred UUID to
+    populate the form automatically:
+    - `username` – taken from the dashboard session.
+    - `user_uuid` – prioritises the linked `user_id` when available, otherwise
+      falls back to `dashboard_user_id` for traceability.
+    - `dashboard_user_id` and `user_id` are returned for completeness.
 - `POST /premium/request`
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
@@ -149,7 +157,10 @@ accepts the updated payload from the UI:
     amount field name inside `dashboard_premium_request.metadata` for
     traceability, while also persisting normalized columns for filtering.
   - Admin WhatsApp notifications now include the requested tier, client ID, and
-    user UUID alongside the transfer details.
+    user UUID alongside the transfer details. When `uuid` is omitted, the
+    backend now defaults to the authenticated user's `user_id` (or
+    `dashboard_user_id` as a fallback) so the dashboard can prefill the "UUID
+    user" field without additional input.
 
 ### Auto-expiry for unattended dashboard requests
 
