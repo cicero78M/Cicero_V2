@@ -125,9 +125,25 @@ export async function getDashboardPremiumRequestContext(req, res, next) {
 }
 
 export async function createDashboardPremiumRequest(req, res, next) {
+  const dashboardUserIdFromToken = req.dashboardUser?.dashboard_user_id || null;
+  const debugContext = {
+    requestClientId: normalizeClientId(req.body?.client_id || req.body?.clientId),
+    submittedUsername: normalizeString(req.body?.username),
+    tokenClientId: normalizeClientId(req.dashboardUser?.client_id),
+    tokenClientIds: Array.isArray(req.dashboardUser?.client_ids)
+      ? req.dashboardUser.client_ids.map(normalizeClientId).filter(Boolean)
+      : [],
+    dashboardUserId: dashboardUserIdFromToken,
+  };
+
+  let dashboardUser = null;
+  let allowedClientIds = [];
+  let resolvedClientId = null;
+  let resolvedUsername = null;
+  let sessionSettings = null;
+
   try {
-    const dashboardUserId = req.dashboardUser?.dashboard_user_id;
-    if (!dashboardUserId) {
+    if (!dashboardUserIdFromToken) {
       return res.status(401).json({ success: false, message: 'Token dashboard tidak valid' });
     }
 
@@ -155,22 +171,22 @@ export async function createDashboardPremiumRequest(req, res, next) {
       });
     }
 
-    const sessionSettings = buildSessionSettingsFromRequest(dashboardUserId, req.dashboardUser);
-    const dashboardUser = await dashboardUserModel.findByIdWithSessionSettings(
-      dashboardUserId,
+    sessionSettings = buildSessionSettingsFromRequest(dashboardUserIdFromToken, req.dashboardUser);
+    dashboardUser = await dashboardUserModel.findByIdWithSessionSettings(
+      dashboardUserIdFromToken,
       sessionSettings,
     );
     if (!dashboardUser) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
 
-    const allowedClientIds = getAllowedClientIds({
+    allowedClientIds = getAllowedClientIds({
       dashboardUserClientIds: dashboardUser?.client_ids,
       tokenClientId: req.dashboardUser?.client_id,
       tokenClientIds: req.dashboardUser?.client_ids,
     });
 
-    const resolvedClientId = resolveClientId({
+    resolvedClientId = resolveClientId({
       requestedClientId: clientId,
       tokenClientId: req.dashboardUser?.client_id,
       tokenClientIds: req.dashboardUser?.client_ids,
@@ -186,7 +202,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
 
     if (!isClientAllowed(resolvedClientId, allowedClientIds)) {
       console.warn('[DashboardPremiumRequest] Rejected client_id for dashboard user', {
-        dashboardUserId,
+        dashboardUserId: dashboardUserIdFromToken,
         dashboardUsername: dashboardUser.username,
         requestedClientId: clientId,
         resolvedClientId,
@@ -201,7 +217,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
     }
 
     const normalizedDashboardUsername = normalizeString(dashboardUser.username);
-    const resolvedUsername = submittedUsername || normalizedDashboardUsername;
+    resolvedUsername = submittedUsername || normalizedDashboardUsername;
 
     if (submittedUsername && normalizedDashboardUsername && submittedUsername !== normalizedDashboardUsername) {
       return res.status(403).json({
@@ -219,7 +235,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
 
     const sessionContext = {
       clientId: resolvedClientId,
-      dashboardUserId,
+      dashboardUserId: dashboardUserIdFromToken,
       userId: dashboardUser.user_id || null,
       username: resolvedUsername,
       userUuid: dashboardUser.user_uuid || null,
@@ -248,9 +264,20 @@ export async function createDashboardPremiumRequest(req, res, next) {
     });
   } catch (err) {
     if (err?.code === '42501' && /row-level security/i.test(err.message || '')) {
+      console.error('[DashboardPremiumRequest] RLS violation while creating premium request', {
+        ...debugContext,
+        error: err.message,
+        code: err.code,
+        dashboardUserId: dashboardUserIdFromToken,
+        resolvedClientId,
+        allowedClientIds,
+        sessionSettings,
+        resolvedUsername,
+      });
       return res.status(403).json({
         success: false,
-        message: 'Akses client dashboard tidak valid untuk membuat permintaan premium',
+        message:
+          'Akses client dashboard tidak valid untuk membuat permintaan premium. Periksa client_id pada token dan akses dashboard user.',
       });
     }
     next(err);
