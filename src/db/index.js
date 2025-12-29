@@ -9,6 +9,12 @@ if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() === 'sqlite') {
   adapter = await import('./mysql.js');
 }
 
+function isPostgresDriver() {
+  if (!env.DB_DRIVER) return true;
+  const normalized = env.DB_DRIVER.toLowerCase();
+  return normalized === 'postgres' || normalized === 'postgresql' || normalized === 'pg';
+}
+
 function summarizeParams(params) {
   if (Array.isArray(params)) return `[${params.length} params]`;
   if (params && typeof params === 'object') return `object with ${Object.keys(params).length} keys`;
@@ -21,7 +27,7 @@ function isValidSettingKey(key) {
 }
 
 async function applySessionSettings(client, sessionSettings = {}) {
-  if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() !== 'postgres') {
+  if (!isPostgresDriver()) {
     return;
   }
 

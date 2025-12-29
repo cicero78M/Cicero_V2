@@ -122,6 +122,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     DIRREQUEST_ENGAGE_RANK_RECIPIENT=628xxxx@c.us
     LAPHAR_ARCHIVE=false
     ```
+   Use `DB_DRIVER=postgres`, `postgresql`, or `pg` when connecting to Postgres so the backend applies the session settings (`app.current_*`) required by database row-level security. Switching `DB_DRIVER` to another value disables these Postgres-only settings.
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
