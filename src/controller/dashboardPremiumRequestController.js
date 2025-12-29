@@ -15,13 +15,18 @@ export async function createDashboardPremiumRequest(req, res, next) {
     const bankName = normalizeString(req.body.bank_name || req.body.bankName);
     const accountNumber = normalizeString(req.body.account_number || req.body.accountNumber);
     const senderName = normalizeString(req.body.sender_name || req.body.senderName);
-    const transferAmountRaw = req.body.transfer_amount ?? req.body.transferAmount;
+    const transferAmountRaw =
+      req.body.transfer_amount ?? req.body.transferAmount ?? req.body.amount;
     const transferAmount = Number(transferAmountRaw);
+    const premiumTier = normalizeString(req.body.premium_tier || req.body.premiumTier);
+    const clientId = normalizeString(req.body.client_id || req.body.clientId);
+    const userUuid = normalizeString(req.body.uuid || req.body.user_uuid || req.body.userUuid);
+    const submittedUsername = normalizeString(req.body.username);
 
     if (!bankName || !accountNumber || !senderName || !transferAmountRaw) {
       return res.status(400).json({
         success: false,
-        message: 'bank_name, account_number, sender_name, dan transfer_amount wajib diisi',
+        message: 'bank_name, account_number, sender_name, dan amount/transfer_amount wajib diisi',
       });
     }
 
@@ -43,6 +48,11 @@ export async function createDashboardPremiumRequest(req, res, next) {
       accountNumber,
       senderName,
       transferAmount,
+      premiumTier,
+      clientId,
+      userUuid,
+      submittedUsername,
+      rawAmountField: transferAmountRaw,
     });
 
     return res.status(201).json({
