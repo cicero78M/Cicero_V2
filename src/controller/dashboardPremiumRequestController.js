@@ -160,6 +160,15 @@ export async function createDashboardPremiumRequest(req, res, next) {
     }
 
     if (!isClientAllowed(resolvedClientId, allowedClientIds)) {
+      console.warn('[DashboardPremiumRequest] Rejected client_id for dashboard user', {
+        dashboardUserId,
+        dashboardUsername: dashboardUser.username,
+        requestedClientId: clientId,
+        resolvedClientId,
+        tokenClientId: req.dashboardUser?.client_id,
+        tokenClientIds: req.dashboardUser?.client_ids,
+        allowedClientIds,
+      });
       return res.status(403).json({
         success: false,
         message: 'client_id tidak sesuai dengan akses dashboard user',

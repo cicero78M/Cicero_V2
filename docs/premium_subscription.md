@@ -149,7 +149,9 @@ accepts the updated payload from the UI:
     dashboard user's `client_ids` list and intersects it with any client IDs
     present in the dashboard token. Requests must use a `client_id` from this
     validated set; mismatches return `403` before any database calls to keep
-    row-level security intact.
+    row-level security intact. The handler also emits a warning log with the
+    dashboard user context and rejected `client_id` to help trace misaligned
+    dashboard sessions.
   - `client_id` – client identifier for the dashboard session (string,
     optional, stored for traceability).
   - `premium_tier` – tier label requested by the dashboard user (string,
