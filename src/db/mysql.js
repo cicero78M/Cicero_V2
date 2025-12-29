@@ -20,6 +20,19 @@ export async function query(text, params) {
   return { rows };
 }
 
+export async function getClient() {
+  await init();
+  const connection = await pool.getConnection();
+
+  return {
+    query: async (text, params) => {
+      const [rows] = await connection.execute(text, params);
+      return { rows };
+    },
+    release: () => connection.release(),
+  };
+}
+
 export async function close() {
   if (pool) await pool.end();
 }

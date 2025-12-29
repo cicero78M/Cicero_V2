@@ -1,4 +1,4 @@
-import { query } from '../repository/db.js';
+import { query, withTransaction } from '../repository/db.js';
 
 function normalizeJson(value) {
   if (value == null) return null;
@@ -17,58 +17,69 @@ function normalizeNumeric(value) {
 }
 
 export async function createRequest(payload) {
-  const res = await query(
-    `INSERT INTO dashboard_premium_request (
-      dashboard_user_id,
-      user_id,
-      username,
-      whatsapp,
-      bank_name,
-      account_number,
-      sender_name,
-      transfer_amount,
-      premium_tier,
-      client_id,
-      user_uuid,
-      metadata,
-      status,
-      request_token,
-      expired_at,
-      responded_at,
-      admin_whatsapp,
-      created_at,
-      updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8,
-      $9, $10, $11, $12,
-      COALESCE($13, 'pending'),
-      COALESCE($14, gen_random_uuid()),
-      $15, $16, $17,
-      COALESCE($18, NOW()),
-      COALESCE($19, NOW())
-    )
-    RETURNING *`,
-    [
-      payload.dashboardUserId,
-      payload.userId || null,
-      payload.username,
-      payload.whatsapp || null,
-      payload.bankName,
-      payload.accountNumber,
-      payload.senderName,
-      normalizeNumeric(payload.transferAmount),
-      payload.premiumTier || null,
-      payload.clientId || null,
-      payload.userUuid || null,
-      normalizeJson(payload.metadata),
-      payload.status,
-      payload.requestToken || null,
-      payload.expiredAt || null,
-      payload.respondedAt || null,
-      payload.adminWhatsapp || null,
-      payload.createdAt || null,
-      payload.updatedAt || null,
-    ],
+  const res = await withTransaction(
+    client =>
+      client.query(
+        `INSERT INTO dashboard_premium_request (
+          dashboard_user_id,
+          user_id,
+          username,
+          whatsapp,
+          bank_name,
+          account_number,
+          sender_name,
+          transfer_amount,
+          premium_tier,
+          client_id,
+          user_uuid,
+          metadata,
+          status,
+          request_token,
+          expired_at,
+          responded_at,
+          admin_whatsapp,
+          created_at,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8,
+          $9, $10, $11, $12,
+          COALESCE($13, 'pending'),
+          COALESCE($14, gen_random_uuid()),
+          $15, $16, $17,
+          COALESCE($18, NOW()),
+          COALESCE($19, NOW())
+        )
+        RETURNING *`,
+        [
+          payload.dashboardUserId,
+          payload.userId || null,
+          payload.username,
+          payload.whatsapp || null,
+          payload.bankName,
+          payload.accountNumber,
+          payload.senderName,
+          normalizeNumeric(payload.transferAmount),
+          payload.premiumTier || null,
+          payload.clientId || null,
+          payload.userUuid || null,
+          normalizeJson(payload.metadata),
+          payload.status,
+          payload.requestToken || null,
+          payload.expiredAt || null,
+          payload.respondedAt || null,
+          payload.adminWhatsapp || null,
+          payload.createdAt || null,
+          payload.updatedAt || null,
+        ],
+      ),
+    {
+      sessionSettings: {
+        'app.current_client_id': payload.clientId || null,
+        'app.current_dashboard_user_id': payload.dashboardUserId || null,
+        'app.current_user_id': payload.userId || null,
+        'app.current_user_uuid': payload.userUuid || null,
+      },
+    },
   );
 
   return res.rows[0];

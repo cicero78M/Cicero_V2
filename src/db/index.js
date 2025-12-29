@@ -9,15 +9,34 @@ if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() === 'sqlite') {
   adapter = await import('./mysql.js');
 }
 
+function summarizeParams(params) {
+  if (Array.isArray(params)) return `[${params.length} params]`;
+  if (params && typeof params === 'object') return `object with ${Object.keys(params).length} keys`;
+  if (params !== undefined) return 'scalar param';
+  return 'none';
+}
+
+function isValidSettingKey(key) {
+  return typeof key === 'string' && /^[a-zA-Z0-9_.]+$/.test(key);
+}
+
+async function applySessionSettings(client, sessionSettings = {}) {
+  if (env.DB_DRIVER && env.DB_DRIVER.toLowerCase() !== 'postgres') {
+    return;
+  }
+
+  const entries = Object.entries(sessionSettings).filter(
+    ([, value]) => value !== undefined && value !== null,
+  );
+  for (const [key, value] of entries) {
+    if (!isValidSettingKey(key)) continue;
+    await client.query(`SET LOCAL ${key} = $1`, [value]);
+  }
+}
+
 export const query = async (text, params) => {
   const shouldLog = process.env.NODE_ENV !== 'production';
-  const paramSummary = Array.isArray(params)
-    ? `[${params.length} params]`
-    : params && typeof params === 'object'
-    ? `object with ${Object.keys(params).length} keys`
-    : params !== undefined
-    ? 'scalar param'
-    : 'none';
+  const paramSummary = summarizeParams(params);
   if (shouldLog) {
     console.log('[DB QUERY]', text, paramSummary);
   }
@@ -33,6 +52,28 @@ export const query = async (text, params) => {
       console.error('[DB ERROR]', err.message);
     }
     throw err;
+  }
+};
+
+export const withTransaction = async (callback, { sessionSettings } = {}) => {
+  if (typeof adapter.getClient !== 'function') {
+    throw new Error('Current database adapter does not support transactions');
+  }
+
+  const client = await adapter.getClient();
+  try {
+    await client.query('BEGIN');
+    if (sessionSettings) {
+      await applySessionSettings(client, sessionSettings);
+    }
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release?.();
   }
 };
 

@@ -166,6 +166,11 @@ accepts the updated payload from the UI:
     user ID, and dashboard user ID alongside the transfer details. When
     `user_id` is omitted, the backend defaults to the authenticated dashboard
     user's identifier so the form no longer needs to expose a UUID input.
+  - The insert path sets Postgres session settings (`app.current_client_id`,
+    `app.current_dashboard_user_id`, `app.current_user_id`, and
+    `app.current_user_uuid`) inside a transaction via
+    `dashboardPremiumRequestModel.createRequest`. Keep these up to date when
+    adding new RLS-protected fields so row-level security stays satisfied.
 
 ### Auto-expiry for unattended dashboard requests
 

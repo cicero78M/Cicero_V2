@@ -19,6 +19,23 @@ export async function query(text, params = []) {
   });
 }
 
+export async function getClient() {
+  await init();
+
+  const runQuery = (text, params = []) =>
+    new Promise((resolve, reject) => {
+      db.all(text, params, (err, rows) => {
+        if (err) return reject(err);
+        resolve({ rows });
+      });
+    });
+
+  return {
+    query: runQuery,
+    release: () => {},
+  };
+}
+
 export function close() {
   return new Promise((resolve, reject) => {
     if (!db) return resolve();
