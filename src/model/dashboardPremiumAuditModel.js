@@ -1,5 +1,14 @@
 import { query } from '../repository/db.js';
 
+function normalizeNullableUuid(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  return value;
+}
+
 export async function insertAuditEntry({
   requestId,
   dashboardUserId = null,
@@ -12,6 +21,8 @@ export async function insertAuditEntry({
   createdAt = null,
   updatedAt = null,
 }) {
+  const normalizedDashboardUserId = normalizeNullableUuid(dashboardUserId);
+
   const res = await query(
     `INSERT INTO dashboard_premium_audit (
       request_id,
@@ -32,7 +43,7 @@ export async function insertAuditEntry({
     RETURNING *`,
     [
       requestId,
-      dashboardUserId,
+      normalizedDashboardUserId,
       action,
       actor,
       reason,

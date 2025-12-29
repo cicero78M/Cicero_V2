@@ -332,6 +332,8 @@ Audit trail for every significant change to dashboard premium requests.
 
 API controllers, cron jobs, and WhatsApp handlers route status transitions through `dashboardPremiumRequestService.recordStatusChange` to ensure an audit row is written every time `status` changes. Request creation also records a `created` audit entry so the lifecycle is traceable end-to-end.
 
+Incoming dashboard user identifiers are trimmed and blank values are normalised to `NULL` before inserting audit rows to avoid invalid UUID errors when legacy or malformed payloads omit the identifier.
+
 ### `visitor_logs`
 Stores anonymised request metadata for auditing.
 - `id` – primary key
