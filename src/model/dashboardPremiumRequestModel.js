@@ -1,5 +1,15 @@
 import { query } from '../repository/db.js';
 
+function normalizeJson(value) {
+  if (value == null) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeNumeric(value) {
   if (value == null) return null;
   const numeric = Number(value);
@@ -17,6 +27,10 @@ export async function createRequest(payload) {
       account_number,
       sender_name,
       transfer_amount,
+      premium_tier,
+      client_id,
+      user_uuid,
+      metadata,
       status,
       request_token,
       expired_at,
@@ -26,11 +40,12 @@ export async function createRequest(payload) {
       updated_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8,
-      COALESCE($9, 'pending'),
-      COALESCE($10, gen_random_uuid()),
-      $11, $12, $13,
-      COALESCE($14, NOW()),
-      COALESCE($15, NOW())
+      $9, $10, $11, $12,
+      COALESCE($13, 'pending'),
+      COALESCE($14, gen_random_uuid()),
+      $15, $16, $17,
+      COALESCE($18, NOW()),
+      COALESCE($19, NOW())
     )
     RETURNING *`,
     [
@@ -42,6 +57,10 @@ export async function createRequest(payload) {
       payload.accountNumber,
       payload.senderName,
       normalizeNumeric(payload.transferAmount),
+      payload.premiumTier || null,
+      payload.clientId || null,
+      payload.userUuid || null,
+      normalizeJson(payload.metadata),
       payload.status,
       payload.requestToken || null,
       payload.expiredAt || null,

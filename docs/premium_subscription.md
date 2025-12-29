@@ -122,6 +122,35 @@ WhatsApp:
 Every admin action inserts a row into `dashboard_premium_request_audit`
 including the admin's WhatsApp number and chat ID for traceability.
 
+### New dashboard request endpoint
+
+Dashboard web users can submit the premium form through a dedicated route that
+accepts the updated payload from the UI:
+
+- `POST /premium/request`
+  - Requires a dashboard session token validated by `verifyDashboardToken`
+    (Bearer header or `token` cookie). The middleware also checks the Redis
+    prefix to ensure the token represents a dashboard session.
+  - Body parameters:
+    - `username` – username submitted by the form (string, optional; falls back
+      to the authenticated dashboard user when omitted).
+    - `client_id` – client identifier for the dashboard session (string,
+      optional, stored for traceability).
+    - `uuid` – dashboard UUID for the user (string, optional, stored for
+      traceability).
+    - `premium_tier` – tier label requested by the dashboard user (string,
+      optional, persisted and forwarded to admins).
+    - `bank_name` – originating bank for the transfer (string, required).
+    - `account_number` – destination account number (string, required).
+    - `sender_name` – name on the sending account (string, required).
+    - `amount` / `transfer_amount` – amount transferred in rupiah (number,
+      required; both field names are accepted).
+  - The endpoint stores `premium_tier`, `client_id`, `uuid`, and the submitted
+    amount field name inside `dashboard_premium_request.metadata` for
+    traceability, while also persisting normalized columns for filtering.
+  - Admin WhatsApp notifications now include the requested tier, client ID, and
+    user UUID alongside the transfer details.
+
 ### Auto-expiry for unattended dashboard requests
 
 Pending dashboard premium requests now expire automatically after 60 minutes:

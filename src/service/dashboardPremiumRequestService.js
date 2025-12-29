@@ -39,6 +39,9 @@ export function buildAdminNotification({ dashboardUser, request }) {
   const whatsappId = dashboardUser?.whatsapp ? formatToWhatsAppId(dashboardUser.whatsapp) : '-';
   const amount = formatAmount(request?.transfer_amount ?? request?.transferAmount);
   const requestId = request?.request_id || request?.id || '-';
+  const tier = request?.premium_tier || request?.premiumTier || '-';
+  const clientId = request?.client_id || request?.clientId;
+  const userUuid = request?.user_uuid || request?.userUuid;
 
   return (
     `📢 ${header}\n\n` +
@@ -46,6 +49,10 @@ export function buildAdminNotification({ dashboardUser, request }) {
     `- Username: ${dashboardUser?.username || '-'}\n` +
     `- WhatsApp: ${whatsappId}\n` +
     `- Dashboard User ID: ${dashboardUser?.dashboard_user_id || '-'}\n\n` +
+    `Detail permintaan:\n` +
+    `- Tier: ${tier}\n` +
+    `- Client ID: ${clientId || '-'}\n` +
+    `- User UUID: ${userUuid || '-'}\n\n` +
     `Detail transfer:\n` +
     `- Bank: ${request?.bank_name || request?.bankName || '-'}\n` +
     `- Nomor Rekening: ${request?.account_number || request?.accountNumber || '-'}\n` +
@@ -166,16 +173,34 @@ export async function createPremiumAccessRequest({
   accountNumber,
   senderName,
   transferAmount,
+  premiumTier,
+  clientId,
+  userUuid,
+  submittedUsername,
+  rawAmountField,
 }) {
+  const username = submittedUsername || dashboardUser.username;
+  const metadata = {
+    submitted_username: submittedUsername || null,
+    submitted_amount_field: rawAmountField ?? null,
+    client_id: clientId || null,
+    user_uuid: userUuid || null,
+    premium_tier: premiumTier || null,
+  };
+
   const request = await dashboardPremiumRequestModel.createRequest({
     dashboardUserId: dashboardUser.dashboard_user_id,
     userId: dashboardUser.user_id || null,
-    username: dashboardUser.username,
+    username,
     whatsapp: dashboardUser.whatsapp || null,
     bankName,
     accountNumber,
     senderName,
     transferAmount,
+    premiumTier,
+    clientId,
+    userUuid,
+    metadata,
     status: 'pending',
   });
 
