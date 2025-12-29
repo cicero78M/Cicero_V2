@@ -173,7 +173,9 @@ accepts the updated payload from the UI:
     adding new RLS-protected fields so row-level security stays satisfied. The
     transaction uses `set_config` with parameter binding to avoid raw string
     concatenation in `SET` statements and prevent Postgres parse errors on bound
-    values.
+    values. The session-setting step runs automatically when `DB_DRIVER` is set
+    to Postgres-friendly values (`postgres`, `postgresql`, or `pg`); other
+    drivers skip this to avoid errors on non-Postgres adapters.
 
 ### Auto-expiry for unattended dashboard requests
 
