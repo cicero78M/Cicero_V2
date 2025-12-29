@@ -5,6 +5,34 @@ function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+export async function getDashboardPremiumRequestContext(req, res, next) {
+  try {
+    const dashboardUserId = req.dashboardUser?.dashboard_user_id;
+    if (!dashboardUserId) {
+      return res.status(401).json({ success: false, message: 'Token dashboard tidak valid' });
+    }
+
+    const dashboardUser = await dashboardUserModel.findById(dashboardUserId);
+    if (!dashboardUser) {
+      return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
+    }
+
+    const userUuid = dashboardUser.user_id || dashboardUser.dashboard_user_id || null;
+
+    return res.json({
+      success: true,
+      data: {
+        username: dashboardUser.username,
+        user_uuid: userUuid,
+        dashboard_user_id: dashboardUser.dashboard_user_id,
+        user_id: dashboardUser.user_id,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function createDashboardPremiumRequest(req, res, next) {
   try {
     const dashboardUserId = req.dashboardUser?.dashboard_user_id;
@@ -20,7 +48,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
     const transferAmount = Number(transferAmountRaw);
     const premiumTier = normalizeString(req.body.premium_tier || req.body.premiumTier);
     const clientId = normalizeString(req.body.client_id || req.body.clientId);
-    const userUuid = normalizeString(req.body.uuid || req.body.user_uuid || req.body.userUuid);
     const submittedUsername = normalizeString(req.body.username);
 
     if (!bankName || !accountNumber || !senderName || !transferAmountRaw) {
@@ -41,6 +68,12 @@ export async function createDashboardPremiumRequest(req, res, next) {
     if (!dashboardUser) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
+
+    const userUuid =
+      normalizeString(req.body.uuid || req.body.user_uuid || req.body.userUuid) ||
+      dashboardUser.user_id ||
+      dashboardUser.dashboard_user_id ||
+      null;
 
     const { request, notification } = await createPremiumAccessRequest({
       dashboardUser,
