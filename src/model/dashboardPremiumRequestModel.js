@@ -22,6 +22,7 @@ export async function createRequest(payload) {
   const sessionDashboardUserId = sessionContext.dashboardUserId ?? payload.dashboardUserId;
   const sessionUserId = sessionContext.userId ?? payload.userId;
   const sessionUserUuid = sessionContext.userUuid ?? payload.userUuid;
+  const sessionUsername = sessionContext.username ?? payload.username;
 
   const res = await withTransaction(
     client =>
@@ -78,15 +79,16 @@ export async function createRequest(payload) {
           payload.updatedAt || null,
         ],
       ),
-    {
-      sessionSettings: {
-        'app.current_client_id': sessionClientId || null,
-        'app.current_dashboard_user_id': sessionDashboardUserId || null,
-        'app.current_user_id': sessionUserId || null,
-        'app.current_user_uuid': sessionUserUuid || null,
+      {
+        sessionSettings: {
+          'app.current_client_id': sessionClientId || null,
+          'app.current_dashboard_user_id': sessionDashboardUserId || null,
+          'app.current_user_id': sessionUserId || null,
+          'app.current_user_uuid': sessionUserUuid || null,
+          'app.current_username': sessionUsername || null,
+        },
       },
-    },
-  );
+    );
 
   return res.rows[0];
 }

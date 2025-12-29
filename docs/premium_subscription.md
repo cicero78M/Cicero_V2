@@ -132,20 +132,21 @@ accepts the updated payload from the UI:
   - Returns the authenticated dashboard username plus identifiers that the
     updated premium form can use automatically:
     - `username` – taken from the dashboard session.
-    - `dashboard_user_id` and `user_id` – returned for completeness so the UI
-      can display who is submitting the request without exposing a UUID field.
+    - `dashboard_user_id` – returned for completeness so the UI can display who
+      is submitting the request without exposing a UUID field. The linked
+      `user_id` column is nullable in the database, so the flow now relies on
+      username to keep traceability intact.
 - `POST /premium/request`
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
     prefix to ensure the token represents a dashboard session.
   - Body parameters:
     - `username` – username submitted by the form (string, optional; falls back
-      to the authenticated dashboard user when omitted).
+      to the authenticated dashboard user when omitted). When the submitted
+      username differs from the authenticated dashboard user, the request is
+      rejected with `403` to prevent impersonation.
     - `client_id` – client identifier for the dashboard session (string,
       optional, stored for traceability).
-    - `user_id` – optional override when the premium form explicitly submits a
-      linked user identifier; otherwise inferred from the authenticated
-      dashboard user.
     - `premium_tier` – tier label requested by the dashboard user (string,
       optional, persisted and forwarded to admins).
     - `bank_name` – originating bank for the transfer (string, required).
@@ -160,20 +161,21 @@ accepts the updated payload from the UI:
     validation ensures the insert complies with database row-level security
     policies.
   - The API pairs the resolved `client_id` with the authenticated
-    `dashboard_user_id` and linked `user_id` to build Postgres session
-    settings. Mismatched `user_id` payloads now fail fast with `403` instead of
-    reaching the database, and RLS violations on insert are translated to a
-    `403` response so dashboard operators receive actionable feedback.
-  - The endpoint stores `premium_tier`, `client_id`, `user_id`, and the submitted
-    amount field name inside `dashboard_premium_request.metadata` for
-    traceability, while also persisting normalized columns for filtering.
+    `dashboard_user_id` and username to build Postgres session settings. When
+    a submitted username does not match the authenticated dashboard user, the
+    handler returns `403` before hitting the database, and RLS violations on
+    insert are translated to a `403` response so dashboard operators receive
+    actionable feedback.
+  - The endpoint stores `premium_tier`, `client_id`, the resolved `username`,
+    and the submitted amount field name inside `dashboard_premium_request.metadata`
+    for traceability, while also persisting normalized columns for filtering.
   - Admin WhatsApp notifications now include the requested tier, client ID,
-    user ID, and dashboard user ID alongside the transfer details. When
-    `user_id` is omitted, the backend defaults to the authenticated dashboard
-    user's identifier so the form no longer needs to expose a UUID input.
+    username, and dashboard user ID alongside the transfer details. When the
+    form omits a username, the backend defaults to the authenticated dashboard
+    user's value so the UI no longer needs to expose a UUID input.
   - The insert path sets Postgres session settings (`app.current_client_id`,
-    `app.current_dashboard_user_id`, `app.current_user_id`, and
-    `app.current_user_uuid`) inside a transaction via
+    `app.current_dashboard_user_id`, `app.current_user_id`, `app.current_username`,
+    and `app.current_user_uuid`) inside a transaction via
     `dashboardPremiumRequestModel.createRequest`. Keep these up to date when
     adding new RLS-protected fields so row-level security stays satisfied. The
     transaction uses `set_config` with parameter binding to avoid raw string
