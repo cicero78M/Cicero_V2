@@ -9,6 +9,29 @@ function normalizeClientId(value) {
   return typeof value === 'string' ? value.trim() : null;
 }
 
+function getAllowedClientIds({
+  dashboardUserClientIds = [],
+  tokenClientId,
+  tokenClientIds = [],
+}) {
+  const normalizedDashboardClientIds = Array.isArray(dashboardUserClientIds)
+    ? dashboardUserClientIds.map(normalizeClientId).filter(Boolean)
+    : [];
+
+  const normalizedTokenClientIds = [
+    normalizeClientId(tokenClientId),
+    ...(Array.isArray(tokenClientIds) ? tokenClientIds.map(normalizeClientId) : []),
+  ].filter(Boolean);
+
+  if (normalizedTokenClientIds.length === 0) {
+    return normalizedDashboardClientIds;
+  }
+
+  const tokenClientIdSet = new Set(normalizedTokenClientIds.map(id => id.toLowerCase()));
+
+  return normalizedDashboardClientIds.filter(id => tokenClientIdSet.has(id.toLowerCase()));
+}
+
 function resolveClientId({
   requestedClientId,
   tokenClientId,
@@ -116,21 +139,18 @@ export async function createDashboardPremiumRequest(req, res, next) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
 
+    const allowedClientIds = getAllowedClientIds({
+      dashboardUserClientIds: dashboardUser?.client_ids,
+      tokenClientId: req.dashboardUser?.client_id,
+      tokenClientIds: req.dashboardUser?.client_ids,
+    });
+
     const resolvedClientId = resolveClientId({
       requestedClientId: clientId,
       tokenClientId: req.dashboardUser?.client_id,
       tokenClientIds: req.dashboardUser?.client_ids,
       dashboardUserClientIds: dashboardUser?.client_ids,
     });
-
-    const allowedClientIds = Array.from(
-      new Set(
-        [
-          ...(Array.isArray(req.dashboardUser?.client_ids) ? req.dashboardUser.client_ids : []),
-          ...(Array.isArray(dashboardUser?.client_ids) ? dashboardUser.client_ids : []),
-        ].filter(Boolean),
-      ),
-    );
 
     if (!resolvedClientId) {
       return res.status(400).json({
