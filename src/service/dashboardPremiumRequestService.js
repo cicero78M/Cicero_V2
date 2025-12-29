@@ -95,6 +95,15 @@ function normalizeUsername(username) {
   return typeof username === 'string' ? username.trim() : '';
 }
 
+function normalizeDashboardUserId(dashboardUserId) {
+  if (!dashboardUserId) return null;
+  if (typeof dashboardUserId === 'string') {
+    const trimmed = dashboardUserId.trim();
+    return trimmed || null;
+  }
+  return dashboardUserId;
+}
+
 function computeExpiresAt(durationDays = DEFAULT_DURATION_DAYS) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + durationDays);
@@ -188,17 +197,18 @@ export async function createPremiumAccessRequest({
   sessionContext = {},
 }) {
   const resolvedUsername = normalizeUsername(username || dashboardUser.username);
+  const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser?.dashboard_user_id);
   const metadata = {
     submitted_username: submittedUsername || null,
     resolved_username: resolvedUsername || null,
     submitted_amount_field: rawAmountField ?? null,
     client_id: clientId || null,
-    dashboard_user_id: dashboardUser.dashboard_user_id || null,
+    dashboard_user_id: normalizedDashboardUserId,
     premium_tier: premiumTier || null,
   };
 
   const request = await dashboardPremiumRequestModel.createRequest({
-    dashboardUserId: dashboardUser.dashboard_user_id,
+    dashboardUserId: normalizedDashboardUserId,
     userId: dashboardUser.user_id || null,
     username: resolvedUsername,
     whatsapp: dashboardUser.whatsapp || null,
@@ -215,7 +225,7 @@ export async function createPremiumAccessRequest({
 
   await dashboardPremiumAuditModel.insertAuditEntry({
     requestId: request.request_id,
-    dashboardUserId: request.dashboard_user_id,
+    dashboardUserId: request.dashboard_user_id || normalizedDashboardUserId,
     action: 'created',
     actor: dashboardUser?.username ? `dashboard_user:${dashboardUser.username}` : 'dashboard_user',
     reason: 'Permintaan premium dikirim melalui dashboard',
