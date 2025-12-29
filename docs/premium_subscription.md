@@ -153,6 +153,12 @@ accepts the updated payload from the UI:
     - `sender_name` – name on the sending account (string, required).
     - `amount` / `transfer_amount` – amount transferred in rupiah (number,
       required; both field names are accepted).
+  - The handler now resolves `client_id` from the request body, the dashboard
+    token payload, or the sole client assigned to the dashboard user. Requests
+    without a resolvable `client_id` return `400`, while client IDs that are not
+    associated with the authenticated dashboard user return `403`. This
+    validation ensures the insert complies with database row-level security
+    policies.
   - The endpoint stores `premium_tier`, `client_id`, `user_id`, and the submitted
     amount field name inside `dashboard_premium_request.metadata` for
     traceability, while also persisting normalized columns for filtering.
