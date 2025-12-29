@@ -96,7 +96,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
     const premiumTier = normalizeString(req.body.premium_tier || req.body.premiumTier);
     const clientId = normalizeString(req.body.client_id || req.body.clientId);
     const submittedUsername = normalizeString(req.body.username);
-    const submittedUserId = normalizeString(req.body.user_id || req.body.userId);
 
     if (!bankName || !accountNumber || !senderName || !transferAmountRaw) {
       return res.status(400).json({
@@ -147,19 +146,28 @@ export async function createDashboardPremiumRequest(req, res, next) {
       });
     }
 
-    const linkedUserId = normalizeString(dashboardUser.user_id);
-    if (submittedUserId && linkedUserId && submittedUserId !== linkedUserId) {
+    const normalizedDashboardUsername = normalizeString(dashboardUser.username);
+    const resolvedUsername = submittedUsername || normalizedDashboardUsername;
+
+    if (submittedUsername && normalizedDashboardUsername && submittedUsername !== normalizedDashboardUsername) {
       return res.status(403).json({
         success: false,
-        message: 'user_id tidak sesuai dengan akun dashboard yang aktif',
+        message: 'username tidak sesuai dengan akun dashboard yang aktif',
       });
     }
 
-    const userId = linkedUserId || submittedUserId || null;
+    if (!resolvedUsername) {
+      return res.status(400).json({
+        success: false,
+        message: 'username wajib diisi',
+      });
+    }
+
     const sessionContext = {
       clientId: resolvedClientId,
       dashboardUserId,
-      userId,
+      userId: dashboardUser.user_id || null,
+      username: resolvedUsername,
       userUuid: dashboardUser.user_uuid || null,
     };
 
@@ -171,10 +179,9 @@ export async function createDashboardPremiumRequest(req, res, next) {
       transferAmount,
       premiumTier,
       clientId: resolvedClientId,
-      userId,
       submittedUsername,
       rawAmountField: transferAmountRaw,
-      submittedUserId,
+      username: resolvedUsername,
       sessionContext,
     });
 

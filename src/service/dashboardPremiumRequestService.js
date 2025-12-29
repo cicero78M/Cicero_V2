@@ -41,7 +41,12 @@ export function buildAdminNotification({ dashboardUser, request }) {
   const requestId = request?.request_id || request?.id || '-';
   const tier = request?.premium_tier || request?.premiumTier || '-';
   const clientId = request?.client_id || request?.clientId;
-  const userId = request?.user_id || request?.userId || '-';
+  const username =
+    request?.username ||
+    request?.resolved_username ||
+    request?.metadata?.resolved_username ||
+    request?.submitted_username ||
+    '-';
   const dashboardUserId = request?.dashboard_user_id || request?.dashboardUserId || '-';
 
   return (
@@ -53,7 +58,7 @@ export function buildAdminNotification({ dashboardUser, request }) {
     `Detail permintaan:\n` +
     `- Tier: ${tier}\n` +
     `- Client ID: ${clientId || '-'}\n` +
-    `- User ID: ${userId}\n` +
+    `- Username (request): ${username}\n` +
     `- Dashboard User ID (request): ${dashboardUserId}\n\n` +
     `Detail transfer:\n` +
     `- Bank: ${request?.bank_name || request?.bankName || '-'}\n` +
@@ -177,19 +182,17 @@ export async function createPremiumAccessRequest({
   transferAmount,
   premiumTier,
   clientId,
-  userId,
   submittedUsername,
   rawAmountField,
-  submittedUserId = null,
+  username,
   sessionContext = {},
 }) {
-  const username = submittedUsername || dashboardUser.username;
+  const resolvedUsername = normalizeUsername(username || dashboardUser.username);
   const metadata = {
     submitted_username: submittedUsername || null,
-    submitted_user_id: submittedUserId || null,
+    resolved_username: resolvedUsername || null,
     submitted_amount_field: rawAmountField ?? null,
     client_id: clientId || null,
-    user_id: userId || null,
     dashboard_user_id: dashboardUser.dashboard_user_id || null,
     premium_tier: premiumTier || null,
   };
@@ -197,7 +200,7 @@ export async function createPremiumAccessRequest({
   const request = await dashboardPremiumRequestModel.createRequest({
     dashboardUserId: dashboardUser.dashboard_user_id,
     userId: dashboardUser.user_id || null,
-    username,
+    username: resolvedUsername,
     whatsapp: dashboardUser.whatsapp || null,
     bankName,
     accountNumber,
@@ -205,7 +208,6 @@ export async function createPremiumAccessRequest({
     transferAmount,
     premiumTier,
     clientId,
-    userId,
     metadata,
     status: 'pending',
     sessionContext,
