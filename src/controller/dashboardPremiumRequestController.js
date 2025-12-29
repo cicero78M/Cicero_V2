@@ -9,6 +9,23 @@ function normalizeClientId(value) {
   return typeof value === 'string' ? value.trim() : null;
 }
 
+function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload = {}) {
+  const clientIds = Array.isArray(dashboardUserPayload.client_ids)
+    ? dashboardUserPayload.client_ids
+    : [];
+  const normalizedClientId =
+    normalizeClientId(dashboardUserPayload.client_id || dashboardUserPayload.clientId) ||
+    normalizeClientId(clientIds[0]);
+
+  return {
+    'app.current_client_id': normalizedClientId || null,
+    'app.current_dashboard_user_id': dashboardUserId || null,
+    'app.current_user_id': dashboardUserPayload.user_id || null,
+    'app.current_user_uuid': dashboardUserPayload.user_uuid || null,
+    'app.current_username': normalizeString(dashboardUserPayload.username) || null,
+  };
+}
+
 function getAllowedClientIds({
   dashboardUserClientIds = [],
   tokenClientId,
@@ -85,7 +102,11 @@ export async function getDashboardPremiumRequestContext(req, res, next) {
       return res.status(401).json({ success: false, message: 'Token dashboard tidak valid' });
     }
 
-    const dashboardUser = await dashboardUserModel.findById(dashboardUserId);
+    const sessionSettings = buildSessionSettingsFromRequest(dashboardUserId, req.dashboardUser);
+    const dashboardUser = await dashboardUserModel.findByIdWithSessionSettings(
+      dashboardUserId,
+      sessionSettings,
+    );
     if (!dashboardUser) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
@@ -134,7 +155,11 @@ export async function createDashboardPremiumRequest(req, res, next) {
       });
     }
 
-    const dashboardUser = await dashboardUserModel.findById(dashboardUserId);
+    const sessionSettings = buildSessionSettingsFromRequest(dashboardUserId, req.dashboardUser);
+    const dashboardUser = await dashboardUserModel.findByIdWithSessionSettings(
+      dashboardUserId,
+      sessionSettings,
+    );
     if (!dashboardUser) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }

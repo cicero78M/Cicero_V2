@@ -1,18 +1,29 @@
-import { query } from '../repository/db.js';
+import { query, withTransaction } from '../repository/db.js';
 
-async function findOneBy(field, value) {
+const BASE_SELECT =
+  `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
+   FROM dashboard_user du
+   LEFT JOIN roles r ON du.role_id = r.role_id
+   LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id`;
+
+const BASE_GROUP_BY = 'GROUP BY du.dashboard_user_id, r.role_name';
+
+async function runDashboardUserQuery({ whereClause, params, sessionSettings, expectMany = false }) {
+  const queryText = `${BASE_SELECT} WHERE ${whereClause} ${BASE_GROUP_BY}`;
+
+  const executor = sessionSettings
+    ? () => withTransaction(client => client.query(queryText, params), { sessionSettings })
+    : () => query(queryText, params);
+
+  const res = await executor();
+  return expectMany ? res.rows : res.rows[0] || null;
+}
+
+async function findOneBy(field, value, { sessionSettings } = {}) {
   const whereClause =
     field === 'username' ? 'LOWER(du.username) = LOWER($1)' : `du.${field} = $1`;
-  const res = await query(
-    `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
-     FROM dashboard_user du
-     LEFT JOIN roles r ON du.role_id = r.role_id
-     LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
-     WHERE ${whereClause}
-     GROUP BY du.dashboard_user_id, r.role_name`,
-    [value],
-  );
-  return res.rows[0] || null;
+
+  return runDashboardUserQuery({ whereClause, params: [value], sessionSettings });
 }
 
 export async function findByUsername(username) {
@@ -24,16 +35,8 @@ export async function findByWhatsApp(wa) {
 }
 
 export async function findAllByWhatsApp(wa) {
-  const res = await query(
-    `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
-     FROM dashboard_user du
-     LEFT JOIN roles r ON du.role_id = r.role_id
-     LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
-     WHERE du.whatsapp = $1
-     GROUP BY du.dashboard_user_id, r.role_name`,
-    [wa],
-  );
-  return res.rows;
+  const whereClause = 'du.whatsapp = $1';
+  return runDashboardUserQuery({ whereClause, params: [wa], expectMany: true });
 }
 
 export async function findAllByNormalizedWhatsApp(whatsapp) {
@@ -42,16 +45,8 @@ export async function findAllByNormalizedWhatsApp(whatsapp) {
   }
   const normalized = String(whatsapp).replace(/\D/g, '');
   const candidates = Array.from(new Set([whatsapp, normalized].filter(Boolean)));
-  const res = await query(
-    `SELECT du.*, r.role_name AS role, COALESCE(array_agg(duc.client_id) FILTER (WHERE duc.client_id IS NOT NULL), '{}') AS client_ids
-     FROM dashboard_user du
-     LEFT JOIN roles r ON du.role_id = r.role_id
-     LEFT JOIN dashboard_user_clients duc ON du.dashboard_user_id = duc.dashboard_user_id
-     WHERE du.whatsapp = ANY($1)
-     GROUP BY du.dashboard_user_id, r.role_name`,
-    [candidates],
-  );
-  return res.rows;
+  const whereClause = 'du.whatsapp = ANY($1)';
+  return runDashboardUserQuery({ whereClause, params: [candidates], expectMany: true });
 }
 
 export async function createUser(data) {
@@ -85,6 +80,10 @@ export async function addClients(dashboardUserId, clientIds = []) {
 
 export async function findById(id) {
   return findOneBy('dashboard_user_id', id);
+}
+
+export async function findByIdWithSessionSettings(id, sessionSettings = {}) {
+  return findOneBy('dashboard_user_id', id, { sessionSettings });
 }
 
 export async function updateStatus(id, status) {
