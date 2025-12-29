@@ -223,6 +223,11 @@ Pending dashboard premium requests now expire automatically after 60 minutes:
     with `username tidak sesuai dengan akun dashboard yang aktif`.
 - Invalid or absent dashboard tokens continue to return `401` with `Token dashboard tidak valid`
   or `Token required` prior to any database calls.
+- When an insert trips row-level security, the controller now emits a structured error log
+  containing the dashboard user ID, resolved `client_id`, allowed client IDs, session settings,
+  and the resolved username. The API still returns `403` but expands the message to nudge
+  operators to verify dashboard token claims and client access so support teams can diagnose
+  misconfigured sessions quickly.
 
 ### Token testing notes and troubleshooting
 
