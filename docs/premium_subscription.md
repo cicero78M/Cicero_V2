@@ -140,15 +140,20 @@ accepts the updated payload from the UI:
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
     prefix to ensure the token represents a dashboard session.
-  - Body parameters:
-    - `username` – username submitted by the form (string, optional; falls back
-      to the authenticated dashboard user when omitted). When the submitted
-      username differs from the authenticated dashboard user, the request is
-      rejected with `403` to prevent impersonation.
-    - `client_id` – client identifier for the dashboard session (string,
-      optional, stored for traceability).
-    - `premium_tier` – tier label requested by the dashboard user (string,
-      optional, persisted and forwarded to admins).
+- Body parameters:
+  - `username` – username submitted by the form (string, optional; falls back
+    to the authenticated dashboard user when omitted). When the submitted
+    username differs from the authenticated dashboard user, the request is
+    rejected with `403` to prevent impersonation.
+  - `client_id` validation now derives allowed IDs from the authenticated
+    dashboard user's `client_ids` list and intersects it with any client IDs
+    present in the dashboard token. Requests must use a `client_id` from this
+    validated set; mismatches return `403` before any database calls to keep
+    row-level security intact.
+  - `client_id` – client identifier for the dashboard session (string,
+    optional, stored for traceability).
+  - `premium_tier` – tier label requested by the dashboard user (string,
+    optional, persisted and forwarded to admins).
     - `bank_name` – originating bank for the transfer (string, required).
     - `account_number` – destination account number (string, required).
     - `sender_name` – name on the sending account (string, required).
