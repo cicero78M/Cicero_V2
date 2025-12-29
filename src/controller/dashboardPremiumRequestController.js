@@ -96,6 +96,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
     const premiumTier = normalizeString(req.body.premium_tier || req.body.premiumTier);
     const clientId = normalizeString(req.body.client_id || req.body.clientId);
     const submittedUsername = normalizeString(req.body.username);
+    const submittedUserId = normalizeString(req.body.user_id || req.body.userId);
 
     if (!bankName || !accountNumber || !senderName || !transferAmountRaw) {
       return res.status(400).json({
@@ -146,11 +147,21 @@ export async function createDashboardPremiumRequest(req, res, next) {
       });
     }
 
-    const userId =
-      normalizeString(req.body.user_id || req.body.userId) ||
-      dashboardUser.user_id ||
-      dashboardUser.dashboard_user_id ||
-      null;
+    const linkedUserId = normalizeString(dashboardUser.user_id);
+    if (submittedUserId && linkedUserId && submittedUserId !== linkedUserId) {
+      return res.status(403).json({
+        success: false,
+        message: 'user_id tidak sesuai dengan akun dashboard yang aktif',
+      });
+    }
+
+    const userId = linkedUserId || submittedUserId || null;
+    const sessionContext = {
+      clientId: resolvedClientId,
+      dashboardUserId,
+      userId,
+      userUuid: dashboardUser.user_uuid || null,
+    };
 
     const { request, notification } = await createPremiumAccessRequest({
       dashboardUser,
@@ -163,6 +174,8 @@ export async function createDashboardPremiumRequest(req, res, next) {
       userId,
       submittedUsername,
       rawAmountField: transferAmountRaw,
+      submittedUserId,
+      sessionContext,
     });
 
     return res.status(201).json({
@@ -173,6 +186,12 @@ export async function createDashboardPremiumRequest(req, res, next) {
       },
     });
   } catch (err) {
+    if (err?.code === '42501' && /row-level security/i.test(err.message || '')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses client dashboard tidak valid untuk membuat permintaan premium',
+      });
+    }
     next(err);
   }
 }

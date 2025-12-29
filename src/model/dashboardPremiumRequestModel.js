@@ -17,6 +17,12 @@ function normalizeNumeric(value) {
 }
 
 export async function createRequest(payload) {
+  const sessionContext = payload.sessionContext || {};
+  const sessionClientId = sessionContext.clientId ?? payload.clientId;
+  const sessionDashboardUserId = sessionContext.dashboardUserId ?? payload.dashboardUserId;
+  const sessionUserId = sessionContext.userId ?? payload.userId;
+  const sessionUserUuid = sessionContext.userUuid ?? payload.userUuid;
+
   const res = await withTransaction(
     client =>
       client.query(
@@ -74,10 +80,10 @@ export async function createRequest(payload) {
       ),
     {
       sessionSettings: {
-        'app.current_client_id': payload.clientId || null,
-        'app.current_dashboard_user_id': payload.dashboardUserId || null,
-        'app.current_user_id': payload.userId || null,
-        'app.current_user_uuid': payload.userUuid || null,
+        'app.current_client_id': sessionClientId || null,
+        'app.current_dashboard_user_id': sessionDashboardUserId || null,
+        'app.current_user_id': sessionUserId || null,
+        'app.current_user_uuid': sessionUserUuid || null,
       },
     },
   );
