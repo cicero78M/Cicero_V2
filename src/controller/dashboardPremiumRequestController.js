@@ -17,13 +17,10 @@ export async function getDashboardPremiumRequestContext(req, res, next) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
 
-    const userUuid = dashboardUser.user_id || dashboardUser.dashboard_user_id || null;
-
     return res.json({
       success: true,
       data: {
         username: dashboardUser.username,
-        user_uuid: userUuid,
         dashboard_user_id: dashboardUser.dashboard_user_id,
         user_id: dashboardUser.user_id,
       },
@@ -69,8 +66,8 @@ export async function createDashboardPremiumRequest(req, res, next) {
       return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
     }
 
-    const userUuid =
-      normalizeString(req.body.uuid || req.body.user_uuid || req.body.userUuid) ||
+    const userId =
+      normalizeString(req.body.user_id || req.body.userId) ||
       dashboardUser.user_id ||
       dashboardUser.dashboard_user_id ||
       null;
@@ -83,7 +80,7 @@ export async function createDashboardPremiumRequest(req, res, next) {
       transferAmount,
       premiumTier,
       clientId,
-      userUuid,
+      userId,
       submittedUsername,
       rawAmountField: transferAmountRaw,
     });

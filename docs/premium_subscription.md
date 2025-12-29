@@ -129,12 +129,11 @@ accepts the updated payload from the UI:
 
 - `GET /premium/request/context`
   - Requires a dashboard session token validated by `verifyDashboardToken`.
-  - Returns the authenticated dashboard username and the preferred UUID to
-    populate the form automatically:
+  - Returns the authenticated dashboard username plus identifiers that the
+    updated premium form can use automatically:
     - `username` – taken from the dashboard session.
-    - `user_uuid` – prioritises the linked `user_id` when available, otherwise
-      falls back to `dashboard_user_id` for traceability.
-    - `dashboard_user_id` and `user_id` are returned for completeness.
+    - `dashboard_user_id` and `user_id` – returned for completeness so the UI
+      can display who is submitting the request without exposing a UUID field.
 - `POST /premium/request`
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
@@ -144,8 +143,9 @@ accepts the updated payload from the UI:
       to the authenticated dashboard user when omitted).
     - `client_id` – client identifier for the dashboard session (string,
       optional, stored for traceability).
-    - `uuid` – dashboard UUID for the user (string, optional, stored for
-      traceability).
+    - `user_id` – optional override when the premium form explicitly submits a
+      linked user identifier; otherwise inferred from the authenticated
+      dashboard user.
     - `premium_tier` – tier label requested by the dashboard user (string,
       optional, persisted and forwarded to admins).
     - `bank_name` – originating bank for the transfer (string, required).
@@ -153,14 +153,13 @@ accepts the updated payload from the UI:
     - `sender_name` – name on the sending account (string, required).
     - `amount` / `transfer_amount` – amount transferred in rupiah (number,
       required; both field names are accepted).
-  - The endpoint stores `premium_tier`, `client_id`, `uuid`, and the submitted
+  - The endpoint stores `premium_tier`, `client_id`, `user_id`, and the submitted
     amount field name inside `dashboard_premium_request.metadata` for
     traceability, while also persisting normalized columns for filtering.
-  - Admin WhatsApp notifications now include the requested tier, client ID, and
-    user UUID alongside the transfer details. When `uuid` is omitted, the
-    backend now defaults to the authenticated user's `user_id` (or
-    `dashboard_user_id` as a fallback) so the dashboard can prefill the "UUID
-    user" field without additional input.
+  - Admin WhatsApp notifications now include the requested tier, client ID,
+    user ID, and dashboard user ID alongside the transfer details. When
+    `user_id` is omitted, the backend defaults to the authenticated dashboard
+    user's identifier so the form no longer needs to expose a UUID input.
 
 ### Auto-expiry for unattended dashboard requests
 
