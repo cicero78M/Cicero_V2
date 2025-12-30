@@ -1,15 +1,23 @@
 import * as dashboardSubscriptionModel from '../model/dashboardSubscriptionModel.js';
 import { query } from '../repository/db.js';
 
-async function updatePremiumCache(dashboardUserId, activeSubscription = null) {
+function getExecutor(dbClient = query) {
+  if (typeof dbClient?.query === 'function') {
+    return (...args) => dbClient.query(...args);
+  }
+  return dbClient;
+}
+
+async function updatePremiumCache(dashboardUserId, activeSubscription = null, dbClient = query) {
+  const exec = getExecutor(dbClient);
   const active =
-    activeSubscription || (await dashboardSubscriptionModel.findActiveByUser(dashboardUserId));
+    activeSubscription || (await dashboardSubscriptionModel.findActiveByUser(dashboardUserId, dbClient));
 
   const premiumStatus = Boolean(active);
   const premiumTier = active?.tier || null;
   const premiumExpiresAt = active?.expires_at || null;
 
-  const { rows } = await query(
+  const { rows } = await exec(
     `UPDATE dashboard_user
      SET premium_status = $2,
          premium_tier = $3,
@@ -38,6 +46,13 @@ export async function createSubscription(payload) {
     await query('ROLLBACK');
     throw err;
   }
+}
+
+export async function createSubscriptionWithClient(payload, dbClient) {
+  const execClient = dbClient || query;
+  const subscription = await dashboardSubscriptionModel.create(payload, execClient);
+  const cache = await updatePremiumCache(subscription.dashboard_user_id, subscription, execClient);
+  return { subscription, cache };
 }
 
 export async function expireSubscription(subscriptionId, expiredAt = null) {
@@ -117,6 +132,6 @@ export async function getPremiumSnapshot(dashboardUser) {
   };
 }
 
-export async function refreshPremiumCache(dashboardUserId) {
-  return updatePremiumCache(dashboardUserId);
+export async function refreshPremiumCache(dashboardUserId, { dbClient } = {}) {
+  return updatePremiumCache(dashboardUserId, null, dbClient || query);
 }

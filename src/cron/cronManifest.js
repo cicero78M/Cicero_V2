@@ -35,4 +35,10 @@ export default [
     bucket: 'waClient',
     description: 'Expire overdue dashboard subscriptions and notify users via WhatsApp.',
   },
+  {
+    jobKey: './src/cron/cronDashboardPremiumRequestExpiry.js',
+    modulePath: './src/cron/cronDashboardPremiumRequestExpiry.js',
+    bucket: 'waClient',
+    description: 'Expire stale dashboard premium requests and notify admins plus requesters.',
+  },
 ];

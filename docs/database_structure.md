@@ -18,6 +18,8 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | dashboard_user | login credentials for dashboard access |
 | dashboard_user_clients | mapping between dashboard users and permitted clients |
 | dashboard_user_subscriptions | premium tier history and cache source for dashboard logins |
+| dashboard_premium_request | dashboard premium submissions with payment proof and expiry |
+| dashboard_premium_request_audit | audit trail for dashboard premium request lifecycle |
 | penmas_user | credentials for Penmas editorial operators |
 | insta_post / insta_post_khusus | Instagram posts fetched for each client (regular & khusus feeds) |
 | insta_like / insta_comment | cached likes and comments for Instagram posts |
@@ -300,13 +302,34 @@ Records premium subscription requests sent from the mobile app.
 - `status` – `pending`, `approved`, `rejected` or `expired`
 - `created_at`, `updated_at` – timestamps
 
-### Retired dashboard premium request tables
-The dashboard-only premium request flow has been removed. Tables
-`dashboard_premium_request`, `dashboard_premium_request_audit`, and
-`dashboard_premium_audit` (including triggers and helper functions) were
-dropped in migration `20260430_drop_dashboard_premium_request_tables.sql`.
-New premium enablement should rely on `dashboard_user_subscriptions` and other
-active subscription helpers instead of the retired request workflow.
+### `dashboard_premium_request`
+Dashboard premium submissions for dashboard users.
+- `request_id` – serial primary key with `request_token` UUID for admin replies
+- `dashboard_user_id` – foreign key to `dashboard_user` (cascade delete)
+- `client_id` – optional reference to `clients`
+- `username`, `whatsapp` – dashboard identity snapshot
+- `bank_name`, `account_number`, `sender_name`, `transfer_amount` – payment metadata
+- `premium_tier` – requested tier label
+- `proof_url` – link to payment proof provided during confirmation
+- `subscription_expires_at` – optional target expiry for the approved subscription
+- `status` – `pending`, `confirmed`, `approved`, `denied`, or `expired`
+- `expired_at`, `responded_at` – workflow timestamps
+- `admin_whatsapp` – admin contact who responded
+- `metadata` – JSONB for auxiliary provider details
+- `created_at`, `updated_at` – timestamps (trigger-maintained)
+- Indexes: unique `request_token`, `status/expired_at`, `dashboard_user_id/status`, `client_id`
+
+### `dashboard_premium_request_audit`
+Lifecycle audit trail for dashboard premium requests.
+- `audit_id` – bigserial primary key
+- `request_id` – references `dashboard_premium_request` (cascade delete)
+- `dashboard_user_id` – optional actor reference
+- `action` – lifecycle verb (`created`, `confirmed`, `approved`, `denied`, `expired`)
+- `actor`, `admin_whatsapp` – who performed the action and through which WA contact
+- `status_from`, `status_to` – previous and next statuses
+- `note`, `metadata` – contextual information (JSONB)
+- `created_at`, `updated_at` – timestamps (trigger-maintained)
+- Indexes: `request_id`, `action`
 
 ### `visitor_logs`
 Stores anonymised request metadata for auditing.
