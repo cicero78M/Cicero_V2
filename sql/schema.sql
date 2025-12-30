@@ -450,7 +450,6 @@ CREATE TABLE IF NOT EXISTS premium_request (
 CREATE TABLE IF NOT EXISTS dashboard_premium_request (
   request_id SERIAL PRIMARY KEY,
   dashboard_user_id UUID REFERENCES dashboard_user(dashboard_user_id),
-  user_id TEXT REFERENCES "user"(user_id),
   username TEXT NOT NULL,
   whatsapp TEXT,
   bank_name TEXT NOT NULL,

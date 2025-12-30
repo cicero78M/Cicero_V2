@@ -304,8 +304,10 @@ Records premium subscription requests sent from the mobile app.
 Premium upgrade submissions coming directly from dashboard users.
 - `request_id` – serial primary key
 - `dashboard_user_id` – references `dashboard_user(dashboard_user_id)`
-- `user_id`, `username`, `whatsapp` – optional requestor metadata for backward compatibility with legacy flows
+- `username`, `whatsapp` – requestor metadata from the authenticated dashboard user
 - `bank_name`, `account_number`, `sender_name`, `transfer_amount` – payment evidence fields
+- `premium_tier`, `client_id`, `user_uuid` – optional identifiers persisted for tracing to dashboard form submissions
+- `metadata` – JSONB payload for submitted username, resolved username, and other request context
 - `status` – `pending`, `approved`, `rejected`, or `expired`
 - `request_token` – unique UUID used to track the request externally
 - `expired_at` – timestamp when the cron marks a stale request as expired
