@@ -104,6 +104,14 @@ function normalizeDashboardUserId(dashboardUserId) {
   return dashboardUserId;
 }
 
+function normalizeWhatsapp(whatsapp) {
+  if (typeof whatsapp === 'string') {
+    const trimmed = whatsapp.trim();
+    return trimmed || null;
+  }
+  return whatsapp || null;
+}
+
 function computeExpiresAt(durationDays = DEFAULT_DURATION_DAYS) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + durationDays);
@@ -198,6 +206,13 @@ export async function createPremiumAccessRequest({
 }) {
   const resolvedUsername = normalizeUsername(username || dashboardUser.username);
   const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser?.dashboard_user_id);
+  const normalizedWhatsapp = normalizeWhatsapp(dashboardUser?.whatsapp);
+  const sanitizedSessionContext = {
+    clientId: sessionContext?.clientId || null,
+    dashboardUserId: normalizedDashboardUserId,
+    userUuid: dashboardUser?.user_uuid || null,
+    username: resolvedUsername,
+  };
   const metadata = {
     submitted_username: submittedUsername || null,
     resolved_username: resolvedUsername || null,
@@ -210,7 +225,7 @@ export async function createPremiumAccessRequest({
   const request = await dashboardPremiumRequestModel.createRequest({
     dashboardUserId: normalizedDashboardUserId,
     username: resolvedUsername,
-    whatsapp: dashboardUser.whatsapp || null,
+    whatsapp: normalizedWhatsapp,
     bankName,
     accountNumber,
     senderName,
@@ -219,7 +234,8 @@ export async function createPremiumAccessRequest({
     clientId,
     metadata,
     status: 'pending',
-    sessionContext,
+    sessionContext: sanitizedSessionContext,
+    userUuid: dashboardUser?.user_uuid || null,
   });
 
   await dashboardPremiumAuditModel.insertAuditEntry({
@@ -230,10 +246,13 @@ export async function createPremiumAccessRequest({
     reason: 'Permintaan premium dikirim melalui dashboard',
     statusFrom: null,
     statusTo: request.status,
-    adminWhatsapp: dashboardUser?.whatsapp || request?.whatsapp || null,
+    adminWhatsapp: normalizedWhatsapp,
   });
 
-  const message = buildAdminNotification({ dashboardUser, request });
+  const message = buildAdminNotification({
+    dashboardUser: { ...dashboardUser, whatsapp: normalizedWhatsapp },
+    request,
+  });
   const notification = await notifyAdmins(message);
 
   return { request, notification };

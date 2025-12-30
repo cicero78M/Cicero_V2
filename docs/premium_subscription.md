@@ -182,11 +182,12 @@ accepts the updated payload from the UI:
     username, and dashboard user ID alongside the transfer details. When the
     form omits a username, the backend defaults to the authenticated dashboard
     user's value so the UI no longer needs to expose a UUID input.
-  - `dashboard_user_id` in the payload is ignored when the dashboard token
-    already contains a valid identifier; malformed IDs now return `400` before
-    touching the database to prevent empty strings from violating UUID checks
-    in `dashboard_premium_audit`. The handler prefers the authenticated
-    dashboard user ID for all downstream calls.
+  - `dashboard_user_id` in the payload is rejected when it differs from the
+    authenticated dashboard token and otherwise ignored. The controller reloads
+    the dashboard profile from the database using the token-sourced
+    `dashboard_user_id` and reuses the fetched `dashboard_user_id` and
+    `whatsapp` for inserts and audit rows. This prevents body-level overrides
+    from bypassing the active dashboard session context.
   - The insert path sets Postgres session settings (`app.current_client_id`,
     `app.current_dashboard_user_id`, `app.current_username`,
     and `app.current_user_uuid`) inside a transaction via
