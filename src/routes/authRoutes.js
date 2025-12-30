@@ -380,7 +380,6 @@ router.post('/dashboard-register', async (req, res) => {
     password_hash,
     role_id,
     status,
-    user_id: null,
     whatsapp,
   });
   if (clientIds.length > 0) {
@@ -461,7 +460,6 @@ router.post('/dashboard-login', async (req, res) => {
   }
   const payload = {
     dashboard_user_id: user.dashboard_user_id,
-    user_id: user.user_id,
     role: roleName,
     role_id: user.role_id,
     client_ids: user.client_ids,

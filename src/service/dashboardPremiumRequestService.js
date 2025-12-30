@@ -209,7 +209,6 @@ export async function createPremiumAccessRequest({
 
   const request = await dashboardPremiumRequestModel.createRequest({
     dashboardUserId: normalizedDashboardUserId,
-    userId: dashboardUser.user_id || null,
     username: resolvedUsername,
     whatsapp: dashboardUser.whatsapp || null,
     bankName,

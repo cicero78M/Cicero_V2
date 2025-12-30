@@ -95,7 +95,6 @@ CREATE TABLE dashboard_user (
   password_hash TEXT NOT NULL,
   role_id INT NOT NULL REFERENCES roles(role_id),
   status BOOLEAN DEFAULT TRUE,
-  user_id VARCHAR REFERENCES "user"(user_id),
   whatsapp VARCHAR,
   premium_status BOOLEAN DEFAULT FALSE,
   premium_tier TEXT,
