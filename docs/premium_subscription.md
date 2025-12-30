@@ -133,9 +133,9 @@ accepts the updated payload from the UI:
     updated premium form can use automatically:
     - `username` – taken from the dashboard session.
     - `dashboard_user_id` – returned for completeness so the UI can display who
-      is submitting the request without exposing a UUID field. The linked
-      `user_id` column is nullable in the database, so the flow now relies on
-      username to keep traceability intact.
+      is submitting the request without exposing a UUID field. The dashboard
+      table no longer stores a legacy `user_id` reference, so the flow relies on
+      username-based traceability.
 - `POST /premium/request`
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
@@ -186,7 +186,7 @@ accepts the updated payload from the UI:
     in `dashboard_premium_audit`. The handler prefers the authenticated
     dashboard user ID for all downstream calls.
   - The insert path sets Postgres session settings (`app.current_client_id`,
-    `app.current_dashboard_user_id`, `app.current_user_id`, `app.current_username`,
+    `app.current_dashboard_user_id`, `app.current_username`,
     and `app.current_user_uuid`) inside a transaction via
     `dashboardPremiumRequestModel.createRequest`. Keep these up to date when
     adding new RLS-protected fields so row-level security stays satisfied. The
@@ -213,7 +213,7 @@ Pending dashboard premium requests now expire automatically after 60 minutes:
 ### Client ID validation and RLS session settings
 
 - The dashboard premium request controller now sets Postgres session settings
-  (`app.current_client_id`, `app.current_dashboard_user_id`, `app.current_user_id`,
+  (`app.current_client_id`, `app.current_dashboard_user_id`,
   `app.current_user_uuid`, and `app.current_username`) before selecting dashboard
   users and their `client_ids`. This keeps `dashboard_user_clients` lookups RLS
   compliant even when older dashboard tokens do not include `client_id` claims,

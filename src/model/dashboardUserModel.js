@@ -51,8 +51,8 @@ export async function findAllByNormalizedWhatsApp(whatsapp) {
 
 export async function createUser(data) {
   const res = await query(
-    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role_id, status, user_id, whatsapp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO dashboard_user (dashboard_user_id, username, password_hash, role_id, status, whatsapp)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
     [
       data.dashboard_user_id,
@@ -60,7 +60,6 @@ export async function createUser(data) {
       data.password_hash,
       data.role_id,
       data.status,
-      data.user_id ?? null,
       data.whatsapp,
     ],
   );

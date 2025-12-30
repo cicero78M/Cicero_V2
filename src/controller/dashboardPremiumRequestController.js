@@ -37,7 +37,6 @@ function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload =
   return {
     'app.current_client_id': normalizedClientId || null,
     'app.current_dashboard_user_id': dashboardUserId || null,
-    'app.current_user_id': dashboardUserPayload.user_id || null,
     'app.current_user_uuid': dashboardUserPayload.user_uuid || null,
     'app.current_username': normalizeString(dashboardUserPayload.username) || null,
   };
@@ -133,7 +132,6 @@ export async function getDashboardPremiumRequestContext(req, res, next) {
       data: {
         username: dashboardUser.username,
         dashboard_user_id: dashboardUser.dashboard_user_id,
-        user_id: dashboardUser.user_id,
       },
     });
   } catch (err) {
@@ -265,7 +263,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
     const sessionContext = {
       clientId: resolvedClientId,
       dashboardUserId: dashboardUserIdFromToken,
-      userId: dashboardUser.user_id || null,
       username: resolvedUsername,
       userUuid: dashboardUser.user_uuid || null,
     };

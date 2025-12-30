@@ -20,7 +20,6 @@ export async function createRequest(payload) {
   const sessionContext = payload.sessionContext || {};
   const sessionClientId = sessionContext.clientId ?? payload.clientId;
   const sessionDashboardUserId = sessionContext.dashboardUserId ?? payload.dashboardUserId;
-  const sessionUserId = sessionContext.userId ?? payload.userId;
   const sessionUserUuid = sessionContext.userUuid ?? payload.userUuid;
   const sessionUsername = sessionContext.username ?? payload.username;
 
@@ -29,7 +28,6 @@ export async function createRequest(payload) {
       client.query(
         `INSERT INTO dashboard_premium_request (
           dashboard_user_id,
-          user_id,
           username,
           whatsapp,
           bank_name,
@@ -48,18 +46,17 @@ export async function createRequest(payload) {
           created_at,
           updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8,
-          $9, $10, $11, $12,
-          COALESCE($13, 'pending'),
-          COALESCE($14, gen_random_uuid()),
-          $15, $16, $17,
-          COALESCE($18, NOW()),
-          COALESCE($19, NOW())
+          $1, $2, $3, $4, $5, $6, $7,
+          $8, $9, $10, $11,
+          COALESCE($12, 'pending'),
+          COALESCE($13, gen_random_uuid()),
+          $14, $15, $16,
+          COALESCE($17, NOW()),
+          COALESCE($18, NOW())
         )
         RETURNING *`,
         [
           payload.dashboardUserId,
-          payload.userId || null,
           payload.username,
           payload.whatsapp || null,
           payload.bankName,
@@ -83,7 +80,6 @@ export async function createRequest(payload) {
         sessionSettings: {
           'app.current_client_id': sessionClientId || null,
           'app.current_dashboard_user_id': sessionDashboardUserId || null,
-          'app.current_user_id': sessionUserId || null,
           'app.current_user_uuid': sessionUserUuid || null,
           'app.current_username': sessionUsername || null,
         },

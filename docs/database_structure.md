@@ -112,7 +112,6 @@ Credentials for the web dashboard login.
 - `password_hash` – bcrypt hashed password
 - `role_id` – foreign key referencing `roles(role_id)`
 - `status` – boolean indicating whether the account is active
-- `user_id` – optional link to `user(user_id)`
 - `whatsapp` – contact number used for notifications
 - `created_at`, `updated_at` – timestamps
 

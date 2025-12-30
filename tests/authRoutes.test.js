@@ -318,7 +318,7 @@ describe('POST /dashboard-register', () => {
       expect(mockQuery).toHaveBeenNthCalledWith(
         3,
         expect.stringContaining('INSERT INTO dashboard_user'),
-        [expect.any(String), 'dash', expect.any(String), 1, false, null, '628121234']
+        [expect.any(String), 'dash', expect.any(String), 1, false, '628121234']
       );
       expect(mockQuery).toHaveBeenNthCalledWith(
         4,
@@ -458,8 +458,7 @@ describe('POST /dashboard-login', () => {
             role: 'admin',
             role_id: 2,
             status: true,
-            client_ids: ['c1'],
-            user_id: null
+            client_ids: ['c1']
           }
         ]
       })
@@ -473,7 +472,6 @@ describe('POST /dashboard-login', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.user).toEqual({
       dashboard_user_id: 'd1',
-      user_id: null,
       role: 'admin',
       role_id: 2,
       client_ids: ['c1'],
@@ -509,8 +507,7 @@ describe('POST /dashboard-login', () => {
             role: 'admin',
             role_id: 2,
             status: true,
-            client_ids: ['DIT1'],
-            user_id: null
+            client_ids: ['DIT1']
           }
         ]
       })
@@ -523,7 +520,6 @@ describe('POST /dashboard-login', () => {
     expect(res.status).toBe(200);
     expect(res.body.user).toEqual({
       dashboard_user_id: 'd1',
-      user_id: null,
       role: 'dit1',
       role_id: 2,
       client_ids: ['DIT1'],
@@ -550,8 +546,7 @@ describe('POST /dashboard-login', () => {
             role: 'admin',
             role_id: 2,
             status: true,
-            client_ids: ['c1'],
-            user_id: null
+            client_ids: ['c1']
           }
         ]
       })
@@ -581,8 +576,7 @@ describe('POST /dashboard-login', () => {
             role: 'BIDHUMAS',
             role_id: 2,
             status: true,
-            client_ids: ['DITSAMAPTA'],
-            user_id: null
+            client_ids: ['DITSAMAPTA']
           }
         ]
       })
@@ -595,7 +589,6 @@ describe('POST /dashboard-login', () => {
     expect(res.status).toBe(200);
     expect(res.body.user).toEqual({
       dashboard_user_id: 'd1',
-      user_id: null,
       role: 'bidhumas',
       role_id: 2,
       client_ids: ['DITSAMAPTA'],
@@ -625,8 +618,7 @@ describe('POST /dashboard-login', () => {
             role: 'bidhumas',
             role_id: 4,
             status: true,
-            client_ids: ['ditsamapta'],
-            user_id: null
+            client_ids: ['ditsamapta']
           }
         ]
       })
@@ -653,8 +645,7 @@ describe('POST /dashboard-login', () => {
               role: 'admin',
               role_id: 2,
               status: true,
-              client_ids: [],
-              user_id: null
+              client_ids: []
             }
         ]
       });
@@ -680,8 +671,7 @@ describe('POST /dashboard-login', () => {
               role: 'admin',
               role_id: 2,
               status: true,
-              client_ids: ['c1'],
-              user_id: null
+              client_ids: ['c1']
             }
         ]
       });
