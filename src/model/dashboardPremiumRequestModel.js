@@ -87,6 +87,37 @@ export async function findLatestForUser(dashboardUserId, dbClient = query) {
   return rows[0] || null;
 }
 
+export async function findLatestOpenByDashboardUserId(dashboardUserId, dbClient = query) {
+  const exec = getExecutor(dbClient);
+  const { rows } = await exec(
+    `SELECT *
+     FROM dashboard_premium_request
+     WHERE dashboard_user_id = $1
+       AND status IN ('pending', 'confirmed')
+       AND (expired_at IS NULL OR expired_at > NOW())
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [dashboardUserId],
+  );
+  return rows[0] || null;
+}
+
+export async function findLatestOpenByUsername(username, dbClient = query) {
+  if (!username) return null;
+  const exec = getExecutor(dbClient);
+  const { rows } = await exec(
+    `SELECT *
+     FROM dashboard_premium_request
+     WHERE LOWER(username) = LOWER($1)
+       AND status IN ('pending', 'confirmed')
+       AND (expired_at IS NULL OR expired_at > NOW())
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [username],
+  );
+  return rows[0] || null;
+}
+
 export async function updateRequest(requestId, patch, dbClient = query) {
   const existing = await findById(requestId, dbClient);
   if (!existing) return null;

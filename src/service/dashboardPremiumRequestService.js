@@ -3,6 +3,10 @@ import * as dashboardPremiumRequestModel from '../model/dashboardPremiumRequestM
 import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import * as dashboardSubscriptionModel from '../model/dashboardSubscriptionModel.js';
 import { createSubscriptionWithClient } from './dashboardSubscriptionService.js';
+import {
+  findLatestOpenByDashboardUserId,
+  findLatestOpenByUsername,
+} from '../model/dashboardPremiumRequestModel.js';
 
 const REQUEST_TTL_HOURS = 24;
 const CONFIRMED_TTL_HOURS = 48;
@@ -364,4 +368,15 @@ export async function findDashboardPremiumRequestByToken(token) {
 
 export async function findDashboardPremiumRequestById(requestId) {
   return dashboardPremiumRequestModel.findById(requestId);
+}
+
+export async function findLatestOpenDashboardPremiumRequestByIdentifier(identifier) {
+  if (!identifier) return null;
+  const normalized = String(identifier).trim();
+  if (!normalized) return null;
+
+  const byId = await findLatestOpenByDashboardUserId(normalized);
+  if (byId) return byId;
+
+  return findLatestOpenByUsername(normalized);
 }
