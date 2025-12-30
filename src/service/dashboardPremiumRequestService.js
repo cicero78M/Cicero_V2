@@ -1,5 +1,6 @@
 import { withTransaction } from '../repository/db.js';
 import * as dashboardPremiumRequestModel from '../model/dashboardPremiumRequestModel.js';
+import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import * as dashboardSubscriptionModel from '../model/dashboardSubscriptionModel.js';
 import { createSubscriptionWithClient } from './dashboardSubscriptionService.js';
 
@@ -42,6 +43,17 @@ function resolveSubscriptionExpiry(payload, request) {
   return addDays(new Date(), DEFAULT_SUBSCRIPTION_DURATION_DAYS);
 }
 
+async function resolveDashboardUserProfile(dashboardUser) {
+  if (!dashboardUser?.dashboard_user_id) {
+    return null;
+  }
+  const dbUser = await dashboardUserModel.findById(dashboardUser.dashboard_user_id);
+  if (!dbUser) {
+    return null;
+  }
+  return { ...dashboardUser, ...dbUser };
+}
+
 function buildActorLabel({ username, whatsapp, dashboard_user_id }) {
   if (username) return username;
   if (whatsapp) return whatsapp;
@@ -71,7 +83,8 @@ function assertPendingStatus(request, allowedStatuses = ['pending']) {
 }
 
 export async function createDashboardPremiumRequest(dashboardUser, payload = {}) {
-  if (!dashboardUser?.dashboard_user_id) {
+  const resolvedDashboardUser = await resolveDashboardUserProfile(dashboardUser);
+  if (!resolvedDashboardUser?.dashboard_user_id) {
     throw createServiceError('Dashboard user tidak valid', 401, 'unauthorized');
   }
   const requiredFields = ['bank_name', 'account_number', 'sender_name'];
@@ -89,10 +102,10 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
   return withTransaction(async client => {
     const request = await dashboardPremiumRequestModel.createRequest(
       {
-        dashboard_user_id: dashboardUser.dashboard_user_id,
+        dashboard_user_id: resolvedDashboardUser.dashboard_user_id,
         client_id: payload.client_id || null,
-        username: dashboardUser.username,
-        whatsapp: payload.whatsapp || dashboardUser.whatsapp || null,
+        username: resolvedDashboardUser.username,
+        whatsapp: payload.whatsapp || resolvedDashboardUser.whatsapp || null,
         bank_name: payload.bank_name,
         account_number: payload.account_number,
         sender_name: payload.sender_name,
@@ -110,9 +123,9 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
     await dashboardPremiumRequestModel.insertAuditEntry(
       {
         request_id: request.request_id,
-        dashboard_user_id: dashboardUser.dashboard_user_id,
+        dashboard_user_id: resolvedDashboardUser.dashboard_user_id,
         action: 'created',
-        actor: buildActorLabel(dashboardUser),
+        actor: buildActorLabel(resolvedDashboardUser),
         status_from: null,
         status_to: request.status,
         metadata: buildAuditMetadata(request),
@@ -125,7 +138,8 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
 }
 
 export async function confirmDashboardPremiumRequest(token, dashboardUser, payload = {}) {
-  if (!dashboardUser?.dashboard_user_id) {
+  const resolvedDashboardUser = await resolveDashboardUserProfile(dashboardUser);
+  if (!resolvedDashboardUser?.dashboard_user_id) {
     throw createServiceError('Dashboard user tidak valid', 401, 'unauthorized');
   }
   if (!payload.proof_url) {
@@ -137,7 +151,7 @@ export async function confirmDashboardPremiumRequest(token, dashboardUser, paylo
     if (!request) {
       throw createServiceError('Request tidak ditemukan', 404, 'not_found');
     }
-    ensureRequestOwnership(request, dashboardUser.dashboard_user_id);
+    ensureRequestOwnership(request, resolvedDashboardUser.dashboard_user_id);
     assertPendingStatus(request, ['pending', 'confirmed']);
 
     const expiredAt = resolveExpiry(payload, CONFIRMED_TTL_HOURS);
@@ -162,9 +176,9 @@ export async function confirmDashboardPremiumRequest(token, dashboardUser, paylo
     await dashboardPremiumRequestModel.insertAuditEntry(
       {
         request_id: request.request_id,
-        dashboard_user_id: dashboardUser.dashboard_user_id,
+        dashboard_user_id: resolvedDashboardUser.dashboard_user_id,
         action: 'confirmed',
-        actor: buildActorLabel(dashboardUser),
+        actor: buildActorLabel(resolvedDashboardUser),
         status_from: request.status,
         status_to: 'confirmed',
         metadata: buildAuditMetadata(updatedRequest),

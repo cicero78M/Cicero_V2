@@ -85,6 +85,9 @@ premium applications from dashboard users:
   WhatsApp (`sendDashboardPremiumRequestNotification`).
 - `GET /api/premium/request/:token` returns the request for the authenticated
   dashboard user.
+- When creating a request, the service re-fetches the dashboard user profile by
+  `dashboard_user_id` to populate `username` and `whatsapp`, ensuring the insert
+  never writes a `NULL` username even if the JWT payload is missing fields.
 
 On approval, `dashboardPremiumRequestService.approveDashboardPremiumRequest`
 creates an active `dashboard_user_subscriptions` row, refreshes cached premium
