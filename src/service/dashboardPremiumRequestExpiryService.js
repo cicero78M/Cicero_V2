@@ -74,8 +74,6 @@ export async function expirePendingRequests({ thresholdMinutes = DEFAULT_THRESHO
       const { request: updatedRequest } = await recordStatusChange({
         request,
         nextStatus: 'expired',
-        actor: 'system-cron:dashboard_premium_expiry',
-        reason: `Auto-expired after ${thresholdMinutes} minutes tanpa tindak lanjut admin`,
         enforcePending: true,
       });
 
