@@ -30,13 +30,6 @@ export default [
     description: 'Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only.',
   },
   {
-    jobKey: './src/cron/cronDashboardPremiumRequestExpiry.js',
-    modulePath: './src/cron/cronDashboardPremiumRequestExpiry.js',
-    bucket: 'waClient',
-    description:
-      'Expire stale dashboard premium access requests and optionally notify applicants via WhatsApp.',
-  },
-  {
     jobKey: './src/cron/cronDashboardSubscriptionExpiry.js',
     modulePath: './src/cron/cronDashboardSubscriptionExpiry.js',
     bucket: 'waClient',
