@@ -9,13 +9,25 @@ function normalizeClientId(value) {
   return typeof value === 'string' ? value.trim() : null;
 }
 
-function normalizeDashboardUserId(value) {
+function normalizeUuid(value) {
   if (value == null) return null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     return trimmed || null;
   }
   return value;
+}
+
+function normalizeDashboardUserId(value) {
+  return normalizeUuid(value);
+}
+
+function normalizeWhatsapp(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  return value || null;
 }
 
 function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload = {}) {
@@ -25,11 +37,12 @@ function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload =
   const normalizedClientId =
     normalizeClientId(dashboardUserPayload.client_id || dashboardUserPayload.clientId) ||
     normalizeClientId(clientIds[0]);
+  const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUserId);
 
   return {
     'app.current_client_id': normalizedClientId || null,
-    'app.current_dashboard_user_id': dashboardUserId || null,
-    'app.current_user_uuid': dashboardUserPayload.user_uuid || null,
+    'app.current_dashboard_user_id': normalizedDashboardUserId || null,
+    'app.current_user_uuid': normalizeUuid(dashboardUserPayload.user_uuid),
     'app.current_username': normalizeString(dashboardUserPayload.username) || null,
   };
 }
@@ -105,7 +118,7 @@ function isClientAllowed(clientId, allowedClientIds = []) {
 
 export async function getDashboardPremiumRequestContext(req, res, next) {
   try {
-    const dashboardUserId = req.dashboardUser?.dashboard_user_id;
+    const dashboardUserId = normalizeDashboardUserId(req.dashboardUser?.dashboard_user_id);
     if (!dashboardUserId) {
       return res.status(401).json({ success: false, message: 'Token dashboard tidak valid' });
     }
@@ -199,12 +212,16 @@ export async function createDashboardPremiumRequest(req, res, next) {
     }
 
     const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser.dashboard_user_id);
-    const normalizedDashboardWhatsapp =
-      typeof dashboardUser.whatsapp === 'string' ? dashboardUser.whatsapp.trim() || null : dashboardUser.whatsapp || null;
+    const normalizedDashboardWhatsapp = normalizeWhatsapp(dashboardUser.whatsapp);
+    const normalizedUserUuid = normalizeUuid(dashboardUser.user_uuid);
+    if (!normalizedDashboardUserId) {
+      return res.status(400).json({ success: false, message: 'dashboard_user_id tidak valid' });
+    }
     dashboardUser = {
       ...dashboardUser,
       dashboard_user_id: normalizedDashboardUserId,
       whatsapp: normalizedDashboardWhatsapp,
+      user_uuid: normalizedUserUuid,
     };
 
     allowedClientIds = getAllowedClientIds({

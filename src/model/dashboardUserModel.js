@@ -8,6 +8,12 @@ const BASE_SELECT =
 
 const BASE_GROUP_BY = 'GROUP BY du.dashboard_user_id, r.role_name';
 
+function normalizeDashboardUserId(value) {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
+
 async function runDashboardUserQuery({ whereClause, params, sessionSettings, expectMany = false }) {
   const queryText = `${BASE_SELECT} WHERE ${whereClause} ${BASE_GROUP_BY}`;
 
@@ -20,6 +26,18 @@ async function runDashboardUserQuery({ whereClause, params, sessionSettings, exp
 }
 
 async function findOneBy(field, value, { sessionSettings } = {}) {
+  if (field === 'dashboard_user_id') {
+    const normalized = normalizeDashboardUserId(value);
+    if (!normalized) {
+      return null;
+    }
+    return runDashboardUserQuery({
+      whereClause: `du.${field} = $1`,
+      params: [normalized],
+      sessionSettings,
+    });
+  }
+
   const whereClause =
     field === 'username' ? 'LOWER(du.username) = LOWER($1)' : `du.${field} = $1`;
 
