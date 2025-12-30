@@ -1,5 +1,41 @@
 import jwt from 'jsonwebtoken';
+import * as dashboardUserModel from '../model/dashboardUserModel.js';
+import { query } from '../repository/db.js';
 import redis from '../config/redis.js';
+
+function normalizeClientIds(clientIds) {
+  if (!Array.isArray(clientIds)) {
+    return [];
+  }
+  return clientIds.filter(id => id != null && String(id).trim() !== '');
+}
+
+async function resolveDashboardRole(dashboardUser) {
+  let roleName = dashboardUser.role;
+  const clientIds = dashboardUser.client_ids || [];
+
+  if (clientIds.length === 1) {
+    const [singleClientId] = clientIds;
+    const normalizedClientId = String(singleClientId || '').toUpperCase();
+    const normalizedRole = String(dashboardUser.role || '').toUpperCase();
+
+    const isBidhumasDitsamapta =
+      normalizedClientId === 'DITSAMAPTA' && normalizedRole === 'BIDHUMAS';
+
+    if (isBidhumasDitsamapta) {
+      roleName = 'bidhumas';
+    } else {
+      const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [
+        singleClientId,
+      ]);
+      if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
+        roleName = String(singleClientId).toLowerCase();
+      }
+    }
+  }
+
+  return roleName;
+}
 
 export async function verifyDashboardToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -20,10 +56,41 @@ export async function verifyDashboardToken(req, res, next) {
     if (!String(exists).startsWith('dashboard:')) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
-    req.dashboardUser = payload;
-    req.user = payload;
+
+    const dashboardUserId = payload.dashboard_user_id;
+    if (!dashboardUserId) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const dashboardUser = await dashboardUserModel.findById(dashboardUserId);
+    if (!dashboardUser || !dashboardUser.status) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const clientIds = normalizeClientIds(dashboardUser.client_ids);
+    if (clientIds.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Operator belum memiliki klien yang diizinkan',
+      });
+    }
+
+    const resolvedRole = await resolveDashboardRole({ ...dashboardUser, client_ids: clientIds });
+    const sanitizedUser = { ...dashboardUser };
+    delete sanitizedUser.password_hash;
+    sanitizedUser.role = resolvedRole;
+    sanitizedUser.client_ids = clientIds;
+    if (clientIds.length === 1) {
+      sanitizedUser.client_id = clientIds[0];
+    } else if ('client_id' in sanitizedUser) {
+      delete sanitizedUser.client_id;
+    }
+
+    req.dashboardUser = sanitizedUser;
+    req.user = sanitizedUser;
     next();
-  } catch {
+  } catch (err) {
+    console.error('[AUTH] Failed to verify dashboard token:', err);
     return res.status(401).json({ success: false, message: 'Invalid token' });
   }
 }

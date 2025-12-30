@@ -42,6 +42,14 @@ when detailed history is required.
 During dashboard login, premium status, tier, and expiry are attached to
 the JWT payload using the cached columns or the latest active subscription.
 
+### Dashboard session validation
+
+Every dashboard API call rehydrates `req.dashboardUser`/`req.user` from
+`dashboard_user` and `dashboard_user_clients` after JWT verification. Requests
+are denied when the dashboard account no longer exists, is inactive, or has no
+mapped clients, guaranteeing that premium checks always use the freshest client
+scope and cached premium flags rather than potentially stale JWT claims.
+
 ## Expiry enforcement
 
 - `src/service/dashboardSubscriptionExpiryService.js` filters active subscription
