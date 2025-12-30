@@ -1,6 +1,6 @@
 # Login API Guide
 
-*Last updated: 2025-12-22*
+*Last updated: 2025-02-18*
 
 This document explains how clients, regular users and dashboard operators authenticate with the backend. Available endpoints:
 - `/api/auth/login` for client operators,
@@ -203,6 +203,14 @@ The token is also delivered as an HTTP-only cookie named `token`.
 5. Every successful login event is reported to the WhatsApp administrators.
 6. When the token expires or is removed from Redis, a new login is required.
 7. Dashboard password resets invalidate existing dashboard login sessions before returning a success response.
+8. Each authenticated dashboard request reloads the dashboard user profile from the database to refresh `client_ids` (and derive `client_id` when only one is available). Requests are rejected when the dashboard user is missing, inactive, or no longer mapped to any clients so the scope always mirrors `dashboard_user_clients`.
+
+### Dashboard session refresh
+
+The `verifyDashboardToken` middleware revalidates dashboard JWTs against Redis and the `dashboard_user` table on every request. It rebuilds `req.dashboardUser`/`req.user` from the latest row, ensuring:
+- Deactivated or deleted dashboard accounts cannot reuse old tokens.
+- `client_ids` always match the current `dashboard_user_clients` mapping.
+- When exactly one client is allowed, `client_id` is derived from the refreshed list; otherwise the field is omitted to prevent stale single-client scopes.
 
 ## 4. Operator Access Allowlist
 
