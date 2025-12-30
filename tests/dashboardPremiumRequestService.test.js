@@ -7,6 +7,7 @@ const mockUpdateStatusIfPending = jest.fn();
 const mockCreateSubscription = jest.fn();
 const mockFindById = jest.fn();
 const mockFindByUsername = jest.fn();
+const mockInsertAuditEntry = jest.fn();
 
 const mockWaitForWaReady = jest.fn();
 const mockSafeSendMessage = jest.fn();
@@ -27,6 +28,9 @@ jest.unstable_mockModule('../src/model/dashboardUserModel.js', () => ({
   findByUsername: mockFindByUsername,
 }));
 
+jest.unstable_mockModule('../src/model/dashboardPremiumRequestAuditModel.js', () => ({
+  insertAuditEntry: mockInsertAuditEntry,
+}));
 jest.unstable_mockModule('../src/service/dashboardSubscriptionService.js', () => ({
   createSubscription: mockCreateSubscription,
 }));
@@ -53,6 +57,13 @@ beforeEach(() => {
   process.env.ADMIN_WHATSAPP = '';
   mockWaitForWaReady.mockResolvedValue();
   mockSafeSendMessage.mockResolvedValue(true);
+  mockInsertAuditEntry.mockResolvedValue({ audit_id: 'audit-1' });
+  mockFindLatestPendingByUsername.mockResolvedValue(null);
+  mockFindById.mockResolvedValue(null);
+  mockFindByUsername.mockResolvedValue(null);
+  mockUpdateStatus.mockResolvedValue(null);
+  mockUpdateStatusIfPending.mockResolvedValue(null);
+  mockCreateSubscription.mockResolvedValue({ subscription: null, cache: null });
   mockCreateRequest.mockResolvedValue({
     request_id: 'req-1',
     dashboard_user_id: 'db-user-1',
@@ -123,6 +134,18 @@ test('createPremiumAccessRequest uses dashboard profile data for ID, whatsapp, a
     expect.stringContaining('db-user-1'),
   );
   expect(result.request.dashboard_user_id).toBe('db-user-1');
+  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-1',
+      action: 'created',
+      sessionContext: expect.objectContaining({
+        clientId: 'client-a',
+        dashboardUserId: 'db-user-1',
+        userUuid: 'uuid-db-user',
+        username: 'override-user',
+      }),
+    }),
+  );
 });
 
 test('createPremiumAccessRequest nulls blank dashboard_user_id before create', async () => {
@@ -169,6 +192,121 @@ test('createPremiumAccessRequest nulls blank dashboard_user_id before create', a
       whatsapp: null,
       sessionContext: expect.objectContaining({
         dashboardUserId: null,
+      }),
+    }),
+  );
+
+  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-blank',
+      action: 'created',
+      sessionContext: expect.objectContaining({
+        dashboardUserId: null,
+        userUuid: null,
+      }),
+    }),
+  );
+});
+
+test('approvePendingRequest uses dashboard user from DB and records audit', async () => {
+  const requestRow = {
+    request_id: 'req-approve',
+    username: 'dashboard-user',
+    dashboard_user_id: '   ',
+    client_id: 'client-a',
+  };
+  mockFindLatestPendingByUsername.mockResolvedValue(requestRow);
+  mockFindByUsername.mockResolvedValue({
+    dashboard_user_id: 'db-user-from-db',
+    username: 'dashboard-user',
+    whatsapp: ' 628123 ',
+    user_uuid: 'uuid-db',
+  });
+  mockUpdateStatusIfPending.mockResolvedValue({
+    ...requestRow,
+    status: 'approved',
+    dashboard_user_id: 'db-user-from-db',
+  });
+  mockCreateSubscription.mockResolvedValue({
+    subscription: { dashboard_user_id: 'db-user-from-db' },
+    cache: { premium: true },
+  });
+
+  const result = await service.approvePendingRequest({
+    username: 'dashboard-user',
+    adminWhatsapp: '62888',
+    adminChatId: 'chat-123',
+  });
+
+  expect(result.status).toBe('approved');
+  expect(result.dashboardUser.dashboard_user_id).toBe('db-user-from-db');
+  expect(result.applicantWhatsapp).toBe('628123');
+  expect(mockCreateSubscription).toHaveBeenCalledWith(
+    expect.objectContaining({ dashboard_user_id: 'db-user-from-db' }),
+  );
+  expect(mockUpdateStatusIfPending).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-approve',
+      status: 'approved',
+      adminWhatsapp: '62888',
+    }),
+  );
+  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-approve',
+      action: 'approved',
+      adminWhatsapp: '62888',
+      adminChatId: 'chat-123',
+      sessionContext: expect.objectContaining({
+        clientId: 'client-a',
+        dashboardUserId: 'db-user-from-db',
+        userUuid: 'uuid-db',
+        username: 'dashboard-user',
+      }),
+    }),
+  );
+});
+
+test('rejectPendingRequest records audit even when dashboard user is missing', async () => {
+  const requestRow = {
+    request_id: 'req-reject',
+    username: 'pending-user',
+    dashboard_user_id: '',
+    client_id: 'client-b',
+    status: 'pending',
+  };
+  mockFindLatestPendingByUsername.mockResolvedValue(requestRow);
+  mockFindByUsername.mockResolvedValue(null);
+  mockUpdateStatusIfPending.mockResolvedValue({
+    ...requestRow,
+    status: 'rejected',
+  });
+
+  const result = await service.rejectPendingRequest({
+    username: 'pending-user',
+    adminWhatsapp: '62admin',
+    adminChatId: 'chat-2',
+  });
+
+  expect(result.status).toBe('rejected');
+  expect(result.applicantWhatsapp).toBeNull();
+  expect(mockUpdateStatusIfPending).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-reject',
+      status: 'rejected',
+      adminWhatsapp: '62admin',
+    }),
+  );
+  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: 'req-reject',
+      action: 'rejected',
+      adminWhatsapp: '62admin',
+      adminChatId: 'chat-2',
+      sessionContext: expect.objectContaining({
+        clientId: 'client-b',
+        dashboardUserId: null,
+        username: 'pending-user',
       }),
     }),
   );

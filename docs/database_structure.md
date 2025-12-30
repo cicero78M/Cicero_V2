@@ -113,6 +113,8 @@ Credentials for the web dashboard login.
 - `status` – boolean indicating whether the account is active
 - `whatsapp` – contact number used for notifications
 - `created_at`, `updated_at` – timestamps
+- legacy `user_id` references have been removed; `dashboard_user_id` is the sole
+  identifier for dashboard flows.
 
 ### `dashboard_user_clients`
 Link table assigning dashboard accounts to the clients they can view.
@@ -319,8 +321,12 @@ Indexes:
 - `idx_dashboard_premium_request_status_expired_at` accelerates the expiry cron that finds `pending` rows whose `expired_at` is still `NULL`.
 
 > **Note:** The legacy `dashboard_premium_audit` table and related trigger helper were removed.
-> Premium request lifecycle tracking now relies on the status fields within `dashboard_premium_request`
-> and consumer-specific logs (e.g. WhatsApp delivery callbacks).
+> Premium request lifecycle tracking now mirrors status changes into
+> `dashboard_premium_request_audit` (including creation, approval, rejection,
+> and expiry) using session settings derived from `dashboard_user_id` and
+> `client_id`. Legacy `user_id` references have been dropped from both the
+> request table and `dashboard_user`; downstream consumers should rely on
+> `dashboard_user_id` plus usernames for traceability.
 
 ### `visitor_logs`
 Stores anonymised request metadata for auditing.

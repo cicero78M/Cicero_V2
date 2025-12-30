@@ -119,10 +119,15 @@ WhatsApp:
 - `dennyaccess#<username>` / `denyaccess#<username>` – rejects the pending
   request and alerts the requester via WhatsApp.
 
-Status updates for dashboard premium requests are now tracked directly on the
-`dashboard_premium_request` row without writing to the removed
-`dashboard_premium_audit` helper table. WhatsApp notifications remain the primary
-feedback channel for applicants and admins.
+Status changes for dashboard premium requests now create audit rows in
+`dashboard_premium_request_audit` (`created`, `approved`, `rejected`, and
+`expired`) alongside the WhatsApp notifications so operators can trace admin
+actions without relying on legacy user identifiers. WhatsApp notifications
+remain the primary feedback channel for applicants and admins.
+The WhatsApp command handlers reload dashboard profiles from the database,
+normalize blank UUIDs to `NULL`, and reuse the persisted `dashboard_user_id` and
+`whatsapp` for subscription updates and audits even when the pending request
+row stores an empty identifier.
 
 ### New dashboard request endpoint
 
@@ -136,8 +141,9 @@ accepts the updated payload from the UI:
     - `username` – taken from the dashboard session.
     - `dashboard_user_id` – returned for completeness so the UI can display who
       is submitting the request without exposing a UUID field. The dashboard
-      request table has dropped the legacy `user_id` column, so the flow relies
-      on dashboard identifiers plus usernames for traceability.
+      request and `dashboard_user` tables have dropped the legacy `user_id`
+      column, so the flow relies on dashboard identifiers plus usernames for
+      traceability.
   - `POST /premium/request`
     - Requires a dashboard session token validated by `verifyDashboardToken`
       (Bearer header or `token` cookie). The middleware also checks the Redis
@@ -178,11 +184,12 @@ accepts the updated payload from the UI:
   - The controller re-fetches the dashboard profile using the
     `dashboard_user_id` from the token and treats the database result as the
     single source of truth for `dashboard_user_id` and `whatsapp`. Blank or
-    missing `dashboard_user_id` values from the token or request body are
-    normalized to `null`, and failed profile lookups now return `400` instead
-    of surfacing database errors. The service passes the normalized identifier
-    (or `null` when absent) to request creation and audit inserts so invalid
-    UUIDs are not persisted.
+    whitespace-only `dashboard_user_id` values from the token are normalized to
+    `null` and rejected with `401/400` instead of surfacing database errors,
+    while body-level overrides are ignored (and mismatches still return `400`).
+    The service passes the normalized identifier (or `null` when absent) to
+    request creation and audit inserts so invalid UUID strings never hit RLS
+    policies or Postgres casts.
   - The endpoint stores `premium_tier`, `client_id`, the resolved `username`,
     and the submitted amount field name inside `dashboard_premium_request.metadata`
     for traceability, while also persisting normalized columns for filtering.
@@ -196,17 +203,20 @@ accepts the updated payload from the UI:
     authenticated dashboard token and otherwise ignored. The controller reloads
     the dashboard profile from the database using the token-sourced
     `dashboard_user_id` and reuses the fetched `dashboard_user_id` and
-    `whatsapp` for inserts and audit rows. This prevents body-level overrides
-    from bypassing the active dashboard session context.
+    trimmed `whatsapp` for inserts and audit rows. This prevents body-level
+    overrides from bypassing the active dashboard session context.
   - The insert path sets Postgres session settings (`app.current_client_id`,
     `app.current_dashboard_user_id`, `app.current_username`,
     and `app.current_user_uuid`) inside a transaction via
-    `dashboardPremiumRequestModel.createRequest`. Keep these up to date when
-    adding new RLS-protected fields so row-level security stays satisfied. The
-    transaction uses `set_config` with parameter binding to avoid raw string
-    concatenation in `SET` statements and prevent Postgres parse errors on bound
-    values. The session-setting step runs automatically when `DB_DRIVER` is set
-    to Postgres-friendly values (`postgres`, `postgresql`, or `pg`); other
+    `dashboardPremiumRequestModel.createRequest`. Empty strings are normalized
+    to `NULL` before calling `set_config` to avoid UUID cast failures, and
+    `app.current_user_id` is deliberately not set for dashboard premium flows.
+    Keep these session settings up to date when adding new RLS-protected fields
+    so row-level security stays satisfied. The transaction uses `set_config`
+    with parameter binding to avoid raw string concatenation in `SET`
+    statements and prevent Postgres parse errors on bound values. The
+    session-setting step runs automatically when `DB_DRIVER` is set to
+    Postgres-friendly values (`postgres`, `postgresql`, or `pg`); other
     drivers skip this to avoid errors on non-Postgres adapters.
 
 ### Auto-expiry for unattended dashboard requests
@@ -215,7 +225,7 @@ Pending dashboard premium requests now expire automatically after 60 minutes:
 
 - `src/service/dashboardPremiumRequestExpiryService.js` queries pending
   `dashboard_premium_request` rows older than the threshold, updates the status
-  to `expired` only if the row is still pending, and writes an
+  to `expired` only if the row is still pending, and writes a
   `dashboard_premium_request_audit` entry with the action `expired` for
   traceability. When a WhatsApp number is available, the service attempts to
   inform the applicant via the gateway client so they can resubmit.

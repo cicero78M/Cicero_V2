@@ -1,4 +1,5 @@
 import * as dashboardPremiumRequestModel from '../model/dashboardPremiumRequestModel.js';
+import * as dashboardPremiumRequestAuditModel from '../model/dashboardPremiumRequestAuditModel.js';
 import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import * as dashboardSubscriptionService from './dashboardSubscriptionService.js';
 import waClient, { waitForWaReady } from './waService.js';
@@ -94,13 +95,18 @@ function normalizeUsername(username) {
   return typeof username === 'string' ? username.trim() : '';
 }
 
-function normalizeDashboardUserId(dashboardUserId) {
-  if (dashboardUserId == null) return null;
-  if (typeof dashboardUserId === 'string') {
-    const trimmed = dashboardUserId.trim();
+function normalizeUuid(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
     return trimmed || null;
   }
-  return dashboardUserId;
+  const serialized = String(value).trim();
+  return serialized || null;
+}
+
+function normalizeDashboardUserId(dashboardUserId) {
+  return normalizeUuid(dashboardUserId);
 }
 
 function normalizeWhatsapp(whatsapp) {
@@ -109,6 +115,35 @@ function normalizeWhatsapp(whatsapp) {
     return trimmed || null;
   }
   return whatsapp || null;
+}
+
+function normalizeClientId(clientId) {
+  if (clientId == null) return null;
+  if (typeof clientId === 'string') {
+    const trimmed = clientId.trim();
+    return trimmed || null;
+  }
+  const serialized = String(clientId).trim();
+  return serialized || null;
+}
+
+function sanitizeDashboardUser(dashboardUser = {}) {
+  return {
+    ...dashboardUser,
+    dashboard_user_id: normalizeDashboardUserId(dashboardUser.dashboard_user_id),
+    whatsapp: normalizeWhatsapp(dashboardUser.whatsapp),
+    user_uuid: normalizeUuid(dashboardUser.user_uuid),
+    username: normalizeUsername(dashboardUser.username) || null,
+  };
+}
+
+function buildSessionContext({ clientId, dashboardUserId, userUuid, username } = {}) {
+  return {
+    clientId: normalizeClientId(clientId),
+    dashboardUserId: normalizeDashboardUserId(dashboardUserId),
+    userUuid: normalizeUuid(userUuid),
+    username: normalizeUsername(username) || null,
+  };
 }
 
 function computeExpiresAt(durationDays = DEFAULT_DURATION_DAYS) {
@@ -122,7 +157,7 @@ function nowISOString() {
 }
 
 function resolveDashboardWhatsapp(request, dashboardUser) {
-  return dashboardUser?.whatsapp || request?.whatsapp || null;
+  return normalizeWhatsapp(dashboardUser?.whatsapp || request?.whatsapp || null);
 }
 
 function formatExpiryLabel(expiresAt) {
@@ -138,13 +173,62 @@ function formatExpiryLabel(expiresAt) {
   }
 }
 
+async function insertAuditEntrySafe({
+  action,
+  request,
+  dashboardUser = null,
+  sessionContext = {},
+  adminWhatsapp = null,
+  adminChatId = null,
+  note = null,
+}) {
+  if (!request?.request_id) return null;
+
+  const sanitizedDashboardUser = dashboardUser ? sanitizeDashboardUser(dashboardUser) : null;
+  const auditSessionContext = buildSessionContext({
+    clientId: sessionContext?.clientId ?? request?.client_id ?? null,
+    dashboardUserId:
+      sanitizedDashboardUser?.dashboard_user_id ??
+      normalizeDashboardUserId(request?.dashboard_user_id),
+    userUuid: sanitizedDashboardUser?.user_uuid ?? sessionContext?.userUuid,
+    username:
+      sessionContext?.username ||
+      sanitizedDashboardUser?.username ||
+      request?.username ||
+      request?.resolved_username ||
+      request?.metadata?.resolved_username ||
+      request?.submitted_username,
+  });
+
+  try {
+    return await dashboardPremiumRequestAuditModel.insertAuditEntry({
+      requestId: request.request_id,
+      action,
+      adminWhatsapp,
+      adminChatId,
+      note,
+      sessionContext: auditSessionContext,
+    });
+  } catch (err) {
+    console.warn('[DashboardPremiumRequest] Failed to insert audit entry', {
+      action,
+      requestId: request?.request_id,
+      error: err?.message || err,
+    });
+    return null;
+  }
+}
+
 export async function recordStatusChange({
   request,
   nextStatus,
   adminWhatsapp = null,
+  adminChatId = null,
   respondedAt = null,
   expiredAt = null,
   enforcePending = false,
+  dashboardUser = null,
+  sessionContext = {},
 }) {
   if (!request?.request_id) {
     return { request: null };
@@ -168,6 +252,15 @@ export async function recordStatusChange({
     return { request: null };
   }
 
+  await insertAuditEntrySafe({
+    action: nextStatus,
+    request: updatedRequest,
+    dashboardUser,
+    sessionContext,
+    adminWhatsapp,
+    adminChatId,
+  });
+
   return { request: updatedRequest };
 }
 
@@ -184,28 +277,27 @@ export async function createPremiumAccessRequest({
   username,
   sessionContext = {},
 }) {
-  const resolvedUsername = normalizeUsername(username || dashboardUser.username);
-  const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser?.dashboard_user_id);
-  const normalizedWhatsapp = normalizeWhatsapp(dashboardUser?.whatsapp);
-  const sanitizedSessionContext = {
-    clientId: sessionContext?.clientId || null,
-    dashboardUserId: normalizedDashboardUserId,
-    userUuid: dashboardUser?.user_uuid || null,
+  const sanitizedDashboardUser = sanitizeDashboardUser(dashboardUser);
+  const resolvedUsername = normalizeUsername(username || sanitizedDashboardUser.username);
+  const sanitizedSessionContext = buildSessionContext({
+    clientId,
+    dashboardUserId: sanitizedDashboardUser.dashboard_user_id,
+    userUuid: sanitizedDashboardUser.user_uuid,
     username: resolvedUsername,
-  };
+  });
   const metadata = {
     submitted_username: submittedUsername || null,
     resolved_username: resolvedUsername || null,
     submitted_amount_field: rawAmountField ?? null,
     client_id: clientId || null,
-    dashboard_user_id: normalizedDashboardUserId,
+    dashboard_user_id: sanitizedDashboardUser.dashboard_user_id,
     premium_tier: premiumTier || null,
   };
 
   const request = await dashboardPremiumRequestModel.createRequest({
-    dashboardUserId: normalizedDashboardUserId,
+    dashboardUserId: sanitizedDashboardUser.dashboard_user_id,
     username: resolvedUsername,
-    whatsapp: normalizedWhatsapp,
+    whatsapp: sanitizedDashboardUser.whatsapp,
     bankName,
     accountNumber,
     senderName,
@@ -215,19 +307,18 @@ export async function createPremiumAccessRequest({
     metadata,
     status: 'pending',
     sessionContext: sanitizedSessionContext,
-    userUuid: dashboardUser?.user_uuid || null,
+    userUuid: sanitizedDashboardUser.user_uuid,
   });
 
-  const requestDashboardUserId = normalizeDashboardUserId(
-    request.dashboard_user_id ?? normalizedDashboardUserId,
-  );
+  await insertAuditEntrySafe({
+    action: 'created',
+    request,
+    dashboardUser: sanitizedDashboardUser,
+    sessionContext: sanitizedSessionContext,
+  });
 
   const message = buildAdminNotification({
-    dashboardUser: {
-      ...dashboardUser,
-      whatsapp: normalizedWhatsapp,
-      dashboard_user_id: normalizedDashboardUserId,
-    },
+    dashboardUser: sanitizedDashboardUser,
     request,
   });
   const notification = await notifyAdmins(message);
@@ -236,15 +327,19 @@ export async function createPremiumAccessRequest({
 }
 
 async function findDashboardUserFromRequest(request, username) {
-  if (request?.dashboard_user_id) {
-    const user = await dashboardUserModel.findById(request.dashboard_user_id);
+  const normalizedDashboardUserId = normalizeDashboardUserId(request?.dashboard_user_id);
+  if (normalizedDashboardUserId) {
+    const user = await dashboardUserModel.findById(normalizedDashboardUserId);
     if (user) {
-      return user;
+      return sanitizeDashboardUser(user);
     }
   }
 
   if (username) {
-    return dashboardUserModel.findByUsername(username);
+    const user = await dashboardUserModel.findByUsername(username);
+    if (user) {
+      return sanitizeDashboardUser(user);
+    }
   }
 
   return null;
@@ -263,6 +358,7 @@ export async function findPendingRequestWithUser(username) {
 export async function approvePendingRequest({
   username,
   adminWhatsapp,
+  adminChatId = null,
   tier = DEFAULT_TIER,
   durationDays = DEFAULT_DURATION_DAYS,
 } = {}) {
@@ -270,13 +366,14 @@ export async function approvePendingRequest({
   if (!request) {
     return { status: 'not_found', request: null, dashboardUser: null };
   }
-  if (!dashboardUser) {
+  const sanitizedDashboardUser = dashboardUser ? sanitizeDashboardUser(dashboardUser) : null;
+  if (!sanitizedDashboardUser?.dashboard_user_id) {
     return { status: 'dashboard_user_missing', request, dashboardUser: null };
   }
 
   const expiresAt = computeExpiresAt(durationDays);
   const { subscription, cache } = await dashboardSubscriptionService.createSubscription({
-    dashboard_user_id: dashboardUser.dashboard_user_id,
+    dashboard_user_id: sanitizedDashboardUser.dashboard_user_id,
     tier,
     expires_at: expiresAt,
     metadata: {
@@ -285,43 +382,64 @@ export async function approvePendingRequest({
     },
   });
 
+  const sessionContext = buildSessionContext({
+    clientId: request?.client_id,
+    dashboardUserId: sanitizedDashboardUser.dashboard_user_id,
+    userUuid: sanitizedDashboardUser.user_uuid,
+    username: sanitizedDashboardUser.username || request?.username,
+  });
+
   const { request: updatedRequest } = await recordStatusChange({
     request,
     nextStatus: 'approved',
     adminWhatsapp,
     enforcePending: true,
+    dashboardUser: sanitizedDashboardUser,
+    sessionContext,
+    adminChatId,
   });
 
   return {
     status: updatedRequest ? 'approved' : 'already_processed',
     request: updatedRequest,
-    dashboardUser,
+    dashboardUser: sanitizedDashboardUser,
     subscription,
     cache,
     expiresAt,
-    applicantWhatsapp: resolveDashboardWhatsapp(request, dashboardUser),
+    applicantWhatsapp: resolveDashboardWhatsapp(request, sanitizedDashboardUser),
   };
 }
 
-export async function rejectPendingRequest({ username, adminWhatsapp } = {}) {
+export async function rejectPendingRequest({ username, adminWhatsapp, adminChatId = null } = {}) {
   const { request, dashboardUser } = await findPendingRequestWithUser(username);
   if (!request) {
     return { status: 'not_found', request: null, dashboardUser: null };
   }
+
+  const sanitizedDashboardUser = dashboardUser ? sanitizeDashboardUser(dashboardUser) : null;
+  const sessionContext = buildSessionContext({
+    clientId: request?.client_id,
+    dashboardUserId: sanitizedDashboardUser?.dashboard_user_id,
+    userUuid: sanitizedDashboardUser?.user_uuid,
+    username: sanitizedDashboardUser?.username || request?.username,
+  });
 
   const { request: updatedRequest } = await recordStatusChange({
     request,
     nextStatus: 'rejected',
     adminWhatsapp,
     enforcePending: true,
+    dashboardUser: sanitizedDashboardUser,
+    sessionContext,
+    adminChatId,
   });
 
-  const applicantWhatsapp = resolveDashboardWhatsapp(request, dashboardUser);
+  const applicantWhatsapp = resolveDashboardWhatsapp(request, sanitizedDashboardUser);
 
   return {
     status: updatedRequest ? 'rejected' : 'already_processed',
     request: updatedRequest,
-    dashboardUser,
+    dashboardUser: sanitizedDashboardUser,
     applicantWhatsapp,
     expiryLabel: updatedRequest?.expires_at ? formatExpiryLabel(updatedRequest.expires_at) : null,
   };

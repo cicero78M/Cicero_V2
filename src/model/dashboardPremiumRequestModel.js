@@ -30,6 +30,25 @@ function normalizeMetadata(value) {
   return json;
 }
 
+function normalizeSessionSetting(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  const serialized = String(value).trim();
+  return serialized || null;
+}
+
+function buildSessionSettings(sessionContext = {}) {
+  return {
+    'app.current_client_id': normalizeSessionSetting(sessionContext.clientId),
+    'app.current_dashboard_user_id': normalizeSessionSetting(sessionContext.dashboardUserId),
+    'app.current_user_uuid': normalizeSessionSetting(sessionContext.userUuid),
+    'app.current_username': normalizeSessionSetting(sessionContext.username),
+  };
+}
+
 export async function createRequest({
   dashboardUserId,
   username,
@@ -51,10 +70,7 @@ export async function createRequest({
   updatedAt = null,
   sessionContext = {},
 }) {
-  const sessionClientId = sessionContext.clientId ?? null;
-  const sessionDashboardUserId = sessionContext.dashboardUserId ?? null;
-  const sessionUserUuid = sessionContext.userUuid ?? null;
-  const sessionUsername = sessionContext.username ?? null;
+  const sessionSettings = buildSessionSettings(sessionContext);
 
   const res = await withTransaction(
     client =>
@@ -110,12 +126,7 @@ export async function createRequest({
         ],
       ),
       {
-        sessionSettings: {
-          'app.current_client_id': sessionClientId || null,
-          'app.current_dashboard_user_id': sessionDashboardUserId || null,
-          'app.current_user_uuid': sessionUserUuid || null,
-          'app.current_username': sessionUsername || null,
-        },
+        sessionSettings,
       },
     );
 
