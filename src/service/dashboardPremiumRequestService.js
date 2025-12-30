@@ -70,6 +70,32 @@ function buildAuditMetadata(request = {}) {
   };
 }
 
+function resolveAuthorizedClientId(dashboardUser, requestedClientId) {
+  const allowedClientIds = Array.isArray(dashboardUser?.client_ids)
+    ? dashboardUser.client_ids.filter(id => id != null && String(id).trim() !== '')
+    : [];
+
+  if (!allowedClientIds.length) {
+    throw createServiceError('Dashboard user belum memiliki relasi client', 403, 'forbidden');
+  }
+
+  const normalizedRequested =
+    requestedClientId == null || requestedClientId === '' ? null : String(requestedClientId);
+  if (normalizedRequested) {
+    const matchIndex = allowedClientIds.findIndex(id => String(id) === normalizedRequested);
+    if (matchIndex === -1) {
+      throw createServiceError('client_id tidak valid untuk pengguna ini', 403, 'forbidden');
+    }
+    return allowedClientIds[matchIndex];
+  }
+
+  if (allowedClientIds.length === 1) {
+    return allowedClientIds[0];
+  }
+
+  throw createServiceError('client_id wajib diisi', 400, 'validation');
+}
+
 function ensureRequestOwnership(request, dashboardUserId) {
   if (request.dashboard_user_id !== dashboardUserId) {
     throw createServiceError('Request tidak ditemukan untuk pengguna ini', 404, 'forbidden');
@@ -87,6 +113,7 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
   if (!resolvedDashboardUser?.dashboard_user_id) {
     throw createServiceError('Dashboard user tidak valid', 401, 'unauthorized');
   }
+  const resolvedClientId = resolveAuthorizedClientId(resolvedDashboardUser, payload.client_id);
   const requiredFields = ['bank_name', 'account_number', 'sender_name'];
   const missingField = requiredFields.find(field => !payload[field]);
   if (missingField) {
@@ -103,7 +130,7 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
     const request = await dashboardPremiumRequestModel.createRequest(
       {
         dashboard_user_id: resolvedDashboardUser.dashboard_user_id,
-        client_id: payload.client_id || null,
+        client_id: resolvedClientId,
         username: resolvedDashboardUser.username,
         whatsapp: payload.whatsapp || resolvedDashboardUser.whatsapp || null,
         bank_name: payload.bank_name,
