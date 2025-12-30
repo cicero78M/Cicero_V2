@@ -514,7 +514,9 @@ Status: 🟢 AKTIF, Exception: False
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
+    const roles = await userModel.getUserRoles(user.user_id);
     let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+    const roleStr = roles.length ? roles.join(", ") : "-";
     let msg = `
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 *Data User* ━━━━━━━━━━
@@ -525,6 +527,7 @@ Status: 🟢 AKTIF, Exception: False
 *Satfung*   : ${user.divisi || "-"}
 *Jabatan*   : ${user.jabatan || "-"}
 *Status*    : ${statusStr}
+*Role Aktif*: ${roleStr}
 ━━━━━━━━━━━━━━━━━━━━━━
 
 Status baru yang akan di-set:
@@ -535,6 +538,8 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
 `.trim();
 
     session.updateStatusNRP = nrp;
+    session.updateStatusRoles = roles;
+    delete session.updateStatusRoleChoice;
     session.step = "updateStatus_value";
     await waClient.sendMessage(chatId, msg);
   },
@@ -1031,19 +1036,86 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return;
     }
     try {
-      await userModel.updateUserField(session.updateStatusNRP, "status", status);
-      const user = await userModel.findUserById(session.updateStatusNRP);
-      let statusStr = status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
-      let msg = `✅ *Status user berhasil diubah!*
+      if (status === true) {
+        await userModel.updateUserField(session.updateStatusNRP, "status", status);
+        const user = await userModel.findUserById(session.updateStatusNRP);
+        let statusStr = "🟢 *AKTIF*";
+        let msg = `✅ *Status user berhasil diubah!*
 ━━━━━━━━━━━━━━━━━━━━━━
 *NRP/NIP*   : ${user.user_id}
 *Nama*      : ${user.nama || "-"}
+*Status*    : ${statusStr}
+━━━━━━━━━━━━━━━━━━━━━━`;
+        await waClient.sendMessage(chatId, msg);
+      } else {
+        const roles = session.updateStatusRoles || (await userModel.getUserRoles(session.updateStatusNRP));
+        if (roles.length > 1 && !session.updateStatusRoleChoice) {
+          const choices = roles.map((role, index) => `${index + 1}. ${role}`).join("\n");
+          session.step = "updateStatus_chooseRole";
+          await waClient.sendMessage(
+            chatId,
+            `User memiliki lebih dari satu role. Pilih role yang akan dihapus:\n${choices}\n\nBalas angka atau ketik *batal* untuk keluar.`
+          );
+          return;
+        }
+        const roleToRemove = session.updateStatusRoleChoice || roles[0] || null;
+        const updatedUser = await userModel.deactivateRoleOrUser(session.updateStatusNRP, roleToRemove);
+        const statusStr = updatedUser.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+        const remainingRoles = await userModel.getUserRoles(session.updateStatusNRP);
+        const activeRoles = remainingRoles.length ? remainingRoles.join(", ") : "-";
+        const msg = `✅ *Status user berhasil diubah!*
+━━━━━━━━━━━━━━━━━━━━━━
+*NRP/NIP*   : ${updatedUser.user_id}
+*Nama*      : ${updatedUser.nama || "-"}
+*Role Diubah*: ${roleToRemove || "-"}
+*Role Tersisa*: ${activeRoles}
+*Status*    : ${statusStr}
+━━━━━━━━━━━━━━━━━━━━━━`;
+        await waClient.sendMessage(chatId, msg);
+      }
+    } catch (err) {
+      await waClient.sendMessage(chatId, `❌ Gagal update status: ${err.message}`);
+    }
+    delete session.updateStatusRoleChoice;
+    delete session.updateStatusRoles;
+    delete session.updateStatusNRP;
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  updateStatus_chooseRole: async (session, chatId, text, waClient, pool, userModel) => {
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.step = "main";
+      await waClient.sendMessage(chatId, "Keluar dari proses ubah status user.");
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const roles = session.updateStatusRoles || [];
+    const index = parseInt(text.trim(), 10) - 1;
+    if (Number.isNaN(index) || !roles[index]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Mohon balas dengan angka sesuai daftar role.");
+      return;
+    }
+    const selectedRole = roles[index];
+    try {
+      const updatedUser = await userModel.deactivateRoleOrUser(session.updateStatusNRP, selectedRole);
+      const remainingRoles = await userModel.getUserRoles(session.updateStatusNRP);
+      const statusStr = updatedUser.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
+      const activeRoles = remainingRoles.length ? remainingRoles.join(", ") : "-";
+      const msg = `✅ *Status user berhasil diubah!*
+━━━━━━━━━━━━━━━━━━━━━━
+*NRP/NIP*   : ${updatedUser.user_id}
+*Nama*      : ${updatedUser.nama || "-"}
+*Role Diubah*: ${selectedRole}
+*Role Tersisa*: ${activeRoles}
 *Status*    : ${statusStr}
 ━━━━━━━━━━━━━━━━━━━━━━`;
       await waClient.sendMessage(chatId, msg);
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal update status: ${err.message}`);
     }
+    delete session.updateStatusRoleChoice;
+    delete session.updateStatusRoles;
+    delete session.updateStatusNRP;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },

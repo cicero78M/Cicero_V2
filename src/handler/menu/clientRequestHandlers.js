@@ -635,8 +635,19 @@ async function processBulkDeletionRequest({
     const officialName =
       formatNama(dbUser) || dbUser.nama || fallbackName || normalizedId;
 
+    const activeRoles = [];
+    if (dbUser.ditbinmas) activeRoles.push("ditbinmas");
+    if (dbUser.ditlantas) activeRoles.push("ditlantas");
+    if (dbUser.bidhumas) activeRoles.push("bidhumas");
+    if (dbUser.ditsamapta) activeRoles.push("ditsamapta");
+    if (dbUser.operator) activeRoles.push("operator");
+    const targetRole =
+      activeRoles.length > 1
+        ? pickPrimaryRole(dbUser) || activeRoles[0]
+        : activeRoles[0] || null;
+
     try {
-      await userModel.updateUserField(normalizedId, "status", false);
+      dbUser = await userModel.deactivateRoleOrUser(normalizedId, targetRole);
     } catch (err) {
       failures.push({
         ...entry,
@@ -647,23 +658,27 @@ async function processBulkDeletionRequest({
       continue;
     }
 
-    try {
-      await userModel.updateUserField(normalizedId, "whatsapp", "");
-    } catch (err) {
-      const note = err?.message || String(err);
-      failures.push({
-        ...entry,
-        name: officialName,
-        userId: normalizedId,
-        error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
-      });
-      continue;
+    if (dbUser?.status === false) {
+      try {
+        await userModel.updateUserField(normalizedId, "whatsapp", "");
+      } catch (err) {
+        const note = err?.message || String(err);
+        failures.push({
+          ...entry,
+          name: officialName,
+          userId: normalizedId,
+          error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
+        });
+        continue;
+      }
     }
 
     successes.push({
       ...entry,
       name: officialName,
       userId: normalizedId,
+      targetRole,
+      statusAfter: dbUser?.status,
     });
   }
 
@@ -672,11 +687,13 @@ async function processBulkDeletionRequest({
   lines.push(`📄 *${title}*`);
 
   if (successes.length) {
-    lines.push("", `✅ Status dinonaktifkan untuk ${successes.length} personel:`);
-    successes.forEach(({ userId, name, reason, rawId }) => {
+    lines.push("", `✅ Permintaan diproses untuk ${successes.length} personel:`);
+    successes.forEach(({ userId, name, reason, rawId, targetRole, statusAfter }) => {
       const displayName = name || rawId || userId;
       const reasonLabel = reason ? ` • ${reason}` : "";
-      lines.push(`- ${userId} (${displayName})${reasonLabel}`);
+      const roleLabel = targetRole ? ` • role: ${targetRole}` : "";
+      const statusLabel = statusAfter === false ? " • status: nonaktif" : " • status: aktif";
+      lines.push(`- ${userId} (${displayName})${roleLabel}${reasonLabel}${statusLabel}`);
     });
   }
 
