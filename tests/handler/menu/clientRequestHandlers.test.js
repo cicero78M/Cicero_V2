@@ -473,7 +473,13 @@ describe('bulkStatus_process', () => {
       if (userId === '75020202' && field === 'whatsapp') {
         throw new Error('Tidak dapat menghapus WhatsApp');
       }
+      return { user_id: userId };
     });
+    const deactivateRoleOrUser = jest.fn(async (userId) => ({
+      user_id: userId,
+      nama: userId === '75020201' ? 'AKP Asep Sunandar' : 'IPTU Budi Santoso',
+      status: false,
+    }));
     const findUserById = jest.fn(async (userId) => {
       if (userId === '75020201') {
         return { user_id: userId, title: 'AKP', nama: 'Asep Sunandar' };
@@ -498,14 +504,8 @@ describe('bulkStatus_process', () => {
       requestMessage,
       { sendMessage },
       undefined,
-      { updateUserField, findUserById }
+      { updateUserField, findUserById, deactivateRoleOrUser }
     );
-
-    const statusCalls = updateUserField.mock.calls.filter(
-      ([, field]) => field === 'status'
-    );
-    expect(statusCalls).toHaveLength(2);
-    expect(statusCalls.map(([id]) => id)).toEqual(['75020201', '75020202']);
 
     const whatsappCalls = updateUserField.mock.calls.filter(
       ([, field]) => field === 'whatsapp'
@@ -515,11 +515,12 @@ describe('bulkStatus_process', () => {
       '75020201',
       '75020202',
     ]);
+    expect(deactivateRoleOrUser).toHaveBeenCalledTimes(2);
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
     const summaryMessage = sendMessage.mock.calls[0][1];
-    expect(summaryMessage).toContain('✅ Status dinonaktifkan untuk 1 personel');
-    expect(summaryMessage).toContain('75020201 (AKP Asep Sunandar) • mutasi');
+    expect(summaryMessage).toContain('✅ Permintaan diproses untuk 1 personel');
+    expect(summaryMessage).toContain('75020201 (AKP Asep Sunandar) • mutasi • status: nonaktif');
     expect(summaryMessage).toContain(
       '75020202 (IPTU Budi Santoso) • pensiun → status dinonaktifkan, namun gagal mengosongkan WhatsApp: Tidak dapat menghapus WhatsApp'
     );
@@ -527,6 +528,43 @@ describe('bulkStatus_process', () => {
       '75020203 (Carla Dewi) • double data → user tidak ditemukan'
     );
     expect(session.step).toBe('main');
+  });
+
+  it('prompts for a role choice when a user has multiple active roles', async () => {
+    const session = { step: 'bulkStatus_process' };
+    const chatId = 'chat-multi-role';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const userModel = {
+      findUserById: jest.fn().mockResolvedValue({
+        user_id: '75020201',
+        nama: 'Asep Sunandar',
+      }),
+      getUserRoles: jest.fn().mockResolvedValue(['ditlantas', 'operator']),
+      deactivateRoleOrUser: jest.fn(),
+      updateUserField: jest.fn(),
+    };
+
+    const requestMessage = [
+      'Permohonan Penghapusan Data Personil – Polres Contoh',
+      '1. Asep Sunandar – 75020201 – mutasi',
+    ].join('\n');
+
+    await clientRequestHandlers.bulkStatus_process(
+      session,
+      chatId,
+      requestMessage,
+      { sendMessage },
+      undefined,
+      userModel
+    );
+
+    expect(userModel.deactivateRoleOrUser).not.toHaveBeenCalled();
+    expect(session.step).toBe('bulkStatus_applySelection');
+    expect(session.bulkStatusContext.pendingSelections).toHaveLength(1);
+    const promptMessage = sendMessage.mock.calls[0][1];
+    expect(promptMessage).toContain('lebih dari satu role');
+    expect(promptMessage).toContain('1. ditlantas');
+    expect(promptMessage).toContain('2. operator');
   });
 
   it('ignores messages that are not bulk deletion requests', async () => {
@@ -621,6 +659,10 @@ describe('bulkStatus_process', () => {
       undefined,
       {
         updateUserField,
+        deactivateRoleOrUser: jest.fn(async (userId) => ({
+          user_id: userId,
+          status: false,
+        })),
         findUserById: jest.fn(async (userId) => {
           if (userId === '76070503') {
             return { user_id: userId, title: 'AIPTU', nama: 'ERWAN WAHYUDI' };
@@ -633,20 +675,97 @@ describe('bulkStatus_process', () => {
       }
     );
 
-    const statusCalls = updateUserField.mock.calls.filter(
-      ([, field]) => field === 'status'
-    );
-    expect(statusCalls.map(([id]) => id)).toEqual(['76070503', '67030561']);
-
     const whatsappCalls = updateUserField.mock.calls.filter(
       ([, field]) => field === 'whatsapp'
     );
     expect(whatsappCalls.map(([id]) => id)).toEqual(['76070503', '67030561']);
 
     const summaryMessage = sendMessage.mock.calls[0][1];
-    expect(summaryMessage).toContain('76070503 (AIPTU ERWAN WAHYUDI) • MUTASI');
-    expect(summaryMessage).toContain('67030561 (AIPTU KANTUN SUTRISNO) • PENSIUN');
+    expect(summaryMessage).toContain('76070503 (AIPTU ERWAN WAHYUDI) • MUTASI • status: nonaktif');
+    expect(summaryMessage).toContain('67030561 (AIPTU KANTUN SUTRISNO) • PENSIUN • status: nonaktif');
     expect(session.step).toBe('main');
+  });
+
+  it('completes pending selections and summarizes the result', async () => {
+    const session = {
+      step: 'bulkStatus_applySelection',
+      bulkStatusContext: {
+        headerLine: 'Permohonan Penghapusan Data Personil – Polres Contoh',
+        successes: [],
+        failures: [],
+        pendingSelections: [
+          {
+            userId: '75020201',
+            name: 'Asep Sunandar',
+            reason: 'mutasi',
+            roles: ['ditlantas', 'operator'],
+          },
+        ],
+      },
+    };
+    const chatId = 'chat-apply-role';
+    const sendMessage = jest.fn().mockResolvedValue();
+    const userModel = {
+      deactivateRoleOrUser: jest
+        .fn()
+        .mockResolvedValue({ user_id: '75020201', status: false }),
+      updateUserField: jest.fn().mockResolvedValue(),
+    };
+
+    await clientRequestHandlers.bulkStatus_applySelection(
+      session,
+      chatId,
+      '2',
+      { sendMessage },
+      undefined,
+      userModel
+    );
+
+    expect(userModel.deactivateRoleOrUser).toHaveBeenCalledWith(
+      '75020201',
+      'operator'
+    );
+    expect(userModel.updateUserField).toHaveBeenCalledWith(
+      '75020201',
+      'whatsapp',
+      ''
+    );
+    const summaryMessage = sendMessage.mock.calls[0][1];
+    expect(summaryMessage).toContain('✅ Permintaan diproses untuk 1 personel');
+    expect(summaryMessage).toContain('role: operator');
+    expect(summaryMessage).toContain('status: nonaktif');
+    expect(session.step).toBe('main');
+    expect(session.bulkStatusContext).toBeUndefined();
+  });
+
+  it('cancels pending role selections when the user exits', async () => {
+    const session = {
+      step: 'bulkStatus_applySelection',
+      bulkStatusContext: {
+        headerLine: 'Permohonan Penghapusan Data Personil',
+        successes: [],
+        failures: [],
+        pendingSelections: [
+          { userId: '75020201', name: 'Asep Sunandar', roles: ['ditlantas'] },
+        ],
+      },
+    };
+    const chatId = 'chat-cancel-role';
+    const sendMessage = jest.fn().mockResolvedValue();
+
+    await clientRequestHandlers.bulkStatus_applySelection(
+      session,
+      chatId,
+      'batal',
+      { sendMessage }
+    );
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining('dibatalkan')
+    );
+    expect(session.step).toBe('main');
+    expect(session.bulkStatusContext).toBeUndefined();
   });
 });
 
