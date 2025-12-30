@@ -4,7 +4,12 @@ function normalizeNullableUuid(value) {
   if (value == null) return null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    return trimmed || null;
+    if (!trimmed) return null;
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(trimmed)) {
+      return null;
+    }
+    return trimmed;
   }
   return value;
 }

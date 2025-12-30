@@ -195,8 +195,17 @@ export async function createDashboardPremiumRequest(req, res, next) {
       sessionSettings,
     );
     if (!dashboardUser) {
-      return res.status(404).json({ success: false, message: 'Pengguna dashboard tidak ditemukan' });
+      return res.status(400).json({ success: false, message: 'dashboard_user_id tidak valid' });
     }
+
+    const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser.dashboard_user_id);
+    const normalizedDashboardWhatsapp =
+      typeof dashboardUser.whatsapp === 'string' ? dashboardUser.whatsapp.trim() || null : dashboardUser.whatsapp || null;
+    dashboardUser = {
+      ...dashboardUser,
+      dashboard_user_id: normalizedDashboardUserId,
+      whatsapp: normalizedDashboardWhatsapp,
+    };
 
     allowedClientIds = getAllowedClientIds({
       dashboardUserClientIds: dashboardUser?.client_ids,

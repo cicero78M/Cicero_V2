@@ -96,7 +96,7 @@ function normalizeUsername(username) {
 }
 
 function normalizeDashboardUserId(dashboardUserId) {
-  if (!dashboardUserId) return null;
+  if (dashboardUserId == null) return null;
   if (typeof dashboardUserId === 'string') {
     const trimmed = dashboardUserId.trim();
     return trimmed || null;
@@ -238,9 +238,13 @@ export async function createPremiumAccessRequest({
     userUuid: dashboardUser?.user_uuid || null,
   });
 
+  const requestDashboardUserId = normalizeDashboardUserId(
+    request.dashboard_user_id ?? normalizedDashboardUserId,
+  );
+
   await dashboardPremiumAuditModel.insertAuditEntry({
     requestId: request.request_id,
-    dashboardUserId: request.dashboard_user_id || normalizedDashboardUserId,
+    dashboardUserId: requestDashboardUserId,
     action: 'created',
     actor: dashboardUser?.username ? `dashboard_user:${dashboardUser.username}` : 'dashboard_user',
     reason: 'Permintaan premium dikirim melalui dashboard',
@@ -250,7 +254,11 @@ export async function createPremiumAccessRequest({
   });
 
   const message = buildAdminNotification({
-    dashboardUser: { ...dashboardUser, whatsapp: normalizedWhatsapp },
+    dashboardUser: {
+      ...dashboardUser,
+      whatsapp: normalizedWhatsapp,
+      dashboard_user_id: normalizedDashboardUserId,
+    },
     request,
   });
   const notification = await notifyAdmins(message);

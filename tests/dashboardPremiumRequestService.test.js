@@ -139,3 +139,59 @@ test('createPremiumAccessRequest uses dashboard profile data for ID, whatsapp, a
   );
   expect(result.request.dashboard_user_id).toBe('db-user-1');
 });
+
+test('createPremiumAccessRequest nulls blank dashboard_user_id before audit insert', async () => {
+  const dashboardUser = {
+    dashboard_user_id: '   ',
+    username: 'dashboard-user',
+    whatsapp: '   ',
+  };
+
+  mockCreateRequest.mockResolvedValue({
+    request_id: 'req-blank',
+    dashboard_user_id: ' ',
+    username: 'dashboard-user',
+    whatsapp: null,
+    bank_name: 'Bank Jago',
+    account_number: '1234567890',
+    sender_name: 'Sender',
+    transfer_amount: 150000,
+    premium_tier: 'gold',
+    client_id: 'client-a',
+    status: 'pending',
+  });
+
+  await service.createPremiumAccessRequest({
+    dashboardUser,
+    bankName: 'Bank Jago',
+    accountNumber: '1234567890',
+    senderName: 'Sender',
+    transferAmount: 150000,
+    premiumTier: 'gold',
+    clientId: 'client-a',
+    username: 'dashboard-user',
+    sessionContext: {
+      clientId: 'body-client',
+      dashboardUserId: 'body-id',
+      userUuid: 'body-uuid',
+      username: 'body-username',
+    },
+  });
+
+  expect(mockCreateRequest).toHaveBeenCalledWith(
+    expect.objectContaining({
+      dashboardUserId: null,
+      whatsapp: null,
+      sessionContext: expect.objectContaining({
+        dashboardUserId: null,
+      }),
+    }),
+  );
+
+  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      dashboardUserId: null,
+      actor: 'dashboard_user:dashboard-user',
+    }),
+  );
+});
