@@ -206,18 +206,17 @@ accepts the updated payload from the UI:
     trimmed `whatsapp` for inserts and audit rows. This prevents body-level
     overrides from bypassing the active dashboard session context.
   - The insert path sets Postgres session settings (`app.current_client_id`,
-    `app.current_dashboard_user_id`, `app.current_username`,
-    and `app.current_user_uuid`) inside a transaction via
-    `dashboardPremiumRequestModel.createRequest`. Empty strings are normalized
-    to `NULL` before calling `set_config` to avoid UUID cast failures, and
-    `app.current_user_id` is deliberately not set for dashboard premium flows.
-    Keep these session settings up to date when adding new RLS-protected fields
-    so row-level security stays satisfied. The transaction uses `set_config`
-    with parameter binding to avoid raw string concatenation in `SET`
-    statements and prevent Postgres parse errors on bound values. The
-    session-setting step runs automatically when `DB_DRIVER` is set to
-    Postgres-friendly values (`postgres`, `postgresql`, or `pg`); other
-    drivers skip this to avoid errors on non-Postgres adapters.
+    `app.current_dashboard_user_id`, and `app.current_username`) inside a
+    transaction via `dashboardPremiumRequestModel.createRequest`. Empty
+    strings are normalized to `NULL` before calling `set_config` to avoid UUID
+    cast failures, and `app.current_user_id` is deliberately not set for
+    dashboard premium flows. Keep these session settings up to date when
+    adding new RLS-protected fields so row-level security stays satisfied. The
+    transaction uses `set_config` with parameter binding to avoid raw string
+    concatenation in `SET` statements and prevent Postgres parse errors on
+    bound values. The session-setting step runs automatically when `DB_DRIVER`
+    is set to Postgres-friendly values (`postgres`, `postgresql`, or `pg`);
+    other drivers skip this to avoid errors on non-Postgres adapters.
 
 ### Auto-expiry for unattended dashboard requests
 
@@ -236,11 +235,11 @@ Pending dashboard premium requests now expire automatically after 60 minutes:
 ### Client ID validation and RLS session settings
 
 - The dashboard premium request controller now sets Postgres session settings
-  (`app.current_client_id`, `app.current_dashboard_user_id`,
-  `app.current_user_uuid`, and `app.current_username`) before selecting dashboard
-  users and their `client_ids`. This keeps `dashboard_user_clients` lookups RLS
-  compliant even when older dashboard tokens do not include `client_id` claims,
-  preventing 42501 errors during these reads.
+  (`app.current_client_id`, `app.current_dashboard_user_id`, and
+  `app.current_username`) before selecting dashboard users and their
+  `client_ids`. This keeps `dashboard_user_clients` lookups RLS compliant even
+  when older dashboard tokens do not include `client_id` claims, preventing
+  42501 errors during these reads.
 - `client_id` resolution follows the stricter validation flow:
   - Missing `client_id` across the request body, token claims, and dashboard profile:
     `400` with `client_id wajib diisi atau akun dashboard harus memiliki satu client aktif`.

@@ -132,16 +132,14 @@ function sanitizeDashboardUser(dashboardUser = {}) {
     ...dashboardUser,
     dashboard_user_id: normalizeDashboardUserId(dashboardUser.dashboard_user_id),
     whatsapp: normalizeWhatsapp(dashboardUser.whatsapp),
-    user_uuid: normalizeUuid(dashboardUser.user_uuid),
     username: normalizeUsername(dashboardUser.username) || null,
   };
 }
 
-function buildSessionContext({ clientId, dashboardUserId, userUuid, username } = {}) {
+function buildSessionContext({ clientId, dashboardUserId, username } = {}) {
   return {
     clientId: normalizeClientId(clientId),
     dashboardUserId: normalizeDashboardUserId(dashboardUserId),
-    userUuid: normalizeUuid(userUuid),
     username: normalizeUsername(username) || null,
   };
 }
@@ -190,7 +188,6 @@ async function insertAuditEntrySafe({
     dashboardUserId:
       sanitizedDashboardUser?.dashboard_user_id ??
       normalizeDashboardUserId(request?.dashboard_user_id),
-    userUuid: sanitizedDashboardUser?.user_uuid ?? sessionContext?.userUuid,
     username:
       sessionContext?.username ||
       sanitizedDashboardUser?.username ||
@@ -282,7 +279,6 @@ export async function createPremiumAccessRequest({
   const sanitizedSessionContext = buildSessionContext({
     clientId,
     dashboardUserId: sanitizedDashboardUser.dashboard_user_id,
-    userUuid: sanitizedDashboardUser.user_uuid,
     username: resolvedUsername,
   });
   const metadata = {
@@ -307,7 +303,6 @@ export async function createPremiumAccessRequest({
     metadata,
     status: 'pending',
     sessionContext: sanitizedSessionContext,
-    userUuid: sanitizedDashboardUser.user_uuid,
   });
 
   await insertAuditEntrySafe({
@@ -385,7 +380,6 @@ export async function approvePendingRequest({
   const sessionContext = buildSessionContext({
     clientId: request?.client_id,
     dashboardUserId: sanitizedDashboardUser.dashboard_user_id,
-    userUuid: sanitizedDashboardUser.user_uuid,
     username: sanitizedDashboardUser.username || request?.username,
   });
 
@@ -420,7 +414,6 @@ export async function rejectPendingRequest({ username, adminWhatsapp, adminChatI
   const sessionContext = buildSessionContext({
     clientId: request?.client_id,
     dashboardUserId: sanitizedDashboardUser?.dashboard_user_id,
-    userUuid: sanitizedDashboardUser?.user_uuid,
     username: sanitizedDashboardUser?.username || request?.username,
   });
 

@@ -307,7 +307,7 @@ Premium upgrade submissions coming directly from dashboard users.
 - `dashboard_user_id` – references `dashboard_user(dashboard_user_id)`
 - `username`, `whatsapp` – requestor metadata from the authenticated dashboard user
 - `bank_name`, `account_number`, `sender_name`, `transfer_amount` – payment evidence fields
-- `premium_tier`, `client_id`, `user_uuid` – optional identifiers persisted for tracing to dashboard form submissions
+- `premium_tier`, `client_id` – optional identifiers persisted for tracing to dashboard form submissions
 - `metadata` – JSONB payload for submitted username, resolved username, and other request context
 - `status` – `pending`, `approved`, `rejected`, or `expired`
 - `request_token` – unique UUID used to track the request externally
@@ -324,7 +324,7 @@ Indexes:
 > Premium request lifecycle tracking now mirrors status changes into
 > `dashboard_premium_request_audit` (including creation, approval, rejection,
 > and expiry) using session settings derived from `dashboard_user_id` and
-> `client_id`. Legacy `user_id` references have been dropped from both the
+> `client_id`. Legacy `user_id` and `user_uuid` references have been dropped from both the
 > request table and `dashboard_user`; downstream consumers should rely on
 > `dashboard_user_id` plus usernames for traceability.
 

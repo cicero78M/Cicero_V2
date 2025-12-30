@@ -42,7 +42,6 @@ function buildSessionSettingsFromRequest(dashboardUserId, dashboardUserPayload =
   return {
     'app.current_client_id': normalizedClientId || null,
     'app.current_dashboard_user_id': normalizedDashboardUserId || null,
-    'app.current_user_uuid': normalizeUuid(dashboardUserPayload.user_uuid),
     'app.current_username': normalizeString(dashboardUserPayload.username) || null,
   };
 }
@@ -213,7 +212,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
 
     const normalizedDashboardUserId = normalizeDashboardUserId(dashboardUser.dashboard_user_id);
     const normalizedDashboardWhatsapp = normalizeWhatsapp(dashboardUser.whatsapp);
-    const normalizedUserUuid = normalizeUuid(dashboardUser.user_uuid);
     if (!normalizedDashboardUserId) {
       return res.status(400).json({ success: false, message: 'dashboard_user_id tidak valid' });
     }
@@ -221,7 +219,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
       ...dashboardUser,
       dashboard_user_id: normalizedDashboardUserId,
       whatsapp: normalizedDashboardWhatsapp,
-      user_uuid: normalizedUserUuid,
     };
 
     allowedClientIds = getAllowedClientIds({
@@ -281,7 +278,6 @@ export async function createDashboardPremiumRequest(req, res, next) {
       clientId: resolvedClientId,
       dashboardUserId: dashboardUser.dashboard_user_id,
       username: resolvedUsername,
-      userUuid: dashboardUser.user_uuid || null,
     };
 
     const { request, notification } = await createPremiumAccessRequest({

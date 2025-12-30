@@ -44,7 +44,6 @@ function buildSessionSettings(sessionContext = {}) {
   return {
     'app.current_client_id': normalizeSessionSetting(sessionContext.clientId),
     'app.current_dashboard_user_id': normalizeSessionSetting(sessionContext.dashboardUserId),
-    'app.current_user_uuid': normalizeSessionSetting(sessionContext.userUuid),
     'app.current_username': normalizeSessionSetting(sessionContext.username),
   };
 }
@@ -59,7 +58,6 @@ export async function createRequest({
   transferAmount,
   premiumTier = null,
   clientId = null,
-  userUuid = null,
   metadata,
   status,
   requestToken = null,
@@ -85,7 +83,6 @@ export async function createRequest({
           transfer_amount,
           premium_tier,
           client_id,
-          user_uuid,
           metadata,
           status,
           request_token,
@@ -114,7 +111,6 @@ export async function createRequest({
           normalizeNumeric(transferAmount),
           premiumTier || null,
           clientId || null,
-          userUuid || null,
           normalizeMetadata(metadata),
           status,
           requestToken || null,
