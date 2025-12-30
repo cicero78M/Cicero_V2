@@ -16,6 +16,20 @@ function normalizeNumeric(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function normalizeMetadata(value) {
+  const json = normalizeJson(value);
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    return json;
+  }
+
+  const { userId, user_id: userIdSnake, ...rest } = json;
+  if (userId !== undefined || userIdSnake !== undefined) {
+    return rest;
+  }
+
+  return json;
+}
+
 export async function createRequest(payload) {
   const sessionContext = payload.sessionContext || {};
   const sessionClientId = sessionContext.clientId ?? payload.clientId;
@@ -66,7 +80,7 @@ export async function createRequest(payload) {
           payload.premiumTier || null,
           payload.clientId || null,
           payload.userUuid || null,
-          normalizeJson(payload.metadata),
+          normalizeMetadata(payload.metadata),
           payload.status,
           payload.requestToken || null,
           payload.expiredAt || null,

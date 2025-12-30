@@ -134,8 +134,8 @@ accepts the updated payload from the UI:
     - `username` – taken from the dashboard session.
     - `dashboard_user_id` – returned for completeness so the UI can display who
       is submitting the request without exposing a UUID field. The dashboard
-      table no longer stores a legacy `user_id` reference, so the flow relies on
-      username-based traceability.
+      request table has dropped the legacy `user_id` column, so the flow relies
+      on dashboard identifiers plus usernames for traceability.
 - `POST /premium/request`
   - Requires a dashboard session token validated by `verifyDashboardToken`
     (Bearer header or `token` cookie). The middleware also checks the Redis
@@ -176,6 +176,8 @@ accepts the updated payload from the UI:
   - The endpoint stores `premium_tier`, `client_id`, the resolved `username`,
     and the submitted amount field name inside `dashboard_premium_request.metadata`
     for traceability, while also persisting normalized columns for filtering.
+    Legacy `user_id` data is no longer stored; incoming metadata is sanitized
+    to drop any `userId`/`user_id` keys before insertion.
   - Admin WhatsApp notifications now include the requested tier, client ID,
     username, and dashboard user ID alongside the transfer details. When the
     form omits a username, the backend defaults to the authenticated dashboard
