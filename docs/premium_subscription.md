@@ -85,6 +85,12 @@ premium applications from dashboard users:
   WhatsApp (`sendDashboardPremiumRequestNotification`).
 - `GET /api/premium/request/:token` returns the request for the authenticated
   dashboard user.
+- When a dashboard user creates a request, the service reloads their profile
+  through `dashboardUserModel.findById` to obtain the permitted `client_ids`.
+  The `client_id` written to the request (and sent in notifications) is resolved
+  from that list: an explicit payload value must be included in `client_ids`,
+  a single allowed client is chosen automatically, and unknown or missing
+  values are rejected.
 - When creating a request, the service re-fetches the dashboard user profile by
   `dashboard_user_id` to populate `username` and `whatsapp`, ensuring the insert
   never writes a `NULL` username even if the JWT payload is missing fields.
