@@ -241,7 +241,10 @@ export const updateUserRoleIds = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const user = await userModel.deleteUser(req.params.id);
+    const rawRole = req.query?.role ?? req.body?.role;
+    const role =
+      typeof rawRole === 'string' && rawRole.trim() ? rawRole.trim().toLowerCase() : null;
+    const user = await userModel.deactivateRoleOrUser(req.params.id, role);
     sendSuccess(res, user);
   } catch (err) {
     next(err);

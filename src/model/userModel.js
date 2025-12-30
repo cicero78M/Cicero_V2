@@ -53,6 +53,59 @@ async function removeRole(userId, roleName) {
   );
 }
 
+export async function getUserRoles(userId) {
+  const uid = normalizeUserId(userId);
+  const { rows } = await query(
+    `SELECT r.role_name
+     FROM user_roles ur
+     JOIN roles r ON ur.role_id = r.role_id
+     WHERE ur.user_id = $1`,
+    [uid]
+  );
+  return rows.map((row) => row.role_name);
+}
+
+export async function deactivateRoleOrUser(userId, roleName = null) {
+  const uid = normalizeUserId(userId);
+  const normalizedRole = typeof roleName === 'string' ? roleName.toLowerCase() : null;
+  await query('BEGIN');
+  try {
+    const { rows } = await query(
+      `SELECT r.role_name
+       FROM user_roles ur
+       JOIN roles r ON ur.role_id = r.role_id
+       WHERE ur.user_id = $1`,
+      [uid]
+    );
+    const currentRoles = rows.map((row) => row.role_name);
+
+    if (normalizedRole) {
+      const hasRole = currentRoles.some((role) => role?.toLowerCase() === normalizedRole);
+      if (!hasRole) {
+        throw new Error(`Role ${roleName} tidak ditemukan untuk user`);
+      }
+      await query(
+        'DELETE FROM user_roles WHERE user_id=$1 AND role_id=(SELECT role_id FROM roles WHERE LOWER(role_name)=LOWER($2))',
+        [uid, roleName]
+      );
+    }
+
+    const remainingRoles = normalizedRole
+      ? currentRoles.filter((role) => role?.toLowerCase() !== normalizedRole)
+      : currentRoles;
+    if (!normalizedRole || remainingRoles.length === 0) {
+      await query('UPDATE "user" SET status=false, updated_at=NOW() WHERE user_id=$1', [uid]);
+    } else {
+      await query('UPDATE "user" SET updated_at=NOW() WHERE user_id=$1', [uid]);
+    }
+    await query('COMMIT');
+  } catch (err) {
+    await query('ROLLBACK');
+    throw err;
+  }
+  return findUserById(uid);
+}
+
 // Helper to normalize text fields to uppercase
 function normalizeUserFields(data) {
   if (!data) return;

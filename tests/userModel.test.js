@@ -17,6 +17,8 @@ let getUsersByClient;
 let getUsersSocialByClient;
 let updateUserRolesUserId;
 let updateUser;
+let deactivateRoleOrUser;
+let getUserRoles;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -31,6 +33,8 @@ beforeAll(async () => {
   getUsersSocialByClient = mod.getUsersSocialByClient;
   updateUserRolesUserId = mod.updateUserRolesUserId;
   updateUser = mod.updateUser;
+  deactivateRoleOrUser = mod.deactivateRoleOrUser;
+  getUserRoles = mod.getUserRoles;
 });
 
 beforeEach(() => {
@@ -343,4 +347,67 @@ test('getClientsByRole filters by client id', async () => {
   const [sql, params] = mockQuery.mock.calls[0];
   expect(sql).toContain('LOWER(duc.client_id) = LOWER($2)');
   expect(params).toEqual(['operator', 'c1']);
+});
+
+test('getUserRoles returns list of role names', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ role_name: 'operator' }, { role_name: 'ditlantas' }] });
+  const roles = await getUserRoles('123');
+  expect(roles).toEqual(['operator', 'ditlantas']);
+  const [sql, params] = mockQuery.mock.calls[0];
+  expect(sql).toContain('FROM user_roles ur');
+  expect(sql).toContain('JOIN roles r ON ur.role_id = r.role_id');
+  expect(params).toEqual(['123']);
+});
+
+test('deactivateRoleOrUser removes selected role but keeps user active when others remain', async () => {
+  mockQuery
+    .mockResolvedValueOnce({}) // BEGIN
+    .mockResolvedValueOnce({ rows: [{ role_name: 'operator' }, { role_name: 'ditlantas' }] }) // fetch roles
+    .mockResolvedValueOnce({}) // delete selected role
+    .mockResolvedValueOnce({}) // update timestamp only
+    .mockResolvedValueOnce({}) // COMMIT
+    .mockResolvedValueOnce({
+      rows: [{
+        user_id: '1',
+        status: true,
+        ditbinmas: false,
+        ditlantas: true,
+        bidhumas: false,
+        ditsamapta: false,
+        operator: false,
+      }]
+    }); // findUserById
+
+  const user = await deactivateRoleOrUser('1', 'operator');
+
+  expect(user.status).toBe(true);
+  const updateSql = mockQuery.mock.calls[3][0];
+  expect(updateSql).toContain('updated_at=NOW()');
+  expect(updateSql).not.toContain('status=false');
+});
+
+test('deactivateRoleOrUser sets status false when last role is removed', async () => {
+  mockQuery
+    .mockResolvedValueOnce({}) // BEGIN
+    .mockResolvedValueOnce({ rows: [{ role_name: 'operator' }] }) // fetch roles
+    .mockResolvedValueOnce({}) // delete selected role
+    .mockResolvedValueOnce({}) // update with status=false
+    .mockResolvedValueOnce({}) // COMMIT
+    .mockResolvedValueOnce({
+      rows: [{
+        user_id: '1',
+        status: false,
+        ditbinmas: false,
+        ditlantas: false,
+        bidhumas: false,
+        ditsamapta: false,
+        operator: false,
+      }]
+    }); // findUserById
+
+  const user = await deactivateRoleOrUser('1', 'operator');
+
+  expect(user.status).toBe(false);
+  const updateSql = mockQuery.mock.calls[3][0];
+  expect(updateSql).toContain('status=false');
 });
