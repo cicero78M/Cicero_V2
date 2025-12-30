@@ -10,6 +10,8 @@ let createRequest;
 let updateRequest;
 let findExpirable;
 let markRequestsExpired;
+let findLatestOpenByDashboardUserId;
+let findLatestOpenByUsername;
 
 beforeAll(async () => {
   const mod = await import('../src/model/dashboardPremiumRequestModel.js');
@@ -17,6 +19,8 @@ beforeAll(async () => {
   updateRequest = mod.updateRequest;
   findExpirable = mod.findExpirable;
   markRequestsExpired = mod.markRequestsExpired;
+  findLatestOpenByDashboardUserId = mod.findLatestOpenByDashboardUserId;
+  findLatestOpenByUsername = mod.findLatestOpenByUsername;
 });
 
 beforeEach(() => {
@@ -122,5 +126,33 @@ test('markRequestsExpired updates all provided request ids', async () => {
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('WHERE request_id = ANY($1)'),
     [[3], date],
+  );
+});
+
+test('findLatestOpenByDashboardUserId returns latest non-expired open request', async () => {
+  mockQuery.mockResolvedValueOnce({
+    rows: [{ request_id: 4, dashboard_user_id: 'user-x', status: 'pending' }],
+  });
+
+  const row = await findLatestOpenByDashboardUserId('user-x');
+
+  expect(row).toEqual({ request_id: 4, dashboard_user_id: 'user-x', status: 'pending' });
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('status IN (\'pending\', \'confirmed\')'),
+    ['user-x'],
+  );
+});
+
+test('findLatestOpenByUsername performs case-insensitive lookup', async () => {
+  mockQuery.mockResolvedValueOnce({
+    rows: [{ request_id: 5, username: 'Tester', status: 'confirmed' }],
+  });
+
+  const row = await findLatestOpenByUsername('tester');
+
+  expect(row).toEqual({ request_id: 5, username: 'Tester', status: 'confirmed' });
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringContaining('LOWER(username) = LOWER($1)'),
+    ['tester'],
   );
 });

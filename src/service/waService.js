@@ -115,6 +115,7 @@ import {
 import {
   approveDashboardPremiumRequest,
   denyDashboardPremiumRequest,
+  findLatestOpenDashboardPremiumRequestByIdentifier,
 } from "./dashboardPremiumRequestService.js";
 
 dotenv.config();
@@ -166,26 +167,32 @@ function formatCurrencyId(value) {
 
 export function buildDashboardPremiumRequestMessage(request) {
   if (!request) return "";
+  const commandUsername = request.username || request.dashboard_user_id || "unknown";
   const lines = [
-    "🔔 Konfirmasi Premium Dashboard",
-    `ID: ${request.request_id}`,
-    `User: ${request.username || request.dashboard_user_id || "-"}`,
-    `WA: ${request.whatsapp || "-"}`,
-    `Client: ${request.client_id || "-"}`,
-    `Tier: ${request.premium_tier || "-"}`,
-    `Nominal: ${formatCurrencyId(request.transfer_amount)}`,
+    "📢 permintaan akses premium",
+    "",
+    "User dashboard:",
+    `- Username: ${commandUsername}`,
+    `- WhatsApp: ${formatToWhatsAppId(request.whatsapp) || "-"}`,
+    `- Dashboard User ID: ${request.dashboard_user_id || "-"}`,
+    "",
+    "Detail permintaan:",
+    `- Tier: ${request.premium_tier || "-"}`,
+    `- Client ID: ${request.client_id || "-"}`,
+    `- Username (request): ${commandUsername}`,
+    `- Dashboard User ID (request): ${request.dashboard_user_id || "-"}`,
+    `- Request Token (request): ${request.request_token || "-"}`,
+    "",
+    "Detail transfer:",
+    `- Bank: ${request.bank_name || "-"}`,
+    `- Nomor Rekening: ${request.account_number || "-"}`,
+    `- Nama Pengirim: ${request.sender_name || "-"}`,
+    `- Jumlah Transfer: ${formatCurrencyId(request.transfer_amount)}`,
+    "",
+    `Request ID: ${request.request_id || "-"}`,
+    "",
+    `Balas dengan <response pesan grant access#${commandUsername}> untuk menyetujui atau <response pesan deny access${commandUsername}> untuk menolak.`,
   ];
-
-  if (request.proof_url) {
-    lines.push(`Bukti: ${request.proof_url}`);
-  }
-
-  if (request.request_token) {
-    lines.push(
-      `Token: ${request.request_token}`,
-      `Balas grantdashsub#${request.request_token} untuk menyetujui atau denydashsub#${request.request_token} untuk menolak.`
-    );
-  }
 
   return lines.filter(Boolean).join("\n");
 }
@@ -2977,7 +2984,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // =========================
   // === APPROVE / DENY DASHBOARD PREMIUM REQUEST
   // =========================
-  if (text.toLowerCase().startsWith("grantdashsub#")) {
+  const accessApprovalMatch = text.match(/^grant\s+access#?(.*)$/i);
+  const accessDenialMatch = text.match(/^deny\s+access#?(.*)$/i);
+  const lowerText = text.toLowerCase();
+
+  if (lowerText.startsWith("grantdashsub#") || accessApprovalMatch) {
     if (!isAdmin || !adminWaId) {
       console.warn(
         `${clientLabel} Unauthorized dashboard premium approval attempt by ${senderId}`
@@ -2988,14 +2999,35 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
-    const [, tokenRaw] = text.split("#");
-    const token = tokenRaw?.trim();
-    if (!token) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: grantdashsub#token");
-      return;
-    }
+    const [, tokenRaw] = lowerText.startsWith("grantdashsub#") ? text.split("#") : [];
+    const approvalToken = tokenRaw?.trim();
+    const approvalIdentifier = accessApprovalMatch?.[1]?.trim();
+
+    let resolvedToken = approvalToken;
     try {
-      const result = await approveDashboardPremiumRequest(token, {
+      if (!resolvedToken && approvalIdentifier) {
+        const pendingRequest = await findLatestOpenDashboardPremiumRequestByIdentifier(
+          approvalIdentifier
+        );
+        if (!pendingRequest || !pendingRequest.request_token) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Request tidak ditemukan atau sudah tidak aktif."
+          );
+          return;
+        }
+        resolvedToken = pendingRequest.request_token;
+      }
+
+      if (!resolvedToken) {
+        await waClient.sendMessage(
+          chatId,
+          "Format salah! Gunakan: grant access#<username/dashboard_user_id> atau grantdashsub#<token>"
+        );
+        return;
+      }
+
+      const result = await approveDashboardPremiumRequest(resolvedToken, {
         admin_whatsapp: adminWaId,
         actor: chatId,
       });
@@ -3008,19 +3040,12 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         "✅ Permintaan premium dashboard Anda disetujui. Silakan login ulang untuk memuat hak akses terbaru."
       );
     } catch (err) {
-      const normalizedCode = err?.code ?? null;
-      if (normalizedCode === "not_found") {
-        await waClient.sendMessage(chatId, "❌ Request tidak ditemukan atau token salah.");
-      } else if (normalizedCode === "locked") {
-        await waClient.sendMessage(chatId, "❌ Request sudah diproses.");
-      } else {
-        await waClient.sendMessage(chatId, `❌ Gagal memproses persetujuan: ${err.message}`);
-      }
+      await waClient.sendMessage(chatId, `❌ Gagal memproses persetujuan: ${err.message}`);
     }
     return;
   }
 
-  if (text.toLowerCase().startsWith("denydashsub#")) {
+  if (lowerText.startsWith("denydashsub#") || accessDenialMatch) {
     if (!isAdmin || !adminWaId) {
       console.warn(
         `${clientLabel} Unauthorized dashboard premium denial attempt by ${senderId}`
@@ -3031,14 +3056,35 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
-    const [, tokenRaw] = text.split("#");
-    const token = tokenRaw?.trim();
-    if (!token) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: denydashsub#token");
-      return;
-    }
+    const [, tokenRaw] = lowerText.startsWith("denydashsub#") ? text.split("#") : [];
+    const denialToken = tokenRaw?.trim();
+    const denialIdentifier = accessDenialMatch?.[1]?.trim();
+
+    let resolvedToken = denialToken;
     try {
-      const request = await denyDashboardPremiumRequest(token, {
+      if (!resolvedToken && denialIdentifier) {
+        const pendingRequest = await findLatestOpenDashboardPremiumRequestByIdentifier(
+          denialIdentifier
+        );
+        if (!pendingRequest || !pendingRequest.request_token) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Request tidak ditemukan atau sudah tidak aktif."
+          );
+          return;
+        }
+        resolvedToken = pendingRequest.request_token;
+      }
+
+      if (!resolvedToken) {
+        await waClient.sendMessage(
+          chatId,
+          "Format salah! Gunakan: deny access#<username/dashboard_user_id> atau denydashsub#<token>"
+        );
+        return;
+      }
+
+      const request = await denyDashboardPremiumRequest(resolvedToken, {
         admin_whatsapp: adminWaId,
         actor: chatId,
       });
@@ -3051,14 +3097,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         "❌ Permintaan premium dashboard Anda ditolak. Silakan hubungi admin untuk informasi lebih lanjut."
       );
     } catch (err) {
-      const normalizedCode = err?.code ?? null;
-      if (normalizedCode === "not_found") {
-        await waClient.sendMessage(chatId, "❌ Request tidak ditemukan atau token salah.");
-      } else if (normalizedCode === "locked") {
-        await waClient.sendMessage(chatId, "❌ Request sudah diproses.");
-      } else {
-        await waClient.sendMessage(chatId, `❌ Gagal menolak request: ${err.message}`);
-      }
+      await waClient.sendMessage(chatId, `❌ Gagal menolak request: ${err.message}`);
     }
     return;
   }

@@ -112,11 +112,42 @@ with `denied` status and an audit log entry.
 
 Admins can respond to confirmed requests directly from WhatsApp:
 
-- Approve: `grantdashsub#<request_token>`
-- Deny: `denydashsub#<request_token>`
+- Approve (new format): `grant access#<username>` (or `grant access#<dashboard_user_id>`)
+- Deny (new format): `deny access#<username>` (or `deny access#<dashboard_user_id>`)
+- Legacy format (still supported): `grantdashsub#<request_token>` or `denydashsub#<request_token>`
 
 Confirmation messages sent to admins include the token, client, tier, transfer
 amount, and proof URL to streamline verification.
+
+Admin notifications now include the full payment payload so approvers can verify
+the transfer before replying. The message template is:
+
+```
+📢 permintaan akses premium
+
+User dashboard:
+- Username: <username>
+- WhatsApp: <wa_id>
+- Dashboard User ID: <dashboard_user_id>
+
+Detail permintaan:
+- Tier: <premium_tier>
+- Client ID: <client_id>
+- Username (request): <username>
+- Dashboard User ID (request): <dashboard_user_id>
+- Request Token (request): <request_token>
+
+Detail transfer:
+- Bank: <bank_name>
+- Nomor Rekening: <account_number>
+- Nama Pengirim: <sender_name>
+- Jumlah Transfer: Rp <amount>
+
+Request ID: <request_id>
+
+Balas dengan <response pesan grant access#<username>> untuk menyetujui atau
+<response pesan deny access<username>> untuk menolak.
+```
 
 Only WhatsApp IDs configured in `ADMIN_WHATSAPP` are allowed to execute these
 commands. Attempts from other senders are rejected and logged, and audit entries
