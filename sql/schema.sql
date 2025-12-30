@@ -458,7 +458,6 @@ CREATE TABLE IF NOT EXISTS dashboard_premium_request (
   transfer_amount NUMERIC,
   premium_tier TEXT,
   client_id TEXT,
-  user_uuid TEXT,
   metadata JSONB,
   status VARCHAR(20) DEFAULT 'pending',
   request_token UUID NOT NULL DEFAULT gen_random_uuid(),

@@ -15,13 +15,11 @@ function buildSessionSettings(sessionContext = {}) {
   const dashboardUserId = normalizeSetting(
     sessionContext.dashboardUserId ?? sessionContext.dashboard_user_id,
   );
-  const userUuid = normalizeSetting(sessionContext.userUuid ?? sessionContext.user_uuid);
   const username = normalizeSetting(sessionContext.username);
 
   return {
     'app.current_client_id': clientId,
     'app.current_dashboard_user_id': dashboardUserId,
-    'app.current_user_uuid': userUuid,
     'app.current_username': username,
   };
 }
@@ -56,4 +54,3 @@ export async function insertAuditEntry({
 
   return res.rows[0];
 }
-
