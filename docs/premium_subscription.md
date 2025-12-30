@@ -118,6 +118,11 @@ Admins can respond to confirmed requests directly from WhatsApp:
 Confirmation messages sent to admins include the token, client, tier, transfer
 amount, and proof URL to streamline verification.
 
+Only WhatsApp IDs configured in `ADMIN_WHATSAPP` are allowed to execute these
+commands. Attempts from other senders are rejected and logged, and audit entries
+store the validated admin WhatsApp ID so subscription history always reflects an
+authorized actor.
+
 ### Expiry enforcement
 
 - `expireDashboardPremiumRequests` marks pending/confirmed rows as `expired` once

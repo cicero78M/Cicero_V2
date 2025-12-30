@@ -697,6 +697,15 @@ export function createHandleMessage(waClient, options = {}) {
     const isGroupChat = chatId?.endsWith("@g.us");
     const senderId = msg.author || chatId;
     const isAdmin = isAdminWhatsApp(senderId);
+    const normalizedSenderAdminId =
+      typeof senderId === "string"
+        ? senderId.endsWith("@c.us")
+          ? senderId
+          : senderId.replace(/\D/g, "") + "@c.us"
+        : "";
+    const adminWaId = isAdmin
+      ? getAdminWAIds().find((wid) => wid === normalizedSenderAdminId) || null
+      : null;
     console.log(`${clientLabel} Incoming message from ${chatId}: ${text}`);
     if (msg.isStatus || chatId === "status@broadcast") {
       console.log(`${clientLabel} Ignored status message from ${chatId}`);
@@ -2969,6 +2978,16 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // === APPROVE / DENY DASHBOARD PREMIUM REQUEST
   // =========================
   if (text.toLowerCase().startsWith("grantdashsub#")) {
+    if (!isAdmin || !adminWaId) {
+      console.warn(
+        `${clientLabel} Unauthorized dashboard premium approval attempt by ${senderId}`
+      );
+      await waClient.sendMessage(
+        chatId,
+        "❌ Perintah ini hanya boleh dijalankan oleh admin yang terdaftar."
+      );
+      return;
+    }
     const [, tokenRaw] = text.split("#");
     const token = tokenRaw?.trim();
     if (!token) {
@@ -2977,7 +2996,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     try {
       const result = await approveDashboardPremiumRequest(token, {
-        admin_whatsapp: senderId,
+        admin_whatsapp: adminWaId,
         actor: chatId,
       });
       await waClient.sendMessage(
@@ -3002,6 +3021,16 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   }
 
   if (text.toLowerCase().startsWith("denydashsub#")) {
+    if (!isAdmin || !adminWaId) {
+      console.warn(
+        `${clientLabel} Unauthorized dashboard premium denial attempt by ${senderId}`
+      );
+      await waClient.sendMessage(
+        chatId,
+        "❌ Perintah ini hanya boleh dijalankan oleh admin yang terdaftar."
+      );
+      return;
+    }
     const [, tokenRaw] = text.split("#");
     const token = tokenRaw?.trim();
     if (!token) {
@@ -3010,7 +3039,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     try {
       const request = await denyDashboardPremiumRequest(token, {
-        admin_whatsapp: senderId,
+        admin_whatsapp: adminWaId,
         actor: chatId,
       });
       await waClient.sendMessage(
