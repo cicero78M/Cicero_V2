@@ -3290,9 +3290,14 @@ const handleUserMessage = createHandleMessage(waUserClient, {
 });
 
 async function processGatewayBulkDeletion(chatId, text) {
-  const session = { menu: "clientrequest", step: "bulkStatus_process" };
+  const existingSession = getSession(chatId);
+  const session =
+    existingSession?.menu === "clientrequest"
+      ? existingSession
+      : { menu: "clientrequest", step: "bulkStatus_process" };
+  setSession(chatId, session);
   await processBulkDeletionRequest({
-    session,
+    session: getSession(chatId),
     chatId,
     text,
     waClient: waGatewayClient,

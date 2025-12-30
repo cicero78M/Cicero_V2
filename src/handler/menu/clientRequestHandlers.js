@@ -554,6 +554,120 @@ function isBulkDeletionSummaryEcho(text) {
   return arrowCount >= 2;
 }
 
+async function sendBulkDeletionSummary({
+  headerLine,
+  successes,
+  failures,
+  chatId,
+  waClient,
+  session,
+}) {
+  const lines = [];
+  const title = headerLine || "Permohonan Penghapusan Data Personil";
+  lines.push(`📄 *${title}*`);
+
+  if (successes.length) {
+    lines.push("", `✅ Permintaan diproses untuk ${successes.length} personel:`);
+    successes.forEach(
+      ({ userId, name, reason, rawId, targetRole, statusAfter }) => {
+        const displayName = name || rawId || userId;
+        const reasonLabel = reason ? ` • ${reason}` : "";
+        const roleLabel = targetRole ? ` • role: ${targetRole}` : "";
+        const statusLabel =
+          statusAfter === false ? " • status: nonaktif" : " • status: aktif";
+        lines.push(
+          `- ${userId} (${displayName})${roleLabel}${reasonLabel}${statusLabel}`
+        );
+      }
+    );
+  }
+
+  if (failures.length) {
+    lines.push("", `❌ ${failures.length} entri gagal diproses:`);
+    failures.forEach(({ rawId, userId, name, reason, error }) => {
+      const idLabel = userId || rawId || "-";
+      const displayName = name || idLabel;
+      const reasonLabel = reason ? ` • ${reason}` : "";
+      lines.push(`- ${idLabel} (${displayName})${reasonLabel} → ${error}`);
+    });
+  }
+
+  lines.push("", "Selesai diproses. Terima kasih.");
+
+  await waClient.sendMessage(chatId, lines.join("\n").trim());
+  if (session) {
+    delete session.bulkStatusContext;
+    session.step = "main";
+  }
+}
+
+async function sendBulkRolePrompt(session, chatId, waClient) {
+  const pending = session?.bulkStatusContext?.pendingSelections || [];
+  const current = pending[0];
+  if (!current) {
+    session.step = "main";
+    return;
+  }
+
+  const choices = current.roles.map((role, index) => `${index + 1}. ${role}`);
+  const promptLines = [
+    `User ${current.name || current.userId || "-"} memiliki lebih dari satu role aktif.`,
+    `NRP/NIP: ${current.userId}`,
+  ];
+  if (current.reason) {
+    promptLines.push(`Alasan: ${current.reason}`);
+  }
+  promptLines.push(
+    "",
+    "Pilih role yang akan dihapus:",
+    choices.join("\n"),
+    "",
+    "Balas angka sesuai pilihan atau ketik *batal* untuk membatalkan proses."
+  );
+  session.step = "bulkStatus_applySelection";
+  await waClient.sendMessage(chatId, promptLines.join("\n"));
+}
+
+async function applyBulkDeletionChoice({
+  entry,
+  targetRole,
+  userModel,
+  successes,
+  failures,
+}) {
+  try {
+    const updatedUser = await userModel.deactivateRoleOrUser(
+      entry.userId,
+      targetRole
+    );
+    if (updatedUser?.status === false) {
+      try {
+        await userModel.updateUserField(entry.userId, "whatsapp", "");
+      } catch (err) {
+        const note = err?.message || String(err);
+        failures.push({
+          ...entry,
+          targetRole,
+          error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
+        });
+        return;
+      }
+    }
+
+    successes.push({
+      ...entry,
+      targetRole,
+      statusAfter: updatedUser?.status,
+    });
+  } catch (err) {
+    failures.push({
+      ...entry,
+      targetRole,
+      error: err?.message || String(err),
+    });
+  }
+}
+
 async function processBulkDeletionRequest({
   session,
   chatId,
@@ -561,6 +675,9 @@ async function processBulkDeletionRequest({
   waClient,
   userModel,
 }) {
+  const currentSession = session || {};
+  delete currentSession.bulkStatusContext;
+
   const trimmed = (text || "").trim();
   if (!trimmed) {
     await waClient.sendMessage(
@@ -576,7 +693,10 @@ async function processBulkDeletionRequest({
 
   if (trimmed.toLowerCase() === "batal") {
     await waClient.sendMessage(chatId, "Permohonan penghapusan dibatalkan.");
-    if (session) session.step = "main";
+    if (session) {
+      delete currentSession.bulkStatusContext;
+      currentSession.step = "main";
+    }
     return { processed: true, cancelled: true };
   }
 
@@ -595,6 +715,7 @@ async function processBulkDeletionRequest({
 
   const successes = [];
   const failures = [];
+  const pendingSelections = [];
 
   for (const entry of entries) {
     const normalizedId = entry.normalizedId || normalizeUserId(entry.rawId);
@@ -635,85 +756,51 @@ async function processBulkDeletionRequest({
     const officialName =
       formatNama(dbUser) || dbUser.nama || fallbackName || normalizedId;
 
-    const activeRoles = [];
-    if (dbUser.ditbinmas) activeRoles.push("ditbinmas");
-    if (dbUser.ditlantas) activeRoles.push("ditlantas");
-    if (dbUser.bidhumas) activeRoles.push("bidhumas");
-    if (dbUser.ditsamapta) activeRoles.push("ditsamapta");
-    if (dbUser.operator) activeRoles.push("operator");
-    const targetRole =
-      activeRoles.length > 1
-        ? pickPrimaryRole(dbUser) || activeRoles[0]
-        : activeRoles[0] || null;
-
-    try {
-      dbUser = await userModel.deactivateRoleOrUser(normalizedId, targetRole);
-    } catch (err) {
-      failures.push({
+    const activeRoles = await resolveActiveRoles(dbUser, userModel);
+    if (activeRoles.length > 1) {
+      pendingSelections.push({
         ...entry,
         name: officialName,
         userId: normalizedId,
-        error: err?.message || String(err),
+        roles: activeRoles,
       });
       continue;
     }
 
-    if (dbUser?.status === false) {
-      try {
-        await userModel.updateUserField(normalizedId, "whatsapp", "");
-      } catch (err) {
-        const note = err?.message || String(err);
-        failures.push({
-          ...entry,
-          name: officialName,
-          userId: normalizedId,
-          error: `status dinonaktifkan, namun gagal mengosongkan WhatsApp: ${note}`,
-        });
-        continue;
-      }
-    }
+    const targetRole =
+      activeRoles.length === 1
+        ? activeRoles[0]
+        : pickPrimaryRole(dbUser) || activeRoles[0] || null;
 
-    successes.push({
-      ...entry,
-      name: officialName,
-      userId: normalizedId,
+    await applyBulkDeletionChoice({
+      entry: { ...entry, name: officialName, userId: normalizedId },
       targetRole,
-      statusAfter: dbUser?.status,
+      userModel,
+      successes,
+      failures,
     });
   }
 
-  const lines = [];
-  const title = headerLine || "Permohonan Penghapusan Data Personil";
-  lines.push(`📄 *${title}*`);
-
-  if (successes.length) {
-    lines.push("", `✅ Permintaan diproses untuk ${successes.length} personel:`);
-    successes.forEach(({ userId, name, reason, rawId, targetRole, statusAfter }) => {
-      const displayName = name || rawId || userId;
-      const reasonLabel = reason ? ` • ${reason}` : "";
-      const roleLabel = targetRole ? ` • role: ${targetRole}` : "";
-      const statusLabel = statusAfter === false ? " • status: nonaktif" : " • status: aktif";
-      lines.push(`- ${userId} (${displayName})${roleLabel}${reasonLabel}${statusLabel}`);
-    });
+  if (pendingSelections.length) {
+    currentSession.bulkStatusContext = {
+      headerLine,
+      successes,
+      failures,
+      pendingSelections,
+    };
+    currentSession.step = "bulkStatus_chooseRole";
+    await sendBulkRolePrompt(currentSession, chatId, waClient);
+    return { processed: true, pending: true };
   }
 
-  if (failures.length) {
-    lines.push(
-      "",
-      `❌ ${failures.length} entri gagal diproses:`
-    );
-    failures.forEach(({ rawId, userId, name, reason, error }) => {
-      const idLabel = userId || rawId || "-";
-      const displayName = name || idLabel;
-      const reasonLabel = reason ? ` • ${reason}` : "";
-      lines.push(`- ${idLabel} (${displayName})${reasonLabel} → ${error}`);
-    });
-  }
-
-  lines.push("", "Selesai diproses. Terima kasih.");
-
-  await waClient.sendMessage(chatId, lines.join("\n").trim());
-  if (session) session.step = "main";
+  await sendBulkDeletionSummary({
+    headerLine,
+    successes,
+    failures,
+    chatId,
+    waClient,
+    session: currentSession,
+  });
   return { processed: true };
 }
 
@@ -750,6 +837,10 @@ function appendUpdateInstructions(target, platformLabel) {
   target.push(`Tautan update data personel: ${UPDATE_DATA_LINK}`);
 }
 
+function normalizeRoles(roles = []) {
+  return Array.from(new Set((roles || []).filter(Boolean)));
+}
+
 function pickPrimaryRole(user) {
   if (!user) return null;
   if (user.ditbinmas) return "ditbinmas";
@@ -757,6 +848,31 @@ function pickPrimaryRole(user) {
   if (user.bidhumas) return "bidhumas";
   if (user.operator) return "operator";
   return null;
+}
+
+async function resolveActiveRoles(dbUser, userModel) {
+  if (!dbUser) return [];
+  const roles = new Set();
+  if (typeof userModel?.getUserRoles === "function") {
+    try {
+      const dynamicRoles = await userModel.getUserRoles(dbUser.user_id);
+      normalizeRoles(dynamicRoles).forEach((role) => roles.add(role));
+    } catch (err) {
+      console.warn(
+        `Failed to load roles for ${dbUser.user_id}: ${err?.message || err}`
+      );
+    }
+  }
+
+  if (roles.size === 0) {
+    if (dbUser.ditbinmas) roles.add("ditbinmas");
+    if (dbUser.ditlantas) roles.add("ditlantas");
+    if (dbUser.bidhumas) roles.add("bidhumas");
+    if (dbUser.ditsamapta) roles.add("ditsamapta");
+    if (dbUser.operator) roles.add("operator");
+  }
+
+  return Array.from(roles);
 }
 
 function shortenCaption(text, max = 120) {
@@ -4658,6 +4774,84 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       text,
       waClient,
       userModel,
+    });
+  },
+  bulkStatus_chooseRole: async (session, chatId, _text, waClient) => {
+    if (!session?.bulkStatusContext?.pendingSelections?.length) {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Tidak ada role yang perlu dipilih. Ketik *clientrequest* untuk memulai ulang."
+      );
+      return;
+    }
+    await sendBulkRolePrompt(session, chatId, waClient);
+  },
+  bulkStatus_applySelection: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    _pool,
+    userModel
+  ) => {
+    const trimmed = (text || "").trim();
+    if (/^(batal|cancel|exit)$/i.test(trimmed)) {
+      const remaining = session?.bulkStatusContext?.pendingSelections?.length || 0;
+      delete session.bulkStatusContext;
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        `Permohonan penghapusan dibatalkan. ${remaining} entri belum diproses.`
+      );
+      return;
+    }
+
+    const context = session?.bulkStatusContext;
+    const pending = context?.pendingSelections || [];
+    const current = pending[0];
+    if (!context || !current) {
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "Sesi pemilihan role tidak ditemukan. Ketik *clientrequest* untuk memulai ulang."
+      );
+      return;
+    }
+
+    const choiceIndex = Number.parseInt(trimmed, 10) - 1;
+    if (!Number.isInteger(choiceIndex) || !current.roles?.[choiceIndex]) {
+      await waClient.sendMessage(
+        chatId,
+        "Pilihan tidak valid. Balas dengan angka sesuai daftar role atau ketik *batal* untuk keluar."
+      );
+      return;
+    }
+
+    const chosenRole = current.roles[choiceIndex];
+    pending.shift();
+
+    await applyBulkDeletionChoice({
+      entry: current,
+      targetRole: chosenRole,
+      userModel,
+      successes: context.successes,
+      failures: context.failures,
+    });
+
+    if (pending.length) {
+      session.step = "bulkStatus_chooseRole";
+      await sendBulkRolePrompt(session, chatId, waClient);
+      return;
+    }
+
+    await sendBulkDeletionSummary({
+      headerLine: context.headerLine,
+      successes: context.successes,
+      failures: context.failures,
+      chatId,
+      waClient,
+      session,
     });
   },
 
