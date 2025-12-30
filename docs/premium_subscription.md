@@ -112,8 +112,8 @@ can use the included identifiers to continue the premium enablement flow.
 Dashboard premium requests can now be approved or rejected directly from
 WhatsApp:
 
-- `grantaccess#<username>` – approves the latest pending dashboard premium
-  request for `<username>`, creates a 30-day `dashboard_user_subscriptions`
+  - `grantaccess#<username>` – approves the latest pending dashboard premium
+    request for `<username>`, creates a 30-day `dashboard_user_subscriptions`
   record with tier `premium`, updates the cached premium fields on
   `dashboard_user`, and notifies the requester via WhatsApp.
 - `dennyaccess#<username>` / `denyaccess#<username>` – rejects the pending
@@ -136,10 +136,10 @@ accepts the updated payload from the UI:
       is submitting the request without exposing a UUID field. The dashboard
       request table has dropped the legacy `user_id` column, so the flow relies
       on dashboard identifiers plus usernames for traceability.
-- `POST /premium/request`
-  - Requires a dashboard session token validated by `verifyDashboardToken`
-    (Bearer header or `token` cookie). The middleware also checks the Redis
-    prefix to ensure the token represents a dashboard session.
+  - `POST /premium/request`
+    - Requires a dashboard session token validated by `verifyDashboardToken`
+      (Bearer header or `token` cookie). The middleware also checks the Redis
+      prefix to ensure the token represents a dashboard session.
 - Body parameters:
   - `username` – username submitted by the form (string, optional; falls back
     to the authenticated dashboard user when omitted). When the submitted
@@ -173,6 +173,14 @@ accepts the updated payload from the UI:
     handler returns `403` before hitting the database, and RLS violations on
     insert are translated to a `403` response so dashboard operators receive
     actionable feedback.
+  - The controller re-fetches the dashboard profile using the
+    `dashboard_user_id` from the token and treats the database result as the
+    single source of truth for `dashboard_user_id` and `whatsapp`. Blank or
+    missing `dashboard_user_id` values from the token or request body are
+    normalized to `null`, and failed profile lookups now return `400` instead
+    of surfacing database errors. The service passes the normalized identifier
+    (or `null` when absent) to request creation and audit inserts so invalid
+    UUIDs are not persisted.
   - The endpoint stores `premium_tier`, `client_id`, the resolved `username`,
     and the submitted amount field name inside `dashboard_premium_request.metadata`
     for traceability, while also persisting normalized columns for filtering.

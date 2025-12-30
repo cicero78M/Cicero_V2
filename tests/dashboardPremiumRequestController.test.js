@@ -109,3 +109,60 @@ test('createDashboardPremiumRequest loads dashboard user from DB and forwards it
     }),
   );
 });
+
+test('createDashboardPremiumRequest rejects when dashboard user lookup fails', async () => {
+  const req = {
+    dashboardUser: {
+      dashboard_user_id: 'token-db-user',
+      client_ids: ['client-1'],
+      client_id: 'client-1',
+      username: 'db-user',
+    },
+    body: {
+      bank_name: 'Bank A',
+      account_number: '123',
+      sender_name: 'Sender',
+      transfer_amount: 1000,
+      client_id: 'client-1',
+      username: 'db-user',
+    },
+  };
+
+  mockFindByIdWithSessionSettings.mockResolvedValue(null);
+
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  const next = jest.fn();
+
+  await controller.createDashboardPremiumRequest(req, res, next);
+
+  expect(res.status).toHaveBeenCalledWith(400);
+  expect(mockCreatePremiumAccessRequest).not.toHaveBeenCalled();
+  expect(next).not.toHaveBeenCalled();
+});
+
+test('createDashboardPremiumRequest normalizes blank dashboard_user_id from token', async () => {
+  const req = {
+    dashboardUser: {
+      dashboard_user_id: '   ',
+      client_ids: ['client-1'],
+    },
+    body: {
+      bank_name: 'Bank A',
+      account_number: '123',
+      sender_name: 'Sender',
+      transfer_amount: 1000,
+      client_id: 'client-1',
+      username: 'db-user',
+    },
+  };
+
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  const next = jest.fn();
+
+  await controller.createDashboardPremiumRequest(req, res, next);
+
+  expect(res.status).toHaveBeenCalledWith(401);
+  expect(mockFindByIdWithSessionSettings).not.toHaveBeenCalled();
+  expect(mockCreatePremiumAccessRequest).not.toHaveBeenCalled();
+  expect(next).not.toHaveBeenCalled();
+});
