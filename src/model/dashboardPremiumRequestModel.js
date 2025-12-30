@@ -30,12 +30,31 @@ function normalizeMetadata(value) {
   return json;
 }
 
-export async function createRequest(payload) {
-  const sessionContext = payload.sessionContext || {};
-  const sessionClientId = sessionContext.clientId ?? payload.clientId;
-  const sessionDashboardUserId = sessionContext.dashboardUserId ?? payload.dashboardUserId;
-  const sessionUserUuid = sessionContext.userUuid ?? payload.userUuid;
-  const sessionUsername = sessionContext.username ?? payload.username;
+export async function createRequest({
+  dashboardUserId,
+  username,
+  whatsapp = null,
+  bankName,
+  accountNumber,
+  senderName,
+  transferAmount,
+  premiumTier = null,
+  clientId = null,
+  userUuid = null,
+  metadata,
+  status,
+  requestToken = null,
+  expiredAt = null,
+  respondedAt = null,
+  adminWhatsapp = null,
+  createdAt = null,
+  updatedAt = null,
+  sessionContext = {},
+}) {
+  const sessionClientId = sessionContext.clientId ?? null;
+  const sessionDashboardUserId = sessionContext.dashboardUserId ?? null;
+  const sessionUserUuid = sessionContext.userUuid ?? null;
+  const sessionUsername = sessionContext.username ?? null;
 
   const res = await withTransaction(
     client =>
@@ -70,24 +89,24 @@ export async function createRequest(payload) {
         )
         RETURNING *`,
         [
-          payload.dashboardUserId,
-          payload.username,
-          payload.whatsapp || null,
-          payload.bankName,
-          payload.accountNumber,
-          payload.senderName,
-          normalizeNumeric(payload.transferAmount),
-          payload.premiumTier || null,
-          payload.clientId || null,
-          payload.userUuid || null,
-          normalizeMetadata(payload.metadata),
-          payload.status,
-          payload.requestToken || null,
-          payload.expiredAt || null,
-          payload.respondedAt || null,
-          payload.adminWhatsapp || null,
-          payload.createdAt || null,
-          payload.updatedAt || null,
+          dashboardUserId,
+          username,
+          whatsapp || null,
+          bankName,
+          accountNumber,
+          senderName,
+          normalizeNumeric(transferAmount),
+          premiumTier || null,
+          clientId || null,
+          userUuid || null,
+          normalizeMetadata(metadata),
+          status,
+          requestToken || null,
+          expiredAt || null,
+          respondedAt || null,
+          adminWhatsapp || null,
+          createdAt || null,
+          updatedAt || null,
         ],
       ),
       {
