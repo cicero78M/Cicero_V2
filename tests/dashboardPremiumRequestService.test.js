@@ -4,7 +4,6 @@ const mockCreateRequest = jest.fn();
 const mockFindLatestPendingByUsername = jest.fn();
 const mockUpdateStatus = jest.fn();
 const mockUpdateStatusIfPending = jest.fn();
-const mockInsertAuditEntry = jest.fn();
 const mockCreateSubscription = jest.fn();
 const mockFindById = jest.fn();
 const mockFindByUsername = jest.fn();
@@ -21,10 +20,6 @@ jest.unstable_mockModule('../src/model/dashboardPremiumRequestModel.js', () => (
   findLatestPendingByUsername: mockFindLatestPendingByUsername,
   updateStatus: mockUpdateStatus,
   updateStatusIfPending: mockUpdateStatusIfPending,
-}));
-
-jest.unstable_mockModule('../src/model/dashboardPremiumAuditModel.js', () => ({
-  insertAuditEntry: mockInsertAuditEntry,
 }));
 
 jest.unstable_mockModule('../src/model/dashboardUserModel.js', () => ({
@@ -71,7 +66,6 @@ beforeEach(() => {
     client_id: 'client-a',
     status: 'pending',
   });
-  mockInsertAuditEntry.mockResolvedValue({ audit_id: 'audit-1' });
 });
 
 test('createPremiumAccessRequest uses dashboard profile data for ID, whatsapp, and session context', async () => {
@@ -121,15 +115,6 @@ test('createPremiumAccessRequest uses dashboard profile data for ID, whatsapp, a
     }),
   );
 
-  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
-    expect.objectContaining({
-      dashboardUserId: 'db-user-1',
-      actor: 'dashboard_user:dashboard-user',
-      statusTo: 'pending',
-      adminWhatsapp: '628111000222',
-    }),
-  );
-
   expect(mockFormatToWhatsAppId).toHaveBeenCalledWith('628111000222');
   expect(mockWaitForWaReady).toHaveBeenCalledTimes(1);
   expect(mockSafeSendMessage).toHaveBeenCalledWith(
@@ -140,7 +125,7 @@ test('createPremiumAccessRequest uses dashboard profile data for ID, whatsapp, a
   expect(result.request.dashboard_user_id).toBe('db-user-1');
 });
 
-test('createPremiumAccessRequest nulls blank dashboard_user_id before audit insert', async () => {
+test('createPremiumAccessRequest nulls blank dashboard_user_id before create', async () => {
   const dashboardUser = {
     dashboard_user_id: '   ',
     username: 'dashboard-user',
@@ -185,13 +170,6 @@ test('createPremiumAccessRequest nulls blank dashboard_user_id before audit inse
       sessionContext: expect.objectContaining({
         dashboardUserId: null,
       }),
-    }),
-  );
-
-  expect(mockInsertAuditEntry).toHaveBeenCalledWith(
-    expect.objectContaining({
-      dashboardUserId: null,
-      actor: 'dashboard_user:dashboard-user',
     }),
   );
 });

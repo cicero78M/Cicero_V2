@@ -37,7 +37,6 @@ for PostgreSQL but can work with MySQL or SQLite via the DB adapter.
 | change_log | mutation history for editorial events |
 | premium_request | premium subscription requests |
 | dashboard_premium_request | premium submissions created by dashboard users |
-| dashboard_premium_audit | audit log for dashboard premium status changes |
 | login_log | history of login events |
 | saved_contact | Google People API cache used for WhatsApp messaging |
 
@@ -319,21 +318,9 @@ Indexes:
 - `idx_dashboard_premium_request_token` enforces uniqueness for `request_token`.
 - `idx_dashboard_premium_request_status_expired_at` accelerates the expiry cron that finds `pending` rows whose `expired_at` is still `NULL`.
 
-### `dashboard_premium_audit`
-Audit trail for every significant change to dashboard premium requests.
-- `audit_id` – bigserial primary key
-- `request_id` – references `dashboard_premium_request` with cascade delete
-- `dashboard_user_id` – mirrors the associated dashboard user for easier joins
-- `action` – `created` or `status_change`
-- `actor` – source of the change (e.g. `dashboard_user:<username>`, `wa_admin:<chatId>`, `system-cron:dashboard_premium_expiry`)
-- `reason` – descriptive reason or admin note
-- `status_from`, `status_to` – previous and new statuses for status changes
-- `admin_whatsapp` – WhatsApp number used by the acting admin (if any)
-- `created_at`, `updated_at`
-
-API controllers, cron jobs, and WhatsApp handlers route status transitions through `dashboardPremiumRequestService.recordStatusChange` to ensure an audit row is written every time `status` changes. Request creation also records a `created` audit entry so the lifecycle is traceable end-to-end.
-
-Incoming dashboard user identifiers are trimmed and blank values are normalised to `NULL` before inserting audit rows to avoid invalid UUID errors when legacy or malformed payloads omit the identifier.
+> **Note:** The legacy `dashboard_premium_audit` table and related trigger helper were removed.
+> Premium request lifecycle tracking now relies on the status fields within `dashboard_premium_request`
+> and consumer-specific logs (e.g. WhatsApp delivery callbacks).
 
 ### `visitor_logs`
 Stores anonymised request metadata for auditing.

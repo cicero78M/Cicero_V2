@@ -119,8 +119,10 @@ WhatsApp:
 - `dennyaccess#<username>` / `denyaccess#<username>` – rejects the pending
   request and alerts the requester via WhatsApp.
 
-Every admin action inserts a row into `dashboard_premium_request_audit`
-including the admin's WhatsApp number and chat ID for traceability.
+Status updates for dashboard premium requests are now tracked directly on the
+`dashboard_premium_request` row without writing to the removed
+`dashboard_premium_audit` helper table. WhatsApp notifications remain the primary
+feedback channel for applicants and admins.
 
 ### New dashboard request endpoint
 
