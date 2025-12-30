@@ -1,16 +1,27 @@
 import { query } from '../repository/db.js';
 
-export async function create({
-  dashboard_user_id,
-  dashboardUserId,
-  tier,
-  status = 'active',
-  expires_at,
-  expiresAt,
-  started_at,
-  startedAt,
-  metadata = null,
-}) {
+function getExecutor(dbClient = query) {
+  if (typeof dbClient?.query === 'function') {
+    return (...args) => dbClient.query(...args);
+  }
+  return dbClient;
+}
+
+export async function create(
+  {
+    dashboard_user_id,
+    dashboardUserId,
+    tier,
+    status = 'active',
+    expires_at,
+    expiresAt,
+    started_at,
+    startedAt,
+    metadata = null,
+  },
+  dbClient = query,
+) {
+  const exec = getExecutor(dbClient);
   const dashboardUser = dashboardUserId || dashboard_user_id;
   const expires = expiresAt || expires_at;
   const started = startedAt || started_at;
@@ -25,7 +36,7 @@ export async function create({
     throw new Error('expires_at is required');
   }
 
-  const { rows } = await query(
+  const { rows } = await exec(
     `INSERT INTO dashboard_user_subscriptions (dashboard_user_id, tier, status, started_at, expires_at, metadata)
      VALUES ($1, $2, $3, COALESCE($4, NOW()), $5, $6)
      RETURNING *`,
@@ -34,8 +45,9 @@ export async function create({
   return rows[0] || null;
 }
 
-export async function findActiveByUser(dashboardUserId) {
-  const { rows } = await query(
+export async function findActiveByUser(dashboardUserId, dbClient = query) {
+  const exec = getExecutor(dbClient);
+  const { rows } = await exec(
     `SELECT * FROM dashboard_user_subscriptions
      WHERE dashboard_user_id = $1
        AND status = 'active'
@@ -48,8 +60,9 @@ export async function findActiveByUser(dashboardUserId) {
   return rows[0] || null;
 }
 
-export async function expire(subscriptionId, expiredAt = null) {
-  const { rows } = await query(
+export async function expire(subscriptionId, expiredAt = null, dbClient = query) {
+  const exec = getExecutor(dbClient);
+  const { rows } = await exec(
     `UPDATE dashboard_user_subscriptions
      SET status = 'expired', expires_at = COALESCE($2, expires_at), canceled_at = NULL
      WHERE subscription_id = $1
@@ -59,8 +72,9 @@ export async function expire(subscriptionId, expiredAt = null) {
   return rows[0] || null;
 }
 
-export async function cancel(subscriptionId, canceledAt = null) {
-  const { rows } = await query(
+export async function cancel(subscriptionId, canceledAt = null, dbClient = query) {
+  const exec = getExecutor(dbClient);
+  const { rows } = await exec(
     `UPDATE dashboard_user_subscriptions
      SET status = 'canceled', canceled_at = COALESCE($2, NOW())
      WHERE subscription_id = $1
@@ -73,8 +87,10 @@ export async function cancel(subscriptionId, canceledAt = null) {
 export async function renew(
   subscriptionId,
   { tier, expires_at, expiresAt, metadata, started_at, startedAt } = {},
+  dbClient = query,
 ) {
-  const current = await query(
+  const exec = getExecutor(dbClient);
+  const current = await exec(
     'SELECT * FROM dashboard_user_subscriptions WHERE subscription_id = $1',
     [subscriptionId],
   );
@@ -88,7 +104,7 @@ export async function renew(
   const mergedMetadata = metadata ?? existing.metadata;
   const mergedStarted = startedAt || started_at || null;
 
-  const { rows } = await query(
+  const { rows } = await exec(
     `UPDATE dashboard_user_subscriptions
      SET tier = $2,
          status = 'active',

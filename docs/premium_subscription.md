@@ -64,19 +64,48 @@ administrators via WhatsApp.
 Administrators approve by replying `grantsub#<id>` or reject with
 `denysub#<id>`. Approval sets `premium_status` to `true` for the user.
 
-## Dashboard premium access requests (removed)
+## Dashboard premium access requests (dashboard users)
 
-The dedicated dashboard premium request flow has been retired. As of migration
-`20260430_drop_dashboard_premium_request_tables.sql`, the following were
-removed:
+Migration `20260601_recreate_dashboard_premium_request.sql` reinstates
+`dashboard_premium_request` and `dashboard_premium_request_audit` to track
+premium applications from dashboard users:
 
-- Tables: `dashboard_premium_request`, `dashboard_premium_request_audit`, and
-  `dashboard_premium_audit` (including triggers, indexes, and helper functions).
-- API routes: `/premium/request` and `/dashboard/premium-access/requests`.
-- WhatsApp admin commands: `grantaccess#<username>`, `dennyaccess#<username>`,
-  and `denyaccess#<username>`.
-- Cron job: `cronDashboardPremiumRequestExpiry.js`.
+- `dashboard_premium_request` stores the request payload, payment proof, expiry
+  deadline, and a unique `request_token` used in admin approvals.
+- `dashboard_premium_request_audit` captures lifecycle transitions (`created`,
+  `confirmed`, `approved`, `denied`, `expired`) with the acting dashboard user
+  or admin WhatsApp ID.
 
-Dashboard premium enablement now relies solely on subscription management via
-`dashboard_user_subscriptions` and manual admin actions outside the retired
-request workflow.
+### API workflow
+
+- `POST /api/premium/request` (dashboard JWT required) creates a pending request
+  with bank/account metadata and a default expiry window.
+- `PUT /api/premium/request/:token/confirm` attaches payment proof, moves the
+  request to `confirmed`, extends the expiry window, and notifies admins via
+  WhatsApp (`sendDashboardPremiumRequestNotification`).
+- `GET /api/premium/request/:token` returns the request for the authenticated
+  dashboard user.
+
+On approval, `dashboardPremiumRequestService.approveDashboardPremiumRequest`
+creates an active `dashboard_user_subscriptions` row, refreshes cached premium
+flags on `dashboard_user`, and records the audit entry. Denials are persisted
+with `denied` status and an audit log entry.
+
+### WhatsApp commands
+
+Admins can respond to confirmed requests directly from WhatsApp:
+
+- Approve: `grantdashsub#<request_token>`
+- Deny: `denydashsub#<request_token>`
+
+Confirmation messages sent to admins include the token, client, tier, transfer
+amount, and proof URL to streamline verification.
+
+### Expiry enforcement
+
+- `expireDashboardPremiumRequests` marks pending/confirmed rows as `expired` once
+  `expired_at` is reached, writes an audit row, and returns the affected
+  requests.
+- `src/cron/cronDashboardPremiumRequestExpiry.js` runs hourly (Asia/Jakarta),
+  notifying requesters via the gateway client and sending an admin summary via
+  `sendWAReport`.
