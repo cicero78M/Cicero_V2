@@ -20,10 +20,6 @@ import * as satbinmasOfficialAccountService from "./satbinmasOfficialAccountServ
 import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as premiumService from "./premiumService.js";
 import * as premiumReqModel from "../model/premiumRequestModel.js";
-import {
-  approvePendingRequest,
-  rejectPendingRequest,
-} from "./dashboardPremiumRequestService.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
 import { checkGoogleSheetCsvStatus } from "./checkGoogleSheetAccess.js";
 import { importUsersFromGoogleSheet } from "./importUsersFromGoogleSheet.js";
@@ -2905,92 +2901,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         waClient,
         formatToWhatsAppId(usr.whatsapp),
         `❌ Registrasi dashboard Anda ditolak.\nUsername: ${usr.username}`
-      );
-    }
-    return;
-  }
-
-  const lowerDashAccess = text.toLowerCase();
-  const isGrantDashAccess = lowerDashAccess.startsWith("grantaccess#");
-  const isDenyDashAccess =
-    lowerDashAccess.startsWith("dennyaccess#") || lowerDashAccess.startsWith("denyaccess#");
-
-  if (isGrantDashAccess || isDenyDashAccess) {
-    const [, usernameRaw] = text.split("#");
-    const username = usernameRaw?.trim();
-    if (!username) {
-      await waClient.sendMessage(
-        chatId,
-        "Format salah! Gunakan: grantaccess#username atau dennyaccess#username",
-      );
-      return;
-    }
-
-    if (isGrantDashAccess) {
-      const result = await approvePendingRequest({
-        username,
-        adminWhatsapp: userWaNum,
-        adminChatId: chatId,
-      });
-
-      if (result.status === "not_found") {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Tidak ada permintaan akses premium yang *pending* untuk ${username}.`,
-        );
-        return;
-      }
-
-      if (result.status === "dashboard_user_missing") {
-        await waClient.sendMessage(
-          chatId,
-          `❌ Data dashboard user untuk ${username} tidak ditemukan. Proses dibatalkan.`,
-        );
-        return;
-      }
-
-      const expiryText = result.expiresAt ? `\nBerlaku hingga: ${formatDateTimeId(result.expiresAt)}` : "";
-      const reqIdText = result.request?.request_id ? `\nRequest ID: ${result.request.request_id}` : "";
-
-      await waClient.sendMessage(
-        chatId,
-        `✅ Akses premium dashboard untuk *${username}* telah diaktifkan.${reqIdText}${expiryText}`,
-      );
-
-      if (result.applicantWhatsapp) {
-        await safeSendMessage(
-          waClient,
-          formatToWhatsAppId(result.applicantWhatsapp),
-          `✅ Permintaan akses premium dashboard Anda disetujui.\nUsername: ${username}${expiryText}`,
-        );
-      }
-      return;
-    }
-
-    const result = await rejectPendingRequest({
-      username,
-      adminWhatsapp: userWaNum,
-      adminChatId: chatId,
-    });
-
-    if (result.status === "not_found") {
-      await waClient.sendMessage(
-        chatId,
-        `❌ Tidak ada permintaan akses premium yang *pending* untuk ${username}.`,
-      );
-      return;
-    }
-
-    await waClient.sendMessage(
-      chatId,
-      `❌ Akses premium dashboard untuk *${username}* ditolak.`,
-    );
-
-    if (result.applicantWhatsapp) {
-      await safeSendMessage(
-        waClient,
-        formatToWhatsAppId(result.applicantWhatsapp),
-        `❌ Permintaan akses premium dashboard Anda ditolak.\nUsername: ${username}`,
       );
     }
     return;
