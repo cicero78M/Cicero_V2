@@ -128,6 +128,17 @@ export async function createDashboardPremiumRequest(dashboardUser, payload = {})
     throw createServiceError(`${missingField} wajib diisi`, 400, 'validation');
   }
 
+  const latestOpenRequest = await findLatestOpenDashboardPremiumRequestByIdentifier(
+    resolvedDashboardUser.dashboard_user_id || resolvedDashboardUser.username,
+  );
+  if (latestOpenRequest) {
+    throw createServiceError(
+      'Permintaan premium sebelumnya masih diproses. Tunggu hingga selesai sebelum mengajukan kembali.',
+      409,
+      'conflict',
+    );
+  }
+
   const expiredAt = resolveExpiry(
     payload,
     payload.proof_url ? CONFIRMED_TTL_HOURS : REQUEST_TTL_HOURS,

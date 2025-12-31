@@ -101,6 +101,10 @@ premium applications from dashboard users:
   WhatsApp (`sendDashboardPremiumRequestNotification`).
 - `GET /api/premium/request/:token` returns the request for the authenticated
   dashboard user.
+- Duplicate submissions are blocked: if a user already has a `pending` or
+  `confirmed` request that has not expired, `POST /api/premium/request` returns
+  HTTP 409 with a message indicating the previous request is still being
+  processed so the frontend can surface the warning.
 - When a dashboard user creates a request, the service reloads their profile
   through `dashboardUserModel.findById` to obtain the permitted `client_ids`.
   The `client_id` written to the request (and sent in notifications) is resolved
