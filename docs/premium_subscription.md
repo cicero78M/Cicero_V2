@@ -101,6 +101,11 @@ premium applications from dashboard users:
   WhatsApp (`sendDashboardPremiumRequestNotification`).
 - `GET /api/premium/request/:token` returns the request for the authenticated
   dashboard user.
+- `GET /api/premium/request/latest` returns the latest `pending`/`confirmed`
+  request for the authenticated dashboard user (identified from the dashboard
+  JWT). When no open request exists it returns a success payload with
+  `hasOpenRequest: false` so the frontend can disable the “Ajukan” button
+  without showing an error.
 - Duplicate submissions are blocked: if a user already has a `pending` or
   `confirmed` request that has not expired, `POST /api/premium/request` returns
   HTTP 409 with a message indicating the previous request is still being
@@ -183,3 +188,55 @@ authorized actor.
 - `src/cron/cronDashboardPremiumRequestExpiry.js` runs hourly (Asia/Jakarta),
   notifying requesters via the gateway client and sending an admin summary via
   `sendWAReport`.
+
+## Frontend status check before submitting a new request
+
+Dashboard clients should check whether a user already has an in-flight premium
+request before enabling the submission UI. Use the authenticated dashboard
+token and call:
+
+```
+GET /api/premium/request/latest
+Authorization: Bearer <dashboard JWT>
+```
+
+Possible responses:
+
+- Open request exists:
+
+```json
+{
+  "success": true,
+  "hasOpenRequest": true,
+  "request": {
+    "request_id": "<uuid>",
+    "request_token": "<token>",
+    "dashboard_user_id": "<dashboard_user_id>",
+    "status": "pending" | "confirmed",
+    "client_id": "<client_id>",
+    "username": "<username>",
+    "bank_name": "<bank>",
+    "account_number": "<account>",
+    "sender_name": "<sender>",
+    "transfer_amount": 100000,
+    "premium_tier": "gold",
+    "proof_url": "<url|null>",
+    "expired_at": "<iso timestamp>",
+    "metadata": { "...": "..." }
+  }
+}
+```
+
+- No open request (preferred for disabling the button):
+
+```json
+{
+  "success": true,
+  "hasOpenRequest": false,
+  "request": null
+}
+```
+
+If the caller needs to fetch a specific token (for example, a bookmarked link),
+`GET /api/premium/request/:token` remains available and returns `404` when the
+token does not belong to the authenticated dashboard user.
