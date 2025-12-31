@@ -124,8 +124,15 @@ Admins can respond to confirmed requests directly from WhatsApp:
 - Deny (new format): `deny access#<username>` (or `deny access#<dashboard_user_id>`)
 - Legacy format (still supported): `grantdashsub#<request_token>` or `denydashsub#<request_token>`
 
+Admin broadcast now fires as soon as a request is created (pending), so Ditbinmas
+admins see the submission immediately even if the requester has not uploaded a
+payment proof yet. The confirmation step still updates the request to `confirmed`
+and will only re-send the WhatsApp broadcast if the initial send failed (a guard
+prevents double delivery when proof is uploaded later).
+
 Confirmation messages sent to admins include the token, client, tier, transfer
-amount, and proof URL to streamline verification.
+amount, and proof URL to streamline verification. Pending requests call out the
+missing proof explicitly.
 
 Admin notifications now include the full payment payload so approvers can verify
 the transfer before replying. The message template is:
@@ -144,12 +151,14 @@ Detail permintaan:
 - Username (request): <username>
 - Dashboard User ID (request): <dashboard_user_id>
 - Request Token (request): <request_token>
+- Status Bukti Transfer: <sudah upload bukti transfer|belum upload bukti transfer>
 
 Detail transfer:
 - Bank: <bank_name>
 - Nomor Rekening: <account_number>
 - Nama Pengirim: <sender_name>
 - Jumlah Transfer: Rp <amount>
+- Bukti Transfer: <proof_url|Belum upload bukti>
 
 Request ID: <request_id>
 

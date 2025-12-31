@@ -168,6 +168,10 @@ function formatCurrencyId(value) {
 export function buildDashboardPremiumRequestMessage(request) {
   if (!request) return "";
   const commandUsername = request.username || request.dashboard_user_id || "unknown";
+  const paymentProofStatus = request.proof_url
+    ? "sudah upload bukti transfer"
+    : "belum upload bukti transfer";
+  const paymentProofLink = request.proof_url || "Belum upload bukti";
   const lines = [
     "📢 permintaan akses premium",
     "",
@@ -182,12 +186,14 @@ export function buildDashboardPremiumRequestMessage(request) {
     `- Username (request): ${commandUsername}`,
     `- Dashboard User ID (request): ${request.dashboard_user_id || "-"}`,
     `- Request Token (request): ${request.request_token || "-"}`,
+    `- Status Bukti Transfer: ${paymentProofStatus}`,
     "",
     "Detail transfer:",
     `- Bank: ${request.bank_name || "-"}`,
     `- Nomor Rekening: ${request.account_number || "-"}`,
     `- Nama Pengirim: ${request.sender_name || "-"}`,
     `- Jumlah Transfer: ${formatCurrencyId(request.transfer_amount)}`,
+    `- Bukti Transfer: ${paymentProofLink}`,
     "",
     `Request ID: ${request.request_id || "-"}`,
     "",
