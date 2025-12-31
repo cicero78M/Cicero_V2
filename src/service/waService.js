@@ -3117,7 +3117,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       return;
     }
     await premiumReqModel.updateRequest(Number(id), { status: "approved" });
-    await userModel.updatePremiumStatus(reqRow.user_id, true, null);
+    await premiumService.grantPremium(reqRow.user_id);
     await waClient.sendMessage(chatId, `✅ Request ${id} disetujui.`);
     const user = await userModel.findUserById(reqRow.user_id);
     if (user?.whatsapp) {

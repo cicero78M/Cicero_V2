@@ -31,10 +31,8 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | `cronDirRequestRekapUpdate.js` | `0 8-18/4 * * *` | Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups. |
 | `cronDirRequestRekapBelumLengkapDitsamapta.js` | `15 7-21 * * *` | Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only. |
 | `cronDashboardSubscriptionExpiry.js` | `*/30 * * * *` | Mark overdue dashboard subscriptions as expired and send WhatsApp reminders when a destination number is available. |
-
-> The former `cronDashboardPremiumRequestExpiry.js` job was removed alongside
-> the dashboard premium request feature (see migration
-> `20260430_drop_dashboard_premium_request_tables.sql`).
+| `cronPremiumExpiry.js` | `0 0 * * *` | Expire mobile premium users when `premium_end_date` is in the past. |
+| `cronDashboardPremiumRequestExpiry.js` | `0 * * * *` | Expire pending/confirmed dashboard premium requests after their `expired_at` deadline and send requester/admin WhatsApp notifications. |
 
 ### Ditbinmas dirRequest group (registered via `registerDirRequestCrons`)
 
