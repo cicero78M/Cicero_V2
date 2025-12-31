@@ -2,6 +2,7 @@ import {
   confirmDashboardPremiumRequest,
   createDashboardPremiumRequest,
   findDashboardPremiumRequestByToken,
+  findLatestOpenDashboardPremiumRequestByIdentifier,
   markDashboardPremiumRequestNotified,
 } from '../service/dashboardPremiumRequestService.js';
 import waClient from '../service/waService.js';
@@ -68,6 +69,22 @@ export async function getDashboardPremiumRequestController(req, res, next) {
       return res.status(404).json({ success: false, message: 'Request tidak ditemukan' });
     }
     res.json({ success: true, request });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getLatestDashboardPremiumRequestController(req, res, next) {
+  try {
+    const dashboardUser = getDashboardUserFromRequest(req);
+    const identifier = dashboardUser?.dashboard_user_id || dashboardUser?.username;
+    const request = await findLatestOpenDashboardPremiumRequestByIdentifier(identifier);
+
+    if (!request || request.dashboard_user_id !== dashboardUser?.dashboard_user_id) {
+      return res.json({ success: true, hasOpenRequest: false, request: null });
+    }
+
+    return res.json({ success: true, hasOpenRequest: true, request });
   } catch (err) {
     next(err);
   }
