@@ -52,6 +52,10 @@ scope and cached premium flags rather than potentially stale JWT claims.
 
 ## Expiry enforcement
 
+- Mobile premium grants automatically set `premium_end_date` to 30 days after
+  approval when `premiumService.grantPremium` is called. Expiry sweeps reset
+  `premium_status` to `false` once the end date passes to keep access aligned
+  with paid periods.
 - `src/service/dashboardSubscriptionExpiryService.js` filters active subscription
   rows whose `expires_at` is past the current time, expires them through
   `expireSubscription`, refreshes the dashboard cache, and sends a WhatsApp
@@ -59,6 +63,10 @@ scope and cached premium flags rather than potentially stale JWT claims.
 - `src/cron/cronDashboardSubscriptionExpiry.js` schedules the expiry sweep every
   30 minutes (Asia/Jakarta) using `scheduleCronJob`; the module is loaded through
   the cron manifest so WhatsApp readiness checks are honored before delivery.
+- `src/service/premiumExpiryService.js` finds mobile users whose
+  `premium_end_date` is in the past and revokes their premium flag.
+- `src/cron/cronPremiumExpiry.js` runs daily at midnight (Asia/Jakarta) to call
+  `processExpiredPremiumUsers`, ensuring mobile access windows close on time.
 
 ## Premium Request Workflow
 
