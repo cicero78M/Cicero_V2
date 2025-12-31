@@ -39,6 +39,9 @@ Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
   WhatsApp, dan mengirim ringkasan sukses/gagal. Header dengan penebalan
   (mis. `📄 **Permohonan ...**`) kini juga dikenali sebagai ringkasan balasan
   bot sehingga tidak diproses ulang jika pesan tersebut dikirim kembali.
+- Normalisasi pesan (lowercase dan trim) dilakukan di awal fungsi `processMessage`
+  agar seluruh percabangan—termasuk perintah `batal` di menu interaktif—selalu
+  menggunakan teks yang sudah stabil tanpa memicu `ReferenceError`.
 
 Sistem menjalankan *dua* nomor WhatsApp:
 1. **Nomor utama** menangani seluruh perintah bot seperti `oprrequest`, `dashrequest`, dan lainnya.
