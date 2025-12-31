@@ -796,11 +796,6 @@ export function createHandleMessage(waClient, options = {}) {
     ) {
       await saveContactIfNew(chatId);
     }
-    const lowerText = text.toLowerCase();
-    const trimmedText = text.trim();
-    const isAdminCommand = adminCommands.some((cmd) =>
-      lowerText.startsWith(cmd)
-    );
 
     let cachedUserByWa = null;
     let userByWaError = null;
@@ -912,6 +907,11 @@ export function createHandleMessage(waClient, options = {}) {
     };
 
     const processMessage = async () => {
+      const lowerText = text.toLowerCase();
+      const trimmedText = text.trim();
+      const isAdminCommand = adminCommands.some((cmd) =>
+        lowerText.startsWith(cmd)
+      );
       const clearUserRequestLinkSession = (id = chatId) => {
         const sessionRef = userRequestLinkSessions[id];
         if (sessionRef?.timeout) {
@@ -2986,7 +2986,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // =========================
   const accessApprovalMatch = text.match(/^grant\s+access#?(.*)$/i);
   const accessDenialMatch = text.match(/^deny\s+access#?(.*)$/i);
-  const lowerText = text.toLowerCase();
 
   if (lowerText.startsWith("grantdashsub#") || accessApprovalMatch) {
     if (!isAdmin || !adminWaId) {
