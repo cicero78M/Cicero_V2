@@ -2,6 +2,7 @@ import {
   confirmDashboardPremiumRequest,
   createDashboardPremiumRequest,
   findDashboardPremiumRequestByToken,
+  markDashboardPremiumRequestNotified,
 } from '../service/dashboardPremiumRequestService.js';
 import waClient from '../service/waService.js';
 import { sendDashboardPremiumRequestNotification } from '../service/waService.js';
@@ -10,11 +11,37 @@ function getDashboardUserFromRequest(req) {
   return req.dashboardUser || req.user || null;
 }
 
+async function broadcastDashboardPremiumRequest(request, source = 'create') {
+  if (!request) return request;
+  if (source === 'confirm' && request.metadata?.admin_notification_sent) {
+    return request;
+  }
+
+  try {
+    const notified = await sendDashboardPremiumRequestNotification(waClient, request);
+    if (notified) {
+      const metadataPatch = {
+        admin_notification_sent: true,
+        admin_notification_sent_at: request.metadata?.admin_notification_sent_at || new Date().toISOString(),
+        admin_notification_source: source,
+      };
+      return markDashboardPremiumRequestNotified(request, metadataPatch);
+    }
+  } catch (err) {
+    console.warn(
+      `[DashboardPremiumRequest] Failed to notify admins on ${source}: ${err?.message || err}`,
+    );
+  }
+
+  return request;
+}
+
 export async function createDashboardPremiumRequestController(req, res, next) {
   try {
     const dashboardUser = getDashboardUserFromRequest(req);
     const request = await createDashboardPremiumRequest(dashboardUser, req.body || {});
-    res.status(201).json({ success: true, request });
+    const updatedRequest = await broadcastDashboardPremiumRequest(request, 'create');
+    res.status(201).json({ success: true, request: updatedRequest });
   } catch (err) {
     next(err);
   }
@@ -25,8 +52,8 @@ export async function confirmDashboardPremiumRequestController(req, res, next) {
     const dashboardUser = getDashboardUserFromRequest(req);
     const { token } = req.params;
     const request = await confirmDashboardPremiumRequest(token, dashboardUser, req.body || {});
-    await sendDashboardPremiumRequestNotification(waClient, request);
-    res.json({ success: true, request });
+    const updatedRequest = await broadcastDashboardPremiumRequest(request, 'confirm');
+    res.json({ success: true, request: updatedRequest });
   } catch (err) {
     next(err);
   }

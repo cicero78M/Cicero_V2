@@ -74,6 +74,10 @@ function buildAuditMetadata(request = {}) {
   };
 }
 
+function mergeRequestMetadata(request, metadataPatch = {}) {
+  return { ...(request?.metadata || {}), ...metadataPatch };
+}
+
 function resolveAuthorizedClientId(dashboardUser, requestedClientId) {
   const allowedClientIds = Array.isArray(dashboardUser?.client_ids)
     ? dashboardUser.client_ids.filter(id => id != null && String(id).trim() !== '')
@@ -379,4 +383,21 @@ export async function findLatestOpenDashboardPremiumRequestByIdentifier(identifi
   if (byId) return byId;
 
   return findLatestOpenByUsername(normalized);
+}
+
+export async function markDashboardPremiumRequestNotified(request, metadataPatch = {}, dbClient) {
+  if (!request?.request_id) return request;
+  const adminNotificationTimestamp =
+    request.metadata?.admin_notification_sent_at || new Date().toISOString();
+  const mergedMetadata = mergeRequestMetadata(request, {
+    admin_notification_sent: true,
+    admin_notification_sent_at: adminNotificationTimestamp,
+    ...metadataPatch,
+  });
+
+  return dashboardPremiumRequestModel.updateRequest(
+    request.request_id,
+    { metadata: mergedMetadata },
+    dbClient,
+  );
 }
