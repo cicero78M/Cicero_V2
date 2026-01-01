@@ -44,4 +44,14 @@ describe('findLatestOpenDashboardPremiumRequestByIdentifier', () => {
     expect(findLatestOpenByDashboardUserId).toHaveBeenCalledWith('tester');
     expect(findLatestOpenByUsername).toHaveBeenCalledWith('tester');
   });
+
+  test('skips dashboard_user_id lookup when identifier is not a UUID', async () => {
+    findLatestOpenByUsername.mockResolvedValueOnce({ request_id: 12, username: 'not-uuid' });
+
+    const result = await findLatestOpenDashboardPremiumRequestByIdentifier('not-uuid');
+
+    expect(result).toEqual({ request_id: 12, username: 'not-uuid' });
+    expect(findLatestOpenByDashboardUserId).not.toHaveBeenCalled();
+    expect(findLatestOpenByUsername).toHaveBeenCalledWith('not-uuid');
+  });
 });

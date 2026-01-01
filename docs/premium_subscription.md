@@ -120,6 +120,9 @@ premium applications from dashboard users:
   from that list: an explicit payload value must be included in `client_ids`,
   a single allowed client is chosen automatically, and unknown or missing
   values are rejected.
+- When admins approve or deny via WhatsApp commands, identifiers are treated as
+  `dashboard_user_id` values only when they are valid UUIDs; other strings fall
+  back to username lookups to avoid database errors from invalid UUID inputs.
 - When creating a request, the service re-fetches the dashboard user profile by
   `dashboard_user_id` to populate `username` and `whatsapp`, ensuring the insert
   never writes a `NULL` username even if the JWT payload is missing fields.
