@@ -360,16 +360,18 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Tahap logging utama yang dicetak berurutan:
   1. **start**: memuat *Client ID* target dan penerima grup WA yang valid.
   2. **timeCheck**: jika waktu Jakarta melewati **17:15 WIB**, cron tetap
-     melanjutkan refresh likes dan komentar, tetapi pengambilan post baru
-     serta pengiriman laporan ke grup dikunci untuk mencegah spam malam hari.
-  3. **fetchPosts**: menarik konten baru IG/TikTok (dilewati otomatis setelah
-     **17:00 WIB**; cron hanya melakukan refresh engagement pada malam hari).
-  4. **refreshEngagement**: memperbarui likes/komentar tanpa menarik konten
-     baru jika sudah lewat 17:00 WIB.
-  5. **buildMessage**: merangkum aksi (fetch/refresh saja), delta konten, dan
-     total penerima.
+     menarik konten baru untuk memastikan refresh komentar malam memakai data
+     terbaru, tetapi pengiriman laporan ke grup dikunci untuk mencegah spam
+     larut malam.
+  3. **fetchPosts**: menarik konten baru IG/TikTok (hanya dilewati ketika
+     `forceEngagementOnly=true`, bukan karena batas waktu harian).
+  4. **refreshEngagement**: memperbarui likes/komentar menggunakan konten yang
+     baru diambil (termasuk setelah pukul 17:15 WIB).
+  5. **buildMessage**: merangkum aksi (fetch/refresh), delta konten, dan total
+     penerima.
   6. **sendToRecipients**: mengirim narasi ke grup WA per client dan saluran
-     debug dengan status `sent` atau `skipped`.
+     debug dengan status `sent` atau `skipped` (laporan grup disupresi setelah
+     17:15 WIB).
 - Pesan *no changes* tetap dicetak ketika tidak ada konten baru atau ketika
   seluruh akun tidak berubah; log tersebut memuat `action=refresh_only` atau
   `result=no_change` sehingga admin tahu cron berjalan tetapi tidak ada delta.
@@ -379,12 +381,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
     `countsAfter=ig:15/tk:10 recipients=120363419830216549@g.us`.
   - **Lewat 17:15** (kirim grup dikunci, refresh tetap jalan):
     `cronDirRequestFetchSosmed | action=timeCheck result=limited`
-    `message="Setelah 17:15 WIB hanya refresh likes/komentar; fetch post dan broadcast grup ditahan"`
-    `meta={"jakartaTime":"17:16"}` diikuti log `sendReport result=suppressed`.
-  - **Lewat 17:00** (skip fetch, hanya refresh): `cronDirRequestFetchSosmed |`
-    `clientId=DITHUMAS action=refresh_only result=skipped`
-    `skipReason=after_17_wib countsBefore=ig:8/tk:5 countsAfter=ig:8/tk:5`
-    `recipients=120363419830216549@g.us`.
+    `message="Setelah 17:15 WIB pengiriman ke grup dikunci; fetch post & refresh engagement tetap jalan supaya data komentar malam tetap terbaru"`
+    `meta={"jakartaTime":"17:16"}` diikuti log `tiktokFetch result=completed`
+    dan `sendReport result=suppressed`.
   - **Error** pada refresh: `cronDirRequestFetchSosmed | clientId=BIDHUMAS`
     `action=refreshEngagement result=error message="RapidAPI 429"`
     `recipients=admin@c.us` (stack trace dicetak di log debug).
