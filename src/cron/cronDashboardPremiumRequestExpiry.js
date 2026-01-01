@@ -4,7 +4,7 @@ import { formatToWhatsAppId, safeSendMessage, sendWAReport } from '../utils/waHe
 import waClient, { waGatewayClient } from '../service/waService.js';
 
 export const JOB_KEY = './src/cron/cronDashboardPremiumRequestExpiry.js';
-const CRON_EXPRESSION = '0 * * * *';
+const CRON_EXPRESSION = '20 * * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 
 function buildRequesterMessage(request) {
