@@ -12,6 +12,11 @@ const REQUEST_TTL_HOURS = 24;
 const CONFIRMED_TTL_HOURS = 48;
 const DEFAULT_SUBSCRIPTION_DURATION_DAYS = 30;
 
+function isUuid(value) {
+  if (typeof value !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 function addHours(baseDate, hours) {
   const date = baseDate ? new Date(baseDate) : new Date();
   date.setHours(date.getHours() + hours);
@@ -402,8 +407,10 @@ export async function findLatestOpenDashboardPremiumRequestByIdentifier(identifi
   const normalized = String(identifier).trim();
   if (!normalized) return null;
 
-  const byId = await findLatestOpenByDashboardUserId(normalized);
-  if (byId) return byId;
+  if (isUuid(normalized)) {
+    const byId = await findLatestOpenByDashboardUserId(normalized);
+    if (byId) return byId;
+  }
 
   return findLatestOpenByUsername(normalized);
 }
