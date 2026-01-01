@@ -235,16 +235,16 @@ export async function runCron(options = {}) {
           action: "timeCheck",
           result: "limited",
           message:
-            "Setelah 17:15 WIB hanya refresh likes/komentar; fetch post dan broadcast grup ditahan",
+            "Setelah 17:15 WIB pengiriman ke grup dikunci; fetch post & refresh engagement tetap jalan supaya data komentar malam tetap terbaru",
           meta: { jakartaTime: jakartaTime.label },
         })
       );
     }
 
-    const skipPostFetch = forceEngagementOnly || jakartaTime.hour >= 17;
+    const skipPostFetch = Boolean(forceEngagementOnly);
     const skipReason = forceEngagementOnly
       ? "Lewati fetch post karena forceEngagementOnly=true"
-      : "Lewati fetch post setelah pukul 17.00 WIB";
+      : null;
     const activeClients = await findAllActiveDirektoratWithTiktok();
 
     if (skipPostFetch) {
