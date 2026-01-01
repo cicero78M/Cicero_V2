@@ -38,10 +38,22 @@ function resolveExpiry(payload, fallbackHours) {
   return addHours(new Date(), fallbackHours);
 }
 
-function resolveSubscriptionExpiry(payload, request) {
+function isWhatsappApproval(adminContext = {}) {
+  return Boolean(
+    adminContext.admin_whatsapp ||
+      adminContext.adminWhatsapp ||
+      adminContext.channel === 'whatsapp',
+  );
+}
+
+function resolveSubscriptionExpiry(adminContext, request) {
+  if (isWhatsappApproval(adminContext)) {
+    return addDays(new Date(), DEFAULT_SUBSCRIPTION_DURATION_DAYS);
+  }
+
   const explicit =
-    payload?.subscriptionExpiresAt ||
-    payload?.subscription_expires_at ||
+    adminContext?.subscriptionExpiresAt ||
+    adminContext?.subscription_expires_at ||
     request?.subscription_expires_at;
   if (explicit) return explicit;
   return addDays(new Date(), DEFAULT_SUBSCRIPTION_DURATION_DAYS);

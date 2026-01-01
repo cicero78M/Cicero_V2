@@ -127,7 +127,10 @@ premium applications from dashboard users:
 On approval, `dashboardPremiumRequestService.approveDashboardPremiumRequest`
 creates an active `dashboard_user_subscriptions` row, refreshes cached premium
 flags on `dashboard_user`, and records the audit entry. Denials are persisted
-with `denied` status and an audit log entry.
+with `denied` status and an audit log entry. WhatsApp approvals (`grant access` /
+`grantdashsub`) always apply a 30-day expiry from the approval timestamp and
+ignore any `subscription_expires_at` included in the request payload to keep
+access windows consistent for chat-based grants.
 
 ### WhatsApp commands
 
