@@ -12,7 +12,7 @@ const router = Router();
 router.use(verifyDashboardToken);
 router.post('/request', createDashboardPremiumRequestController);
 router.put('/request/:token/confirm', confirmDashboardPremiumRequestController);
-router.get('/request/:token', getDashboardPremiumRequestController);
 router.get('/request/latest', getLatestDashboardPremiumRequestController);
+router.get('/request/:token', getDashboardPremiumRequestController);
 
 export default router;

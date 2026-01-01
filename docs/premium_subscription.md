@@ -106,6 +106,10 @@ premium applications from dashboard users:
   JWT). When no open request exists it returns a success payload with
   `hasOpenRequest: false` so the frontend can disable the “Ajukan” button
   without showing an error.
+- The `/api/premium/request/latest` route is registered before the tokenized
+  lookup to prevent the literal path segment `latest` from being parsed as a
+  `request_token`. This avoids database errors from UUID parsing when clients
+  query the endpoint.
 - Duplicate submissions are blocked: if a user already has a `pending` or
   `confirmed` request that has not expired, `POST /api/premium/request` returns
   HTTP 409 with a message indicating the previous request is still being
