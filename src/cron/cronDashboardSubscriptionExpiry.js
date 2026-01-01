@@ -2,7 +2,7 @@ import { scheduleCronJob } from '../utils/cronScheduler.js';
 import { processExpiredSubscriptions } from '../service/dashboardSubscriptionExpiryService.js';
 
 export const JOB_KEY = './src/cron/cronDashboardSubscriptionExpiry.js';
-const CRON_EXPRESSION = '*/23 * * * *';
+const CRON_EXPRESSION = '*/48 * * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 
 export async function runCron() {
