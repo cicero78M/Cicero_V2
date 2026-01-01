@@ -18,7 +18,7 @@ const TARGET_CLIENT_IDS = new Set(["DITBINMAS", "BIDHUMAS"]);
 
 const THANK_YOU_MESSAGE =
   "Terimakasih, Tugas Likes dan komentar hari ini sudah dilaksanakan semua";
-const DEFAULT_SEND_DELAY_MS = 3000;
+const DEFAULT_SEND_DELAY_MS = 2000;
 const WHATSAPP_SEND_DELAY_MS =
   process.env.NODE_ENV === "test" ? 0 : DEFAULT_SEND_DELAY_MS;
 
