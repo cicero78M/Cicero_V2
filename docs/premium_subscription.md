@@ -50,6 +50,21 @@ are denied when the dashboard account no longer exists, is inactive, or has no
 mapped clients, guaranteeing that premium checks always use the freshest client
 scope and cached premium flags rather than potentially stale JWT claims.
 
+### Dashboard premium guard middleware
+
+- `src/middleware/dashboardPremiumGuard.js` enforces dashboard premium access on
+  protected routes. The middleware reads `premium_status`, `premium_tier`, and
+  `premium_expires_at` from `req.dashboardUser` and refreshes missing fields
+  using `dashboardSubscriptionService.getPremiumSnapshot` to avoid stale or
+  empty cache values.
+- Expired subscriptions return HTTP 403 with a message describing the expired
+  status. Allowed tiers can be passed as an array; a 403 is returned when the
+  caller's normalized tier is not in the permitted list.
+- Requests that pass the guard expose `req.premiumGuard` with
+  `{ premiumStatus, premiumTier, premiumExpiresAt }` so downstream handlers can
+  log or branch on the resolved subscription context without re-parsing the
+  request.
+
 ## Expiry enforcement
 
 - Mobile premium grants automatically set `premium_end_date` to 30 days after
