@@ -36,7 +36,7 @@ test('getPostsTodayByClient filters by Jakarta date and orders results', async (
   await getPostsTodayByClient('Client 1');
 
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringMatching(/AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
+    expect.stringMatching(/AT TIME ZONE 'UTC'\)\s*AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
     ['client 1', expectedDate]
   );
   expect(mockQuery.mock.calls[0][0]).toMatch(/ORDER BY\s+created_at\s+ASC,\s+video_id\s+ASC/i);
@@ -54,7 +54,7 @@ test('getPostsTodayByClient respects Jakarta-normalized referenceDate on non-WIB
     await getPostsTodayByClient('Client 2', referenceDate);
 
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.any(String),
+      expect.stringMatching(/AT TIME ZONE 'UTC'\)\s*AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
       ['client 2', expectedDate]
     );
   } finally {
@@ -70,7 +70,7 @@ test('getVideoIdsTodayByClient applies Jakarta date filter for reference date', 
   await getVideoIdsTodayByClient('Client 3', referenceDate);
 
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringMatching(/AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
+    expect.stringMatching(/AT TIME ZONE 'UTC'\)\s*AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
     ['client 3', expectedDate]
   );
 });
@@ -138,4 +138,18 @@ test('countPostsByClient falls back to client filter when role-scope returns zer
   expect(fallbackSql).toContain('LOWER(TRIM(p.client_id)) = LOWER($1)');
   expect(fallbackSql).not.toContain('tiktok_post_roles');
   expect(result).toBe(5);
+});
+
+test('getVideoIdsTodayByClient treats late-night UTC as same Jakarta day', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  const nearMidnightUtc = new Date('2024-02-29T17:30:00.000Z');
+  const expectedJakarta = toJakartaDateInput(nearMidnightUtc);
+
+  await getVideoIdsTodayByClient('Client 4', nearMidnightUtc);
+
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringMatching(/AT TIME ZONE 'UTC'\)\s*AT TIME ZONE 'Asia\/Jakarta'\)\:\:date = \$2\:\:date/i),
+    ['client 4', expectedJakarta]
+  );
+  expect(expectedJakarta).toBe('2024-03-01');
 });

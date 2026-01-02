@@ -17,6 +17,17 @@ function resolveJakartaDate(referenceDate) {
   return validDate.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 }
 
+function normalizeUtcCreatedAt(input) {
+  if (!input) return null;
+  const parsed = new Date(input);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function jakartaDateCast(columnAlias = "created_at") {
+  return `(( ${columnAlias} AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Jakarta')`;
+}
+
 /**
  * Ambil satu post TikTok berdasarkan video_id.
  * @param {string} video_id
@@ -62,7 +73,7 @@ export async function upsertTiktokPosts(client_id, posts) {
   for (const post of posts) {
     await query(
       `INSERT INTO tiktok_post (client_id, video_id, caption, like_count, comment_count, created_at)
-       VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+       VALUES ($1, $2, $3, $4, $5, (COALESCE($6::timestamptz, NOW()) AT TIME ZONE 'UTC'))
        ON CONFLICT (video_id) DO UPDATE
          SET client_id = EXCLUDED.client_id,
              caption = EXCLUDED.caption,
@@ -75,7 +86,9 @@ export async function upsertTiktokPosts(client_id, posts) {
         post.desc || post.caption || "",
         post.digg_count ?? post.like_count ?? 0,
         post.comment_count ?? 0,
-        post.created_at || post.create_time || post.createTime || null,
+        normalizeUtcCreatedAt(
+          post.created_at || post.create_time || post.createTime || null
+        ),
       ]
     );
   }
@@ -106,7 +119,7 @@ export async function upsertTiktokPostWithStatus({
 
   const res = await query(
     `INSERT INTO tiktok_post (client_id, video_id, caption, like_count, comment_count, created_at)
-     VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+     VALUES ($1, $2, $3, $4, $5, (COALESCE($6::timestamptz, NOW()) AT TIME ZONE 'UTC'))
      ON CONFLICT (video_id) DO UPDATE
        SET client_id = EXCLUDED.client_id,
            caption = EXCLUDED.caption,
@@ -120,7 +133,7 @@ export async function upsertTiktokPostWithStatus({
       caption || "",
       toInteger(like_count) ?? 0,
       toInteger(comment_count) ?? 0,
-      created_at || null,
+      normalizeUtcCreatedAt(created_at || null),
     ]
   );
 
@@ -139,7 +152,7 @@ export async function getVideoIdsTodayByClient(client_id, referenceDate) {
   const res = await query(
     `SELECT video_id FROM tiktok_post
      WHERE LOWER(TRIM(client_id)) = $1
-     AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date`,
+     AND ${jakartaDateCast("created_at")}::date = $2::date`,
     [normalizedId, targetDate]
   );
   return res.rows.map((r) => r.video_id);
@@ -154,7 +167,9 @@ export async function getPostsTodayByClient(client_id, referenceDate) {
   const normalizedId = normalizeClientId(client_id);
   const targetDate = resolveJakartaDate(referenceDate);
   const res = await query(
-    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND (created_at AT TIME ZONE 'Asia/Jakarta')::date = $2::date ORDER BY created_at ASC, video_id ASC`,
+    `SELECT * FROM tiktok_post WHERE LOWER(TRIM(client_id)) = $1 AND ${jakartaDateCast(
+      "created_at"
+    )}::date = $2::date ORDER BY created_at ASC, video_id ASC`,
     [normalizedId, targetDate]
   );
   return res.rows;
@@ -200,7 +215,7 @@ export async function getPostsByClientAndDateRange(client_id, startDate, endDate
   const res = await query(
     `SELECT * FROM tiktok_post
      WHERE LOWER(TRIM(client_id)) = $1
-       AND (created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $2::date AND $3::date
+       AND ${jakartaDateCast("created_at")}::date BETWEEN $2::date AND $3::date
      ORDER BY created_at DESC`,
     [normalizedId, startStr, endStr]
   );
@@ -245,32 +260,34 @@ export async function countPostsByClient(
   }
 
   const addDateFilter = (addParamFn) => {
-    let filter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
+    const jakartaColumn = jakartaDateCast("p.created_at");
+    const nowJakarta = "(NOW() AT TIME ZONE 'Asia/Jakarta')";
+    let filter = `${jakartaColumn}::date = ${nowJakarta}::date`;
     if (start_date && end_date) {
       const startIdx = addParamFn(start_date);
       const endIdx = addParamFn(end_date);
-      filter = `p.created_at::date BETWEEN ${startIdx}::date AND ${endIdx}::date`;
+      filter = `${jakartaColumn}::date BETWEEN ${startIdx}::date AND ${endIdx}::date`;
     } else if (periode === 'semua') {
       filter = '1=1';
     } else if (periode === 'mingguan') {
       if (tanggal) {
         const tanggalIdx = addParamFn(tanggal);
-        filter = `date_trunc('week', p.created_at) = date_trunc('week', ${tanggalIdx}::date)`;
+        filter = `date_trunc('week', ${jakartaColumn}) = date_trunc('week', ${tanggalIdx}::date)`;
       } else {
-        filter = "date_trunc('week', p.created_at) = date_trunc('week', NOW())";
+        filter = `date_trunc('week', ${jakartaColumn}) = date_trunc('week', ${nowJakarta})`;
       }
     } else if (periode === 'bulanan') {
       if (tanggal) {
         const monthDate = tanggal.length === 7 ? `${tanggal}-01` : tanggal;
         const monthIdx = addParamFn(monthDate);
-        filter = `date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', ${monthIdx}::date)`;
+        filter = `date_trunc('month', ${jakartaColumn}) = date_trunc('month', ${monthIdx}::date)`;
       } else {
         filter =
-          "date_trunc('month', p.created_at AT TIME ZONE 'Asia/Jakarta') = date_trunc('month', NOW() AT TIME ZONE 'Asia/Jakarta')";
+          `date_trunc('month', ${jakartaColumn}) = date_trunc('month', ${nowJakarta})`;
       }
     } else if (tanggal) {
       const tanggalIdx = addParamFn(tanggal);
-      filter = `p.created_at::date = ${tanggalIdx}::date`;
+      filter = `${jakartaColumn}::date = ${tanggalIdx}::date`;
     }
     return filter;
   };

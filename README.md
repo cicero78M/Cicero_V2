@@ -305,6 +305,12 @@ The middleware in [`src/middleware/dedupRequestMiddleware.js`](src/middleware/de
 - Add indexes to frequently queried fields.
 - Cache Instagram and TikTok profiles in Redis (`profileCacheService.js`) to improve response times.
 
+### TikTok fetch timezone handling
+
+- TikTok timestamps from RapidAPI are treated as **UTC** and normalized during upsert so the database stores them consistently.
+- Date-based filters for `tiktok_post.created_at` convert the stored value from UTC to **Asia/Jakarta** before casting to `date` (e.g., `(created_at AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Jakarta'`) to avoid off-by-one errors around midnight.
+- When adding new fetchers or reports that rely on TikTok posting dates, reuse this double `AT TIME ZONE` pattern to keep late-night UTC posts counted on the correct Jakarta calendar day.
+
 ## High Volume Queue (RabbitMQ)
 
 - Use RabbitMQ to process large jobs asynchronously.
