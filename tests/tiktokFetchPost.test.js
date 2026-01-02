@@ -119,6 +119,11 @@ describe('fetchAndStoreTiktokContent timezone handling', () => {
 });
 
 describe('fetchAndStoreTiktokContent fallback handling', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-03-10T08:00:00Z')); // 15:00 WIB, within fallback window
+  });
+
   afterEach(() => {
     jest.useRealTimers();
     jest.resetModules();
@@ -264,7 +269,7 @@ describe('fetchAndStoreTiktokContent fallback handling', () => {
 
   test('falls back to username when primary posts do not include today', async () => {
     jest.useFakeTimers();
-    const systemTime = new Date('2024-03-10T03:00:00Z');
+    const systemTime = new Date('2024-03-10T04:30:00Z'); // 11:30 WIB
     jest.setSystemTime(systemTime);
 
     const mockQuery = jest.fn().mockResolvedValue({ rows: [] });

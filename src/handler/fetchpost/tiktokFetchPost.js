@@ -80,6 +80,21 @@ function parseCreatedAt(value) {
   return null;
 }
 
+/**
+ * Cek apakah sekarang (Asia/Jakarta) berada di antara 11:00 sampai 17:15.
+ * Dipakai untuk membatasi fallback RapidAPI via username agar hanya berjalan pada jam sibuk.
+ */
+function isWithinJakartaFallbackWindow() {
+  const nowJakarta = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
+  const start = new Date(nowJakarta);
+  start.setHours(11, 0, 0, 0);
+  const end = new Date(nowJakarta);
+  end.setHours(17, 15, 0, 0);
+  return nowJakarta >= start && nowJakarta <= end;
+}
+
 export async function fetchAndStoreSingleTiktokPost(clientId, videoInput) {
   if (!clientId) {
     throw new Error("Client ID wajib diisi.");
@@ -270,6 +285,14 @@ export async function fetchAndStoreTiktokContent(
 
     const tryUsernameFallback = async (reason) => {
       if (!canFallbackToUsername || triedUsernameFallback) return false;
+      if (!isWithinJakartaFallbackWindow()) {
+        sendDebug({
+          tag: "TIKTOK FETCH",
+          msg: `${reason}. Lewati fallback RapidAPI karena di luar jam 11:00-17:15 WIB`,
+          client_id: client.id,
+        });
+        return false;
+      }
       triedUsernameFallback = true;
       sendDebug({
         tag: "TIKTOK FETCH",
