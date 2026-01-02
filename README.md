@@ -194,7 +194,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
    `CONTACT_CACHE_TTL_MS` controls how long Google contact lookups stay cached in memory.
    `DASHBOARD_RESET_TOKEN_EXPIRY_MINUTES` and `DASHBOARD_PASSWORD_RESET_URL` customise dashboard password reset links.
-   `RAPIDAPI_FALLBACK_KEY` and `RAPIDAPI_FALLBACK_HOST` allow the TikTok fetcher to call an alternate RapidAPI host (`/user/videos`) when the primary `tiktok-api23` host fails or returns an empty payload. The fallback endpoint should return a `videos` or `result.videos` array containing TikTok objects with identifiers (`video_id`/`id`) and timestamps (`create_time`/`createTime`) so the backend can normalize them.
+   `RAPIDAPI_FALLBACK_KEY` and `RAPIDAPI_FALLBACK_HOST` allow the TikTok fetcher to call an alternate RapidAPI host (`/user/videos`) when the primary `tiktok-api23` host fails or returns an empty payload. If the primary host only returns posts outside of the current Jakarta day (no tasks for today), the fetcher retries via the fallback host using the username to avoid missing same-day content. The fallback endpoint should return a `videos` or `result.videos` array containing TikTok objects with identifiers (`video_id`/`id`) and timestamps (`create_time`/`createTime`) so the backend can normalize them.
 
 3. **Set up Redis**
     ```bash

@@ -120,6 +120,7 @@ describe('fetchAndStoreTiktokContent timezone handling', () => {
 
 describe('fetchAndStoreTiktokContent fallback handling', () => {
   afterEach(() => {
+    jest.useRealTimers();
     jest.resetModules();
   });
 
@@ -259,5 +260,87 @@ describe('fetchAndStoreTiktokContent fallback handling', () => {
     const upsertPayload = mockUpsert.mock.calls[0][1][0];
     expect(upsertPayload.video_id).toBe('fallback-video-2');
     expect(upsertPayload.like_count).toBe(7);
+  });
+
+  test('falls back to username when primary posts do not include today', async () => {
+    jest.useFakeTimers();
+    const systemTime = new Date('2024-03-10T03:00:00Z');
+    jest.setSystemTime(systemTime);
+
+    const mockQuery = jest.fn().mockResolvedValue({ rows: [] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'CLIENT_FALLBACK',
+            client_tiktok: '@clientfallback',
+            tiktok_secuid: 'SEC123',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ client_id: 'CLIENT_FALLBACK', client_tiktok: '@clientfallback' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            video_id: 'fresh-video',
+            client_id: 'CLIENT_FALLBACK',
+            created_at: new Date(systemTime),
+          },
+        ],
+      });
+
+    const mockUpsert = jest.fn().mockResolvedValue();
+    const mockSendDebug = jest.fn();
+    const mockFetchBySecUid = jest.fn().mockResolvedValue([
+      {
+        id: 'stale-video',
+        createTime: Math.floor(new Date('2024-03-09T03:00:00Z').getTime() / 1000),
+        stats: { diggCount: 1, commentCount: 1 },
+      },
+    ]);
+    const freshTimestamp = Math.floor(systemTime.getTime() / 1000);
+    const mockFetchByUsername = jest.fn().mockResolvedValue([
+      {
+        id: 'fresh-video',
+        create_time: freshTimestamp,
+        stats: { diggCount: 2, commentCount: 0 },
+      },
+    ]);
+
+    jest.unstable_mockModule('../src/db/index.js', () => ({
+      query: mockQuery,
+    }));
+    jest.unstable_mockModule('../src/model/clientModel.js', () => ({
+      update: jest.fn(),
+    }));
+    jest.unstable_mockModule('../src/model/tiktokPostModel.js', () => ({
+      upsertTiktokPosts: mockUpsert,
+    }));
+    jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
+      sendDebug: mockSendDebug,
+    }));
+    jest.unstable_mockModule('../src/service/tiktokApi.js', () => ({
+      fetchTiktokPosts: mockFetchByUsername,
+      fetchTiktokPostsBySecUid: mockFetchBySecUid,
+      fetchTiktokInfo: jest.fn(),
+      fetchTiktokPostDetail: jest.fn(),
+    }));
+
+    const { fetchAndStoreTiktokContent } = await import(
+      '../src/handler/fetchpost/tiktokFetchPost.js'
+    );
+
+    await fetchAndStoreTiktokContent('CLIENT_FALLBACK');
+
+    expect(mockFetchBySecUid).toHaveBeenCalledTimes(1);
+    expect(mockFetchByUsername).toHaveBeenCalledTimes(1);
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+    const upsertPayload = mockUpsert.mock.calls[0][1][0];
+    expect(upsertPayload.video_id).toBe('fresh-video');
+    expect(upsertPayload.like_count).toBe(2);
+    expect(upsertPayload.comment_count).toBe(0);
   });
 });

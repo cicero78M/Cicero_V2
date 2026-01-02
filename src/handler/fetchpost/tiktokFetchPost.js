@@ -264,6 +264,22 @@ export async function fetchAndStoreTiktokContent(
   for (const client of clientsToFetch) {
     let secUid;
     const username = client.client_tiktok;
+    const canFallbackToUsername = Boolean(username);
+    let triedUsernameFallback = false;
+    let itemList = [];
+
+    const tryUsernameFallback = async (reason) => {
+      if (!canFallbackToUsername || triedUsernameFallback) return false;
+      triedUsernameFallback = true;
+      sendDebug({
+        tag: "TIKTOK FETCH",
+        msg: `${reason}. Coba fallback host RapidAPI via username ${username}`,
+        client_id: client.id,
+      });
+      itemList = await fetchTiktokPosts(username, 35);
+      return true;
+    };
+
     try {
       secUid = await getTiktokSecUid(client);
     } catch (err) {
@@ -275,8 +291,6 @@ export async function fetchAndStoreTiktokContent(
       continue;
     }
 
-    let itemList = [];
-    const canFallbackToUsername = Boolean(username);
     try {
       sendDebug({
         tag: "TIKTOK FETCH",
@@ -290,12 +304,7 @@ export async function fetchAndStoreTiktokContent(
       }
 
       if (canFallbackToUsername && (!itemList || itemList.length === 0)) {
-        sendDebug({
-          tag: "TIKTOK FETCH",
-          msg: `Primary fetch kosong untuk ${client.id}, coba fallback host RapidAPI`,
-          client_id: client.id,
-        });
-        itemList = await fetchTiktokPosts(username, 35);
+        await tryUsernameFallback(`Primary fetch kosong untuk ${client.id}`);
       }
 
       console.log(
@@ -325,12 +334,10 @@ export async function fetchAndStoreTiktokContent(
         });
         if (canFallbackToUsername) {
           try {
-            sendDebug({
-              tag: "TIKTOK FETCH",
-              msg: `Gagal fetch utama untuk ${client.id}, coba fallback host RapidAPI`,
-              client_id: client.id,
-            });
-            itemList = await fetchTiktokPosts(username, 35);
+            const attempted = await tryUsernameFallback(
+              `Gagal fetch utama untuk ${client.id}`
+            );
+            if (!attempted) continue;
           } catch (fallbackErr) {
             sendDebug({
               tag: "TIKTOK POST ERROR",
@@ -344,11 +351,35 @@ export async function fetchAndStoreTiktokContent(
         }
       }
 
+    const filterItemsForToday = () =>
+      (itemList || []).filter((post) => {
+        const ts = post.createTime || post.create_time || post.timestamp;
+        return isTodayJakarta(ts);
+      });
+
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====
-    const items = itemList.filter((post) => {
-      const ts = post.createTime || post.create_time || post.timestamp;
-      return isTodayJakarta(ts);
-    });
+    let items = filterItemsForToday();
+
+    if (
+      items.length === 0 &&
+      canFallbackToUsername &&
+      !triedUsernameFallback &&
+      secUid
+    ) {
+      try {
+        await tryUsernameFallback(
+          `Konten hari ini kosong dari fetch utama ${client.id}`
+        );
+        items = filterItemsForToday();
+      } catch (fallbackErr) {
+        sendDebug({
+          tag: "TIKTOK POST ERROR",
+          msg: `Fallback TikTok gagal saat konten kosong: ${fallbackErr.message}`,
+          client_id: client.id,
+        });
+        continue;
+      }
+    }
 
     sendDebug({
       tag: "TIKTOK FILTER",
