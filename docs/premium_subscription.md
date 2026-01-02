@@ -60,6 +60,10 @@ scope and cached premium flags rather than potentially stale JWT claims.
 - Expired subscriptions return HTTP 403 with a message describing the expired
   status. Allowed tiers can be passed as an array; a 403 is returned when the
   caller's normalized tier is not in the permitted list.
+- A list of allowed tiers for dashboard routes can be configured via the
+  `DASHBOARD_PREMIUM_ALLOWED_TIERS` env var (comma-separated, defaults to
+  `tier1,tier2,premium_1`). Routes reuse this list to keep premium tier handling
+  consistent across environments.
 - Requests that pass the guard expose `req.premiumGuard` with
   `{ premiumStatus, premiumTier, premiumExpiresAt }` so downstream handlers can
   log or branch on the resolved subscription context without re-parsing the

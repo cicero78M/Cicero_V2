@@ -276,7 +276,7 @@ Contoh response:
 
 Endpoint ini berada di belakang middleware `verifyDashboardToken`, sehingga wajib mengirim bearer token dashboard (`Authorization: Bearer <token>`). Middleware `dashboardPremiumGuard` mengecek snapshot premium dan:
 - Mengembalikan **403** jika langganan premium tidak aktif atau sudah kedaluwarsa (ikut menyertakan `premium_tier` dan `premium_expires_at` bila ada).
-- Mengembalikan **403** jika tier tidak ada di daftar diizinkan (`tier1` atau `tier2`).
+- Mengembalikan **403** jika tier tidak ada di daftar diizinkan. Daftar ini dibaca dari `DASHBOARD_PREMIUM_ALLOWED_TIERS` (default: `tier1,tier2,premium_1`).
 - Meneruskan permintaan hanya ketika token valid, premium aktif, dan tier sesuai.
 
 Parameter query:
