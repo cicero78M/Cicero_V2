@@ -17,6 +17,8 @@ export const env = cleanEnv(process.env, {
   SECRET_KEY: str({ default: '' }),
   JWT_SECRET: str(),
   RAPIDAPI_KEY: str({ default: '' }),
+  RAPIDAPI_FALLBACK_KEY: str({ default: '' }),
+  RAPIDAPI_FALLBACK_HOST: str({ default: '' }),
   ADMIN_WHATSAPP: str({ default: '' }),
   GATEWAY_WHATSAPP_ADMIN: str({ default: '' }),
   APP_SESSION_NAME: str({ default: '' }),

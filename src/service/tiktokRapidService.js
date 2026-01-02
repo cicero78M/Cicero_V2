@@ -11,6 +11,10 @@ const RETRYABLE_ERROR_CODES = new Set([
   'ECONNABORTED',
   'ENOTFOUND'
 ]);
+const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
+const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
+const RAPIDAPI_FALLBACK_KEY = env.RAPIDAPI_FALLBACK_KEY;
+const RAPIDAPI_FALLBACK_HOST = env.RAPIDAPI_FALLBACK_HOST;
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -24,8 +28,34 @@ function isRetryableError(err) {
   return false;
 }
 
-const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = 'tiktok-api23.p.rapidapi.com';
+function normalizePostItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const normalizedStats =
+    item.stats && typeof item.stats === 'object' ? { ...item.stats } : {};
+
+  if (normalizedStats.diggCount === undefined) {
+    normalizedStats.diggCount =
+      item.digg_count ?? item.like_count ?? normalizedStats.likeCount ?? 0;
+  }
+  if (normalizedStats.commentCount === undefined) {
+    normalizedStats.commentCount =
+      item.comment_count ?? normalizedStats.comments ?? 0;
+  }
+
+  return {
+    ...item,
+    id: item.id ?? item.video_id ?? item.aweme_id,
+    video_id: item.video_id ?? item.id ?? item.aweme_id,
+    createTime:
+      item.createTime ??
+      item.create_time ??
+      item.timestamp ??
+      item.create_at ??
+      null,
+    desc: item.desc ?? item.caption ?? item.title ?? '',
+    stats: normalizedStats
+  };
+}
 
 function parsePosts(resData) {
   let dataObj = resData?.data?.data || resData?.data?.result || resData?.data;
@@ -36,11 +66,16 @@ function parsePosts(resData) {
       dataObj = {};
     }
   }
-  if (Array.isArray(dataObj.itemList)) return dataObj.itemList;
-  if (Array.isArray(dataObj.items)) return dataObj.items;
-  if (Array.isArray(resData?.data?.result?.videos)) return resData.data.result.videos;
-  if (Array.isArray(dataObj.videos)) return dataObj.videos;
-  return [];
+
+  const candidateLists = [
+    dataObj?.itemList,
+    dataObj?.items,
+    resData?.data?.result?.videos,
+    dataObj?.videos
+  ].find(Array.isArray);
+
+  if (!candidateLists || !Array.isArray(candidateLists)) return [];
+  return candidateLists.map(normalizePostItem).filter(Boolean);
 }
 
 function parsePostDetail(resData) {
@@ -58,6 +93,59 @@ function parsePostDetail(resData) {
   if (payload?.itemStruct) return payload.itemStruct;
   if (payload?.itemInfo?.item) return payload.itemInfo.item;
   return null;
+}
+
+async function requestRapidApiPosts({ host, key, endpoint, params }) {
+  const res = await axios.get(`https://${host}/${endpoint}`, {
+    params,
+    headers: {
+      'X-RapidAPI-Key': key,
+      'X-RapidAPI-Host': host,
+      'x-cache-control': 'no-cache'
+    }
+  });
+  return parsePosts(res);
+}
+
+function buildFallbackFetcher(params, limit) {
+  if (!RAPIDAPI_FALLBACK_KEY || !RAPIDAPI_FALLBACK_HOST) return null;
+  const fallbackParams = {
+    ...params,
+    count: String(limit > 0 ? limit : 10)
+  };
+
+  return () =>
+    requestRapidApiPosts({
+      host: RAPIDAPI_FALLBACK_HOST,
+      key: RAPIDAPI_FALLBACK_KEY,
+      endpoint: 'user/videos',
+      params: fallbackParams
+    });
+}
+
+async function fetchPostsWithFallback(primaryFetcher, fallbackFetcher, limit) {
+  let primaryError = null;
+  let primaryItems = [];
+
+  try {
+    primaryItems = await primaryFetcher();
+  } catch (err) {
+    primaryError = err;
+  }
+
+  if (primaryItems?.length) {
+    return limit ? primaryItems.slice(0, limit) : primaryItems;
+  }
+
+  if (typeof fallbackFetcher === 'function') {
+    const fallbackItems = await fallbackFetcher();
+    if (fallbackItems?.length) {
+      return limit ? fallbackItems.slice(0, limit) : fallbackItems;
+    }
+  }
+
+  if (primaryError) throw primaryError;
+  return limit ? primaryItems.slice(0, limit) : primaryItems;
 }
 
 export async function fetchTiktokProfile(username) {
@@ -118,21 +206,28 @@ export async function fetchTiktokInfo(username) {
 
 export async function fetchTiktokPosts(username, limit = 10) {
   if (!username) return [];
+  const normalizedUsername = username.replace(/^@/, '');
+  const params = {
+    uniqueId: normalizedUsername,
+    username: normalizedUsername,
+    cursor: '0'
+  };
+
   try {
-    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-      params: {
-        uniqueId: username.replace(/^@/, ''),
-        count: String(limit > 0 ? limit : 10),
-        cursor: '0'
-      },
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-        'x-cache-control': 'no-cache'
-      }
-    });
-    const items = parsePosts(res);
-    return limit ? items.slice(0, limit) : items;
+    return await fetchPostsWithFallback(
+      () =>
+        requestRapidApiPosts({
+          host: RAPIDAPI_HOST,
+          key: RAPIDAPI_KEY,
+          endpoint: 'api/user/posts',
+          params: {
+            ...params,
+            count: String(limit > 0 ? limit : 10)
+          }
+        }),
+      buildFallbackFetcher(params, limit),
+      limit
+    );
   } catch (err) {
     const msg = err.response?.data || err.message;
     if (typeof msg === 'object' && /missing required params/i.test(msg.error || '')) {
@@ -151,21 +246,26 @@ export async function fetchTiktokPosts(username, limit = 10) {
 
 export async function fetchTiktokPostsBySecUid(secUid, limit = 10) {
   if (!secUid) return [];
+  const params = {
+    secUid,
+    cursor: '0'
+  };
+
   try {
-    const res = await axios.get(`https://${RAPIDAPI_HOST}/api/user/posts`, {
-      params: {
-        secUid,
-        count: String(limit > 0 ? limit : 10),
-        cursor: '0'
-      },
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-        'x-cache-control': 'no-cache'
-      }
-    });
-    const items = parsePosts(res);
-    return limit ? items.slice(0, limit) : items;
+    return await fetchPostsWithFallback(
+      () =>
+        requestRapidApiPosts({
+          host: RAPIDAPI_HOST,
+          key: RAPIDAPI_KEY,
+          endpoint: 'api/user/posts',
+          params: {
+            ...params,
+            count: String(limit > 0 ? limit : 10)
+          }
+        }),
+      buildFallbackFetcher(params, limit),
+      limit
+    );
   } catch (err) {
     const msg = err.response?.data
       ? JSON.stringify(err.response.data)

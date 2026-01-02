@@ -13,6 +13,9 @@ jest.unstable_mockModule('../src/service/linkReportExcelService.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/googleContactsService.js', () => ({
   saveContactIfNew: jest.fn(),
+  authorize: jest.fn(),
+  saveGoogleContact: jest.fn(),
+  searchByNumbers: jest.fn(),
 }));
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   getAdminWANumbers: jest.fn(),
@@ -20,8 +23,25 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: jest.fn(),
   formatToWhatsAppId: jest.fn(),
   safeSendMessage: mockSafeSendMessage,
+  isAdminWhatsApp: jest.fn(),
+  formatClientData: jest.fn(),
+  isUnsupportedVersionError: jest.fn(),
+  sendWAReport: jest.fn(),
 }));
-jest.unstable_mockModule('../src/model/linkReportModel.js', () => ({}));
+jest.unstable_mockModule('../src/model/linkReportModel.js', () => ({
+  hasRecentLinkReport: jest.fn(),
+  createLinkReport: jest.fn(),
+  getLinkReports: jest.fn(),
+  findLinkReportByShortcode: jest.fn(),
+  updateLinkReport: jest.fn(),
+  deleteLinkReport: jest.fn(),
+  getReportsTodayByClient: jest.fn(),
+  getReportsYesterdayByClient: jest.fn(),
+  getReportsTodayByShortcode: jest.fn(),
+  getRekapLinkByClient: jest.fn(),
+  getReportsThisMonthByClient: jest.fn(),
+  getReportsPrevMonthByClient: jest.fn(),
+}));
 jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
   handleFetchLikesInstagram: jest.fn(),
 }));
