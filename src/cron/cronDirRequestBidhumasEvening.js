@@ -96,9 +96,9 @@ export async function runCron() {
   let sendStatus = 'pending';
 
   try {
-    await runDirRequestFetchSosmed();
-    fetchStatus = 'sosmed fetch selesai';
-    await logPhase('Fetch sosmed selesai untuk cron BIDHUMAS malam');
+    await runDirRequestFetchSosmed({ forceEngagementOnly: true });
+    fetchStatus = 'refresh engagement sosmed selesai (skip fetch post)';
+    await logPhase('Refresh engagement sosmed selesai untuk cron BIDHUMAS malam (tanpa fetch post)');
   } catch (err) {
     fetchStatus = `gagal sosmed fetch: ${err.message || err}`;
     await logToAdmins(fetchStatus);

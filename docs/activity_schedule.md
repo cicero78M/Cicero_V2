@@ -47,7 +47,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestCustomSequence.js` (Ditbinmas recap + custom combined) | `30 20 * * *` | Fetch sosmed content and engagement, execute the Ditbinmas recap (menus 6, 9, 34, 35 for super admins plus 30 for operators), then reuse the same data to run the full custom sequence without re-fetching. |
 | `cronDirRequestCustomSequence.js` (Ditbinmas recap) | `33 20 * * *` | Send Ditbinmas menus 6, 9, 34, and 35 to super admins, plus menu 30 to Ditbinmas operators, adding weekly recaps on Sundays and monthly recaps on the last day of the month. |
 | `cronDirRequestCustomSequence.js` (BIDHUMAS 20:30) | `30 20 * * *` | Deliver BIDHUMAS menus 6, 9, 28, and 29 at the same time as the Ditbinmas recap without blocking it, targeting the BIDHUMAS group and super admins. |
-| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Chain sosmed fetches then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
+| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Refresh engagement data only (`forceEngagementOnly` skips Instagram/TikTok post fetch) then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
 
 #### Ditbinmas WA reminder persistence
 
