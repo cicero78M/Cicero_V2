@@ -9,7 +9,15 @@ const mockFormatToWhatsAppId = jest.fn();
 const mockFormatUserData = jest.fn();
 const mockFormatComplaintIssue = jest.fn();
 const mockFetchInstagramInfo = jest.fn();
+const mockFetchInstagramPosts = jest.fn();
+const mockFetchInstagramProfile = jest.fn();
 const mockFetchTiktokProfile = jest.fn();
+const mockFetchTiktokPosts = jest.fn();
+const mockFetchTiktokPostsBySecUid = jest.fn();
+const mockFetchTiktokInfo = jest.fn();
+const mockFetchTiktokPostDetail = jest.fn();
+const mockFetchTiktokCommentsPage = jest.fn();
+const mockFetchAllTiktokComments = jest.fn();
 const mockHasUserLikedBetween = jest.fn();
 const mockHasUserCommentedBetween = jest.fn();
 const mockSendComplaintEmail = jest.fn();
@@ -23,6 +31,9 @@ jest.unstable_mockModule('../src/utils/utilsHelper.js', () => ({
   formatClientInfo: jest.fn(),
   groupByDivision: jest.fn(),
   sortDivisionKeys: jest.fn(),
+  sortTitleKeys: jest.fn(),
+  normalizeKomentarArr: jest.fn(),
+  extractInstagramShortcode: jest.fn(),
   formatNama: mockFormatNama,
   normalizeUserId: mockNormalizeUserId,
   normalizeEmail: mockNormalizeEmail,
@@ -37,6 +48,10 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: jest.fn(),
   formatToWhatsAppId: mockFormatToWhatsAppId,
   safeSendMessage: mockSafeSendMessage,
+  isAdminWhatsApp: jest.fn(),
+  formatClientData: jest.fn(),
+  isUnsupportedVersionError: jest.fn(),
+  sendWAReport: jest.fn(),
 }));
 
 jest.unstable_mockModule('../src/service/emailService.js', () => ({
@@ -50,8 +65,24 @@ jest.unstable_mockModule('../src/service/linkReportExcelService.js', () => ({
 }));
 jest.unstable_mockModule('../src/service/googleContactsService.js', () => ({
   saveContactIfNew: jest.fn(),
+  authorize: jest.fn(),
+  saveGoogleContact: jest.fn(),
+  searchByNumbers: jest.fn(),
 }));
-jest.unstable_mockModule('../src/model/linkReportModel.js', () => ({}));
+jest.unstable_mockModule('../src/model/linkReportModel.js', () => ({
+  hasRecentLinkReport: jest.fn(),
+  createLinkReport: jest.fn(),
+  getLinkReports: jest.fn(),
+  findLinkReportByShortcode: jest.fn(),
+  updateLinkReport: jest.fn(),
+  deleteLinkReport: jest.fn(),
+  getReportsTodayByClient: jest.fn(),
+  getReportsYesterdayByClient: jest.fn(),
+  getReportsTodayByShortcode: jest.fn(),
+  getRekapLinkByClient: jest.fn(),
+  getReportsThisMonthByClient: jest.fn(),
+  getReportsPrevMonthByClient: jest.fn(),
+}));
 jest.unstable_mockModule('../src/handler/fetchengagement/fetchLikesInstagram.js', () => ({
   handleFetchLikesInstagram: jest.fn(),
 }));
@@ -59,19 +90,56 @@ jest.unstable_mockModule('../src/handler/fetchabsensi/tiktok/absensiKomentarTikt
   absensiKomentar: jest.fn(),
   absensiKomentarTiktokPerKonten: jest.fn(),
   absensiKomentarDitbinmasReport: jest.fn(),
+  extractUsernamesFromComments: jest.fn(),
+  normalizeUsername: jest.fn(),
+  collectKomentarRecap: jest.fn(),
+  absensiKomentarDitbinmasSimple: jest.fn(),
+  lapharTiktokDitbinmas: jest.fn(),
 }));
 jest.unstable_mockModule('../src/service/instaRapidService.js', () => ({
   fetchInstagramInfo: mockFetchInstagramInfo,
+  fetchInstagramPosts: mockFetchInstagramPosts,
+  fetchInstagramProfile: mockFetchInstagramProfile,
+  fetchInstagramPostsByMonthToken: jest.fn(),
+  fetchInstagramPostsByMonth: jest.fn(),
+  fetchInstagramPostsPageToken: jest.fn(),
+  fetchInstagramPostsPage: jest.fn(),
+  fetchAllInstagramComments: jest.fn(),
+  fetchAllInstagramLikes: jest.fn(),
+  fetchAllInstagramLikesItems: jest.fn(),
+  fetchInstagramHashtag: jest.fn(),
+  fetchInstagramLikesPage: jest.fn(),
+  fetchInstagramLikesPageRetry: jest.fn(),
+  fetchInstagramPostInfo: jest.fn(),
 }));
 jest.unstable_mockModule('../src/service/tiktokRapidService.js', () => ({
   fetchTiktokProfile: mockFetchTiktokProfile,
+  fetchTiktokPosts: mockFetchTiktokPosts,
+  fetchTiktokPostsBySecUid: mockFetchTiktokPostsBySecUid,
+  fetchTiktokInfo: mockFetchTiktokInfo,
+  fetchTiktokPostDetail: mockFetchTiktokPostDetail,
+  fetchTiktokCommentsPage: mockFetchTiktokCommentsPage,
+  fetchAllTiktokComments: mockFetchAllTiktokComments,
 }));
 jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
   hasUserLikedBetween: mockHasUserLikedBetween,
+  upsertInstaLike: jest.fn(),
+  getLikeUsernamesByShortcode: jest.fn(),
+  deleteInstaLikeByShortcode: jest.fn(),
+  getAllShortcodesToday: jest.fn(),
+  getLikesByShortcode: jest.fn(),
+  saveLikeSnapshotAudit: jest.fn(),
+  getLatestLikeAuditByWindow: jest.fn(),
+  getRekapLikesByClient: jest.fn(),
 }));
 jest.unstable_mockModule('../src/model/tiktokCommentModel.js', () => ({
   hasUserCommentedBetween: mockHasUserCommentedBetween,
   deleteCommentsByVideoId: jest.fn(),
+  upsertTiktokComments: jest.fn(),
+  getCommentsByVideoId: jest.fn(),
+  saveCommentSnapshotAudit: jest.fn(),
+  getLatestCommentAuditByWindow: jest.fn(),
+  getRekapKomentarByClient: jest.fn(),
 }));
 
 process.env.COMPLAINT_RESPONSE_DELAY_MS = '0';
@@ -563,4 +631,3 @@ test('respondComplaint_issue stores formatted complaint issue and prompts for so
     'Tuliskan *solusi/tindak lanjut* yang akan dikirim ke pelapor (atau ketik *batal* untuk keluar):'
   );
 });
-

@@ -263,6 +263,7 @@ export async function fetchAndStoreTiktokContent(
 
   for (const client of clientsToFetch) {
     let secUid;
+    const username = client.client_tiktok;
     try {
       secUid = await getTiktokSecUid(client);
     } catch (err) {
@@ -275,6 +276,7 @@ export async function fetchAndStoreTiktokContent(
     }
 
     let itemList = [];
+    const canFallbackToUsername = Boolean(username);
     try {
       sendDebug({
         tag: "TIKTOK FETCH",
@@ -283,8 +285,17 @@ export async function fetchAndStoreTiktokContent(
 
       if (secUid) {
         itemList = await fetchTiktokPostsBySecUid(secUid, 35);
-      } else if (client.client_tiktok) {
-        itemList = await fetchTiktokPosts(client.client_tiktok, 35);
+      } else if (username) {
+        itemList = await fetchTiktokPosts(username, 35);
+      }
+
+      if (canFallbackToUsername && (!itemList || itemList.length === 0)) {
+        sendDebug({
+          tag: "TIKTOK FETCH",
+          msg: `Primary fetch kosong untuk ${client.id}, coba fallback host RapidAPI`,
+          client_id: client.id,
+        });
+        itemList = await fetchTiktokPosts(username, 35);
       }
 
       console.log(
@@ -312,7 +323,25 @@ export async function fetchAndStoreTiktokContent(
           msg: err.message,
           client_id: client.id,
         });
-        continue;
+        if (canFallbackToUsername) {
+          try {
+            sendDebug({
+              tag: "TIKTOK FETCH",
+              msg: `Gagal fetch utama untuk ${client.id}, coba fallback host RapidAPI`,
+              client_id: client.id,
+            });
+            itemList = await fetchTiktokPosts(username, 35);
+          } catch (fallbackErr) {
+            sendDebug({
+              tag: "TIKTOK POST ERROR",
+              msg: `Fallback TikTok gagal: ${fallbackErr.message}`,
+              client_id: client.id,
+            });
+            continue;
+          }
+        } else {
+          continue;
+        }
       }
 
     // ==== FILTER HANYA KONTEN YANG DI-POST HARI INI (Asia/Jakarta) ====

@@ -161,6 +161,8 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     SECRET_KEY=your-secret
     JWT_SECRET=your-jwt-secret
     RAPIDAPI_KEY=xxxx
+    RAPIDAPI_FALLBACK_KEY=xxxx-secondary
+    RAPIDAPI_FALLBACK_HOST=tiktok-api6.p.rapidapi.com
     AMQP_URL=amqp://localhost
     DEBUG_FETCH_INSTAGRAM=false
     GOOGLE_CONTACT_SCOPE=https://www.googleapis.com/auth/contacts
@@ -192,6 +194,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
    `CONTACT_CACHE_TTL_MS` controls how long Google contact lookups stay cached in memory.
    `DASHBOARD_RESET_TOKEN_EXPIRY_MINUTES` and `DASHBOARD_PASSWORD_RESET_URL` customise dashboard password reset links.
+   `RAPIDAPI_FALLBACK_KEY` and `RAPIDAPI_FALLBACK_HOST` allow the TikTok fetcher to call an alternate RapidAPI host (`/user/videos`) when the primary `tiktok-api23` host fails or returns an empty payload. The fallback endpoint should return a `videos` or `result.videos` array containing TikTok objects with identifiers (`video_id`/`id`) and timestamps (`create_time`/`createTime`) so the backend can normalize them.
 
 3. **Set up Redis**
     ```bash
