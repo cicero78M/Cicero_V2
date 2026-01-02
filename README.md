@@ -124,11 +124,6 @@ Example response (truncated):
 }
 ```
 
-Frontend note (Cicero_Web):
-- The dashboard sidebar/menu should expose the **Anev Polres** item pointing to `/dashboard/anev`.
-- Match the backend guard by allowing premium tiers `tier1` and `tier2` before rendering the page.
-- See [docs/cicero_web_anev_polres.md](docs/cicero_web_anev_polres.md) for navigation details and the expected API parameters.
-
 Development reminder: after updating this endpoint or its documentation, run `npm run lint` and `npm test` to align with repository guidelines.
 
 ## Logging Timezone
