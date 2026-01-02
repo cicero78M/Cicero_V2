@@ -271,3 +271,58 @@ Contoh response:
   }
 }
 ```
+
+## 6. Dashboard Anev (`/api/dashboard/anev`)
+
+Endpoint ini memerlukan JWT dashboard **dan** akses premium tier `tier1` atau `tier2`. Middleware `requirePremiumTier` akan menolak permintaan dengan status `402` jika premium tidak aktif atau kedaluwarsa, dan `403` jika tier tidak cocok.
+
+Parameter query:
+- `client_id` (wajib jika token tidak membawa `client_id`; harus termasuk dalam `dashboard_user.client_ids`)
+- `role` dan `scope` (default dari token; `scope` hanya menerima `org` atau `direktorat`)
+- `regional_id` (opsional; huruf besar)
+- `time_range` (`today`, `7d` *(default)*, `30d`, `90d`, `custom`, `all`)
+- `start_date` dan `end_date` (wajib bila `time_range=custom`; format tanggal mengikuti zona waktu Asia/Jakarta)
+
+Respons merangkum metadata filter dan agregat engagement:
+- `filters.permitted_time_ranges` menegaskan daftar rentang waktu yang diterima.
+- `filters.start_date`/`end_date` sudah dihitung ke batas awal/akhir hari Asia/Jakarta.
+- `aggregates.total_users` menghitung user aktif (`status=true`) pada client/regional yang sesuai.
+- `aggregates.total_likes` dan `aggregates.total_comments` dijumlahkan dari tabel likes/komentar dengan filter `client_id`, `role`/`scope`, dan `regional_id`.
+- `aggregates.compliance_per_pelaksana` menampilkan likes, komentar, total aksi, serta `completion_rate` per pelaksana terhadap total konten dalam rentang yang sama.
+
+Contoh response ringkas:
+```json
+{
+  "success": true,
+  "data": {
+    "filters": {
+      "client_id": "DITBINMAS",
+      "role": "ditbinmas",
+      "scope": "org",
+      "regional_id": "JATIM",
+      "time_range": "7d",
+      "start_date": "2025-02-01T00:00:00+07:00",
+      "end_date": "2025-02-07T23:59:59.999+07:00",
+      "permitted_time_ranges": ["today", "7d", "30d", "90d", "custom", "all"]
+    },
+    "aggregates": {
+      "total_users": 45,
+      "instagram_posts": 12,
+      "tiktok_posts": 8,
+      "total_likes": 320,
+      "total_comments": 110,
+      "expected_actions": 20,
+      "compliance_per_pelaksana": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "likes": 10,
+          "comments": 4,
+          "total_actions": 14,
+          "completion_rate": 0.7
+        }
+      ]
+    }
+  }
+}
+```
