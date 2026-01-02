@@ -274,14 +274,22 @@ Contoh response:
 
 ## 6. Dashboard Anev (`/api/dashboard/anev`)
 
-Endpoint ini memerlukan JWT dashboard **dan** akses premium tier `tier1` atau `tier2`. Middleware `requirePremiumTier` akan menolak permintaan dengan status `402` jika premium tidak aktif atau kedaluwarsa, dan `403` jika tier tidak cocok.
+Endpoint ini berada di belakang middleware `verifyDashboardToken`, sehingga wajib mengirim bearer token dashboard (`Authorization: Bearer <token>`). Middleware `dashboardPremiumGuard` mengecek snapshot premium dan:
+- Mengembalikan **403** jika langganan premium tidak aktif atau sudah kedaluwarsa (ikut menyertakan `premium_tier` dan `premium_expires_at` bila ada).
+- Mengembalikan **403** jika tier tidak ada di daftar diizinkan (`tier1` atau `tier2`).
+- Meneruskan permintaan hanya ketika token valid, premium aktif, dan tier sesuai.
 
 Parameter query:
-- `client_id` (wajib jika token tidak membawa `client_id`; harus termasuk dalam `dashboard_user.client_ids`)
-- `role` dan `scope` (default dari token; `scope` hanya menerima `org` atau `direktorat`)
-- `regional_id` (opsional; huruf besar)
+- `client_id` (wajib jika token tidak membawa `client_id`; harus termasuk dalam `dashboard_user.client_ids`). Dapat dikirim sebagai query atau header `X-Client-Id`.
+- `role` dan `scope` (default dari token; `scope` hanya menerima `org` atau `direktorat`; `role` **wajib** dan ditolak 400 bila kosong)
+- `regional_id` (opsional; di-normalisasi ke huruf besar)
 - `time_range` (`today`, `7d` *(default)*, `30d`, `90d`, `custom`, `all`)
 - `start_date` dan `end_date` (wajib bila `time_range=custom`; format tanggal mengikuti zona waktu Asia/Jakarta)
+
+Validasi penting:
+- `client_id` harus cocok dengan daftar izin user dashboard; jika dikirim tetapi tidak cocok, backend membalas **403** `client_id tidak diizinkan`.
+- `scope` selain `org`/`direktorat` dibalas **400** `scope tidak valid`.
+- `role` kosong dibalas **400** `role wajib diisi`.
 
 Respons merangkum metadata filter dan agregat engagement:
 - `filters.permitted_time_ranges` menegaskan daftar rentang waktu yang diterima.
@@ -289,6 +297,13 @@ Respons merangkum metadata filter dan agregat engagement:
 - `aggregates.total_users` menghitung user aktif (`status=true`) pada client/regional yang sesuai.
 - `aggregates.total_likes` dan `aggregates.total_comments` dijumlahkan dari tabel likes/komentar dengan filter `client_id`, `role`/`scope`, dan `regional_id`.
 - `aggregates.compliance_per_pelaksana` menampilkan likes, komentar, total aksi, serta `completion_rate` per pelaksana terhadap total konten dalam rentang yang sama.
+
+Contoh request:
+```bash
+curl -X GET "https://api.example.com/api/dashboard/anev?time_range=90d&role=ditbinmas&scope=org" \
+  -H "Authorization: Bearer <dashboard-jwt>" \
+  -H "X-Client-Id: DITBINMAS"
+```
 
 Contoh response ringkas:
 ```json
