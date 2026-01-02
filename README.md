@@ -68,6 +68,64 @@ GET /api/analytics?client_id=demo_client
 
 This allows operators to scope responses to the correct client.
 
+### Dashboard Anev Endpoint (`/api/dashboard/anev`)
+
+This endpoint surfaces premium analytics and engagement compliance for dashboard users. Access is guarded by:
+- `Authorization: Bearer <dashboard-jwt>` issued by the dashboard login flow (`verifyDashboardToken` middleware).
+- Premium subscription via `dashboardPremiumGuard` with allowed tiers `tier1` or `tier2`. Expired or missing premium status returns HTTP 403 with the current tier/expiry snapshot.
+- `client_id` authorization: the requested `client_id` (via query or `X-Client-Id` header) must exist in `dashboard_user.client_ids`. If omitted, the backend falls back to the token client or the first allowed client; otherwise a 400 error is returned.
+- `role` is required; `scope` only accepts `org` or `direktorat` (400 on invalid scope). `regional_id` is optional but normalised to uppercase.
+
+Query parameters:
+- `time_range`: `today`, `7d` (default), `30d`, `90d`, `custom`, `all`. `custom` requires `start_date` and `end_date` in Asia/Jakarta timezone.
+- `client_id`, `role`, `scope`, `regional_id`, `start_date`, `end_date`. `client_id` may also be sent as `X-Client-Id` header.
+
+Example request:
+```bash
+curl -X GET "https://api.example.com/api/dashboard/anev?time_range=30d&role=ditbinmas&scope=org" \
+  -H "Authorization: Bearer <dashboard-jwt>" \
+  -H "X-Client-Id: DITBINMAS"
+```
+
+Example response (truncated):
+```json
+{
+  "success": true,
+  "data": {
+    "filters": {
+      "client_id": "DITBINMAS",
+      "role": "ditbinmas",
+      "scope": "org",
+      "regional_id": "JATIM",
+      "time_range": "30d",
+      "start_date": "2025-01-09T00:00:00+07:00",
+      "end_date": "2025-02-07T23:59:59.999+07:00",
+      "permitted_time_ranges": ["today", "7d", "30d", "90d", "custom", "all"]
+    },
+    "aggregates": {
+      "total_users": 45,
+      "instagram_posts": 12,
+      "tiktok_posts": 8,
+      "total_likes": 320,
+      "total_comments": 110,
+      "expected_actions": 20,
+      "compliance_per_pelaksana": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "likes": 10,
+          "comments": 4,
+          "total_actions": 14,
+          "completion_rate": 0.7
+        }
+      ]
+    }
+  }
+}
+```
+
+Development reminder: after updating this endpoint or its documentation, run `npm run lint` and `npm test` to align with repository guidelines.
+
 ## Logging Timezone
 
 Application logs are timestamped using the Asia/Jakarta timezone by the console wrapper in `src/utils/logger.js`. Expect log prefixes in the format `YYYY-MM-DDTHH:mm:ss.SSS+07:00` for consistent Jakarta-local monitoring.
