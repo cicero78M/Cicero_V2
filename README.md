@@ -269,7 +269,7 @@ Two WhatsApp sessions are launched from `app.js`: `waClient` for operator intera
 
 - The BIDHUMAS dispatch inside the custom and combined sequences still shares the **20:30** slot, remaining decoupled from the Ditbinmas recap that now fires at **20:33**.
 
-- `src/cron/cronDirRequestBidhumasEvening.js` adds a **22:00** (Asia/Jakarta) BIDHUMAS-only cron that first runs `runDirRequestFetchSosmed()` and then executes dirRequest menus **6** and **9** specifically for the BIDHUMAS WhatsApp group and its super admin recipients. The job shares the dirRequest bucket and inherits the same WhatsApp readiness guardrails as the other dirRequest schedules.
+- `src/cron/cronDirRequestBidhumasEvening.js` adds a **22:00** (Asia/Jakarta) BIDHUMAS-only cron that first runs `runDirRequestFetchSosmed({ forceEngagementOnly: true })` (refresh likes/comments only, skipping new post fetches) and then executes dirRequest menus **6** and **9** specifically for the BIDHUMAS WhatsApp group and its super admin recipients. The job shares the dirRequest bucket and inherits the same WhatsApp readiness guardrails as the other dirRequest schedules.
 
 The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP emails are sent synchronously via SMTP to minimise delays.
 

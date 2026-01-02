@@ -417,8 +417,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
-  **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed()` untuk
-  memperbarui data sosmed, lalu menjalankan menu **6** (Instagram likes),
+  **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed({
+  forceEngagementOnly: true })` untuk *hanya* menyegarkan engagement (likes &
+  komentar) tanpa fetch post baru, lalu menjalankan menu **6** (Instagram likes),
   **9** (komentar TikTok), **2️⃣8️⃣** (rekap likes per konten), dan **2️⃣9️⃣**
   (rekap komentar per konten) khusus untuk client `BIDHUMAS`.
 - Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
