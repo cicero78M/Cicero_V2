@@ -143,6 +143,63 @@ function mapFromObject(obj) {
   return new Map(Object.entries(obj || {}).map(([key, value]) => [key, Number(value) || 0]));
 }
 
+function buildUserDirectory(users) {
+  return users.map((user) => ({
+    user_id: user.user_id,
+    nama: user.nama,
+    divisi: user.divisi,
+    client_id: user.client_id,
+    kontak_sosial: {
+      instagram: user.insta || null,
+      tiktok: user.tiktok || null,
+    },
+  }));
+}
+
+function mapEngagementPerUser(users, byUserMap, platform) {
+  const normalizer = platform === 'instagram' ? normalizeInstaUsername : normalizeTiktokUsername;
+  const metricKey = platform === 'instagram' ? 'likes' : 'comments';
+  const totalsByUserId = new Map();
+  const perUser = [];
+  const seenUsernames = new Set();
+
+  users.forEach((user) => {
+    const username = normalizer(user[platform === 'instagram' ? 'insta' : 'tiktok']);
+    const total = username ? byUserMap.get(username) || 0 : 0;
+    if (username) {
+      seenUsernames.add(username);
+    }
+    totalsByUserId.set(user.user_id, total);
+    perUser.push({
+      user_id: user.user_id,
+      nama: user.nama,
+      divisi: user.divisi,
+      client_id: user.client_id,
+      username,
+      kontak_sosial: {
+        instagram: user.insta || null,
+        tiktok: user.tiktok || null,
+      },
+      [metricKey]: total,
+    });
+  });
+
+  for (const [username, total] of byUserMap.entries()) {
+    if (seenUsernames.has(username)) continue;
+    perUser.push({
+      user_id: null,
+      nama: null,
+      divisi: null,
+      client_id: null,
+      username,
+      [metricKey]: total,
+      unmapped: true,
+    });
+  }
+
+  return { perUser, totalsByUserId };
+}
+
 async function fetchInstagramLikeStats(clientId, startDate, endDate, { role, scope, regionalId }) {
   const normalizedClientId = clientId ? String(clientId).trim() : null;
   const normalizedRole = role ? String(role).trim().toLowerCase() : null;
@@ -403,11 +460,15 @@ export async function getAnevSummary({
   ]);
 
   const expectedActions = (Number(igPosts) || 0) + (Number(ttPosts) || 0);
+  const userDirectory = buildUserDirectory(activeUsers);
+  const { perUser: instagramPerUser, totalsByUserId: instagramTotalsByUserId } =
+    mapEngagementPerUser(activeUsers, igLikes.byUser, 'instagram');
+  const { perUser: tiktokPerUser, totalsByUserId: tiktokTotalsByUserId } =
+    mapEngagementPerUser(activeUsers, ttComments.byUser, 'tiktok');
+
   const compliance = activeUsers.map((user) => {
-    const instaUsername = normalizeInstaUsername(user.insta);
-    const tiktokUsername = normalizeTiktokUsername(user.tiktok);
-    const likes = instaUsername ? igLikes.byUser.get(instaUsername) || 0 : 0;
-    const comments = tiktokUsername ? ttComments.byUser.get(tiktokUsername) || 0 : 0;
+    const likes = instagramTotalsByUserId.get(user.user_id) || 0;
+    const comments = tiktokTotalsByUserId.get(user.user_id) || 0;
     const totalActions = likes + comments;
     const completionRate = expectedActions > 0 ? totalActions / expectedActions : 0;
     return {
@@ -433,10 +494,21 @@ export async function getAnevSummary({
       end_date: endDate,
       permitted_time_ranges: ALLOWED_TIME_RANGES,
     },
+    user_directory: userDirectory,
+    instagram_engagement: {
+      total_posts: Number(igPosts) || 0,
+      total_likes: igLikes.totalLikes,
+      per_user: instagramPerUser,
+    },
+    tiktok_engagement: {
+      total_posts: Number(ttPosts) || 0,
+      total_comments: ttComments.totalComments,
+      per_user: tiktokPerUser,
+    },
     aggregates: {
       total_users: activeUsers.length,
-      instagram_posts: igPosts,
-      tiktok_posts: ttPosts,
+      instagram_posts: Number(igPosts) || 0,
+      tiktok_posts: Number(ttPosts) || 0,
       total_likes: igLikes.totalLikes,
       total_comments: ttComments.totalComments,
       expected_actions: expectedActions,

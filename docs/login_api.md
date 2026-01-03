@@ -315,6 +315,8 @@ Validasi penting:
 - `role` kosong dibalas **400** `role wajib diisi`.
 
 Respons merangkum metadata filter dan agregat engagement:
+- `user_directory` menyalin daftar user aktif dari helper User Directory agar frontend tidak perlu menggabungkan data lain.
+- `instagram_engagement` dan `tiktok_engagement` masing-masing memuat total post, total likes/komentar, serta `per_user` yang sudah memetakan username ke `user_id` (username tak terpetakan tetap muncul dengan `unmapped=true`).
 - `filters.permitted_time_ranges` menegaskan daftar rentang waktu yang diterima.
 - `filters.start_date`/`end_date` sudah dihitung ke batas awal/akhir hari Asia/Jakarta.
 - `aggregates.total_users` menghitung user aktif (`status=true`) pada client/regional yang sesuai.
@@ -334,6 +336,54 @@ Contoh response ringkas:
 {
   "success": true,
   "data": {
+    "user_directory": [
+      {
+        "user_id": "u-1",
+        "nama": "USER SATKER",
+        "divisi": "SUBBID PENMAS",
+        "client_id": "DITBINMAS",
+        "kontak_sosial": {
+          "instagram": "user_ig",
+          "tiktok": "user_tt"
+        }
+      }
+    ],
+    "instagram_engagement": {
+      "total_posts": 12,
+      "total_likes": 320,
+      "per_user": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "divisi": "SUBBID PENMAS",
+          "client_id": "DITBINMAS",
+          "username": "user_ig",
+          "kontak_sosial": {
+            "instagram": "user_ig",
+            "tiktok": "user_tt"
+          },
+          "likes": 10
+        }
+      ]
+    },
+    "tiktok_engagement": {
+      "total_posts": 8,
+      "total_comments": 110,
+      "per_user": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "divisi": "SUBBID PENMAS",
+          "client_id": "DITBINMAS",
+          "username": "user_tt",
+          "kontak_sosial": {
+            "instagram": "user_ig",
+            "tiktok": "user_tt"
+          },
+          "comments": 4
+        }
+      ]
+    },
     "filters": {
       "client_id": "DITBINMAS",
       "role": "ditbinmas",
