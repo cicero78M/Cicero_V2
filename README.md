@@ -81,6 +81,11 @@ Query parameters:
 - `time_range`: `today`, `7d` (default), `30d`, `90d`, `custom`, `all`. `custom` requires `start_date` and `end_date` in Asia/Jakarta timezone.
 - `client_id`, `role`, `scope`, `regional_id`, `start_date`, `end_date`. `client_id` may also be sent as `X-Client-Id` header.
 
+Response structure highlights:
+- `user_directory` echoes active dashboard users from the shared User Directory helper, including `user_id`, `nama`, `divisi`, `client_id`, and social handles (`kontak_sosial.instagram`/`kontak_sosial.tiktok`).
+- `instagram_engagement` and `tiktok_engagement` expose `total_posts`, aggregate likes/comments, and `per_user` breakdowns where each username has been mapped back to `user_id` (unmapped usernames are still listed with `unmapped=true`).
+- Legacy `aggregates.*` remain for backward compatibility and reuse the same counts/derivations as the new DTO sections.
+
 Example request:
 ```bash
 curl -X GET "https://api.example.com/api/dashboard/anev?time_range=30d&role=ditbinmas&scope=org" \
@@ -93,6 +98,54 @@ Example response (truncated):
 {
   "success": true,
   "data": {
+    "user_directory": [
+      {
+        "user_id": "u-1",
+        "nama": "USER SATKER",
+        "divisi": "SUBBID PENMAS",
+        "client_id": "DITBINMAS",
+        "kontak_sosial": {
+          "instagram": "user_ig",
+          "tiktok": "user_tt"
+        }
+      }
+    ],
+    "instagram_engagement": {
+      "total_posts": 12,
+      "total_likes": 320,
+      "per_user": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "divisi": "SUBBID PENMAS",
+          "client_id": "DITBINMAS",
+          "username": "user_ig",
+          "kontak_sosial": {
+            "instagram": "user_ig",
+            "tiktok": "user_tt"
+          },
+          "likes": 10
+        }
+      ]
+    },
+    "tiktok_engagement": {
+      "total_posts": 8,
+      "total_comments": 110,
+      "per_user": [
+        {
+          "user_id": "u-1",
+          "nama": "USER SATKER",
+          "divisi": "SUBBID PENMAS",
+          "client_id": "DITBINMAS",
+          "username": "user_tt",
+          "kontak_sosial": {
+            "instagram": "user_ig",
+            "tiktok": "user_tt"
+          },
+          "comments": 4
+        }
+      ]
+    },
     "filters": {
       "client_id": "DITBINMAS",
       "role": "ditbinmas",
