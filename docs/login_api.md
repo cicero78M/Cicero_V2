@@ -317,6 +317,7 @@ Respons merangkum metadata filter dan agregat engagement:
 - `filters.start_date`/`end_date` sudah dihitung ke batas awal/akhir hari Asia/Jakarta.
 - `aggregates.total_users` menghitung user aktif (`status=true`) pada client/regional yang sesuai.
 - `aggregates.total_likes` dan `aggregates.total_comments` dijumlahkan dari tabel likes/komentar dengan filter `client_id`, `role`/`scope`, dan `regional_id`.
+- `aggregates.instagram_posts` dan `aggregates.tiktok_posts` ikut memakai filter `role` (bila dikirim) serta `scope`/`regional_id` yang sama sehingga seluruh agregat berada pada ruang filter identik.
 - `aggregates.compliance_per_pelaksana` menampilkan likes, komentar, total aksi, serta `completion_rate` per pelaksana terhadap total konten dalam rentang yang sama.
 
 Contoh request:

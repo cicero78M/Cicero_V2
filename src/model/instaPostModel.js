@@ -414,8 +414,7 @@ export async function countPostsByClient(
     return filter;
   };
 
-  const shouldUseRoleFilter =
-    Boolean(normalizedRole) && (normalizedScope === 'direktorat' || clientType === 'direktorat');
+  const shouldUseRoleFilter = Boolean(normalizedRole);
 
   const executeCount = async (useRoleFilter) => {
     const params = [];
@@ -459,15 +458,6 @@ export async function countPostsByClient(
   };
 
   const initialCount = await executeCount(shouldUseRoleFilter);
-
-  if (
-    initialCount === 0 &&
-    shouldUseRoleFilter &&
-    normalizedClientId &&
-    clientType === 'direktorat'
-  ) {
-    return executeCount(false);
-  }
 
   return initialCount;
 }
