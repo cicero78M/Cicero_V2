@@ -565,7 +565,7 @@ describe('POST /dashboard-login', () => {
     expect(decoded.premium_tier).toBe('gold');
   });
 
-  test('maps DITSAMAPTA + BIDHUMAS to BIDHUMAS role without changing client_ids', async () => {
+  test('keeps directorate client as role when client is DITSAMAPTA even if role is BIDHUMAS', async () => {
     mockQuery
       .mockResolvedValueOnce({
         rows: [
@@ -587,18 +587,14 @@ describe('POST /dashboard-login', () => {
       .send({ username: 'dash', password: 'pass' });
 
     expect(res.status).toBe(200);
-    expect(res.body.user).toEqual({
-      dashboard_user_id: 'd1',
-      role: 'bidhumas',
-      role_id: 2,
-      client_ids: ['DITSAMAPTA'],
-      client_id: 'DITSAMAPTA',
-      premium_status: false,
-      premium_tier: null,
-      premium_expires_at: null
-    });
+    expect(res.body.user.dashboard_user_id).toBe('d1');
+    expect(res.body.user.role).toBe('ditsamapta');
+    expect(res.body.user.client_ids).toEqual(['DITSAMAPTA']);
+    expect(res.body.user.client_id).toBe('DITSAMAPTA');
+    expect(res.body.user.premium_status).toBe(false);
+    expect(res.body.user.premium_tier).toBeNull();
     const decoded = jwt.verify(res.body.token, 'testsecret');
-    expect(decoded.role).toBe('bidhumas');
+    expect(decoded.role).toBe('ditsamapta');
     expect(decoded.client_id).toBe('DITSAMAPTA');
     expect(mockRedis.set).toHaveBeenCalledWith(
       `login_token:${res.body.token}`,
@@ -607,7 +603,7 @@ describe('POST /dashboard-login', () => {
     );
   });
 
-  test('handles case-insensitive BIDHUMAS role override when client is DITSAMAPTA', async () => {
+  test('normalizes directorate client role to client_id when client is DITSAMAPTA', async () => {
     mockQuery
       .mockResolvedValueOnce({
         rows: [
@@ -629,10 +625,10 @@ describe('POST /dashboard-login', () => {
       .send({ username: 'dash2', password: 'pass' });
 
     expect(res.status).toBe(200);
-    expect(res.body.user.role).toBe('bidhumas');
+    expect(res.body.user.role).toBe('ditsamapta');
     expect(res.body.user.premium_status).toBe(false);
     const decoded = jwt.verify(res.body.token, 'testsecret');
-    expect(decoded.role).toBe('bidhumas');
+    expect(decoded.role).toBe('ditsamapta');
   });
 
   test('returns 400 when operator has no allowed clients', async () => {
