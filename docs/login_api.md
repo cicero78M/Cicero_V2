@@ -235,6 +235,25 @@ Untuk endpoint yang menerima parameter `client_id` (terutama `/api/clients/profi
 - Menolak role direktorat yang tidak dikenal untuk `scope=direktorat`.
 - Memastikan `regional_id` (dari query atau token) cocok dengan `regional_id` client yang dikembalikan.
 
+Respons profil menyertakan alias tier untuk kebutuhan AuthContext front-end:
+- `level` – alias dari `client_level` untuk menjaga kompatibilitas.
+- `tier` – label tier yang dinormalisasi lowercase dari `client_level` atau snapshot premium.
+- `premium_tier` – sinonim `tier` agar downstream yang memakai kolom premium tetap berjalan.
+
+Contoh ringkas:
+```json
+{
+  "success": true,
+  "client": {
+    "client_id": "LEVEL1",
+    "client_level": "Premium_1",
+    "level": "Premium_1",
+    "tier": "premium_1",
+    "premium_tier": "premium_1"
+  }
+}
+```
+
 Dokumentasi lengkap untuk `/api/amplify/rekap` (termasuk parameter `client_id`, `periode`, `tanggal`, `start_date`/`end_date`, `role`, `scope`, dan `regional_id`) tersedia di `docs/amplifyRekapApi.md`.
 
 ## 5. Dashboard Stats (`/api/dashboard/stats`)

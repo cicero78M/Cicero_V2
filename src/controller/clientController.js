@@ -8,6 +8,11 @@ import * as satbinmasOfficialAccountService from '../service/satbinmasOfficialAc
 import { sendSuccess } from '../utils/response.js';
 import { normalizeClientId } from '../utils/utilsHelper.js';
 
+const normalizeTierLabel = (tier) =>
+  typeof tier === "string" && tier.trim() !== ""
+    ? tier.trim().toLowerCase()
+    : null;
+
 // List semua client (bisa filter by group)
 export const getAllClients = async (req, res, next) => {
   try {
@@ -322,8 +327,25 @@ export const getClientProfile = async (req, res, next) => {
       }
     }
 
+    const tierFromSubscription =
+      normalizeTierLabel(req.user?.premium_tier) ||
+      normalizeTierLabel(req.user?.premiumTier) ||
+      normalizeTierLabel(client.premium_tier);
+    const tierFromLevel =
+      normalizeTierLabel(client.client_level) || normalizeTierLabel(client.level);
+    const resolvedTier = tierFromSubscription || tierFromLevel;
+    const levelAlias = client.level ?? client.client_level ?? null;
+
     // Sesuaikan key hasil jika ingin (client/profile)
-    res.json({ success: true, client });
+    res.json({
+      success: true,
+      client: {
+        ...client,
+        level: levelAlias,
+        tier: resolvedTier,
+        premium_tier: resolvedTier,
+      },
+    });
   } catch (err) {
     next(err);
   }

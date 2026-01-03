@@ -61,6 +61,9 @@ test('uses role client data for social media fields when non-operator org', asyn
       client_tiktok: 'dittiktok',
       client_tiktok_status: true,
       client_amplify_status: true,
+      level: null,
+      tier: null,
+      premium_tier: null,
     }),
   });
 });
@@ -75,5 +78,41 @@ test('uses token client_id when not provided in request', async () => {
   await getClientProfile(req, res, () => {});
 
   expect(mockFindClientById).toHaveBeenCalledWith('C1');
-  expect(json).toHaveBeenCalledWith({ success: true, client: { client_id: 'C1', client_type: 'org' } });
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    client: {
+      client_id: 'C1',
+      client_type: 'org',
+      level: null,
+      tier: null,
+      premium_tier: null,
+    },
+  });
+});
+
+test('maps client_level to tier aliases in profile response', async () => {
+  mockFindClientById.mockResolvedValueOnce({
+    client_id: 'LEVEL1',
+    client_type: 'org',
+    client_level: 'Premium_1',
+  });
+
+  const req = { params: {}, query: { client_id: 'LEVEL1' }, body: {}, user: {} };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { json, status };
+
+  await getClientProfile(req, res, () => {});
+
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    client: {
+      client_id: 'LEVEL1',
+      client_type: 'org',
+      client_level: 'Premium_1',
+      level: 'Premium_1',
+      tier: 'premium_1',
+      premium_tier: 'premium_1',
+    },
+  });
 });
