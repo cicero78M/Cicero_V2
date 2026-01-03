@@ -368,19 +368,9 @@ export async function countPostsByClient(
 
   const normalizedClientId = client_id ? String(client_id).trim() : null;
   const normalizedRole = options.role ? String(options.role).trim().toLowerCase() : null;
-  const normalizedScope = options.scope ? String(options.scope).trim().toLowerCase() : null;
   const normalizedRegionalId = options.regionalId
     ? String(options.regionalId).trim().toUpperCase()
     : null;
-
-  let clientType = null;
-  if (normalizedClientId) {
-    const typeRes = await query(
-      'SELECT client_type FROM clients WHERE LOWER(TRIM(client_id)) = $1 LIMIT 1',
-      [normalizedClientId.toLowerCase()]
-    );
-    clientType = typeRes.rows[0]?.client_type?.toLowerCase() || null;
-  }
 
   const addDateFilter = (addParamFn) => {
     let filter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";

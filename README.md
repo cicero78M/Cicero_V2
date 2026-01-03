@@ -73,8 +73,9 @@ This allows operators to scope responses to the correct client.
 This endpoint surfaces premium analytics and engagement compliance for dashboard users. Access is guarded by:
 - `Authorization: Bearer <dashboard-jwt>` issued by the dashboard login flow (`verifyDashboardToken` middleware).
 - Premium subscription via `dashboardPremiumGuard` with allowed tiers from `DASHBOARD_PREMIUM_ALLOWED_TIERS` (default: `tier1,tier2,premium_1`). Expired or missing premium status returns HTTP 403 with the current tier/expiry snapshot.
-- `client_id` authorization: the requested `client_id` (via query or `X-Client-Id` header) must exist in `dashboard_user.client_ids`. If omitted, the backend falls back to the token client or the first allowed client; otherwise a 400 error is returned.
+- `client_id` authorization: the requested `client_id` (via query or `X-Client-Id` header) must exist in `dashboard_user.client_ids`. Operators with multiple clients must supply `client_id` explicitly; otherwise a 400 error is returned.
 - `role` is required; `scope` only accepts `org` or `direktorat` (400 on invalid scope). `regional_id` is optional but normalised to uppercase.
+- User lookups for Anev and polres dashboards now reuse the User Directory helper (active users only) with the same `scope` (`org`/`direktorat`) rules and optional `regional_id` filtering, ensuring both experiences draw from the same operator dataset.
 
 Query parameters:
 - `time_range`: `today`, `7d` (default), `30d`, `90d`, `custom`, `all`. `custom` requires `start_date` and `end_date` in Asia/Jakarta timezone.

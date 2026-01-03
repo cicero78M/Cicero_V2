@@ -1,5 +1,5 @@
 import * as userModel from '../model/userModel.js';
-import * as clientService from '../service/clientService.js';
+import { getUserDirectoryUsers, UserDirectoryError } from '../service/userDirectoryService.js';
 import { sendSuccess } from '../utils/response.js';
 import { normalizeWhatsappNumber } from '../utils/waHelper.js';
 
@@ -339,141 +339,37 @@ export const getUsersByClientFull = async (req, res, next) => {
 export const getUserList = async (req, res, next) => {
   try {
     const role = req.user?.role?.toLowerCase();
+    const clientId = req.query.client_id;
     const tokenClientId = req.user?.client_id;
     const tokenClientIds = Array.isArray(req.user?.client_ids)
       ? req.user.client_ids
-      : req.user?.client_id
-        ? [req.user.client_id]
+      : tokenClientId
+        ? [tokenClientId]
         : [];
     const requestedRole = req.query.role
       ? String(req.query.role).toLowerCase()
       : role;
     const requestedScope = req.query.scope
       ? String(req.query.scope).toLowerCase()
+      : 'org';
+    const regionalId = req.query.regional_id
+      ? String(req.query.regional_id).trim().toUpperCase()
       : null;
-    const validDirektoratRoles = [
-      'ditbinmas',
-      'ditlantas',
-      'bidhumas',
-      'ditsamapta',
-    ];
-    if (
-      requestedScope === 'direktorat' &&
-      !validDirektoratRoles.includes(requestedRole)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'role direktorat tidak valid',
-      });
-    }
-    let users;
 
-    if (role === 'operator') {
-      const requestedClientId = req.query.client_id;
-      const normalizedTokenClientIds = tokenClientIds.map((clientId) =>
-        String(clientId).toLowerCase()
-      );
-      let selectedClientId;
-
-      if (requestedClientId) {
-        const normalizedRequestedId = String(requestedClientId).toLowerCase();
-        const matchedIndex = normalizedTokenClientIds.indexOf(
-          normalizedRequestedId
-        );
-
-        if (matchedIndex === -1) {
-          return res.status(403).json({
-            success: false,
-            message: 'client_id tidak diizinkan',
-          });
-        }
-
-        selectedClientId = tokenClientIds[matchedIndex];
-      } else if (tokenClientIds.length === 1) {
-        selectedClientId = tokenClientIds[0];
-      }
-
-      if (!selectedClientId) {
-        return res
-          .status(400)
-          .json({ success: false, message: 'client_id wajib diisi' });
-      }
-      if (requestedScope === 'direktorat') {
-        users = await userModel.getUsersByDirektorat(
-          requestedRole,
-          selectedClientId
-        );
-      } else {
-        users = await userModel.getUsersByClientAndRole(
-          selectedClientId,
-          requestedRole
-        );
-      }
-    } else {
-      const clientId = req.query.client_id;
-      if (!clientId) {
-        return res
-          .status(400)
-          .json({ success: false, message: 'client_id wajib diisi' });
-      }
-      const loweredClientId = clientId.toLowerCase();
-      const direktorateRoles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
-
-      if (requestedScope === 'direktorat') {
-        const filterClientId =
-          tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
-            ? tokenClientId
-            : null;
-        if (filterClientId) {
-          users = await userModel.getUsersByDirektorat(
-            requestedRole,
-            filterClientId
-          );
-        } else {
-          users = await userModel.getUsersByDirektorat(requestedRole);
-        }
-      } else if (requestedScope === 'org') {
-        users = await userModel.getUsersByClientAndRole(
-          clientId,
-          requestedRole
-        );
-      } else if (direktorateRoles.includes(loweredClientId)) {
-        const filterClientId =
-          tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
-            ? tokenClientId
-            : null;
-        if (filterClientId) {
-          users = await userModel.getUsersByDirektorat(
-            loweredClientId,
-            filterClientId
-          );
-        } else {
-          users = await userModel.getUsersByDirektorat(loweredClientId);
-        }
-      } else {
-        const client = await clientService.findClientById(clientId);
-        const clientType = client?.client_type?.toLowerCase();
-
-        if (clientType === 'direktorat') {
-          const filterClientId =
-            tokenClientId && tokenClientId.toLowerCase() !== loweredClientId
-              ? tokenClientId
-              : null;
-          if (filterClientId) {
-            users = await userModel.getUsersByDirektorat(
-              loweredClientId,
-              filterClientId
-            );
-          } else {
-            users = await userModel.getUsersByDirektorat(loweredClientId);
-          }
-        } else {
-          users = await userModel.getUsersByClient(clientId, requestedRole);
-        }
-      }
-    }
+    const { users } = await getUserDirectoryUsers({
+      requesterRole: role,
+      tokenClientId,
+      tokenClientIds,
+      clientId,
+      role: requestedRole,
+      scope: requestedScope,
+      regionalId,
+    });
     sendSuccess(res, users);
   } catch (err) {
+    if (err instanceof UserDirectoryError) {
+      return res.status(err.status).json({ success: false, message: err.message });
+    }
     next(err);
   }
 };

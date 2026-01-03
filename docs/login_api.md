@@ -85,6 +85,8 @@ Successful dashboard login responses now include premium metadata when available
 }
 ```
 
+The same `client_ids` and `role` from the dashboard token gate both the User Directory and the Anev/Polres dashboards. Operators who manage multiple clients must pass an explicit `client_id` when hitting `/api/dashboard/anev`; the backend will then pull active users via the shared User Directory helper, applying the same `scope` (`org`/`direktorat`) logic and optional `regional_id` filter so every dashboard view reads from a single source of truth.
+
 When operator hanya memiliki satu `client_id` bertipe direktorat, JWT `role` dan field `user.role` akan dinormalisasi ke `client_id` tersebut dalam lowercase (mis. `DITSAMAPTA` → `ditsamapta`) agar downstream handler menggunakan konteks direktorat yang tepat.
 
 ### Dashboard Password Reset Request
