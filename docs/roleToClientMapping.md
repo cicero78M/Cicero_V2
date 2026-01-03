@@ -8,7 +8,7 @@ This guide outlines how session roles map to client data and how the `roleFlag` 
 - **Directorate roles** (e.g. `DITBINMAS`, `DITLANTAS`, `BIDHUMAS`, `DITSAMAPTA`) – `session.role` equals the directorate ID. Rekap handlers aggregate across subordinate clients and use `roleFlag` to query with `getUsersByDirektorat`.
 - **Client roles** – regular users tied to specific clients. Their `session.role` is forwarded as `roleFlag` so rekap handlers call `getUsersByClient(clientId, roleFlag)` and limit results to that role.
 - **operator** – dashboard stats are always scoped to `req.user.client_id`. Any `client_id` provided in query string or headers is ignored, and missing `client_id` on the session is rejected.
-- **Special BIDHUMAS override** – dashboard users whose sole `client_id` adalah `DITSAMAPTA` namun perannya `BIDHUMAS` akan mempertahankan `session.role = 'bidhumas'` agar pemetaan downstream tetap merujuk ke BIDHUMAS. JWT login claims also emit `role: 'bidhumas'` for this combination, and aggregator requests pre-emptively resolve `DITSAMAPTA` to the BIDHUMAS org client so the experience mirrors BIDHUMAS rather than the directorate default. Kombinasi lain tetap mengikuti aturan di atas.
+- **Directorate normalization** – when a dashboard user only has satu `client_id` bertipe `direktorat`, `session.role` dan JWT `role` akan diset ke `client_id` tersebut dalam lowercase (mis. `DITSAMAPTA` → `ditsamapta`). Kombinasi peran lain tidak menimpa normalisasi ini.
 
 ## Dashboard flow
 

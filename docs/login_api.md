@@ -85,6 +85,8 @@ Successful dashboard login responses now include premium metadata when available
 }
 ```
 
+When operator hanya memiliki satu `client_id` bertipe direktorat, JWT `role` dan field `user.role` akan dinormalisasi ke `client_id` tersebut dalam lowercase (mis. `DITSAMAPTA` → `ditsamapta`) agar downstream handler menggunakan konteks direktorat yang tepat.
+
 ### Dashboard Password Reset Request
 `POST /api/auth/dashboard-password-reset/request`
 *(aliases: `/api/auth/password-reset/request`, `/api/password-reset/request` — the last one requires no token)*

@@ -16,21 +16,11 @@ async function resolveDashboardRole(dashboardUser) {
 
   if (clientIds.length === 1) {
     const [singleClientId] = clientIds;
-    const normalizedClientId = String(singleClientId || '').toUpperCase();
-    const normalizedRole = String(dashboardUser.role || '').toUpperCase();
-
-    const isBidhumasDitsamapta =
-      normalizedClientId === 'DITSAMAPTA' && normalizedRole === 'BIDHUMAS';
-
-    if (isBidhumasDitsamapta) {
-      roleName = 'bidhumas';
-    } else {
-      const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [
-        singleClientId,
-      ]);
-      if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
-        roleName = String(singleClientId).toLowerCase();
-      }
+    const { rows } = await query('SELECT client_type FROM clients WHERE client_id = $1', [
+      singleClientId,
+    ]);
+    if (rows[0]?.client_type?.toLowerCase() === 'direktorat') {
+      roleName = String(singleClientId).toLowerCase();
     }
   }
 
