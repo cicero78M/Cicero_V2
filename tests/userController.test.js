@@ -5,6 +5,7 @@ const mockFindUserById = jest.fn();
 const mockUpdateUserField = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockGetUsersByClient = jest.fn();
+const mockGetUsersByClientAndRole = jest.fn();
 const mockGetUsersByDirektorat = jest.fn();
 const mockFindClientById = jest.fn();
 const mockUpdateUserRolesUserId = jest.fn();
@@ -15,6 +16,7 @@ jest.unstable_mockModule('../src/model/userModel.js', () => ({
   updateUserField: mockUpdateUserField,
   updateUser: mockUpdateUser,
   getUsersByClient: mockGetUsersByClient,
+  getUsersByClientAndRole: mockGetUsersByClientAndRole,
   getUsersByDirektorat: mockGetUsersByDirektorat,
   updateUserRolesUserId: mockUpdateUserRolesUserId
 }));
@@ -44,6 +46,7 @@ beforeEach(() => {
   mockUpdateUserField.mockReset();
   mockUpdateUser.mockReset();
   mockGetUsersByClient.mockReset();
+  mockGetUsersByClientAndRole.mockReset();
   mockGetUsersByDirektorat.mockReset();
   mockFindClientById.mockReset();
   mockUpdateUserRolesUserId.mockReset();

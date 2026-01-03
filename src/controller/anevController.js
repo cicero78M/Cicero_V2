@@ -1,11 +1,12 @@
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 import { ALLOWED_TIME_RANGES, getAnevSummary, resolveTimeRange } from "../service/anevService.js";
+import { UserDirectoryError } from "../service/userDirectoryService.js";
 
 function normalizeClientIdList(clientIds) {
   if (!Array.isArray(clientIds)) return [];
   return clientIds
     .filter((id) => id != null && String(id).trim() !== "")
-    .map((id) => String(id));
+    .map((id) => String(id).trim());
 }
 
 export async function getAnevDashboard(req, res) {
@@ -21,18 +22,43 @@ export async function getAnevDashboard(req, res) {
     }
 
     const allowedClientIds = normalizeClientIdList(req.dashboardUser?.client_ids);
+    const dashboardRole = (req.dashboardUser?.role || "").toLowerCase();
     const requestedClientId = req.query.client_id || req.headers["x-client-id"];
+    const normalizedRequestedClientId = requestedClientId
+      ? String(requestedClientId).trim()
+      : null;
     let clientId = null;
-    if (requestedClientId) {
-      const normalizedRequested = String(requestedClientId).toLowerCase();
-      const match = allowedClientIds.find((id) => String(id).toLowerCase() === normalizedRequested);
-      if (!match) {
-        return res.status(403).json({ success: false, message: "client_id tidak diizinkan" });
+    if (normalizedRequestedClientId) {
+      const normalizedRequested = normalizedRequestedClientId.toLowerCase();
+      if (allowedClientIds.length > 0) {
+        const matchIndex = allowedClientIds.findIndex(
+          (id) => String(id).toLowerCase() === normalizedRequested
+        );
+        if (matchIndex === -1) {
+          return res.status(403).json({ success: false, message: "client_id tidak diizinkan" });
+        }
+        clientId = allowedClientIds[matchIndex];
+      } else if (
+        req.dashboardUser?.client_id &&
+        String(req.dashboardUser.client_id).toLowerCase() === normalizedRequested
+      ) {
+        clientId = req.dashboardUser.client_id;
+      } else {
+        clientId = normalizedRequestedClientId;
       }
-      clientId = match;
+    } else if (dashboardRole === "operator") {
+      if (allowedClientIds.length === 1) {
+        [clientId] = allowedClientIds;
+      } else if (allowedClientIds.length === 0 && req.dashboardUser?.client_id) {
+        clientId = req.dashboardUser.client_id;
+      } else {
+        return res.status(400).json({ success: false, message: "client_id wajib diisi" });
+      }
     } else if (req.dashboardUser?.client_id) {
       clientId = req.dashboardUser.client_id;
-    } else if (allowedClientIds.length > 0) {
+    } else if (allowedClientIds.length === 1) {
+      [clientId] = allowedClientIds;
+    } else if (allowedClientIds.length > 0 && dashboardRole !== "operator") {
       [clientId] = allowedClientIds;
     }
 
@@ -61,10 +87,16 @@ export async function getAnevDashboard(req, res) {
       startDate,
       endDate,
       timeRange,
+      requesterRole: dashboardRole,
+      requesterClientId: req.dashboardUser?.client_id,
+      requesterClientIds: allowedClientIds,
     });
 
     return res.json({ success: true, data: summary });
   } catch (err) {
+    if (err instanceof UserDirectoryError) {
+      return res.status(err.status).json({ success: false, message: err.message });
+    }
     sendConsoleDebug({ tag: "ANEV", msg: `Error getAnevDashboard: ${err.message}` });
     return res.status(500).json({ success: false, message: err.message });
   }

@@ -1,8 +1,8 @@
 import redis from '../config/redis.js';
-import { getAllClients, findById as findClientById } from '../model/clientModel.js';
-import { getAllUsers } from '../model/userModel.js';
+import { findById as findClientById } from '../model/clientModel.js';
 import { getInstaPostCount, getTiktokPostCount } from './postCountService.js';
 import { query } from '../repository/db.js';
+import { getUserDirectoryUsers } from './userDirectoryService.js';
 
 const TTL_SEC = 60;
 export const ALLOWED_TIME_RANGES = ['today', '7d', '30d', '90d', 'custom', 'all'];
@@ -366,19 +366,6 @@ async function getTiktokCommentStats(clientId, startDate, endDate, options) {
   return result;
 }
 
-async function filterUsersByRegional(users, regionalId) {
-  if (!regionalId) return users;
-  const normalizedRegional = String(regionalId).trim().toUpperCase();
-  const clients = await getAllClients();
-  const allowed = new Set(
-    clients
-      .filter((c) => c.regional_id && String(c.regional_id).trim().toUpperCase() === normalizedRegional)
-      .map((c) => String(c.client_id).toUpperCase())
-  );
-  if (allowed.size === 0) return [];
-  return users.filter((u) => u.client_id && allowed.has(String(u.client_id).toUpperCase()));
-}
-
 export async function getAnevSummary({
   clientId,
   role,
@@ -387,20 +374,33 @@ export async function getAnevSummary({
   startDate,
   endDate,
   timeRange,
+  requesterRole,
+  requesterClientId,
+  requesterClientIds = [],
 }) {
-  const options = { role, scope, regionalId };
-  const [usersRaw, igLikes, ttComments, igPosts, ttPosts] = await Promise.all([
-    getAllUsers(clientId, role),
-    getInstagramLikeStats(clientId, startDate, endDate, options),
-    getTiktokCommentStats(clientId, startDate, endDate, options),
-    getInstaPostCount(clientId, 'custom', null, startDate, endDate, options),
-    getTiktokPostCount(clientId, 'custom', null, startDate, endDate, options),
-  ]);
+  const {
+    users: activeUsers,
+    clientId: resolvedClientId,
+    role: normalizedRole,
+    scope: normalizedScope,
+  } = await getUserDirectoryUsers({
+    requesterRole,
+    tokenClientId: requesterClientId,
+    tokenClientIds: requesterClientIds,
+    clientId,
+    role,
+    scope,
+    regionalId,
+  });
 
-  const activeUsersRaw = Array.isArray(usersRaw)
-    ? usersRaw.filter((user) => user.status === true)
-    : [];
-  const activeUsers = await filterUsersByRegional(activeUsersRaw, regionalId);
+  const targetClientId = resolvedClientId || clientId;
+  const options = { role: normalizedRole, scope: normalizedScope, regionalId };
+  const [igLikes, ttComments, igPosts, ttPosts] = await Promise.all([
+    getInstagramLikeStats(targetClientId, startDate, endDate, options),
+    getTiktokCommentStats(targetClientId, startDate, endDate, options),
+    getInstaPostCount(targetClientId, 'custom', null, startDate, endDate, options),
+    getTiktokPostCount(targetClientId, 'custom', null, startDate, endDate, options),
+  ]);
 
   const expectedActions = (Number(igPosts) || 0) + (Number(ttPosts) || 0);
   const compliance = activeUsers.map((user) => {
@@ -424,9 +424,9 @@ export async function getAnevSummary({
 
   return {
     filters: {
-      client_id: clientId,
-      role: role || null,
-      scope: scope || null,
+      client_id: targetClientId,
+      role: normalizedRole || null,
+      scope: normalizedScope || null,
       regional_id: regionalId || null,
       time_range: timeRange,
       start_date: startDate,
