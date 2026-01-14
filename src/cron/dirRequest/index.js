@@ -56,15 +56,15 @@ const dirRequestCrons = [
       { cronExpression: '5 23 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
-  {
-    jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    description:
-      'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
-    schedules: [
-      { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-      // { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
+  // {
+  //   jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
+  //   description:
+  //     'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
+  //   schedules: [
+  //     { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+  //     { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+  //   ],
+  // },
   {
     jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
     description:
