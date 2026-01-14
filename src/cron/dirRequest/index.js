@@ -42,11 +42,11 @@ const dirRequestCrons = [
     schedules: [
       { cronExpression: '10 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '10 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '40 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '10 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '40 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '10 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '10 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '40 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '10 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '40 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '10 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
@@ -65,18 +65,18 @@ const dirRequestCrons = [
       { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
-  {
-    jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
-    description:
-      'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
-    schedules: [
-      {
-        cronExpression: '30 20 * * *',
-        handler: () => runDitbinmasRecapAndCustomSequence(),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-    ],
-  },
+  // {
+  //   jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
+  //   description:
+  //     'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
+  //   schedules: [
+  //     {
+  //       cronExpression: '30 20 * * *',
+  //       handler: () => runDitbinmasRecapAndCustomSequence(),
+  //       options: DEFAULT_CRON_OPTIONS,
+  //     },
+  //   ],
+  // },
 
   {
     jobKey: BIDHUMAS_EVENING_JOB_KEY,
