@@ -62,21 +62,21 @@ const dirRequestCrons = [
       'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
     schedules: [
       { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+      // { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
-  // {
-  //   jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
-  //   description:
-  //     'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
-  //   schedules: [
-  //     {
-  //       cronExpression: '30 20 * * *',
-  //       handler: () => runDitbinmasRecapAndCustomSequence(),
-  //       options: DEFAULT_CRON_OPTIONS,
-  //     },
-  //   ],
-  // },
+  {
+    jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
+    description:
+      'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
+    schedules: [
+      {
+        cronExpression: '0 18 * * *',
+        handler: () => runDitbinmasRecapAndCustomSequence(),
+        options: DEFAULT_CRON_OPTIONS,
+      },
+    ],
+  },
 
   {
     jobKey: BIDHUMAS_EVENING_JOB_KEY,
