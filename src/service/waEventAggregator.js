@@ -11,6 +11,10 @@ const seen = new Set();
 export function handleIncoming(fromAdapter, msg, handler) {
   const jid = msg.key?.remoteJid || msg.from;
   const id = msg.key?.id || msg.id?.id || msg.id?._serialized;
+  if (!jid || !id) {
+    handler(msg);
+    return;
+  }
   const key = `${jid}:${id}`;
   if (seen.has(key)) return;
 
