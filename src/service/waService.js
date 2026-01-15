@@ -4034,6 +4034,31 @@ if (shouldInitWhatsAppClients) {
         return;
       }
       const { label } = state;
+      let fallbackReadySource = null;
+      if (typeof client?.isReady === "function") {
+        try {
+          const isReady = (await client.isReady()) === true;
+          if (isReady) {
+            fallbackReadySource = "isReady";
+          }
+        } catch (error) {
+          console.warn(
+            `[${label}] fallback isReady check failed: ${error?.message}`
+          );
+        }
+      }
+      if (!fallbackReadySource && client?.info !== undefined) {
+        fallbackReadySource = "info";
+      }
+      if (fallbackReadySource) {
+        console.log(
+          `[${label}] fallback ${fallbackReadySource} indicates ready; marking ready`
+        );
+        fallbackStateRetryCounts.set(client, 0);
+        fallbackReinitCounts.set(client, 0);
+        markClientReady(client, "fallback-isReady");
+        return;
+      }
       if (typeof client?.getState !== "function") {
         console.log(`[${label}] getState not available for fallback readiness`);
         return;
