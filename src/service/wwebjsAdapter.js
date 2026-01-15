@@ -432,6 +432,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   emitter.sendMessage = async (jid, content, options = {}) => {
     const safeOptions = options && typeof options === 'object' ? options : {};
+    const normalizedOptions = { sendSeen: false, ...safeOptions };
     let message;
     if (
       content &&
@@ -444,13 +445,13 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         content.fileName
       );
       message = await client.sendMessage(jid, media, {
-        ...safeOptions,
+        ...normalizedOptions,
         sendMediaAsDocument: true,
       });
     } else {
       const text =
         typeof content === 'string' ? content : content?.text ?? '';
-      message = await client.sendMessage(jid, text, safeOptions);
+      message = await client.sendMessage(jid, text, normalizedOptions);
     }
     return message.id._serialized || message.id.id || '';
   };
