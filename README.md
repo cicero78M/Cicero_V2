@@ -344,6 +344,7 @@ The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP 
 
 - **DB connection errors** – check database credentials and PostgreSQL status.
 - **WhatsApp not connected** – rescan the QR code, confirm session folders (`APP_SESSION_NAME`, `USER_WA_CLIENT_ID`, `GATEWAY_WA_CLIENT_ID`), and check for unsupported version logs. If browser traces include `static.whatsapp.net` stack frames that mention updating WhatsApp, either set `WA_WEB_VERSION_CACHE_URL` to a reachable mirror or pin `WA_WEB_VERSION` to the latest release from the cache JSON. If the remote endpoint is unavailable, leave `WA_WEB_VERSION_CACHE_URL` empty to disable cache fetching and rely on a pinned `WA_WEB_VERSION`.
+- **`LocalWebCache.persist` stack trace / `Cannot read properties of null (reading '1')`** – this usually means the `WA_WEB_VERSION_CACHE_URL` payload is mismatched or blocked. Clear `WA_WEB_VERSION_CACHE_URL` when the endpoint is unstable, or pin `WA_WEB_VERSION` to a valid build string (e.g., `2.3000.0`). When the cache is disabled, `whatsapp-web.js` will fall back to its default version resolution.
 - **Email OTP delivery failed** – verify `SMTP_*` variables and network egress.
 - **External API errors** – verify `RAPIDAPI_KEY` and check application logs.
 - **Cron jobs not running** – confirm cron buckets activated after WhatsApp readiness and verify timezone settings (`Asia/Jakarta`).
