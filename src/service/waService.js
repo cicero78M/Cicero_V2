@@ -941,6 +941,19 @@ export function createHandleMessage(waClient, options = {}) {
     if (allowUserMenu && typeof waClient.sendSeen === "function") {
       await sleep(1000);
       try {
+        if (typeof waClient.getChat !== "function") {
+          console.warn(
+            `${clientLabel} Skip sendSeen for ${chatId}: getChat is unavailable`
+          );
+          return;
+        }
+        const chat = await waClient.getChat(chatId);
+        if (!chat) {
+          console.warn(
+            `${clientLabel} Skip sendSeen for ${chatId}: chat not found`
+          );
+          return;
+        }
         await waClient.sendSeen(chatId);
       } catch (err) {
         console.warn(

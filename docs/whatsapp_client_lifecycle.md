@@ -81,10 +81,13 @@ Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel
 ## Normalisasi opsi sendMessage
 
 Adapter `wwebjsAdapter` selalu menormalkan parameter `options` untuk `sendMessage`
-menjadi objek sebelum diteruskan ke `whatsapp-web.js`. Ini mencegah error seperti
+menjadi objek sebelum diteruskan ke `whatsapp-web.js`. Default internal `sendSeen`
+diset `false` (kecuali caller eksplisit mengaktifkan) agar penandaan dibaca dilakukan
+secara manual setelah chat tervalidasi. Ini mencegah error seperti
 `Cannot read properties of undefined (reading 'markedUnread')` yang dapat muncul
-saat opsi tidak dikirim atau bernilai `null` dari caller. Jika payload teks tidak
-memiliki `text`, adapter akan mengirim string kosong agar tetap kompatibel.
+saat opsi tidak dikirim atau bernilai `null` dari caller, sekaligus menghindari
+`sendSeen` pada chat yang belum ter-hydrate. Jika payload teks tidak memiliki `text`,
+adapter akan mengirim string kosong agar tetap kompatibel.
 
 ## Fallback saat authenticated tapi tidak ready
 
