@@ -112,6 +112,17 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
 4. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
 
+## Guard readiness untuk `getNumberId`
+
+Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
+`WidFactory` ter-inject di `window.Store`. Helper `ensureWidFactory` akan:
+
+1. Mengecek `client.pupPage` (atau `client.info?.wid` jika sudah siap).
+2. Menjalankan `pupPage.evaluate` untuk memastikan `window.Store.WidFactory`
+   tersedia dan menambahkan `toUserWidOrThrow` bila belum ada.
+3. Mengembalikan `null` dan mencatat warning jika `WidFactory` belum tersedia,
+   sehingga caller bisa retry setelah client benar-benar ready.
+
 ## Checklist troubleshooting
 
 1. **Periksa log event**

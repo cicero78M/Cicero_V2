@@ -347,25 +347,44 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
-  client.on('ready', async () => {
-    try {
-      if (!client.pupPage) {
-        throw new Error('pupPage is not available');
+  const ensureWidFactory = async (contextLabel) => {
+    if (!client.pupPage) {
+      if (client.info?.wid) {
+        return true;
       }
-      await client.pupPage.evaluate(() => {
-        if (
-          window.Store?.WidFactory &&
-          !window.Store.WidFactory.toUserWidOrThrow
-        ) {
+      console.warn(
+        `[WWEBJS] ${contextLabel} skipped: WidFactory belum tersedia karena pupPage belum siap.`
+      );
+      return false;
+    }
+    try {
+      const hasWidFactory = await client.pupPage.evaluate(() => {
+        if (!window.Store?.WidFactory) {
+          return false;
+        }
+        if (!window.Store.WidFactory.toUserWidOrThrow) {
           window.Store.WidFactory.toUserWidOrThrow = (jid) =>
             window.Store.WidFactory.createWid(jid);
         }
+        return true;
       });
+      if (!hasWidFactory) {
+        console.warn(
+          `[WWEBJS] ${contextLabel} skipped: WidFactory belum tersedia di window.Store.`
+        );
+      }
+      return hasWidFactory;
     } catch (err) {
       console.warn(
-        `[WWEBJS] ready handler setup failed for clientId=${clientId}:`,
+        `[WWEBJS] ${contextLabel} WidFactory check failed:`,
         err?.message || err
       );
+      return false;
+    }
+  };
+  client.on('ready', async () => {
+    try {
+      await ensureWidFactory(`ready handler for clientId=${clientId}`);
     } finally {
       emitter.emit('ready');
     }
@@ -413,6 +432,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.getNumberId = async (phone) => {
+    const widReady = await ensureWidFactory('getNumberId');
+    if (!widReady) {
+      return null;
+    }
     try {
       return await client.getNumberId(phone);
     } catch (err) {
