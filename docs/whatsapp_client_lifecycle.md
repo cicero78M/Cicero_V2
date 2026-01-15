@@ -52,6 +52,18 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 
 Pastikan path ini writable oleh user yang menjalankan service.
 
+## Fallback init untuk webVersionCache
+
+Jika `client.initialize()` gagal dengan error yang mengandung `LocalWebCache.persist`
+atau `Cannot read properties of null (reading '1')`, adapter akan:
+
+1. Override `webVersionCache` menjadi `{ type: 'none' }` dan menghapus `webVersion`.
+2. Mencatat warning dengan label `clientId` agar mudah ditelusuri.
+3. Menyarankan pemeriksaan `WA_WEB_VERSION_CACHE_URL` dan/atau pengaturan `WA_WEB_VERSION`.
+4. Mencoba `initialize()` ulang satu kali setelah fallback diterapkan.
+
+Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel.
+
 ## Fallback saat authenticated tapi tidak ready
 
 Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READY_TIMEOUT_MS`
