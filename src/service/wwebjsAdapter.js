@@ -31,11 +31,11 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  */
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
+
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId }),
-    puppeteer: { args: ['--no-sandbox'], headless: true },
-    ...resolveWebVersionOptions(),
-  });
+  authStrategy: new LocalAuth({ clientId }),
+  puppeteer: { args: ['--no-sandbox'], headless: true }
+});
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
   client.on('ready', async () => {
