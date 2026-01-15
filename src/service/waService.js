@@ -3865,15 +3865,28 @@ if (shouldInitWhatsAppClients) {
     console.error("[WA-GATEWAY] Initialization failed:", err.message);
   }
 
-  setTimeout(async () => {
-    try {
-      const state = await waClient.getState();
-      console.log("[WA] getState:", state);
-      if (state === "CONNECTED" || state === "open") markWaReady("getState");
-    } catch (e) {
-      console.log("[WA] getState error:", e?.message);
-    }
-  }, 60000);
+  const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
+    setTimeout(async () => {
+      const { label } = getClientReadinessState(client);
+      if (typeof client?.getState !== "function") {
+        console.log(`[${label}] getState not available for fallback readiness`);
+        return;
+      }
+      try {
+        const state = await client.getState();
+        console.log(`[${label}] getState: ${state}`);
+        if (state === "CONNECTED" || state === "open") {
+          markClientReady(client, "getState");
+        }
+      } catch (e) {
+        console.log(`[${label}] getState error: ${e?.message}`);
+      }
+    }, delayMs);
+  };
+
+  scheduleFallbackReadyCheck(waClient);
+  scheduleFallbackReadyCheck(waUserClient);
+  scheduleFallbackReadyCheck(waGatewayClient);
 }
 
 export default waClient;
