@@ -420,6 +420,12 @@ export let waGatewayClient = await createWwebjsClient(env.GATEWAY_WA_CLIENT_ID);
 
 const clientReadiness = new Map();
 const adminNotificationQueue = [];
+const authenticatedReadyFallbackTimers = new Map();
+const authenticatedReadyTimeoutMs = Number.isNaN(
+  Number(process.env.WA_AUTH_READY_TIMEOUT_MS)
+)
+  ? 45000
+  : Number(process.env.WA_AUTH_READY_TIMEOUT_MS);
 
 function getClientReadinessState(client, label = "WA") {
   if (!clientReadiness.has(client)) {
@@ -431,6 +437,75 @@ function getClientReadinessState(client, label = "WA") {
     });
   }
   return clientReadiness.get(client);
+}
+
+function clearAuthenticatedFallbackTimer(client) {
+  const timer = authenticatedReadyFallbackTimers.get(client);
+  if (timer) {
+    clearTimeout(timer);
+    authenticatedReadyFallbackTimers.delete(client);
+  }
+}
+
+function scheduleAuthenticatedReadyFallback(client, label) {
+  clearAuthenticatedFallbackTimer(client);
+  const { label: stateLabel } = getClientReadinessState(client, label);
+  const timeoutMs = authenticatedReadyTimeoutMs;
+  authenticatedReadyFallbackTimers.set(
+    client,
+    setTimeout(async () => {
+      const state = getClientReadinessState(client, stateLabel);
+      if (state.ready) {
+        return;
+      }
+      console.warn(
+        `[${stateLabel}] Authenticated but no ready event after ${timeoutMs}ms`
+      );
+      if (client?.isReady) {
+        try {
+          const isReady = (await client.isReady()) === true;
+          if (isReady) {
+            markClientReady(client, "authenticated-timeout-isReady");
+            return;
+          }
+        } catch (error) {
+          console.warn(
+            `[${stateLabel}] isReady check failed after authenticated timeout: ${error?.message}`
+          );
+        }
+      }
+      if (client?.getState) {
+        try {
+          const currentState = await client.getState();
+          console.warn(
+            `[${stateLabel}] getState after authenticated timeout: ${currentState}`
+          );
+          if (currentState === "CONNECTED" || currentState === "open") {
+            markClientReady(client, "authenticated-timeout-getState");
+            return;
+          }
+        } catch (error) {
+          console.warn(
+            `[${stateLabel}] getState failed after authenticated timeout: ${error?.message}`
+          );
+        }
+      }
+      if (typeof client?.connect === "function") {
+        console.warn(
+          `[${stateLabel}] Reinitializing client after authenticated timeout`
+        );
+        client.connect().catch((err) => {
+          console.error(
+            `[${stateLabel}] Reinit failed after authenticated timeout: ${err?.message}`
+          );
+        });
+      } else {
+        console.warn(
+          `[${stateLabel}] connect not available; unable to reinit after authenticated timeout`
+        );
+      }
+    }, timeoutMs)
+  );
 }
 
 function registerClientReadiness(client, label) {
@@ -472,41 +547,28 @@ registerClientReadiness(waClient, "WA");
 registerClientReadiness(waUserClient, "WA-USER");
 registerClientReadiness(waGatewayClient, "WA-GATEWAY");
 
-function handleDisconnect(reason) {
-  setClientNotReady(waClient);
-  console.warn("[WA] Client disconnected:", reason);
+function handleClientDisconnect(client, label, reason) {
+  setClientNotReady(client);
+  clearAuthenticatedFallbackTimer(client);
+  console.warn(`[${label}] Client disconnected:`, reason);
   setTimeout(() => {
-    waClient.connect().catch((err) => {
-      console.error("[WA] Reconnect failed:", err.message);
+    client.connect().catch((err) => {
+      console.error(`[${label}] Reconnect failed:`, err.message);
     });
   }, 5000);
 }
 
-waClient.onDisconnect(handleDisconnect);
+waClient.on("disconnected", (reason) => {
+  handleClientDisconnect(waClient, "WA", reason);
+});
 
-function handleUserDisconnect(reason) {
-  setClientNotReady(waUserClient);
-  console.warn("[WA-USER] Client disconnected:", reason);
-  setTimeout(() => {
-    waUserClient.connect().catch((err) => {
-      console.error("[WA-USER] Reconnect failed:", err.message);
-    });
-  }, 5000);
-}
+waUserClient.on("disconnected", (reason) => {
+  handleClientDisconnect(waUserClient, "WA-USER", reason);
+});
 
-waUserClient.onDisconnect(handleUserDisconnect);
-
-function handleGatewayDisconnect(reason) {
-  setClientNotReady(waGatewayClient);
-  console.warn("[WA-GATEWAY] Client disconnected:", reason);
-  setTimeout(() => {
-    waGatewayClient.connect().catch((err) => {
-      console.error("[WA-GATEWAY] Reconnect failed:", err.message);
-    });
-  }, 5000);
-}
-
-waGatewayClient.onDisconnect(handleGatewayDisconnect);
+waGatewayClient.on("disconnected", (reason) => {
+  handleClientDisconnect(waGatewayClient, "WA-GATEWAY", reason);
+});
 
 export function queueAdminNotification(message) {
   adminNotificationQueue.push(message);
@@ -616,8 +678,21 @@ waClient.on("qr", (qr) => {
   console.log("[WA] Scan QR dengan WhatsApp Anda!");
 });
 
+waClient.on("authenticated", (session) => {
+  const sessionInfo = session ? "session received" : "no session payload";
+  console.log(`[WA] Authenticated (${sessionInfo}); menunggu ready.`);
+  scheduleAuthenticatedReadyFallback(waClient, "WA");
+});
+
+waClient.on("auth_failure", (message) => {
+  clearAuthenticatedFallbackTimer(waClient);
+  setClientNotReady(waClient);
+  console.error(`[WA] Auth failure: ${message}`);
+});
+
 // Wa Bot siap
 waClient.once("ready", () => {
+  clearAuthenticatedFallbackTimer(waClient);
   markClientReady(waClient, "ready");
 });
 
@@ -625,6 +700,7 @@ waClient.once("ready", () => {
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
+    clearAuthenticatedFallbackTimer(waClient);
     markClientReady(waClient, "state");
   }
 });
@@ -634,13 +710,27 @@ waUserClient.on("qr", (qr) => {
   console.log("[WA-USER] Scan QR dengan WhatsApp Anda!");
 });
 
+waUserClient.on("authenticated", (session) => {
+  const sessionInfo = session ? "session received" : "no session payload";
+  console.log(`[WA-USER] Authenticated (${sessionInfo}); menunggu ready.`);
+  scheduleAuthenticatedReadyFallback(waUserClient, "WA-USER");
+});
+
+waUserClient.on("auth_failure", (message) => {
+  clearAuthenticatedFallbackTimer(waUserClient);
+  setClientNotReady(waUserClient);
+  console.error(`[WA-USER] Auth failure: ${message}`);
+});
+
 waUserClient.once("ready", () => {
+  clearAuthenticatedFallbackTimer(waUserClient);
   markClientReady(waUserClient, "ready");
 });
 
 waUserClient.on("change_state", (state) => {
   console.log(`[WA-USER] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
+    clearAuthenticatedFallbackTimer(waUserClient);
     markClientReady(waUserClient, "state");
   }
 });
@@ -650,13 +740,27 @@ waGatewayClient.on("qr", (qr) => {
   console.log("[WA-GATEWAY] Scan QR dengan WhatsApp Anda!");
 });
 
+waGatewayClient.on("authenticated", (session) => {
+  const sessionInfo = session ? "session received" : "no session payload";
+  console.log(`[WA-GATEWAY] Authenticated (${sessionInfo}); menunggu ready.`);
+  scheduleAuthenticatedReadyFallback(waGatewayClient, "WA-GATEWAY");
+});
+
+waGatewayClient.on("auth_failure", (message) => {
+  clearAuthenticatedFallbackTimer(waGatewayClient);
+  setClientNotReady(waGatewayClient);
+  console.error(`[WA-GATEWAY] Auth failure: ${message}`);
+});
+
 waGatewayClient.once("ready", () => {
+  clearAuthenticatedFallbackTimer(waGatewayClient);
   markClientReady(waGatewayClient, "ready");
 });
 
 waGatewayClient.on("change_state", (state) => {
   console.log(`[WA-GATEWAY] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
+    clearAuthenticatedFallbackTimer(waGatewayClient);
     markClientReady(waGatewayClient, "state");
   }
 });
