@@ -1,8 +1,25 @@
+import { rm } from 'fs/promises';
+import path from 'path';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
 const DEFAULT_WEB_VERSION_CACHE_URL =
   'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json';
+const DEFAULT_AUTH_DATA_PATH = '.wwebjs_auth';
+
+function resolveAuthDataPath() {
+  const configuredPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
+  const authPath = configuredPath || path.join(process.cwd(), DEFAULT_AUTH_DATA_PATH);
+  return path.resolve(authPath);
+}
+
+function shouldClearAuthSession() {
+  return process.env.WA_AUTH_CLEAR_SESSION_ON_REINIT === 'true';
+}
+
+function buildSessionPath(authDataPath, clientId) {
+  return path.join(authDataPath, `session-${clientId}`);
+}
 
 function resolveWebVersionOptions() {
   const cacheUrl =
@@ -31,11 +48,63 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  */
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
+  const authDataPath = resolveAuthDataPath();
+  const clearAuthSession = shouldClearAuthSession();
+  const sessionPath = buildSessionPath(authDataPath, clientId);
+  let reinitInProgress = false;
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId }),
+    authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
     ...resolveWebVersionOptions(),
   });
+
+  const reinitializeClient = async (trigger, reason) => {
+    if (reinitInProgress) {
+      console.warn(
+        `[WWEBJS] Reinit already in progress for clientId=${clientId}, skipping ${trigger}.`
+      );
+      return;
+    }
+    reinitInProgress = true;
+    console.warn(
+      `[WWEBJS] Reinitializing clientId=${clientId} after ${trigger}${
+        reason ? ` (${reason})` : ''
+      }.`
+    );
+    try {
+      await client.destroy();
+    } catch (err) {
+      console.warn(
+        `[WWEBJS] destroy failed for clientId=${clientId}:`,
+        err?.message || err
+      );
+    }
+
+    if (clearAuthSession) {
+      try {
+        await rm(sessionPath, { recursive: true, force: true });
+        console.warn(
+          `[WWEBJS] Cleared auth session for clientId=${clientId} at ${sessionPath}.`
+        );
+      } catch (err) {
+        console.warn(
+          `[WWEBJS] Failed to clear auth session for clientId=${clientId}:`,
+          err?.message || err
+        );
+      }
+    }
+
+    try {
+      await client.initialize();
+    } catch (err) {
+      console.error(
+        `[WWEBJS] Reinitialize failed for clientId=${clientId}:`,
+        err?.message || err
+      );
+    } finally {
+      reinitInProgress = false;
+    }
+  };
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
   client.on('ready', async () => {
@@ -61,7 +130,18 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       emitter.emit('ready');
     }
   });
-  client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
+  client.on('auth_failure', async (message) => {
+    console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
+    await reinitializeClient('auth_failure', message);
+  });
+
+  client.on('disconnected', async (reason) => {
+    const normalizedReason = String(reason || '').toUpperCase();
+    if (normalizedReason === 'LOGGED_OUT') {
+      await reinitializeClient('disconnected', reason);
+    }
+    emitter.emit('disconnected', reason);
+  });
   client.on('message', async (msg) => {
     let contactMeta = {};
     try {
