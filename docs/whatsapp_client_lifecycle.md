@@ -86,10 +86,12 @@ Ini membantu mengatasi kondisi “stuck setelah QR” tanpa restart manual.
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
 ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 
-1. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
-2. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
+1. Sebelum memanggil `getState()`, melakukan fallback `isReady()` (atau cek `client.info`)
+   agar client yang sudah siap tetap ditandai ready walau event `ready` terlewat.
+2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
+3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
-3. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
+4. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
 
 ## Checklist troubleshooting
 
