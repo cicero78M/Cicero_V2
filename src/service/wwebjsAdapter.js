@@ -53,29 +53,16 @@ client.on('auth_failure', (err) => {
 client.on('loading_screen', (p, msg) => {
   console.log('[WA] LOADING', p, msg);
 });
-
-client.on('ready', async () => {
-    isInitializing = false;
-
-  await client.pupPage.evaluate(() => {
-    // 🔥 FIX BUG markedUnread (Jan 2026)
-    if (window.WWebJS?.sendSeen) {
-      window.WWebJS.sendSeen = async () => true;
-    }
-
-    // WidFactory fix
-    if (
-      window.Store?.WidFactory &&
-      !window.Store.WidFactory.toUserWidOrThrow
-    ) {
-      window.Store.WidFactory.toUserWidOrThrow = (jid) =>
-        window.Store.WidFactory.createWid(jid);
-    }
-  });
-
-  console.log('[WA] Client READY');
-  emitter.emit('ready');
+client.on('ready', () => {
+  console.log('[WA] READY');
+  // JANGAN reset isInitializing di sini
 });
+
+client.on('disconnected', () => {
+  console.log('[WA] DISCONNECTED');
+  isInitializing = false; // ✅ reset di sini
+});
+
 
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', async (msg) => {
@@ -100,19 +87,25 @@ client.on('ready', async () => {
     });
   });
 
-emitter.connect = async () => {
-  if (isInitializing || client.info) {
-    console.log('[WA] init skipped (already initializing/ready)');
-    return;
-  }
+let waState = 'idle'; 
+// idle | initializing | ready
 
-  isInitializing = true;
-  try {
-    await client.initialize();
-  } finally {
-    isInitializing = false;
-  }
+emitter.connect = async () => {
+  if (waState !== 'idle') return;
+
+  waState = 'initializing';
+  await client.initialize();
 };
+
+client.on('ready', () => {
+  waState = 'ready';
+});
+
+client.on('disconnected', () => {
+  waState = 'idle';
+});
+
+
 
 
   emitter.disconnect = async () => {
