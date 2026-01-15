@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { rm } from 'fs/promises';
 import path from 'path';
 import { EventEmitter } from 'events';
@@ -48,8 +49,52 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  */
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
-  const authDataPath = resolveAuthDataPath();
+  const configuredAuthPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
+  const defaultAuthDataPath = path.resolve(
+    path.join(process.cwd(), DEFAULT_AUTH_DATA_PATH)
+  );
+  let authDataPath = resolveAuthDataPath();
   const clearAuthSession = shouldClearAuthSession();
+  const ensureAuthDataPathWritable = async (candidatePath, isConfiguredPath) => {
+    try {
+      await fs.promises.mkdir(candidatePath, { recursive: true });
+      await fs.promises.access(candidatePath, fs.constants.W_OK);
+      return true;
+    } catch (err) {
+      const requirement = isConfiguredPath
+        ? 'WA_AUTH_DATA_PATH must be writable by the runtime user'
+        : 'Auth data path must be writable by the runtime user';
+      console.error(
+        `[WWEBJS] ${requirement}. Failed to access ${candidatePath}:`,
+        err?.message || err
+      );
+      return false;
+    }
+  };
+  const authPathWritable = await ensureAuthDataPathWritable(
+    authDataPath,
+    Boolean(configuredAuthPath)
+  );
+  if (!authPathWritable) {
+    if (configuredAuthPath) {
+      const fallbackWritable = await ensureAuthDataPathWritable(
+        defaultAuthDataPath,
+        false
+      );
+      if (fallbackWritable) {
+        console.warn(
+          `[WWEBJS] Falling back to default auth data path at ${defaultAuthDataPath}.`
+        );
+        authDataPath = defaultAuthDataPath;
+      } else {
+        throw new Error(
+          `[WWEBJS] Default auth data path is not writable: ${defaultAuthDataPath}`
+        );
+      }
+    } else {
+      throw new Error(`[WWEBJS] Auth data path is not writable: ${authDataPath}`);
+    }
+  }
   const sessionPath = buildSessionPath(authDataPath, clientId);
   let reinitInProgress = false;
   const client = new Client({
