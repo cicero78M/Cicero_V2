@@ -527,7 +527,15 @@ export function flushAdminNotificationQueue() {
 async function waitForClientReady(client, timeout = 30000) {
   const state = getClientReadinessState(client);
   if (state.ready) return;
-  if (client?.isReady?.()) {
+  let isReady = false;
+  if (client?.isReady) {
+    try {
+      isReady = (await client.isReady()) === true;
+    } catch (error) {
+      console.warn("[WA] isReady check failed:", error?.message);
+    }
+  }
+  if (isReady) {
     markClientReady(client, "isReady");
     return;
   }

@@ -1,5 +1,5 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-03-11*
+*Last updated: 2025-03-12*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
 
@@ -108,3 +108,11 @@ Apakah Anda ingin menambah atau mengubah data akun resmi Satbinmas? Balas *ya* u
 - Jika cache belum tersedia atau gagal dimuat, bot akan menolak memproses pesan grup sebagai langkah aman hingga daftar grup berhasil diambil kembali.
 
 Menu operator ini membantu mengelola user dan memantau laporan secara cepat melalui WhatsApp.
+
+## Readiness Check Client WA
+- Sistem mengecek kesiapan koneksi dengan `client.isReady()` dan hanya
+  menandai *ready* jika hasilnya boolean `true`, sehingga status tidak
+  dianggap siap hanya karena Promise sudah dibuat.
+- Jika `isReady` bernilai `false` atau gagal, sistem tetap menjalankan
+  fallback `client.getState()` dan menganggap siap ketika state
+  `CONNECTED` atau `open` terdeteksi.
