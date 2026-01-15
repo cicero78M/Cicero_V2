@@ -178,6 +178,17 @@ function sanitizeWebVersionOptions(versionOptions) {
 }
 
 const { Client, LocalAuth, MessageMedia } = pkg;
+const WEB_VERSION_FALLBACK_ERRORS = [
+  'LocalWebCache.persist',
+  "Cannot read properties of null (reading '1')",
+];
+
+function shouldFallbackWebVersion(err) {
+  const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
+  return WEB_VERSION_FALLBACK_ERRORS.some((needle) =>
+    errorDetails.includes(needle)
+  );
+}
 
 /**
  * Create a whatsapp-web.js client that matches the WAAdapter contract.
@@ -249,6 +260,40 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     ...webVersionOptions,
   });
 
+  const applyWebVersionFallback = () => {
+    client.options.webVersionCache = { type: 'none' };
+    delete client.options.webVersion;
+  };
+
+  const initializeClientWithFallback = async (triggerLabel) => {
+    try {
+      await client.initialize();
+    } catch (err) {
+      if (shouldFallbackWebVersion(err)) {
+        console.warn(
+          `[WWEBJS] initialize failed for clientId=${clientId} (${triggerLabel}). ` +
+            'Applying webVersionCache fallback; check WA_WEB_VERSION_CACHE_URL and/or WA_WEB_VERSION.',
+          err?.message || err
+        );
+        applyWebVersionFallback();
+        try {
+          await client.initialize();
+          return;
+        } catch (retryErr) {
+          console.error(
+            `[WWEBJS] initialize retry failed for clientId=${clientId} (${triggerLabel}):`,
+            retryErr?.message || retryErr
+          );
+          return;
+        }
+      }
+      console.error(
+        `[WWEBJS] initialize failed for clientId=${clientId} (${triggerLabel}):`,
+        err?.message || err
+      );
+    }
+  };
+
   const reinitializeClient = async (trigger, reason) => {
     if (reinitInProgress) {
       console.warn(
@@ -286,12 +331,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     try {
-      await client.initialize();
-    } catch (err) {
-      console.error(
-        `[WWEBJS] Reinitialize failed for clientId=${clientId}:`,
-        err?.message || err
-      );
+      await initializeClientWithFallback(`reinitialize:${trigger}`);
     } finally {
       reinitInProgress = false;
     }
@@ -356,7 +396,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   emitter.connect = async () => {
-    await client.initialize();
+    await initializeClientWithFallback('connect');
   };
 
   emitter.disconnect = async () => {
