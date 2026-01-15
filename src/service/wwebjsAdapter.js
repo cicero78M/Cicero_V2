@@ -68,13 +68,6 @@ client.on('ready', async () => {
       ...contactMeta,
     });
   });
-client.on('authenticated', () => {
-  console.log('[WA] AUTHENTICATED');
-});
-
-client.on('auth_failure', (err) => {
-  console.error('[WA] AUTH FAILURE', err);
-});
 
 let isInitializing = false;
 
