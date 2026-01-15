@@ -78,6 +78,14 @@ atau `Cannot read properties of null (reading '1')`, adapter akan:
 
 Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel.
 
+## Normalisasi opsi sendMessage
+
+Adapter `wwebjsAdapter` selalu menormalkan parameter `options` untuk `sendMessage`
+menjadi objek sebelum diteruskan ke `whatsapp-web.js`. Ini mencegah error seperti
+`Cannot read properties of undefined (reading 'markedUnread')` yang dapat muncul
+saat opsi tidak dikirim atau bernilai `null` dari caller. Jika payload teks tidak
+memiliki `text`, adapter akan mengirim string kosong agar tetap kompatibel.
+
 ## Fallback saat authenticated tapi tidak ready
 
 Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READY_TIMEOUT_MS`
