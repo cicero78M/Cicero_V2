@@ -1,17 +1,29 @@
 import fs from 'fs';
 import { rm } from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
 const DEFAULT_WEB_VERSION_CACHE_URL =
   'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json';
-const DEFAULT_AUTH_DATA_PATH = '.wwebjs_auth';
+const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
+const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
+
+function resolveDefaultAuthDataPath() {
+  const homeDir = os.homedir?.();
+  const baseDir = homeDir || process.cwd();
+  return path.resolve(
+    path.join(baseDir, DEFAULT_AUTH_DATA_PARENT_DIR, DEFAULT_AUTH_DATA_DIR)
+  );
+}
 
 function resolveAuthDataPath() {
   const configuredPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
-  const authPath = configuredPath || path.join(process.cwd(), DEFAULT_AUTH_DATA_PATH);
-  return path.resolve(authPath);
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+  return resolveDefaultAuthDataPath();
 }
 
 function shouldClearAuthSession() {
@@ -111,9 +123,7 @@ const { Client, LocalAuth, MessageMedia } = pkg;
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
   const configuredAuthPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
-  const defaultAuthDataPath = path.resolve(
-    path.join(process.cwd(), DEFAULT_AUTH_DATA_PATH)
-  );
+  const recommendedAuthPath = resolveDefaultAuthDataPath();
   let authDataPath = resolveAuthDataPath();
   const clearAuthSession = shouldClearAuthSession();
   const ensureAuthDataPathWritable = async (candidatePath, isConfiguredPath) => {
@@ -122,13 +132,19 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       await fs.promises.access(candidatePath, fs.constants.W_OK);
       return true;
     } catch (err) {
-      const requirement = isConfiguredPath
-        ? 'WA_AUTH_DATA_PATH must be writable by the runtime user'
-        : 'Auth data path must be writable by the runtime user';
-      console.error(
-        `[WWEBJS] ${requirement}. Failed to access ${candidatePath}:`,
-        err?.message || err
-      );
+      if (isConfiguredPath) {
+        console.error(
+          `[WWEBJS] WA_AUTH_DATA_PATH must be writable by the runtime user. ` +
+            `Failed to access ${candidatePath}. Recommended path: ${recommendedAuthPath}.`,
+          err?.message || err
+        );
+      } else {
+        console.error(
+          `[WWEBJS] Auth data path must be writable by the runtime user. ` +
+            `Failed to access ${candidatePath}.`,
+          err?.message || err
+        );
+      }
       return false;
     }
   };
@@ -138,22 +154,15 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   );
   if (!authPathWritable) {
     if (configuredAuthPath) {
-      const fallbackWritable = await ensureAuthDataPathWritable(
-        defaultAuthDataPath,
-        false
+      throw new Error(
+        `[WWEBJS] WA_AUTH_DATA_PATH is not writable: ${authDataPath}. ` +
+          `Set WA_AUTH_DATA_PATH to a writable directory (recommended: ${recommendedAuthPath}).`
       );
-      if (fallbackWritable) {
-        console.warn(
-          `[WWEBJS] Falling back to default auth data path at ${defaultAuthDataPath}.`
-        );
-        authDataPath = defaultAuthDataPath;
-      } else {
-        throw new Error(
-          `[WWEBJS] Default auth data path is not writable: ${defaultAuthDataPath}`
-        );
-      }
     } else {
-      throw new Error(`[WWEBJS] Auth data path is not writable: ${authDataPath}`);
+      throw new Error(
+        `[WWEBJS] Auth data path is not writable: ${authDataPath}. ` +
+          `Recommended path: ${recommendedAuthPath}.`
+      );
     }
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
