@@ -3948,26 +3948,18 @@ if (shouldInitWhatsAppClients) {
     handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
 
-  console.log("[WA] Starting WhatsApp client initialization");
-  try {
-    await waClient.connect();
-  } catch (err) {
-    console.error("[WA] Initialization failed:", err.message);
-  }
+  const clientsToInit = [
+    { label: "WA", client: waClient },
+    { label: "WA-USER", client: waUserClient },
+    { label: "WA-GATEWAY", client: waGatewayClient },
+  ];
 
-  console.log("[WA-USER] Starting WhatsApp client initialization");
-  try {
-    await waUserClient.connect();
-  } catch (err) {
-    console.error("[WA-USER] Initialization failed:", err.message);
-  }
-
-  console.log("[WA-GATEWAY] Starting WhatsApp client initialization");
-  try {
-    await waGatewayClient.connect();
-  } catch (err) {
-    console.error("[WA-GATEWAY] Initialization failed:", err.message);
-  }
+  const initPromises = clientsToInit.map(({ label, client }) => {
+    console.log(`[${label}] Starting WhatsApp client initialization`);
+    return client.connect().catch((err) => {
+      console.error(`[${label}] Initialization failed:`, err.message);
+    });
+  });
 
   const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
     setTimeout(async () => {
@@ -3991,6 +3983,8 @@ if (shouldInitWhatsAppClients) {
   scheduleFallbackReadyCheck(waClient);
   scheduleFallbackReadyCheck(waUserClient);
   scheduleFallbackReadyCheck(waGatewayClient);
+
+  await Promise.allSettled(initPromises);
 }
 
 export default waClient;
