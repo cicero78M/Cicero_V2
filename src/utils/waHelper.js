@@ -183,19 +183,36 @@ async function resolveChatId(waClient, chatId) {
   const normalized = normalizeChatId(chatId);
   if (!normalized) return '';
   const isGroup = normalized.endsWith('@g.us');
+  const digits = extractPhoneDigits(normalized);
+  const canFallback = !isGroup && isValidPhoneDigits(digits, minPhoneDigitLength);
 
   if (!isGroup && typeof waClient?.getNumberId === 'function') {
     try {
-      const numberId = await waClient.getNumberId(extractPhoneDigits(normalized));
+      const numberId = await waClient.getNumberId(digits);
       if (numberId?._serialized) {
         const chat = await hydrateChat(waClient, numberId._serialized);
         return chat?.id?._serialized || numberId._serialized;
       }
       if (numberId == null) {
+        if (canFallback) {
+          const fallbackId = formatToWhatsAppId(digits);
+          console.warn(
+            '[WA] getNumberId returned null, using fallback @c.us:',
+            fallbackId
+          );
+          const chat = await hydrateChat(waClient, fallbackId);
+          return chat?.id?._serialized || fallbackId;
+        }
         return '';
       }
     } catch (err) {
       console.warn('[WA] getNumberId failed:', err?.message || err);
+      if (canFallback) {
+        const fallbackId = formatToWhatsAppId(digits);
+        console.warn('[WA] getNumberId failed, using fallback @c.us:', fallbackId);
+        const chat = await hydrateChat(waClient, fallbackId);
+        return chat?.id?._serialized || fallbackId;
+      }
     }
   }
 
