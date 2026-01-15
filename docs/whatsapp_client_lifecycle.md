@@ -31,6 +31,17 @@ Semua handler log menyertakan label:
 - `[WA-USER]` untuk user menu.
 - `[WA-GATEWAY]` untuk gateway broadcast.
 
+## Inisialisasi paralel
+
+Pada startup, ketiga WhatsApp client (`waClient`, `waUserClient`, `waGatewayClient`)
+diinisialisasi **secara paralel**. Artinya:
+
+- QR/ready pada salah satu sesi tidak memblokir sesi lain untuk memulai koneksi.
+- Log error tetap terpisah per label (`[WA]`, `[WA-USER]`, `[WA-GATEWAY]`) agar mudah
+  melacak sesi yang bermasalah.
+- Fallback readiness (`getState()` setelah ~60 detik) tetap dijadwalkan untuk semua
+  client segera setelah inisialisasi dimulai.
+
 ## Lokasi penyimpanan auth
 
 Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session di:
