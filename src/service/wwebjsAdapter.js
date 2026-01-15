@@ -29,9 +29,6 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  *
  * @param {string} [clientId='wa-admin'] - WhatsApp client identifier used by LocalAuth.
  */
-
-let isInitializing = false;
-
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
   const client = new Client({
@@ -41,29 +38,18 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
-
-  client.on('authenticated', () => {
-  console.log('[WA] AUTHENTICATED');
-});
-
-client.on('auth_failure', (err) => {
-  console.error('[WA] AUTH FAILURE', err);
-});
-
-client.on('loading_screen', (p, msg) => {
-  console.log('[WA] LOADING', p, msg);
-});
-client.on('ready', () => {
-  console.log('[WA] READY');
-  // JANGAN reset isInitializing di sini
-});
-
-client.on('disconnected', () => {
-  console.log('[WA] DISCONNECTED');
-  isInitializing = false; // ✅ reset di sini
-});
-
-
+  client.on('ready', async () => {
+    await client.pupPage.evaluate(() => {
+      if (
+        window.Store?.WidFactory &&
+        !window.Store.WidFactory.toUserWidOrThrow
+      ) {
+        window.Store.WidFactory.toUserWidOrThrow = (jid) =>
+          window.Store.WidFactory.createWid(jid);
+      }
+    });
+    emitter.emit('ready');
+  });
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', async (msg) => {
     let contactMeta = {};
@@ -87,26 +73,9 @@ client.on('disconnected', () => {
     });
   });
 
-let waState = 'idle'; 
-// idle | initializing | ready
-
-emitter.connect = async () => {
-  if (waState !== 'idle') return;
-
-  waState = 'initializing';
-  await client.initialize();
-};
-
-client.on('ready', () => {
-  waState = 'ready';
-});
-
-client.on('disconnected', () => {
-  waState = 'idle';
-});
-
-
-
+  emitter.connect = async () => {
+    await client.initialize();
+  };
 
   emitter.disconnect = async () => {
     await client.destroy();
@@ -130,11 +99,13 @@ client.on('disconnected', () => {
     }
   };
 
-emitter.sendMessage = async (jid, content, options = {}) => {
-  try {
+  emitter.sendMessage = async (jid, content, options = {}) => {
     let message;
-
-    if (content && typeof content === 'object' && 'document' in content) {
+    if (
+      content &&
+      typeof content === 'object' &&
+      'document' in content
+    ) {
       const media = new MessageMedia(
         content.mimetype || 'application/octet-stream',
         Buffer.from(content.document).toString('base64'),
@@ -148,16 +119,8 @@ emitter.sendMessage = async (jid, content, options = {}) => {
       const text = typeof content === 'string' ? content : content.text;
       message = await client.sendMessage(jid, text, options);
     }
-
-    return message?.id?._serialized || message?.id?.id || '';
-  } catch (err) {
-    if (String(err).includes('markedUnread')) {
-      console.warn('[WWEBJS] sendSeen bug ignored');
-      return '';
-    }
-    throw err;
-  }
-};
+    return message.id._serialized || message.id.id || '';
+  };
 
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
@@ -167,6 +130,15 @@ emitter.sendMessage = async (jid, content, options = {}) => {
       return await client.getState();
     } catch {
       return 'close';
+    }
+  };
+
+  emitter.sendSeen = async (jid) => {
+    try {
+      return await client.sendSeen(jid);
+    } catch (err) {
+      console.warn('[WWEBJS] sendSeen failed:', err?.message || err);
+      return false;
     }
   };
 
