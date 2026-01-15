@@ -22,14 +22,75 @@ function buildSessionPath(authDataPath, clientId) {
   return path.join(authDataPath, `session-${clientId}`);
 }
 
-function resolveWebVersionOptions() {
-  const cacheUrl =
-    process.env.WA_WEB_VERSION_CACHE_URL || DEFAULT_WEB_VERSION_CACHE_URL;
-  const pinnedVersion = (process.env.WA_WEB_VERSION || '').trim();
+function extractVersionString(payload) {
+  if (!payload) {
+    return null;
+  }
+  if (typeof payload === 'string') {
+    const match = payload.match(/\d+\.\d+(\.\d+)?/);
+    return match?.[0] || null;
+  }
+  if (typeof payload === 'object') {
+    const knownKeys = ['version', 'webVersion', 'wa_version', 'waVersion'];
+    for (const key of knownKeys) {
+      const value = payload[key];
+      if (typeof value === 'string') {
+        const match = value.match(/\d+\.\d+(\.\d+)?/);
+        if (match?.[0]) {
+          return match[0];
+        }
+      }
+    }
+  }
+  return null;
+}
 
-  const versionOptions = {
-    webVersionCache: { type: 'remote', remotePath: cacheUrl },
-  };
+async function fetchWebVersionCache(cacheUrl) {
+  try {
+    const response = await fetch(cacheUrl, { redirect: 'follow' });
+    if (!response.ok) {
+      console.warn(
+        `[WWEBJS] Web version cache fetch failed (${response.status}) for ${cacheUrl}.`
+      );
+      return null;
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    const textPayload = await response.text();
+    try {
+      return JSON.parse(textPayload);
+    } catch {
+      return textPayload;
+    }
+  } catch (err) {
+    console.warn(
+      `[WWEBJS] Web version cache fetch error for ${cacheUrl}:`,
+      err?.message || err
+    );
+    return null;
+  }
+}
+
+async function resolveWebVersionOptions() {
+  const cacheUrl =
+    (process.env.WA_WEB_VERSION_CACHE_URL || DEFAULT_WEB_VERSION_CACHE_URL).trim();
+  const pinnedVersion = (process.env.WA_WEB_VERSION || '').trim();
+  const versionOptions = {};
+
+  if (cacheUrl) {
+    const cachePayload = await fetchWebVersionCache(cacheUrl);
+    const extractedVersion = extractVersionString(cachePayload);
+    if (extractedVersion) {
+      versionOptions.webVersionCache = { type: 'remote', remotePath: cacheUrl };
+    } else {
+      console.warn(
+        `[WWEBJS] Web version cache validation failed for ${cacheUrl}. ` +
+          'Omitting webVersionCache so whatsapp-web.js falls back to defaults.'
+      );
+    }
+  }
 
   if (pinnedVersion) {
     versionOptions.webVersion = pinnedVersion;
@@ -97,10 +158,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
   let reinitInProgress = false;
+  const webVersionOptions = await resolveWebVersionOptions();
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
-    ...resolveWebVersionOptions(),
+    ...webVersionOptions,
   });
 
   const reinitializeClient = async (trigger, reason) => {

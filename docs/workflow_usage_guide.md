@@ -62,6 +62,12 @@ WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
 
 # Hapus sesi sebelum re-init ketika auth gagal/logged out (opsional)
 WA_AUTH_CLEAR_SESSION_ON_REINIT=false
+
+# URL cache versi WhatsApp Web (opsional, default ke mirror GitHub)
+WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json
+
+# Pin versi WhatsApp Web untuk menghindari error cache remote (opsional)
+WA_WEB_VERSION=
 ```
 
 ### Langkah Login
@@ -71,6 +77,7 @@ WA_AUTH_CLEAR_SESSION_ON_REINIT=false
 4. Setelah dipindai, sesi tersimpan di folder `.wwebjs_auth/` (atau `WA_AUTH_DATA_PATH` jika di-set). Pastikan folder tersebut writable oleh runtime user; jika `WA_AUTH_DATA_PATH` tidak bisa diakses, adapter akan fallback ke `.wwebjs_auth` di root proyek.
 5. Saat terjadi `auth_failure` atau `LOGGED_OUT`, adapter akan melakukan `destroy()` + `initialize()` dengan log yang menyertakan `clientId` untuk membantu troubleshooting.
 6. Jika modul web WhatsApp belum siap (`pupPage` tidak tersedia atau evaluasi gagal), sistem mencatat warning dengan `clientId` namun tetap melanjutkan status ready agar alur tidak menggantung.
+7. Adapter memvalidasi payload `WA_WEB_VERSION_CACHE_URL` sebelum dipakai. Jika payload tidak berisi string versi yang diharapkan, sistem akan men-skip `webVersionCache` agar whatsapp-web.js kembali ke default, dan sebaiknya gunakan `WA_WEB_VERSION` untuk pin versi yang stabil.
 
 Pengguna cukup menyimpan nomor bot yang sesuai, mengirim perintah `userrequest`, lalu mengikuti instruksi balasan.
 
