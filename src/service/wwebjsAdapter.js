@@ -292,13 +292,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
             `[WWEBJS] initialize retry failed for clientId=${clientId} (${triggerLabel}):`,
             retryErr?.message || retryErr
           );
-          return;
+          throw retryErr;
         }
       }
       console.error(
         `[WWEBJS] initialize failed for clientId=${clientId} (${triggerLabel}):`,
         err?.message || err
       );
+      throw err;
     }
   };
 
