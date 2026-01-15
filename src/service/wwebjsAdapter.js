@@ -163,22 +163,29 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return false;
     }
   };
-  const authPathWritable = await ensureAuthDataPathWritable(
+  let authPathWritable = await ensureAuthDataPathWritable(
     authDataPath,
     Boolean(configuredAuthPath)
   );
+  if (!authPathWritable && configuredAuthPath) {
+    console.warn(
+      `[WWEBJS] Falling back to recommended auth path ${recommendedAuthPath} ` +
+        `because WA_AUTH_DATA_PATH is not writable.`
+    );
+    authDataPath = recommendedAuthPath;
+    authPathWritable = await ensureAuthDataPathWritable(authDataPath, false);
+  }
   if (!authPathWritable) {
     if (configuredAuthPath) {
       throw new Error(
-        `[WWEBJS] WA_AUTH_DATA_PATH is not writable: ${authDataPath}. ` +
-          `Set WA_AUTH_DATA_PATH to a writable directory (recommended: ${recommendedAuthPath}).`
-      );
-    } else {
-      throw new Error(
-        `[WWEBJS] Auth data path is not writable: ${authDataPath}. ` +
-          `Recommended path: ${recommendedAuthPath}.`
+        `[WWEBJS] WA_AUTH_DATA_PATH is not writable: ${configuredAuthPath}. ` +
+          `Fallback path is also not writable: ${authDataPath}.`
       );
     }
+    throw new Error(
+      `[WWEBJS] Auth data path is not writable: ${authDataPath}. ` +
+        `Recommended path: ${recommendedAuthPath}.`
+    );
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
   let reinitInProgress = false;
