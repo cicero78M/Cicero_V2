@@ -100,6 +100,14 @@ async function resolveWebVersionOptions() {
     );
   }
 
+  if (!cacheUrl && !pinnedVersionInput) {
+    console.warn(
+      '[WWEBJS] WA_WEB_VERSION and WA_WEB_VERSION_CACHE_URL are empty; ' +
+        'disabling local web cache to avoid LocalWebCache.persist errors.'
+    );
+    versionOptions.webVersionCache = { type: 'none' };
+  }
+
   if (cacheUrl) {
     const cachePayload = await fetchWebVersionCache(cacheUrl);
     if (!cachePayload) {
@@ -151,7 +159,7 @@ function sanitizeWebVersionOptions(versionOptions) {
   const shouldValidate =
     Boolean(webVersionMeta?.pinnedVersionInput) ||
     Boolean(webVersionMeta?.cacheUrl) ||
-    Boolean(sanitized.webVersionCache);
+    sanitized.webVersionCache?.type === 'remote';
   if (shouldValidate && !isValidResolvedVersion) {
     const details = [];
     if (webVersionMeta?.pinnedVersionInput) {
