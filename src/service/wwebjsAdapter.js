@@ -409,7 +409,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.isReady = async () => client.info !== undefined;
   emitter.getState = async () => {
     try {
-      return await client.getState();
+      const state = await client.getState();
+      if (state === null || state === undefined) {
+        return 'unknown';
+      }
+      return state;
     } catch {
       return 'close';
     }

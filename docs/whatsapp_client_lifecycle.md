@@ -62,6 +62,17 @@ Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READ
 
 Ini membantu mengatasi kondisi “stuck setelah QR” tanpa restart manual.
 
+## Arti state `unknown/null` dan recovery otomatis
+
+Pada fallback readiness, `getState()` dapat mengembalikan `null`/`undefined` ketika session
+belum siap atau ada glitch sementara. Adapter akan menormalisasi nilai tersebut menjadi
+`unknown`. Ketika state `unknown` terdeteksi, sistem akan:
+
+1. Log warning seperti `[WA] getState returned unknown`.
+2. Melakukan retry `getState()` dengan backoff ringan (mis. 2 detik lalu 4 detik).
+3. Jika masih `unknown` setelah retry, melakukan `connect()` ulang secara terbatas
+   (maksimal beberapa kali per client) agar tidak loop tanpa batas.
+
 ## Checklist troubleshooting
 
 1. **Periksa log event**
@@ -74,6 +85,8 @@ Ini membantu mengatasi kondisi “stuck setelah QR” tanpa restart manual.
 
 3. **Stuck setelah authenticated**
    - Lihat warning fallback: “Authenticated but no ready event”.
+   - Jika ada warning `getState returned unknown`, tunggu retry/backoff selesai.
+     Sistem akan mencoba `connect()` ulang secara otomatis jika state tetap `unknown`.
    - Pastikan network untuk WhatsApp Web tidak diblokir.
 
 4. **Sering disconnect**

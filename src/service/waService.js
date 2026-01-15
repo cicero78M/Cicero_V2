@@ -426,6 +426,11 @@ const authenticatedReadyTimeoutMs = Number.isNaN(
 )
   ? 45000
   : Number(process.env.WA_AUTH_READY_TIMEOUT_MS);
+const fallbackStateRetryCounts = new WeakMap();
+const fallbackReinitCounts = new WeakMap();
+const maxFallbackStateRetries = 2;
+const maxFallbackReinitAttempts = 2;
+const fallbackStateRetryBaseDelayMs = 2000;
 
 function getClientReadinessState(client, label = "WA") {
   if (!clientReadiness.has(client)) {
@@ -3970,9 +3975,54 @@ if (shouldInitWhatsAppClients) {
       }
       try {
         const state = await client.getState();
-        console.log(`[${label}] getState: ${state}`);
-        if (state === "CONNECTED" || state === "open") {
+        const normalizedState =
+          state === null || state === undefined ? "unknown" : state;
+        console.log(`[${label}] getState: ${normalizedState}`);
+        if (normalizedState === "CONNECTED" || normalizedState === "open") {
+          fallbackStateRetryCounts.set(client, 0);
+          fallbackReinitCounts.set(client, 0);
           markClientReady(client, "getState");
+          return;
+        }
+        if (normalizedState === "unknown") {
+          const currentRetryCount = fallbackStateRetryCounts.get(client) || 0;
+          if (currentRetryCount < maxFallbackStateRetries) {
+            const nextRetryCount = currentRetryCount + 1;
+            fallbackStateRetryCounts.set(client, nextRetryCount);
+            const retryDelayMs =
+              fallbackStateRetryBaseDelayMs * Math.pow(2, currentRetryCount);
+            console.warn(
+              `[${label}] getState returned unknown; retrying (${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms`
+            );
+            scheduleFallbackReadyCheck(client, retryDelayMs);
+            return;
+          }
+          fallbackStateRetryCounts.set(client, 0);
+          const reinitAttempts = fallbackReinitCounts.get(client) || 0;
+          if (reinitAttempts >= maxFallbackReinitAttempts) {
+            console.warn(
+              `[${label}] getState returned unknown after retries; reinit skipped (max ${maxFallbackReinitAttempts} attempts)`
+            );
+            return;
+          }
+          fallbackReinitCounts.set(client, reinitAttempts + 1);
+          if (typeof client?.connect === "function") {
+            console.warn(
+              `[${label}] getState returned unknown after retries; reinitializing (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
+            );
+            client.connect().catch((err) => {
+              console.error(
+                `[${label}] Reinit failed after unknown getState: ${err?.message}`
+              );
+            });
+            scheduleFallbackReadyCheck(client, delayMs);
+          } else {
+            console.warn(
+              `[${label}] connect not available; unable to reinit after unknown getState`
+            );
+          }
+        } else {
+          fallbackStateRetryCounts.set(client, 0);
         }
       } catch (e) {
         console.log(`[${label}] getState error: ${e?.message}`);
