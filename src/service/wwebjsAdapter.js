@@ -8,6 +8,7 @@ import pkg from 'whatsapp-web.js';
 const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
+const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -94,7 +95,7 @@ async function resolveWebVersionOptions() {
   const versionOptions = {};
 
   if (pinnedVersionInput && !pinnedVersion) {
-    throw new Error(
+    console.warn(
       `[WWEBJS] WA_WEB_VERSION must be a valid version string (got "${pinnedVersionInput}").`
     );
   }
@@ -127,21 +128,48 @@ async function resolveWebVersionOptions() {
     versionOptions.webVersion = pinnedVersion;
   }
 
-  if ('webVersion' in versionOptions && !versionOptions.webVersion) {
-    throw new Error('[WWEBJS] Resolved webVersion is empty; aborting initialization.');
-  }
-
-  return versionOptions;
+  return {
+    ...versionOptions,
+    __webVersionMeta: { cacheUrl, pinnedVersionInput },
+  };
 }
 
 function sanitizeWebVersionOptions(versionOptions) {
-  const sanitized = { ...versionOptions };
+  const { __webVersionMeta: webVersionMeta, ...baseOptions } = versionOptions;
+  const sanitized = { ...baseOptions };
   if (sanitized.webVersionCache?.type === 'remote' && !sanitized.webVersion) {
     console.warn(
       '[WWEBJS] Web version cache disabled because webVersion is empty. ' +
         'Check WA_WEB_VERSION_CACHE_URL for a valid payload.'
     );
     sanitized.webVersionCache = { type: 'none' };
+  }
+
+  const resolvedVersion = sanitized.webVersion;
+  const isValidResolvedVersion =
+    typeof resolvedVersion === 'string' && WEB_VERSION_PATTERN.test(resolvedVersion);
+  const shouldValidate =
+    Boolean(webVersionMeta?.pinnedVersionInput) ||
+    Boolean(webVersionMeta?.cacheUrl) ||
+    Boolean(sanitized.webVersionCache);
+  if (shouldValidate && !isValidResolvedVersion) {
+    const details = [];
+    if (webVersionMeta?.pinnedVersionInput) {
+      details.push(`WA_WEB_VERSION="${webVersionMeta.pinnedVersionInput}"`);
+    }
+    if (webVersionMeta?.cacheUrl) {
+      details.push(`WA_WEB_VERSION_CACHE_URL="${webVersionMeta.cacheUrl}"`);
+    }
+    const metaDetails = details.length ? ` (${details.join(', ')})` : '';
+    const reason = resolvedVersion
+      ? `Invalid resolved webVersion "${resolvedVersion}"`
+      : 'Resolved webVersion is missing';
+    console.warn(
+      `[WWEBJS] ${reason}${metaDetails}. ` +
+        'Disabling webVersionCache so whatsapp-web.js falls back to defaults.'
+    );
+    sanitized.webVersionCache = { type: 'none' };
+    delete sanitized.webVersion;
   }
   if ('webVersion' in sanitized && !sanitized.webVersion) {
     delete sanitized.webVersion;
