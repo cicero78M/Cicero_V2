@@ -34,6 +34,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const client = new Client({
     authStrategy: new LocalAuth({ clientId }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
+      disableAutoReply: true,
     ...resolveWebVersionOptions(),
   });
 
