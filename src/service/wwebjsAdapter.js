@@ -29,6 +29,9 @@ const { Client, LocalAuth, MessageMedia } = pkg;
  *
  * @param {string} [clientId='wa-admin'] - WhatsApp client identifier used by LocalAuth.
  */
+
+let isInitializing = false;
+
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
   const client = new Client({
@@ -38,18 +41,27 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
-  client.on('ready', async () => {
-    await client.pupPage.evaluate(() => {
-      if (
-        window.Store?.WidFactory &&
-        !window.Store.WidFactory.toUserWidOrThrow
-      ) {
-        window.Store.WidFactory.toUserWidOrThrow = (jid) =>
-          window.Store.WidFactory.createWid(jid);
-      }
-    });
-    emitter.emit('ready');
+client.on('ready', async () => {
+  await client.pupPage.evaluate(() => {
+    // 🔥 FIX BUG markedUnread (Jan 2026)
+    if (window.WWebJS?.sendSeen) {
+      window.WWebJS.sendSeen = async () => true;
+    }
+
+    // WidFactory fix
+    if (
+      window.Store?.WidFactory &&
+      !window.Store.WidFactory.toUserWidOrThrow
+    ) {
+      window.Store.WidFactory.toUserWidOrThrow = (jid) =>
+        window.Store.WidFactory.createWid(jid);
+    }
   });
+
+  console.log('[WA] Client READY');
+  emitter.emit('ready');
+});
+
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', async (msg) => {
     let contactMeta = {};
@@ -73,9 +85,20 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     });
   });
 
-  emitter.connect = async () => {
+emitter.connect = async () => {
+  if (isInitializing || client.info) {
+    console.log('[WA] init skipped (already initializing/ready)');
+    return;
+  }
+
+  isInitializing = true;
+  try {
     await client.initialize();
-  };
+  } finally {
+    isInitializing = false;
+  }
+};
+
 
   emitter.disconnect = async () => {
     await client.destroy();
@@ -99,13 +122,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
   };
 
-  emitter.sendMessage = async (jid, content, options = {}) => {
+emitter.sendMessage = async (jid, content, options = {}) => {
+  try {
     let message;
-    if (
-      content &&
-      typeof content === 'object' &&
-      'document' in content
-    ) {
+
+    if (content && typeof content === 'object' && 'document' in content) {
       const media = new MessageMedia(
         content.mimetype || 'application/octet-stream',
         Buffer.from(content.document).toString('base64'),
@@ -119,8 +140,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       const text = typeof content === 'string' ? content : content.text;
       message = await client.sendMessage(jid, text, options);
     }
-    return message.id._serialized || message.id.id || '';
-  };
+
+    return message?.id?._serialized || message?.id?.id || '';
+  } catch (err) {
+    if (String(err).includes('markedUnread')) {
+      console.warn('[WWEBJS] sendSeen bug ignored');
+      return '';
+    }
+    throw err;
+  }
+};
 
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
@@ -130,15 +159,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return await client.getState();
     } catch {
       return 'close';
-    }
-  };
-
-  emitter.sendSeen = async (jid) => {
-    try {
-      return await client.sendSeen(jid);
-    } catch (err) {
-      console.warn('[WWEBJS] sendSeen failed:', err?.message || err);
-      return false;
     }
   };
 
