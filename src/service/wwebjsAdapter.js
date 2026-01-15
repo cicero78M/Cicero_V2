@@ -38,14 +38,18 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
-let ready = false;
-
-client.on('ready', async () => {
-  ready = true;
-  emitter.emit('ready');
-});
-
-
+  client.on('ready', async () => {
+    await client.pupPage.evaluate(() => {
+      if (
+        window.Store?.WidFactory &&
+        !window.Store.WidFactory.toUserWidOrThrow
+      ) {
+        window.Store.WidFactory.toUserWidOrThrow = (jid) =>
+          window.Store.WidFactory.createWid(jid);
+      }
+    });
+    emitter.emit('ready');
+  });
   client.on('disconnected', (reason) => emitter.emit('disconnected', reason));
   client.on('message', async (msg) => {
     let contactMeta = {};
@@ -69,19 +73,9 @@ client.on('ready', async () => {
     });
   });
 
-let isInitializing = false;
-
-emitter.connect = async () => {
-  if (isInitializing || ready) return;
-
-  isInitializing = true;
-  try {
+  emitter.connect = async () => {
     await client.initialize();
-  } finally {
-    isInitializing = false;
-  }
-};
-
+  };
 
   emitter.disconnect = async () => {
     await client.destroy();
@@ -130,7 +124,7 @@ emitter.connect = async () => {
 
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
-emitter.isReady = async () => ready;
+  emitter.isReady = async () => client.info !== undefined;
   emitter.getState = async () => {
     try {
       return await client.getState();
