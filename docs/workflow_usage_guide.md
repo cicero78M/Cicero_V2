@@ -57,7 +57,7 @@ APP_SESSION_NAME=wa-admin
 # ID sesi untuk nomor kedua (`userrequest`)
 USER_WA_CLIENT_ID=wa-userrequest
 
-# Lokasi folder sesi LocalAuth (opsional)
+# Lokasi folder sesi LocalAuth (opsional, harus writable oleh runtime user; jika tidak, fallback ke `.wwebjs_auth`)
 WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
 
 # Hapus sesi sebelum re-init ketika auth gagal/logged out (opsional)
@@ -68,7 +68,7 @@ WA_AUTH_CLEAR_SESSION_ON_REINIT=false
 1. Jalankan `npm run dev` atau `npm start`.
 2. Terminal menampilkan QR `[WA]` untuk nomor utama; pindai dengan akun WhatsApp utama.
 3. Terminal juga menampilkan QR `[WA-USER]` untuk nomor kedua; pindai dengan nomor khusus `userrequest`.
-4. Setelah dipindai, sesi tersimpan di folder `.wwebjs_auth/` (atau `WA_AUTH_DATA_PATH` jika di-set) sehingga tidak perlu login ulang.
+4. Setelah dipindai, sesi tersimpan di folder `.wwebjs_auth/` (atau `WA_AUTH_DATA_PATH` jika di-set). Pastikan folder tersebut writable oleh runtime user; jika `WA_AUTH_DATA_PATH` tidak bisa diakses, adapter akan fallback ke `.wwebjs_auth` di root proyek.
 5. Saat terjadi `auth_failure` atau `LOGGED_OUT`, adapter akan melakukan `destroy()` + `initialize()` dengan log yang menyertakan `clientId` untuk membantu troubleshooting.
 6. Jika modul web WhatsApp belum siap (`pupPage` tidak tersedia atau evaluasi gagal), sistem mencatat warning dengan `clientId` namun tetap melanjutkan status ready agar alur tidak menggantung.
 

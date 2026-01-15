@@ -244,7 +244,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
    `APP_SESSION_NAME` is the session folder name used for the main WhatsApp client; override it when running multiple instances on the same host.
-   `WA_AUTH_DATA_PATH` overrides the LocalAuth session directory (default: `.wwebjs_auth` under the project root) for clearer session storage paths.
+   `WA_AUTH_DATA_PATH` overrides the LocalAuth session directory (default: `.wwebjs_auth` under the project root) for clearer session storage paths. Ensure the directory is owned by or writable to the runtime user; if the configured path is not writable, the adapter logs an error and falls back to `.wwebjs_auth` under the project root.
    `WA_AUTH_CLEAR_SESSION_ON_REINIT=true` forces the adapter to remove the `session-<clientId>` folder before reinitializing after `auth_failure` or `LOGGED_OUT`.
    `WA_WEB_VERSION_CACHE_URL` points to a remote JSON document that whatsapp-web.js reads to align with the latest WhatsApp Web build; keep the default to avoid "update WhatsApp" browser errors, or swap in your own mirror if GitHub access is blocked. Set `WA_WEB_VERSION` to pin a specific version string from the JSON when the automatic cache path is unavailable.
    `ENABLE_DIRREQUEST_GROUP=false` disables all Ditbinmas dirRequest cron jobs at once while leaving other schedules intact.
