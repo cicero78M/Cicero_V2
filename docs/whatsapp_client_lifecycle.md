@@ -42,6 +42,10 @@ diinisialisasi **secara paralel**. Artinya:
 - Fallback readiness (`getState()` setelah ~60 detik) tetap dijadwalkan untuk semua
   client segera setelah inisialisasi dimulai, dan akan berhenti otomatis ketika
   event `ready` atau `change_state` menandai client siap.
+- `connect()` dapat **reject** (hard failure) jika inisialisasi gagal, misalnya setelah
+  retry fallback webVersion tetap gagal. Saat ini, `waService.js` menandai client
+  sebagai tidak siap dan menjadwalkan reinit dengan backoff lebih panjang
+  (hingga beberapa menit), serta akan **abort** setelah sejumlah retry tertentu.
 
 ## Lokasi penyimpanan auth
 
@@ -61,6 +65,8 @@ atau `Cannot read properties of null (reading '1')`, adapter akan:
 2. Mencatat warning dengan label `clientId` agar mudah ditelusuri.
 3. Menyarankan pemeriksaan `WA_WEB_VERSION_CACHE_URL` dan/atau pengaturan `WA_WEB_VERSION`.
 4. Mencoba `initialize()` ulang satu kali setelah fallback diterapkan.
+5. Jika retry gagal, `connect()` akan reject sehingga caller dapat menandai
+   kegagalan sebagai hard failure.
 
 Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel.
 
@@ -105,6 +111,12 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 4. **Sering disconnect**
    - Pastikan session valid dan host tidak sleep.
    - Periksa log `disconnected` untuk reason.
+
+5. **connect() hard failure**
+   - Periksa log `Initialization failed (hard failure)` dan root cause error.
+   - Tunggu retry backoff yang lebih panjang, atau lakukan reinit manual jika perlu.
+   - Pastikan konfigurasi `WA_WEB_VERSION` / `WA_WEB_VERSION_CACHE_URL` valid dan
+     path `WA_AUTH_DATA_PATH` writable.
 
 ## Referensi kode
 

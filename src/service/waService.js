@@ -432,12 +432,23 @@ const maxFallbackStateRetries = 3;
 const maxFallbackReinitAttempts = 2;
 const fallbackStateRetryMinDelayMs = 15000;
 const fallbackStateRetryMaxDelayMs = 30000;
+const hardInitRetryCounts = new WeakMap();
+const maxHardInitRetries = 3;
+const hardInitRetryBaseDelayMs = 120000;
+const hardInitRetryMaxDelayMs = 900000;
 
 function getFallbackStateRetryDelayMs() {
   const jitterRange = fallbackStateRetryMaxDelayMs - fallbackStateRetryMinDelayMs;
   return (
     fallbackStateRetryMinDelayMs + Math.floor(Math.random() * jitterRange)
   );
+}
+
+function getHardInitRetryDelayMs(attempt) {
+  const baseDelay = hardInitRetryBaseDelayMs * 2 ** Math.max(0, attempt - 1);
+  const cappedDelay = Math.min(baseDelay, hardInitRetryMaxDelayMs);
+  const jitter = Math.floor(Math.random() * 0.2 * cappedDelay);
+  return cappedDelay + jitter;
 }
 
 function getClientReadinessState(client, label = "WA") {
@@ -530,6 +541,42 @@ function setClientNotReady(client) {
   state.ready = false;
 }
 
+function resetHardInitRetryCount(client) {
+  if (hardInitRetryCounts.has(client)) {
+    hardInitRetryCounts.set(client, 0);
+  }
+}
+
+function scheduleHardInitRetry(client, label, err) {
+  setClientNotReady(client);
+  clearAuthenticatedFallbackTimer(client);
+  const currentAttempts = hardInitRetryCounts.get(client) || 0;
+  if (currentAttempts >= maxHardInitRetries) {
+    console.error(
+      `[${label}] Hard init failure; aborting after ${currentAttempts} attempt(s): ${err?.message}`
+    );
+    return;
+  }
+  const nextAttempt = currentAttempts + 1;
+  hardInitRetryCounts.set(client, nextAttempt);
+  const delayMs = getHardInitRetryDelayMs(nextAttempt);
+  console.warn(
+    `[${label}] Hard init failure; scheduling reinit attempt ${nextAttempt}/${maxHardInitRetries} in ${delayMs}ms`
+  );
+  setTimeout(() => {
+    client.connect()
+      .then(() => {
+        resetHardInitRetryCount(client);
+      })
+      .catch((retryErr) => {
+        console.error(
+          `[${label}] Hard init retry ${nextAttempt} failed: ${retryErr?.message}`
+        );
+        scheduleHardInitRetry(client, label, retryErr);
+      });
+  }, delayMs);
+}
+
 function flushPendingMessages(client) {
   const state = getClientReadinessState(client);
   if (state.pendingMessages.length) {
@@ -550,6 +597,7 @@ function markClientReady(client, src = "unknown") {
     console.log(`[${state.label}] READY via ${src}`);
     state.readyResolvers.splice(0).forEach((resolve) => resolve());
   }
+  resetHardInitRetryCount(client);
   flushPendingMessages(client);
   if (client === waClient) {
     flushAdminNotificationQueue();
@@ -3969,9 +4017,14 @@ if (shouldInitWhatsAppClients) {
 
   const initPromises = clientsToInit.map(({ label, client }) => {
     console.log(`[${label}] Starting WhatsApp client initialization`);
-    return client.connect().catch((err) => {
-      console.error(`[${label}] Initialization failed:`, err.message);
-    });
+    return client.connect()
+      .then(() => {
+        resetHardInitRetryCount(client);
+      })
+      .catch((err) => {
+        console.error(`[${label}] Initialization failed (hard failure):`, err?.message);
+        scheduleHardInitRetry(client, label, err);
+      });
   });
 
   const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
