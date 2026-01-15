@@ -77,7 +77,7 @@ WA_WEB_VERSION=
 4. Setelah dipindai, sesi tersimpan di folder `~/.cicero/wwebjs_auth/` (atau `WA_AUTH_DATA_PATH` jika di-set). Pastikan folder tersebut writable oleh runtime user; jika `WA_AUTH_DATA_PATH` tidak bisa diakses, adapter akan log error lalu fallback ke path rekomendasi selama folder fallback bisa dibuat dan ditulis.
 5. Saat terjadi `auth_failure` atau `LOGGED_OUT`, adapter akan melakukan `destroy()` + `initialize()` dengan log yang menyertakan `clientId` untuk membantu troubleshooting.
 6. Jika modul web WhatsApp belum siap (`pupPage` tidak tersedia atau evaluasi gagal), sistem mencatat warning dengan `clientId` namun tetap melanjutkan status ready agar alur tidak menggantung.
-7. Adapter memvalidasi payload `WA_WEB_VERSION_CACHE_URL` sebelum dipakai. Jika payload tidak berisi string versi yang diharapkan, sistem akan men-skip `webVersionCache` agar whatsapp-web.js kembali ke default. Saat endpoint remote tidak tersedia, kosongkan `WA_WEB_VERSION_CACHE_URL` untuk menonaktifkan fetch cache, lalu set `WA_WEB_VERSION` untuk pin versi yang stabil.
+7. Adapter memvalidasi payload `WA_WEB_VERSION_CACHE_URL` sebelum dipakai. Jika payload tidak berisi string versi yang diharapkan atau endpoint 404, sistem akan men-disable `webVersionCache` agar whatsapp-web.js kembali ke default. Log seperti `Web version cache fetch failed (404)` menandakan URL cache perlu diperbaiki. Saat endpoint remote tidak tersedia, kosongkan `WA_WEB_VERSION_CACHE_URL` untuk menonaktifkan fetch cache, lalu set `WA_WEB_VERSION` untuk pin versi yang stabil.
 
 Pengguna cukup menyimpan nomor bot yang sesuai, mengirim perintah `userrequest`, lalu mengikuti instruksi balasan.
 

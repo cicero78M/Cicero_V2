@@ -101,17 +101,25 @@ async function resolveWebVersionOptions() {
 
   if (cacheUrl) {
     const cachePayload = await fetchWebVersionCache(cacheUrl);
-    const extractedVersion = extractVersionString(cachePayload);
-    if (extractedVersion) {
-      versionOptions.webVersionCache = { type: 'remote', remotePath: cacheUrl };
-      if (!pinnedVersion) {
-        versionOptions.webVersion = extractedVersion;
-      }
-    } else {
+    if (!cachePayload) {
       console.warn(
-        `[WWEBJS] Web version cache validation failed for ${cacheUrl}. ` +
-          'Omitting webVersionCache so whatsapp-web.js falls back to defaults.'
+        `[WWEBJS] Web version cache disabled because fetch failed for ${cacheUrl}.`
       );
+      versionOptions.webVersionCache = { type: 'none' };
+    } else {
+      const extractedVersion = extractVersionString(cachePayload);
+      if (extractedVersion) {
+        versionOptions.webVersionCache = { type: 'remote', remotePath: cacheUrl };
+        if (!pinnedVersion) {
+          versionOptions.webVersion = extractedVersion;
+        }
+      } else {
+        console.warn(
+          `[WWEBJS] Web version cache validation failed for ${cacheUrl}. ` +
+            'Disabling webVersionCache so whatsapp-web.js falls back to defaults.'
+        );
+        versionOptions.webVersionCache = { type: 'none' };
+      }
     }
   }
 
@@ -124,6 +132,21 @@ async function resolveWebVersionOptions() {
   }
 
   return versionOptions;
+}
+
+function sanitizeWebVersionOptions(versionOptions) {
+  const sanitized = { ...versionOptions };
+  if (sanitized.webVersionCache?.type === 'remote' && !sanitized.webVersion) {
+    console.warn(
+      '[WWEBJS] Web version cache disabled because webVersion is empty. ' +
+        'Check WA_WEB_VERSION_CACHE_URL for a valid payload.'
+    );
+    sanitized.webVersionCache = { type: 'none' };
+  }
+  if ('webVersion' in sanitized && !sanitized.webVersion) {
+    delete sanitized.webVersion;
+  }
+  return sanitized;
 }
 
 const { Client, LocalAuth, MessageMedia } = pkg;
@@ -189,7 +212,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
   let reinitInProgress = false;
-  const webVersionOptions = await resolveWebVersionOptions();
+  const webVersionOptions = sanitizeWebVersionOptions(
+    await resolveWebVersionOptions()
+  );
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: { args: ['--no-sandbox'], headless: true },
