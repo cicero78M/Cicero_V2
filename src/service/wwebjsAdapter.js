@@ -41,7 +41,22 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   client.on('qr', (qr) => emitter.emit('qr', qr));
+
+  client.on('authenticated', () => {
+  console.log('[WA] AUTHENTICATED');
+});
+
+client.on('auth_failure', (err) => {
+  console.error('[WA] AUTH FAILURE', err);
+});
+
+client.on('loading_screen', (p, msg) => {
+  console.log('[WA] LOADING', p, msg);
+});
+
 client.on('ready', async () => {
+    isInitializing = false;
+
   await client.pupPage.evaluate(() => {
     // 🔥 FIX BUG markedUnread (Jan 2026)
     if (window.WWebJS?.sendSeen) {
