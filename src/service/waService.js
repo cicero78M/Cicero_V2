@@ -418,8 +418,62 @@ export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
 export let waGatewayClient = await createWwebjsClient(env.GATEWAY_WA_CLIENT_ID);
 
+const clientReadiness = new Map();
+const adminNotificationQueue = [];
+
+function getClientReadinessState(client, label = "WA") {
+  if (!clientReadiness.has(client)) {
+    clientReadiness.set(client, {
+      label,
+      ready: false,
+      pendingMessages: [],
+      readyResolvers: [],
+    });
+  }
+  return clientReadiness.get(client);
+}
+
+function registerClientReadiness(client, label) {
+  getClientReadinessState(client, label);
+}
+
+function setClientNotReady(client) {
+  const state = getClientReadinessState(client);
+  state.ready = false;
+}
+
+function flushPendingMessages(client) {
+  const state = getClientReadinessState(client);
+  if (state.pendingMessages.length) {
+    console.log(
+      `[${state.label}] Processing ${state.pendingMessages.length} deferred message(s)`
+    );
+    state.pendingMessages.splice(0).forEach((msg) => {
+      console.log(`[${state.label}] Processing deferred message from ${msg.from}`);
+      client.emit("message", msg);
+    });
+  }
+}
+
+function markClientReady(client, src = "unknown") {
+  const state = getClientReadinessState(client);
+  if (!state.ready) {
+    state.ready = true;
+    console.log(`[${state.label}] READY via ${src}`);
+    state.readyResolvers.splice(0).forEach((resolve) => resolve());
+  }
+  flushPendingMessages(client);
+  if (client === waClient) {
+    flushAdminNotificationQueue();
+  }
+}
+
+registerClientReadiness(waClient, "WA");
+registerClientReadiness(waUserClient, "WA-USER");
+registerClientReadiness(waGatewayClient, "WA-GATEWAY");
+
 function handleDisconnect(reason) {
-  waReady = false;
+  setClientNotReady(waClient);
   console.warn("[WA] Client disconnected:", reason);
   setTimeout(() => {
     waClient.connect().catch((err) => {
@@ -431,6 +485,7 @@ function handleDisconnect(reason) {
 waClient.onDisconnect(handleDisconnect);
 
 function handleUserDisconnect(reason) {
+  setClientNotReady(waUserClient);
   console.warn("[WA-USER] Client disconnected:", reason);
   setTimeout(() => {
     waUserClient.connect().catch((err) => {
@@ -442,6 +497,7 @@ function handleUserDisconnect(reason) {
 waUserClient.onDisconnect(handleUserDisconnect);
 
 function handleGatewayDisconnect(reason) {
+  setClientNotReady(waGatewayClient);
   console.warn("[WA-GATEWAY] Client disconnected:", reason);
   setTimeout(() => {
     waGatewayClient.connect().catch((err) => {
@@ -451,21 +507,6 @@ function handleGatewayDisconnect(reason) {
 }
 
 waGatewayClient.onDisconnect(handleGatewayDisconnect);
-
-let waReady = false;
-const pendingMessages = [];
-const readyResolvers = [];
-const adminNotificationQueue = [];
-
-function flushPendingMessages() {
-  if (pendingMessages.length) {
-    console.log(`[WA] Processing ${pendingMessages.length} deferred message(s)`);
-    pendingMessages.splice(0).forEach((msg) => {
-      console.log(`[WA] Processing deferred message from ${msg.from}`);
-      waClient.emit("message", msg);
-    });
-  }
-}
 
 export function queueAdminNotification(message) {
   adminNotificationQueue.push(message);
@@ -483,76 +524,44 @@ export function flushAdminNotificationQueue() {
   });
 }
 
-function markWaReady(src = "unknown") {
-  if (!waReady) {
-    waReady = true;
-    console.log(`[WA] READY via ${src}`);
-    readyResolvers.splice(0).forEach((resolve) => resolve());
+async function waitForClientReady(client, timeout = 30000) {
+  const state = getClientReadinessState(client);
+  if (state.ready) return;
+  if (client?.isReady?.()) {
+    markClientReady(client, "isReady");
+    return;
   }
-  flushPendingMessages();
-  flushAdminNotificationQueue();
-}
+  if (client?.getState) {
+    const currentState = await client.getState().catch(() => undefined);
+    if (currentState === "CONNECTED" || currentState === "open") {
+      markClientReady(client, "getState");
+      return;
+    }
+  }
 
-export function waitForWaReady(timeout = 30000) {
-  if (waReady) return Promise.resolve();
   return new Promise((resolve, reject) => {
     let timer;
     const resolver = () => {
       clearTimeout(timer);
       resolve();
     };
-    readyResolvers.push(resolver);
+    state.readyResolvers.push(resolver);
     timer = setTimeout(() => {
-      const idx = readyResolvers.indexOf(resolver);
-      if (idx !== -1) readyResolvers.splice(idx, 1);
+      const idx = state.readyResolvers.indexOf(resolver);
+      if (idx !== -1) state.readyResolvers.splice(idx, 1);
       reject(new Error("WhatsApp client not ready"));
     }, timeout);
   });
 }
 
-export function waitUntilClientReady(client, timeout = 30000) {
-  if (client?.isReady?.()) return Promise.resolve();
-
-  return new Promise(async (resolve, reject) => {
-    let timer;
-    const onReady = () => {
-      cleanup();
-      resolve();
-    };
-    const cleanup = () => {
-      clearTimeout(timer);
-      client?.off?.("ready", onReady);
-    };
-
-    client?.on?.("ready", onReady);
-
-    try {
-      if (client?.isReady?.()) {
-        cleanup();
-        resolve();
-        return;
-      }
-      if (client?.getState) {
-        const state = await client.getState().catch(() => undefined);
-        if (state === "CONNECTED" || state === "open") {
-          cleanup();
-          resolve();
-          return;
-        }
-      }
-    } catch (_) {}
-
-    timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("WhatsApp client not ready"));
-    }, timeout);
-  });
+export function waitForWaReady(timeout = 30000) {
+  return waitForClientReady(waClient, timeout);
 }
 
 // Expose readiness helper for consumers like safeSendMessage
-waClient.waitForWaReady = waitForWaReady;
-waUserClient.waitForWaReady = () => waitUntilClientReady(waUserClient);
-waGatewayClient.waitForWaReady = () => waitUntilClientReady(waGatewayClient);
+waClient.waitForWaReady = () => waitForClientReady(waClient);
+waUserClient.waitForWaReady = () => waitForClientReady(waUserClient);
+waGatewayClient.waitForWaReady = () => waitForClientReady(waGatewayClient);
 
 // Pastikan semua pengiriman pesan menunggu hingga client siap
 function wrapSendMessage(client) {
@@ -563,7 +572,7 @@ function wrapSendMessage(client) {
     const waitFn =
       typeof client.waitForWaReady === "function"
         ? client.waitForWaReady
-        : () => waitUntilClientReady(client);
+        : () => waitForClientReady(client);
 
     await waitFn().catch(() => {
       console.warn("[WA] sendMessage called before ready");
@@ -601,13 +610,15 @@ waClient.on("qr", (qr) => {
 
 // Wa Bot siap
 waClient.once("ready", () => {
-  markWaReady("ready");
+  markClientReady(waClient, "ready");
 });
 
 // Log client state changes if available
 waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
-  if (state === "CONNECTED" || state === "open") markWaReady("state");
+  if (state === "CONNECTED" || state === "open") {
+    markClientReady(waClient, "state");
+  }
 });
 
 waUserClient.on("qr", (qr) => {
@@ -616,11 +627,14 @@ waUserClient.on("qr", (qr) => {
 });
 
 waUserClient.once("ready", () => {
-  console.log("[WA-USER] READY");
+  markClientReady(waUserClient, "ready");
 });
 
 waUserClient.on("change_state", (state) => {
   console.log(`[WA-USER] Client state changed: ${state}`);
+  if (state === "CONNECTED" || state === "open") {
+    markClientReady(waUserClient, "state");
+  }
 });
 
 waGatewayClient.on("qr", (qr) => {
@@ -629,11 +643,14 @@ waGatewayClient.on("qr", (qr) => {
 });
 
 waGatewayClient.once("ready", () => {
-  console.log("[WA-GATEWAY] READY");
+  markClientReady(waGatewayClient, "ready");
 });
 
 waGatewayClient.on("change_state", (state) => {
   console.log(`[WA-GATEWAY] Client state changed: ${state}`);
+  if (state === "CONNECTED" || state === "open") {
+    markClientReady(waGatewayClient, "state");
+  }
 });
 
 // =======================
@@ -724,11 +741,20 @@ export function createHandleMessage(waClient, options = {}) {
       console.log(`${clientLabel} Ignored status message from ${chatId}`);
       return;
     }
-    if (!waReady) {
+    const waitForReady =
+      typeof waClient.waitForWaReady === "function"
+        ? waClient.waitForWaReady
+        : () => waitForClientReady(waClient);
+    const isReady = await waitForReady().then(
+      () => true,
+      () => false
+    );
+    if (!isReady) {
       console.warn(
         `${clientLabel} Client not ready, message from ${msg.from} deferred`
       );
-      pendingMessages.push(msg);
+      const readinessState = getClientReadinessState(waClient);
+      readinessState.pendingMessages.push(msg);
       waClient
         .sendMessage(msg.from, "🤖 Bot sedang memuat, silakan tunggu")
         .catch(() => {

@@ -318,7 +318,9 @@ A cron job (`src/cron/cronDbBackup.js`) runs daily at **04:00** (Asia/Jakarta), 
 
 ## WhatsApp Sessions & Cron Buckets
 
-Two WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Manifest entries in `src/cron/cronManifest.js` drive the always/`waClient` buckets, while all Ditbinmas dirRequest jobs are bundled in `src/cron/dirRequest/index.js` and registered via `registerDirRequestCrons(waGatewayClient)` so they share the same gateway context and can be toggled with `ENABLE_DIRREQUEST_GROUP`.
+WhatsApp sessions are launched from `app.js`: `waClient` for operator interactions, `waUserClient` for user-request flows, and `waGatewayClient` for broadcast/reporting flows. Cron buckets remain paused until each session signals readiness, preventing duplicate schedules after restarts. Manifest entries in `src/cron/cronManifest.js` drive the always/`waClient` buckets, while all Ditbinmas dirRequest jobs are bundled in `src/cron/dirRequest/index.js` and registered via `registerDirRequestCrons(waGatewayClient)` so they share the same gateway context and can be toggled with `ENABLE_DIRREQUEST_GROUP`.
+
+- WhatsApp readiness is tracked per client. Message handlers await the specific client's `waitForWaReady()` before processing, and the service logs `READY` for WA/WA-USER/WA-GATEWAY when `ready`, `change_state`, or `getState()` checks confirm a connected session.
 
 - `src/cron/cronDirRequestFetchSosmed.js` is now listed in the `waClient` manifest bucket so the scheduler keeps its metadata aligned with other WhatsApp-dependent jobs; the schedules still live in the dirRequest group (see `src/cron/dirRequest/index.js`) and continue to wait for the WhatsApp gateway readiness guardrails.
 
