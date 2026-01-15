@@ -209,7 +209,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     GATEWAY_WA_CLIENT_ID=wa-gateway
     WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
     WA_AUTH_CLEAR_SESSION_ON_REINIT=false
-    WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json
+    WA_WEB_VERSION_CACHE_URL=
     WA_WEB_VERSION=
     ENABLE_DIRREQUEST_GROUP=true
     CORS_ORIGIN=http://localhost:3000
@@ -246,7 +246,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    `APP_SESSION_NAME` is the session folder name used for the main WhatsApp client; override it when running multiple instances on the same host.
    `WA_AUTH_DATA_PATH` overrides the LocalAuth session directory (default: `~/.cicero/wwebjs_auth`). Ensure the directory is owned by or writable to the runtime user; if the configured path is not writable, the adapter logs an error with the recommended path and refuses to start until a writable directory is provided.
    `WA_AUTH_CLEAR_SESSION_ON_REINIT=true` forces the adapter to remove the `session-<clientId>` folder before reinitializing after `auth_failure` or `LOGGED_OUT`.
-   `WA_WEB_VERSION_CACHE_URL` points to a remote JSON document that whatsapp-web.js reads to align with the latest WhatsApp Web build; keep the default to avoid "update WhatsApp" browser errors, or swap in your own mirror if GitHub access is blocked. The adapter now fetches and validates the cache payload before using it—if the response is missing an expected version string, it logs a warning and omits `webVersionCache` so whatsapp-web.js falls back to its defaults. Set `WA_WEB_VERSION` to pin a specific version string from the cache JSON when the automatic cache path is unavailable or the cache payload fails validation.
+   `WA_WEB_VERSION_CACHE_URL` points to a remote JSON document that whatsapp-web.js reads to align with the latest WhatsApp Web build. This is opt-in by default; leave it empty to skip remote cache fetching when your environment cannot reach the endpoint. The adapter fetches and validates the cache payload before using it—if the response is missing an expected version string, it logs a warning and omits `webVersionCache` so whatsapp-web.js falls back to its defaults. Set `WA_WEB_VERSION` to pin a specific version string (for example, `2.3000.0`) when the automatic cache path is unavailable or the cache payload fails validation.
    `ENABLE_DIRREQUEST_GROUP=false` disables all Ditbinmas dirRequest cron jobs at once while leaving other schedules intact.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
@@ -341,7 +341,7 @@ The OTP worker (`src/service/otpQueue.js`) now resolves immediately because OTP 
 ## Troubleshooting
 
 - **DB connection errors** – check database credentials and PostgreSQL status.
-- **WhatsApp not connected** – rescan the QR code, confirm session folders (`APP_SESSION_NAME`, `USER_WA_CLIENT_ID`, `GATEWAY_WA_CLIENT_ID`), and check for unsupported version logs. If browser traces include `static.whatsapp.net` stack frames that mention updating WhatsApp, point `WA_WEB_VERSION_CACHE_URL` to a reachable mirror or pin `WA_WEB_VERSION` to the latest release from the cache JSON. If you see warnings about cache validation failures, use a pinned `WA_WEB_VERSION` to bypass remote cache parsing until the mirror is fixed.
+- **WhatsApp not connected** – rescan the QR code, confirm session folders (`APP_SESSION_NAME`, `USER_WA_CLIENT_ID`, `GATEWAY_WA_CLIENT_ID`), and check for unsupported version logs. If browser traces include `static.whatsapp.net` stack frames that mention updating WhatsApp, either set `WA_WEB_VERSION_CACHE_URL` to a reachable mirror or pin `WA_WEB_VERSION` to the latest release from the cache JSON. If the remote endpoint is unavailable, leave `WA_WEB_VERSION_CACHE_URL` empty to disable cache fetching and rely on a pinned `WA_WEB_VERSION`.
 - **Email OTP delivery failed** – verify `SMTP_*` variables and network egress.
 - **External API errors** – verify `RAPIDAPI_KEY` and check application logs.
 - **Cron jobs not running** – confirm cron buckets activated after WhatsApp readiness and verify timezone settings (`Asia/Jakarta`).

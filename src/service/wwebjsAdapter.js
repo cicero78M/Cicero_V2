@@ -5,8 +5,7 @@ import os from 'os';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
-const DEFAULT_WEB_VERSION_CACHE_URL =
-  'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json';
+const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
 
@@ -88,14 +87,26 @@ async function fetchWebVersionCache(cacheUrl) {
 async function resolveWebVersionOptions() {
   const cacheUrl =
     (process.env.WA_WEB_VERSION_CACHE_URL || DEFAULT_WEB_VERSION_CACHE_URL).trim();
-  const pinnedVersion = (process.env.WA_WEB_VERSION || '').trim();
+  const pinnedVersionInput = (process.env.WA_WEB_VERSION || '').trim();
+  const pinnedVersion = pinnedVersionInput
+    ? extractVersionString(pinnedVersionInput)
+    : null;
   const versionOptions = {};
+
+  if (pinnedVersionInput && !pinnedVersion) {
+    throw new Error(
+      `[WWEBJS] WA_WEB_VERSION must be a valid version string (got "${pinnedVersionInput}").`
+    );
+  }
 
   if (cacheUrl) {
     const cachePayload = await fetchWebVersionCache(cacheUrl);
     const extractedVersion = extractVersionString(cachePayload);
     if (extractedVersion) {
       versionOptions.webVersionCache = { type: 'remote', remotePath: cacheUrl };
+      if (!pinnedVersion) {
+        versionOptions.webVersion = extractedVersion;
+      }
     } else {
       console.warn(
         `[WWEBJS] Web version cache validation failed for ${cacheUrl}. ` +
@@ -106,6 +117,10 @@ async function resolveWebVersionOptions() {
 
   if (pinnedVersion) {
     versionOptions.webVersion = pinnedVersion;
+  }
+
+  if ('webVersion' in versionOptions && !versionOptions.webVersion) {
+    throw new Error('[WWEBJS] Resolved webVersion is empty; aborting initialization.');
   }
 
   return versionOptions;
