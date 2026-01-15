@@ -40,7 +40,8 @@ diinisialisasi **secara paralel**. Artinya:
 - Log error tetap terpisah per label (`[WA]`, `[WA-USER]`, `[WA-GATEWAY]`) agar mudah
   melacak sesi yang bermasalah.
 - Fallback readiness (`getState()` setelah ~60 detik) tetap dijadwalkan untuk semua
-  client segera setelah inisialisasi dimulai.
+  client segera setelah inisialisasi dimulai, dan akan berhenti otomatis ketika
+  event `ready` atau `change_state` menandai client siap.
 
 ## Lokasi penyimpanan auth
 
@@ -62,16 +63,15 @@ Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READ
 
 Ini membantu mengatasi kondisi “stuck setelah QR” tanpa restart manual.
 
-## Arti state `unknown/null` dan recovery otomatis
+## Fallback readiness (retry `getState()` dan reinit)
 
-Pada fallback readiness, `getState()` dapat mengembalikan `null`/`undefined` ketika session
-belum siap atau ada glitch sementara. Adapter akan menormalisasi nilai tersebut menjadi
-`unknown`. Ketika state `unknown` terdeteksi, sistem akan:
+Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
+ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 
-1. Log warning seperti `[WA] getState returned unknown`.
-2. Melakukan retry `getState()` dengan backoff ringan (mis. 2 detik lalu 4 detik).
-3. Jika masih `unknown` setelah retry, melakukan `connect()` ulang secara terbatas
-   (maksimal beberapa kali per client) agar tidak loop tanpa batas.
+1. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
+2. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
+   ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
+3. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
 
 ## Checklist troubleshooting
 
@@ -85,8 +85,9 @@ belum siap atau ada glitch sementara. Adapter akan menormalisasi nilai tersebut 
 
 3. **Stuck setelah authenticated**
    - Lihat warning fallback: “Authenticated but no ready event”.
-   - Jika ada warning `getState returned unknown`, tunggu retry/backoff selesai.
-     Sistem akan mencoba `connect()` ulang secara otomatis jika state tetap `unknown`.
+   - Jika ada warning `getState=<state>`, tunggu retry selesai.
+     Sistem akan mencoba `connect()` ulang secara otomatis jika state tetap belum
+     `CONNECTED/open`.
    - Pastikan network untuk WhatsApp Web tidak diblokir.
 
 4. **Sering disconnect**
