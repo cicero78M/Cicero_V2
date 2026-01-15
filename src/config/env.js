@@ -26,7 +26,7 @@ export const env = cleanEnv(process.env, {
   GATEWAY_WA_CLIENT_ID: str({ default: 'wa-gateway' }),
   WA_WEB_VERSION: str({ default: '' }),
   WA_WEB_VERSION_CACHE_URL: str({
-    default: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/last.json'
+    default: ''
   }),
   ENABLE_DIRREQUEST_GROUP: bool({ default: true }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),

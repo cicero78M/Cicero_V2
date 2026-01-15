@@ -50,6 +50,11 @@ test('wwebjs adapter relays messages', async () => {
 test('wwebjs adapter configures web version cache and overrides', async () => {
   process.env.WA_WEB_VERSION_CACHE_URL = 'https://example.com/wa.json';
   process.env.WA_WEB_VERSION = '2.3000.0';
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    headers: { get: () => 'application/json' },
+    json: async () => ({ version: '2.3000.0' }),
+  });
 
   await createWwebjsClient('custom-client');
 
