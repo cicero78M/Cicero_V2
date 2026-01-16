@@ -599,6 +599,7 @@ async function sendBulkDeletionSummary({
     delete session.bulkStatusContext;
     session.step = "main";
   }
+  clearSession(chatId);
 }
 
 async function sendBulkRolePrompt(session, chatId, waClient) {
@@ -697,6 +698,7 @@ async function processBulkDeletionRequest({
       delete currentSession.bulkStatusContext;
       currentSession.step = "main";
     }
+    clearSession(chatId);
     return { processed: true, cancelled: true };
   }
 
@@ -4804,6 +4806,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         chatId,
         `Permohonan penghapusan dibatalkan. ${remaining} entri belum diproses.`
       );
+      clearSession(chatId);
       return;
     }
 

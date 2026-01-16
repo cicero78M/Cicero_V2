@@ -22,6 +22,7 @@ This document outlines how Cicero handles per-role removals and user deactivatio
   `User <NAMA/NRP> memiliki lebih dari satu role aktif. NRP/NIP: <NRP> ... Pilih role yang akan dihapus: 1. <role> ... Balas angka sesuai pilihan atau ketik *batal* untuk membatalkan proses.`
 - After a role is chosen, `deactivateRoleOrUser` runs for that role. WhatsApp numbers are cleared only when the resulting user status becomes `false`.
 - The final summary lists the chosen role (if any) and whether the user remains aktif or becomes nonaktif per entry.
+- After sending the bulk deletion summary (or when the operator cancels), the `clientrequest` session is cleared so subsequent messages are treated as fresh input.
 
 ## REST: `DELETE /users/:id`
 
