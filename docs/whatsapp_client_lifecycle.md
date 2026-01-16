@@ -88,6 +88,14 @@ Pastikan path ini writable oleh user yang menjalankan service.
 Ketika logout/unpaired terjadi, folder `session-<clientId>` akan dibersihkan
 agar sesi lama tidak tersisa dan QR baru dapat dipindai ulang.
 
+## Profil browser per client (LocalAuth)
+
+`LocalAuth` mengelola profil Puppeteer di dalam folder session per client
+(`session-<clientId>`). Ini sudah memisahkan state browser antar client.
+Jika ada beberapa proses yang menjalankan client dengan `clientId` sama,
+pastikan `WA_AUTH_DATA_PATH` berbeda per proses agar tidak bentrok di folder
+session yang sama.
+
 ## Fallback init untuk webVersionCache
 
 Jika `client.initialize()` gagal dengan error yang mengandung `LocalWebCache.persist`
@@ -101,6 +109,19 @@ atau `Cannot read properties of null (reading '1')`, adapter akan:
    kegagalan sebagai hard failure.
 
 Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel.
+
+## Recovery saat browser sudah berjalan (lock userDataDir)
+
+Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
+adapter akan:
+
+1. Memanggil `client.destroy()` untuk memastikan proses lama dihentikan.
+2. Menghapus file lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`)
+   di dalam folder `session-<clientId>` bila ada.
+3. Menunggu backoff lebih panjang sebelum mencoba `initialize()` ulang.
+
+Durasi backoff dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
+(default 20000ms). Ini mencegah retry yang terlalu agresif pada folder yang terkunci.
 
 ## Normalisasi opsi sendMessage
 

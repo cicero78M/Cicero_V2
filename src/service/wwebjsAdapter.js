@@ -9,6 +9,7 @@ const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
 const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
+const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -44,6 +45,17 @@ function resolvePuppeteerExecutablePath() {
     ''
   ).trim();
   return configuredPath || null;
+}
+
+function resolveBrowserLockBackoffMs() {
+  const configured = Number.parseInt(
+    process.env.WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS || '',
+    10
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_BROWSER_LOCK_BACKOFF_MS;
+  }
+  return Math.max(configured, 0);
 }
 
 function buildSessionPath(authDataPath, clientId) {
@@ -206,12 +218,25 @@ const WEB_VERSION_FALLBACK_ERRORS = [
   'LocalWebCache.persist',
   "Cannot read properties of null (reading '1')",
 ];
+const BROWSER_ALREADY_RUNNING_ERROR = 'browser is already running for';
 
 function shouldFallbackWebVersion(err) {
   const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
   return WEB_VERSION_FALLBACK_ERRORS.some((needle) =>
     errorDetails.includes(needle)
   );
+}
+
+function isBrowserAlreadyRunningError(err) {
+  const errorDetails = [err?.stack, err?.message]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return errorDetails.includes(BROWSER_ALREADY_RUNNING_ERROR);
+}
+
+function delay(durationMs) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
 /**
@@ -274,6 +299,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     );
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
+  const puppeteerProfilePath = sessionPath;
   let reinitInProgress = false;
   let connectInProgress = null;
   const webVersionOptions = sanitizeWebVersionOptions(
@@ -297,10 +323,64 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     delete client.options.webVersion;
   };
 
+  const cleanupPuppeteerLocks = async () => {
+    if (!puppeteerProfilePath) {
+      return;
+    }
+    const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+    await Promise.all(
+      lockFiles.map(async (lockFile) => {
+        const lockPath = path.join(puppeteerProfilePath, lockFile);
+        try {
+          await rm(lockPath, { force: true });
+        } catch (err) {
+          console.warn(
+            `[WWEBJS] Failed to remove puppeteer lock file for clientId=${clientId}: ${lockPath}`,
+            err?.message || err
+          );
+        }
+      })
+    );
+  };
+
+  const recoverFromBrowserAlreadyRunning = async (triggerLabel, err) => {
+    const backoffMs = resolveBrowserLockBackoffMs();
+    console.warn(
+      `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel}). ` +
+        `Waiting ${backoffMs}ms before retry to avoid hammering userDataDir.`,
+      err?.message || err
+    );
+    try {
+      await client.destroy();
+    } catch (destroyErr) {
+      console.warn(
+        `[WWEBJS] destroy failed during browser lock recovery for clientId=${clientId}:`,
+        destroyErr?.message || destroyErr
+      );
+    }
+    await cleanupPuppeteerLocks();
+    if (backoffMs > 0) {
+      await delay(backoffMs);
+    }
+  };
+
   const initializeClientWithFallback = async (triggerLabel) => {
     try {
       await client.initialize();
     } catch (err) {
+      if (isBrowserAlreadyRunningError(err)) {
+        await recoverFromBrowserAlreadyRunning(triggerLabel, err);
+        try {
+          await client.initialize();
+          return;
+        } catch (retryErr) {
+          console.error(
+            `[WWEBJS] initialize retry failed after browser lock recovery for clientId=${clientId} (${triggerLabel}):`,
+            retryErr?.message || retryErr
+          );
+          throw retryErr;
+        }
+      }
       if (shouldFallbackWebVersion(err)) {
         console.warn(
           `[WWEBJS] initialize failed for clientId=${clientId} (${triggerLabel}). ` +
