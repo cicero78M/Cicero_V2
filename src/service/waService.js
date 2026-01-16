@@ -165,6 +165,49 @@ function formatCurrencyId(value) {
   return `Rp ${numberFormatter.format(numeric)}`;
 }
 
+async function runMenuHandler({
+  handlers,
+  menuName,
+  session,
+  chatId,
+  text,
+  waClient,
+  args = [],
+  clientLabel = "[WA]",
+  invalidStepMessage,
+  failureMessage,
+}) {
+  const step = session?.step || "main";
+  const handler = handlers[step];
+  if (typeof handler !== "function") {
+    clearSession(chatId);
+    await safeSendMessage(
+      waClient,
+      chatId,
+      invalidStepMessage ||
+        `⚠️ Sesi menu ${menuName} tidak dikenali. Ketik *${menuName}* ulang atau *batal*.`
+    );
+    return false;
+  }
+
+  try {
+    await handler(session, chatId, text, waClient, ...args);
+    return true;
+  } catch (err) {
+    console.error(
+      `${clientLabel} ${menuName} handler failed (step=${step}): ${err?.stack || err}`
+    );
+    clearSession(chatId);
+    await safeSendMessage(
+      waClient,
+      chatId,
+      failureMessage ||
+        `❌ Terjadi kesalahan pada menu ${menuName}. Silakan ketik *${menuName}* ulang.`
+    );
+    return true;
+  }
+}
+
 export function buildDashboardPremiumRequestMessage(request) {
   if (!request) return "";
   const commandUsername = request.username || request.dashboard_user_id || "unknown";
@@ -879,6 +922,7 @@ async function handleClientRequestSessionStep({
   chatId,
   text,
   waClient,
+  clientLabel,
   pool,
   userModel,
   clientService,
@@ -897,17 +941,19 @@ async function handleClientRequestSessionStep({
 
   if ((text || "").toLowerCase() === "batal") {
     clearSession(chatId);
-    await waClient.sendMessage(chatId, "✅ Menu Client ditutup.");
+    await safeSendMessage(waClient, chatId, "✅ Menu Client ditutup.");
     return true;
   }
 
-  const handler = clientRequestHandlers[session.step || "main"];
-  if (typeof handler === "function") {
-    await handler(
-      session,
-      chatId,
-      text,
-      waClient,
+  await runMenuHandler({
+    handlers: clientRequestHandlers,
+    menuName: "clientrequest",
+    session,
+    chatId,
+    text,
+    waClient,
+    clientLabel,
+    args: [
       pool,
       userModel,
       clientService,
@@ -918,15 +964,13 @@ async function handleClientRequestSessionStep({
       fetchAndStoreTiktokContent,
       formatClientData,
       handleFetchLikesInstagram,
-      handleFetchKomentarTiktokBatch
-    );
-  } else {
-    clearSession(chatId);
-    await waClient.sendMessage(
-      chatId,
-      "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*."
-    );
-  }
+      handleFetchKomentarTiktokBatch,
+    ],
+    invalidStepMessage:
+      "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*.",
+    failureMessage:
+      "❌ Terjadi kesalahan pada menu client. Ketik *clientrequest* ulang untuk memulai kembali.",
+  });
 
   return true;
 }
@@ -1378,14 +1422,32 @@ export function createHandleMessage(waClient, options = {}) {
       };
       setSession(chatId, nextSession);
       session = getSession(chatId);
-      await clientRequestHandlers.bulkStatus_process(
+      await runMenuHandler({
+        handlers: clientRequestHandlers,
+        menuName: "clientrequest",
         session,
         chatId,
-        trimmedText,
+        text: trimmedText,
         waClient,
-        pool,
-        userModel
-      );
+        clientLabel,
+        args: [
+          pool,
+          userModel,
+          clientService,
+          migrateUsersFromFolder,
+          checkGoogleSheetCsvStatus,
+          importUsersFromGoogleSheet,
+          fetchAndStoreInstaContent,
+          fetchAndStoreTiktokContent,
+          formatClientData,
+          handleFetchLikesInstagram,
+          handleFetchKomentarTiktokBatch,
+        ],
+        invalidStepMessage:
+          "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*.",
+        failureMessage:
+          "❌ Terjadi kesalahan pada menu client. Ketik *clientrequest* ulang untuk memulai kembali.",
+      });
       return;
     }
 
@@ -1465,14 +1527,20 @@ export function createHandleMessage(waClient, options = {}) {
       if (/^1$/.test(text.trim())) {
         delete operatorOptionSessions[chatId];
         setSession(chatId, { menu: "oprrequest", step: "main" });
-        await oprRequestHandlers.main(
-          getSession(chatId),
+        await runMenuHandler({
+          handlers: oprRequestHandlers,
+          menuName: "oprrequest",
+          session: getSession(chatId),
           chatId,
-          `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
-          pool,
-          userModel
-        );
+          clientLabel,
+          args: [pool, userModel],
+          invalidStepMessage:
+            "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
+          failureMessage:
+            "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
+        });
         return;
       }
       if (/^2$/.test(text.trim())) {
@@ -1545,14 +1613,20 @@ export function createHandleMessage(waClient, options = {}) {
           return;
         }
         setSession(chatId, { menu: "oprrequest", step: "main" });
-        await oprRequestHandlers.main(
-          getSession(chatId),
+        await runMenuHandler({
+          handlers: oprRequestHandlers,
+          menuName: "oprrequest",
+          session: getSession(chatId),
           chatId,
-          `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
-          pool,
-          userModel
-        );
+          clientLabel,
+          args: [pool, userModel],
+          invalidStepMessage:
+            "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
+          failureMessage:
+            "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
+        });
         return;
       }
       if (/^3$/.test(text.trim())) {
@@ -1602,14 +1676,20 @@ export function createHandleMessage(waClient, options = {}) {
   // ===== Handler Menu Operator =====
   if (session && session.menu === "oprrequest") {
     // Routing pesan sesuai langkah/session operator (tambah user, update status, dst)
-    await oprRequestHandlers[session.step || "main"](
+    await runMenuHandler({
+      handlers: oprRequestHandlers,
+      menuName: "oprrequest",
       session,
       chatId,
       text,
       waClient,
-      pool,
-      userModel
-    );
+      clientLabel,
+      args: [pool, userModel],
+      invalidStepMessage:
+        "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
+      failureMessage:
+        "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
+    });
     return;
   }
 
@@ -1624,12 +1704,19 @@ export function createHandleMessage(waClient, options = {}) {
   }
 
   if (session && session.menu === "dirrequest") {
-    await dirRequestHandlers[session.step || "main"](
+    await runMenuHandler({
+      handlers: dirRequestHandlers,
+      menuName: "dirrequest",
       session,
       chatId,
       text,
-      waClient
-    );
+      waClient,
+      clientLabel,
+      invalidStepMessage:
+        "⚠️ Sesi menu dirrequest tidak dikenali. Ketik *dirrequest* ulang atau *batal*.",
+      failureMessage:
+        "❌ Terjadi kesalahan pada menu dirrequest. Ketik *dirrequest* ulang untuk memulai kembali.",
+    });
     return;
   }
 
@@ -1657,10 +1744,12 @@ export function createHandleMessage(waClient, options = {}) {
       return;
     }
     setSession(chatId, { menu: "oprrequest", step: "main" });
-    await oprRequestHandlers.main(
-      getSession(chatId),
+    await runMenuHandler({
+      handlers: oprRequestHandlers,
+      menuName: "oprrequest",
+      session: getSession(chatId),
       chatId,
-      `┏━━━ *MENU OPERATOR CICERO* ━━━┓
+      text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
 
 1️⃣ Tambah user baru
@@ -1680,9 +1769,13 @@ export function createHandleMessage(waClient, options = {}) {
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
       waClient,
-      pool,
-      userModel
-    );
+      clientLabel,
+      args: [pool, userModel],
+      invalidStepMessage:
+        "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
+      failureMessage:
+        "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
+    });
     return;
   }
 
@@ -1777,12 +1870,19 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         username: du.username,
         dir_clients: activeDirectorateClients,
       });
-      await dirRequestHandlers.choose_client(
-        getSession(chatId),
+      await runMenuHandler({
+        handlers: dirRequestHandlers,
+        menuName: "dirrequest",
+        session: getSession(chatId),
         chatId,
-        "",
-        waClient
-      );
+        text: "",
+        waClient,
+        clientLabel,
+        invalidStepMessage:
+          "⚠️ Sesi menu dirrequest tidak dikenali. Ketik *dirrequest* ulang atau *batal*.",
+        failureMessage:
+          "❌ Terjadi kesalahan pada menu dirrequest. Ketik *dirrequest* ulang untuk memulai kembali.",
+      });
       return;
     }
   }
@@ -1846,6 +1946,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     chatId,
     text,
     waClient,
+    clientLabel,
     pool,
     userModel,
     clientService,
@@ -1915,23 +2016,32 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   // ===== Handler Menu Client =====
   if (text.toLowerCase() === "clientrequest") {
     setSession(chatId, { menu: "clientrequest", step: "main" });
-    await clientRequestHandlers.main(
-      getSession(chatId),
+    await runMenuHandler({
+      handlers: clientRequestHandlers,
+      menuName: "clientrequest",
+      session: getSession(chatId),
       chatId,
-      "",
+      text: "",
       waClient,
-      pool,
-      userModel,
-      clientService,
-      migrateUsersFromFolder,
-      checkGoogleSheetCsvStatus,
-      importUsersFromGoogleSheet,
-      fetchAndStoreInstaContent,
-      fetchAndStoreTiktokContent,
-      formatClientData,
-      handleFetchLikesInstagram,
-      handleFetchKomentarTiktokBatch
-    );
+      clientLabel,
+      args: [
+        pool,
+        userModel,
+        clientService,
+        migrateUsersFromFolder,
+        checkGoogleSheetCsvStatus,
+        importUsersFromGoogleSheet,
+        fetchAndStoreInstaContent,
+        fetchAndStoreTiktokContent,
+        formatClientData,
+        handleFetchLikesInstagram,
+        handleFetchKomentarTiktokBatch,
+      ],
+      invalidStepMessage:
+        "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*.",
+      failureMessage:
+        "❌ Terjadi kesalahan pada menu client. Ketik *clientrequest* ulang untuk memulai kembali.",
+    });
     return;
   }
 
@@ -3800,15 +3910,20 @@ export async function handleGatewayMessage(msg) {
       };
 
       setSession(chatId, nextSession);
-      await clientRequestHandlers.satbinmasOfficial_promptRole(
-        getSession(chatId),
+      await runMenuHandler({
+        handlers: clientRequestHandlers,
+        menuName: "clientrequest",
+        session: getSession(chatId),
         chatId,
-        "",
-        waGatewayClient,
-        pool,
-        userModel,
-        clientService
-      );
+        text: "",
+        waClient: waGatewayClient,
+        clientLabel: "[WA-GATEWAY]",
+        args: [pool, userModel, clientService],
+        invalidStepMessage:
+          "⚠️ Sesi menu client tidak dikenali. Ketik *clientrequest* ulang atau *batal*.",
+        failureMessage:
+          "❌ Terjadi kesalahan pada menu client. Ketik *clientrequest* ulang untuk memulai kembali.",
+      });
       return;
     }
 
@@ -3834,6 +3949,7 @@ export async function handleGatewayMessage(msg) {
     chatId,
     text,
     waClient: waGatewayClient,
+    clientLabel: "[WA-GATEWAY]",
     pool,
     userModel,
     clientService,

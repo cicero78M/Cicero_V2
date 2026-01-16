@@ -48,6 +48,18 @@ duplikasi pesan ketika beberapa adapter aktif. Deduplikasi memakai kombinasi
 pesan akan langsung diproses tanpa deduplikasi agar pesan tetap diproses
 meskipun adapter tidak mengirim `id` yang lengkap.
 
+## Guard error sesi menu WA
+
+`src/service/waService.js` kini memvalidasi handler menu WhatsApp untuk
+`oprrequest`, `dirrequest`, dan `clientrequest` sebelum mengeksekusi langkah
+yang tersimpan di sesi. Jika step tidak valid atau handler melempar error,
+bot akan:
+
+- Membersihkan sesi agar tidak terjebak di langkah yang rusak.
+- Mengirim pesan peringatan/kegagalan yang aman ke user.
+- Mencatat log error tanpa menghentikan proses sehingga request WA tidak
+  memicu restart server karena crash handler.
+
 ## Inisialisasi paralel
 
 Pada startup, ketiga WhatsApp client (`waClient`, `waUserClient`, `waGatewayClient`)
