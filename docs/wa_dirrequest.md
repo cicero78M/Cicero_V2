@@ -175,6 +175,12 @@ dirrequest tanpa langkah tambahan.
   **Total Likes (akumulatif)**. Baris diurutkan dari total likes tertinggi,
   lalu pangkat (mengikuti urutan PANGKAT_ORDER Kasat Binmas), lalu nama agar
   rekap mudah dipantau oleh pimpinan.
+- Generator Excel menu **4️⃣4️⃣** hanya menyusun tiga kolom inti di atas untuk
+  menjaga payload tetap ringan, lalu menyimpan berkas via jalur async
+  (buffer → `writeFile`) agar tidak memblokir event loop.
+- Jika jumlah personel Kasat Binmas melebihi **500 baris**, proses ekspor
+  langsung dihentikan dan bot mengirim pesan singkat agar operator mempersempit
+  periode/filter sebelum mencoba ulang.
 - Label periode pada baris kedua sheet mengikuti format submenu (contoh: harian
   "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
   bulanan "Bulan Mei 2024").
