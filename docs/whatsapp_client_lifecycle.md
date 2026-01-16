@@ -115,7 +115,8 @@ Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
 adapter akan:
 
-1. Memanggil `client.destroy()` untuk memastikan proses lama dihentikan.
+1. Memanggil `client.destroy()` hanya jika Puppeteer sudah terinisialisasi (`pupBrowser`/`pupPage`).
+   Jika belum, destroy dilewati dan hanya dicatat debug agar recovery tetap bersih.
 2. Menghapus file lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`)
    di dalam folder `session-<clientId>` bila ada.
 3. Menunggu backoff lebih panjang sebelum mencoba `initialize()` ulang.

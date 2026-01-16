@@ -350,13 +350,21 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         `Waiting ${backoffMs}ms before retry to avoid hammering userDataDir.`,
       err?.message || err
     );
-    try {
-      await client.destroy();
-    } catch (destroyErr) {
-      console.warn(
-        `[WWEBJS] destroy failed during browser lock recovery for clientId=${clientId}:`,
-        destroyErr?.message || destroyErr
+    const hasActivePuppeteer = Boolean(client.pupBrowser || client.pupPage);
+    if (!hasActivePuppeteer) {
+      console.debug(
+        `[WWEBJS] Skipping destroy during browser lock recovery for clientId=${clientId} ` +
+          'because Puppeteer is not initialized.'
       );
+    } else {
+      try {
+        await client.destroy();
+      } catch (destroyErr) {
+        console.warn(
+          `[WWEBJS] destroy failed during browser lock recovery for clientId=${clientId}:`,
+          destroyErr?.message || destroyErr
+        );
+      }
     }
     await cleanupPuppeteerLocks();
     if (backoffMs > 0) {
