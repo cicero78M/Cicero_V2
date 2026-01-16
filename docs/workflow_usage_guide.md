@@ -70,6 +70,7 @@ WA_WEB_VERSION_CACHE_URL=
 WA_WEB_VERSION=
 ```
 Jika `WA_WEB_VERSION_CACHE_URL` dan `WA_WEB_VERSION` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Set salah satu dari dua variabel tersebut untuk mengaktifkan kembali mekanisme cache versi.
+Fallback readiness juga akan memicu reinit **clear session** untuk client `WA-GATEWAY` ketika `getState` tetap `unknown` setelah batas retry, dan log PM2 akan memuat frasa "clear session" agar reset mudah dilacak.
 
 ### Langkah Login
 1. Jalankan `npm run dev` atau `npm start`.

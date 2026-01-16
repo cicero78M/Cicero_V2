@@ -4373,6 +4373,30 @@ if (shouldInitWhatsAppClients) {
           return;
         }
         fallbackReinitCounts.set(client, reinitAttempts + 1);
+        const shouldClearFallbackSession =
+          normalizedState === "unknown" && label === "WA-GATEWAY";
+        if (
+          shouldClearFallbackSession &&
+          typeof client?.reinitialize === "function"
+        ) {
+          console.warn(
+            `[${label}] getState=${normalizedState} after retries; ` +
+              `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
+          );
+          client
+            .reinitialize({
+              clearAuthSession: true,
+              trigger: "fallback-unknown",
+              reason: "getState unknown",
+            })
+            .catch((err) => {
+              console.error(
+                `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
+              );
+            });
+          scheduleFallbackReadyCheck(client, delayMs);
+          return;
+        }
         if (typeof client?.connect === "function") {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; reinitializing (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
