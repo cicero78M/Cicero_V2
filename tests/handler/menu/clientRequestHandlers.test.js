@@ -96,6 +96,32 @@ describe('parseComplaintMessage', () => {
       'Sudah melaksanakan like dan comment tiktok belum terdata.',
     ]);
   });
+
+  it('keeps parsing fields even after the issue header appears', () => {
+    const parsed = parseComplaintMessage(
+      [
+        'Pesan komplain',
+        'Kendala',
+        '- Sudah melaksanakan like instagram belum terdata.',
+        'NRP/NIP: 12345678',
+        'Nama: Example User',
+        'Polres: Polres Example',
+        'Username IG: exampleUser',
+        'Username Tiktok: exampleTikTok',
+        '- Sudah melaksanakan comment tiktok belum terdata.',
+      ].join('\n')
+    );
+
+    expect(parsed.nrp).toBe('12345678');
+    expect(parsed.name).toBe('Example User');
+    expect(parsed.polres).toBe('Polres Example');
+    expect(parsed.instagram).toBe('@exampleuser');
+    expect(parsed.tiktok).toBe('@exampletiktok');
+    expect(parsed.issues).toEqual([
+      'Sudah melaksanakan like instagram belum terdata.',
+      'Sudah melaksanakan comment tiktok belum terdata.',
+    ]);
+  });
 });
 
 describe('main menu bulk status option removal', () => {

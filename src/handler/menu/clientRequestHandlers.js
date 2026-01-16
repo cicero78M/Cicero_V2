@@ -1256,6 +1256,39 @@ function parseComplaintMessage(message) {
     return rest.join(":").trim();
   };
 
+  const parseFieldLine = (line) => {
+    if (!line.includes(":") && !line.includes("：")) {
+      return null;
+    }
+    const [rawKey] = line.split(/[:：]/);
+    const key = rawKey.trim().toLowerCase();
+    if (!key) {
+      return null;
+    }
+
+    if (
+      /^nrp\b/.test(key) ||
+      /^nip\b/.test(key) ||
+      /^nrp\s*\/\s*nip\b/.test(key)
+    ) {
+      return { field: "nrp", value: extractField(line) };
+    }
+    if (/^nama\b/.test(key)) {
+      return { field: "name", value: extractField(line) };
+    }
+    if (/^polres\b/.test(key)) {
+      return { field: "polres", value: extractField(line) };
+    }
+    if (/^(username\s+ig|username\s+instagram|instagram)\b/.test(key)) {
+      return { field: "instagram", value: extractField(line) };
+    }
+    if (/^(username\s+tiktok|tiktok)\b/.test(key)) {
+      return { field: "tiktok", value: extractField(line) };
+    }
+
+    return null;
+  };
+
   let inIssues = false;
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -1272,32 +1305,21 @@ function parseComplaintMessage(message) {
       continue;
     }
 
+    const parsedField = parseFieldLine(contentLine);
+    if (parsedField) {
+      if (parsedField.field === "instagram" || parsedField.field === "tiktok") {
+        data[parsedField.field] = normalizeComplaintHandle(parsedField.value);
+      } else {
+        data[parsedField.field] = parsedField.value;
+      }
+      continue;
+    }
+
     if (inIssues) {
       const issueContent = stripListPrefix(line).trim();
       if (issueContent) {
         data.issues.push(issueContent);
       }
-      continue;
-    }
-
-    if (normalized.startsWith("nrp")) {
-      data.nrp = extractField(contentLine);
-      continue;
-    }
-    if (normalized.startsWith("nama")) {
-      data.name = extractField(contentLine);
-      continue;
-    }
-    if (normalized.startsWith("polres")) {
-      data.polres = extractField(contentLine);
-      continue;
-    }
-    if (normalized.startsWith("username ig") || normalized.startsWith("username instagram")) {
-      data.instagram = normalizeComplaintHandle(extractField(contentLine));
-      continue;
-    }
-    if (normalized.startsWith("username tiktok")) {
-      data.tiktok = normalizeComplaintHandle(extractField(contentLine));
       continue;
     }
   }

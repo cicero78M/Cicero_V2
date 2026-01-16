@@ -33,6 +33,8 @@ Kendala
 - Complaint replies are throttled with a fixed 3-second pause between each outbound message (including the reporter follow-up and
   admin summary). The delay can be tuned via `COMPLAINT_RESPONSE_DELAY_MS` but defaults to `3000` ms to keep operator and reporter
   responses in sync.
+- Field labels such as `NRP`, `NRP/NIP`, `Nama`, `Polres`, `Username IG`, `Instagram`, and `Username TikTok` are still parsed even
+  if they appear after the `Kendala` header; these recognized fields are excluded from the issues list.
 
 ## Example with "Rincian Kendala"
 
