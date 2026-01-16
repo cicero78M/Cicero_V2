@@ -651,5 +651,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
   };
 
+  emitter.clientId = clientId;
+  emitter.sessionPath = sessionPath;
+
   return emitter;
 }

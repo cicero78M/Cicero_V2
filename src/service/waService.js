@@ -4276,6 +4276,18 @@ if (shouldInitWhatsAppClients) {
   });
 
   const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
+    const formatFallbackReadyContext = (readinessState) => {
+      const clientId = client?.clientId || "unknown";
+      const sessionPath = client?.sessionPath || "unknown";
+      const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
+      const lastDisconnectReason = readinessState?.lastDisconnectReason || "none";
+      return (
+        `clientId=${clientId} ` +
+        `awaitingQrScan=${awaitingQrScan} ` +
+        `lastDisconnectReason=${lastDisconnectReason} ` +
+        `sessionPath=${sessionPath}`
+      );
+    };
     setTimeout(async () => {
       const state = getClientReadinessState(client);
       if (state.ready) {
@@ -4326,6 +4338,11 @@ if (shouldInitWhatsAppClients) {
             ? "unknown"
             : currentState;
         console.log(`[${label}] getState: ${normalizedState}`);
+        if (normalizedState === "unknown") {
+          console.warn(
+            `[${label}] fallback getState unknown; ${formatFallbackReadyContext(state)}`
+          );
+        }
         if (normalizedState === "CONNECTED" || normalizedState === "open") {
           fallbackStateRetryCounts.set(client, 0);
           fallbackReinitCounts.set(client, 0);
@@ -4339,7 +4356,9 @@ if (shouldInitWhatsAppClients) {
           fallbackStateRetryCounts.set(client, nextRetryCount);
           const retryDelayMs = getFallbackStateRetryDelayMs();
           console.warn(
-            `[${label}] getState=${normalizedState}; retrying (${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms`
+            `[${label}] getState=${normalizedState}; retrying ` +
+              `(${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms; ` +
+              formatFallbackReadyContext(state)
           );
           scheduleFallbackReadyCheck(client, retryDelayMs);
           return;
