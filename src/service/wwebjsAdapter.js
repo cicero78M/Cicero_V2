@@ -275,6 +275,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   }
   const sessionPath = buildSessionPath(authDataPath, clientId);
   let reinitInProgress = false;
+  let connectInProgress = null;
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
@@ -326,12 +327,35 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
   };
 
+  const startConnect = (triggerLabel) => {
+    if (connectInProgress) {
+      return connectInProgress;
+    }
+    connectInProgress = initializeClientWithFallback(triggerLabel).finally(() => {
+      connectInProgress = null;
+    });
+    return connectInProgress;
+  };
+
   const reinitializeClient = async (trigger, reason, options = {}) => {
     if (reinitInProgress) {
       console.warn(
         `[WWEBJS] Reinit already in progress for clientId=${clientId}, skipping ${trigger}.`
       );
       return;
+    }
+    if (connectInProgress) {
+      console.warn(
+        `[WWEBJS] Reinit waiting for in-flight connect for clientId=${clientId} (${trigger}).`
+      );
+      try {
+        await connectInProgress;
+      } catch (err) {
+        console.warn(
+          `[WWEBJS] In-flight connect failed before reinit for clientId=${clientId}:`,
+          err?.message || err
+        );
+      }
     }
     reinitInProgress = true;
     console.warn(
@@ -365,7 +389,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     try {
-      await initializeClientWithFallback(`reinitialize:${trigger}`);
+      await startConnect(`reinitialize:${trigger}`);
     } finally {
       reinitInProgress = false;
     }
@@ -450,9 +474,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     });
   });
 
-  emitter.connect = async () => {
-    await initializeClientWithFallback('connect');
-  };
+  emitter.connect = async () => startConnect('connect');
 
   emitter.disconnect = async () => {
     await client.destroy();
@@ -509,6 +531,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.onMessage = (handler) => emitter.on('message', handler);
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
   emitter.isReady = async () => client.info !== undefined;
+  emitter.getConnectPromise = () => connectInProgress;
   emitter.getState = async () => {
     try {
       const state = await client.getState();

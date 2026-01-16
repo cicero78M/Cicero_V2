@@ -631,8 +631,29 @@ function scheduleHardInitRetry(client, label, err) {
   console.warn(
     `[${label}] Hard init failure; scheduling reinit attempt ${nextAttempt}/${maxHardInitRetries} in ${delayMs}ms`
   );
-  setTimeout(() => {
-    client.connect()
+  setTimeout(async () => {
+    const connectPromise =
+      typeof client?.getConnectPromise === "function"
+        ? client.getConnectPromise()
+        : null;
+    if (connectPromise) {
+      console.warn(
+        `[${label}] Hard init retry ${nextAttempt} waiting for in-flight connect.`
+      );
+      try {
+        await connectPromise;
+        resetHardInitRetryCount(client);
+        return;
+      } catch (retryErr) {
+        console.error(
+          `[${label}] In-flight connect failed before hard init retry ${nextAttempt}: ${retryErr?.message}`
+        );
+        scheduleHardInitRetry(client, label, retryErr);
+        return;
+      }
+    }
+    client
+      .connect()
       .then(() => {
         resetHardInitRetryCount(client);
       })
@@ -691,7 +712,23 @@ function handleClientDisconnect(client, label, reason) {
     );
     return;
   }
-  setTimeout(() => {
+  setTimeout(async () => {
+    const connectPromise =
+      typeof client?.getConnectPromise === "function"
+        ? client.getConnectPromise()
+        : null;
+    if (connectPromise) {
+      console.warn(`[${label}] Reconnect skipped; connect already in progress.`);
+      try {
+        await connectPromise;
+      } catch (err) {
+        console.error(
+          `[${label}] In-flight connect failed after disconnect:`,
+          err?.message || err
+        );
+      }
+      return;
+    }
     client.connect().catch((err) => {
       console.error(`[${label}] Reconnect failed:`, err.message);
     });
