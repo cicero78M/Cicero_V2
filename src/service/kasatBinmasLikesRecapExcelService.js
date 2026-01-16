@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink } from "fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path, { basename } from "path";
 import XLSX from "xlsx";
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
@@ -15,6 +15,7 @@ const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
 const EXPORT_DIR = path.resolve("export_data/dirrequest");
 const EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const MAX_KASAT_USERS = 500;
 
 function sanitizeLabel(label) {
   return String(label || "").replace(/\s+/g, "_").replace(/[^\w\-]+/g, "-");
@@ -86,6 +87,14 @@ export async function generateKasatBinmasLikesRecapExcel({
       message: `Belum ada data Kasat Binmas untuk periode ${periodInfo.label}.`,
     };
   }
+  if (kasatUsers.length > MAX_KASAT_USERS) {
+    return {
+      filePath: null,
+      periodLabel: periodInfo.label,
+      totalKonten: 0,
+      message: `Data Kasat Binmas terlalu besar untuk dikirim (maksimal ${MAX_KASAT_USERS} baris). Silakan persempit periode atau filter data.`,
+    };
+  }
 
   const { rows, totalKonten } = await getRekapLikesByClient(
     DITBINMAS_CLIENT_ID,
@@ -128,7 +137,8 @@ export async function generateKasatBinmasLikesRecapExcel({
 
   await mkdir(EXPORT_DIR, { recursive: true });
   const filePath = path.join(EXPORT_DIR, buildFilename(periodInfo.label));
-  XLSX.writeFile(wb, filePath);
+  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
+  await writeFile(filePath, buffer);
 
   return { filePath, periodLabel: periodInfo.label, totalKonten: Number(totalKonten) || 0 };
 }
