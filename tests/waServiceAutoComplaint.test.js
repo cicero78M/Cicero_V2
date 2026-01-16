@@ -128,6 +128,27 @@ describe('waAutoComplaintService', () => {
     expect(getSession(chatId)).toMatchObject({ menu: 'clientrequest' });
   });
 
+  test('accepts complaints with a preamble before the header', () => {
+    const complaintMessage = [
+      'Mohon dibantu untuk laporan berikut.',
+      'Pesan Komplain',
+      'NRP    : 12345',
+      '',
+      'Kendala',
+      '- Data belum masuk.',
+    ].join('\n');
+
+    const result = shouldHandleComplaintMessage({
+      text: complaintMessage,
+      allowUserMenu: false,
+      session: null,
+      isAdmin: true,
+      initialIsMyContact: true,
+    });
+
+    expect(result).toBe(true);
+  });
+
   test('should not handle when header or verification is missing', async () => {
     const result = shouldHandleComplaintMessage({
       text: 'Pesan Biasa',
