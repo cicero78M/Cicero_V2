@@ -79,10 +79,12 @@ export async function generateKasatBinmasLikesRecapExcel({
   const kasatUsers = (users || []).filter((user) => matchesKasatBinmasJabatan(user?.jabatan));
 
   if (!kasatUsers.length) {
-    const totalUsers = users?.length || 0;
-    throw new Error(
-      `Dari ${totalUsers} user aktif ${DITBINMAS_CLIENT_ID} (${TARGET_ROLE}), tidak ditemukan data Kasat Binmas.`
-    );
+    return {
+      filePath: null,
+      periodLabel: periodInfo.label,
+      totalKonten: 0,
+      message: `Belum ada data Kasat Binmas untuk periode ${periodInfo.label}.`,
+    };
   }
 
   const { rows, totalKonten } = await getRekapLikesByClient(
@@ -93,6 +95,15 @@ export async function generateKasatBinmasLikesRecapExcel({
     periodInfo.endDate,
     TARGET_ROLE
   );
+
+  if (!Number(totalKonten)) {
+    return {
+      filePath: null,
+      periodLabel: periodInfo.label,
+      totalKonten: 0,
+      message: `Belum ada konten Instagram Kasat Binmas untuk periode ${periodInfo.label}.`,
+    };
+  }
 
   const likeMap = new Map();
   (rows || []).forEach((row) => {
@@ -132,10 +143,21 @@ export async function sendKasatBinmasLikesRecapExcel({
   let periodLabel;
 
   try {
-    const { filePath: generatedPath, periodLabel: generatedLabel } =
-      await generateKasatBinmasLikesRecapExcel({ period, referenceDate });
+    const {
+      filePath: generatedPath,
+      periodLabel: generatedLabel,
+      message,
+    } = await generateKasatBinmasLikesRecapExcel({ period, referenceDate });
     filePath = generatedPath;
     periodLabel = generatedLabel;
+    if (!filePath) {
+      await safeSendMessage(
+        waClient,
+        chatId,
+        message || "Belum ada konten Instagram Kasat Binmas untuk periode yang dipilih."
+      );
+      return { success: true, empty: true, periodLabel };
+    }
     const buffer = await readFile(filePath);
     await sendWAFile(
       waClient,
