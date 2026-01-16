@@ -163,6 +163,9 @@ dirrequest tanpa langkah tambahan.
 - Setelah memilih **4️⃣4️⃣**, bot meminta periode rekap: **1. Harian**, **2.
   Mingguan** (Senin–Minggu berjalan), atau **3. Bulanan**. Balas angka 1–3
   atau ketik *batal* untuk kembali ke menu utama Monitoring Kasatker.
+- Semua respons dalam alur **4️⃣4️⃣** (prompt periode, input invalid, batal,
+  maupun pesan error) dikirim memakai `safeSendMessage` agar tidak memicu reset
+  sesi WhatsApp.
 - File Excel yang dikirim berisi kolom **Polres**, **Pangkat dan Nama**, dan
   **Total Likes (akumulatif)**. Baris diurutkan dari total likes tertinggi,
   lalu pangkat (mengikuti urutan PANGKAT_ORDER Kasat Binmas), lalu nama agar
@@ -174,9 +177,10 @@ dirrequest tanpa langkah tambahan.
   dengan MIME Excel, lalu dihapus otomatis setelah proses selesai agar direktori
   kerja tetap bersih.
 - Jika pengiriman gagal, bot mencatat log bertanda **submenu 4️⃣4️⃣** dan
-  mengirim pesan error lewat helper `safeSendMessage`. Sesi tetap berada di
-  submenu yang sama agar operator bisa mencoba ulang tanpa mengulang menu
-  utama.
+  mengirim pesan error lewat helper `safeSendMessage`. Bot **tidak** keluar
+  dari submenu 4️⃣4️⃣ dan tetap menampilkan prompt periode agar operator bisa
+  mencoba ulang; perilaku terbaru ini memastikan menu 4️⃣4️⃣ tidak lagi
+  memicu "restart" sesi saat gagal kirim file.
 - Untuk menjaga stabilitas pengiriman file di menu **4️⃣4️⃣**, pastikan
   konfigurasi environment menetapkan `WA_WEB_VERSION_CACHE_URL` atau
   `WA_WEB_VERSION` yang valid. Rekomendasi: gunakan cache URL
