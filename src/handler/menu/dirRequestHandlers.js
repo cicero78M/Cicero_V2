@@ -3175,12 +3175,13 @@ export const dirRequestHandlers = {
   async choose_kasat_binmas_likes_excel_period(session, chatId, text, waClient) {
     const input = (text || "").trim();
     if (!input) {
-      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      await safeSendMessage(waClient, chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
       return;
     }
 
     if (input.toLowerCase() === "batal") {
-      await waClient.sendMessage(
+      await safeSendMessage(
+        waClient,
         chatId,
         "✅ Menu Rekap Likes Instagram Kasat Binmas (Excel) ditutup."
       );
@@ -3191,40 +3192,43 @@ export const dirRequestHandlers = {
 
     const option = KASAT_BINMAS_LIKES_PERIOD_MAP[input];
     if (!option) {
-      await waClient.sendMessage(
+      await safeSendMessage(
+        waClient,
         chatId,
         "Pilihan tidak valid. Balas angka 1 sampai 3 atau ketik *batal*."
       );
-      await waClient.sendMessage(chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      await safeSendMessage(waClient, chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
       return;
     }
 
     try {
-      await sendKasatBinmasLikesRecapExcel({
+      const result = await sendKasatBinmasLikesRecapExcel({
         period: option.period,
         chatId,
         waClient,
       });
+      if (!result?.success) {
+        console.error(
+          "[submenu 44] Rekap Likes Kasat Binmas (Excel) gagal dikirim.",
+          result?.error
+        );
+        session.step = "choose_kasat_binmas_likes_excel_period";
+        await safeSendMessage(waClient, chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+        return;
+      }
     } catch (error) {
       console.error(
-        "Gagal membuat rekap Likes Kasat Binmas (Excel):",
+        "[submenu 44] Unexpected error rekap Likes Kasat Binmas (Excel):",
         error
       );
-      const msg =
-        error?.message &&
-        (error.message.includes("direktorat") ||
-          error.message.includes("Client tidak ditemukan") ||
-          error.message.includes("Tidak ada data"))
-          ? error.message
-          : `❌ Gagal mengirim rekap Likes Kasat Binmas (Excel) (${option.description}).`;
-      try {
-        await safeSendMessage(waClient, chatId, msg);
-      } catch (sendError) {
-        console.error(
-          "Gagal mengirim pesan error rekap Likes Kasat Binmas (Excel):",
-          sendError
-        );
-      }
+      session.step = "choose_kasat_binmas_likes_excel_period";
+      await safeSendMessage(
+        waClient,
+        chatId,
+        "❌ Terjadi gangguan saat menyiapkan rekap Likes Kasat Binmas. Silakan coba lagi."
+      );
+      await safeSendMessage(waClient, chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
+      return;
     }
 
     session.step = "main";

@@ -171,11 +171,12 @@ dirrequest tanpa langkah tambahan.
   "Rabu, 22 Mei 2024", mingguan "Senin, 20 Mei 2024 s.d. Minggu, 26 Mei 2024",
   bulanan "Bulan Mei 2024").
 - Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
-  dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
-  direktori kerja tetap bersih.
-- Jika pengiriman gagal, bot tetap mengirim pesan error lewat helper
-  `safeSendMessage` untuk mencegah *unhandled rejection* ketika WA client belum
-  siap.
+  dengan MIME Excel, lalu dihapus otomatis setelah proses selesai agar direktori
+  kerja tetap bersih.
+- Jika pengiriman gagal, bot mencatat log bertanda **submenu 4️⃣4️⃣** dan
+  mengirim pesan error lewat helper `safeSendMessage`. Sesi tetap berada di
+  submenu yang sama agar operator bisa mencoba ulang tanpa mengulang menu
+  utama.
 - Untuk menjaga stabilitas pengiriman file di menu **4️⃣4️⃣**, pastikan
   konfigurasi environment menetapkan `WA_WEB_VERSION_CACHE_URL` atau
   `WA_WEB_VERSION` yang valid. Rekomendasi: gunakan cache URL

@@ -4,7 +4,7 @@ import XLSX from "xlsx";
 import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
-import { sendWAFile } from "../utils/waHelper.js";
+import { sendWAFile, safeSendMessage } from "../utils/waHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
 import {
   describeKasatBinmasLikesPeriod,
@@ -125,11 +125,13 @@ export async function sendKasatBinmasLikesRecapExcel({
   waClient,
 } = {}) {
   let filePath;
-  const { filePath: generatedPath, periodLabel } =
-    await generateKasatBinmasLikesRecapExcel({ period });
-  filePath = generatedPath;
+  let periodLabel;
 
   try {
+    const { filePath: generatedPath, periodLabel: generatedLabel } =
+      await generateKasatBinmasLikesRecapExcel({ period });
+    filePath = generatedPath;
+    periodLabel = generatedLabel;
     const buffer = await readFile(filePath);
     await sendWAFile(
       waClient,
@@ -138,11 +140,33 @@ export async function sendKasatBinmasLikesRecapExcel({
       chatId,
       EXCEL_MIME
     );
-    await waClient.sendMessage(
+    await safeSendMessage(
+      waClient,
       chatId,
       `✅ File rekap likes Kasat Binmas (${periodLabel}) dikirim.`
     );
-    return { periodLabel };
+    return { success: true, periodLabel };
+  } catch (error) {
+    console.error(
+      "[submenu 44] Gagal mengirim rekap Likes Kasat Binmas (Excel):",
+      error
+    );
+    const msg =
+      error?.message &&
+      (error.message.includes("direktorat") ||
+        error.message.includes("Client tidak ditemukan") ||
+        error.message.includes("Tidak ada data"))
+        ? error.message
+        : "❌ Gagal mengirim rekap Likes Kasat Binmas (Excel). Silakan coba lagi.";
+    try {
+      await safeSendMessage(waClient, chatId, msg);
+    } catch (sendError) {
+      console.error(
+        "[submenu 44] Gagal mengirim pesan error rekap Likes Kasat Binmas (Excel):",
+        sendError
+      );
+    }
+    return { success: false, error };
   } finally {
     if (filePath) {
       try {
