@@ -41,13 +41,17 @@ function hasComplaintHeader(text) {
     .map((line) => line.trim())
     .filter(Boolean);
   if (!lines.length) return false;
-  const [firstLine] = lines;
-  if (!/^pesan\s+komplain/i.test(firstLine)) {
+  const headerIndex = lines.findIndex((line) =>
+    /^pesan\s+komplain/i.test(line)
+  );
+  if (headerIndex < 0) {
     return false;
   }
-  const hasKendalaSection = lines.some((line) =>
-    /^kendala\b/.test(line.toLowerCase().replace(/[:：]/g, ''))
-  );
+  const hasKendalaSection = lines
+    .slice(headerIndex + 1)
+    .some((line) =>
+      /^kendala\b/.test(line.toLowerCase().replace(/[:：]/g, ''))
+    );
   if (!hasKendalaSection) {
     return false;
   }
