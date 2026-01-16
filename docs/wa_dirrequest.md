@@ -176,6 +176,13 @@ dirrequest tanpa langkah tambahan.
 - Jika pengiriman gagal, bot tetap mengirim pesan error lewat helper
   `safeSendMessage` untuk mencegah *unhandled rejection* ketika WA client belum
   siap.
+- Untuk menjaga stabilitas pengiriman file di menu **4️⃣4️⃣**, pastikan
+  konfigurasi environment menetapkan `WA_WEB_VERSION_CACHE_URL` atau
+  `WA_WEB_VERSION` yang valid. Rekomendasi: gunakan cache URL
+  `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json`
+  agar WhatsApp Web version cache tetap sinkron. Jika kedua nilai kosong, cache
+  akan dimatikan dan WA client lebih rentan re-init saat beban pengiriman file
+  meningkat.
 
 ## Monitoring Kasatker – Rekap Komentar TikTok Kasat Binmas (Excel)
 - Grup Monitoring Kasatker menambahkan menu **4️⃣5️⃣ Rekap komentar TikTok Kasat
