@@ -445,11 +445,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         );
       }
     }
+    const shouldClearSession =
+      options?.clearAuthSessionOverride ?? clearAuthSession;
+    const clearSessionLabel = shouldClearSession ? ' (clear session)' : '';
     reinitInProgress = true;
     console.warn(
       `[WWEBJS] Reinitializing clientId=${clientId} after ${trigger}${
         reason ? ` (${reason})` : ''
-      }.`
+      }${clearSessionLabel}.`
     );
     try {
       await client.destroy();
@@ -460,8 +463,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       );
     }
 
-    const shouldClearSession =
-      options?.clearAuthSessionOverride ?? clearAuthSession;
     if (shouldClearSession) {
       try {
         await rm(sessionPath, { recursive: true, force: true });
@@ -563,6 +564,17 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   });
 
   emitter.connect = async () => startConnect('connect');
+  emitter.reinitialize = async (options = {}) => {
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const hasClearAuthSession =
+      typeof safeOptions.clearAuthSession === 'boolean';
+    const clearAuthSessionOverride = hasClearAuthSession
+      ? safeOptions.clearAuthSession
+      : undefined;
+    const reason = safeOptions.reason || null;
+    const trigger = safeOptions.trigger || 'manual';
+    return reinitializeClient(trigger, reason, { clearAuthSessionOverride });
+  };
 
   emitter.disconnect = async () => {
     await client.destroy();
