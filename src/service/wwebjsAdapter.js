@@ -30,6 +30,15 @@ function shouldClearAuthSession() {
   return process.env.WA_AUTH_CLEAR_SESSION_ON_REINIT === 'true';
 }
 
+function resolvePuppeteerExecutablePath() {
+  const configuredPath = (
+    process.env.WA_PUPPETEER_EXECUTABLE_PATH ||
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    ''
+  ).trim();
+  return configuredPath || null;
+}
+
 function buildSessionPath(authDataPath, clientId) {
   return path.join(authDataPath, `session-${clientId}`);
 }
@@ -262,9 +271,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
+  const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
-    puppeteer: { args: ['--no-sandbox'], headless: true },
+    puppeteer: {
+      args: ['--no-sandbox'],
+      headless: true,
+      ...(puppeteerExecutablePath
+        ? { executablePath: puppeteerExecutablePath }
+        : {}),
+    },
     ...webVersionOptions,
   });
 

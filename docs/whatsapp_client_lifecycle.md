@@ -136,7 +136,8 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
 3. **`Could not find Chrome` / `Could not find browser`**
    - whatsapp-web.js memakai Puppeteer untuk menjalankan Chrome.
    - Install Chrome lewat `npx puppeteer browsers install chrome` (menggunakan cache Puppeteer) atau via package OS (Chrome/Chromium).
-   - Jika Chrome sudah terpasang atau path cache diubah, set `PUPPETEER_EXECUTABLE_PATH` dan/atau `PUPPETEER_CACHE_DIR`.
+   - Jika Chrome sudah terpasang atau path cache diubah, set `WA_PUPPETEER_EXECUTABLE_PATH`
+     (prioritas) atau `PUPPETEER_EXECUTABLE_PATH`, dan/atau `PUPPETEER_CACHE_DIR`.
    - Contoh log yang sering muncul: `Error: Could not find Chrome (ver. 121.0.6167.85)` atau `Error: Could not find browser executable`.
 
 4. **Stuck setelah authenticated**
