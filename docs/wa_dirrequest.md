@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2025-12-12*
+*Last updated: 2026-01-16*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -173,6 +173,9 @@ dirrequest tanpa langkah tambahan.
 - Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
   dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
   direktori kerja tetap bersih.
+- Jika pengiriman gagal, bot tetap mengirim pesan error lewat helper
+  `safeSendMessage` untuk mencegah *unhandled rejection* ketika WA client belum
+  siap.
 
 ## Monitoring Kasatker – Rekap Komentar TikTok Kasat Binmas (Excel)
 - Grup Monitoring Kasatker menambahkan menu **4️⃣5️⃣ Rekap komentar TikTok Kasat
@@ -191,6 +194,9 @@ dirrequest tanpa langkah tambahan.
 - Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
   dengan MIME Excel, lalu dihapus otomatis setelah pengiriman berhasil agar
   direktori tetap bersih.
+- Jika pengiriman gagal, bot tetap mengirim pesan error lewat helper
+  `safeSendMessage` untuk mencegah *unhandled rejection* ketika WA client belum
+  siap.
 
 ## Monitoring Satbinmas Official
 Grup menu terbaru di bagian bawah menambahkan alur khusus untuk memantau akun
