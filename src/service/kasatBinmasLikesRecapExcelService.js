@@ -70,8 +70,11 @@ function buildWorksheetRows(entries, periodLabel) {
   return ws;
 }
 
-export async function generateKasatBinmasLikesRecapExcel({ period = "daily" } = {}) {
-  const periodInfo = describeKasatBinmasLikesPeriod(period);
+export async function generateKasatBinmasLikesRecapExcel({
+  period = "daily",
+  referenceDate,
+} = {}) {
+  const periodInfo = describeKasatBinmasLikesPeriod(period, referenceDate);
   const users = await getUsersByClient(DITBINMAS_CLIENT_ID, TARGET_ROLE);
   const kasatUsers = (users || []).filter((user) => matchesKasatBinmasJabatan(user?.jabatan));
 
@@ -121,6 +124,7 @@ export async function generateKasatBinmasLikesRecapExcel({ period = "daily" } = 
 
 export async function sendKasatBinmasLikesRecapExcel({
   period = "daily",
+  referenceDate,
   chatId,
   waClient,
 } = {}) {
@@ -129,7 +133,7 @@ export async function sendKasatBinmasLikesRecapExcel({
 
   try {
     const { filePath: generatedPath, periodLabel: generatedLabel } =
-      await generateKasatBinmasLikesRecapExcel({ period });
+      await generateKasatBinmasLikesRecapExcel({ period, referenceDate });
     filePath = generatedPath;
     periodLabel = generatedLabel;
     const buffer = await readFile(filePath);

@@ -2217,6 +2217,29 @@ async function performAction(
         }
         break;
       }
+      case "44": {
+        try {
+          const period = context?.period || "daily";
+          const referenceDate = context?.referenceDate;
+          const normalizedReferenceDate =
+            referenceDate !== undefined && referenceDate !== null
+              ? resolveBaseDate(referenceDate)
+              : undefined;
+          await sendKasatBinmasLikesRecapExcel({
+            period,
+            referenceDate: normalizedReferenceDate,
+            chatId,
+            waClient,
+          });
+        } catch (error) {
+          console.error(
+            "[submenu 44] Gagal mengirim rekap Likes Kasat Binmas (Excel) via performAction:",
+            error
+          );
+          msg = "❌ Gagal mengirim rekap Likes Kasat Binmas (Excel).";
+        }
+        break;
+      }
       case "42": {
         try {
           const client = await findClientById(clientId);
@@ -3201,9 +3224,17 @@ export const dirRequestHandlers = {
       return;
     }
 
+    const referenceDate =
+      session?.dirRequestReferenceDate || session?.executionDate || session?.referenceDate;
+    const normalizedReferenceDate =
+      referenceDate !== undefined && referenceDate !== null
+        ? resolveBaseDate(referenceDate)
+        : undefined;
+
     try {
       const result = await sendKasatBinmasLikesRecapExcel({
         period: option.period,
+        referenceDate: normalizedReferenceDate,
         chatId,
         waClient,
       });
@@ -3229,6 +3260,10 @@ export const dirRequestHandlers = {
       );
       await safeSendMessage(waClient, chatId, KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT);
       return;
+    } finally {
+      session.dirRequestReferenceDate = undefined;
+      session.executionDate = undefined;
+      session.referenceDate = undefined;
     }
 
     session.step = "main";
