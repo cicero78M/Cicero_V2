@@ -461,6 +461,43 @@ export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
 export let waGatewayClient = await createWwebjsClient(env.GATEWAY_WA_CLIENT_ID);
 
+const defaultUserClientId = "wa-userrequest";
+const defaultGatewayClientId = "wa-gateway";
+const normalizedUserClientId = String(env.USER_WA_CLIENT_ID || "").trim();
+const normalizedGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "").trim();
+const logClientIdIssue = (envVar, issueMessage) => {
+  console.error(`[WA] ${envVar} ${issueMessage}; clientId harus unik.`);
+};
+
+if (!normalizedUserClientId) {
+  logClientIdIssue("USER_WA_CLIENT_ID", "kosong");
+}
+if (!normalizedGatewayClientId) {
+  logClientIdIssue("GATEWAY_WA_CLIENT_ID", "kosong");
+}
+if (normalizedUserClientId === defaultUserClientId) {
+  logClientIdIssue(
+    "USER_WA_CLIENT_ID",
+    `masih default (${defaultUserClientId})`
+  );
+}
+if (normalizedGatewayClientId === defaultGatewayClientId) {
+  logClientIdIssue(
+    "GATEWAY_WA_CLIENT_ID",
+    `masih default (${defaultGatewayClientId})`
+  );
+}
+if (
+  normalizedUserClientId &&
+  normalizedGatewayClientId &&
+  normalizedUserClientId === normalizedGatewayClientId
+) {
+  console.error(
+    `[WA] USER_WA_CLIENT_ID dan GATEWAY_WA_CLIENT_ID sama (${normalizedUserClientId}); ` +
+      "clientId harus unik."
+  );
+}
+
 const clientReadiness = new Map();
 const adminNotificationQueue = [];
 const authenticatedReadyFallbackTimers = new Map();
