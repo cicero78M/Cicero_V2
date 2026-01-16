@@ -243,6 +243,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    Use `DB_DRIVER=postgres`, `postgresql`, or `pg` when connecting to Postgres so the backend applies the session settings (`app.current_*`) required by database row-level security. Switching `DB_DRIVER` to another value disables these Postgres-only settings.
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
+   `USER_WA_CLIENT_ID` dan `GATEWAY_WA_CLIENT_ID` wajib unik (berbeda dari default maupun satu sama lain). Contoh benar: `USER_WA_CLIENT_ID=wa-userrequest-prod` dan `GATEWAY_WA_CLIENT_ID=wa-gateway-prod`.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
    `APP_SESSION_NAME` is the session folder name used for the main WhatsApp client; override it when running multiple instances on the same host.
    `WA_AUTH_DATA_PATH` overrides the LocalAuth session directory (default: `~/.cicero/wwebjs_auth`). Ensure the directory is owned by or writable to the runtime user; if the configured path is not writable, the adapter logs an error, falls back to the recommended path, and proceeds only when the fallback directory can be created and written.
