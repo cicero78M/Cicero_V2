@@ -4,6 +4,9 @@
 import qrcode from "qrcode-terminal";
 import PQueue from "p-queue";
 import dotenv from "dotenv";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { query } from "../db/index.js";
 import { env } from "../config/env.js";
 const pool = { query };
@@ -456,15 +459,81 @@ function formatVerificationSummary(
 // INISIALISASI CLIENT WA
 // =======================
 
+const DEFAULT_AUTH_DATA_PARENT_DIR = ".cicero";
+const DEFAULT_AUTH_DATA_DIR = "wwebjs_auth";
+const rawUserClientId = String(env.USER_WA_CLIENT_ID || "");
+const rawGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "");
+const normalizedUserClientId = rawUserClientId.trim();
+const normalizedGatewayClientId = rawGatewayClientId.trim().toLowerCase();
+const resolvedGatewayClientId = normalizedGatewayClientId || undefined;
+const resolveAuthDataPath = () => {
+  const configuredPath = String(process.env.WA_AUTH_DATA_PATH || "").trim();
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+  const homeDir = os.homedir?.();
+  const baseDir = homeDir || process.cwd();
+  return path.resolve(
+    path.join(baseDir, DEFAULT_AUTH_DATA_PARENT_DIR, DEFAULT_AUTH_DATA_DIR)
+  );
+};
+const findGatewaySessionCaseMismatch = (authDataPath, clientId) => {
+  if (!authDataPath || !clientId) {
+    return null;
+  }
+  try {
+    const entries = fs.readdirSync(authDataPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      if (!entry.name.startsWith("session-")) {
+        continue;
+      }
+      const existingClientId = entry.name.slice("session-".length);
+      if (
+        existingClientId &&
+        existingClientId.toLowerCase() === clientId &&
+        existingClientId !== clientId
+      ) {
+        return path.join(authDataPath, entry.name);
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `[WA] Gagal memeriksa folder session di ${authDataPath}:`,
+      err?.message || err
+    );
+  }
+  return null;
+};
+
+const trimmedGatewayClientId = rawGatewayClientId.trim();
+if (
+  trimmedGatewayClientId &&
+  normalizedGatewayClientId &&
+  trimmedGatewayClientId !== normalizedGatewayClientId
+) {
+  const sessionPath = findGatewaySessionCaseMismatch(
+    resolveAuthDataPath(),
+    normalizedGatewayClientId
+  );
+  if (sessionPath) {
+    console.warn(
+      `[WA] GATEWAY_WA_CLIENT_ID menggunakan casing "${trimmedGatewayClientId}" ` +
+        `tetapi ada session dengan casing berbeda di ${sessionPath}. ` +
+        `Gunakan nilai yang konsisten agar tidak membuat session baru.`
+    );
+  }
+}
+
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
-export let waGatewayClient = await createWwebjsClient(env.GATEWAY_WA_CLIENT_ID);
+export let waGatewayClient = await createWwebjsClient(resolvedGatewayClientId);
 
 const defaultUserClientId = "wa-userrequest";
 const defaultGatewayClientId = "wa-gateway";
-const normalizedUserClientId = String(env.USER_WA_CLIENT_ID || "").trim();
-const normalizedGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "").trim();
 const logClientIdIssue = (envVar, issueMessage) => {
   console.error(`[WA] ${envVar} ${issueMessage}; clientId harus unik.`);
 };
