@@ -30,6 +30,13 @@ function shouldClearAuthSession() {
   return process.env.WA_AUTH_CLEAR_SESSION_ON_REINIT === 'true';
 }
 
+const LOGOUT_DISCONNECT_REASONS = new Set([
+  'LOGGED_OUT',
+  'UNPAIRED',
+  'CONFLICT',
+  'UNPAIRED_IDLE',
+]);
+
 function resolvePuppeteerExecutablePath() {
   const configuredPath = (
     process.env.WA_PUPPETEER_EXECUTABLE_PATH ||
@@ -319,7 +326,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
   };
 
-  const reinitializeClient = async (trigger, reason) => {
+  const reinitializeClient = async (trigger, reason, options = {}) => {
     if (reinitInProgress) {
       console.warn(
         `[WWEBJS] Reinit already in progress for clientId=${clientId}, skipping ${trigger}.`
@@ -341,7 +348,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       );
     }
 
-    if (clearAuthSession) {
+    const shouldClearSession =
+      options?.clearAuthSessionOverride ?? clearAuthSession;
+    if (shouldClearSession) {
       try {
         await rm(sessionPath, { recursive: true, force: true });
         console.warn(
@@ -412,8 +421,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   client.on('disconnected', async (reason) => {
     const normalizedReason = String(reason || '').toUpperCase();
-    if (normalizedReason === 'LOGGED_OUT') {
-      await reinitializeClient('disconnected', reason);
+    if (LOGOUT_DISCONNECT_REASONS.has(normalizedReason)) {
+      await reinitializeClient('disconnected', reason, {
+        clearAuthSessionOverride: true,
+      });
     }
     emitter.emit('disconnected', reason);
   });

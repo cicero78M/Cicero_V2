@@ -436,6 +436,12 @@ const hardInitRetryCounts = new WeakMap();
 const maxHardInitRetries = 3;
 const hardInitRetryBaseDelayMs = 120000;
 const hardInitRetryMaxDelayMs = 900000;
+const logoutDisconnectReasons = new Set([
+  "LOGGED_OUT",
+  "UNPAIRED",
+  "CONFLICT",
+  "UNPAIRED_IDLE",
+]);
 
 function getFallbackStateRetryDelayMs() {
   const jitterRange = fallbackStateRetryMaxDelayMs - fallbackStateRetryMinDelayMs;
@@ -458,9 +464,28 @@ function getClientReadinessState(client, label = "WA") {
       ready: false,
       pendingMessages: [],
       readyResolvers: [],
+      awaitingQrScan: false,
+      lastDisconnectReason: null,
     });
   }
   return clientReadiness.get(client);
+}
+
+function normalizeDisconnectReason(reason) {
+  return String(reason || "").trim().toUpperCase();
+}
+
+function isLogoutDisconnectReason(reason) {
+  const normalizedReason = normalizeDisconnectReason(reason);
+  return logoutDisconnectReasons.has(normalizedReason);
+}
+
+function clearLogoutAwaitingQr(client) {
+  const state = getClientReadinessState(client);
+  if (state.awaitingQrScan || state.lastDisconnectReason) {
+    state.awaitingQrScan = false;
+    state.lastDisconnectReason = null;
+  }
 }
 
 function clearAuthenticatedFallbackTimer(client) {
@@ -611,7 +636,18 @@ registerClientReadiness(waGatewayClient, "WA-GATEWAY");
 function handleClientDisconnect(client, label, reason) {
   setClientNotReady(client);
   clearAuthenticatedFallbackTimer(client);
+  const normalizedReason = normalizeDisconnectReason(reason);
+  const shouldAwaitQr = isLogoutDisconnectReason(normalizedReason);
+  const state = getClientReadinessState(client);
+  state.lastDisconnectReason = normalizedReason || null;
+  state.awaitingQrScan = shouldAwaitQr;
   console.warn(`[${label}] Client disconnected:`, reason);
+  if (shouldAwaitQr) {
+    console.warn(
+      `[${label}] Disconnect reason=${normalizedReason}; waiting for QR scan before reconnect.`
+    );
+    return;
+  }
   setTimeout(() => {
     client.connect().catch((err) => {
       console.error(`[${label}] Reconnect failed:`, err.message);
@@ -742,6 +778,7 @@ waClient.on("qr", (qr) => {
 waClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA] Authenticated (${sessionInfo}); menunggu ready.`);
+  clearLogoutAwaitingQr(waClient);
   scheduleAuthenticatedReadyFallback(waClient, "WA");
 });
 
@@ -754,6 +791,7 @@ waClient.on("auth_failure", (message) => {
 // Wa Bot siap
 waClient.once("ready", () => {
   clearAuthenticatedFallbackTimer(waClient);
+  clearLogoutAwaitingQr(waClient);
   markClientReady(waClient, "ready");
 });
 
@@ -762,6 +800,7 @@ waClient.on("change_state", (state) => {
   console.log(`[WA] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
     clearAuthenticatedFallbackTimer(waClient);
+    clearLogoutAwaitingQr(waClient);
     markClientReady(waClient, "state");
   }
 });
@@ -774,6 +813,7 @@ waUserClient.on("qr", (qr) => {
 waUserClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-USER] Authenticated (${sessionInfo}); menunggu ready.`);
+  clearLogoutAwaitingQr(waUserClient);
   scheduleAuthenticatedReadyFallback(waUserClient, "WA-USER");
 });
 
@@ -785,6 +825,7 @@ waUserClient.on("auth_failure", (message) => {
 
 waUserClient.once("ready", () => {
   clearAuthenticatedFallbackTimer(waUserClient);
+  clearLogoutAwaitingQr(waUserClient);
   markClientReady(waUserClient, "ready");
 });
 
@@ -792,6 +833,7 @@ waUserClient.on("change_state", (state) => {
   console.log(`[WA-USER] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
     clearAuthenticatedFallbackTimer(waUserClient);
+    clearLogoutAwaitingQr(waUserClient);
     markClientReady(waUserClient, "state");
   }
 });
@@ -804,6 +846,7 @@ waGatewayClient.on("qr", (qr) => {
 waGatewayClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-GATEWAY] Authenticated (${sessionInfo}); menunggu ready.`);
+  clearLogoutAwaitingQr(waGatewayClient);
   scheduleAuthenticatedReadyFallback(waGatewayClient, "WA-GATEWAY");
 });
 
@@ -815,6 +858,7 @@ waGatewayClient.on("auth_failure", (message) => {
 
 waGatewayClient.once("ready", () => {
   clearAuthenticatedFallbackTimer(waGatewayClient);
+  clearLogoutAwaitingQr(waGatewayClient);
   markClientReady(waGatewayClient, "ready");
 });
 
@@ -822,6 +866,7 @@ waGatewayClient.on("change_state", (state) => {
   console.log(`[WA-GATEWAY] Client state changed: ${state}`);
   if (state === "CONNECTED" || state === "open") {
     clearAuthenticatedFallbackTimer(waGatewayClient);
+    clearLogoutAwaitingQr(waGatewayClient);
     markClientReady(waGatewayClient, "state");
   }
 });
@@ -4047,6 +4092,14 @@ if (shouldInitWhatsAppClients) {
         return;
       }
       const { label } = state;
+      if (state.awaitingQrScan) {
+        const reasonLabel = state.lastDisconnectReason || "LOGOUT";
+        console.warn(
+          `[${label}] Awaiting QR scan after ${reasonLabel}; skipping fallback readiness`
+        );
+        scheduleFallbackReadyCheck(client, delayMs);
+        return;
+      }
       let fallbackReadySource = null;
       if (typeof client?.isReady === "function") {
         try {

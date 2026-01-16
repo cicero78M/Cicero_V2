@@ -26,6 +26,15 @@ Event yang perlu diperhatikan untuk failure:
 - `auth_failure` → login gagal (biasanya session rusak/invalid).
 - `disconnected` → client terputus dari WhatsApp Web.
 
+Alur khusus logout/unpaired:
+
+- Jika `disconnected` membawa reason **logout/unpaired**, adapter akan **menghapus**
+  folder auth `session-<clientId>` dan melakukan `reinitialize()` agar QR baru muncul.
+- Setelah logout/unpaired, sistem akan menunggu QR discan ulang sebelum melakukan
+  fallback `getState()`/reconnect otomatis untuk mencegah loop status check.
+- Reason yang dianggap logout/unpaired saat ini: `LOGGED_OUT`, `UNPAIRED`,
+  `CONFLICT`, `UNPAIRED_IDLE`.
+
 Semua handler log menyertakan label:
 - `[WA]` untuk client operator utama.
 - `[WA-USER]` untuk user menu.
@@ -63,6 +72,9 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 - Override: `WA_AUTH_DATA_PATH` (env) → path absolut, tetap menghasilkan folder `session-<clientId>`.
 
 Pastikan path ini writable oleh user yang menjalankan service.
+
+Ketika logout/unpaired terjadi, folder `session-<clientId>` akan dibersihkan
+agar sesi lama tidak tersisa dan QR baru dapat dipindai ulang.
 
 ## Fallback init untuk webVersionCache
 
@@ -111,6 +123,8 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
 4. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
+5. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
+   **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.
 
 ## Guard readiness untuk `getNumberId`
 
