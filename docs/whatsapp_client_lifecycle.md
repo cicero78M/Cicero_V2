@@ -133,18 +133,24 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Pastikan `WA_AUTH_DATA_PATH` (jika diset) writable.
    - Default path: `~/.cicero/wwebjs_auth/`.
 
-3. **Stuck setelah authenticated**
+3. **`Could not find Chrome` / `Could not find browser`**
+   - whatsapp-web.js memakai Puppeteer untuk menjalankan Chrome.
+   - Install Chrome lewat `npx puppeteer browsers install chrome` (menggunakan cache Puppeteer) atau via package OS (Chrome/Chromium).
+   - Jika Chrome sudah terpasang atau path cache diubah, set `PUPPETEER_EXECUTABLE_PATH` dan/atau `PUPPETEER_CACHE_DIR`.
+   - Contoh log yang sering muncul: `Error: Could not find Chrome (ver. 121.0.6167.85)` atau `Error: Could not find browser executable`.
+
+4. **Stuck setelah authenticated**
    - Lihat warning fallback: “Authenticated but no ready event”.
    - Jika ada warning `getState=<state>`, tunggu retry selesai.
      Sistem akan mencoba `connect()` ulang secara otomatis jika state tetap belum
      `CONNECTED/open`.
    - Pastikan network untuk WhatsApp Web tidak diblokir.
 
-4. **Sering disconnect**
+5. **Sering disconnect**
    - Pastikan session valid dan host tidak sleep.
    - Periksa log `disconnected` untuk reason.
 
-5. **connect() hard failure**
+6. **connect() hard failure**
    - Periksa log `Initialization failed (hard failure)` dan root cause error.
    - Tunggu retry backoff yang lebih panjang, atau lakukan reinit manual jika perlu.
    - Pastikan konfigurasi `WA_WEB_VERSION` / `WA_WEB_VERSION_CACHE_URL` valid dan
