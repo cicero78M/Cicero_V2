@@ -181,6 +181,11 @@ dirrequest tanpa langkah tambahan.
 - Berkas disimpan sementara di `export_data/dirrequest`, dikirim melalui WA
   dengan MIME Excel, lalu dihapus otomatis setelah proses selesai agar direktori
   kerja tetap bersih.
+- Jika tidak ada data Kasat Binmas atau konten Instagram pada periode terpilih,
+  bot **tidak** mengirim file. Sebagai gantinya, bot hanya mengirim pesan
+  informasi (contoh: "Belum ada konten Instagram Kasat Binmas untuk periode
+  ...") lalu langsung kembali ke menu utama Monitoring Kasatker tanpa mengulang
+  prompt periode.
 - Jika pengiriman gagal, bot mencatat log bertanda **submenu 4️⃣4️⃣** dan
   mengirim pesan error lewat helper `safeSendMessage`. Bot **tidak** keluar
   dari submenu 4️⃣4️⃣ dan tetap menampilkan prompt periode agar operator bisa
