@@ -3217,7 +3217,14 @@ export const dirRequestHandlers = {
           error.message.includes("Tidak ada data"))
           ? error.message
           : `❌ Gagal mengirim rekap Likes Kasat Binmas (Excel) (${option.description}).`;
-      await waClient.sendMessage(chatId, msg);
+      try {
+        await safeSendMessage(waClient, chatId, msg);
+      } catch (sendError) {
+        console.error(
+          "Gagal mengirim pesan error rekap Likes Kasat Binmas (Excel):",
+          sendError
+        );
+      }
     }
 
     session.step = "main";
@@ -3282,7 +3289,14 @@ export const dirRequestHandlers = {
           error.message.includes("Tidak ada data"))
           ? error.message
           : `❌ Gagal mengirim rekap komentar TikTok Kasat Binmas (Excel) (${option.description}).`;
-      await waClient.sendMessage(chatId, msg);
+      try {
+        await safeSendMessage(waClient, chatId, msg);
+      } catch (sendError) {
+        console.error(
+          "Gagal mengirim pesan error rekap komentar TikTok Kasat Binmas (Excel):",
+          sendError
+        );
+      }
     } finally {
       session.dirRequestReferenceDate = undefined;
       session.executionDate = undefined;
