@@ -163,6 +163,11 @@ dirrequest tanpa langkah tambahan.
 - Setelah memilih **4️⃣4️⃣**, bot meminta periode rekap: **1. Harian**, **2.
   Mingguan** (Senin–Minggu berjalan), atau **3. Bulanan**. Balas angka 1–3
   atau ketik *batal* untuk kembali ke menu utama Monitoring Kasatker.
+- Saat menu **4️⃣4️⃣** dijalankan lewat dirrequest terjadwal (via context
+  `referenceDate`), periode harian/mingguan/bulanan dihitung dari tanggal acuan
+  tersebut. Sumber tanggal yang dibaca berurutan dari
+  `dirRequestReferenceDate`, `executionDate`, lalu `referenceDate` agar hasil
+  rekap selaras dengan jadwal eksekusi.
 - Semua respons dalam alur **4️⃣4️⃣** (prompt periode, input invalid, batal,
   maupun pesan error) dikirim memakai `safeSendMessage` agar tidak memicu reset
   sesi WhatsApp.

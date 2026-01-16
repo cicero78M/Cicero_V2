@@ -71,8 +71,9 @@ export function kasatBinmasRankWeight(rank) {
   return idx === -1 ? PANGKAT_ORDER.length : idx;
 }
 
-export function describeKasatBinmasLikesPeriod(period = "daily") {
-  const today = new Date();
+export function describeKasatBinmasLikesPeriod(period = "daily", referenceDate) {
+  const baseDate = referenceDate ? new Date(referenceDate) : new Date();
+  const today = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
   if (period === "weekly") {
     const { start, end, label } = resolveWeeklyRange(today);
     return {
@@ -157,8 +158,11 @@ function sortKasatList(entries) {
   });
 }
 
-export async function generateKasatBinmasLikesRecap({ period = "daily" } = {}) {
-  const periodInfo = describeKasatBinmasLikesPeriod(period);
+export async function generateKasatBinmasLikesRecap({
+  period = "daily",
+  referenceDate,
+} = {}) {
+  const periodInfo = describeKasatBinmasLikesPeriod(period, referenceDate);
 
   const users = await getUsersByClient(DITBINMAS_CLIENT_ID, TARGET_ROLE);
   const kasatUsers = (users || []).filter((user) =>
