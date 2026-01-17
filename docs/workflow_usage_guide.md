@@ -66,13 +66,13 @@ WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
 # Hapus sesi sebelum re-init ketika auth gagal/logged out (opsional)
 WA_AUTH_CLEAR_SESSION_ON_REINIT=false
 
-# URL cache versi WhatsApp Web (opsional, kosongkan untuk menonaktifkan fetch remote)
-WA_WEB_VERSION_CACHE_URL=
+# URL cache versi WhatsApp Web (opsional, kosongkan jika ingin menonaktifkan fetch remote)
+WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json
 
 # Pin versi WhatsApp Web untuk menghindari error cache remote (opsional, format: \d+\.\d+(\.\d+)?)
 WA_WEB_VERSION=
 ```
-Jika `WA_WEB_VERSION_CACHE_URL` dan `WA_WEB_VERSION` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Set salah satu dari dua variabel tersebut untuk mengaktifkan kembali mekanisme cache versi.
+Jika `WA_WEB_VERSION_CACHE_URL` dan `WA_WEB_VERSION` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Biarkan salah satu dari dua variabel tersebut terisi untuk mengaktifkan kembali mekanisme cache versi, dan kosongkan keduanya hanya jika memang ingin menonaktifkan caching.
 Fallback readiness juga akan memicu reinit **clear session** untuk client `WA-GATEWAY` ketika `getState` tetap `unknown` setelah batas retry, dan log PM2 akan memuat frasa "clear session" agar reset mudah dilacak.
 
 ### Langkah Login
