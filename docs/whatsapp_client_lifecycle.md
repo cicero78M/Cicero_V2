@@ -198,6 +198,24 @@ Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READ
 
 Ini membantu mengatasi kondisi “stuck setelah QR” tanpa restart manual.
 
+## Timeout `waitForWaReady` / `waitForClientReady`
+
+Helper `waitForWaReady`/`waitForClientReady` kini menunggu lebih lama agar
+fallback readiness punya kesempatan berjalan sebelum promise reject. Default
+timeout diturunkan dari kombinasi berikut:
+
+- `WA_READY_TIMEOUT_MS` → override default timeout untuk semua client (opsional).
+- Jika `WA_READY_TIMEOUT_MS` tidak diisi, default dihitung sebagai
+  `max(WA_AUTH_READY_TIMEOUT_MS, WA_FALLBACK_READY_DELAY_MS + 5000)`.
+- `WA_FALLBACK_READY_DELAY_MS` (default 60000ms) → jeda fallback readiness pertama.
+- `WA_GATEWAY_READY_TIMEOUT_MS` → override khusus client `WA-GATEWAY` (jika tidak
+  diisi, otomatis memakai `WA_READY_TIMEOUT_MS` + `WA_FALLBACK_READY_DELAY_MS`).
+- Override per client masih dimungkinkan lewat `client.readyTimeoutMs`
+  (misalnya untuk memanjangkan timeout pada client tertentu).
+
+Perubahan ini memastikan fallback readiness pertama sempat dijalankan sebelum
+`waitForWaReady` menolak dengan error “client not ready”.
+
 ## Fallback readiness (retry `getState()` dan reinit)
 
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
