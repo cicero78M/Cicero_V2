@@ -632,6 +632,8 @@ function getClientReadinessState(client, label = "WA") {
       lastDisconnectReason: null,
       lastAuthFailureAt: null,
       lastAuthFailureMessage: null,
+      lastQrAt: null,
+      lastQrPayloadSeen: null,
     });
   }
   return clientReadiness.get(client);
@@ -998,6 +1000,9 @@ export function sendGatewayMessage(jid, text) {
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
+  const state = getClientReadinessState(waClient, "WA");
+  state.lastQrAt = Date.now();
+  state.lastQrPayloadSeen = qr;
   qrcode.generate(qr, { small: true });
   console.log("[WA] Scan QR dengan WhatsApp Anda!");
 });
@@ -1036,6 +1041,9 @@ waClient.on("change_state", (state) => {
 });
 
 waUserClient.on("qr", (qr) => {
+  const state = getClientReadinessState(waUserClient, "WA-USER");
+  state.lastQrAt = Date.now();
+  state.lastQrPayloadSeen = qr;
   qrcode.generate(qr, { small: true });
   console.log("[WA-USER] Scan QR dengan WhatsApp Anda!");
 });
@@ -1072,6 +1080,9 @@ waUserClient.on("change_state", (state) => {
 });
 
 waGatewayClient.on("qr", (qr) => {
+  const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
+  state.lastQrAt = Date.now();
+  state.lastQrPayloadSeen = qr;
   qrcode.generate(qr, { small: true });
   console.log("[WA-GATEWAY] Scan QR dengan WhatsApp Anda!");
 });
@@ -4421,6 +4432,9 @@ if (shouldInitWhatsAppClients) {
       const lastAuthFailureAt = readinessState?.lastAuthFailureAt
         ? new Date(readinessState.lastAuthFailureAt).toISOString()
         : "none";
+      const lastQrAt = readinessState?.lastQrAt
+        ? new Date(readinessState.lastQrAt).toISOString()
+        : "none";
       const connectInFlightLabel = connectInFlight ? "true" : "false";
       const connectInFlightDuration =
         connectInFlightDurationMs !== null
@@ -4433,6 +4447,7 @@ if (shouldInitWhatsAppClients) {
         `awaitingQrScan=${awaitingQrScan} ` +
         `lastDisconnectReason=${lastDisconnectReason} ` +
         `lastAuthFailureAt=${lastAuthFailureAt} ` +
+        `lastQrAt=${lastQrAt} ` +
         `sessionPath=${sessionPath}`
       );
     };
@@ -4491,7 +4506,11 @@ if (shouldInitWhatsAppClients) {
           return;
         }
         console.log(
-          `[${label}] fallback readiness skipped; connect in progress`
+          `[${label}] fallback readiness skipped; connect in progress; ${formatFallbackReadyContext(
+            state,
+            true,
+            connectInFlightDurationMs
+          )}`
         );
         scheduleFallbackReadyCheck(client, delayMs);
         return;

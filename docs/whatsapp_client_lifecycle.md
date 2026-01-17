@@ -148,6 +148,15 @@ Jika log `connect in progress` muncul berulang-ulang, artinya koneksi masih
 in-flight. Sistem akan mencatat durasi dan melakukan reinit saat melewati
 ambang waktu di atas, atau lebih cepat jika timeout connect tercapai.
 
+Log `fallback readiness skipped; connect in progress` kini juga membawa konteks
+`awaitingQrScan`, `lastDisconnectReason`, dan `lastQrAt` untuk membantu
+troubleshooting stuck/QR. Interpretasinya:
+
+- `awaitingQrScan=true` + `lastDisconnectReason` bernilai `LOGGED_OUT/UNPAIRED/...`
+  → koneksi memang menunggu QR dipindai ulang; fokuskan pada scan QR terbaru.
+- `lastQrAt` menunjukkan kapan QR terakhir dicetak (ISO timestamp); jika nilainya
+  "none" berarti belum ada QR baru tercatat pada sesi tersebut.
+
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
