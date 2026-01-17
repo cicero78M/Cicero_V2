@@ -92,6 +92,18 @@ dan warning. Karena nama folder session mengikuti `clientId`, jaga agar casing
 di env tetap konsisten untuk menghindari pembuatan session baru yang tidak
 diinginkan.
 
+Checklist operasional (casing & path):
+
+1. Tentukan path auth yang aktif:
+   - `WA_AUTH_DATA_PATH` jika di-set, atau default `~/.cicero/wwebjs_auth/`.
+2. Periksa folder `session-<clientId>` yang sudah ada.
+   - Jika ada `session-<clientId>` dengan casing tertentu, samakan
+     `GATEWAY_WA_CLIENT_ID` **persis** dengan casing tersebut, atau rename folder
+     `session-<clientId>` agar cocok dengan nilai env.
+3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` konsisten di semua konfigurasi proses
+   (deployment, PM2/daemon, systemd, atau env file) agar casing tidak berubah saat
+   restart.
+
 Ketika logout/unpaired terjadi, folder `session-<clientId>` akan dibersihkan
 agar sesi lama tidak tersisa dan QR baru dapat dipindai ulang.
 
