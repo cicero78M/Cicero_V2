@@ -581,6 +581,16 @@ const maxFallbackStateRetries = 3;
 const maxFallbackReinitAttempts = 2;
 const fallbackStateRetryMinDelayMs = 15000;
 const fallbackStateRetryMaxDelayMs = 30000;
+const connectInFlightWarnMs = Number.isNaN(
+  Number(process.env.WA_CONNECT_INFLIGHT_WARN_MS)
+)
+  ? 120000
+  : Number(process.env.WA_CONNECT_INFLIGHT_WARN_MS);
+const connectInFlightReinitMs = Number.isNaN(
+  Number(process.env.WA_CONNECT_INFLIGHT_REINIT_MS)
+)
+  ? 300000
+  : Number(process.env.WA_CONNECT_INFLIGHT_REINIT_MS);
 const hardInitRetryCounts = new WeakMap();
 const maxHardInitRetries = 3;
 const hardInitRetryBaseDelayMs = 120000;
@@ -604,6 +614,11 @@ function getHardInitRetryDelayMs(attempt) {
   const cappedDelay = Math.min(baseDelay, hardInitRetryMaxDelayMs);
   const jitter = Math.floor(Math.random() * 0.2 * cappedDelay);
   return cappedDelay + jitter;
+}
+
+function formatConnectDurationMs(durationMs) {
+  const seconds = Math.round(durationMs / 1000);
+  return `${durationMs}ms (${seconds}s)`;
 }
 
 function getClientReadinessState(client, label = "WA") {
@@ -4383,7 +4398,22 @@ if (shouldInitWhatsAppClients) {
     const isConnectInFlight = () =>
       typeof client?.getConnectPromise === "function" &&
       Boolean(client.getConnectPromise());
-    const formatFallbackReadyContext = (readinessState, connectInFlight) => {
+    const getConnectInFlightDurationMs = () => {
+      if (typeof client?.getConnectStartedAt !== "function") {
+        return null;
+      }
+      const startedAt = client.getConnectStartedAt();
+      if (!startedAt) {
+        return null;
+      }
+      const durationMs = Date.now() - startedAt;
+      return durationMs >= 0 ? durationMs : null;
+    };
+    const formatFallbackReadyContext = (
+      readinessState,
+      connectInFlight,
+      connectInFlightDurationMs = null
+    ) => {
       const clientId = client?.clientId || "unknown";
       const sessionPath = client?.sessionPath || "unknown";
       const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
@@ -4392,9 +4422,14 @@ if (shouldInitWhatsAppClients) {
         ? new Date(readinessState.lastAuthFailureAt).toISOString()
         : "none";
       const connectInFlightLabel = connectInFlight ? "true" : "false";
+      const connectInFlightDuration =
+        connectInFlightDurationMs !== null
+          ? formatConnectDurationMs(connectInFlightDurationMs)
+          : "n/a";
       return (
         `clientId=${clientId} ` +
         `connectInFlight=${connectInFlightLabel} ` +
+        `connectInFlightDuration=${connectInFlightDuration} ` +
         `awaitingQrScan=${awaitingQrScan} ` +
         `lastDisconnectReason=${lastDisconnectReason} ` +
         `lastAuthFailureAt=${lastAuthFailureAt} ` +
@@ -4407,7 +4442,54 @@ if (shouldInitWhatsAppClients) {
         return;
       }
       const { label } = state;
+      const connectInFlightDurationMs = getConnectInFlightDurationMs();
       if (isConnectInFlight()) {
+        if (
+          connectInFlightDurationMs !== null &&
+          connectInFlightDurationMs >= connectInFlightWarnMs
+        ) {
+          console.warn(
+            `[${label}] connect in progress for ${formatConnectDurationMs(
+              connectInFlightDurationMs
+            )}; ${formatFallbackReadyContext(
+              state,
+              true,
+              connectInFlightDurationMs
+            )}`
+          );
+        }
+        if (
+          connectInFlightDurationMs !== null &&
+          connectInFlightDurationMs >= connectInFlightReinitMs
+        ) {
+          if (typeof client?.reinitialize === "function") {
+            console.warn(
+              `[${label}] connect in progress for ${formatConnectDurationMs(
+                connectInFlightDurationMs
+              )}; triggering reinit.`
+            );
+            client
+              .reinitialize({
+                trigger: "connect-inflight-timeout",
+                reason: `connect in progress for ${formatConnectDurationMs(
+                  connectInFlightDurationMs
+                )}`,
+              })
+              .catch((err) => {
+                console.error(
+                  `[${label}] Reinit failed after connect in-flight timeout: ${err?.message}`
+                );
+              });
+          } else {
+            console.warn(
+              `[${label}] connect in progress for ${formatConnectDurationMs(
+                connectInFlightDurationMs
+              )}; reinit unavailable.`
+            );
+          }
+          scheduleFallbackReadyCheck(client, delayMs);
+          return;
+        }
         console.log(
           `[${label}] fallback readiness skipped; connect in progress`
         );
@@ -4468,7 +4550,8 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] fallback getState unknown; ${formatFallbackReadyContext(
               state,
-              isConnectInFlight()
+              isConnectInFlight(),
+              getConnectInFlightDurationMs()
             )}`
           );
         }
@@ -4487,7 +4570,11 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] getState=${normalizedState}; retrying ` +
               `(${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms; ` +
-              formatFallbackReadyContext(state, isConnectInFlight())
+              formatFallbackReadyContext(
+                state,
+                isConnectInFlight(),
+                getConnectInFlightDurationMs()
+              )
           );
           scheduleFallbackReadyCheck(client, retryDelayMs);
           return;
@@ -4515,7 +4602,11 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
               `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts}); ` +
-              formatFallbackReadyContext(state, isConnectInFlight())
+              formatFallbackReadyContext(
+                state,
+                isConnectInFlight(),
+                getConnectInFlightDurationMs()
+              )
           );
           client
             .reinitialize({
@@ -4538,7 +4629,11 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
               `skip clear session (${skipReason}); ` +
-              formatFallbackReadyContext(state, isConnectInFlight())
+              formatFallbackReadyContext(
+                state,
+                isConnectInFlight(),
+                getConnectInFlightDurationMs()
+              )
           );
         }
         if (typeof client?.connect === "function") {

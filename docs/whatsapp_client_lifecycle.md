@@ -129,6 +129,25 @@ atau `Cannot read properties of null (reading '1')`, adapter akan:
 
 Langkah ini membantu ketika cache web version dari WhatsApp Web tidak kompatibel.
 
+## Timeout connect & connect in progress
+
+Adapter `wwebjsAdapter` menyimpan timestamp ketika `startConnect()` dipanggil dan
+menjalankan `initialize()` dengan timeout. Jika timeout tercapai, log akan
+menyebut “koneksi macet”/timeout dan `connect()` akan melempar error agar
+`scheduleHardInitRetry` atau reinit lainnya bisa berjalan.
+
+Konfigurasi timeout dan ambang monitoring:
+
+- `WA_CONNECT_TIMEOUT_MS` (default 180000ms) → batas maksimal `initialize()`.
+- `WA_CONNECT_INFLIGHT_WARN_MS` (default 120000ms) → log warning ketika
+  `connectInFlight` terlalu lama.
+- `WA_CONNECT_INFLIGHT_REINIT_MS` (default 300000ms) → trigger reinit otomatis
+  jika `connectInProgress` macet terlalu lama.
+
+Jika log `connect in progress` muncul berulang-ulang, artinya koneksi masih
+in-flight. Sistem akan mencatat durasi dan melakukan reinit saat melewati
+ambang waktu di atas, atau lebih cepat jika timeout connect tercapai.
+
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
@@ -187,6 +206,8 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    sesi yang masih valid tidak terhapus.
 5. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
+   Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan
+   fallback readiness dapat memicu reinit untuk memutus koneksi yang macet.
 6. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
 7. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
    **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.

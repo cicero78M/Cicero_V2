@@ -11,6 +11,7 @@ const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
 const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
 const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
 const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
+const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -66,6 +67,14 @@ function resolvePuppeteerProtocolTimeoutMs() {
   );
   if (Number.isNaN(configured)) {
     return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS;
+  }
+  return Math.max(configured, 0);
+}
+
+function resolveConnectTimeoutMs() {
+  const configured = Number.parseInt(process.env.WA_CONNECT_TIMEOUT_MS || '', 10);
+  if (Number.isNaN(configured)) {
+    return DEFAULT_CONNECT_TIMEOUT_MS;
   }
   return Math.max(configured, 0);
 }
@@ -326,6 +335,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const puppeteerProfilePath = sessionPath;
   let reinitInProgress = false;
   let connectInProgress = null;
+  let connectStartedAt = null;
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
@@ -458,12 +468,41 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
   };
 
+  const initializeClientWithTimeout = (triggerLabel) => {
+    const timeoutMs = resolveConnectTimeoutMs();
+    if (timeoutMs <= 0) {
+      return initializeClientWithFallback(triggerLabel);
+    }
+    let timeoutId;
+    return new Promise((resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        connectInProgress = null;
+        connectStartedAt = null;
+        const error = new Error(
+          `[WWEBJS] connect timeout after ${timeoutMs}ms for clientId=${clientId} (${triggerLabel}).`
+        );
+        error.code = 'WA_CONNECT_TIMEOUT';
+        console.error(
+          `[WWEBJS] Koneksi macet (timeout ${timeoutMs}ms) untuk clientId=${clientId} (${triggerLabel}). ` +
+            'Menandai connect sebagai gagal agar reinit bisa berjalan.'
+        );
+        reject(error);
+      }, timeoutMs);
+      initializeClientWithFallback(triggerLabel)
+        .then(resolve)
+        .catch(reject)
+        .finally(() => clearTimeout(timeoutId));
+    });
+  };
+
   const startConnect = (triggerLabel) => {
     if (connectInProgress) {
       return connectInProgress;
     }
-    connectInProgress = initializeClientWithFallback(triggerLabel).finally(() => {
+    connectStartedAt = Date.now();
+    connectInProgress = initializeClientWithTimeout(triggerLabel).finally(() => {
       connectInProgress = null;
+      connectStartedAt = null;
     });
     return connectInProgress;
   };
@@ -675,6 +714,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.onDisconnect = (handler) => emitter.on('disconnected', handler);
   emitter.isReady = async () => client.info !== undefined;
   emitter.getConnectPromise = () => connectInProgress;
+  emitter.getConnectStartedAt = () => connectStartedAt;
   emitter.getState = async () => {
     try {
       const state = await client.getState();
