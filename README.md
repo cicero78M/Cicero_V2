@@ -205,8 +205,8 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     ADMIN_WHATSAPP=628xxxxxx,628yyyyyy
     GATEWAY_WHATSAPP_ADMIN=628zzzzzz
     APP_SESSION_NAME=wa-admin
-    USER_WA_CLIENT_ID=wa-userrequest
-    GATEWAY_WA_CLIENT_ID=wa-gateway
+    USER_WA_CLIENT_ID=wa-userrequest-prod
+    GATEWAY_WA_CLIENT_ID=wa-gateway-prod
     WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
     WA_AUTH_CLEAR_SESSION_ON_REINIT=false
     WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json
