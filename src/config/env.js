@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { cleanEnv, str, port, bool } from 'envalid';
+import { cleanEnv, str, port, bool, num } from 'envalid';
 
 dotenv.config();
 
@@ -29,6 +29,7 @@ export const env = cleanEnv(process.env, {
     default:
       'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json'
   }),
+  WA_WWEBJS_PROTOCOL_TIMEOUT_MS: num({ default: 120000 }),
   ENABLE_DIRREQUEST_GROUP: bool({ default: true }),
   DEBUG_FETCH_INSTAGRAM: bool({ default: false }),
   AMQP_URL: str({ default: 'amqp://localhost' }),
