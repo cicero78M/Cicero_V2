@@ -962,6 +962,25 @@ async function waitForClientReady(client, timeoutMs) {
     }
   }
 
+  const formatClientReadyTimeoutContext = (readinessState) => {
+    const label = readinessState?.label || "WA";
+    const clientId = client?.clientId || "unknown";
+    const sessionPath = client?.sessionPath || "unknown";
+    const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
+    const lastDisconnectReason = readinessState?.lastDisconnectReason || "none";
+    const lastAuthFailureAt = readinessState?.lastAuthFailureAt
+      ? new Date(readinessState.lastAuthFailureAt).toISOString()
+      : "none";
+    return {
+      label,
+      clientId,
+      sessionPath,
+      awaitingQrScan,
+      lastDisconnectReason,
+      lastAuthFailureAt,
+    };
+  };
+
   return new Promise((resolve, reject) => {
     let timer;
     const resolver = () => {
@@ -978,7 +997,22 @@ async function waitForClientReady(client, timeoutMs) {
     timer = setTimeout(() => {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
-      reject(new Error("WhatsApp client not ready"));
+      const timeoutContext = formatClientReadyTimeoutContext(state);
+      const contextMessage =
+        `label=${timeoutContext.label} ` +
+        `clientId=${timeoutContext.clientId} ` +
+        `sessionPath=${timeoutContext.sessionPath} ` +
+        `awaitingQrScan=${timeoutContext.awaitingQrScan} ` +
+        `lastDisconnectReason=${timeoutContext.lastDisconnectReason} ` +
+        `lastAuthFailureAt=${timeoutContext.lastAuthFailureAt}`;
+      console.warn(
+        `[${timeoutContext.label}] waitForClientReady timeout after ${resolvedTimeoutMs}ms; ${contextMessage}`
+      );
+      const timeoutError = new Error(
+        `WhatsApp client not ready after ${resolvedTimeoutMs}ms; ${contextMessage}`
+      );
+      timeoutError.context = timeoutContext;
+      reject(timeoutError);
     }, resolvedTimeoutMs);
   });
 }
