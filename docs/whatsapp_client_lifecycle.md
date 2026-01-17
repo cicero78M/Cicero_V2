@@ -216,6 +216,22 @@ timeout diturunkan dari kombinasi berikut:
 Perubahan ini memastikan fallback readiness pertama sempat dijalankan sebelum
 `waitForWaReady` menolak dengan error “client not ready”.
 
+Saat timeout `waitForWaReady`/`waitForClientReady` terjadi, log sekarang
+menyertakan konteks tambahan (tanpa payload QR) untuk mempercepat debugging:
+
+- `label` → identitas client (`WA`, `WA-USER`, `WA-GATEWAY`).
+- `clientId` → nilai `clientId` yang dipakai `LocalAuth`.
+- `sessionPath` → lokasi folder `session-<clientId>` yang dipakai.
+- `awaitingQrScan` → `true` jika sistem sedang menunggu QR discan ulang.
+- `lastDisconnectReason` → reason terakhir dari event `disconnected` (atau `none`).
+- `lastAuthFailureAt` → timestamp ISO dari event `auth_failure` terakhir (atau `none`).
+
+Interpretasi cepat:
+
+- `awaitingQrScan=true` + `lastDisconnectReason` logout/unpaired → butuh scan QR baru.
+- `lastAuthFailureAt` terisi → kemungkinan session invalid atau auth gagal berulang.
+- `sessionPath` memastikan folder auth yang dipakai sudah benar dan writable.
+
 ## Fallback readiness (retry `getState()` dan reinit)
 
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
