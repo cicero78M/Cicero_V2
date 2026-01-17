@@ -180,8 +180,10 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
-4. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
-5. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
+4. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
+   dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
+5. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
+6. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
    **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.
 
 ## Guard readiness untuk `getNumberId`
