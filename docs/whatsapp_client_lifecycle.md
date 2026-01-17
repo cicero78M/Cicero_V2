@@ -180,10 +180,15 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
-4. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
+4. Untuk `WA-GATEWAY`, fallback readiness **hanya akan clear session** jika ada
+   indikasi logout/auth failure (misalnya `lastDisconnectReason` termasuk
+   `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure` tercatat).
+   Jika tidak ada indikasi tersebut, sistem tetap reinit tanpa clear session agar
+   sesi yang masih valid tidak terhapus.
+5. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
-5. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
-6. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
+6. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
+7. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
    **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.
 
 ## Guard readiness untuk `getNumberId`

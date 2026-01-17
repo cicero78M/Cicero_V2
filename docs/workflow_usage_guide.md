@@ -77,7 +77,7 @@ WA_WWEBJS_PROTOCOL_TIMEOUT_MS=120000
 ```
 Jika `WA_WEB_VERSION_CACHE_URL` dan `WA_WEB_VERSION` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Biarkan salah satu dari dua variabel tersebut terisi untuk mengaktifkan kembali mekanisme cache versi, dan kosongkan keduanya hanya jika memang ingin menonaktifkan caching.
 `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` memperbesar ambang `Runtime.callFunctionOn` pada Puppeteer; naikkan ke 180000ms jika koneksi ke WhatsApp Web sering lambat atau time out.
-Fallback readiness juga akan memicu reinit **clear session** untuk client `WA-GATEWAY` ketika `getState` tetap `unknown` setelah batas retry, dan log PM2 akan memuat frasa "clear session" agar reset mudah dilacak.
+Fallback readiness akan melakukan reinit ketika `getState` tetap `unknown` setelah batas retry. Untuk client `WA-GATEWAY`, **clear session hanya dilakukan** jika ada indikasi logout/auth failure (misalnya `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure`). Jika tidak ada indikasi tersebut, sistem tetap reinit tanpa clear session agar sesi valid tidak terhapus, dan log PM2 tetap menandai alasan fallback.
 
 ### Langkah Login
 1. Jalankan `npm run dev` atau `npm start`.

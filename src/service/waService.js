@@ -615,6 +615,8 @@ function getClientReadinessState(client, label = "WA") {
       readyResolvers: [],
       awaitingQrScan: false,
       lastDisconnectReason: null,
+      lastAuthFailureAt: null,
+      lastAuthFailureMessage: null,
     });
   }
   return clientReadiness.get(client);
@@ -627,6 +629,13 @@ function normalizeDisconnectReason(reason) {
 function isLogoutDisconnectReason(reason) {
   const normalizedReason = normalizeDisconnectReason(reason);
   return logoutDisconnectReasons.has(normalizedReason);
+}
+
+function hasAuthFailureIndicator(state) {
+  return (
+    isLogoutDisconnectReason(state?.lastDisconnectReason) ||
+    Boolean(state?.lastAuthFailureAt)
+  );
 }
 
 function clearLogoutAwaitingQr(client) {
@@ -804,6 +813,10 @@ function markClientReady(client, src = "unknown") {
     state.ready = true;
     console.log(`[${state.label}] READY via ${src}`);
     state.readyResolvers.splice(0).forEach((resolve) => resolve());
+  }
+  if (state.lastAuthFailureAt) {
+    state.lastAuthFailureAt = null;
+    state.lastAuthFailureMessage = null;
   }
   resetHardInitRetryCount(client);
   flushPendingMessages(client);
@@ -984,6 +997,9 @@ waClient.on("authenticated", (session) => {
 waClient.on("auth_failure", (message) => {
   clearAuthenticatedFallbackTimer(waClient);
   setClientNotReady(waClient);
+  const state = getClientReadinessState(waClient, "WA");
+  state.lastAuthFailureAt = Date.now();
+  state.lastAuthFailureMessage = message || null;
   console.error(`[WA] Auth failure: ${message}`);
 });
 
@@ -1019,6 +1035,9 @@ waUserClient.on("authenticated", (session) => {
 waUserClient.on("auth_failure", (message) => {
   clearAuthenticatedFallbackTimer(waUserClient);
   setClientNotReady(waUserClient);
+  const state = getClientReadinessState(waUserClient, "WA-USER");
+  state.lastAuthFailureAt = Date.now();
+  state.lastAuthFailureMessage = message || null;
   console.error(`[WA-USER] Auth failure: ${message}`);
 });
 
@@ -1052,6 +1071,9 @@ waGatewayClient.on("authenticated", (session) => {
 waGatewayClient.on("auth_failure", (message) => {
   clearAuthenticatedFallbackTimer(waGatewayClient);
   setClientNotReady(waGatewayClient);
+  const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
+  state.lastAuthFailureAt = Date.now();
+  state.lastAuthFailureMessage = message || null;
   console.error(`[WA-GATEWAY] Auth failure: ${message}`);
 });
 
@@ -4366,12 +4388,16 @@ if (shouldInitWhatsAppClients) {
       const sessionPath = client?.sessionPath || "unknown";
       const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
       const lastDisconnectReason = readinessState?.lastDisconnectReason || "none";
+      const lastAuthFailureAt = readinessState?.lastAuthFailureAt
+        ? new Date(readinessState.lastAuthFailureAt).toISOString()
+        : "none";
       const connectInFlightLabel = connectInFlight ? "true" : "false";
       return (
         `clientId=${clientId} ` +
         `connectInFlight=${connectInFlightLabel} ` +
         `awaitingQrScan=${awaitingQrScan} ` +
         `lastDisconnectReason=${lastDisconnectReason} ` +
+        `lastAuthFailureAt=${lastAuthFailureAt} ` +
         `sessionPath=${sessionPath}`
       );
     };
@@ -4478,19 +4504,24 @@ if (shouldInitWhatsAppClients) {
         fallbackReinitCounts.set(client, reinitAttempts + 1);
         const shouldClearFallbackSession =
           normalizedState === "unknown" && label === "WA-GATEWAY";
+        const hasAuthIndicators = hasAuthFailureIndicator(state);
+        const sessionPath = client?.sessionPath || null;
+        const sessionPathExists = sessionPath ? fs.existsSync(sessionPath) : false;
         if (
           shouldClearFallbackSession &&
+          hasAuthIndicators &&
           typeof client?.reinitialize === "function"
         ) {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
-              `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
+              `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts}); ` +
+              formatFallbackReadyContext(state, isConnectInFlight())
           );
           client
             .reinitialize({
               clearAuthSession: true,
-              trigger: "fallback-unknown",
-              reason: "getState unknown",
+              trigger: "fallback-unknown-auth",
+              reason: "getState unknown with auth indicator",
             })
             .catch((err) => {
               console.error(
@@ -4499,6 +4530,16 @@ if (shouldInitWhatsAppClients) {
             });
           scheduleFallbackReadyCheck(client, delayMs);
           return;
+        }
+        if (shouldClearFallbackSession && !hasAuthIndicators) {
+          const skipReason = sessionPathExists
+            ? "session path exists and no auth indicator"
+            : "no auth indicator";
+          console.warn(
+            `[${label}] getState=${normalizedState} after retries; ` +
+              `skip clear session (${skipReason}); ` +
+              formatFallbackReadyContext(state, isConnectInFlight())
+          );
         }
         if (typeof client?.connect === "function") {
           console.warn(
