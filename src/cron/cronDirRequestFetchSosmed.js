@@ -18,6 +18,7 @@ const LOG_TAG = "CRON DIRFETCH SOSMED";
 
 const lastStateByClient = new Map();
 const adminRecipients = new Set(getAdminWAIds());
+let isFetchInFlight = false;
 
 function getCurrentJakartaTime(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -214,6 +215,20 @@ async function ensureClientState(clientId) {
 
 export async function runCron(options = {}) {
   const { forceEngagementOnly = false } = options;
+
+  if (isFetchInFlight) {
+    await sendStructuredLog(
+      buildLogEntry({
+        phase: "lock",
+        action: "inFlight",
+        result: "skipped",
+        message: "skip due to in-flight",
+      })
+    );
+    return;
+  }
+
+  isFetchInFlight = true;
 
   await sendStructuredLog(
     buildLogEntry({
@@ -571,6 +586,8 @@ export async function runCron(options = {}) {
         meta: errorMeta,
       })
     );
+  } finally {
+    isFetchInFlight = false;
   }
 }
 
