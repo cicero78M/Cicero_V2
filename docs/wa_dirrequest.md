@@ -502,7 +502,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Gabungan Fetch + Recap Ditbinmas + Cron Custom
 - Fungsi `runDitbinmasRecapAndCustomSequence` pada
   `src/cron/cronDirRequestCustomSequence.js` kini terjadwal otomatis pada
-  pukul **20:30** (job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
+  pukul **20:30** (cron `30 20 * * *`, job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
   mencakup seluruh logika `runDitbinmasRecapSequence`, sehingga tidak ada job
   terpisah khusus recap. Urutan tahapannya menjaga fetch hanya dilakukan sekali:
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
