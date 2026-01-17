@@ -409,6 +409,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Pesan *no changes* tetap dicetak ketika tidak ada konten baru atau ketika
   seluruh akun tidak berubah; log tersebut memuat `action=refresh_only` atau
   `result=no_change` sehingga admin tahu cron berjalan tetapi tidak ada delta.
+- Eksekusi fetch sosmed memakai single-flight lock. Jika ada pemanggilan baru
+  ketika proses sebelumnya masih berjalan, cron mencatat `message="skip due to in-flight"`
+  dengan `phase=lock` dan keluar tanpa mengulang proses.
 - Contoh log WhatsApp/debug:
   - **Sukses kirim** ke grup: `cronDirRequestFetchSosmed | clientId=DITBINMAS`
     `action=fetch_dirrequest result=sent countsBefore=ig:12/tk:9`
