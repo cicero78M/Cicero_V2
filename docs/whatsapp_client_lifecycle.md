@@ -143,6 +143,11 @@ adapter akan:
 Durasi backoff dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
 (default 20000ms). Ini mencegah retry yang terlalu agresif pada folder yang terkunci.
 
+Timeout DevTools Protocol Puppeteer di whatsapp-web.js dapat diatur lewat
+`WA_WWEBJS_PROTOCOL_TIMEOUT_MS` (default 120000ms). Ini memperbesar ambang
+`Runtime.callFunctionOn` saat koneksi lambat; naikkan ke 180000ms atau lebih jika
+host sering time out ketika melakukan evaluasi di halaman WhatsApp Web.
+
 ## Normalisasi opsi sendMessage
 
 Adapter `wwebjsAdapter` selalu menormalkan parameter `options` untuk `sendMessage`

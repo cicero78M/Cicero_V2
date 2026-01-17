@@ -10,6 +10,7 @@ const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
 const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
 const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
+const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -54,6 +55,17 @@ function resolveBrowserLockBackoffMs() {
   );
   if (Number.isNaN(configured)) {
     return DEFAULT_BROWSER_LOCK_BACKOFF_MS;
+  }
+  return Math.max(configured, 0);
+}
+
+function resolvePuppeteerProtocolTimeoutMs() {
+  const configured = Number.parseInt(
+    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_MS || '',
+    10
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS;
   }
   return Math.max(configured, 0);
 }
@@ -318,11 +330,13 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     await resolveWebVersionOptions()
   );
   const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
+  const puppeteerProtocolTimeoutMs = resolvePuppeteerProtocolTimeoutMs();
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: {
       args: ['--no-sandbox'],
       headless: true,
+      protocolTimeout: puppeteerProtocolTimeoutMs,
       ...(puppeteerExecutablePath
         ? { executablePath: puppeteerExecutablePath }
         : {}),
