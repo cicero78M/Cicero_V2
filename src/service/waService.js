@@ -575,6 +575,21 @@ const authenticatedReadyTimeoutMs = Number.isNaN(
 )
   ? 45000
   : Number(process.env.WA_AUTH_READY_TIMEOUT_MS);
+const fallbackReadyCheckDelayMs = Number.isNaN(
+  Number(process.env.WA_FALLBACK_READY_DELAY_MS)
+)
+  ? 60000
+  : Number(process.env.WA_FALLBACK_READY_DELAY_MS);
+const defaultReadyTimeoutMs = Number.isNaN(
+  Number(process.env.WA_READY_TIMEOUT_MS)
+)
+  ? Math.max(authenticatedReadyTimeoutMs, fallbackReadyCheckDelayMs + 5000)
+  : Number(process.env.WA_READY_TIMEOUT_MS);
+const gatewayReadyTimeoutMs = Number.isNaN(
+  Number(process.env.WA_GATEWAY_READY_TIMEOUT_MS)
+)
+  ? defaultReadyTimeoutMs + fallbackReadyCheckDelayMs
+  : Number(process.env.WA_GATEWAY_READY_TIMEOUT_MS);
 const fallbackStateRetryCounts = new WeakMap();
 const fallbackReinitCounts = new WeakMap();
 const maxFallbackStateRetries = 3;
@@ -619,6 +634,17 @@ function getHardInitRetryDelayMs(attempt) {
 function formatConnectDurationMs(durationMs) {
   const seconds = Math.round(durationMs / 1000);
   return `${durationMs}ms (${seconds}s)`;
+}
+
+function getClientReadyTimeoutMs(client) {
+  const clientOverride = client?.readyTimeoutMs;
+  if (typeof clientOverride === "number" && !Number.isNaN(clientOverride)) {
+    return clientOverride;
+  }
+  if (client === waGatewayClient) {
+    return gatewayReadyTimeoutMs;
+  }
+  return defaultReadyTimeoutMs;
 }
 
 function getClientReadinessState(client, label = "WA") {
@@ -845,6 +871,7 @@ function markClientReady(client, src = "unknown") {
 registerClientReadiness(waClient, "WA");
 registerClientReadiness(waUserClient, "WA-USER");
 registerClientReadiness(waGatewayClient, "WA-GATEWAY");
+waGatewayClient.readyTimeoutMs = gatewayReadyTimeoutMs;
 
 function handleClientDisconnect(client, label, reason) {
   setClientNotReady(client);
@@ -912,7 +939,7 @@ export function flushAdminNotificationQueue() {
   });
 }
 
-async function waitForClientReady(client, timeout = 30000) {
+async function waitForClientReady(client, timeoutMs) {
   const state = getClientReadinessState(client);
   if (state.ready) return;
   let isReady = false;
@@ -942,16 +969,22 @@ async function waitForClientReady(client, timeout = 30000) {
       resolve();
     };
     state.readyResolvers.push(resolver);
+    const resolvedTimeoutMs =
+      timeoutMs === null || timeoutMs === undefined
+        ? getClientReadyTimeoutMs(client)
+        : Number.isNaN(Number(timeoutMs))
+          ? getClientReadyTimeoutMs(client)
+          : Number(timeoutMs);
     timer = setTimeout(() => {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
       reject(new Error("WhatsApp client not ready"));
-    }, timeout);
+    }, resolvedTimeoutMs);
   });
 }
 
-export function waitForWaReady(timeout = 30000) {
-  return waitForClientReady(waClient, timeout);
+export function waitForWaReady(timeoutMs) {
+  return waitForClientReady(waClient, timeoutMs);
 }
 
 // Expose readiness helper for consumers like safeSendMessage
@@ -4405,7 +4438,10 @@ if (shouldInitWhatsAppClients) {
       });
   });
 
-  const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
+  const scheduleFallbackReadyCheck = (
+    client,
+    delayMs = fallbackReadyCheckDelayMs
+  ) => {
     const isConnectInFlight = () =>
       typeof client?.getConnectPromise === "function" &&
       Boolean(client.getConnectPromise());
