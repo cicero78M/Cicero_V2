@@ -55,7 +55,10 @@ Tambahkan variabel berikut pada `.env` untuk mengatur sesi WhatsApp:
 APP_SESSION_NAME=wa-admin
 
 # ID sesi untuk nomor kedua (`userrequest`)
-USER_WA_CLIENT_ID=wa-userrequest
+USER_WA_CLIENT_ID=wa-userrequest-prod
+
+# ID sesi untuk nomor gateway (harus beda dari USER_WA_CLIENT_ID)
+GATEWAY_WA_CLIENT_ID=wa-gateway-prod
 
 # Lokasi folder sesi LocalAuth (opsional, harus writable oleh runtime user; jika tidak writable, adapter akan log error lalu fallback ke path default yang dibuat otomatis)
 WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
