@@ -40,10 +40,10 @@ const dirRequestCrons = [
     description:
       'Send WhatsApp task reminders to Ditbinmas users who opted in, with nightly follow-ups for incomplete tasks.',
     schedules: [
+      { cronExpression: '10 16 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '40 16 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '10 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '10 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '40 18 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       //{ cronExpression: '10 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       //{ cronExpression: '40 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       //{ cronExpression: '10 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
@@ -56,22 +56,22 @@ const dirRequestCrons = [
       { cronExpression: '5 23 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
-  // {
-  //   jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-  //   description:
-  //     'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
-  //   schedules: [
-  //     { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-  //     { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-  //   ],
-  // },
+  {
+    jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
+    description:
+      'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
+    schedules: [
+      { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+      // { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
   {
     jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
     description:
       'Fetch sosmed + recap Ditbinmas + cron custom di slot 20:30 tanpa duplikasi job recap terpisah.',
     schedules: [
       {
-        cronExpression: '0 18 * * *',
+        cronExpression: '2 18 * * *',
         handler: () => runDitbinmasRecapAndCustomSequence(),
         options: DEFAULT_CRON_OPTIONS,
       },
