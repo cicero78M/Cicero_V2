@@ -85,6 +85,13 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 
 Pastikan path ini writable oleh user yang menjalankan service.
 
+Catatan penting: nilai `clientId` untuk `waGatewayClient` mempertahankan casing
+yang diberikan di `GATEWAY_WA_CLIENT_ID` (tidak di-lowercase sebelum
+`createWwebjsClient`). Normalisasi ke lowercase hanya dipakai untuk perbandingan
+dan warning. Karena nama folder session mengikuti `clientId`, jaga agar casing
+di env tetap konsisten untuk menghindari pembuatan session baru yang tidak
+diinginkan.
+
 Ketika logout/unpaired terjadi, folder `session-<clientId>` akan dibersihkan
 agar sesi lama tidak tersisa dan QR baru dapat dipindai ulang.
 

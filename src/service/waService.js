@@ -464,8 +464,9 @@ const DEFAULT_AUTH_DATA_DIR = "wwebjs_auth";
 const rawUserClientId = String(env.USER_WA_CLIENT_ID || "");
 const rawGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "");
 const normalizedUserClientId = rawUserClientId.trim();
-const normalizedGatewayClientId = rawGatewayClientId.trim().toLowerCase();
-const resolvedGatewayClientId = normalizedGatewayClientId || undefined;
+const trimmedGatewayClientId = rawGatewayClientId.trim();
+const normalizedGatewayClientId = trimmedGatewayClientId.toLowerCase();
+const resolvedGatewayClientId = trimmedGatewayClientId || undefined;
 const resolveAuthDataPath = () => {
   const configuredPath = String(process.env.WA_AUTH_DATA_PATH || "").trim();
   if (configuredPath) {
@@ -508,7 +509,6 @@ const findGatewaySessionCaseMismatch = (authDataPath, clientId) => {
   return null;
 };
 
-const trimmedGatewayClientId = rawGatewayClientId.trim();
 if (
   trimmedGatewayClientId &&
   normalizedGatewayClientId &&
