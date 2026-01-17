@@ -187,6 +187,7 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Jika Chrome sudah terpasang atau path cache diubah, set `WA_PUPPETEER_EXECUTABLE_PATH`
      (prioritas) atau `PUPPETEER_EXECUTABLE_PATH`, dan/atau `PUPPETEER_CACHE_DIR`.
    - Contoh log yang sering muncul: `Error: Could not find Chrome (ver. 121.0.6167.85)` atau `Error: Could not find browser executable`.
+   - Inisialisasi akan menganggap error ini sebagai fatal dan **melewati retry otomatis** sampai Chrome tersedia.
 
 4. **Stuck setelah authenticated**
    - Lihat warning fallback: “Authenticated but no ready event”.

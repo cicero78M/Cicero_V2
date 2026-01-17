@@ -721,9 +721,22 @@ function resetHardInitRetryCount(client) {
   }
 }
 
+function isFatalMissingChrome(client, err) {
+  return (
+    err?.isMissingChromeError === true ||
+    client?.fatalInitError?.type === "missing-chrome"
+  );
+}
+
 function scheduleHardInitRetry(client, label, err) {
   setClientNotReady(client);
   clearAuthenticatedFallbackTimer(client);
+  if (isFatalMissingChrome(client, err)) {
+    console.error(
+      `[${label}] Missing Chrome executable; skipping hard init retries until Chrome is installed.`
+    );
+    return;
+  }
   const currentAttempts = hardInitRetryCounts.get(client) || 0;
   if (currentAttempts >= maxHardInitRetries) {
     console.error(
@@ -4363,6 +4376,12 @@ if (shouldInitWhatsAppClients) {
         return;
       }
       const { label } = state;
+      if (isFatalMissingChrome(client)) {
+        console.warn(
+          `[${label}] Missing Chrome executable; skipping fallback readiness until Chrome is installed.`
+        );
+        return;
+      }
       if (state.awaitingQrScan) {
         const reasonLabel = state.lastDisconnectReason || "LOGOUT";
         console.warn(

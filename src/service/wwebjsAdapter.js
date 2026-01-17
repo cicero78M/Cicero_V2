@@ -219,6 +219,10 @@ const WEB_VERSION_FALLBACK_ERRORS = [
   "Cannot read properties of null (reading '1')",
 ];
 const BROWSER_ALREADY_RUNNING_ERROR = 'browser is already running for';
+const MISSING_CHROME_ERROR_PATTERNS = [
+  /could not find chrome/i,
+  /could not find browser executable/i,
+];
 
 function shouldFallbackWebVersion(err) {
   const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
@@ -235,6 +239,13 @@ function isBrowserAlreadyRunningError(err) {
   return errorDetails.includes(BROWSER_ALREADY_RUNNING_ERROR);
 }
 
+function isMissingChromeError(err) {
+  const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
+  return MISSING_CHROME_ERROR_PATTERNS.some((pattern) =>
+    pattern.test(errorDetails)
+  );
+}
+
 function delay(durationMs) {
   return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
@@ -248,6 +259,7 @@ function delay(durationMs) {
  */
 export async function createWwebjsClient(clientId = 'wa-admin') {
   const emitter = new EventEmitter();
+  emitter.fatalInitError = null;
   const configuredAuthPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
   const recommendedAuthPath = resolveDefaultAuthDataPath();
   let authDataPath = resolveAuthDataPath();
@@ -373,9 +385,26 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   const initializeClientWithFallback = async (triggerLabel) => {
+    emitter.fatalInitError = null;
     try {
       await client.initialize();
     } catch (err) {
+      if (isMissingChromeError(err)) {
+        const taggedError =
+          err instanceof Error ? err : new Error(err?.message || String(err));
+        taggedError.isMissingChromeError = true;
+        emitter.fatalInitError = {
+          type: 'missing-chrome',
+          error: taggedError,
+        };
+        console.error(
+          `[WWEBJS] Chrome executable not found for clientId=${clientId} (${triggerLabel}). ` +
+            'Set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome" ' +
+            'to populate the Puppeteer cache.',
+          err?.message || err
+        );
+        throw taggedError;
+      }
       if (isBrowserAlreadyRunningError(err)) {
         await recoverFromBrowserAlreadyRunning(triggerLabel, err);
         try {
