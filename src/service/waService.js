@@ -4358,13 +4358,18 @@ if (shouldInitWhatsAppClients) {
   });
 
   const scheduleFallbackReadyCheck = (client, delayMs = 60000) => {
-    const formatFallbackReadyContext = (readinessState) => {
+    const isConnectInFlight = () =>
+      typeof client?.getConnectPromise === "function" &&
+      Boolean(client.getConnectPromise());
+    const formatFallbackReadyContext = (readinessState, connectInFlight) => {
       const clientId = client?.clientId || "unknown";
       const sessionPath = client?.sessionPath || "unknown";
       const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
       const lastDisconnectReason = readinessState?.lastDisconnectReason || "none";
+      const connectInFlightLabel = connectInFlight ? "true" : "false";
       return (
         `clientId=${clientId} ` +
+        `connectInFlight=${connectInFlightLabel} ` +
         `awaitingQrScan=${awaitingQrScan} ` +
         `lastDisconnectReason=${lastDisconnectReason} ` +
         `sessionPath=${sessionPath}`
@@ -4376,6 +4381,13 @@ if (shouldInitWhatsAppClients) {
         return;
       }
       const { label } = state;
+      if (isConnectInFlight()) {
+        console.log(
+          `[${label}] fallback readiness skipped; connect in progress`
+        );
+        scheduleFallbackReadyCheck(client, delayMs);
+        return;
+      }
       if (isFatalMissingChrome(client)) {
         console.warn(
           `[${label}] Missing Chrome executable; skipping fallback readiness until Chrome is installed.`
@@ -4428,7 +4440,10 @@ if (shouldInitWhatsAppClients) {
         console.log(`[${label}] getState: ${normalizedState}`);
         if (normalizedState === "unknown") {
           console.warn(
-            `[${label}] fallback getState unknown; ${formatFallbackReadyContext(state)}`
+            `[${label}] fallback getState unknown; ${formatFallbackReadyContext(
+              state,
+              isConnectInFlight()
+            )}`
           );
         }
         if (normalizedState === "CONNECTED" || normalizedState === "open") {
@@ -4446,7 +4461,7 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] getState=${normalizedState}; retrying ` +
               `(${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms; ` +
-              formatFallbackReadyContext(state)
+              formatFallbackReadyContext(state, isConnectInFlight())
           );
           scheduleFallbackReadyCheck(client, retryDelayMs);
           return;
