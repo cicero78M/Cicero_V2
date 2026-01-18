@@ -27,7 +27,7 @@ const dirRequestCrons = [
       { cronExpression: '0,30 7-14 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '30 15 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 16-17 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '30 18 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
+      //{ cronExpression: '30 18 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 19 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 20 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
@@ -62,7 +62,7 @@ const dirRequestCrons = [
       'Run dirRequest custom sequence: sosmed fetch, Ditsamapta menus 6/9/28/29 (plus extras), Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
     schedules: [
       { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '30 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
