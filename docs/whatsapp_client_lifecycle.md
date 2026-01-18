@@ -85,24 +85,23 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 
 Pastikan path ini writable oleh user yang menjalankan service.
 
-Catatan penting: nilai `clientId` untuk `waGatewayClient` mempertahankan casing
-yang diberikan di `GATEWAY_WA_CLIENT_ID` (tidak di-lowercase sebelum
-`createWwebjsClient`). Normalisasi ke lowercase hanya dipakai untuk perbandingan
-dan warning. Karena nama folder session mengikuti `clientId`, jaga agar casing
-di env tetap konsisten untuk menghindari pembuatan session baru yang tidak
-diinginkan.
+Catatan penting: `GATEWAY_WA_CLIENT_ID` **harus lowercase**. Service akan
+memaksa nilai ini menjadi lowercase sebelum memanggil `createWwebjsClient` dan
+akan mencatat error jika env memakai casing campuran. Karena nama folder session
+mengikuti `clientId`, pastikan nilai env sudah lowercase agar folder session
+tetap konsisten.
 
 Checklist operasional (casing & path):
 
 1. Tentukan path auth yang aktif:
    - `WA_AUTH_DATA_PATH` jika di-set, atau default `~/.cicero/wwebjs_auth/`.
 2. Periksa folder `session-<clientId>` yang sudah ada.
-   - Jika ada `session-<clientId>` dengan casing tertentu, samakan
-     `GATEWAY_WA_CLIENT_ID` **persis** dengan casing tersebut, atau rename folder
-     `session-<clientId>` agar cocok dengan nilai env.
-3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` konsisten di semua konfigurasi proses
-   (deployment, PM2/daemon, systemd, atau env file) agar casing tidak berubah saat
-   restart.
+   - Jika ada `session-<clientId>` dengan casing tidak lowercase, rename folder
+     tersebut menjadi lowercase (contoh: `session-Wa-Gateway` → `session-wa-gateway`)
+     agar sesuai dengan `GATEWAY_WA_CLIENT_ID` yang baru.
+3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` lowercase di semua konfigurasi proses
+   (deployment, PM2/daemon, systemd, atau env file) agar tidak membuat session baru
+   saat restart.
 
 Ketika logout/unpaired terjadi, folder `session-<clientId>` akan dibersihkan
 agar sesi lama tidak tersisa dan QR baru dapat dipindai ulang.

@@ -466,7 +466,7 @@ const rawGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "");
 const normalizedUserClientId = rawUserClientId.trim();
 const trimmedGatewayClientId = rawGatewayClientId.trim();
 const normalizedGatewayClientId = trimmedGatewayClientId.toLowerCase();
-const resolvedGatewayClientId = trimmedGatewayClientId || undefined;
+const resolvedGatewayClientId = normalizedGatewayClientId || undefined;
 const resolveAuthDataPath = () => {
   const configuredPath = String(process.env.WA_AUTH_DATA_PATH || "").trim();
   if (configuredPath) {
@@ -514,6 +514,11 @@ if (
   normalizedGatewayClientId &&
   trimmedGatewayClientId !== normalizedGatewayClientId
 ) {
+  console.error(
+    `[WA] GATEWAY_WA_CLIENT_ID harus lowercase; nilai "${trimmedGatewayClientId}" ` +
+      `akan dipaksa menjadi "${normalizedGatewayClientId}". ` +
+      "Perbarui env agar konsisten."
+  );
   const sessionPath = findGatewaySessionCaseMismatch(
     resolveAuthDataPath(),
     normalizedGatewayClientId
