@@ -128,7 +128,9 @@ const dirRequestCrons = [
     description:
       'Send Bidhumas 22.00 evening recap..',
     schedules: [
+      { cronExpression: '30 21 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '00 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+
     ],
   },
 ];
