@@ -15,7 +15,52 @@ import {
 } from '../cronDirRequestBidhumasEvening.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
-const READINESS_GRACE_MS = 4000;
+const DIRREQUEST_WA_READY_TIMEOUT_MS = (() => {
+  const resolvedTimeout = Number(
+    process.env.DIRREQUEST_WA_READY_TIMEOUT_MS
+      || process.env.WA_GATEWAY_READY_TIMEOUT_MS
+      || process.env.WA_READY_TIMEOUT_MS
+      || 5 * 60 * 1000,
+  );
+  return Number.isNaN(resolvedTimeout) ? 5 * 60 * 1000 : resolvedTimeout;
+})();
+
+const waitForWaGatewayReadyWithTimeout = (waGatewayClient, timeoutMs) => {
+  if (typeof waGatewayClient?.waitForWaReady !== 'function') {
+    return Promise.resolve();
+  }
+
+  if (!timeoutMs || Number.isNaN(Number(timeoutMs))) {
+    return waGatewayClient.waitForWaReady();
+  }
+
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[CRON] WA gateway not ready after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([waGatewayClient.waitForWaReady(), timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+};
+
+const createDirRequestCustomSequenceHandler = waGatewayClient => {
+  return async () => {
+    try {
+      await waitForWaGatewayReadyWithTimeout(waGatewayClient, DIRREQUEST_WA_READY_TIMEOUT_MS);
+    } catch (error) {
+      console.warn(
+        `[CRON] DirRequest custom sequence skipped: WA gateway readiness timeout after ${DIRREQUEST_WA_READY_TIMEOUT_MS}ms`,
+        error,
+      );
+      return;
+    }
+
+    return runDirRequestCustomSequence();
+  };
+};
 
 const dirRequestCrons = [
   {
@@ -103,60 +148,17 @@ export function registerDirRequestCrons(waGatewayClient) {
     return [];
   }
 
-  let activated = false;
-  let readinessFallbackTimer;
   const scheduledJobs = [];
+  const dirRequestCustomSequenceHandler = createDirRequestCustomSequenceHandler(waGatewayClient);
 
-  const activateGroup = () => {
-    if (activated) {
-      console.log('[CRON] dirRequest cron group already registered');
-      return scheduledJobs;
-    }
-
-    activated = true;
-    clearTimeout(readinessFallbackTimer);
-
-    dirRequestCrons.forEach(({ jobKey, description, schedules }) => {
-      schedules.forEach(({ cronExpression, handler, options }) => {
-        console.log(`[CRON] Registering ${jobKey} (${description}) at ${cronExpression}`);
-        scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, handler, options));
-      });
+  dirRequestCrons.forEach(({ jobKey, description, schedules }) => {
+    schedules.forEach(({ cronExpression, handler, options }) => {
+      const resolvedHandler =
+        jobKey === DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY ? dirRequestCustomSequenceHandler : handler;
+      console.log(`[CRON] Registering ${jobKey} (${description}) at ${cronExpression}`);
+      scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, resolvedHandler, options));
     });
-
-    return scheduledJobs;
-  };
-
-  const deferWithGracePeriod = reason => {
-    if (readinessFallbackTimer || activated) return;
-    console.log(
-      `[CRON] dirRequest cron registration deferred (${reason}); will auto-activate after ${READINESS_GRACE_MS}ms grace period`,
-    );
-    readinessFallbackTimer = setTimeout(() => {
-      if (activated) return;
-      console.warn(
-        '[CRON] Activating dirRequest cron group after WA readiness grace period elapsed; WA ready event/promise missing',
-      );
-      activateGroup();
-    }, READINESS_GRACE_MS);
-  };
-
-  waGatewayClient.on('ready', () => {
-    console.log('[CRON] WA gateway client ready event for dirRequest bucket');
-    activateGroup();
   });
-
-  deferWithGracePeriod('waiting for WA gateway readiness');
-
-  waGatewayClient
-    .waitForWaReady()
-    .then(() => {
-      console.log('[CRON] WA gateway client ready for dirRequest bucket');
-      return activateGroup();
-    })
-    .catch(err => {
-      console.error('[CRON] Error waiting for WA gateway readiness, will rely on grace-period activation', err);
-      deferWithGracePeriod('waGatewayClient.waitForWaReady rejected');
-    });
 
   return scheduledJobs;
 }

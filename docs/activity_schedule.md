@@ -1,7 +1,7 @@
 # System Activity Schedule
 *Last updated: 2026-04-30*
 
-This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can share the same WhatsApp gateway readiness checks and be toggled together.
+This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together while applying per-run WhatsApp readiness checks where needed.【F:src/cron/dirRequest/index.js†L1-L151】
 
 ## Runtime safeguards & configuration sync
 
@@ -9,7 +9,7 @@ Every cron file calls `scheduleCronJob`, which delegates to `src/utils/cronSched
 
 The configuration data lives in the migration `sql/migrations/20251022_create_cron_job_config.sql` and is surfaced in the cron configuration menu, keeping this schedule synchronized with the controls that ops staff use to enable or pause jobs.【F:sql/migrations/20251022_create_cron_job_config.sql†L1-L34】
 
-dirRequest cron registration now waits for the WhatsApp gateway to emit `ready`, but also installs a 60-second grace-period fallback. If `waGatewayClient.waitForWaReady()` rejects or no ready event ever arrives, the group logs the deferral and auto-activates after the grace window so daily recaps do not get stuck waiting on the gateway.【F:src/cron/dirRequest/index.js†L93-L164】
+dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed.【F:src/cron/dirRequest/index.js†L1-L151】
 
 ## Cron Jobs
 
@@ -36,7 +36,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 
 ### Ditbinmas dirRequest group (registered via `registerDirRequestCrons`)
 
-The schedules below are bundled inside `src/cron/dirRequest/index.js` and register once the WhatsApp gateway client is ready. Set `ENABLE_DIRREQUEST_GROUP=false` in the environment to pause all of them together without editing each job record. The table order mirrors the serialized registration chain, and the cron expressions are staggered to avoid overlapping WhatsApp sends in the Asia/Jakarta timezone.【F:src/cron/dirRequest/index.js†L1-L92】
+The schedules below are bundled inside `src/cron/dirRequest/index.js` and register immediately during boot. The dirRequest custom sequence waits for WhatsApp readiness per run with a timeout so the 15:00 and 18:30 slots still fire even if the gateway is slow to become ready. Set `ENABLE_DIRREQUEST_GROUP=false` in the environment to pause all of them together without editing each job record. The table order mirrors the serialized registration chain, and the cron expressions are staggered to avoid overlapping WhatsApp sends in the Asia/Jakarta timezone.【F:src/cron/dirRequest/index.js†L1-L151】
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
