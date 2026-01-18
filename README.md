@@ -211,7 +211,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     GATEWAY_WA_CLIENT_ID=wa-gateway-prod
     WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
     WA_AUTH_CLEAR_SESSION_ON_REINIT=false
-    WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json
+    WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json
     WA_WEB_VERSION=
     WA_WEB_VERSION_RECOMMENDED=
     WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS=20000

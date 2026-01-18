@@ -200,7 +200,7 @@ dirrequest tanpa langkah tambahan.
 - Untuk menjaga stabilitas pengiriman file di menu **4️⃣4️⃣**, pastikan
   konfigurasi environment menetapkan `WA_WEB_VERSION_CACHE_URL` atau
   `WA_WEB_VERSION` yang valid. Rekomendasi: gunakan cache URL
-  `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json`
+  `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json`
   agar WhatsApp Web version cache tetap sinkron. Jika kedua nilai kosong, cache
   akan dimatikan dan WA client lebih rentan re-init saat beban pengiriman file
   meningkat.
