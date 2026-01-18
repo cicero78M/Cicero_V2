@@ -27,7 +27,7 @@ export const env = cleanEnv(process.env, {
   WA_WEB_VERSION: str({ default: '' }),
   WA_WEB_VERSION_CACHE_URL: str({
     default:
-      'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json'
+      'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json'
   }),
   WA_WWEBJS_PROTOCOL_TIMEOUT_MS: num({ default: 120000 }),
   ENABLE_DIRREQUEST_GROUP: bool({ default: true }),

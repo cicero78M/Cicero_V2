@@ -67,7 +67,7 @@ WA_AUTH_DATA_PATH=/var/lib/cicero/wa-sessions
 WA_AUTH_CLEAR_SESSION_ON_REINIT=false
 
 # URL cache versi WhatsApp Web (opsional, kosongkan jika ingin menonaktifkan fetch remote)
-WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/wa-version.json
+WA_WEB_VERSION_CACHE_URL=https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json
 
 # Pin versi WhatsApp Web untuk menghindari error cache remote (opsional, format: \d+\.\d+(\.\d+)?)
 WA_WEB_VERSION=
