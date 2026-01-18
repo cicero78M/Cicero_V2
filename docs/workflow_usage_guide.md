@@ -74,9 +74,12 @@ WA_WEB_VERSION=
 
 # Timeout DevTools Protocol Puppeteer untuk whatsapp-web.js (opsional, ms)
 WA_WWEBJS_PROTOCOL_TIMEOUT_MS=120000
+# Override timeout per client (opsional, suffix = client ID uppercase dengan non-alfanumerik jadi "_")
+WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER=120000
+WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000
 ```
 Jika `WA_WEB_VERSION_CACHE_URL` dan `WA_WEB_VERSION` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Biarkan salah satu dari dua variabel tersebut terisi untuk mengaktifkan kembali mekanisme cache versi, dan kosongkan keduanya hanya jika memang ingin menonaktifkan caching.
-`WA_WWEBJS_PROTOCOL_TIMEOUT_MS` memperbesar ambang `Runtime.callFunctionOn` pada Puppeteer; naikkan ke 180000ms jika koneksi ke WhatsApp Web sering lambat atau time out.
+`WA_WWEBJS_PROTOCOL_TIMEOUT_MS` memperbesar ambang `Runtime.callFunctionOn` pada Puppeteer; naikkan ke 180000ms jika koneksi ke WhatsApp Web sering lambat atau time out. Override per client bisa di-set dengan suffix client ID uppercase (misalnya `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000` untuk `wa-gateway-prod`) agar admin tetap pakai default sementara client tertentu bisa diperpanjang.
 Fallback readiness akan melakukan reinit ketika `getState` tetap `unknown` setelah batas retry. Untuk client `WA-GATEWAY`, **clear session hanya dilakukan** jika ada indikasi logout/auth failure (misalnya `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure`). Jika tidak ada indikasi tersebut, sistem tetap reinit tanpa clear session agar sesi valid tidak terhapus, dan log PM2 tetap menandai alasan fallback.
 
 ### Langkah Login

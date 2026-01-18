@@ -176,6 +176,11 @@ Timeout DevTools Protocol Puppeteer di whatsapp-web.js dapat diatur lewat
 `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` (default 120000ms). Ini memperbesar ambang
 `Runtime.callFunctionOn` saat koneksi lambat; naikkan ke 180000ms atau lebih jika
 host sering time out ketika melakukan evaluasi di halaman WhatsApp Web.
+Override per client tersedia dengan menambahkan suffix client ID uppercase,
+mengganti karakter non-alfanumerik menjadi `_`. Contoh: `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000`
+untuk client ID `wa-gateway-prod`, atau `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER=180000`
+untuk client user. Dengan begitu, admin tetap memakai default sementara client tertentu
+bisa diperpanjang tanpa mengganggu WA admin.
 
 ## Normalisasi opsi sendMessage
 
