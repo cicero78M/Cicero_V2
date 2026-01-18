@@ -461,6 +461,8 @@ function formatVerificationSummary(
 
 const DEFAULT_AUTH_DATA_PARENT_DIR = ".cicero";
 const DEFAULT_AUTH_DATA_DIR = "wwebjs_auth";
+const defaultUserClientId = "wa-userrequest";
+const defaultGatewayClientId = "wa-gateway";
 const rawUserClientId = String(env.USER_WA_CLIENT_ID || "");
 const rawGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "");
 const normalizedUserClientId = rawUserClientId.trim();
@@ -509,36 +511,55 @@ const findGatewaySessionCaseMismatch = (authDataPath, clientId) => {
   return null;
 };
 
-if (
-  trimmedGatewayClientId &&
-  normalizedGatewayClientId &&
-  trimmedGatewayClientId !== normalizedGatewayClientId
-) {
-  console.error(
-    `[WA] GATEWAY_WA_CLIENT_ID harus lowercase; nilai "${trimmedGatewayClientId}" ` +
-      `akan dipaksa menjadi "${normalizedGatewayClientId}". ` +
-      "Perbarui env agar konsisten."
-  );
-  const sessionPath = findGatewaySessionCaseMismatch(
-    resolveAuthDataPath(),
-    normalizedGatewayClientId
-  );
-  if (sessionPath) {
-    console.warn(
-      `[WA] GATEWAY_WA_CLIENT_ID menggunakan casing "${trimmedGatewayClientId}" ` +
-        `tetapi ada session dengan casing berbeda di ${sessionPath}. ` +
-        `Gunakan nilai yang konsisten agar tidak membuat session baru.`
+const throwGatewayClientIdError = (message) => {
+  throw new Error(`[WA] ${message}`);
+};
+
+const ensureGatewayClientIdConsistency = () => {
+  const authDataPath = resolveAuthDataPath();
+  if (
+    trimmedGatewayClientId &&
+    normalizedGatewayClientId &&
+    trimmedGatewayClientId !== normalizedGatewayClientId
+  ) {
+    const sessionPath = findGatewaySessionCaseMismatch(
+      authDataPath,
+      normalizedGatewayClientId
+    );
+    const sessionHint = sessionPath
+      ? ` Ditemukan session berbeda di ${sessionPath}.`
+      : "";
+    throwGatewayClientIdError(
+      `GATEWAY_WA_CLIENT_ID harus lowercase. Nilai "${trimmedGatewayClientId}" tidak konsisten.${sessionHint} ` +
+        "Perbarui env/folder session agar cocok sebelum menjalankan proses."
     );
   }
-}
+  if (normalizedGatewayClientId === defaultGatewayClientId) {
+    throwGatewayClientIdError(
+      `GATEWAY_WA_CLIENT_ID masih default (${defaultGatewayClientId}); clientId harus unik dan lowercase. ` +
+        `Perbarui env dan bersihkan session lama di ${authDataPath}.`
+    );
+  }
+  const mismatchedSessionPath = findGatewaySessionCaseMismatch(
+    authDataPath,
+    normalizedGatewayClientId
+  );
+  if (mismatchedSessionPath) {
+    throwGatewayClientIdError(
+      `Folder session "${path.basename(mismatchedSessionPath)}" tidak konsisten dengan ` +
+        `GATEWAY_WA_CLIENT_ID="${normalizedGatewayClientId}". Rename atau hapus session lama di ` +
+        `${mismatchedSessionPath} agar konsisten.`
+    );
+  }
+};
+
+ensureGatewayClientIdConsistency();
 
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
 export let waGatewayClient = await createWwebjsClient(resolvedGatewayClientId);
 
-const defaultUserClientId = "wa-userrequest";
-const defaultGatewayClientId = "wa-gateway";
 const logClientIdIssue = (envVar, issueMessage) => {
   console.error(`[WA] ${envVar} ${issueMessage}; clientId harus unik.`);
 };
