@@ -262,11 +262,13 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
-4. Untuk `WA-GATEWAY`, fallback readiness **hanya akan clear session** jika ada
-   indikasi logout/auth failure (misalnya `lastDisconnectReason` termasuk
-   `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure` tercatat).
-   Jika tidak ada indikasi tersebut, sistem tetap reinit tanpa clear session agar
-   sesi yang masih valid tidak terhapus.
+4. Untuk `WA-GATEWAY` dan `WA-USER`, fallback readiness **hanya akan clear session**
+   jika ada indikasi logout/auth failure (misalnya `lastDisconnectReason` termasuk
+   `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure` tercatat)
+   dan folder `session-<clientId>` masih ada. Jika tidak ada indikasi tersebut,
+   sistem tetap reinit tanpa clear session agar sesi yang masih valid tidak terhapus.
+   Sebelum menghapus manual, backup folder session agar autentikasi bisa dipulihkan
+   bila diperlukan.
 5. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
    Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan
