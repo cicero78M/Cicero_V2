@@ -994,6 +994,24 @@ async function waitForClientReady(client, timeoutMs) {
         : Number.isNaN(Number(timeoutMs))
           ? getClientReadyTimeoutMs(client)
           : Number(timeoutMs);
+    if (isFatalMissingChrome(client) || client?.fatalInitError?.type === "missing-chrome") {
+      const idx = state.readyResolvers.indexOf(resolver);
+      if (idx !== -1) state.readyResolvers.splice(idx, 1);
+      const timeoutContext = formatClientReadyTimeoutContext(state);
+      const contextMessage =
+        `label=${timeoutContext.label} ` +
+        `clientId=${timeoutContext.clientId} ` +
+        `sessionPath=${timeoutContext.sessionPath} ` +
+        `awaitingQrScan=${timeoutContext.awaitingQrScan} ` +
+        `lastDisconnectReason=${timeoutContext.lastDisconnectReason} ` +
+        `lastAuthFailureAt=${timeoutContext.lastAuthFailureAt}`;
+      const missingChromeError = new Error(
+        `WhatsApp client not ready: missing Chrome executable; ${contextMessage}`
+      );
+      missingChromeError.context = timeoutContext;
+      reject(missingChromeError);
+      return;
+    }
     timer = setTimeout(() => {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
