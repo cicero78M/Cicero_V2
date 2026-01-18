@@ -780,6 +780,9 @@ function isFatalMissingChrome(client, err) {
   );
 }
 
+const missingChromeRemediationHint =
+  "Set WA_PUPPETEER_EXECUTABLE_PATH or run `npx puppeteer browsers install chrome`.";
+
 function scheduleHardInitRetry(client, label, err) {
   setClientNotReady(client);
   clearAuthenticatedFallbackTimer(client);
@@ -998,6 +1001,7 @@ async function waitForClientReady(client, timeoutMs) {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
       const timeoutContext = formatClientReadyTimeoutContext(state);
+      timeoutContext.remediationHint = missingChromeRemediationHint;
       const contextMessage =
         `label=${timeoutContext.label} ` +
         `clientId=${timeoutContext.clientId} ` +
@@ -1006,7 +1010,7 @@ async function waitForClientReady(client, timeoutMs) {
         `lastDisconnectReason=${timeoutContext.lastDisconnectReason} ` +
         `lastAuthFailureAt=${timeoutContext.lastAuthFailureAt}`;
       const missingChromeError = new Error(
-        `WhatsApp client not ready: missing Chrome executable; ${contextMessage}`
+        `WhatsApp client not ready: missing Chrome executable; ${contextMessage}. ${missingChromeRemediationHint}`
       );
       missingChromeError.context = timeoutContext;
       reject(missingChromeError);
@@ -1016,6 +1020,7 @@ async function waitForClientReady(client, timeoutMs) {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
       const timeoutContext = formatClientReadyTimeoutContext(state);
+      const missingChrome = isFatalMissingChrome(client);
       const contextMessage =
         `label=${timeoutContext.label} ` +
         `clientId=${timeoutContext.clientId} ` +
@@ -1026,6 +1031,15 @@ async function waitForClientReady(client, timeoutMs) {
       console.warn(
         `[${timeoutContext.label}] waitForClientReady timeout after ${resolvedTimeoutMs}ms; ${contextMessage}`
       );
+      if (missingChrome) {
+        timeoutContext.remediationHint = missingChromeRemediationHint;
+        const missingChromeError = new Error(
+          `WhatsApp client not ready: missing Chrome executable; ${contextMessage}. ${missingChromeRemediationHint}`
+        );
+        missingChromeError.context = timeoutContext;
+        reject(missingChromeError);
+        return;
+      }
       const timeoutError = new Error(
         `WhatsApp client not ready after ${resolvedTimeoutMs}ms; ${contextMessage}`
       );
