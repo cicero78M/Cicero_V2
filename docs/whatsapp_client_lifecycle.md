@@ -236,6 +236,16 @@ Interpretasi cepat:
   missing Chrome executable" beserta konteks readiness di atas agar leak resolver
   bisa dihindari.
 
+## Deferral pesan gateway sebelum ready
+
+`handleGatewayMessage` akan memanggil `waitForWaReady` untuk `waGatewayClient`
+di awal proses. Jika client belum siap, pesan gateway akan **ditunda** dengan
+menambahkan payload ke `pendingMessages` dan handler segera keluar tanpa
+melakukan akses DB atau forward. Ketika `markClientReady` menandai client
+siap, `flushPendingMessages` akan meneruskan pesan yang tertunda dengan
+men-emit event `message` sehingga alur gateway berjalan seperti biasa setelah
+readiness tercapai.
+
 ## Fallback readiness (retry `getState()` dan reinit)
 
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
