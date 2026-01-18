@@ -4167,6 +4167,22 @@ async function ensureGatewayAllowedGroupsLoaded(reason = "") {
 refreshGatewayAllowedGroups("initial warmup").catch(() => {});
 
 export async function handleGatewayMessage(msg) {
+  const readinessState = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
+  if (!readinessState.ready) {
+    waGatewayClient
+      .waitForWaReady()
+      .catch((err) => {
+        console.warn(
+          `[WA-GATEWAY] waitForWaReady failed before message handling: ${err?.message || err}`
+        );
+      });
+    readinessState.pendingMessages.push(msg);
+    console.log(
+      `[WA-GATEWAY] Deferred gateway message from ${msg?.from || "unknown"} until ready`
+    );
+    return;
+  }
+
   const chatId = msg.from || "";
   const text = (msg.body || "").trim();
   if (!text) return;
