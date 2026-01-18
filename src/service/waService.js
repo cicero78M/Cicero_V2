@@ -4753,15 +4753,14 @@ if (shouldInitWhatsAppClients) {
         }
         fallbackReinitCounts.set(client, reinitAttempts + 1);
         const shouldClearFallbackSession =
-          normalizedState === "unknown" && label === "WA-GATEWAY";
+          normalizedState === "unknown" &&
+          (label === "WA-GATEWAY" || label === "WA-USER");
         const hasAuthIndicators = hasAuthFailureIndicator(state);
         const sessionPath = client?.sessionPath || null;
         const sessionPathExists = sessionPath ? fs.existsSync(sessionPath) : false;
-        if (
-          shouldClearFallbackSession &&
-          hasAuthIndicators &&
-          typeof client?.reinitialize === "function"
-        ) {
+        const canClearFallbackSession =
+          shouldClearFallbackSession && hasAuthIndicators && sessionPathExists;
+        if (canClearFallbackSession && typeof client?.reinitialize === "function") {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
               `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts}); ` +
@@ -4785,10 +4784,10 @@ if (shouldInitWhatsAppClients) {
           scheduleFallbackReadyCheck(client, delayMs);
           return;
         }
-        if (shouldClearFallbackSession && !hasAuthIndicators) {
-          const skipReason = sessionPathExists
-            ? "session path exists and no auth indicator"
-            : "no auth indicator";
+        if (shouldClearFallbackSession && !canClearFallbackSession) {
+          const skipReason = !hasAuthIndicators
+            ? "no auth indicator"
+            : "session path missing";
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
               `skip clear session (${skipReason}); ` +
