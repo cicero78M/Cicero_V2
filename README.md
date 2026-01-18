@@ -60,6 +60,8 @@ The API exposes endpoints for managing clients and users, fetching Instagram and
 
 Basic health checks are available without authentication. `GET` or `POST /` returns `{ "status": "ok" }` for load balancers or uptime probes, and `/_next/dev/` responds the same to keep Next.js dev proxies from spamming logs.
 
+Security note: requests that attempt to access `.env`-style paths are short-circuited with a 404 response to reduce log noise and prevent accidental exposure of sensitive configuration files.
+
 When a request requires data for a particular client, include the client's identifier as a query parameter:
 
 ```

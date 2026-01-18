@@ -11,6 +11,7 @@ import claimRoutes from './src/routes/claimRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
+import { sensitivePathGuard } from './src/middleware/sensitivePathGuard.js';
 import cronManifest from './src/cron/cronManifest.js';
 import { registerDirRequestCrons } from './src/cron/dirRequest/index.js';
 import { waClient, waGatewayClient } from './src/service/waService.js';
@@ -91,6 +92,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(dedupRequest);
+app.use(sensitivePathGuard);
 
 app.all('/', (req, res) => res.status(200).json({ status: 'ok' }));
 app.all('/_next/dev/', (req, res) => res.status(200).json({ status: 'ok' }));
