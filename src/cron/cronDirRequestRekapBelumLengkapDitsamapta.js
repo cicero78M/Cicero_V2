@@ -10,7 +10,7 @@ import { buildClientRecipientSet } from '../utils/recipientHelper.js';
 
 const TARGET_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestRekapBelumLengkapDitsamapta.js';
-const CRON_EXPRESSION = '15 7-21 * * *';
+const CRON_EXPRESSION = '15 6 * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 export async function runCron() {
   sendDebug({
