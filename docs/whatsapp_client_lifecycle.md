@@ -231,6 +231,10 @@ Interpretasi cepat:
 - `awaitingQrScan=true` + `lastDisconnectReason` logout/unpaired → butuh scan QR baru.
 - `lastAuthFailureAt` terisi → kemungkinan session invalid atau auth gagal berulang.
 - `sessionPath` memastikan folder auth yang dipakai sudah benar dan writable.
+- Jika terdeteksi missing Chrome (`fatalInitError.type=missing-chrome`), helper
+  akan langsung reject sebelum timer berjalan dengan error "WhatsApp client not ready:
+  missing Chrome executable" beserta konteks readiness di atas agar leak resolver
+  bisa dihindari.
 
 ## Fallback readiness (retry `getState()` dan reinit)
 
