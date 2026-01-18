@@ -167,9 +167,15 @@ async function resolveWebVersionOptions() {
   const cacheUrl =
     (process.env.WA_WEB_VERSION_CACHE_URL || DEFAULT_WEB_VERSION_CACHE_URL).trim();
   const pinnedVersionInput = (process.env.WA_WEB_VERSION || '').trim();
+  const recommendedVersionInput = (process.env.WA_WEB_VERSION_RECOMMENDED || '')
+    .trim();
   const pinnedVersion = pinnedVersionInput
     ? extractVersionString(pinnedVersionInput)
     : null;
+  const recommendedVersion = recommendedVersionInput
+    ? extractVersionString(recommendedVersionInput)
+    : null;
+  const resolvedPinnedVersion = pinnedVersion || recommendedVersion;
   const versionOptions = {};
 
   if (pinnedVersionInput && !pinnedVersion) {
@@ -177,8 +183,13 @@ async function resolveWebVersionOptions() {
       `[WWEBJS] WA_WEB_VERSION must be a valid version string (got "${pinnedVersionInput}").`
     );
   }
+  if (recommendedVersionInput && !recommendedVersion) {
+    console.warn(
+      `[WWEBJS] WA_WEB_VERSION_RECOMMENDED must be a valid version string (got "${recommendedVersionInput}").`
+    );
+  }
 
-  if (!cacheUrl && !pinnedVersionInput) {
+  if (!cacheUrl && !pinnedVersionInput && !recommendedVersionInput) {
     console.warn(
       '[WWEBJS] WA_WEB_VERSION and WA_WEB_VERSION_CACHE_URL are empty; ' +
         'disabling local web cache to avoid LocalWebCache.persist errors.'
@@ -197,7 +208,7 @@ async function resolveWebVersionOptions() {
       const extractedVersion = extractVersionString(cachePayload);
       if (extractedVersion) {
         versionOptions.webVersionCache = { type: 'remote', remotePath: cacheUrl };
-        if (!pinnedVersion) {
+        if (!resolvedPinnedVersion) {
           versionOptions.webVersion = extractedVersion;
         }
       } else {
@@ -210,13 +221,17 @@ async function resolveWebVersionOptions() {
     }
   }
 
-  if (pinnedVersion) {
-    versionOptions.webVersion = pinnedVersion;
+  if (resolvedPinnedVersion) {
+    versionOptions.webVersion = resolvedPinnedVersion;
   }
 
   return {
     ...versionOptions,
-    __webVersionMeta: { cacheUrl, pinnedVersionInput },
+    __webVersionMeta: {
+      cacheUrl,
+      pinnedVersionInput,
+      recommendedVersionInput,
+    },
   };
 }
 
@@ -236,12 +251,18 @@ function sanitizeWebVersionOptions(versionOptions) {
     typeof resolvedVersion === 'string' && WEB_VERSION_PATTERN.test(resolvedVersion);
   const shouldValidate =
     Boolean(webVersionMeta?.pinnedVersionInput) ||
+    Boolean(webVersionMeta?.recommendedVersionInput) ||
     Boolean(webVersionMeta?.cacheUrl) ||
     sanitized.webVersionCache?.type === 'remote';
   if (shouldValidate && !isValidResolvedVersion) {
     const details = [];
     if (webVersionMeta?.pinnedVersionInput) {
       details.push(`WA_WEB_VERSION="${webVersionMeta.pinnedVersionInput}"`);
+    }
+    if (webVersionMeta?.recommendedVersionInput) {
+      details.push(
+        `WA_WEB_VERSION_RECOMMENDED="${webVersionMeta.recommendedVersionInput}"`
+      );
     }
     if (webVersionMeta?.cacheUrl) {
       details.push(`WA_WEB_VERSION_CACHE_URL="${webVersionMeta.cacheUrl}"`);
