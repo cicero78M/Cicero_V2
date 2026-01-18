@@ -12,6 +12,8 @@ const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
 const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
 const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
 const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
+const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
+const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -60,15 +62,42 @@ function resolveBrowserLockBackoffMs() {
   return Math.max(configured, 0);
 }
 
-function resolvePuppeteerProtocolTimeoutMs() {
-  const configured = Number.parseInt(
-    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_MS || '',
-    10
-  );
+function parseTimeoutEnvValue(rawValue) {
+  const configured = Number.parseInt(rawValue || '', 10);
   if (Number.isNaN(configured)) {
-    return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS;
+    return null;
   }
   return Math.max(configured, 0);
+}
+
+function normalizeClientIdEnvSuffix(clientId) {
+  if (!clientId) {
+    return '';
+  }
+  return String(clientId)
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+}
+
+function resolvePuppeteerProtocolTimeoutMs(clientId) {
+  const clientSuffix = normalizeClientIdEnvSuffix(clientId);
+  if (clientSuffix) {
+    const perClientValue = parseTimeoutEnvValue(
+      process.env[`WA_WWEBJS_PROTOCOL_TIMEOUT_MS_${clientSuffix}`]
+    );
+    if (perClientValue !== null) {
+      return perClientValue;
+    }
+  }
+  const configured = parseTimeoutEnvValue(
+    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_MS
+  );
+  if (configured !== null) {
+    return configured;
+  }
+  return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS;
 }
 
 function resolveConnectTimeoutMs() {
@@ -271,6 +300,33 @@ function delay(durationMs) {
   return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
+function isRuntimeCallTimeout(err) {
+  const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
+  return errorDetails.includes('Runtime.callFunctionOn timed out');
+}
+
+async function withRuntimeTimeoutRetry(action, label) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await action();
+    } catch (err) {
+      lastError = err;
+      if (!isRuntimeCallTimeout(err) || attempt >= DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS) {
+        throw err;
+      }
+      const backoffMs = DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS * attempt;
+      console.warn(
+        `[WWEBJS] ${label} timed out (Runtime.callFunctionOn). ` +
+          `Retrying in ${backoffMs}ms (attempt ${attempt}/${DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS}).`,
+        err?.message || err
+      );
+      await delay(backoffMs);
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Create a whatsapp-web.js client that matches the WAAdapter contract.
  * The client stays in standby mode and does not mark messages as read
@@ -340,7 +396,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     await resolveWebVersionOptions()
   );
   const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
-  const puppeteerProtocolTimeoutMs = resolvePuppeteerProtocolTimeoutMs();
+  const puppeteerProtocolTimeoutMs = resolvePuppeteerProtocolTimeoutMs(clientId);
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: {
@@ -668,7 +724,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return null;
     }
     try {
-      return await client.getNumberId(phone);
+      return await withRuntimeTimeoutRetry(
+        () => client.getNumberId(phone),
+        'getNumberId'
+      );
     } catch (err) {
       console.warn('[WWEBJS] getNumberId failed:', err?.message || err);
       return null;
@@ -677,7 +736,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   emitter.getChat = async (jid) => {
     try {
-      return await client.getChatById(jid);
+      return await withRuntimeTimeoutRetry(
+        () => client.getChatById(jid),
+        'getChat'
+      );
     } catch (err) {
       console.warn('[WWEBJS] getChat failed:', err?.message || err);
       return null;
@@ -738,7 +800,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   emitter.getContact = async (jid) => {
     try {
-      const contact = await client.getContactById(jid);
+      const contact = await withRuntimeTimeoutRetry(
+        () => client.getContactById(jid),
+        'getContact'
+      );
       return contact;
     } catch (err) {
       console.warn('[WWEBJS] getContact failed:', err?.message || err);
