@@ -85,11 +85,11 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 
 Pastikan path ini writable oleh user yang menjalankan service.
 
-Catatan penting: `GATEWAY_WA_CLIENT_ID` **harus lowercase**. Service akan
-memaksa nilai ini menjadi lowercase sebelum memanggil `createWwebjsClient` dan
-akan mencatat error jika env memakai casing campuran. Karena nama folder session
-mengikuti `clientId`, pastikan nilai env sudah lowercase agar folder session
-tetap konsisten.
+Catatan penting: `GATEWAY_WA_CLIENT_ID` **harus lowercase** dan **tidak boleh
+default `wa-gateway`**. Service akan menghentikan proses sejak awal jika nilai
+masih default, mengandung huruf besar, atau folder `session-<clientId>` di
+`WA_AUTH_DATA_PATH` memakai casing berbeda. Karena nama folder session mengikuti
+`clientId`, pastikan nilai env dan folder session selalu konsisten.
 
 Checklist operasional (casing & path):
 
@@ -99,7 +99,9 @@ Checklist operasional (casing & path):
    - Jika ada `session-<clientId>` dengan casing tidak lowercase, rename folder
      tersebut menjadi lowercase (contoh: `session-Wa-Gateway` → `session-wa-gateway`)
      agar sesuai dengan `GATEWAY_WA_CLIENT_ID` yang baru.
-3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` lowercase di semua konfigurasi proses
+   - Saat mengganti `GATEWAY_WA_CLIENT_ID`, hapus atau rename folder session lama
+     di `WA_AUTH_DATA_PATH` agar sesi usang tidak tertinggal.
+3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` lowercase dan unik di semua konfigurasi proses
    (deployment, PM2/daemon, systemd, atau env file) agar tidak membuat session baru
    saat restart.
 
