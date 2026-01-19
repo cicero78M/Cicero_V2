@@ -523,6 +523,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
   ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
   aktif bertipe Direktorat sebelum mengirim.
+- Cron custom sequence menunggu WA-GATEWAY siap sebelum berjalan (timeout via
+  `DIRREQUEST_WA_READY_TIMEOUT_MS` atau fallback `WA_GATEWAY_READY_TIMEOUT_MS` /
+  `WA_READY_TIMEOUT_MS`). Jika readiness timeout, cron dilewati dan peringatan
+  ditulis ke log produksi agar penyebab skip terlihat.
 - Debug dan kegagalan menu dicatat lewat `sendDebug` serta dikirim ke daftar
   admin (`ADMIN_WHATSAPP`) agar alur kronologis dan error dapat dilacak tanpa
   membuka dashboard. Ringkasan akhir kini mencantumkan status Ditsamapta, Ditbinmas,
@@ -531,7 +535,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Gabungan Fetch + Recap Ditbinmas + Cron Custom
 - Fungsi `runDitbinmasRecapAndCustomSequence` pada
   `src/cron/cronDirRequestCustomSequence.js` kini terjadwal otomatis pada
-  pukul **20:30** (cron `30 20 * * *`, job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
+  pukul **18:15** (cron `15 18 * * *`, job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
   mencakup seluruh logika `runDitbinmasRecapSequence`, sehingga tidak ada job
   terpisah khusus recap. Urutan tahapannya menjaga fetch hanya dilakukan sekali:
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
@@ -542,19 +546,23 @@ berpindah ke dashboard web atau menjalankan skrip manual.
      menu operator **30** ke kontak `client_operator` setelah blok super admin.
   3. Memanggil `runCron({ includeFetch: false })` sehingga blok custom
      dirrequest berjalan tanpa fetch ulang.
+- Job ini menunggu kesiapan WA-GATEWAY sebelum eksekusi (timeout via
+  `DIRREQUEST_WA_READY_TIMEOUT_MS` atau fallback `WA_GATEWAY_READY_TIMEOUT_MS` /
+  `WA_READY_TIMEOUT_MS`). Jika readiness tidak tercapai, cron melewati eksekusi
+  dan menulis log peringatan agar alasan skip terlihat di produksi.
 - Setiap tahap mencatat progres ke admin WhatsApp; ringkasan gabungan
   menampilkan status fetch, recap Ditbinmas, dan cron custom secara terpisah
   supaya ketahuan bila salah satu langkah gagal namun langkah berikutnya tetap
   dieksekusi.
 
-## Logika Recap Ditbinmas dalam Slot 20:30
+## Logika Recap Ditbinmas dalam Slot 18:15
 - `runDitbinmasRecapSequence` tidak lagi dijadwalkan terpisah; ia dijalankan
-  di tengah alur `runDitbinmasRecapAndCustomSequence` pada pukul **20:30**.
+  di tengah alur `runDitbinmasRecapAndCustomSequence` pada pukul **18:15**.
   Pemanggilan manual tetap bisa dilakukan bila diperlukan, tetapi cron hanya
   berjalan sekali di slot tersebut.
 - Penerima dibagi otomatis berdasarkan kontak Ditbinmas:
   - Menu **6**, **9**, **34**, dan **35** dikirim hanya ke daftar `client_super`.
-  - Menu **30** dikirim hanya ke `client_operator` pada slot 20:30 setelah
+  - Menu **30** dikirim hanya ke `client_operator` pada slot 18:15 setelah
     menu super admin selesai.
   - Menu **21** tidak lagi dijalankan; slot ini tidak mengirim rekap ke grup Ditbinmas.
 - Periode rekap mengikuti tanggal eksekusi:
@@ -567,7 +575,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   Ditbinmas, menormalkan WID dengan `splitRecipientField`/`toWAid`, lalu
   menjalankan menu secara berurutan melalui `executeMenuActions`.
 - Setiap pesan antar menu/penerima diberi jeda **2 detik** (`delayAfterSend`)
-  pada alur standar, tetapi slot 20:30 untuk Super Admin Ditbinmas memakai jeda
+  pada alur standar, tetapi slot 18:15 untuk Super Admin Ditbinmas memakai jeda
   **10 detik** per eksekusi menu agar tidak menabrak batas pengiriman WhatsApp.
 
 ## Penerima Cron DirRequest
