@@ -14,6 +14,13 @@ const splitRecipientField = jest.fn((value) => (value ? value.split(',') : []));
 const normalizeGroupId = jest.fn((value) => value);
 const runDirRequestFetchSosmed = jest.fn(async () => {});
 const delayAfterSend = jest.fn(async () => {});
+const minPhoneDigitLength = 8;
+const normalizeUserWhatsAppId = (value, minLength = minPhoneDigitLength) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length < minLength) return null;
+  const normalized = digits.startsWith('62') ? digits : `62${digits.replace(/^0/, '')}`;
+  return `${normalized}@c.us`;
+};
 
 const originalExtraActions = process.env.DITSAMAPTA_EXTRA_ACTIONS;
 
@@ -54,6 +61,8 @@ async function loadModules() {
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
     getAdminWAIds: () => [],
+    normalizeUserWhatsAppId,
+    minPhoneDigitLength,
   }));
 
   jest.unstable_mockModule('../src/service/waService.js', () => ({
@@ -115,13 +124,13 @@ test('runDitbinmasRecapAndCustomSequence sends Ditbinmas recap menus to super ad
 
   expect(ditbinmasRecapCalls).toHaveLength(4);
   const recipients = new Set(ditbinmasRecapCalls.map(([args]) => args.chatId));
-  expect(Array.from(recipients)).toEqual(['08123456789@c.us']);
+  expect(Array.from(recipients)).toEqual(['628123456789@c.us']);
 
   const operatorCalls = runDirRequestAction.mock.calls.filter(
     ([args]) => args.clientId === 'DITBINMAS' && String(args.action) === '30',
   );
   expect(operatorCalls).toHaveLength(1);
-  expect(operatorCalls[0][0].chatId).toBe('081987654321@c.us');
+  expect(operatorCalls[0][0].chatId).toBe('6281987654321@c.us');
 
   expect(delayAfterSend).toHaveBeenCalledWith(10000);
 });

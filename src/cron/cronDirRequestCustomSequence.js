@@ -2,7 +2,12 @@ import { sendDebug } from '../middleware/debugHandler.js';
 import { runDirRequestAction } from '../handler/menu/dirRequestHandlers.js';
 import { findClientById } from '../service/clientService.js';
 import { splitRecipientField } from '../repository/clientContactRepository.js';
-import { safeSendMessage, getAdminWAIds } from '../utils/waHelper.js';
+import {
+  safeSendMessage,
+  getAdminWAIds,
+  normalizeUserWhatsAppId,
+  minPhoneDigitLength,
+} from '../utils/waHelper.js';
 import { waGatewayClient } from '../service/waService.js';
 import { delayAfterSend } from './dirRequestThrottle.js';
 import {
@@ -36,12 +41,25 @@ function validateDirektoratClient(client, clientId) {
   return { valid: true, reason: null };
 }
 
+function logInvalidRecipient(value) {
+  console.warn('[SKIP WA] invalid recipient', value);
+}
+
+function normalizeUserRecipient(value) {
+  const normalized = normalizeUserWhatsAppId(value, minPhoneDigitLength);
+  if (!normalized) {
+    logInvalidRecipient(value);
+    return null;
+  }
+  return normalized;
+}
+
 function toWAid(id) {
   if (!id || typeof id !== 'string') return null;
   const trimmed = id.trim();
   if (!trimmed) return null;
-  if (trimmed.endsWith('@c.us') || trimmed.endsWith('@g.us')) return trimmed;
-  return trimmed.replace(/\D/g, '') + '@c.us';
+  if (trimmed.endsWith('@g.us')) return trimmed;
+  return normalizeUserRecipient(trimmed);
 }
 
 function getGroupRecipient(client) {
@@ -84,7 +102,9 @@ function buildRecipients(
   return Array.from(recipients);
 }
 
-const adminRecipients = new Set(getAdminWAIds());
+const adminRecipients = new Set(
+  getAdminWAIds().map((wid) => normalizeUserRecipient(wid)).filter(Boolean)
+);
 
 async function logToAdmins(message) {
   if (!message || adminRecipients.size === 0) return;

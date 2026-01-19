@@ -620,7 +620,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
     dipertahankan apa adanya selama digit angkanya valid.
 - Token non-numerik (seperti `not-a-number`) atau nomor dengan digit kurang
   dari **8 angka** akan ditolak sehingga penerima tidak akan disertakan di
-  daftar `recipients` cron.
+  daftar `recipients` cron. Saat terjadi, cron akan mencatat log
+  `[SKIP WA] invalid recipient` untuk memudahkan penelusuran.
 
 ### Format Grup WA untuk DirRequest
 - Kolom `client_group` menerima beberapa variasi input untuk grup Ditbinmas dan
