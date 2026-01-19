@@ -47,6 +47,8 @@ duplikasi pesan ketika beberapa adapter aktif. Deduplikasi memakai kombinasi
 `remoteJid`/`from` dan `id` pesan. Jika salah satu nilai tidak tersedia,
 pesan akan langsung diproses tanpa deduplikasi agar pesan tetap diproses
 meskipun adapter tidak mengirim `id` yang lengkap.
+Pemanggilan handler kini dibungkus `Promise.resolve` dan akan mencatat error
+dengan konteks `jid`, `id`, dan `fromAdapter` agar akar masalah mudah ditelusuri.
 
 ## Guard error sesi menu WA
 
