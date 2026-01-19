@@ -14,6 +14,11 @@ const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
 const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
+const PROTOCOL_TIMEOUT_ENV_VAR_BASE = 'WA_WWEBJS_PROTOCOL_TIMEOUT_MS';
+const PROTOCOL_TIMEOUT_ROLE_ALIASES = [
+  { prefix: 'wa-gateway', suffix: 'GATEWAY' },
+  { prefix: 'wa-user', suffix: 'USER' },
+];
 
 function resolveDefaultAuthDataPath() {
   const homeDir = os.homedir?.();
@@ -81,23 +86,46 @@ function normalizeClientIdEnvSuffix(clientId) {
     .toUpperCase();
 }
 
-function resolvePuppeteerProtocolTimeoutMs(clientId) {
+function resolveProtocolTimeoutRoleSuffix(clientId) {
+  if (!clientId) {
+    return null;
+  }
+  const normalizedClientId = String(clientId).trim().toLowerCase();
+  if (!normalizedClientId) {
+    return null;
+  }
+  const match = PROTOCOL_TIMEOUT_ROLE_ALIASES.find(({ prefix }) =>
+    normalizedClientId.startsWith(prefix)
+  );
+  return match?.suffix || null;
+}
+
+function resolveProtocolTimeoutEnvCandidates(clientId) {
+  const candidates = [];
   const clientSuffix = normalizeClientIdEnvSuffix(clientId);
   if (clientSuffix) {
-    const perClientValue = parseTimeoutEnvValue(
-      process.env[`WA_WWEBJS_PROTOCOL_TIMEOUT_MS_${clientSuffix}`]
-    );
-    if (perClientValue !== null) {
-      return perClientValue;
+    candidates.push(`${PROTOCOL_TIMEOUT_ENV_VAR_BASE}_${clientSuffix}`);
+  }
+  const roleSuffix = resolveProtocolTimeoutRoleSuffix(clientId);
+  if (roleSuffix) {
+    candidates.push(`${PROTOCOL_TIMEOUT_ENV_VAR_BASE}_${roleSuffix}`);
+  }
+  candidates.push(PROTOCOL_TIMEOUT_ENV_VAR_BASE);
+  return [...new Set(candidates)];
+}
+
+function resolvePuppeteerProtocolTimeoutConfig(clientId) {
+  const candidates = resolveProtocolTimeoutEnvCandidates(clientId);
+  for (const envVarName of candidates) {
+    const configuredValue = parseTimeoutEnvValue(process.env[envVarName]);
+    if (configuredValue !== null) {
+      return { timeoutMs: configuredValue, envVarName };
     }
   }
-  const configured = parseTimeoutEnvValue(
-    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_MS
-  );
-  if (configured !== null) {
-    return configured;
-  }
-  return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS;
+  return {
+    timeoutMs: DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS,
+    envVarName: PROTOCOL_TIMEOUT_ENV_VAR_BASE,
+  };
 }
 
 function resolveConnectTimeoutMs() {
@@ -326,7 +354,12 @@ function isRuntimeCallTimeout(err) {
   return errorDetails.includes('Runtime.callFunctionOn timed out');
 }
 
-async function withRuntimeTimeoutRetry(action, label) {
+async function withRuntimeTimeoutRetry(
+  action,
+  label,
+  protocolTimeoutEnvVarName,
+  clientId
+) {
   let lastError = null;
   for (let attempt = 1; attempt <= DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS; attempt += 1) {
     try {
@@ -339,7 +372,9 @@ async function withRuntimeTimeoutRetry(action, label) {
       const backoffMs = DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS * attempt;
       console.warn(
         `[WWEBJS] ${label} timed out (Runtime.callFunctionOn). ` +
-          `Retrying in ${backoffMs}ms (attempt ${attempt}/${DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS}).`,
+          `Retrying in ${backoffMs}ms (attempt ${attempt}/${DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS}). ` +
+          `Protocol timeout env var: ${protocolTimeoutEnvVarName}. ` +
+          `clientId=${clientId}.`,
         err?.message || err
       );
       await delay(backoffMs);
@@ -417,7 +452,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     await resolveWebVersionOptions()
   );
   const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
-  const puppeteerProtocolTimeoutMs = resolvePuppeteerProtocolTimeoutMs(clientId);
+  const puppeteerProtocolTimeoutConfig =
+    resolvePuppeteerProtocolTimeoutConfig(clientId);
+  const puppeteerProtocolTimeoutMs = puppeteerProtocolTimeoutConfig.timeoutMs;
+  const protocolTimeoutEnvVarName = puppeteerProtocolTimeoutConfig.envVarName;
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: {
@@ -747,7 +785,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     try {
       return await withRuntimeTimeoutRetry(
         () => client.getNumberId(phone),
-        'getNumberId'
+        'getNumberId',
+        protocolTimeoutEnvVarName,
+        clientId
       );
     } catch (err) {
       console.warn('[WWEBJS] getNumberId failed:', err?.message || err);
@@ -759,7 +799,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     try {
       return await withRuntimeTimeoutRetry(
         () => client.getChatById(jid),
-        'getChat'
+        'getChat',
+        protocolTimeoutEnvVarName,
+        clientId
       );
     } catch (err) {
       console.warn('[WWEBJS] getChat failed:', err?.message || err);
@@ -823,7 +865,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     try {
       const contact = await withRuntimeTimeoutRetry(
         () => client.getContactById(jid),
-        'getContact'
+        'getContact',
+        protocolTimeoutEnvVarName,
+        clientId
       );
       return contact;
     } catch (err) {
