@@ -719,6 +719,10 @@ export async function absensiLikesDitbinmasReport(clientId = "DITBINMAS") {
     });
 
     const belumCount = belum.length + tanpaUsername.length;
+    const totalPelaksanaanDivisi = users.reduce(
+      (total, user) => total + (user.count || 0),
+      0
+    );
 
     reportEntries.push({
       clientName: div,
@@ -727,33 +731,44 @@ export async function absensiLikesDitbinmasReport(clientId = "DITBINMAS") {
       kurangCount: kurang.length,
       belumCount,
       noUsernameCount: tanpaUsername.length,
-      sudahList: sudah.map((u) => `- ${formatNama(u)}, ${u.count}`),
-      kurangList: kurang.map((u) => `- ${formatNama(u)}, ${u.count}`),
+      totalPelaksanaanDivisi,
+      sudahList: sudah.map(
+        (u) =>
+          `- ${formatNama(u)}, Pelaksanaan: ${u.count || 0}/${shortcodes.length}`
+      ),
+      kurangList: kurang.map(
+        (u) =>
+          `- ${formatNama(u)}, Pelaksanaan: ${u.count || 0}/${shortcodes.length}`
+      ),
       belumList: belum.map(
-        (u) => `- ${formatNama(u)}, ${u.insta ? u.insta : "-"}`
+        (u) =>
+          `- ${formatNama(u)}, Pelaksanaan: ${u.count || 0}/${shortcodes.length}`
       ),
       noUsernameList: tanpaUsername.map(
         (u) =>
-          `- ${formatNama(u)}, IG Kosong${!u.tiktok ? ", Tiktok Kosong" : ""}`
+          `- ${formatNama(u)}, Pelaksanaan: ${u.count || 0}/${
+            shortcodes.length
+          } (IG Kosong${!u.tiktok ? ", Tiktok Kosong" : ""})`
       ),
     });
   });
 
   reportEntries.sort((a, b) => {
-    const aBinmas = a.clientName.toUpperCase() === "DITBINMAS";
-    const bBinmas = b.clientName.toUpperCase() === "DITBINMAS";
-    if (aBinmas && !bBinmas) return -1;
-    if (bBinmas && !aBinmas) return 1;
-
-    const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
-    const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
+    if (a.totalPelaksanaanDivisi !== b.totalPelaksanaanDivisi) {
+      return b.totalPelaksanaanDivisi - a.totalPelaksanaanDivisi;
+    }
+    const aPct = a.usersCount
+      ? (a.sudahCount + a.kurangCount) / a.usersCount
+      : 0;
+    const bPct = b.usersCount
+      ? (b.sudahCount + b.kurangCount) / b.usersCount
+      : 0;
     if (aPct !== bPct) return bPct - aPct;
-
     if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
     return a.clientName.localeCompare(b.clientName);
   });
 
-  const reports = reportEntries.map((r, idx) => {
+  const reports = reportEntries.map((r) => {
     const sudahList = r.sudahList.length ? r.sudahList.join("\n") : "-";
     const kurangList = r.kurangList.length
       ? r.kurangList.join("\n")
@@ -764,8 +779,9 @@ export async function absensiLikesDitbinmasReport(clientId = "DITBINMAS") {
       : "-";
 
     let entry =
-      `${idx + 1}. ${r.clientName}\n` +
-      `*Jumlah Personil* : ${r.usersCount} pers\n` +
+      `*${r.clientName}*\n` +
+      `Akumulasi Pelaksanaan: ${r.totalPelaksanaanDivisi} (dari ${shortcodes.length} konten)\n` +
+      `Jumlah Personil: ${r.usersCount} pers\n\n` +
       `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
 
     if (r.kurangCount > 0) {
@@ -797,7 +813,7 @@ export async function absensiLikesDitbinmasReport(clientId = "DITBINMAS") {
     `- ⚠️ *Melaksanakan kurang lengkap :* ${totals.kurang} pers\n` +
     `❌ *Belum melaksanakan :* ${totals.belum} pers\n` +
     `⚠️❌ *Belum Update Username Instagram :* ${totals.noUsername} pers\n\n` +
-    reports.join("\n") +
+    reports.join("\n\n") +
     "\n\nTerimakasih.";
 
   return msg.trim();
