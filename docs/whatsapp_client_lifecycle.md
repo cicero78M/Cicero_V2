@@ -276,6 +276,11 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    sistem tetap reinit tanpa clear session agar sesi yang masih valid tidak terhapus.
    Sebelum menghapus manual, backup folder session agar autentikasi bisa dipulihkan
    bila diperlukan.
+   - **Escalation khusus `WA-GATEWAY`**: bila `getState()` terus `unknown` melewati
+     beberapa siklus retry, readiness akan menaikkan `unknown-state retries` dan
+     memaksa `reinitialize({ clearAuthSession: true })` meskipun indikator auth
+     kosong, agar gateway tidak terus-menerus stuck di state tak dikenal. Log akan
+     mencatat alasan escalation serta jumlah retry yang sudah dilewati.
 5. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
    Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan
