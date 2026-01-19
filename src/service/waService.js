@@ -625,6 +625,7 @@ const fallbackStateRetryCounts = new WeakMap();
 const fallbackReinitCounts = new WeakMap();
 const maxFallbackStateRetries = 3;
 const maxFallbackReinitAttempts = 2;
+const maxUnknownStateEscalationRetries = 2;
 const fallbackStateRetryMinDelayMs = 15000;
 const fallbackStateRetryMaxDelayMs = 30000;
 const connectInFlightWarnMs = Number.isNaN(
@@ -691,6 +692,7 @@ function getClientReadinessState(client, label = "WA") {
       lastAuthFailureMessage: null,
       lastQrAt: null,
       lastQrPayloadSeen: null,
+      unknownStateRetryCount: 0,
     });
   }
   return clientReadiness.get(client);
@@ -4604,6 +4606,8 @@ if (shouldInitWhatsAppClients) {
       setTimeout(() => {
         fallbackReinitCounts.set(client, 0);
         fallbackStateRetryCounts.set(client, 0);
+        const readinessState = getClientReadinessState(client);
+        readinessState.unknownStateRetryCount = 0;
         scheduleFallbackReadyCheck(client, delayMs);
       }, cooldownMs);
     };
@@ -4707,6 +4711,7 @@ if (shouldInitWhatsAppClients) {
         );
         fallbackStateRetryCounts.set(client, 0);
         fallbackReinitCounts.set(client, 0);
+        state.unknownStateRetryCount = 0;
         markClientReady(client, "fallback-isReady");
         return;
       }
@@ -4733,6 +4738,7 @@ if (shouldInitWhatsAppClients) {
         if (normalizedState === "CONNECTED" || normalizedState === "open") {
           fallbackStateRetryCounts.set(client, 0);
           fallbackReinitCounts.set(client, 0);
+          state.unknownStateRetryCount = 0;
           markClientReady(client, "getState");
           return;
         }
@@ -4767,6 +4773,19 @@ if (shouldInitWhatsAppClients) {
           return;
         }
         fallbackReinitCounts.set(client, reinitAttempts + 1);
+        if (normalizedState !== "unknown") {
+          state.unknownStateRetryCount = 0;
+        }
+        const unknownStateRetryCount = normalizedState === "unknown"
+          ? (state.unknownStateRetryCount || 0) + 1
+          : 0;
+        if (normalizedState === "unknown") {
+          state.unknownStateRetryCount = unknownStateRetryCount;
+        }
+        const shouldEscalateUnknownState =
+          normalizedState === "unknown" &&
+          label === "WA-GATEWAY" &&
+          unknownStateRetryCount >= maxUnknownStateEscalationRetries;
         const shouldClearFallbackSession =
           normalizedState === "unknown" &&
           (label === "WA-GATEWAY" || label === "WA-USER");
@@ -4775,6 +4794,37 @@ if (shouldInitWhatsAppClients) {
         const sessionPathExists = sessionPath ? fs.existsSync(sessionPath) : false;
         const canClearFallbackSession =
           shouldClearFallbackSession && hasAuthIndicators && sessionPathExists;
+        if (
+          shouldEscalateUnknownState &&
+          sessionPathExists &&
+          typeof client?.reinitialize === "function"
+        ) {
+          state.lastAuthFailureAt = Date.now();
+          state.lastAuthFailureMessage = "fallback-unknown-escalation";
+          console.warn(
+            `[${label}] getState=${normalizedState} after retries; ` +
+              `escalating unknown-state retries (${unknownStateRetryCount}/${maxUnknownStateEscalationRetries}); ` +
+              `reinitializing with clear session; ` +
+              formatFallbackReadyContext(
+                state,
+                isConnectInFlight(),
+                getConnectInFlightDurationMs()
+              )
+          );
+          client
+            .reinitialize({
+              clearAuthSession: true,
+              trigger: "fallback-unknown-escalation",
+              reason: `unknown state after ${unknownStateRetryCount} retry cycles`,
+            })
+            .catch((err) => {
+              console.error(
+                `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
+              );
+            });
+          scheduleFallbackReadyCheck(client, delayMs);
+          return;
+        }
         if (canClearFallbackSession && typeof client?.reinitialize === "function") {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
