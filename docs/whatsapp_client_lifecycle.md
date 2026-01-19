@@ -176,11 +176,13 @@ Timeout DevTools Protocol Puppeteer di whatsapp-web.js dapat diatur lewat
 `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` (default 120000ms). Ini memperbesar ambang
 `Runtime.callFunctionOn` saat koneksi lambat; naikkan ke 180000ms atau lebih jika
 host sering time out ketika melakukan evaluasi di halaman WhatsApp Web.
-Override per client tersedia dengan menambahkan suffix client ID uppercase,
-mengganti karakter non-alfanumerik menjadi `_`. Contoh: `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000`
-untuk client ID `wa-gateway-prod`, atau `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER=180000`
-untuk client user. Dengan begitu, admin tetap memakai default sementara client tertentu
-bisa diperpanjang tanpa mengganggu WA admin.
+Override per client tersedia dalam dua format: alias role berbasis prefix dan suffix
+client ID uppercase. Alias role memakai `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY`
+untuk client ID yang diawali `wa-gateway` dan `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER`
+untuk `wa-user`. Contoh untuk `wa-gateway-prod`: alias `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000`,
+atau suffix eksplisit `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_WA_GATEWAY_PROD=180000`
+(client ID uppercase + non-alfanumerik jadi `_`). Dengan begitu, admin tetap memakai default sementara
+client tertentu bisa diperpanjang tanpa mengganggu WA admin.
 
 ## Normalisasi opsi sendMessage
 
@@ -214,6 +216,8 @@ timeout diturunkan dari kombinasi berikut:
 - Jika `WA_READY_TIMEOUT_MS` tidak diisi, default dihitung sebagai
   `max(WA_AUTH_READY_TIMEOUT_MS, WA_FALLBACK_READY_DELAY_MS + 5000)`.
 - `WA_FALLBACK_READY_DELAY_MS` (default 60000ms) → jeda fallback readiness pertama.
+- `WA_FALLBACK_READY_COOLDOWN_MS` (default 300000ms) → jeda cooldown setelah
+  fallback reinit mencapai batas agar siklus pemulihan berikutnya tetap berjalan.
 - `WA_GATEWAY_READY_TIMEOUT_MS` → override khusus client `WA-GATEWAY` (jika tidak
   diisi, otomatis memakai `WA_READY_TIMEOUT_MS` + `WA_FALLBACK_READY_DELAY_MS`).
 - Override per client masih dimungkinkan lewat `client.readyTimeoutMs`
@@ -262,6 +266,9 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
+   Setelah mencapai batas reinit, fallback readiness tetap berjalan dengan jeda cooldown
+   sebelum memulai siklus retry baru (default 5 menit) agar pemulihan terus mencoba tanpa
+   restart proses.
 4. Untuk `WA-GATEWAY` dan `WA-USER`, fallback readiness **hanya akan clear session**
    jika ada indikasi logout/auth failure (misalnya `lastDisconnectReason` termasuk
    `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure` tercatat)
@@ -269,6 +276,11 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    sistem tetap reinit tanpa clear session agar sesi yang masih valid tidak terhapus.
    Sebelum menghapus manual, backup folder session agar autentikasi bisa dipulihkan
    bila diperlukan.
+   - **Escalation khusus `WA-GATEWAY`**: bila `getState()` terus `unknown` melewati
+     beberapa siklus retry, readiness akan menaikkan `unknown-state retries` dan
+     memaksa `reinitialize({ clearAuthSession: true })` meskipun indikator auth
+     kosong, agar gateway tidak terus-menerus stuck di state tak dikenal. Log akan
+     mencatat alasan escalation serta jumlah retry yang sudah dilewati.
 5. Jika `connect()` sudah berjalan (in-flight), fallback readiness akan ditunda dan
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
    Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan

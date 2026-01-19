@@ -62,6 +62,22 @@ const createDirRequestCustomSequenceHandler = waGatewayClient => {
   };
 };
 
+const createDitbinmasRecapAndCustomSequenceHandler = waGatewayClient => {
+  return async () => {
+    try {
+      await waitForWaGatewayReadyWithTimeout(waGatewayClient, DIRREQUEST_WA_READY_TIMEOUT_MS);
+    } catch (error) {
+      console.warn(
+        `[CRON] Ditbinmas recap + custom sequence skipped: WA gateway readiness timeout after ${DIRREQUEST_WA_READY_TIMEOUT_MS}ms`,
+        error,
+      );
+      return;
+    }
+
+    return runDitbinmasRecapAndCustomSequence();
+  };
+};
+
 const dirRequestCrons = [
   {
     jobKey: FETCH_SOSMED_JOB_KEY,
@@ -152,11 +168,17 @@ export function registerDirRequestCrons(waGatewayClient) {
 
   const scheduledJobs = [];
   const dirRequestCustomSequenceHandler = createDirRequestCustomSequenceHandler(waGatewayClient);
+  const ditbinmasRecapAndCustomSequenceHandler =
+    createDitbinmasRecapAndCustomSequenceHandler(waGatewayClient);
 
   dirRequestCrons.forEach(({ jobKey, description, schedules }) => {
     schedules.forEach(({ cronExpression, handler, options }) => {
       const resolvedHandler =
-        jobKey === DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY ? dirRequestCustomSequenceHandler : handler;
+        jobKey === DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY
+          ? dirRequestCustomSequenceHandler
+          : jobKey === DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY
+            ? ditbinmasRecapAndCustomSequenceHandler
+            : handler;
       console.log(`[CRON] Registering ${jobKey} (${description}) at ${cronExpression}`);
       scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, resolvedHandler, options));
     });
