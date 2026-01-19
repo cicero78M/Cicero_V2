@@ -77,12 +77,12 @@ WA_WEB_VERSION_RECOMMENDED=
 
 # Timeout DevTools Protocol Puppeteer untuk whatsapp-web.js (opsional, ms)
 WA_WWEBJS_PROTOCOL_TIMEOUT_MS=120000
-# Override timeout per client (opsional, suffix = client ID uppercase dengan non-alfanumerik jadi "_")
+# Override timeout per client (opsional, tersedia alias role + suffix client ID uppercase dengan non-alfanumerik jadi "_")
 WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER=120000
 WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000
 ```
 Jika `WA_WEB_VERSION_CACHE_URL`, `WA_WEB_VERSION`, dan `WA_WEB_VERSION_RECOMMENDED` sama-sama kosong, adapter akan menonaktifkan local web cache untuk mencegah error `LocalWebCache.persist`. Biarkan salah satu dari variabel tersebut terisi untuk mengaktifkan kembali mekanisme cache versi, dan kosongkan semuanya hanya jika memang ingin menonaktifkan caching.
-`WA_WWEBJS_PROTOCOL_TIMEOUT_MS` memperbesar ambang `Runtime.callFunctionOn` pada Puppeteer; naikkan ke 180000ms jika koneksi ke WhatsApp Web sering lambat atau time out. Override per client bisa di-set dengan suffix client ID uppercase (misalnya `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000` untuk `wa-gateway-prod`) agar admin tetap pakai default sementara client tertentu bisa diperpanjang.
+`WA_WWEBJS_PROTOCOL_TIMEOUT_MS` memperbesar ambang `Runtime.callFunctionOn` pada Puppeteer; naikkan ke 180000ms jika koneksi ke WhatsApp Web sering lambat atau time out. Override per client bisa di-set lewat alias role berbasis prefix (client ID `wa-gateway*` → `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY`, `wa-user*` → `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER`) atau suffix client ID uppercase. Contoh untuk `wa-gateway-prod`: alias `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000` atau suffix eksplisit `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_WA_GATEWAY_PROD=180000`. Dengan begitu, admin tetap pakai default sementara client tertentu bisa diperpanjang.
 Fallback readiness akan melakukan reinit ketika `getState` tetap `unknown` setelah batas retry. Untuk client `WA-GATEWAY` dan `WA-USER`, **clear session hanya dilakukan** jika ada indikasi logout/auth failure (misalnya `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure`) dan folder `session-<clientId>` masih ada. Jika tidak ada indikasi tersebut, sistem tetap reinit tanpa clear session agar sesi valid tidak terhapus, dan log PM2 tetap menandai alasan fallback. Simpan backup folder session sebelum pembersihan manual agar autentikasi bisa dipulihkan.
 
 ### Langkah Login
