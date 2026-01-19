@@ -7,6 +7,13 @@ const runDirRequestAction = jest.fn(() => Promise.resolve());
 const findClientById = jest.fn();
 const splitRecipientField = jest.fn((value) => (value ? value.split(',') : []));
 const normalizeGroupId = jest.fn((value) => value);
+const minPhoneDigitLength = 8;
+const normalizeUserWhatsAppId = (value, minLength = minPhoneDigitLength) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length < minLength) return null;
+  const normalized = digits.startsWith('62') ? digits : `62${digits.replace(/^0/, '')}`;
+  return `${normalized}@c.us`;
+};
 
 const waGatewayClient = { on: jest.fn(), waitForWaReady: jest.fn(() => Promise.resolve()) };
 const flushMicrotasks = async () => {
@@ -22,6 +29,8 @@ function mockCommonModules({ adminIds = [] } = {}) {
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
     getAdminWAIds: () => adminIds,
+    normalizeUserWhatsAppId,
+    minPhoneDigitLength,
   }));
   jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient }));
   jest.unstable_mockModule('../src/cron/cronDirRequestFetchSosmed.js', () => ({

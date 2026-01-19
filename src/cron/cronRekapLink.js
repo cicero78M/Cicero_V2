@@ -4,6 +4,7 @@ dotenv.config();
 
 import waClient from "../service/waService.js";
 import { sendDebug } from "../middleware/debugHandler.js";
+import { normalizeUserWhatsAppId, minPhoneDigitLength } from "../utils/waHelper.js";
 
 import { absensiLink } from "../handler/fetchabsensi/link/absensiLinkAmplifikasi.js";
 
@@ -19,12 +20,25 @@ async function getActiveClients() {
   return rows.rows;
 }
 
+function logInvalidRecipient(value) {
+  console.warn("[SKIP WA] invalid recipient", value);
+}
+
+function normalizeUserRecipient(value) {
+  const normalized = normalizeUserWhatsAppId(value, minPhoneDigitLength);
+  if (!normalized) {
+    logInvalidRecipient(value);
+    return null;
+  }
+  return normalized;
+}
+
 function toWAid(id) {
   if (!id || typeof id !== "string") return null;
   const trimmed = id.trim();
   if (!trimmed) return null;
-  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
-  return trimmed.replace(/\D/g, "") + "@c.us";
+  if (trimmed.endsWith("@g.us")) return trimmed;
+  return normalizeUserRecipient(trimmed);
 }
 
 function getAdminWAIds() {

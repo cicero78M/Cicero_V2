@@ -15,6 +15,13 @@ const findClientById = jest.fn(async () => ({
 }));
 const splitRecipientField = jest.fn((value) => (value ? value.split(',') : []));
 const normalizeGroupId = jest.fn((value) => value);
+const minPhoneDigitLength = 8;
+const normalizeUserWhatsAppId = (value, minLength = minPhoneDigitLength) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length < minLength) return null;
+  const normalized = digits.startsWith('62') ? digits : `62${digits.replace(/^0/, '')}`;
+  return `${normalized}@c.us`;
+};
 
 const waGatewayClient = {
   on: jest.fn((event, cb) => {
@@ -73,6 +80,8 @@ async function loadModules() {
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
     getAdminWAIds: () => [],
+    normalizeUserWhatsAppId,
+    minPhoneDigitLength,
   }));
 
   jest.unstable_mockModule('../src/service/waService.js', () => ({

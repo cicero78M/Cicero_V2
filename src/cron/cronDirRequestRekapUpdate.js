@@ -3,18 +3,31 @@ dotenv.config();
 
 import waClient from "../service/waService.js";
 import { formatRekapUserData, formatExecutiveSummary } from "../handler/menu/dirRequestHandlers.js";
-import { safeSendMessage } from "../utils/waHelper.js";
+import { safeSendMessage, normalizeUserWhatsAppId, minPhoneDigitLength } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { scheduleCronJob } from "../utils/cronScheduler.js";
 
 const DIRREQUEST_GROUP = "120363419830216549@g.us";
 
+function logInvalidRecipient(value) {
+  console.warn("[SKIP WA] invalid recipient", value);
+}
+
+function normalizeUserRecipient(value) {
+  const normalized = normalizeUserWhatsAppId(value, minPhoneDigitLength);
+  if (!normalized) {
+    logInvalidRecipient(value);
+    return null;
+  }
+  return normalized;
+}
+
 function toWAid(id) {
   if (!id || typeof id !== "string") return null;
   const trimmed = id.trim();
   if (!trimmed) return null;
-  if (trimmed.endsWith("@c.us") || trimmed.endsWith("@g.us")) return trimmed;
-  return trimmed.replace(/\D/g, "") + "@c.us";
+  if (trimmed.endsWith("@g.us")) return trimmed;
+  return normalizeUserRecipient(trimmed);
 }
 
 function getAdminWAIds() {
@@ -57,4 +70,3 @@ if (process.env.JEST_WORKER_ID === undefined) {
 }
 
 export default null;
-
