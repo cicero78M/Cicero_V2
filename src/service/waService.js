@@ -606,6 +606,11 @@ const fallbackReadyCheckDelayMs = Number.isNaN(
 )
   ? 60000
   : Number(process.env.WA_FALLBACK_READY_DELAY_MS);
+const fallbackReadyCooldownMs = Number.isNaN(
+  Number(process.env.WA_FALLBACK_READY_COOLDOWN_MS)
+)
+  ? 300000
+  : Math.max(0, Number(process.env.WA_FALLBACK_READY_COOLDOWN_MS));
 const defaultReadyTimeoutMs = Number.isNaN(
   Number(process.env.WA_READY_TIMEOUT_MS)
 )
@@ -4595,6 +4600,13 @@ if (shouldInitWhatsAppClients) {
         `sessionPath=${sessionPath}`
       );
     };
+    const scheduleFallbackCooldown = (cooldownMs) => {
+      setTimeout(() => {
+        fallbackReinitCounts.set(client, 0);
+        fallbackStateRetryCounts.set(client, 0);
+        scheduleFallbackReadyCheck(client, delayMs);
+      }, cooldownMs);
+    };
     setTimeout(async () => {
       const state = getClientReadinessState(client);
       if (state.ready) {
@@ -4747,8 +4759,11 @@ if (shouldInitWhatsAppClients) {
         const reinitAttempts = fallbackReinitCounts.get(client) || 0;
         if (reinitAttempts >= maxFallbackReinitAttempts) {
           console.warn(
-            `[${label}] getState=${normalizedState} after retries; reinit skipped (max ${maxFallbackReinitAttempts} attempts)`
+            `[${label}] getState=${normalizedState} after retries; reinit skipped ` +
+              `(max ${maxFallbackReinitAttempts} attempts); cooldown ` +
+              `${fallbackReadyCooldownMs}ms before retrying fallback checks`
           );
+          scheduleFallbackCooldown(fallbackReadyCooldownMs);
           return;
         }
         fallbackReinitCounts.set(client, reinitAttempts + 1);
