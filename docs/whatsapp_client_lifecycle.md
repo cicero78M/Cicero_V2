@@ -216,6 +216,8 @@ timeout diturunkan dari kombinasi berikut:
 - Jika `WA_READY_TIMEOUT_MS` tidak diisi, default dihitung sebagai
   `max(WA_AUTH_READY_TIMEOUT_MS, WA_FALLBACK_READY_DELAY_MS + 5000)`.
 - `WA_FALLBACK_READY_DELAY_MS` (default 60000ms) → jeda fallback readiness pertama.
+- `WA_FALLBACK_READY_COOLDOWN_MS` (default 300000ms) → jeda cooldown setelah
+  fallback reinit mencapai batas agar siklus pemulihan berikutnya tetap berjalan.
 - `WA_GATEWAY_READY_TIMEOUT_MS` → override khusus client `WA-GATEWAY` (jika tidak
   diisi, otomatis memakai `WA_READY_TIMEOUT_MS` + `WA_FALLBACK_READY_DELAY_MS`).
 - Override per client masih dimungkinkan lewat `client.readyTimeoutMs`
@@ -264,6 +266,9 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
+   Setelah mencapai batas reinit, fallback readiness tetap berjalan dengan jeda cooldown
+   sebelum memulai siklus retry baru (default 5 menit) agar pemulihan terus mencoba tanpa
+   restart proses.
 4. Untuk `WA-GATEWAY` dan `WA-USER`, fallback readiness **hanya akan clear session**
    jika ada indikasi logout/auth failure (misalnya `lastDisconnectReason` termasuk
    `LOGGED_OUT/UNPAIRED/CONFLICT/UNPAIRED_IDLE` atau event `auth_failure` tercatat)
