@@ -98,6 +98,17 @@ dirrequest tanpa langkah tambahan.
   Rekap mingguan/bulanan akan menampilkan peringatan jika database belum
   memiliki data pada rentang tersebut, sehingga label periode dan sumber data
   tetap konsisten dengan format laporan di menu 3️⃣4️⃣.
+- Format laporan absensi komentar TikTok dirrequest kini menampilkan ringkasan
+  per divisi dengan aturan berikut:
+  - Header divisi dicetak **tebal** dan dipisahkan dengan satu baris kosong
+    agar mudah dibaca di WhatsApp.
+  - Urutan divisi disusun dari **Akumulasi Pelaksanaan** tertinggi (total
+    komentar dari seluruh personel divisi) ke terendah.
+  - Header memuat `Jumlah Personil` dan `Akumulasi Pelaksanaan` (total komentar
+    dibanding total target divisi).
+  - Setiap personel memakai format
+    `- Nama, Pelaksanaan: <commentCount>/<totalKonten>` untuk menampilkan
+    jumlah konten yang dikomentari secara jelas.
 
 ## Rekap Kelengkapan data Personil Satker (Menu 1)
 - Label menu utama diperbarui menjadi **1️⃣ Rekap Kelengkapan data Personil Satker.**

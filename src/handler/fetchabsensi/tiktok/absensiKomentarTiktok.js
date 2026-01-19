@@ -754,10 +754,12 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
     const kurang = [];
     const belum = [];
     const tanpaUsername = [];
+    let totalPelaksanaanDivisi = 0;
 
     users.forEach((u) => {
+      const baseData = { user: u, commentCount: 0 };
       if (!u.tiktok || u.tiktok.trim() === "") {
-        tanpaUsername.push(u);
+        tanpaUsername.push(baseData);
         return;
       }
       const uname = normalizeUsername(u.tiktok);
@@ -765,10 +767,12 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
       commentSets.forEach((set) => {
         if (set.has(uname)) count += 1;
       });
+      totalPelaksanaanDivisi += count;
+      const payload = { user: u, commentCount: count };
       const percentage = totalKonten ? (count / totalKonten) * 100 : 0;
-      if (percentage >= 50) sudah.push(u);
-      else if (percentage > 0) kurang.push(u);
-      else belum.push(u);
+      if (percentage >= 50) sudah.push(payload);
+      else if (percentage > 0) kurang.push(payload);
+      else belum.push(payload);
     });
 
     const belumCount = belum.length + tanpaUsername.length;
@@ -785,23 +789,33 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
       kurangCount: kurang.length,
       belumCount,
       noUsernameCount: tanpaUsername.length,
-      sudahList: sudah.map((u) => `- ${formatNama(u)}`),
-      kurangList: kurang.map((u) => `- ${formatNama(u)}`),
-      belumList: belum.map((u) => `- ${formatNama(u)}`),
-      noUsernameList: tanpaUsername.map((u) => `- ${formatNama(u)}`),
+      totalPelaksanaanDivisi,
+      sudahList: sudah.map(
+        ({ user, commentCount }) =>
+          `- ${formatNama(user)}, Pelaksanaan: ${commentCount}/${totalKonten}`
+      ),
+      kurangList: kurang.map(
+        ({ user, commentCount }) =>
+          `- ${formatNama(user)}, Pelaksanaan: ${commentCount}/${totalKonten}`
+      ),
+      belumList: belum.map(
+        ({ user, commentCount }) =>
+          `- ${formatNama(user)}, Pelaksanaan: ${commentCount}/${totalKonten}`
+      ),
+      noUsernameList: tanpaUsername.map(
+        ({ user, commentCount }) =>
+          `- ${formatNama(user)}, Pelaksanaan: ${commentCount}/${totalKonten}`
+      ),
     });
   }
 
   reportEntries.sort((a, b) => {
-    const aBinmas = a.clientName.toUpperCase() === "DITBINMAS";
-    const bBinmas = b.clientName.toUpperCase() === "DITBINMAS";
-    if (aBinmas && !bBinmas) return -1;
-    if (bBinmas && !aBinmas) return 1;
-
+    if (a.totalPelaksanaanDivisi !== b.totalPelaksanaanDivisi) {
+      return b.totalPelaksanaanDivisi - a.totalPelaksanaanDivisi;
+    }
     const aPct = a.usersCount ? a.sudahCount / a.usersCount : 0;
     const bPct = b.usersCount ? b.sudahCount / b.usersCount : 0;
     if (aPct !== bPct) return bPct - aPct;
-
     if (a.usersCount !== b.usersCount) return b.usersCount - a.usersCount;
     return a.clientName.localeCompare(b.clientName);
   });
@@ -814,9 +828,11 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
       ? r.noUsernameList.join("\n")
       : "-";
 
+    const totalTarget = r.usersCount * totalKonten;
     let entry =
-      `${idx + 1}. ${r.clientName}\n` +
+      `*${idx + 1}. ${r.clientName}*\n` +
       `*Jumlah Personil* : ${r.usersCount} pers\n` +
+      `*Akumulasi Pelaksanaan* : ${r.totalPelaksanaanDivisi}/${totalTarget}\n` +
       `✅ Melaksanakan Lengkap (${r.sudahCount} pers):\n${sudahList}`;
 
     if (r.kurangCount > 0) {
@@ -846,7 +862,7 @@ export async function absensiKomentarDitbinmasReport(clientId = "DITBINMAS") {
     `- ⚠️ *Melaksanakan kurang lengkap* : *${totals.kurang} pers*\n` +
     `❌ *Belum melaksanakan* : *${totals.belum} pers*\n` +
     `⚠️❌ *Belum Update Username TikTok* : *${totals.noUsername} pers*\n\n` +
-    reports.join("\n");
+    reports.join("\n\n");
 
   if (failedVideoIds.length) {
     msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
