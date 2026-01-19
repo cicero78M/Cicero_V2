@@ -51,6 +51,21 @@ dirrequest tanpa langkah tambahan.
   untuk menjaga pembaruan engagement, tetapi pengambilan konten baru
   dilewati kecuali dipaksa manual sebelum 17.00 WIB.
 
+## Absensi Likes Instagram (Format Dirrequest)
+- Rekap absensi likes Instagram (menu dirrequest untuk Direktorat) kini
+  menampilkan setiap divisi sebagai header tebal, dipisahkan satu baris kosong
+  agar mudah dibaca pada WhatsApp.
+- Urutan divisi utama disusun berdasarkan **Akumulasi Pelaksanaan** tertinggi
+  (total likes dari seluruh personel pada divisi), lalu fallback ke persentase
+  ketercapaian/ukuran divisi bila nilainya sama.
+- Header divisi memuat ringkasan:
+  - `*NAMA DIVISI*`
+  - `Akumulasi Pelaksanaan: <total> (dari <jumlah konten>)`
+  - `Jumlah Personil: <angka>`
+- Setiap personel ditampilkan dengan label pelaksanaan yang jelas, misalnya
+  `- Nama, Pelaksanaan: 3/5`, sehingga operator dapat melihat jumlah konten
+  yang sudah dilike oleh masing-masing personel secara cepat.
+
 ## Absensi Komentar TikTok Kasat Binmas
 - Submenu Absensi Komentar TikTok mengikuti tanggal **Asia/Jakarta (WIB)**.
   Periode harian yang dipilih dari WhatsApp otomatis menormalkan tanggal ke
