@@ -464,7 +464,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   let reinitInProgress = false;
   let connectInProgress = null;
   let connectStartedAt = null;
-  let browserLockRecoveryAttempts = 0;
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
@@ -513,45 +512,28 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   const recoverFromBrowserAlreadyRunning = async (triggerLabel, err) => {
     const backoffMs = resolveBrowserLockBackoffMs();
-    browserLockRecoveryAttempts += 1;
-    const maxSoftRetries = Number.parseInt(
-      process.env.WA_WWEBJS_BROWSER_LOCK_SOFT_RETRIES || '1',
-      10
-    );
-    const resolvedSoftRetries =
-      Number.isNaN(maxSoftRetries) || maxSoftRetries < 0
-        ? 1
-        : maxSoftRetries;
-    const shouldCleanupLocks = browserLockRecoveryAttempts > resolvedSoftRetries;
     console.warn(
       `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel}). ` +
         `Waiting ${backoffMs}ms before retry to avoid hammering userDataDir.`,
       err?.message || err
     );
-    if (shouldCleanupLocks) {
-      const hasActivePuppeteer = Boolean(client.pupBrowser || client.pupPage);
-      if (!hasActivePuppeteer) {
-        console.debug(
-          `[WWEBJS] Skipping destroy during browser lock recovery for clientId=${clientId} ` +
-            'because Puppeteer is not initialized.'
-        );
-      } else {
-        try {
-          await client.destroy();
-        } catch (destroyErr) {
-          console.warn(
-            `[WWEBJS] destroy failed during browser lock recovery for clientId=${clientId}:`,
-            destroyErr?.message || destroyErr
-          );
-        }
-      }
-      await cleanupPuppeteerLocks();
-    } else {
-      console.info(
-        `[WWEBJS] Browser lock recovery soft attempt ${browserLockRecoveryAttempts}/${resolvedSoftRetries}; ` +
-          'skipping lock cleanup to preserve active session.'
+    const hasActivePuppeteer = Boolean(client.pupBrowser || client.pupPage);
+    if (!hasActivePuppeteer) {
+      console.debug(
+        `[WWEBJS] Skipping destroy during browser lock recovery for clientId=${clientId} ` +
+          'because Puppeteer is not initialized.'
       );
+    } else {
+      try {
+        await client.destroy();
+      } catch (destroyErr) {
+        console.warn(
+          `[WWEBJS] destroy failed during browser lock recovery for clientId=${clientId}:`,
+          destroyErr?.message || destroyErr
+        );
+      }
     }
+    await cleanupPuppeteerLocks();
     if (backoffMs > 0) {
       await delay(backoffMs);
     }
@@ -561,7 +543,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     emitter.fatalInitError = null;
     try {
       await client.initialize();
-      browserLockRecoveryAttempts = 0;
     } catch (err) {
       if (isMissingChromeError(err)) {
         const taggedError =
