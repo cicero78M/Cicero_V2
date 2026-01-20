@@ -167,12 +167,25 @@ adapter akan:
 
 1. Memanggil `client.destroy()` hanya jika Puppeteer sudah terinisialisasi (`pupBrowser`/`pupPage`).
    Jika belum, destroy dilewati dan hanya dicatat debug agar recovery tetap bersih.
-2. Menghapus file lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`)
-   di dalam folder `session-<clientId>` bila ada.
-3. Menunggu backoff lebih panjang sebelum mencoba `initialize()` ulang.
+2. Memverifikasi apakah lock masih aktif dengan membaca `SingletonLock` (PID) dan
+   mengecek `SingletonSocket`. Jika terdeteksi proses Chromium masih hidup, lock
+   dianggap aktif.
+3. Jika lock **tidak aktif**, file lock Puppeteer (`SingletonLock`, `SingletonCookie`,
+   `SingletonSocket`) di dalam folder `session-<clientId>` akan dibersihkan.
+4. Jika lock **aktif**, adapter tidak menghapus file lock dan menggunakan backoff
+   lebih panjang sebelum retry. Dengan `WA_WWEBJS_LOCK_RECOVERY_STRICT=true`, adapter
+   akan **bail out** dengan error jelas agar operator memakai sesi yang sama atau
+   menghentikan proses lama secara eksplisit.
 
-Durasi backoff dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
-(default 20000ms). Ini mencegah retry yang terlalu agresif pada folder yang terkunci.
+Durasi backoff dasar dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
+(default 20000ms). Saat lock aktif, backoff akan dinaikkan otomatis. Gunakan
+`WA_WWEBJS_LOCK_RECOVERY_STRICT=true` untuk mode aman (tanpa menghapus lock
+ketika lock aktif) dan memaksa operator melakukan cleanup manual sebelum reinit.
+
+Langkah operasional saat lock aktif:
+
+- Gunakan sesi yang sama (jangan membuat `clientId` baru) ketika proses lama masih berjalan.
+- Hentikan proses Chromium/Node lama secara eksplisit sebelum melakukan reinit.
 
 Timeout DevTools Protocol Puppeteer di whatsapp-web.js dapat diatur lewat
 `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` (default 120000ms). Ini memperbesar ambang
