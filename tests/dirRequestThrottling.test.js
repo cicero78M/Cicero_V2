@@ -28,11 +28,16 @@ function mockCommonModules({ adminIds = [] } = {}) {
   jest.unstable_mockModule('../src/repository/clientContactRepository.js', () => ({ splitRecipientField }));
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
+    sendWithClientFallback: jest.fn(),
     getAdminWAIds: () => adminIds,
     normalizeUserWhatsAppId,
     minPhoneDigitLength,
   }));
-  jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient }));
+  jest.unstable_mockModule('../src/service/waService.js', () => ({
+    default: {},
+    waGatewayClient,
+    waUserClient: {},
+  }));
   jest.unstable_mockModule('../src/cron/cronDirRequestFetchSosmed.js', () => ({
     runCron: jest.fn(),
     normalizeGroupId,

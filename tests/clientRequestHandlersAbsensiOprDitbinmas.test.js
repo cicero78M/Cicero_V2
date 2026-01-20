@@ -23,6 +23,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: jest.fn(),
   formatToWhatsAppId: jest.fn(),
   safeSendMessage: mockSafeSendMessage,
+  sendWithClientFallback: jest.fn(),
   isAdminWhatsApp: jest.fn(),
   formatClientData: jest.fn(),
   isUnsupportedVersionError: jest.fn(),

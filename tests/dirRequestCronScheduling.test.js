@@ -79,13 +79,16 @@ async function loadModules() {
 
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
+    sendWithClientFallback: jest.fn(),
     getAdminWAIds: () => [],
     normalizeUserWhatsAppId,
     minPhoneDigitLength,
   }));
 
   jest.unstable_mockModule('../src/service/waService.js', () => ({
+    default: {},
     waGatewayClient,
+    waUserClient: {},
   }));
 
   jest.unstable_mockModule('../src/cron/cronDirRequestFetchSosmed.js', () => ({

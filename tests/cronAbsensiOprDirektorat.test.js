@@ -12,6 +12,7 @@ jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {} }))
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAReport: mockSendWAReport,
   getAdminWAIds: mockGetAdminWAIds,
+  sendWithClientFallback: jest.fn(),
 }));
 jest.unstable_mockModule('../src/model/clientModel.js', () => ({
   findAllActiveDirektorat: mockFindAllActiveDirektorat,

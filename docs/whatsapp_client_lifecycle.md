@@ -201,6 +201,26 @@ Log peringatan akan menyertakan `jid` dan tipe konten untuk investigasi. Caller
 disarankan memakai `safeSendMessage` atau menangkap error lokal saat membutuhkan
 penanganan kegagalan yang konsisten.
 
+## Fallback pengiriman pesan (gateway → utama → user)
+
+Untuk notifikasi/broadcast, helper `sendWithClientFallback` dipakai agar pengiriman
+tetap berjalan ketika salah satu client WA bermasalah. Urutan fallback:
+
+1. `waGatewayClient` (label `WA-GATEWAY`).
+2. `waClient` (label `WA`).
+3. `waUserClient` (label `WA-USER`).
+
+Setiap percobaan memakai `safeSendMessage` agar readiness dan retry tetap terjaga.
+Jika satu client gagal, sistem akan log ringkas yang berisi `client label`, `chatId`,
+serta ringkasan error dari attempt sebelumnya sebelum melanjutkan ke client berikutnya.
+Jika semua attempt gagal, helper akan:
+
+- Mengirim ringkasan ke admin melalui `sendWAReport` (jika report client tersedia).
+- Menuliskan log error terstruktur (`event=wa_fallback_failed`) agar mudah dipantau.
+
+Pemakaian fallback ini menjadi standar untuk cron notifikasi dan pengiriman gateway
+agar pesan tidak bergantung pada satu sesi WA saja.
+
 ## Fallback saat authenticated tapi tidak ready
 
 Jika event `authenticated` muncul namun `ready` tidak datang dalam `WA_AUTH_READY_TIMEOUT_MS`

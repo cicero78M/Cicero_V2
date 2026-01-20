@@ -6,6 +6,7 @@ const mockFetchTiktok = jest.fn();
 const mockGenerateMsg = jest.fn();
 const mockFetchKomentarTiktokBatch = jest.fn();
 const mockSafeSend = jest.fn();
+const mockSendWithClientFallback = jest.fn();
 const mockSendDebug = jest.fn();
 const mockGetInstaPostCount = jest.fn();
 const mockGetTiktokPostCount = jest.fn();
@@ -13,7 +14,11 @@ const mockGetShortcodesTodayByClient = jest.fn();
 const mockGetVideoIdsTodayByClient = jest.fn();
 const mockFindAllActiveDirektoratWithTiktok = jest.fn();
 
-jest.unstable_mockModule('../src/service/waService.js', () => ({ waGatewayClient: {} }));
+jest.unstable_mockModule('../src/service/waService.js', () => ({
+  default: {},
+  waGatewayClient: {},
+  waUserClient: {},
+}));
 jest.unstable_mockModule('../src/handler/fetchpost/instaFetchPost.js', () => ({
   fetchAndStoreInstaContent: mockFetchInsta,
 }));
@@ -34,6 +39,7 @@ jest.unstable_mockModule('../src/utils/waHelper.js', async () => {
   return {
     ...actual,
     safeSendMessage: mockSafeSend,
+    sendWithClientFallback: mockSendWithClientFallback,
     getAdminWAIds: () => ['123@c.us'],
   };
 });
@@ -167,7 +173,9 @@ test('runCron fetches sosmed and sends message to recipients', async () => {
   expect(mockFetchLikes).toHaveBeenCalledWith(null, null, 'DITBINMAS');
   expect(mockFetchTiktok).toHaveBeenCalledWith('DITBINMAS');
   expect(mockGenerateMsg).toHaveBeenCalled();
-  const sentMessages = mockSafeSend.mock.calls.map(([, to, text]) => [to, text]);
+  const sentMessages = mockSendWithClientFallback.mock.calls.map(
+    ([payload]) => [payload.chatId, payload.message]
+  );
   expect(sentMessages[0][0]).toBe('123@c.us');
   expect(sentMessages[0][1]).toContain('[CRON DIRFETCH SOSMED]');
   expect(sentMessages[1]).toEqual(['120363419830216549@g.us', 'msg']);
@@ -199,14 +207,16 @@ test('runCron skips sending when counts unchanged', async () => {
   mockGetShortcodesTodayByClient.mockResolvedValueOnce(['dbIg1']).mockResolvedValueOnce(['dbIg2']);
   mockGetVideoIdsTodayByClient.mockResolvedValueOnce(['dbTt1']).mockResolvedValueOnce(['dbTt2']);
   await runCron();
-  mockSafeSend.mockClear();
+  mockSendWithClientFallback.mockClear();
   await runCron();
   expect(mockGenerateMsg).toHaveBeenLastCalledWith('DITBINMAS', {
     skipLikesFetch: true,
     skipTiktokFetch: true,
     previousState: { igShortcodes: ['dbIg2'], tiktokVideoIds: ['dbTt2'] },
   });
-  const adminMessages = mockSafeSend.mock.calls.map(([, to, text]) => [to, text]);
+  const adminMessages = mockSendWithClientFallback.mock.calls.map(
+    ([payload]) => [payload.chatId, payload.message]
+  );
   expect(adminMessages).toHaveLength(2);
   expect(adminMessages[0][0]).toBe('123@c.us');
   expect(adminMessages[0][1]).toContain('Mulai cron dirrequest fetch sosmed');

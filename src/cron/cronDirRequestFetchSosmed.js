@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { waGatewayClient } from "../service/waService.js";
+import waClient, { waGatewayClient, waUserClient } from "../service/waService.js";
 import { findAllActiveDirektoratWithTiktok } from "../model/clientModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
@@ -9,7 +9,7 @@ import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikes
 import { fetchAndStoreTiktokContent } from "../handler/fetchpost/tiktokFetchPost.js";
 import { handleFetchKomentarTiktokBatch } from "../handler/fetchengagement/fetchCommentTiktok.js";
 import { generateSosmedTaskMessage } from "../handler/fetchabsensi/sosmedTask.js";
-import { getAdminWAIds, safeSendMessage } from "../utils/waHelper.js";
+import { getAdminWAIds, sendWithClientFallback } from "../utils/waHelper.js";
 import { sendDebug } from "../middleware/debugHandler.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getVideoIdsTodayByClient } from "../model/tiktokPostModel.js";
@@ -19,6 +19,11 @@ const LOG_TAG = "CRON DIRFETCH SOSMED";
 const lastStateByClient = new Map();
 const adminRecipients = new Set(getAdminWAIds());
 let isFetchInFlight = false;
+const waFallbackClients = [
+  { client: waGatewayClient, label: "WA-GATEWAY" },
+  { client: waClient, label: "WA" },
+  { client: waUserClient, label: "WA-USER" },
+];
 
 function getCurrentJakartaTime(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -181,7 +186,13 @@ async function sendAdminLog(entry) {
   if (!text) return;
 
   for (const admin of adminRecipients) {
-    await safeSendMessage(waGatewayClient, admin, text.trim());
+    await sendWithClientFallback({
+      chatId: admin,
+      message: text.trim(),
+      clients: waFallbackClients,
+      reportClient: waClient,
+      reportContext: { tag: LOG_TAG, admin },
+    });
   }
 }
 
@@ -542,7 +553,13 @@ export async function runCron(options = {}) {
           })
         );
         for (const wa of recipients) {
-          await safeSendMessage(waGatewayClient, wa, text.trim());
+          await sendWithClientFallback({
+            chatId: wa,
+            message: text.trim(),
+            clients: waFallbackClients,
+            reportClient: waClient,
+            reportContext: { tag: LOG_TAG, clientId },
+          });
         }
         await sendStructuredLog(
           buildLogEntry({

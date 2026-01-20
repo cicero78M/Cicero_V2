@@ -109,6 +109,7 @@ import {
   getAdminWAIds,
   isUnsupportedVersionError,
   sendWAReport,
+  sendWithClientFallback,
 } from "../utils/waHelper.js";
 import {
   IG_PROFILE_REGEX,
@@ -1127,7 +1128,18 @@ wrapSendMessage(waUserClient);
 wrapSendMessage(waGatewayClient);
 
 export function sendGatewayMessage(jid, text) {
-  return waGatewayClient.sendMessage(jid, text);
+  const waFallbackClients = [
+    { client: waGatewayClient, label: "WA-GATEWAY" },
+    { client: waClient, label: "WA" },
+    { client: waUserClient, label: "WA-USER" },
+  ];
+  return sendWithClientFallback({
+    chatId: jid,
+    message: text,
+    clients: waFallbackClients,
+    reportClient: waClient,
+    reportContext: { source: "sendGatewayMessage", jid },
+  });
 }
 
 // Handle QR code (scan)
