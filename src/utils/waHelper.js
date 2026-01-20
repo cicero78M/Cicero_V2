@@ -394,7 +394,8 @@ function defaultShouldRetry(err) {
     message.includes('invalid recipient') ||
     message.includes('not a valid') ||
     message.includes('bad request') ||
-    message.includes('lid is missing in chat table')
+    message.includes('lid is missing in chat table') ||
+    message.includes('sendmessage returned no id')
   ) {
     return false;
   }
@@ -505,8 +506,11 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     );
     return true;
   } catch (err) {
+    const contentTypeInfo = err?.contentType
+      ? ` (contentType=${err.contentType})`
+      : '';
     console.error(
-      `[WA] Failed to send message to ${resolvedChatId || chatId}: ${err?.message || err}`
+      `[WA] Failed to send message to ${resolvedChatId || chatId}${contentTypeInfo}: ${err?.message || err}`
     );
     return false;
   }
