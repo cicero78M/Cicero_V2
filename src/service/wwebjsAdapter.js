@@ -1,7 +1,8 @@
 import fs from 'fs';
-import { rm } from 'fs/promises';
+import { rm, readFile, stat } from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import net from 'net';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
@@ -10,6 +11,8 @@ const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
 const WEB_VERSION_PATTERN = /^\d+\.\d+(\.\d+)?$/;
 const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
+const DEFAULT_ACTIVE_BROWSER_LOCK_BACKOFF_MULTIPLIER = 3;
+const MIN_ACTIVE_BROWSER_LOCK_BACKOFF_MS = 30000;
 const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
 const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
@@ -67,12 +70,100 @@ function resolveBrowserLockBackoffMs() {
   return Math.max(configured, 0);
 }
 
+function resolveActiveBrowserLockBackoffMs() {
+  const baseBackoffMs = resolveBrowserLockBackoffMs();
+  const scaledBackoffMs =
+    baseBackoffMs * DEFAULT_ACTIVE_BROWSER_LOCK_BACKOFF_MULTIPLIER;
+  return Math.max(scaledBackoffMs, MIN_ACTIVE_BROWSER_LOCK_BACKOFF_MS);
+}
+
+function shouldUseStrictLockRecovery() {
+  return process.env.WA_WWEBJS_LOCK_RECOVERY_STRICT === 'true';
+}
+
 function parseTimeoutEnvValue(rawValue) {
   const configured = Number.parseInt(rawValue || '', 10);
   if (Number.isNaN(configured)) {
     return null;
   }
   return Math.max(configured, 0);
+}
+
+function isProcessRunning(pid) {
+  if (!pid) {
+    return false;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if (err?.code === 'ESRCH') {
+      return false;
+    }
+    return false;
+  }
+}
+
+async function readLockPid(lockPath) {
+  try {
+    const content = await readFile(lockPath, 'utf8');
+    const pid = Number.parseInt(String(content).trim(), 10);
+    if (Number.isNaN(pid)) {
+      return null;
+    }
+    return pid;
+  } catch (err) {
+    if (err?.code === 'ENOENT') {
+      return null;
+    }
+    return null;
+  }
+}
+
+async function isSingletonSocketActive(socketPath) {
+  try {
+    const socketStats = await stat(socketPath);
+    if (!socketStats.isSocket()) {
+      return false;
+    }
+  } catch (err) {
+    if (err?.code === 'ENOENT') {
+      return false;
+    }
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ path: socketPath });
+    const finalize = (result) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.once('connect', () => finalize(true));
+    socket.once('error', (err) => {
+      if (err?.code === 'ECONNREFUSED' || err?.code === 'ENOENT') {
+        finalize(false);
+        return;
+      }
+      finalize(false);
+    });
+  });
+}
+
+async function detectActiveBrowserLock(profilePath) {
+  const lockPath = path.join(profilePath, 'SingletonLock');
+  const socketPath = path.join(profilePath, 'SingletonSocket');
+  const pid = await readLockPid(lockPath);
+  if (pid && isProcessRunning(pid)) {
+    return { isActive: true, reason: `pid=${pid}` };
+  }
+  const socketActive = await isSingletonSocketActive(socketPath);
+  if (socketActive) {
+    return { isActive: true, reason: 'singleton socket active' };
+  }
+  return { isActive: false, reason: null };
 }
 
 function normalizeClientIdEnvSuffix(clientId) {
@@ -511,9 +602,17 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   const recoverFromBrowserAlreadyRunning = async (triggerLabel, err) => {
-    const backoffMs = resolveBrowserLockBackoffMs();
+    const strictLockRecovery = shouldUseStrictLockRecovery();
+    const activeLockStatus = await detectActiveBrowserLock(puppeteerProfilePath);
+    const isActiveLock = activeLockStatus.isActive;
+    const backoffMs = isActiveLock
+      ? resolveActiveBrowserLockBackoffMs()
+      : resolveBrowserLockBackoffMs();
+    const activeReason = activeLockStatus.reason
+      ? ` (active lock: ${activeLockStatus.reason})`
+      : '';
     console.warn(
-      `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel}). ` +
+      `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel})${activeReason}. ` +
         `Waiting ${backoffMs}ms before retry to avoid hammering userDataDir.`,
       err?.message || err
     );
@@ -533,9 +632,34 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         );
       }
     }
-    await cleanupPuppeteerLocks();
+
+    if (isActiveLock) {
+      if (strictLockRecovery) {
+        console.warn(
+          `[WWEBJS] Active browser lock detected for clientId=${clientId}; ` +
+            'skipping lock cleanup because WA_WWEBJS_LOCK_RECOVERY_STRICT=true.'
+        );
+      } else {
+        console.warn(
+          `[WWEBJS] Active browser lock detected for clientId=${clientId}; ` +
+            'skipping lock cleanup to avoid stomping on a running browser session.'
+        );
+      }
+    } else {
+      await cleanupPuppeteerLocks();
+    }
+
     if (backoffMs > 0) {
       await delay(backoffMs);
+    }
+
+    if (isActiveLock && strictLockRecovery) {
+      const error = new Error(
+        `[WWEBJS] Browser lock still active for clientId=${clientId}. ` +
+          'Reuse the existing session or stop the previous Chromium process before reinit.'
+      );
+      error.code = 'WA_WWEBJS_LOCK_ACTIVE';
+      throw error;
     }
   };
 
