@@ -17,6 +17,7 @@ jest.unstable_mockModule('../src/service/waService.js', () => ({ default: {} }))
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   formatToWhatsAppId: mockFormatToWhatsAppId,
   safeSendMessage: mockSafeSendMessage,
+  sendWithClientFallback: jest.fn(),
   sendWAReport: mockSendWAReport,
   getAdminWAIds: mockGetAdminWAIds,
 }));

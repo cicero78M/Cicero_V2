@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 const sendDebug = jest.fn();
 const safeSendMessage = jest.fn();
+const sendWithClientFallback = jest.fn();
 const runDirRequestAction = jest.fn();
 const findClientById = jest.fn(async () => ({
   client_group: '120363025123456789@g.us',
@@ -60,13 +61,16 @@ async function loadModules() {
 
   jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
     safeSendMessage,
+    sendWithClientFallback,
     getAdminWAIds: () => [],
     normalizeUserWhatsAppId,
     minPhoneDigitLength,
   }));
 
   jest.unstable_mockModule('../src/service/waService.js', () => ({
+    default: {},
     waGatewayClient: {},
+    waUserClient: {},
   }));
 
   jest.unstable_mockModule('../src/cron/cronDirRequestFetchSosmed.js', () => ({

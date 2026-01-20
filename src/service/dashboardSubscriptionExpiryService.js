@@ -1,9 +1,14 @@
 import { query } from '../repository/db.js';
 import { expireSubscription } from './dashboardSubscriptionService.js';
-import { safeSendMessage, formatToWhatsAppId } from '../utils/waHelper.js';
-import { waGatewayClient } from './waService.js';
+import { sendWithClientFallback, formatToWhatsAppId } from '../utils/waHelper.js';
+import waClient, { waGatewayClient, waUserClient } from './waService.js';
 
 const DEFAULT_TIMEZONE = 'Asia/Jakarta';
+const waFallbackClients = [
+  { client: waGatewayClient, label: 'WA-GATEWAY' },
+  { client: waClient, label: 'WA' },
+  { client: waUserClient, label: 'WA-USER' },
+];
 
 export function selectExpiredSubscriptions(subscriptions = [], now = new Date()) {
   const nowTs = new Date(now).getTime();
@@ -54,7 +59,16 @@ async function notifyExpiry(subscription) {
   if (!chatId) return false;
 
   const message = buildExpiryMessage(subscription);
-  return safeSendMessage(waGatewayClient, chatId, message);
+  return sendWithClientFallback({
+    chatId,
+    message,
+    clients: waFallbackClients,
+    reportClient: waClient,
+    reportContext: {
+      source: 'dashboardSubscriptionExpiry',
+      subscriptionId: subscription.subscription_id,
+    },
+  });
 }
 
 export async function fetchActiveSubscriptions() {

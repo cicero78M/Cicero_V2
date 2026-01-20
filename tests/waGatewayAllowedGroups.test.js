@@ -214,6 +214,7 @@ describe("waService gateway allowed group cache", () => {
       formatToWhatsAppId: jest.fn((value) => value),
       formatClientData: jest.fn(),
       safeSendMessage: jest.fn(),
+      sendWithClientFallback: jest.fn(),
       getAdminWAIds: jest.fn().mockReturnValue([]),
       isUnsupportedVersionError: jest.fn(),
     }));

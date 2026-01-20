@@ -436,16 +436,15 @@ async function sendWithRetry(task, config = {}) {
 export async function safeSendMessage(waClient, chatId, message, options = {}) {
   let retryOptions = {};
   let sendOptions = options ?? {};
+  let onErrorHandler = null;
 
-  if (
-    options &&
-    typeof options === 'object' &&
-    !Array.isArray(options) &&
-    Object.prototype.hasOwnProperty.call(options, 'retry')
-  ) {
-    const { retry, ...rest } = options;
-    retryOptions = retry ?? {};
+  if (options && typeof options === 'object' && !Array.isArray(options)) {
+    const { retry, onError, ...rest } = options;
+    if (Object.prototype.hasOwnProperty.call(options, 'retry')) {
+      retryOptions = retry ?? {};
+    }
     sendOptions = rest;
+    onErrorHandler = typeof onError === 'function' ? onError : null;
   }
 
   if (sendOptions == null || typeof sendOptions !== 'object') {
@@ -509,11 +508,102 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     const contentTypeInfo = err?.contentType
       ? ` (contentType=${err.contentType})`
       : '';
+    if (onErrorHandler) {
+      onErrorHandler(err);
+    }
     console.error(
       `[WA] Failed to send message to ${resolvedChatId || chatId}${contentTypeInfo}: ${err?.message || err}`
     );
     return false;
   }
+}
+
+function summarizeSendError(err) {
+  if (!err) return 'unknown error';
+  const message = String(err?.message || err);
+  const code = err?.code || err?.status || err?.statusCode || err?.data?.code;
+  const name = err?.name;
+  const details = [name ? `name=${name}` : null, code ? `code=${code}` : null]
+    .filter(Boolean)
+    .join(' ');
+  if (details) {
+    return `${message} (${details})`.trim();
+  }
+  return message.trim();
+}
+
+function stringifyContext(context) {
+  if (!context) return '';
+  try {
+    const serialized = JSON.stringify(context);
+    return serialized.length > 500 ? `${serialized.slice(0, 500)}...` : serialized;
+  } catch {
+    return String(context);
+  }
+}
+
+export async function sendWithClientFallback({
+  chatId,
+  message,
+  clients = [],
+  sendOptions = {},
+  reportClient = null,
+  reportContext = null,
+} = {}) {
+  const attempts = Array.isArray(clients)
+    ? clients.filter((entry) => entry?.client)
+    : [];
+  const labels = attempts.map((entry) => entry?.label || 'unknown');
+  if (!chatId || !attempts.length) {
+    console.warn(
+      `[WA] Fallback send aborted: chatId=${chatId || 'unknown'} clients=${labels.join(',')}`
+    );
+    return false;
+  }
+
+  let previousError = null;
+
+  for (const { client, label } of attempts) {
+    if (previousError) {
+      console.warn(
+        `[WA] Fallback attempt via ${label} for ${chatId}; previousError=${previousError}`
+      );
+    }
+
+    let attemptError = null;
+    const sent = await safeSendMessage(client, chatId, message, {
+      ...sendOptions,
+      onError: (err) => {
+        attemptError = err;
+      },
+    });
+
+    if (sent) {
+      return true;
+    }
+
+    const summary = summarizeSendError(attemptError);
+    console.warn(`[WA] Send failed via ${label} for ${chatId}: ${summary}`);
+    previousError = summary;
+  }
+
+  const contextText = stringifyContext(reportContext);
+  const reportMessage =
+    `[WA] Semua fallback client gagal mengirim pesan ke ${chatId}. ` +
+    `clients=${labels.join(', ') || 'unknown'}; lastError=${previousError || 'unknown'}` +
+    (contextText ? `; context=${contextText}` : '');
+
+  if (reportClient) {
+    await sendWAReport(reportClient, reportMessage);
+  }
+
+  console.error('[WA] Fallback send failed', {
+    chatId,
+    clients: labels,
+    lastError: previousError,
+    context: reportContext,
+  });
+  return false;
 }
 
 export function isUnsupportedVersionError(err) {

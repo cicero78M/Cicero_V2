@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 const mockScheduleCronJob = jest.fn();
 const mockSafeSendMessage = jest.fn();
+const mockSendWithClientFallback = jest.fn();
 const mockFormatToWhatsAppId = jest.fn((digits) => `${digits}@c.us`);
 const mockGetActiveUsersWithWhatsapp = jest.fn();
 const mockGetShortcodesTodayByClient = jest.fn();
@@ -19,11 +20,14 @@ jest.unstable_mockModule('../src/utils/cronScheduler.js', () => ({
 }));
 
 jest.unstable_mockModule('../src/service/waService.js', () => ({
+  default: {},
   waGatewayClient: {},
+  waUserClient: {},
 }));
 
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   safeSendMessage: mockSafeSendMessage,
+  sendWithClientFallback: mockSendWithClientFallback,
   formatToWhatsAppId: mockFormatToWhatsAppId,
 }));
 
@@ -83,6 +87,7 @@ beforeEach(async () => {
     reminderStateStore.clear();
   });
   mockSafeSendMessage.mockResolvedValue(true);
+  mockSendWithClientFallback.mockResolvedValue(true);
 
   mockGetShortcodesTodayByClient.mockResolvedValue([]);
   mockGetLikesByShortcode.mockResolvedValue([]);
@@ -132,9 +137,13 @@ test('runCron only sends reminders for DITBINMAS and BIDHUMAS users', async () =
   await runCron();
 
   expect(mockGetActiveUsersWithWhatsapp).toHaveBeenCalledTimes(1);
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(2);
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '081234567890@c.us', expect.any(String));
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '082233445566@c.us', expect.any(String));
+  expect(mockSendWithClientFallback).toHaveBeenCalledTimes(2);
+  expect(mockSendWithClientFallback).toHaveBeenCalledWith(
+    expect.objectContaining({ chatId: '081234567890@c.us', message: expect.any(String) })
+  );
+  expect(mockSendWithClientFallback).toHaveBeenCalledWith(
+    expect.objectContaining({ chatId: '082233445566@c.us', message: expect.any(String) })
+  );
   expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('DITBINMAS');
   expect(mockGetShortcodesTodayByClient).toHaveBeenCalledWith('BIDHUMAS');
   expect(mockGetPostsTodayByClient).toHaveBeenCalledWith('DITBINMAS');
@@ -160,28 +169,28 @@ test('runCron sends staged follow-ups for users still incomplete', async () => {
 
   await runCron();
 
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(mockSendWithClientFallback).toHaveBeenCalledTimes(1);
   expect(reminderStateStore.get('081234567890@c.us:DITBINMAS')).toEqual({
     lastStage: 'initial',
     isComplete: false,
   });
 
-  mockSafeSendMessage.mockClear();
+  mockSendWithClientFallback.mockClear();
   mockGetLikesByShortcode.mockResolvedValue(['user1']);
 
   await runCron();
 
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
+  expect(mockSendWithClientFallback).toHaveBeenCalledTimes(1);
   expect(reminderStateStore.get('081234567890@c.us:DITBINMAS')).toEqual({
     lastStage: 'completed',
     isComplete: true,
   });
 
-  mockSafeSendMessage.mockClear();
+  mockSendWithClientFallback.mockClear();
 
   await runCron();
 
-  expect(mockSafeSendMessage).not.toHaveBeenCalled();
+  expect(mockSendWithClientFallback).not.toHaveBeenCalled();
 });
 
 test('cron skips completed recipients but keeps following up with pending users after a restart', async () => {
@@ -212,8 +221,10 @@ test('cron skips completed recipients but keeps following up with pending users 
 
   await runCron();
 
-  expect(mockSafeSendMessage).toHaveBeenCalledTimes(1);
-  expect(mockSafeSendMessage).toHaveBeenCalledWith({}, '089876543210@c.us', expect.any(String));
+  expect(mockSendWithClientFallback).toHaveBeenCalledTimes(1);
+  expect(mockSendWithClientFallback).toHaveBeenCalledWith(
+    expect.objectContaining({ chatId: '089876543210@c.us', message: expect.any(String) })
+  );
   expect(reminderStateStore.get('089876543210@c.us:DITBINMAS')).toEqual({
     lastStage: 'followup2',
     isComplete: false,

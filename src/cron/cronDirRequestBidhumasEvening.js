@@ -3,12 +3,12 @@ import { runDirRequestAction } from '../handler/menu/dirRequestHandlers.js';
 import { findClientById } from '../service/clientService.js';
 import { splitRecipientField } from '../repository/clientContactRepository.js';
 import {
-  safeSendMessage,
+  sendWithClientFallback,
   getAdminWAIds,
   normalizeUserWhatsAppId,
   minPhoneDigitLength,
 } from '../utils/waHelper.js';
-import { waGatewayClient } from '../service/waService.js';
+import waClient, { waGatewayClient, waUserClient } from '../service/waService.js';
 import { normalizeGroupId, runCron as runDirRequestFetchSosmed } from './cronDirRequestFetchSosmed.js';
 import { delayAfterSend } from './dirRequestThrottle.js';
 
@@ -32,6 +32,11 @@ const adminRecipients = new Set(
   getAdminWAIds().map((wid) => normalizeUserRecipient(wid)).filter(Boolean)
 );
 const CRON_LABEL = 'CRON DIRREQ BIDHUMAS 22:00';
+const waFallbackClients = [
+  { client: waGatewayClient, label: 'WA-GATEWAY' },
+  { client: waClient, label: 'WA' },
+  { client: waUserClient, label: 'WA-USER' },
+];
 
 function toWAid(value) {
   if (!value || typeof value !== 'string') return null;
@@ -63,7 +68,13 @@ async function logToAdmins(message) {
   if (!message || adminRecipients.size === 0) return;
   const prefix = '[CRON DIRREQ BIDHUMAS 22:00] ';
   for (const admin of adminRecipients) {
-    await safeSendMessage(waGatewayClient, admin, `${prefix}${message}`);
+    await sendWithClientFallback({
+      chatId: admin,
+      message: `${prefix}${message}`,
+      clients: waFallbackClients,
+      reportClient: waClient,
+      reportContext: { jobKey: JOB_KEY, admin },
+    });
   }
 }
 

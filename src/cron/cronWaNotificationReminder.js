@@ -1,5 +1,5 @@
-import { waGatewayClient } from "../service/waService.js";
-import { safeSendMessage, formatToWhatsAppId } from "../utils/waHelper.js";
+import waClient, { waGatewayClient, waUserClient } from "../service/waService.js";
+import { sendWithClientFallback, formatToWhatsAppId } from "../utils/waHelper.js";
 import { getActiveUsersWithWhatsapp } from "../model/userModel.js";
 import { getShortcodesTodayByClient } from "../model/instaPostModel.js";
 import { getLikesByShortcode } from "../model/instaLikeModel.js";
@@ -21,6 +21,11 @@ const THANK_YOU_MESSAGE =
 const DEFAULT_SEND_DELAY_MS = 2000;
 const WHATSAPP_SEND_DELAY_MS =
   process.env.NODE_ENV === "test" ? 0 : DEFAULT_SEND_DELAY_MS;
+const waFallbackClients = [
+  { client: waGatewayClient, label: "WA-GATEWAY" },
+  { client: waClient, label: "WA" },
+  { client: waUserClient, label: "WA-USER" },
+];
 
 function delay(ms) {
   return new Promise((resolve) => {
@@ -340,7 +345,17 @@ export async function runCron() {
       status = null;
     }
 
-    const sent = await safeSendMessage(waGatewayClient, chatId, message);
+    const sent = await sendWithClientFallback({
+      chatId,
+      message,
+      clients: waFallbackClients,
+      reportClient: waClient,
+      reportContext: {
+        jobKey: JOB_KEY,
+        clientId,
+        stage,
+      },
+    });
     if (!sent) {
       console.error(
         `[WA] Skip reminder state update for ${chatId} because message delivery failed.`

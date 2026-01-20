@@ -1,6 +1,6 @@
 import { sendDebug } from "../middleware/debugHandler.js";
-import { waGatewayClient } from "../service/waService.js";
-import { getAdminWAIds, safeSendMessage } from "../utils/waHelper.js";
+import waClient, { waGatewayClient, waUserClient } from "../service/waService.js";
+import { getAdminWAIds, sendWithClientFallback } from "../utils/waHelper.js";
 import {
   buildSatbinmasOfficialInstagramRecap,
   buildSatbinmasOfficialTiktokRecap,
@@ -8,6 +8,11 @@ import {
 
 export const JOB_KEY = "./src/cron/cronDirRequestSatbinmasOfficialMedia.js";
 const CRON_TAG = "CRON DIRREQ SATBINMAS OFFICIAL MEDIA";
+const waFallbackClients = [
+  { client: waGatewayClient, label: "WA-GATEWAY" },
+  { client: waClient, label: "WA" },
+  { client: waUserClient, label: "WA-USER" },
+];
 
 function getRecipients() {
   const adminRecipients = getAdminWAIds().filter((wid) => wid.endsWith("@c.us"));
@@ -16,7 +21,13 @@ function getRecipients() {
 
 async function sendRecapToRecipients(message, recipients) {
   for (const wid of recipients) {
-    await safeSendMessage(waGatewayClient, wid, message);
+    await sendWithClientFallback({
+      chatId: wid,
+      message,
+      clients: waFallbackClients,
+      reportClient: waClient,
+      reportContext: { jobKey: JOB_KEY, recipient: wid },
+    });
   }
 }
 
@@ -60,4 +71,3 @@ export async function runCron() {
     });
   }
 }
-
