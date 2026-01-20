@@ -195,7 +195,11 @@ secara manual setelah chat tervalidasi. Ini mencegah error seperti
 `Cannot read properties of undefined (reading 'markedUnread')` yang dapat muncul
 saat opsi tidak dikirim atau bernilai `null` dari caller, sekaligus menghindari
 `sendSeen` pada chat yang belum ter-hydrate. Jika payload teks tidak memiliki `text`,
-adapter akan mengirim string kosong agar tetap kompatibel.
+adapter akan mengirim string kosong agar tetap kompatibel. Setelah `sendMessage`,
+adapter memvalidasi response dan melempar error terkontrol jika tidak ada `message.id`.
+Log peringatan akan menyertakan `jid` dan tipe konten untuk investigasi. Caller
+disarankan memakai `safeSendMessage` atau menangkap error lokal saat membutuhkan
+penanganan kegagalan yang konsisten.
 
 ## Fallback saat authenticated tapi tidak ready
 

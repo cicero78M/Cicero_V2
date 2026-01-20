@@ -163,6 +163,22 @@ function extractVersionString(payload) {
   return null;
 }
 
+function describeSendMessageContentType(content) {
+  if (content && typeof content === 'object' && 'document' in content) {
+    return 'document';
+  }
+  if (typeof content === 'string') {
+    return 'text';
+  }
+  if (content && typeof content === 'object' && 'text' in content) {
+    return 'text';
+  }
+  if (content == null) {
+    return 'empty';
+  }
+  return typeof content;
+}
+
 async function fetchWebVersionCache(cacheUrl) {
   try {
     const response = await fetch(cacheUrl, { redirect: 'follow' });
@@ -812,6 +828,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.sendMessage = async (jid, content, options = {}) => {
     const safeOptions = options && typeof options === 'object' ? options : {};
     const normalizedOptions = { sendSeen: false, ...safeOptions };
+    const contentType = describeSendMessageContentType(content);
     let message;
     if (
       content &&
@@ -831,6 +848,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       const text =
         typeof content === 'string' ? content : content?.text ?? '';
       message = await client.sendMessage(jid, text, normalizedOptions);
+    }
+    if (!message || !message.id) {
+      console.warn(
+        `[WWEBJS] sendMessage returned no id (jid=${jid}, contentType=${contentType}).`
+      );
+      const error = new Error('sendMessage returned no id');
+      error.jid = jid;
+      error.contentType = contentType;
+      error.retryable = false;
+      throw error;
     }
     return message.id._serialized || message.id.id || '';
   };
