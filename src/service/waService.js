@@ -793,6 +793,9 @@ function scheduleAuthenticatedReadyFallback(client, label) {
 
 function registerClientReadiness(client, label) {
   getClientReadinessState(client, label);
+  if (client) {
+    client.clientLabel = label;
+  }
 }
 
 function setClientNotReady(client) {
@@ -1125,6 +1128,11 @@ function wrapSendMessage(client) {
 wrapSendMessage(waClient);
 wrapSendMessage(waUserClient);
 wrapSendMessage(waGatewayClient);
+
+export const waSendFallbackChain = [waGatewayClient, waClient, waUserClient];
+waClient.sendFallbackChain = waSendFallbackChain;
+waUserClient.sendFallbackChain = waSendFallbackChain;
+waGatewayClient.sendFallbackChain = waSendFallbackChain;
 
 export function sendGatewayMessage(jid, text) {
   return waGatewayClient.sendMessage(jid, text);

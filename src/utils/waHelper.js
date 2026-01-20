@@ -433,39 +433,14 @@ async function sendWithRetry(task, config = {}) {
   throw new Error('sendWithRetry exhausted attempts');
 }
 
-export async function safeSendMessage(waClient, chatId, message, options = {}) {
-  let retryOptions = {};
-  let sendOptions = options ?? {};
-
-  if (
-    options &&
-    typeof options === 'object' &&
-    !Array.isArray(options) &&
-    Object.prototype.hasOwnProperty.call(options, 'retry')
-  ) {
-    const { retry, ...rest } = options;
-    retryOptions = retry ?? {};
-    sendOptions = rest;
-  }
-
-  if (sendOptions == null || typeof sendOptions !== 'object') {
-    sendOptions = {};
-  }
-
-  const retryConfig = {
-    maxAttempts: 3,
-    baseDelayMs: 500,
-    maxDelayMs: 5000,
-    jitterRatio: 0.2,
-    shouldRetry: (err, attempt) => {
-      if (isMissingLidError(err) && attempt < 2) {
-        return true;
-      }
-      return defaultShouldRetry(err, attempt);
-    },
-    ...retryOptions,
-  };
-
+async function sendMessageViaClient(
+  waClient,
+  chatId,
+  message,
+  sendOptions,
+  retryConfig
+) {
+  const clientLabel = waClient?.clientLabel ? `[${waClient.clientLabel}]` : "[WA]";
   const ensureClientReady = async () => {
     if (typeof waClient?.waitForWaReady === 'function') {
       await waClient.waitForWaReady();
@@ -502,7 +477,7 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     }, retryConfig);
 
     console.log(
-      `[WA] Sent message to ${resolvedChatId || chatId}: ${String(message).substring(0, 64)}`
+      `${clientLabel} Sent message to ${resolvedChatId || chatId}: ${String(message).substring(0, 64)}`
     );
     return true;
   } catch (err) {
@@ -510,10 +485,67 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
       ? ` (contentType=${err.contentType})`
       : '';
     console.error(
-      `[WA] Failed to send message to ${resolvedChatId || chatId}${contentTypeInfo}: ${err?.message || err}`
+      `${clientLabel} Failed to send message to ${resolvedChatId || chatId}${contentTypeInfo}: ${err?.message || err}`
     );
     return false;
   }
+}
+
+export async function safeSendMessage(waClient, chatId, message, options = {}) {
+  let retryOptions = {};
+  let sendOptions = options ?? {};
+
+  if (
+    options &&
+    typeof options === 'object' &&
+    !Array.isArray(options) &&
+    Object.prototype.hasOwnProperty.call(options, 'retry')
+  ) {
+    const { retry, ...rest } = options;
+    retryOptions = retry ?? {};
+    sendOptions = rest;
+  }
+
+  if (sendOptions == null || typeof sendOptions !== 'object') {
+    sendOptions = {};
+  }
+
+  const retryConfig = {
+    maxAttempts: 3,
+    baseDelayMs: 500,
+    maxDelayMs: 5000,
+    jitterRatio: 0.2,
+    shouldRetry: (err, attempt) => {
+      if (isMissingLidError(err) && attempt < 2) {
+        return true;
+      }
+      return defaultShouldRetry(err, attempt);
+    },
+    ...retryOptions,
+  };
+
+  const fallbackChain = Array.isArray(waClient?.sendFallbackChain)
+    ? waClient.sendFallbackChain.filter(Boolean)
+    : null;
+  const clientsToTry = fallbackChain && fallbackChain.length > 0
+    ? fallbackChain
+    : [waClient];
+
+  for (const client of clientsToTry) {
+    if (!client) continue;
+    const sent = await sendMessageViaClient(
+      client,
+      chatId,
+      message,
+      sendOptions,
+      retryConfig
+    );
+    if (sent) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function isUnsupportedVersionError(err) {

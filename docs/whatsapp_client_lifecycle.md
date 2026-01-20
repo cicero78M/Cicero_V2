@@ -163,13 +163,19 @@ troubleshooting stuck/QR. Interpretasinya:
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
-adapter akan:
+adapter akan mencoba mempertahankan sesi aktif dengan pendekatan bertahap:
 
-1. Memanggil `client.destroy()` hanya jika Puppeteer sudah terinisialisasi (`pupBrowser`/`pupPage`).
-   Jika belum, destroy dilewati dan hanya dicatat debug agar recovery tetap bersih.
-2. Menghapus file lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`)
-   di dalam folder `session-<clientId>` bila ada.
-3. Menunggu backoff lebih panjang sebelum mencoba `initialize()` ulang.
+1. **Soft retry**: menunggu backoff dan mencoba `initialize()` ulang tanpa
+   `client.destroy()`/pembersihan lock agar sesi yang sedang berjalan tidak
+   terganggu.
+2. **Cleanup retry**: setelah melewati batas soft retry, barulah adapter memanggil
+   `client.destroy()` (jika `pupBrowser`/`pupPage` tersedia) dan menghapus file lock
+   Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`) di
+   `session-<clientId>` sebelum mencoba `initialize()` ulang.
+
+Jumlah soft retry dikendalikan oleh `WA_WWEBJS_BROWSER_LOCK_SOFT_RETRIES`
+(default `1`). Set ke `0` untuk langsung melakukan cleanup, atau naikkan nilainya
+jika proses Chrome tetap aktif dan Anda ingin memprioritaskan reuse sesi.
 
 Durasi backoff dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
 (default 20000ms). Ini mencegah retry yang terlalu agresif pada folder yang terkunci.
