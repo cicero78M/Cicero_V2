@@ -554,6 +554,7 @@ export async function sendWithClientFallback({
     ? clients.filter((entry) => entry?.client)
     : [];
   const labels = attempts.map((entry) => entry?.label || 'unknown');
+  const contextText = stringifyContext(reportContext);
   if (!chatId || !attempts.length) {
     console.warn(
       `[WA] Fallback send aborted: chatId=${chatId || 'unknown'} clients=${labels.join(',')}`
@@ -565,8 +566,9 @@ export async function sendWithClientFallback({
 
   for (const { client, label } of attempts) {
     if (previousError) {
+      const contextSuffix = contextText ? `; context=${contextText}` : '';
       console.warn(
-        `[WA] Fallback attempt via ${label} for ${chatId}; previousError=${previousError}`
+        `[WA] Fallback attempt via ${label} for ${chatId}; previousError=${previousError}${contextSuffix}`
       );
     }
 
@@ -583,11 +585,11 @@ export async function sendWithClientFallback({
     }
 
     const summary = summarizeSendError(attemptError);
-    console.warn(`[WA] Send failed via ${label} for ${chatId}: ${summary}`);
+    const contextSuffix = contextText ? `; context=${contextText}` : '';
+    console.warn(`[WA] Send failed via ${label} for ${chatId}: ${summary}${contextSuffix}`);
     previousError = summary;
   }
 
-  const contextText = stringifyContext(reportContext);
   const reportMessage =
     `[WA] Semua fallback client gagal mengirim pesan ke ${chatId}. ` +
     `clients=${labels.join(', ') || 'unknown'}; lastError=${previousError || 'unknown'}` +

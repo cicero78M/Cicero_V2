@@ -101,6 +101,13 @@ async function executeBidhumasMenus(recipients) {
           roleFlag: BIDHUMAS_CLIENT_ID,
           userClientId: BIDHUMAS_CLIENT_ID,
           waClient: waGatewayClient,
+          fallbackClients: waFallbackClients,
+          fallbackContext: {
+            action,
+            clientId: BIDHUMAS_CLIENT_ID,
+            chatId,
+            jobKey: JOB_KEY,
+          },
         });
         await logPhase(`Menu ${action} selesai untuk ${chatId}`);
       } catch (err) {

@@ -26,7 +26,7 @@ import {
 import { absensiRegistrasiDashboardDirektorat } from "../fetchabsensi/dashboard/absensiRegistrasiDashboardDirektorat.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
-import { sendWAFile, safeSendMessage } from "../../utils/waHelper.js";
+import { sendWAFile, safeSendMessage, sendWithClientFallback } from "../../utils/waHelper.js";
 import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import { join, basename } from "path";
 import {
@@ -70,14 +70,30 @@ const DITBINMAS_CLIENT_ID = "DITBINMAS";
 
 const isGroupChatId = (value) => String(value || "").trim().endsWith("@g.us");
 
-const sendMenuMessage = async (waClient, chatId, message, options) => {
-  if (isGroupChatId(chatId)) {
-    return safeSendMessage(waClient, chatId, message, options);
+const sendMenuMessage = async (waClient, chatId, message, options = {}) => {
+  const {
+    fallbackClients,
+    fallbackContext,
+    reportClient,
+    ...sendOptions
+  } = options || {};
+  if (Array.isArray(fallbackClients) && fallbackClients.length) {
+    return sendWithClientFallback({
+      chatId,
+      message,
+      clients: fallbackClients,
+      sendOptions,
+      reportClient: reportClient || waClient,
+      reportContext: fallbackContext,
+    });
   }
-  if (options === undefined) {
+  if (isGroupChatId(chatId)) {
+    return safeSendMessage(waClient, chatId, message, sendOptions);
+  }
+  if (!sendOptions || Object.keys(sendOptions).length === 0) {
     return waClient.sendMessage(chatId, message);
   }
-  return waClient.sendMessage(chatId, message, options);
+  return waClient.sendMessage(chatId, message, sendOptions);
 };
 
 const isDitbinmas = (value) =>
@@ -1631,9 +1647,14 @@ async function performAction(
   chatId,
   roleFlag,
   userClientId,
-  context = {}
+  context = {},
+  fallbackOptions = {}
 ) {
   let msg = "";
+  const { fallbackClients, fallbackContext } = fallbackOptions;
+  const fallbackPayload = fallbackClients
+    ? { fallbackClients, fallbackContext, reportClient: waClient }
+    : {};
   const userClient = userClientId ? await findClientById(userClientId) : null;
   const userType = userClient?.client_type?.toLowerCase();
   const attendanceClientId = String(userClientId || clientId || "").toUpperCase();
@@ -1847,7 +1868,7 @@ async function performAction(
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         if (narrative) {
-          await sendMenuMessage(waClient, chatId, narrative.trim());
+          await sendMenuMessage(waClient, chatId, narrative.trim(), fallbackPayload);
         }
         if (text && filename) {
           const buffer = Buffer.from(text, "utf-8");
@@ -1875,7 +1896,7 @@ async function performAction(
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         if (narrative) {
-          await sendMenuMessage(waClient, chatId, narrative.trim());
+          await sendMenuMessage(waClient, chatId, narrative.trim(), fallbackPayload);
         }
         if (text && filename) {
           const buffer = Buffer.from(text, "utf-8");
@@ -1955,7 +1976,7 @@ async function performAction(
           }
         );
         if (narrative) {
-          await sendMenuMessage(waClient, chatId, narrative);
+          await sendMenuMessage(waClient, chatId, narrative, fallbackPayload);
         }
         if (ig.text && ig.filename) {
           const buffer = Buffer.from(ig.text, "utf-8");
@@ -2318,9 +2339,19 @@ async function performAction(
     return;
   }
 
-  await sendMenuMessage(waClient, chatId, normalizedMsg);
+  await sendMenuMessage(waClient, chatId, normalizedMsg, fallbackPayload);
   if (action === "12" || action === "14" || action === "16") {
-    await safeSendMessage(waClient, dirRequestGroup, normalizedMsg);
+    if (Array.isArray(fallbackClients) && fallbackClients.length) {
+      await sendWithClientFallback({
+        chatId: dirRequestGroup,
+        message: normalizedMsg,
+        clients: fallbackClients,
+        reportClient: waClient,
+        reportContext: fallbackContext,
+      });
+    } else {
+      await safeSendMessage(waClient, dirRequestGroup, normalizedMsg);
+    }
   }
 }
 
@@ -2332,6 +2363,8 @@ export async function runDirRequestAction({
   userClientId,
   waClient,
   context,
+  fallbackClients,
+  fallbackContext,
 } = {}) {
   if (!action) {
     throw new Error("Action menu wajib diisi");
@@ -2345,6 +2378,11 @@ export async function runDirRequestAction({
 
   const normalizedAction = String(action).trim();
   const normalizedClient = (clientId || "").trim();
+  const resolvedFallbackContext = fallbackContext || {
+    action: normalizedAction,
+    clientId: normalizedClient,
+    chatId,
+  };
 
   return performAction(
     normalizedAction,
@@ -2353,7 +2391,11 @@ export async function runDirRequestAction({
     chatId,
     roleFlag,
     userClientId,
-    context
+    context,
+    {
+      fallbackClients,
+      fallbackContext: resolvedFallbackContext,
+    }
   );
 }
 

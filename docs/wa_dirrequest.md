@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2026-02-07*
+*Last updated: 2026-01-21*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -11,6 +11,15 @@ Output menu dari `performAction` kini memakai jalur pengiriman aman khusus chat
 grup (`@g.us`) agar bot melewati chat grup yang belum ter-hydrate tanpa
 mengubah perilaku pengiriman ke user personal. Pengiriman di grup menggunakan
 `safeSendMessage` untuk memastikan chat siap sebelum balasan dikirim.
+
+Untuk eksekusi menu dirrequest via cron, pemilihan client WA kini dilakukan
+secara berurutan: **WA-GATEWAY** → **WA** → **WA-USER**. Cron akan memanggil
+`waitForWaReady()` pada tiap client dan otomatis fallback jika gateway gagal
+siap. Setiap fallback mencatat label client, alasan kegagalan, serta action
+menu ke log cron agar mudah ditelusuri. Pengiriman menu memakai
+`sendWithClientFallback`, sehingga bila pengiriman gagal pada client utama,
+bot akan mencoba client berikutnya dan tetap mencatat konteks action yang
+sama di log.
 
 Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
 
