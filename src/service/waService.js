@@ -643,6 +643,7 @@ const hardInitRetryCounts = new WeakMap();
 const maxHardInitRetries = 3;
 const hardInitRetryBaseDelayMs = 120000;
 const hardInitRetryMaxDelayMs = 900000;
+const qrAwaitingReinitGraceMs = 120000;
 const logoutDisconnectReasons = new Set([
   "LOGGED_OUT",
   "UNPAIRED",
@@ -667,6 +668,14 @@ function getHardInitRetryDelayMs(attempt) {
 function formatConnectDurationMs(durationMs) {
   const seconds = Math.round(durationMs / 1000);
   return `${durationMs}ms (${seconds}s)`;
+}
+
+function hasRecentQrScan(state, graceMs = qrAwaitingReinitGraceMs) {
+  if (!state?.lastQrAt) {
+    return false;
+  }
+  const elapsedMs = Date.now() - state.lastQrAt;
+  return elapsedMs >= 0 && elapsedMs <= graceMs;
 }
 
 function getClientReadyTimeoutMs(client) {
@@ -1147,6 +1156,7 @@ waClient.on("qr", (qr) => {
   const state = getClientReadinessState(waClient, "WA");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
+  state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
   console.log("[WA] Scan QR dengan WhatsApp Anda!");
 });
@@ -1188,6 +1198,7 @@ waUserClient.on("qr", (qr) => {
   const state = getClientReadinessState(waUserClient, "WA-USER");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
+  state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
   console.log("[WA-USER] Scan QR dengan WhatsApp Anda!");
 });
@@ -1227,6 +1238,7 @@ waGatewayClient.on("qr", (qr) => {
   const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
+  state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
   console.log("[WA-GATEWAY] Scan QR dengan WhatsApp Anda!");
 });
@@ -4649,6 +4661,17 @@ if (shouldInitWhatsAppClients) {
           connectInFlightDurationMs !== null &&
           connectInFlightDurationMs >= connectInFlightReinitMs
         ) {
+          if (state.awaitingQrScan && hasRecentQrScan(state)) {
+            console.warn(
+              `[${label}] QR baru muncul; reinit ditunda; ${formatFallbackReadyContext(
+                state,
+                true,
+                connectInFlightDurationMs
+              )}`
+            );
+            scheduleFallbackReadyCheck(client, delayMs);
+            return;
+          }
           if (typeof client?.reinitialize === "function") {
             console.warn(
               `[${label}] connect in progress for ${formatConnectDurationMs(
