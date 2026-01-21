@@ -132,7 +132,7 @@ const dirRequestCrons = [
       'Fetch sosmed + recap Ditbinmas + cron custom di slot 18:00 tanpa duplikasi job recap terpisah.',
     schedules: [
       {
-        cronExpression: '15 18 * * *',
+        cronExpression: '20 18 * * *',
         handler: () => runDitbinmasRecapAndCustomSequence(),
         options: DEFAULT_CRON_OPTIONS,
       },
