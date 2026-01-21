@@ -26,6 +26,7 @@ const waFallbackClients = [
   { client: waClient, label: 'WA' },
   { client: waUserClient, label: 'WA-USER' },
 ];
+let isCustomSequenceInFlight = false;
 
 function validateDirektoratClient(client, clientId) {
   if (!client) {
@@ -328,7 +329,18 @@ export async function runCron({
   ditsamaptaActions = buildDitsamaptaActions(),
   ditsamaptaLabel = 'Menu recap DITSAMAPTA',
   summaryTitle = '[CRON DIRREQ CUSTOM] Ringkasan',
+  runContext,
 } = {}) {
+  if (isCustomSequenceInFlight) {
+    const skipMessage = `Lewati cron custom dirrequest${
+      runContext ? ` (${runContext})` : ''
+    }: job masih berjalan`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: skipMessage });
+    await logToAdmins(skipMessage);
+    return { skipped: true, reason: skipMessage };
+  }
+
+  isCustomSequenceInFlight = true;
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai urutan cron custom dirrequest' });
 
   const summary = {
@@ -338,92 +350,99 @@ export async function runCron({
     bidhumas: includeBidhumas ? 'pending' : 'dilewati (tidak dijadwalkan)',
   };
 
-  if (includeFetch) {
-    await logToAdmins('Mulai cron custom dirrequest: blok runDirRequestFetchSosmed');
-    try {
-      await runDirRequestFetchSosmed();
-      summary.fetch = 'sosmed fetch selesai';
-      await logToAdmins('Selesai blok runDirRequestFetchSosmed');
-    } catch (err) {
-      summary.fetch = `gagal sosmed fetch: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.fetch });
-      await logToAdmins(summary.fetch);
-    }
-  }
-
   try {
-    await logToAdmins(`Mulai blok sekuens DITSAMAPTA (${ditsamaptaActions.join('/')})`);
-    const ditsamaptaClient = await findClientById(DITSAMAPTA_CLIENT_ID);
-    const { valid, reason } = validateDirektoratClient(ditsamaptaClient, DITSAMAPTA_CLIENT_ID);
-
-    if (!valid) {
-      summary.ditsamapta = reason;
-      await logToAdmins(`Lewati blok DITSAMAPTA: ${reason}`);
-    } else {
-      const recipients = buildRecipients(ditsamaptaClient, {
-        includeGroup: true,
-        includeSuperAdmins: true,
-        includeOperators: true,
-      });
-
-      summary.ditsamapta = await executeMenuActions({
-        clientId: DITSAMAPTA_CLIENT_ID,
-        actions: ditsamaptaActions,
-        recipients,
-        label: ditsamaptaLabel,
-        roleFlag: DITSAMAPTA_CLIENT_ID,
-        userClientId: DITSAMAPTA_CLIENT_ID,
-      });
-      await logToAdmins(`Selesai blok DITSAMAPTA: ${summary.ditsamapta}`);
+    if (includeFetch) {
+      await logToAdmins('Mulai cron custom dirrequest: blok runDirRequestFetchSosmed');
+      try {
+        await runDirRequestFetchSosmed();
+        summary.fetch = 'sosmed fetch selesai';
+        await logToAdmins('Selesai blok runDirRequestFetchSosmed');
+      } catch (err) {
+        summary.fetch = `gagal sosmed fetch: ${err.message || err}`;
+        sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.fetch });
+        await logToAdmins(summary.fetch);
+      }
     }
-  } catch (err) {
-    summary.ditsamapta = `gagal kirim DITSAMAPTA: ${err.message || err}`;
-    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditsamapta });
-    await logToAdmins(summary.ditsamapta);
-  }
 
-  if (includeDitbinmas) {
     try {
-      await logToAdmins('Mulai blok Menu 21 DITBINMAS');
-      const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
-      const recipients = buildRecipients(ditbinmasClient, { includeGroup: true });
-      summary.ditbinmas = await executeMenuActions({
-        clientId: DITBINMAS_CLIENT_ID,
-        actions: ['21'],
-        recipients,
-        label: 'Menu 21 DITBINMAS',
-        userClientId: DITBINMAS_CLIENT_ID,
-      });
-      await logToAdmins(`Selesai blok Menu 21 DITBINMAS: ${summary.ditbinmas}`);
+      await logToAdmins(`Mulai blok sekuens DITSAMAPTA (${ditsamaptaActions.join('/')})`);
+      const ditsamaptaClient = await findClientById(DITSAMAPTA_CLIENT_ID);
+      const { valid, reason } = validateDirektoratClient(ditsamaptaClient, DITSAMAPTA_CLIENT_ID);
+
+      if (!valid) {
+        summary.ditsamapta = reason;
+        await logToAdmins(`Lewati blok DITSAMAPTA: ${reason}`);
+      } else {
+        const recipients = buildRecipients(ditsamaptaClient, {
+          includeGroup: true,
+          includeSuperAdmins: true,
+          includeOperators: true,
+        });
+
+        summary.ditsamapta = await executeMenuActions({
+          clientId: DITSAMAPTA_CLIENT_ID,
+          actions: ditsamaptaActions,
+          recipients,
+          label: ditsamaptaLabel,
+          roleFlag: DITSAMAPTA_CLIENT_ID,
+          userClientId: DITSAMAPTA_CLIENT_ID,
+        });
+        await logToAdmins(`Selesai blok DITSAMAPTA: ${summary.ditsamapta}`);
+      }
     } catch (err) {
-      summary.ditbinmas = `gagal rekap DITBINMAS: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmas });
-      await logToAdmins(summary.ditbinmas);
+      summary.ditsamapta = `gagal kirim DITSAMAPTA: ${err.message || err}`;
+      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditsamapta });
+      await logToAdmins(summary.ditsamapta);
     }
-  }
 
-  if (includeBidhumas) {
-    try {
-      await logToAdmins('Mulai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29)');
-      const { sendStatus } = await runBidhumasMenuSequence({ label: 'Menu 6, 9, 28, & 29 BIDHUMAS' });
-      summary.bidhumas = sendStatus;
-      await logToAdmins(`Selesai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29): ${sendStatus}`);
-    } catch (err) {
-      summary.bidhumas = `gagal kirim BIDHUMAS: ${err.message || err}`;
-      sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.bidhumas });
-      await logToAdmins(summary.bidhumas);
+    if (includeDitbinmas) {
+      try {
+        await logToAdmins('Mulai blok Menu 21 DITBINMAS');
+        const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
+        const recipients = buildRecipients(ditbinmasClient, { includeGroup: true });
+        summary.ditbinmas = await executeMenuActions({
+          clientId: DITBINMAS_CLIENT_ID,
+          actions: ['21'],
+          recipients,
+          label: 'Menu 21 DITBINMAS',
+          userClientId: DITBINMAS_CLIENT_ID,
+        });
+        await logToAdmins(`Selesai blok Menu 21 DITBINMAS: ${summary.ditbinmas}`);
+      } catch (err) {
+        summary.ditbinmas = `gagal rekap DITBINMAS: ${err.message || err}`;
+        sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditbinmas });
+        await logToAdmins(summary.ditbinmas);
+      }
     }
+
+    if (includeBidhumas) {
+      try {
+        await logToAdmins('Mulai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29)');
+        const { sendStatus } = await runBidhumasMenuSequence({
+          label: 'Menu 6, 9, 28, & 29 BIDHUMAS',
+        });
+        summary.bidhumas = sendStatus;
+        await logToAdmins(`Selesai blok sekuens BIDHUMAS (menu 6, 9, 28, & 29): ${sendStatus}`);
+      } catch (err) {
+        summary.bidhumas = `gagal kirim BIDHUMAS: ${err.message || err}`;
+        sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.bidhumas });
+        await logToAdmins(summary.bidhumas);
+      }
+    }
+
+    const logMessage =
+      `${summaryTitle}:\n` +
+      `- Fetch sosmed: ${summary.fetch}\n` +
+      `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
+      `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
+      `- Menu 6/9/28/29 BIDHUMAS: ${summary.bidhumas}`;
+
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
+    await logToAdmins(logMessage);
+    return { skipped: false, summary };
+  } finally {
+    isCustomSequenceInFlight = false;
   }
-
-  const logMessage =
-    `${summaryTitle}:\n` +
-    `- Fetch sosmed: ${summary.fetch}\n` +
-    `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
-    `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
-    `- Menu 6/9/28/29 BIDHUMAS: ${summary.bidhumas}`;
-
-  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary });
-  await logToAdmins(logMessage);
 }
 
 export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Date()) {
@@ -463,8 +482,13 @@ export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Dat
   }
 
   try {
-    await runCron({ includeFetch: false });
-    summary.customSequence = 'cron custom selesai';
+    const cronResult = await runCron({
+      includeFetch: false,
+      runContext: 'gabungan recap Ditbinmas',
+    });
+    summary.customSequence = cronResult?.skipped
+      ? 'dilewati karena cron custom masih berjalan'
+      : 'cron custom selesai';
   } catch (err) {
     summary.customSequence = `gagal menjalankan cron custom: ${err.message || err}`;
     sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.customSequence });

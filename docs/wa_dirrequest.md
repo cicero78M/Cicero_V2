@@ -525,6 +525,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
     BIDHUMAS.
   - Menu ekstra pada `DITSAMAPTA_EXTRA_ACTIONS` diabaikan agar fokus pada empat
     menu utama yang wajib.
+- Cron custom sequence memakai single-flight internal: bila job masih berjalan,
+  pemanggilan berikutnya (termasuk dari alur gabungan recap Ditbinmas) akan
+  dilewati dan admin menerima log bahwa job sedang in-flight.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
   ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
   aktif bertipe Direktorat sebelum mengirim.
@@ -559,6 +562,9 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   menampilkan status fetch, recap Ditbinmas, dan cron custom secara terpisah
   supaya ketahuan bila salah satu langkah gagal namun langkah berikutnya tetap
   dieksekusi.
+- Jika cron custom masih in-flight, tahap terakhir akan dilewati agar tidak
+  overlap dengan jadwal reguler; admin menerima log skip dan ringkasan mencatat
+  status dilewati.
 
 ## Logika Recap Ditbinmas dalam Slot 18:15
 - `runDitbinmasRecapSequence` tidak lagi dijadwalkan terpisah; ia dijalankan
