@@ -27,6 +27,54 @@ const waFallbackClients = [
   { client: waUserClient, label: 'WA-USER' },
 ];
 
+function buildOrderedFallbackClients(primaryLabel) {
+  if (!primaryLabel) return waFallbackClients;
+  const primary = waFallbackClients.find((entry) => entry.label === primaryLabel);
+  if (!primary) return waFallbackClients;
+  return [primary, ...waFallbackClients.filter((entry) => entry.label !== primaryLabel)];
+}
+
+function logFallbackEvent(message) {
+  sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: message });
+  console.warn(message);
+}
+
+async function resolveReadyWaClient({ action, clientId, chatId }) {
+  let lastError = null;
+
+  for (const { client, label } of waFallbackClients) {
+    if (typeof client?.waitForWaReady !== 'function') {
+      if (lastError) {
+        logFallbackEvent(
+          `[WA FALLBACK] action=${action} clientId=${clientId} recipient=${chatId} label=${label} reason=waitForWaReady not available (prev=${lastError})`
+        );
+      }
+      return { client, label };
+    }
+
+    try {
+      await client.waitForWaReady();
+      if (lastError) {
+        logFallbackEvent(
+          `[WA FALLBACK] action=${action} clientId=${clientId} recipient=${chatId} label=${label} reason=${lastError}`
+        );
+      }
+      return { client, label };
+    } catch (err) {
+      lastError = err?.message || err;
+      logFallbackEvent(
+        `[WA FALLBACK] action=${action} clientId=${clientId} recipient=${chatId} label=${label} reason=${lastError}`
+      );
+    }
+  }
+
+  const failureMessage =
+    `[WA FALLBACK] action=${action} clientId=${clientId} recipient=${chatId} ` +
+    `semua client gagal siap (lastError=${lastError || 'unknown'})`;
+  logFallbackEvent(failureMessage);
+  throw new Error(failureMessage);
+}
+
 function validateDirektoratClient(client, clientId) {
   if (!client) {
     return { valid: false, reason: `Client ${clientId} tidak ditemukan` };
@@ -178,14 +226,26 @@ async function executeMenuActions({
           msg: startMsg,
         });
         await logToAdmins(startMsg);
+        const { client: readyClient, label: readyLabel } = await resolveReadyWaClient({
+          action: normalizedAction.action,
+          clientId,
+          chatId: wa,
+        });
         await runDirRequestAction({
           action: normalizedAction.action,
           clientId,
           chatId: wa,
           roleFlag,
           userClientId,
-          waClient: waGatewayClient,
+          waClient: readyClient,
           context: normalizedAction.context,
+          fallbackClients: buildOrderedFallbackClients(readyLabel),
+          fallbackContext: {
+            action: normalizedAction.action,
+            clientId,
+            chatId: wa,
+            jobKey: JOB_KEY,
+          },
         });
         const successMsg = `${actionPrefix} sukses${contextText ? ` (${contextText.trim()})` : ''}`;
         await logToAdmins(successMsg);
