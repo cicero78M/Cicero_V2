@@ -68,6 +68,18 @@ import { generateTiktokAllDataRecap } from "../../service/tiktokAllDataRecapServ
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 
+const isGroupChatId = (value) => String(value || "").trim().endsWith("@g.us");
+
+const sendMenuMessage = async (waClient, chatId, message, options) => {
+  if (isGroupChatId(chatId)) {
+    return safeSendMessage(waClient, chatId, message, options);
+  }
+  if (options === undefined) {
+    return waClient.sendMessage(chatId, message);
+  }
+  return waClient.sendMessage(chatId, message, options);
+};
+
 const isDitbinmas = (value) =>
   String(value || "")
     .trim()
@@ -1835,7 +1847,7 @@ async function performAction(
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         if (narrative) {
-          await waClient.sendMessage(chatId, narrative.trim());
+          await sendMenuMessage(waClient, chatId, narrative.trim());
         }
         if (text && filename) {
           const buffer = Buffer.from(text, "utf-8");
@@ -1863,7 +1875,7 @@ async function performAction(
         const dirPath = "laphar";
         await mkdir(dirPath, { recursive: true });
         if (narrative) {
-          await waClient.sendMessage(chatId, narrative.trim());
+          await sendMenuMessage(waClient, chatId, narrative.trim());
         }
         if (text && filename) {
           const buffer = Buffer.from(text, "utf-8");
@@ -1943,7 +1955,7 @@ async function performAction(
           }
         );
         if (narrative) {
-          await waClient.sendMessage(chatId, narrative);
+          await sendMenuMessage(waClient, chatId, narrative);
         }
         if (ig.text && ig.filename) {
           const buffer = Buffer.from(ig.text, "utf-8");
@@ -2306,7 +2318,7 @@ async function performAction(
     return;
   }
 
-  await waClient.sendMessage(chatId, normalizedMsg);
+  await sendMenuMessage(waClient, chatId, normalizedMsg);
   if (action === "12" || action === "14" || action === "16") {
     await safeSendMessage(waClient, dirRequestGroup, normalizedMsg);
   }
