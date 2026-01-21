@@ -47,9 +47,9 @@ dirrequest tanpa langkah tambahan.
   timestamp eksekusi fetch yang eksplisit.
 - Setelah pukul **17.00 WIB**, cron fetch sosmed hanya menjalankan refresh
   likes Instagram dan komentar TikTok tanpa menarik postingan baru. Slot
-  malam (mis. 18.00, 19.00, 20.00, 21.00, dan 20:30 gabungan) tetap aktif
-  untuk menjaga pembaruan engagement, tetapi pengambilan konten baru
-  dilewati kecuali dipaksa manual sebelum 17.00 WIB.
+  malam (mis. 19.00, 19.30, 20.00, 21.00, dan 21.30) tetap aktif untuk
+  menjaga pembaruan engagement, tetapi pengambilan konten baru dilewati
+  kecuali dipaksa manual sebelum 17.00 WIB.
 
 ## Absensi Likes Instagram (Format Dirrequest)
 - Rekap absensi likes Instagram (menu dirrequest untuk Direktorat) kini
@@ -499,7 +499,7 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 ## Automasi Cron DirRequest Custom
 - Cron `cronDirRequestCustomSequence` menyambungkan pengambilan data sosmed
   harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
-- Jadwal **15:00** dan **18:00** menjalankan urutan penuh:
+- Jadwal **15:00** dan **18:05** menjalankan urutan penuh:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
      Instagram dan TikTok seluruh direktorat aktif.
   2. Menjalankan menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** untuk *Client ID*
@@ -513,13 +513,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
      Excel) untuk *Client ID* `BIDHUMAS` lalu mengirimkan hasilnya ke dua target
      sekaligus: grup WA `client_group` dan daftar Super Admin dari kolom
      `client_super`.
-- Jadwal **20:30** kini dikurangi agar tidak menabrak recap Ditbinmas/BIDHUMAS:
-  - Hanya menjalankan blok Ditsamapta dengan menu **6**, **9**, **28**, dan
-    **29**.
-  - Tidak memicu `cronDirRequestFetchSosmed`, menu 21 Ditbinmas, maupun blok
-    BIDHUMAS.
-  - Menu ekstra pada `DITSAMAPTA_EXTRA_ACTIONS` diabaikan agar fokus pada empat
-    menu utama yang wajib.
+- Slot **18:05** dan **18:15** sengaja dibuat berjarak 10 menit supaya
+  pengiriman WhatsApp tidak bertumpuk. Slot 18:05 menjalankan custom sequence
+  penuh, sementara slot 18:15 dipakai untuk recap Ditbinmas + custom sequence
+  agar recap tidak perlu dijadwalkan ulang sebagai job terpisah.
 - Seluruh penerima difilter dengan `normalizeGroupId`/`toWAid` sehingga hanya
   ID WA yang valid yang akan dipakai. Blok Ditsamapta juga memvalidasi client
   aktif bertipe Direktorat sebelum mengirim.
@@ -537,7 +534,10 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   `src/cron/cronDirRequestCustomSequence.js` kini terjadwal otomatis pada
   pukul **18:15** (cron `15 18 * * *`, job key `DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY`) dan sudah
   mencakup seluruh logika `runDitbinmasRecapSequence`, sehingga tidak ada job
-  terpisah khusus recap. Urutan tahapannya menjaga fetch hanya dilakukan sekali:
+  terpisah khusus recap. Slot 18:15 sengaja mengikuti custom sequence **18:05**
+  agar pengiriman WA tidak overlap, dan agar recap Ditbinmas hanya terjadi
+  sekali sebelum custom sequence dijalankan ulang tanpa fetch tambahan. Urutan
+  tahapannya menjaga fetch hanya dilakukan sekali:
   1. Memanggil `runDirRequestFetchSosmed()` untuk menarik konten Instagram dan
      TikTok sekaligus menyegarkan likes serta komentar di awal alur.
   2. Menjalankan `runDitbinmasRecapSequence()` hanya untuk menu **6/9/34/35**
