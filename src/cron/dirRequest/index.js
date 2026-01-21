@@ -108,7 +108,6 @@ const dirRequestCrons = [
       { cronExpression: '0,30 7-14 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '30 15 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 16-17 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '30 18 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 19 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0 20 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '0,30 21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
@@ -125,9 +124,6 @@ const dirRequestCrons = [
       { cronExpression: '40 16 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '10 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '40 17 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '10 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '40 19 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
-      //{ cronExpression: '10 20 * * *', handler: () => runNotificationReminder(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {

@@ -17,7 +17,6 @@ import {
 
 const DITBINMAS_CLIENT_ID = 'DITBINMAS';
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
-const DITSAMAPTA_CLIENT_ID = 'DITSAMAPTA';
 export const JOB_KEY = './src/cron/cronDirRequestCustomSequence.js';
 export const BIDHUMAS_2030_JOB_KEY = `${JOB_KEY}#bidhumas-20-30`;
 export const DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY = `${JOB_KEY}#ditbinmas-recap-and-custom`;
@@ -73,25 +72,6 @@ async function resolveReadyWaClient({ action, clientId, chatId }) {
     `semua client gagal siap (lastError=${lastError || 'unknown'})`;
   logFallbackEvent(failureMessage);
   throw new Error(failureMessage);
-}
-
-function validateDirektoratClient(client, clientId) {
-  if (!client) {
-    return { valid: false, reason: `Client ${clientId} tidak ditemukan` };
-  }
-
-  if (!client.client_status) {
-    return { valid: false, reason: `Client ${clientId} tidak aktif` };
-  }
-
-  if (String(client.client_type || '').toLowerCase() !== 'direktorat') {
-    return {
-      valid: false,
-      reason: `Client ${clientId} bukan bertipe direktorat (${client.client_type})`,
-    };
-  }
-
-  return { valid: true, reason: null };
 }
 
 function logInvalidRecipient(value) {
@@ -411,37 +391,6 @@ export async function runCron({
     }
   }
 
-  try {
-    await logToAdmins(`Mulai blok sekuens DITSAMAPTA (${ditsamaptaActions.join('/')})`);
-    const ditsamaptaClient = await findClientById(DITSAMAPTA_CLIENT_ID);
-    const { valid, reason } = validateDirektoratClient(ditsamaptaClient, DITSAMAPTA_CLIENT_ID);
-
-    if (!valid) {
-      summary.ditsamapta = reason;
-      await logToAdmins(`Lewati blok DITSAMAPTA: ${reason}`);
-    } else {
-      const recipients = buildRecipients(ditsamaptaClient, {
-        includeGroup: true,
-        includeSuperAdmins: true,
-        includeOperators: true,
-      });
-
-      summary.ditsamapta = await executeMenuActions({
-        clientId: DITSAMAPTA_CLIENT_ID,
-        actions: ditsamaptaActions,
-        recipients,
-        label: ditsamaptaLabel,
-        roleFlag: DITSAMAPTA_CLIENT_ID,
-        userClientId: DITSAMAPTA_CLIENT_ID,
-      });
-      await logToAdmins(`Selesai blok DITSAMAPTA: ${summary.ditsamapta}`);
-    }
-  } catch (err) {
-    summary.ditsamapta = `gagal kirim DITSAMAPTA: ${err.message || err}`;
-    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: summary.ditsamapta });
-    await logToAdmins(summary.ditsamapta);
-  }
-
   if (includeDitbinmas) {
     try {
       await logToAdmins('Mulai blok Menu 21 DITBINMAS');
@@ -478,7 +427,6 @@ export async function runCron({
   const logMessage =
     `${summaryTitle}:\n` +
     `- Fetch sosmed: ${summary.fetch}\n` +
-    `- Menu DITSAMAPTA: ${summary.ditsamapta}\n` +
     `- Menu 21 DITBINMAS: ${summary.ditbinmas}\n` +
     `- Menu 6/9/28/29 BIDHUMAS: ${summary.bidhumas}`;
 
@@ -544,17 +492,6 @@ export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Dat
   return summary;
 }
 
-export function runDitsamaptaOnlySequence() {
-  const baseDitsamaptaActions = ['6', '9', '28', '29'];
-  return runCron({
-    includeFetch: true,
-    includeDitbinmas: true,
-    includeBidhumas: true,
-    ditsamaptaActions: baseDitsamaptaActions,
-    ditsamaptaLabel: 'Menu DITSAMAPTA 20:30 (6/9/28/29)',
-    summaryTitle: '[CRON DIRREQ CUSTOM] Ringkasan DITSAMAPTA 22:00',
-  });
-}
 
 export async function runDitbinmasRecapSequence(
   referenceDate = new Date(),
