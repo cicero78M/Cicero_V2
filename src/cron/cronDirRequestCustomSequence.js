@@ -307,15 +307,6 @@ export async function runBidhumasMenuSequence({
   return { fetchStatus, sendStatus };
 }
 
-function buildDitsamaptaActions() {
-  const baseActions = ['6', '9', '28', '29'];
-  const extraActions = splitRecipientField(process.env.DITSAMAPTA_EXTRA_ACTIONS || '')
-    .map((action) => action.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set([...baseActions, ...extraActions]));
-}
-
 function isLastDayOfMonth(date = new Date()) {
   const checkDate = new Date(date);
   const nextDay = new Date(checkDate);
@@ -365,15 +356,12 @@ export async function runCron({
   includeFetch = true,
   includeDitbinmas = true,
   includeBidhumas = true,
-  ditsamaptaActions = buildDitsamaptaActions(),
-  ditsamaptaLabel = 'Menu recap DITSAMAPTA',
   summaryTitle = '[CRON DIRREQ CUSTOM] Ringkasan',
 } = {}) {
   sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: 'Mulai urutan cron custom dirrequest' });
 
   const summary = {
     fetch: includeFetch ? 'pending' : 'dilewati (tidak dijadwalkan)',
-    ditsamapta: 'pending',
     ditbinmas: includeDitbinmas ? 'pending' : 'dilewati (tidak dijadwalkan)',
     bidhumas: includeBidhumas ? 'pending' : 'dilewati (tidak dijadwalkan)',
   };
