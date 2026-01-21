@@ -46,6 +46,26 @@ const waitForWaGatewayReadyWithTimeout = (waGatewayClient, timeoutMs) => {
   });
 };
 
+const inFlightJobs = new Map();
+
+const createSingleFlightHandler = (jobKey, cronExpression, handler) => {
+  return async () => {
+    if (inFlightJobs.get(jobKey)) {
+      console.warn(
+        `[CRON] Skipping ${jobKey} at ${cronExpression}: previous run still in-flight`,
+      );
+      return;
+    }
+
+    inFlightJobs.set(jobKey, true);
+    try {
+      return await handler();
+    } finally {
+      inFlightJobs.delete(jobKey);
+    }
+  };
+};
+
 const createDirRequestCustomSequenceHandler = waGatewayClient => {
   return async () => {
     try {
@@ -179,8 +199,13 @@ export function registerDirRequestCrons(waGatewayClient) {
           : jobKey === DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY
             ? ditbinmasRecapAndCustomSequenceHandler
             : handler;
+      const singleFlightHandler = createSingleFlightHandler(
+        jobKey,
+        cronExpression,
+        resolvedHandler,
+      );
       console.log(`[CRON] Registering ${jobKey} (${description}) at ${cronExpression}`);
-      scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, resolvedHandler, options));
+      scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, singleFlightHandler, options));
     });
   });
 
