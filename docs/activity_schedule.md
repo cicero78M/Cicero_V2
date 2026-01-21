@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2026-04-30*
+*Last updated: 2026-01-21*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together while applying per-run WhatsApp readiness checks where needed.【F:src/cron/dirRequest/index.js†L1-L151】
 
@@ -9,7 +9,7 @@ Every cron file calls `scheduleCronJob`, which delegates to `src/utils/cronSched
 
 The configuration data lives in the migration `sql/migrations/20251022_create_cron_job_config.sql` and is surfaced in the cron configuration menu, keeping this schedule synchronized with the controls that ops staff use to enable or pause jobs.【F:sql/migrations/20251022_create_cron_job_config.sql†L1-L34】
 
-dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed.【F:src/cron/dirRequest/index.js†L1-L151】
+dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed. Every dirRequest job key is single-flight: if a previous run is still in-flight, the next scheduled run logs a skip message and exits early to prevent overlap.【F:src/cron/dirRequest/index.js†L1-L151】
 
 ## Cron Jobs
 
