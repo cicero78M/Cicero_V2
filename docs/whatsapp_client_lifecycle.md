@@ -34,6 +34,10 @@ Alur khusus logout/unpaired:
   fallback `getState()`/reconnect otomatis untuk mencegah loop status check.
 - Reason yang dianggap logout/unpaired saat ini: `LOGGED_OUT`, `UNPAIRED`,
   `CONFLICT`, `UNPAIRED_IDLE`.
+- Saat event `qr` muncul, state readiness akan menandai `awaitingQrScan=true` dan
+  mencatat `lastQrAt` untuk menahan reinit sampai QR benar-benar dipindai.
+- `awaitingQrScan` akan dibersihkan lewat `clearLogoutAwaitingQr` ketika event
+  `authenticated`, `ready`, atau `change_state` (`CONNECTED`/`open`) terjadi.
 
 Semua handler log menyertakan label:
 - `[WA]` untuk client operator utama.
@@ -159,6 +163,8 @@ troubleshooting stuck/QR. Interpretasinya:
   → koneksi memang menunggu QR dipindai ulang; fokuskan pada scan QR terbaru.
 - `lastQrAt` menunjukkan kapan QR terakhir dicetak (ISO timestamp); jika nilainya
   "none" berarti belum ada QR baru tercatat pada sesi tersebut.
+- Saat `awaitingQrScan=true` dan QR baru muncul, guard fallback akan menunda reinit
+  agar proses tidak mereset sesi sebelum QR sempat dipindai.
 
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
