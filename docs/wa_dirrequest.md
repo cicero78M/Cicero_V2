@@ -1,11 +1,16 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2026-01-16*
+*Last updated: 2026-02-07*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
 grup seperti Rekap Data, Absensi, Pengambilan Data, hingga Monitoring
 Kasatker. Setiap opsi dipilih dengan membalas angka menu sesuai label yang
 ditampilkan bot.
+
+Output menu dari `performAction` kini memakai jalur pengiriman aman khusus chat
+grup (`@g.us`) agar bot melewati chat grup yang belum ter-hydrate tanpa
+mengubah perilaku pengiriman ke user personal. Pengiriman di grup menggunakan
+`safeSendMessage` untuk memastikan chat siap sebelum balasan dikirim.
 
 Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
 
