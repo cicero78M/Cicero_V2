@@ -502,18 +502,16 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Automasi Cron BIDHUMAS Malam
 - Cron `cronDirRequestBidhumasEvening.js` berjalan setiap hari pukul
-  **22:00 WIB**. Urutan eksekusi: memanggil `runDirRequestFetchSosmed({
-  forceEngagementOnly: true })` untuk *hanya* menyegarkan engagement (likes &
-  komentar) tanpa fetch post baru, lalu menjalankan menu **6** (Instagram likes),
+  **22:00 WIB**. Urutan eksekusi: menjalankan menu **6** (Instagram likes),
   **9** (komentar TikTok), **2️⃣8️⃣** (rekap likes per konten), dan **2️⃣9️⃣**
-  (rekap komentar per konten) khusus untuk client `BIDHUMAS`.
+  (rekap komentar per konten) khusus untuk client `BIDHUMAS` tanpa langkah fetch
+  post/engagement tambahan di awal.
 - Hasil hanya dikirim ke Group WhatsApp BIDHUMAS (`client_group`) dan daftar
   super admin BIDHUMAS (`client_super`). Operator atau admin WhatsApp lainnya
   tidak menerima laporan ini.
-- Log progres dikirim ke admin WhatsApp untuk setiap fase: pembuka cron,
-  status fetch sosmed, daftar penerima valid, progres per menu/penerima, hingga
-  ringkasan akhir. Pesan memakai label `[CRON DIRREQ BIDHUMAS 22:00]` agar
-  mudah difilter.
+- Log progres dikirim ke admin WhatsApp untuk setiap fase: pembuka cron, daftar
+  penerima valid, progres per menu/penerima, hingga ringkasan akhir. Pesan
+  memakai label `[CRON DIRREQ BIDHUMAS 22:00]` agar mudah difilter.
 - Pengiriman setiap pesan dibatasi jeda **2 detik** per menu/penerima agar tidak
   membanjiri gateway WA; jeda ini hanya memblokir alur BIDHUMAS saja, bukan cron
   lain.
