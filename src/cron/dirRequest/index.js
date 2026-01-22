@@ -3,6 +3,10 @@ import { scheduleCronJob } from '../../utils/cronScheduler.js';
 import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JOB_KEY } from '../cronWaNotificationReminder.js';
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
 import {
+  runCron as runDitbinmasGroupRecap,
+  JOB_KEY as DITBINMAS_GROUP_RECAP_JOB_KEY,
+} from '../cronDirRequestDitbinmasGroupRecap.js';
+import {
   runCron as runBidhumasEvening,
   JOB_KEY as BIDHUMAS_EVENING_JOB_KEY,
 } from '../cronDirRequestBidhumasEvening.js';
@@ -45,6 +49,14 @@ const dirRequestCrons = [
     description: 'Share Satbinmas official media updates with Ditbinmas recipients.',
     schedules: [
       { cronExpression: '5 23 * * *', handler: () => runSatbinmasOfficialMedia(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DITBINMAS_GROUP_RECAP_JOB_KEY,
+    description: 'Send Ditbinmas group recap for menu 21/19/20/22 (today).',
+    schedules: [
+      { cronExpression: '20 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '20 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {

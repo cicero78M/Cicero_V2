@@ -2006,6 +2006,53 @@ async function performAction(
         }
         return;
       }
+      case "22": {
+        let filePath;
+        const period = context?.period || "today";
+        const periodEntry = Object.values(ENGAGEMENT_RECAP_PERIOD_MAP).find(
+          (entry) => entry.period === period
+        );
+        const periodLabel = periodEntry?.label || period;
+
+        try {
+          const { filePath: generatedPath } = await saveEngagementRankingExcel({
+            clientId,
+            roleFlag,
+            period,
+          });
+          filePath = generatedPath;
+          const buffer = await readFile(filePath);
+          await sendWAFile(
+            waClient,
+            buffer,
+            basename(filePath),
+            chatId,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          msg = `✅ File Excel rekap ranking engagement (${periodLabel}) dikirim.`;
+        } catch (error) {
+          console.error("Gagal membuat rekap ranking engagement:", error);
+          if (
+            error?.message &&
+            (error.message.includes("direktorat") ||
+              error.message.includes("Client tidak ditemukan") ||
+              error.message.includes("Tidak ada data"))
+          ) {
+            msg = error.message;
+          } else {
+            msg = `❌ Gagal membuat rekap ranking engagement (${periodLabel}).`;
+          }
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
+        }
+        break;
+      }
       case "23": {
         let filePath;
         try {
