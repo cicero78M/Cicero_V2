@@ -188,6 +188,11 @@ ulang setelah cleanup otomatis ini terjadi.
 
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
+Entri konfigurasi dan log lock ada di `src/service/wwebjsAdapter.js`, sementara
+initialisasi client dipanggil dari `src/service/waService.js` lewat
+`createWwebjsClient()`. Gunakan dua file ini sebagai titik entry ketika perlu
+mengubah perilaku WWEBJS atau menambahkan log baru.
+
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
 adapter akan:
 
@@ -220,6 +225,58 @@ Langkah operasional saat lock aktif:
 
 - Gunakan sesi yang sama (jangan membuat `clientId` baru) ketika proses lama masih berjalan.
 - Hentikan proses Chromium/Node lama secara eksplisit sebelum melakukan reinit.
+- Jika proses lama sudah mati, hapus lock stale di folder `session-<clientId>`
+  (file `SingletonLock`, `SingletonCookie`, `SingletonSocket`) lalu restart service.
+- Bila lock aktif terus-menerus, gunakan `WA_WWEBJS_FALLBACK_AUTH_DATA_PATH` atau
+  suffix `WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX` agar instance baru memakai
+  userDataDir berbeda tanpa menimpa sesi lama.
+
+### Gejala lock aktif (log WWEBJS)
+
+Lock aktif biasanya terlihat dari salah satu log berikut:
+
+- `[WWEBJS] Active browser lock detected before <context> for clientId=...`
+  → ada proses Chromium yang masih hidup sehingga cleanup dilewati.
+- `[WWEBJS] Detected browser lock for clientId=... (<trigger>) (active lock: ...)`
+  → fallback recovery berjalan dan akan menunggu backoff.
+- `[WWEBJS] Active browser lock detected for clientId=...; skipping lock cleanup`
+  → mode aman/strict mencegah penghapusan lock aktif.
+- `[WWEBJS] Browser lock still active for clientId=... Reuse the existing session...`
+  → strict mode menolak reinit; hentikan instance lama atau pakai userDataDir lain.
+
+### Lokasi userDataDir & file lock
+
+- Default userDataDir: `~/.cicero/wwebjs_auth/session-<clientId>`
+- Override lewat env: `WA_AUTH_DATA_PATH=/path/custom` → tetap membuat
+  `session-<clientId>` di dalam path tersebut.
+- File lock Puppeteer berada di folder `session-<clientId>`:
+  `SingletonLock`, `SingletonCookie`, `SingletonSocket`.
+
+### Contoh konfigurasi env (userDataDir & multi-instance)
+
+Contoh dasar untuk memindahkan userDataDir utama:
+
+```bash
+WA_AUTH_DATA_PATH=/var/lib/cicero/wwebjs_auth
+```
+
+Contoh multi-instance aman (setiap node memakai suffix unik):
+
+```bash
+WA_AUTH_DATA_PATH=/var/lib/cicero/wwebjs_auth
+WA_WWEBJS_FALLBACK_AUTH_DATA_PATH=/var/lib/cicero/wwebjs_auth_fallback
+WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX=${HOSTNAME}-${NODE_ENV}
+```
+
+Strategi lain jika satu host menjalankan beberapa proses:
+
+```bash
+WA_AUTH_DATA_PATH=/var/lib/cicero/wwebjs_auth
+WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX=worker-${PM2_INSTANCE_ID}
+```
+
+Pastikan `GATEWAY_WA_CLIENT_ID`/`USER_WA_CLIENT_ID` tetap lowercase agar folder
+`session-<clientId>` konsisten dan tidak bentrok antar instance.
 
 Timeout DevTools Protocol Puppeteer di whatsapp-web.js dapat diatur lewat
 `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` (default 120000ms). Ini memperbesar ambang
