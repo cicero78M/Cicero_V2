@@ -52,9 +52,9 @@ const dirRequestCrons = [
     description:
       'Send Bidhumas 22.00 evening recap..',
     schedules: [
-      { cronExpression: '30 20 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '00 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
-
+      { cronExpression: '15 15 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '15 20 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '15 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
