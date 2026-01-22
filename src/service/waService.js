@@ -1918,7 +1918,7 @@ export function createHandleMessage(waClient, options = {}) {
           menuName: "oprrequest",
           session: getSession(chatId),
           chatId,
-          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Kelola User\n2️⃣ Kelola Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
           clientLabel,
           args: [pool, userModel],
@@ -2004,7 +2004,7 @@ export function createHandleMessage(waClient, options = {}) {
           menuName: "oprrequest",
           session: getSession(chatId),
           chatId,
-          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Tambah user baru\n2️⃣ Ubah status user (aktif/nonaktif)\n3️⃣ Cek data user (NRP/NIP)\n4️⃣ Update Tugas\n5️⃣ Rekap link harian\n6️⃣ Rekap link harian kemarin\n7️⃣ Rekap link per post\n8️⃣ Absensi Amplifikasi User\n9️⃣ Absensi Registrasi User\n1️⃣0️⃣ Tugas Khusus\n1️⃣1️⃣ Rekap link tugas khusus\n1️⃣2️⃣ Rekap per post khusus\n1️⃣3️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Kelola User\n2️⃣ Kelola Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
           clientLabel,
           args: [pool, userModel],
@@ -2135,22 +2135,11 @@ export function createHandleMessage(waClient, options = {}) {
       menuName: "oprrequest",
       session: getSession(chatId),
       chatId,
-      text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓
+    text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
 
-1️⃣ Tambah user baru
-2️⃣ Ubah status user (aktif/nonaktif)
-3️⃣ Cek data user (NRP/NIP)
-4️⃣ Update Tugas
-5️⃣ Rekap link harian
-6️⃣ Rekap link harian kemarin
-7️⃣ Rekap link per post
-8️⃣ Absensi Amplifikasi User
-9️⃣ Absensi Registrasi User
-1️⃣0️⃣ Tugas Khusus
-1️⃣1️⃣ Rekap link tugas khusus
-1️⃣2️⃣ Rekap per post khusus
-1️⃣3️⃣ Absensi Amplifikasi Khusus
+1️⃣ Kelola User
+2️⃣ Kelola Amplifikasi
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
