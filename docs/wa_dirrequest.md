@@ -415,6 +415,15 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   tidak mengirim laporan ke Super Admin, Operator, atau Group WA dan akan
   dilewati jika tidak ada admin penerima yang valid.
 
+## Automasi Cron Ditbinmas Group Recap
+- Cron `cronDirRequestDitbinmasGroupRecap.js` berjalan setiap hari pukul
+  **15:20** dan **18:20 WIB** untuk menjalankan menu **2️⃣1️⃣**, **1️⃣9️⃣**,
+  **2️⃣0️⃣**, dan **2️⃣2️⃣** dengan pilihan periode **hari ini**.
+- Pengiriman hanya ke Group WhatsApp Ditbinmas (`client_group`). Super Admin,
+  Operator, maupun admin WhatsApp lain tidak menjadi target penerima.
+- Menu **2️⃣2️⃣** memakai rekap ranking engagement periode *today* sehingga file
+  Excel yang dikirim selalu mengacu pada data hari berjalan.
+
 ## Rekap personel yang belum melengkapi Instagram/TikTok Ditsamapta
 - Cron `cronDirRequestRekapBelumLengkapDitsamapta` memanggil helper
   `formatRekapBelumLengkapDirektorat("DITSAMAPTA")` setiap pukul **menit 15**
