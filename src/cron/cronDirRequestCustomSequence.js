@@ -518,6 +518,39 @@ export async function runDitbinmasSuperAdminDailyRecap(referenceDate = new Date(
   return status;
 }
 
+export async function runDitbinmasOperatorDailyReport(referenceDate = new Date()) {
+  const label = 'Ditbinmas operator (menu 30 hari ini)';
+  sendDebug({
+    tag: 'CRON DIRREQ CUSTOM',
+    msg: 'Mulai cron Ditbinmas operator harian (menu 30 hari ini)',
+  });
+  await logToAdmins('Mulai cron Ditbinmas operator harian (menu 30 hari ini)');
+
+  let status = 'pending';
+
+  try {
+    const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
+    const recipients = getOperatorRecipients(ditbinmasClient);
+    const actions = [{ action: '30', context: { period: 'today', referenceDate } }];
+
+    status = await executeMenuActions({
+      clientId: DITBINMAS_CLIENT_ID,
+      actions,
+      recipients,
+      label,
+      roleFlag: DITBINMAS_CLIENT_ID,
+      userClientId: DITBINMAS_CLIENT_ID,
+    });
+    await logToAdmins(`Selesai cron Ditbinmas operator harian: ${status}`);
+  } catch (err) {
+    status = `gagal menjalankan cron Ditbinmas operator harian: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: status });
+    await logToAdmins(status);
+  }
+
+  return status;
+}
+
 
 export async function runDitbinmasRecapSequence(
   referenceDate = new Date(),

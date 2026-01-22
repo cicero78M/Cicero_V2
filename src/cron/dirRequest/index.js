@@ -14,6 +14,10 @@ import {
   runCron as runDitbinmasSuperAdminDaily,
   JOB_KEY as DITBINMAS_SUPER_ADMIN_DAILY_JOB_KEY,
 } from '../cronDirRequestDitbinmasSuperAdminDaily.js';
+import {
+  runCron as runDitbinmasOperatorDaily,
+  JOB_KEY as DITBINMAS_OPERATOR_DAILY_JOB_KEY,
+} from '../cronDirRequestDitbinmasOperatorDaily.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const inFlightJobs = new Map();
@@ -79,6 +83,14 @@ const dirRequestCrons = [
       'Send Ditbinmas super admin daily recap (menus 6/9/34/35) with today period only.',
     schedules: [
       { cronExpression: '10 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DITBINMAS_OPERATOR_DAILY_JOB_KEY,
+    description:
+      'Send Ditbinmas operator daily report (menu 30) with today period only.',
+    schedules: [
+      { cronExpression: '12 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
