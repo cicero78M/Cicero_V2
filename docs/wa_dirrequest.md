@@ -431,6 +431,13 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Rekap hanya dikirim ke daftar Super Admin Ditbinmas (`client_super`) tanpa
   broadcast ke grup atau operator.
 
+## Automasi Cron Ditbinmas Operator Harian
+- Cron `cronDirRequestDitbinmasOperatorDaily.js` berjalan setiap hari pukul
+  **18:12 WIB** untuk menjalankan menu **3️⃣0️⃣** dengan pilihan data
+  **hari ini**.
+- Rekap hanya dikirim ke daftar Operator Ditbinmas (`client_operator`) tanpa
+  broadcast ke grup maupun Super Admin.
+
 ## Rekap personel yang belum melengkapi Instagram/TikTok Ditsamapta
 - Cron `cronDirRequestRekapBelumLengkapDitsamapta` memanggil helper
   `formatRekapBelumLengkapDirektorat("DITSAMAPTA")` setiap pukul **menit 15**
