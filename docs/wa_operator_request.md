@@ -1,29 +1,36 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-03-12*
+*Last updated: 2025-03-13*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
+Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
 2. Jika perintah dikirim dari nomor WhatsApp admin, bot terlebih dahulu
    menampilkan daftar client untuk dipilih. Setelah memilih, nomor admin
    dianggap terdaftar pada client tersebut selama sesi menu berlangsung.
-3. Bot menampilkan pilihan berikut:
+3. Bot menampilkan pilihan utama:
+   - 1️⃣ Kelola User
+   - 2️⃣ Kelola Amplifikasi
+   Ketik angka menu yang diinginkan atau `batal` untuk keluar.
+4. Di dalam *Kelola User*, menu yang tersedia:
    - 1️⃣ Tambah user baru
    - 2️⃣ Update data user
    - 3️⃣ Ubah status user (aktif/nonaktif)
    - 4️⃣ Cek data user berdasarkan NRP/NIP
-   - 5️⃣ Update tugas Instagram
-   - 6️⃣ Rekap link harian
-   - 7️⃣ Rekap link harian kemarin
-   - 8️⃣ Rekap link per post
-   - 9️⃣ Absensi Amplifikasi User
-   - 1️⃣0️⃣ Absensi Registrasi User
-   - 1️⃣1️⃣ Tugas Khusus
-   - 1️⃣2️⃣ Rekap link tugas khusus
-   - 1️⃣3️⃣ Rekap per post khusus
-   - 1️⃣4️⃣ Absensi Amplifikasi Khusus
-   Ketik angka menu yang diinginkan atau `batal` untuk keluar.
+5. Di dalam *Kelola Amplifikasi*, terdapat dua kelompok:
+   - **Tugas**
+     - 1️⃣ Update tugas Instagram
+     - 2️⃣ Tugas Khusus
+   - **Laporan**
+     - 1️⃣ Rekap link harian
+     - 2️⃣ Rekap link harian kemarin
+     - 3️⃣ Rekap link per post
+     - 4️⃣ Absensi Amplifikasi User
+     - 5️⃣ Absensi Registrasi User
+     - 6️⃣ Rekap link tugas khusus
+     - 7️⃣ Rekap per post khusus
+     - 8️⃣ Absensi Amplifikasi Khusus
 
 ## Alur Singkat Setiap Menu
 - **Tambah User Baru**

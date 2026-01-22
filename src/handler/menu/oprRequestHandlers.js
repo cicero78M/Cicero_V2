@@ -31,6 +31,86 @@ function normalizeOperatorNumbers(rawNumber) {
   return Array.from(variants);
 }
 
+async function resolveClientProfile(session, chatId, pool) {
+  if (session.selected_client_id) {
+    const { rows } = await pool.query(
+      "SELECT * FROM clients WHERE LOWER(client_id) = LOWER($1) LIMIT 1",
+      [session.selected_client_id]
+    );
+    return rows[0] || null;
+  }
+
+  const candidates = normalizeOperatorNumbers(chatId);
+  if (candidates.length) {
+    const { rows } = await pool.query(
+      "SELECT * FROM clients WHERE client_operator = ANY($1::text[]) LIMIT 1",
+      [candidates]
+    );
+    if (rows[0]) {
+      session.selected_client_id = rows[0].client_id;
+      return rows[0];
+    }
+  }
+
+  try {
+    const superAdmin = await findBySuperAdmin(chatId);
+    if (superAdmin) {
+      session.selected_client_id = superAdmin.client_id;
+      return superAdmin;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  return null;
+}
+
+async function ensureUserMenuAccess(session, chatId, waClient, pool) {
+  const client = await resolveClientProfile(session, chatId, pool);
+  if (!client) {
+    await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+    return null;
+  }
+  if (!client.client_status) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu kelola user hanya tersedia untuk client dengan status aktif."
+    );
+    return null;
+  }
+  if ((client.client_type || "").toLowerCase() !== "org") {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu kelola user hanya tersedia untuk client dengan tipe *org*."
+    );
+    return null;
+  }
+  return client;
+}
+
+async function ensureAmplifyMenuAccess(session, chatId, waClient, pool) {
+  const client = await resolveClientProfile(session, chatId, pool);
+  if (!client) {
+    await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+    return null;
+  }
+  if (!client.client_status) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu kelola amplifikasi hanya tersedia untuk client dengan status aktif."
+    );
+    return null;
+  }
+  if (!client.client_amplify_status) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu kelola amplifikasi hanya tersedia untuk client dengan amplifikasi aktif."
+    );
+    return null;
+  }
+  return client;
+}
+
 async function resolveClientId(session, chatId, pool) {
   if (session.selected_client_id) {
     return session.selected_client_id;
@@ -96,38 +176,89 @@ export const oprRequestHandlers = {
         pool
       );
     }
- let msg =
+    const msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Hanya untuk operator client.
 
-1️⃣ Tambah user baru
-2️⃣ Update data user
-3️⃣ Ubah status user (aktif/nonaktif)
-4️⃣ Cek data user (NRP/NIP)
-5️⃣ Update Tugas
-6️⃣ Rekap link harian
-7️⃣ Rekap link harian kemarin
-8️⃣ Rekap link per post
-9️⃣ Absensi Amplifikasi User
-1️⃣0️⃣ Absensi Registrasi User
-1️⃣1️⃣ Tugas Khusus
-1️⃣2️⃣ Rekap link tugas khusus
-1️⃣3️⃣ Rekap per post khusus
-1️⃣4️⃣ Absensi Amplifikasi Khusus
+1️⃣ Kelola User
+2️⃣ Kelola Amplifikasi
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
-    session.step = "chooseMenu";
+    session.step = "chooseMenuGroup";
     await waClient.sendMessage(chatId, msg);
   },
 
-  chooseMenu: async (session, chatId, text, waClient, pool, userModel) => {
+  chooseMenuGroup: async (session, chatId, text, waClient, pool, userModel) => {
     const clean = () => {
       delete session.addUser;
       delete session.availableSatfung;
       delete session.updateStatusNRP;
-      session.step = "main";
     };
+    if (/^1$/i.test(text.trim())) {
+      clean();
+      const client = await ensureUserMenuAccess(session, chatId, waClient, pool);
+      if (!client) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "kelolaUser_menu";
+      await waClient.sendMessage(
+        chatId,
+        `*Kelola User*\n1️⃣ Tambah user baru\n2️⃣ Update data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (/^2$/i.test(text.trim())) {
+      clean();
+      const client = await ensureAmplifyMenuAccess(session, chatId, waClient, pool);
+      if (!client) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "kelolaAmplifikasi_menu";
+      await waClient.sendMessage(
+        chatId,
+        `*Kelola Amplifikasi*\n1️⃣ Tugas\n2️⃣ Laporan\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      clean();
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-2 atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaUser_menu: async (session, chatId, text, waClient, pool, userModel) => {
+    const clean = () => {
+      delete session.addUser;
+      delete session.availableSatfung;
+      delete session.updateStatusNRP;
+    };
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      clean();
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
     if (/^1$/i.test(text.trim())) {
       clean();
       session.step = "addUser_nrp";
@@ -175,7 +306,70 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
-    if (/^5$/i.test(text.trim())) {
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-4, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaAmplifikasi_menu: async (session, chatId, text, waClient, pool, userModel) => {
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_tugas";
+      await waClient.sendMessage(
+        chatId,
+        `*Kelola Amplifikasi → Tugas*\n1️⃣ Update Tugas\n2️⃣ Tugas Khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (/^2$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_laporan";
+      await waClient.sendMessage(
+        chatId,
+        `*Kelola Amplifikasi → Laporan*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi Amplifikasi User\n5️⃣ Absensi Registrasi User\n6️⃣ Rekap link tugas khusus\n7️⃣ Rekap per post khusus\n8️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-2, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaAmplifikasi_tugas: async (session, chatId, text, waClient, pool, userModel) => {
+    const clean = () => {
+      delete session.addUser;
+      delete session.availableSatfung;
+      delete session.updateStatusNRP;
+    };
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_menu";
+      return oprRequestHandlers.kelolaAmplifikasi_menu(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      clean();
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "updateTugas_chooseClient";
@@ -191,7 +385,43 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "updateTugas";
       return oprRequestHandlers.updateTugas(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^6$/i.test(text.trim())) {
+    if (/^2$/i.test(text.trim())) {
+      clean();
+      session.step = "tugasKhusus_link";
+      await waClient.sendMessage(chatId, "Kirim link Instagram tugas khusus:");
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-2, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaAmplifikasi_laporan: async (session, chatId, text, waClient, pool, userModel) => {
+    const clean = () => {
+      delete session.addUser;
+      delete session.availableSatfung;
+      delete session.updateStatusNRP;
+    };
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_menu";
+      return oprRequestHandlers.kelolaAmplifikasi_menu(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      clean();
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLink_chooseClient";
@@ -207,7 +437,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "rekapLink";
       return oprRequestHandlers.rekapLink(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^7$/i.test(text.trim())) {
+    if (/^2$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKemarin_chooseClient";
@@ -223,7 +453,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "rekapLinkKemarin";
       return oprRequestHandlers.rekapLinkKemarin(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^8$/i.test(text.trim())) {
+    if (/^3$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkPerPost_chooseClient";
@@ -238,7 +468,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "rekapLinkPerPost";
       return oprRequestHandlers.rekapLinkPerPost(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^9$/i.test(text.trim())) {
+    if (/^4$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLink_chooseClient";
@@ -254,7 +484,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_client_id = null;
       return oprRequestHandlers.absensiLink_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^10$/i.test(text.trim())) {
+    if (/^5$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiReg_chooseClient";
@@ -270,13 +500,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_reg_client_id = null;
       return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^11$/i.test(text.trim())) {
-      clean();
-      session.step = "tugasKhusus_link";
-      await waClient.sendMessage(chatId, "Kirim link Instagram tugas khusus:");
-      return;
-    }
-    if (/^12$/i.test(text.trim())) {
+    if (/^6$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhusus_chooseClient";
@@ -298,7 +522,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^13$/i.test(text.trim())) {
+    if (/^7$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhususPerPost_chooseClient";
@@ -320,7 +544,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^14$/i.test(text.trim())) {
+    if (/^8$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLinkKhusus_chooseClient";
@@ -343,16 +567,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
-      session.menu = null;
-      session.step = null;
-      clean();
-      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
-      return;
-    }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-14 atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-8, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
