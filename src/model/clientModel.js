@@ -105,6 +105,33 @@ export const findAllActiveDirektoratWithTiktok = async () => {
   return res.rows;
 };
 
+export const findAllActiveClientsWithSosmed = async () => {
+  const selectColumns = await buildClientSelect(
+    [
+      "client_id",
+      "nama",
+      "client_type",
+      "client_status",
+      "client_group",
+      "client_operator",
+      "client_super",
+      "client_insta_status",
+      "client_tiktok_status",
+      "regional_id",
+      "client_level",
+    ],
+    { includeParentClientId: true }
+  );
+  const res = await query(
+    `SELECT ${selectColumns}
+     FROM clients
+     WHERE client_status = true
+       AND (client_insta_status = true OR client_tiktok_status = true)
+     ORDER BY client_id`
+  );
+  return res.rows;
+};
+
 // Ambil client by client_id (case-insensitive)
 export const findById = async (client_id) => {
   const res = await query(

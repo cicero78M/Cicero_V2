@@ -3,7 +3,7 @@ dotenv.config();
 
 import { scheduleCronJob } from "../utils/cronScheduler.js";
 import waClient, { waGatewayClient, waUserClient } from "../service/waService.js";
-import { findAllActiveDirektoratWithTiktok } from "../model/clientModel.js";
+import { findAllActiveClientsWithSosmed } from "../model/clientModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { fetchAndStoreInstaContent } from "../handler/fetchpost/instaFetchPost.js";
 import { handleFetchLikesInstagram } from "../handler/fetchengagement/fetchLikesInstagram.js";
@@ -70,8 +70,7 @@ export function normalizeGroupId(groupId) {
 export function getRecipientsForClient(client) {
   const recipients = new Set();
 
-  const clientType = String(client?.client_type || "").trim().toLowerCase();
-  if (clientType && clientType !== "direktorat") {
+  if (client?.client_status === false) {
     return recipients;
   }
 
@@ -272,7 +271,7 @@ export async function runCron(options = {}) {
     const skipReason = forceEngagementOnly
       ? "Lewati fetch post karena forceEngagementOnly=true"
       : null;
-    const activeClients = await findAllActiveDirektoratWithTiktok();
+    const activeClients = await findAllActiveClientsWithSosmed();
 
     if (skipPostFetch) {
       await sendStructuredLog(
@@ -291,7 +290,7 @@ export async function runCron(options = {}) {
           phase: "init",
           action: "loadClients",
           result: "empty",
-          message: "Tidak ada client direktorat aktif dengan Instagram & TikTok aktif",
+          message: "Tidak ada client aktif dengan Instagram atau TikTok aktif",
         })
       );
       return;

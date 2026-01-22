@@ -431,6 +431,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   atribut `phase`, `clientId`, `action`, `result`, `countsBefore`,
   `countsAfter`, `recipients`, dan `skipReason` untuk mengirim pesan yang sama
   ke saluran debug dan admin WA.
+- Target cron ini mencakup seluruh client aktif (direktorat maupun org) yang
+  memiliki Instagram atau TikTok aktif, bukan hanya direktorat.
 - Tahap logging utama yang dicetak berurutan:
   1. **start**: memuat *Client ID* target dan penerima grup WA yang valid.
   2. **timeCheck**: jika waktu Jakarta melewati **17:15 WIB**, cron tetap
@@ -515,7 +517,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
   harian dengan menu dirrequest yang sudah ada tanpa perlu input operator.
 - Jadwal **15:00** dan **18:00** menjalankan urutan penuh:
   1. Memanggil `cronDirRequestFetchSosmed` untuk menarik konten/engagement
-     Instagram dan TikTok seluruh direktorat aktif.
+     Instagram dan TikTok seluruh client aktif (direktorat maupun org) yang
+     memiliki akun Instagram atau TikTok aktif.
   2. Menjalankan menu **6️⃣**, **9️⃣**, dan **2️⃣8️⃣** untuk *Client ID*
      `DITSAMAPTA` (ditambah menu ekstra dari `DITSAMAPTA_EXTRA_ACTIONS` bila
      diset) ke tiga target sekaligus: grup WA `client_group`, nomor super admin
