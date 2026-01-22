@@ -166,6 +166,12 @@ troubleshooting stuck/QR. Interpretasinya:
 - Saat `awaitingQrScan=true` dan QR baru muncul, guard fallback akan menunda reinit
   agar proses tidak mereset sesi sebelum QR sempat dipindai.
 
+Jika `getState()` berulang kali mengembalikan `close` pada `[WA-GATEWAY]` sementara
+folder `session-<clientId>` masih berisi data auth, fallback readiness akan
+menghapus session tersebut dan menjalankan reinit agar inisialisasi tidak
+terjebak di status close tanpa QR baru. Pastikan operator siap melakukan scan
+ulang setelah cleanup otomatis ini terjadi.
+
 ## Recovery saat browser sudah berjalan (lock userDataDir)
 
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
