@@ -44,6 +44,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronWaNotificationReminder.js` | `10 16 * * *<br>40 16 * * *<br>10 17 * * *<br>40 17 * * *` | Send WhatsApp task reminders to Ditbinmas and BIDHUMAS users who opted in, spacing each WhatsApp delivery by 3 seconds and persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 | `cronDirRequestDitbinmasGroupRecap.js` | `20 15 * * *<br>20 18 * * *` | Send Ditbinmas group-only recap by running dirRequest menus 21, 19, 20, and 22 with the "hari ini" engagement period. |
+| `cronDirRequestDitbinmasSuperAdminDaily.js` | `10 18 * * *` | Send Ditbinmas super admin-only recaps by running dirRequest menus 6, 9, 34, and 35 with the "hari ini" engagement period. |
 | `cronDirRequestBidhumasEvening.js` | `30 20 * * *<br>0 22 * * *` | Refresh engagement data only (`forceEngagementOnly` skips Instagram/TikTok post fetch) then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
 
 #### Ditbinmas WA reminder persistence

@@ -480,6 +480,44 @@ export async function runDitbinmasRecapAndCustomSequence(referenceDate = new Dat
   return summary;
 }
 
+export async function runDitbinmasSuperAdminDailyRecap(referenceDate = new Date()) {
+  const label = 'Ditbinmas super admin (6,9,34,35 harian)';
+  sendDebug({
+    tag: 'CRON DIRREQ CUSTOM',
+    msg: 'Mulai cron Ditbinmas super admin harian (menu 6/9/34/35 hari ini)',
+  });
+  await logToAdmins('Mulai cron Ditbinmas super admin harian (menu 6/9/34/35 hari ini)');
+
+  let status = 'pending';
+
+  try {
+    const ditbinmasClient = await findClientById(DITBINMAS_CLIENT_ID);
+    const recipients = getSuperAdminRecipients(ditbinmasClient);
+    const actions = [
+      { action: '6' },
+      { action: '9' },
+      { action: '34', context: { period: 'daily', referenceDate } },
+      { action: '35', context: { period: 'daily', referenceDate } },
+    ];
+
+    status = await executeMenuActions({
+      clientId: DITBINMAS_CLIENT_ID,
+      actions,
+      recipients,
+      label,
+      roleFlag: DITBINMAS_CLIENT_ID,
+      userClientId: DITBINMAS_CLIENT_ID,
+    });
+    await logToAdmins(`Selesai cron Ditbinmas super admin harian: ${status}`);
+  } catch (err) {
+    status = `gagal menjalankan cron Ditbinmas super admin harian: ${err.message || err}`;
+    sendDebug({ tag: 'CRON DIRREQ CUSTOM', msg: status });
+    await logToAdmins(status);
+  }
+
+  return status;
+}
+
 
 export async function runDitbinmasRecapSequence(
   referenceDate = new Date(),

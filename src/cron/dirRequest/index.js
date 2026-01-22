@@ -10,6 +10,10 @@ import {
   runCron as runBidhumasEvening,
   JOB_KEY as BIDHUMAS_EVENING_JOB_KEY,
 } from '../cronDirRequestBidhumasEvening.js';
+import {
+  runCron as runDitbinmasSuperAdminDaily,
+  JOB_KEY as DITBINMAS_SUPER_ADMIN_DAILY_JOB_KEY,
+} from '../cronDirRequestDitbinmasSuperAdminDaily.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const inFlightJobs = new Map();
@@ -67,6 +71,14 @@ const dirRequestCrons = [
       { cronExpression: '15 15 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '15 20 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '15 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DITBINMAS_SUPER_ADMIN_DAILY_JOB_KEY,
+    description:
+      'Send Ditbinmas super admin daily recap (menus 6/9/34/35) with today period only.',
+    schedules: [
+      { cronExpression: '10 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];

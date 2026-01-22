@@ -424,6 +424,13 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 - Menu **2️⃣2️⃣** memakai rekap ranking engagement periode *today* sehingga file
   Excel yang dikirim selalu mengacu pada data hari berjalan.
 
+## Automasi Cron Ditbinmas Super Admin Harian
+- Cron `cronDirRequestDitbinmasSuperAdminDaily.js` berjalan setiap hari pukul
+  **18:10 WIB** untuk menjalankan menu **6**, **9**, **3️⃣4️⃣**, dan **3️⃣5️⃣**
+  dengan pilihan data **hari ini**.
+- Rekap hanya dikirim ke daftar Super Admin Ditbinmas (`client_super`) tanpa
+  broadcast ke grup atau operator.
+
 ## Rekap personel yang belum melengkapi Instagram/TikTok Ditsamapta
 - Cron `cronDirRequestRekapBelumLengkapDitsamapta` memanggil helper
   `formatRekapBelumLengkapDirektorat("DITSAMAPTA")` setiap pukul **menit 15**
