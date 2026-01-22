@@ -1,5 +1,5 @@
 # Menu DirRequest untuk Operator WA
-*Last updated: 2026-01-21*
+*Last updated: 2026-01-22*
 
 Menu **dirrequest** digunakan tim Ditbinmas untuk memicu pengambilan data,
 rekap, dan laporan langsung dari WhatsApp. Menu utama menampilkan beberapa
@@ -20,6 +20,12 @@ menu ke log cron agar mudah ditelusuri. Pengiriman menu memakai
 `sendWithClientFallback`, sehingga bila pengiriman gagal pada client utama,
 bot akan mencoba client berikutnya dan tetap mencatat konteks action yang
 sama di log.
+
+Mulai 18:27 WIB setiap hari, cron khusus Ditbinmas mengeksekusi menu **5**
+(absensi likes) dan **10** (absensi komentar) dengan periode **hari ini**
+dan hanya mengirim ke penerima khusus `081331780006` (format WA dinormalisasi
+ke `@c.us`). Jadwal ini berada di grup cron `dirrequest` sehingga mengikuti
+flag `ENABLE_DIRREQUEST_GROUP`.
 
 Blok menu utama kini mencantumkan grup baru **Rekap All Data** dengan opsi:
 

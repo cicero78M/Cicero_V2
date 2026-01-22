@@ -18,6 +18,10 @@ import {
   runCron as runDitbinmasOperatorDaily,
   JOB_KEY as DITBINMAS_OPERATOR_DAILY_JOB_KEY,
 } from '../cronDirRequestDitbinmasOperatorDaily.js';
+import {
+  runCron as runDitbinmasAbsensiToday,
+  JOB_KEY as DITBINMAS_ABSENSI_TODAY_JOB_KEY,
+} from '../cronDirRequestDitbinmasAbsensiToday.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const inFlightJobs = new Map();
@@ -91,6 +95,14 @@ const dirRequestCrons = [
       'Send Ditbinmas operator daily report (menu 30) with today period only.',
     schedules: [
       { cronExpression: '12 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
+    ],
+  },
+  {
+    jobKey: DITBINMAS_ABSENSI_TODAY_JOB_KEY,
+    description:
+      'Send Ditbinmas absensi recap (menu 5 & 10, today) to the dedicated recipient only.',
+    schedules: [
+      { cronExpression: '27 18 * * *', handler: () => runDitbinmasAbsensiToday(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
