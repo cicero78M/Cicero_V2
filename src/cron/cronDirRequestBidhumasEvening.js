@@ -9,7 +9,7 @@ import {
   minPhoneDigitLength,
 } from '../utils/waHelper.js';
 import waClient, { waGatewayClient, waUserClient } from '../service/waService.js';
-import { normalizeGroupId, runCron as runDirRequestFetchSosmed } from './cronDirRequestFetchSosmed.js';
+import { normalizeGroupId } from './cronDirRequestFetchSosmed.js';
 import { delayAfterSend } from './dirRequestThrottle.js';
 
 const BIDHUMAS_CLIENT_ID = 'BIDHUMAS';
@@ -128,19 +128,9 @@ async function executeBidhumasMenus(recipients) {
 }
 
 export async function runCron() {
-  await logPhase('Mulai cron BIDHUMAS malam: persiapan fetch sosmed');
+  await logPhase('Mulai cron BIDHUMAS malam: tanpa fetch sosmed');
 
-  let fetchStatus = 'pending';
   let sendStatus = 'pending';
-
-  try {
-    await runDirRequestFetchSosmed({ forceEngagementOnly: true });
-    fetchStatus = 'refresh engagement sosmed selesai (skip fetch post)';
-    await logPhase('Refresh engagement sosmed selesai untuk cron BIDHUMAS malam (tanpa fetch post)');
-  } catch (err) {
-    fetchStatus = `gagal sosmed fetch: ${err.message || err}`;
-    await logToAdmins(fetchStatus);
-  }
 
   try {
     await logPhase('Ambil data BIDHUMAS dan daftar penerima WA');
@@ -167,8 +157,8 @@ export async function runCron() {
     await logToAdmins(sendStatus);
   }
 
-  await logToAdmins(`Ringkasan: ${fetchStatus}; ${sendStatus}`);
-  sendDebug({ tag: CRON_LABEL, msg: { fetchStatus, sendStatus } });
+  await logToAdmins(`Ringkasan: ${sendStatus}`);
+  sendDebug({ tag: CRON_LABEL, msg: { sendStatus } });
 }
 
 export default null;

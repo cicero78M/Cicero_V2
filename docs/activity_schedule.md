@@ -46,7 +46,7 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 | `cronDirRequestDitbinmasGroupRecap.js` | `20 15 * * *<br>20 18 * * *` | Send Ditbinmas group-only recap by running dirRequest menus 21, 19, 20, and 22 with the "hari ini" engagement period. |
 | `cronDirRequestDitbinmasSuperAdminDaily.js` | `10 18 * * *` | Send Ditbinmas super admin-only recaps by running dirRequest menus 6, 9, 34, and 35 with the "hari ini" engagement period. |
 | `cronDirRequestDitbinmasOperatorDaily.js` | `12 18 * * *` | Send Ditbinmas operator-only reports by running dirRequest menu 30 with the "hari ini" period. |
-| `cronDirRequestBidhumasEvening.js` | `30 20 * * *<br>0 22 * * *` | Refresh engagement data only (`forceEngagementOnly` skips Instagram/TikTok post fetch) then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
+| `cronDirRequestBidhumasEvening.js` | `30 20 * * *<br>0 22 * * *` | Send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB (no fetch post/engagement step). |
 
 #### Ditbinmas WA reminder persistence
 
