@@ -650,6 +650,11 @@ const logoutDisconnectReasons = new Set([
   "CONFLICT",
   "UNPAIRED_IDLE",
 ]);
+const authSessionIgnoreEntries = new Set([
+  "SingletonLock",
+  "SingletonCookie",
+  "SingletonSocket",
+]);
 
 function getFallbackStateRetryDelayMs() {
   const jitterRange = fallbackStateRetryMaxDelayMs - fallbackStateRetryMinDelayMs;
@@ -722,6 +727,27 @@ function hasAuthFailureIndicator(state) {
     isLogoutDisconnectReason(state?.lastDisconnectReason) ||
     Boolean(state?.lastAuthFailureAt)
   );
+}
+
+function hasPersistedAuthSession(sessionPath) {
+  if (!sessionPath) {
+    return false;
+  }
+  try {
+    if (!fs.existsSync(sessionPath)) {
+      return false;
+    }
+    const entries = fs.readdirSync(sessionPath, { withFileTypes: true });
+    return entries.some(
+      (entry) => !authSessionIgnoreEntries.has(entry.name)
+    );
+  } catch (err) {
+    console.warn(
+      `[WA] Gagal memeriksa isi session di ${sessionPath}:`,
+      err?.message || err
+    );
+    return false;
+  }
 }
 
 function clearLogoutAwaitingQr(client) {
@@ -4760,8 +4786,12 @@ if (shouldInitWhatsAppClients) {
           currentState === null || currentState === undefined
             ? "unknown"
             : currentState;
+        const normalizedStateLower =
+          normalizedState === "unknown"
+            ? "unknown"
+            : String(normalizedState).toLowerCase();
         console.log(`[${label}] getState: ${normalizedState}`);
-        if (normalizedState === "unknown") {
+        if (normalizedStateLower === "unknown") {
           console.warn(
             `[${label}] fallback getState unknown; ${formatFallbackReadyContext(
               state,
@@ -4770,7 +4800,10 @@ if (shouldInitWhatsAppClients) {
             )}`
           );
         }
-        if (normalizedState === "CONNECTED" || normalizedState === "open") {
+        if (
+          normalizedStateLower === "connected" ||
+          normalizedStateLower === "open"
+        ) {
           fallbackStateRetryCounts.set(client, 0);
           fallbackReinitCounts.set(client, 0);
           state.unknownStateRetryCount = 0;
@@ -4808,27 +4841,35 @@ if (shouldInitWhatsAppClients) {
           return;
         }
         fallbackReinitCounts.set(client, reinitAttempts + 1);
-        if (normalizedState !== "unknown") {
+        if (normalizedStateLower !== "unknown") {
           state.unknownStateRetryCount = 0;
         }
-        const unknownStateRetryCount = normalizedState === "unknown"
+        const unknownStateRetryCount = normalizedStateLower === "unknown"
           ? (state.unknownStateRetryCount || 0) + 1
           : 0;
-        if (normalizedState === "unknown") {
+        if (normalizedStateLower === "unknown") {
           state.unknownStateRetryCount = unknownStateRetryCount;
         }
         const shouldEscalateUnknownState =
-          normalizedState === "unknown" &&
+          normalizedStateLower === "unknown" &&
           label === "WA-GATEWAY" &&
           unknownStateRetryCount >= maxUnknownStateEscalationRetries;
         const shouldClearFallbackSession =
-          normalizedState === "unknown" &&
+          normalizedStateLower === "unknown" &&
           (label === "WA-GATEWAY" || label === "WA-USER");
         const hasAuthIndicators = hasAuthFailureIndicator(state);
         const sessionPath = client?.sessionPath || null;
         const sessionPathExists = sessionPath ? fs.existsSync(sessionPath) : false;
+        const hasSessionContent =
+          sessionPathExists && hasPersistedAuthSession(sessionPath);
+        const shouldClearCloseSession =
+          normalizedStateLower === "close" &&
+          label === "WA-GATEWAY" &&
+          hasSessionContent;
         const canClearFallbackSession =
-          shouldClearFallbackSession && hasAuthIndicators && sessionPathExists;
+          sessionPathExists &&
+          ((shouldClearFallbackSession && hasAuthIndicators) ||
+            shouldClearCloseSession);
         if (
           shouldEscalateUnknownState &&
           sessionPathExists &&
@@ -4861,6 +4902,10 @@ if (shouldInitWhatsAppClients) {
           return;
         }
         if (canClearFallbackSession && typeof client?.reinitialize === "function") {
+          const clearReason =
+            shouldClearCloseSession && !hasAuthIndicators
+              ? "getState close with persisted session"
+              : "getState unknown with auth indicator";
           console.warn(
             `[${label}] getState=${normalizedState} after retries; ` +
               `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts}); ` +
@@ -4874,7 +4919,7 @@ if (shouldInitWhatsAppClients) {
             .reinitialize({
               clearAuthSession: true,
               trigger: "fallback-unknown-auth",
-              reason: "getState unknown with auth indicator",
+              reason: clearReason,
             })
             .catch((err) => {
               console.error(
@@ -4884,8 +4929,13 @@ if (shouldInitWhatsAppClients) {
           scheduleFallbackReadyCheck(client, delayMs);
           return;
         }
-        if (shouldClearFallbackSession && !canClearFallbackSession) {
-          const skipReason = !hasAuthIndicators
+        if (
+          (shouldClearFallbackSession || shouldClearCloseSession) &&
+          !canClearFallbackSession
+        ) {
+          const skipReason = shouldClearCloseSession
+            ? "session path missing"
+            : !hasAuthIndicators
             ? "no auth indicator"
             : "session path missing";
           console.warn(
