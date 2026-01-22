@@ -3,48 +3,11 @@ import { scheduleCronJob } from '../../utils/cronScheduler.js';
 import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JOB_KEY } from '../cronWaNotificationReminder.js';
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
 import {
-  runCron as runDirRequestCustomSequence,
-  JOB_KEY as DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-  runDitbinmasRecapAndCustomSequence,
-  DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
-} from '../cronDirRequestCustomSequence.js';
-import {
   runCron as runBidhumasEvening,
   JOB_KEY as BIDHUMAS_EVENING_JOB_KEY,
 } from '../cronDirRequestBidhumasEvening.js';
 
 const DEFAULT_CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
-const DIRREQUEST_WA_READY_TIMEOUT_MS = (() => {
-  const resolvedTimeout = Number(
-    process.env.DIRREQUEST_WA_READY_TIMEOUT_MS
-      || process.env.WA_GATEWAY_READY_TIMEOUT_MS
-      || process.env.WA_READY_TIMEOUT_MS
-      || 5 * 60 * 1000,
-  );
-  return Number.isNaN(resolvedTimeout) ? 5 * 60 * 1000 : resolvedTimeout;
-})();
-
-const waitForWaGatewayReadyWithTimeout = (waGatewayClient, timeoutMs) => {
-  if (typeof waGatewayClient?.waitForWaReady !== 'function') {
-    return Promise.resolve();
-  }
-
-  if (!timeoutMs || Number.isNaN(Number(timeoutMs))) {
-    return waGatewayClient.waitForWaReady();
-  }
-
-  let timeoutId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`[CRON] WA gateway not ready after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-
-  return Promise.race([waGatewayClient.waitForWaReady(), timeoutPromise]).finally(() => {
-    if (timeoutId) clearTimeout(timeoutId);
-  });
-};
-
 const inFlightJobs = new Map();
 
 const createSingleFlightHandler = (jobKey, cronExpression, handler) => {
@@ -62,38 +25,6 @@ const createSingleFlightHandler = (jobKey, cronExpression, handler) => {
     } finally {
       inFlightJobs.delete(jobKey);
     }
-  };
-};
-
-const createDirRequestCustomSequenceHandler = waGatewayClient => {
-  return async () => {
-    try {
-      await waitForWaGatewayReadyWithTimeout(waGatewayClient, DIRREQUEST_WA_READY_TIMEOUT_MS);
-    } catch (error) {
-      console.warn(
-        `[CRON] DirRequest custom sequence skipped: WA gateway readiness timeout after ${DIRREQUEST_WA_READY_TIMEOUT_MS}ms`,
-        error,
-      );
-      return;
-    }
-
-    return runDirRequestCustomSequence();
-  };
-};
-
-const createDitbinmasRecapAndCustomSequenceHandler = waGatewayClient => {
-  return async () => {
-    try {
-      await waitForWaGatewayReadyWithTimeout(waGatewayClient, DIRREQUEST_WA_READY_TIMEOUT_MS);
-    } catch (error) {
-      console.warn(
-        `[CRON] Ditbinmas recap + custom sequence skipped: WA gateway readiness timeout after ${DIRREQUEST_WA_READY_TIMEOUT_MS}ms`,
-        error,
-      );
-      return;
-    }
-
-    return runDitbinmasRecapAndCustomSequence();
   };
 };
 
@@ -117,28 +48,6 @@ const dirRequestCrons = [
     ],
   },
   {
-    jobKey: DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY,
-    description:
-      'Run dirRequest custom sequence: sosmed fetch, Ditbinmas combined recap (menu 21), then Bidhumas menus 6/9/28/29 to group + super admin.',
-    schedules: [
-      { cronExpression: '0 15 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '05 18 * * *', handler: () => runDirRequestCustomSequence(), options: DEFAULT_CRON_OPTIONS },
-    ],
-  },
-  {
-    jobKey: DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY,
-    description:
-      'Fetch sosmed + recap Ditbinmas + cron custom di slot 18:00 tanpa duplikasi job recap terpisah.',
-    schedules: [
-      {
-        cronExpression: '20 18 * * *',
-        handler: () => runDitbinmasRecapAndCustomSequence(),
-        options: DEFAULT_CRON_OPTIONS,
-      },
-    ],
-  },
-
-  {
     jobKey: BIDHUMAS_EVENING_JOB_KEY,
     description:
       'Send Bidhumas 22.00 evening recap..',
@@ -151,6 +60,7 @@ const dirRequestCrons = [
 ];
 
 export function registerDirRequestCrons(waGatewayClient) {
+  void waGatewayClient;
   if (!waGatewayClient) {
     throw new Error('waGatewayClient is required to register dirRequest crons');
   }
@@ -166,22 +76,13 @@ export function registerDirRequestCrons(waGatewayClient) {
   }
 
   const scheduledJobs = [];
-  const dirRequestCustomSequenceHandler = createDirRequestCustomSequenceHandler(waGatewayClient);
-  const ditbinmasRecapAndCustomSequenceHandler =
-    createDitbinmasRecapAndCustomSequenceHandler(waGatewayClient);
 
   dirRequestCrons.forEach(({ jobKey, description, schedules }) => {
     schedules.forEach(({ cronExpression, handler, options }) => {
-      const resolvedHandler =
-        jobKey === DIRREQUEST_CUSTOM_SEQUENCE_JOB_KEY
-          ? dirRequestCustomSequenceHandler
-          : jobKey === DITBINMAS_RECAP_AND_CUSTOM_JOB_KEY
-            ? ditbinmasRecapAndCustomSequenceHandler
-            : handler;
       const singleFlightHandler = createSingleFlightHandler(
         jobKey,
         cronExpression,
-        resolvedHandler,
+        handler,
       );
       console.log(`[CRON] Registering ${jobKey} (${description}) at ${cronExpression}`);
       scheduledJobs.push(scheduleCronJob(jobKey, cronExpression, singleFlightHandler, options));

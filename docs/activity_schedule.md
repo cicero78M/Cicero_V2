@@ -1,7 +1,7 @@
 # System Activity Schedule
 *Last updated: 2026-01-21*
 
-This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together while applying per-run WhatsApp readiness checks where needed.【F:src/cron/dirRequest/index.js†L1-L131】
+This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together when needed.【F:src/cron/dirRequest/index.js†L1-L108】
 
 ## Runtime safeguards & configuration sync
 
@@ -9,7 +9,7 @@ Every cron file calls `scheduleCronJob`, which delegates to `src/utils/cronSched
 
 The configuration data lives in the migration `sql/migrations/20251022_create_cron_job_config.sql` and is surfaced in the cron configuration menu, keeping this schedule synchronized with the controls that ops staff use to enable or pause jobs.【F:sql/migrations/20251022_create_cron_job_config.sql†L1-L34】
 
-dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed. Every dirRequest job key is single-flight: if a previous run is still in-flight, the next scheduled run logs a skip message and exits early to prevent overlap.【F:src/cron/dirRequest/index.js†L1-L131】
+dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`). Every dirRequest job key is single-flight: if a previous run is still in-flight, the next scheduled run logs a skip message and exits early to prevent overlap.【F:src/cron/dirRequest/index.js†L1-L108】
 
 ## Cron Jobs
 
@@ -37,17 +37,13 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 
 ### Ditbinmas dirRequest group (registered via `registerDirRequestCrons`)
 
-The schedules below are bundled inside `src/cron/dirRequest/index.js` and register immediately during boot. The dirRequest custom sequence waits for WhatsApp readiness per run with a timeout so the 15:00 and 18:30 slots still fire even if the gateway is slow to become ready. Set `ENABLE_DIRREQUEST_GROUP=false` in the environment to pause all of them together without editing each job record. The table order mirrors the serialized registration chain, and the cron expressions are staggered to avoid overlapping WhatsApp sends in the Asia/Jakarta timezone.【F:src/cron/dirRequest/index.js†L1-L151】
+The schedules below are bundled inside `src/cron/dirRequest/index.js` and register immediately during boot. Set `ENABLE_DIRREQUEST_GROUP=false` in the environment to pause all of them together without editing each job record. The table order mirrors the serialized registration chain, and the cron expressions are staggered to avoid overlapping WhatsApp sends in the Asia/Jakarta timezone.【F:src/cron/dirRequest/index.js†L1-L108】
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas and BIDHUMAS users who opted in, spacing each WhatsApp delivery by 3 seconds and persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
+| `cronWaNotificationReminder.js` | `10 16 * * *<br>40 16 * * *<br>10 17 * * *<br>40 17 * * *` | Send WhatsApp task reminders to Ditbinmas and BIDHUMAS users who opted in, spacing each WhatsApp delivery by 3 seconds and persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
-| `cronDirRequestCustomSequence.js` (custom menus) | `0 15 * * *<br>0 18 * * *<br>30 20 * * *` | Chain sosmed fetches, run Ditsamapta menus 6/9/28/29 (plus optional extras) to the Ditsamapta group, super admins, and operators, deliver Ditbinmas menu 21 to the Ditbinmas group, then send BIDHUMAS menus 6, 9, 28, and 29 to the BIDHUMAS group and its super admins. The 20:30 slot now aligns with the Ditbinmas recap and BIDHUMAS 20:30 dispatch without blocking either flow. |
-| `cronDirRequestCustomSequence.js` (Ditbinmas recap + custom combined) | `30 20 * * *` | Fetch sosmed content and engagement, execute the Ditbinmas recap (menus 6, 9, 34, 35 for super admins plus 30 for operators), then reuse the same data to run the full custom sequence without re-fetching. |
-| `cronDirRequestCustomSequence.js` (Ditbinmas recap) | `33 20 * * *` | Send Ditbinmas menus 6, 9, 34, and 35 to super admins, plus menu 30 to Ditbinmas operators, adding weekly recaps on Sundays and monthly recaps on the last day of the month. |
-| `cronDirRequestCustomSequence.js` (BIDHUMAS 20:30) | `30 20 * * *` | Deliver BIDHUMAS menus 6, 9, 28, and 29 at the same time as the Ditbinmas recap without blocking it, targeting the BIDHUMAS group and super admins. |
-| `cronDirRequestBidhumasEvening.js` | `0 22 * * *` | Refresh engagement data only (`forceEngagementOnly` skips Instagram/TikTok post fetch) then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
+| `cronDirRequestBidhumasEvening.js` | `30 20 * * *<br>0 22 * * *` | Refresh engagement data only (`forceEngagementOnly` skips Instagram/TikTok post fetch) then send dirRequest menus 6, 9, 28, and 29 exclusively to the BIDHUMAS group and its super admin recipients at exactly 22:00 WIB. |
 
 #### Ditbinmas WA reminder persistence
 
