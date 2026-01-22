@@ -32,7 +32,7 @@ export default [
   {
     jobKey: './src/cron/cronDirRequestFetchSosmed.js',
     modulePath: './src/cron/cronDirRequestFetchSosmed.js',
-    bucket: 'waClient',
+    bucket: 'always',
     description: 'Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas.',
   },
   {
