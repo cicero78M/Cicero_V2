@@ -15,8 +15,12 @@ const DEFAULT_ACTIVE_BROWSER_LOCK_BACKOFF_MULTIPLIER = 3;
 const MIN_ACTIVE_BROWSER_LOCK_BACKOFF_MS = 30000;
 const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
 const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
+const DEFAULT_CONNECT_RETRY_ATTEMPTS = 3;
+const DEFAULT_CONNECT_RETRY_BACKOFF_MS = 5000;
+const DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
+const DEFAULT_LOCK_FALLBACK_THRESHOLD = 2;
 const PROTOCOL_TIMEOUT_ENV_VAR_BASE = 'WA_WWEBJS_PROTOCOL_TIMEOUT_MS';
 const PROTOCOL_TIMEOUT_ROLE_ALIASES = [
   { prefix: 'wa-gateway', suffix: 'GATEWAY' },
@@ -227,8 +231,81 @@ function resolveConnectTimeoutMs() {
   return Math.max(configured, 0);
 }
 
+function resolveConnectRetryAttempts() {
+  const configured = Number.parseInt(
+    process.env.WA_WWEBJS_CONNECT_RETRY_ATTEMPTS || '',
+    10
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_CONNECT_RETRY_ATTEMPTS;
+  }
+  return Math.max(configured, 1);
+}
+
+function resolveConnectRetryBackoffMs() {
+  const configured = Number.parseInt(
+    process.env.WA_WWEBJS_CONNECT_RETRY_BACKOFF_MS || '',
+    10
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_CONNECT_RETRY_BACKOFF_MS;
+  }
+  return Math.max(configured, 0);
+}
+
+function resolveConnectRetryBackoffMultiplier() {
+  const configured = Number.parseFloat(
+    process.env.WA_WWEBJS_CONNECT_RETRY_BACKOFF_MULTIPLIER || ''
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER;
+  }
+  return Math.max(configured, 1);
+}
+
+function resolveLockFallbackThreshold() {
+  const configured = Number.parseInt(
+    process.env.WA_WWEBJS_LOCK_FALLBACK_THRESHOLD || '',
+    10
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_LOCK_FALLBACK_THRESHOLD;
+  }
+  return Math.max(configured, 1);
+}
+
 function buildSessionPath(authDataPath, clientId) {
   return path.join(authDataPath, `session-${clientId}`);
+}
+
+function resolveFallbackAuthDataPath(authDataPath) {
+  const configuredPath = (process.env.WA_WWEBJS_FALLBACK_AUTH_DATA_PATH || '').trim();
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+  return authDataPath;
+}
+
+function sanitizePathSegment(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildFallbackAuthDataPath(authDataPath, clientId, attempt) {
+  const hostname = sanitizePathSegment(os.hostname());
+  const pid = sanitizePathSegment(String(process.pid));
+  const envSuffix = sanitizePathSegment(
+    (process.env.WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX || '').trim()
+  );
+  const suffixParts = [clientId, hostname, pid, `attempt${attempt}`, envSuffix].filter(
+    Boolean
+  );
+  const suffix = sanitizePathSegment(suffixParts.join('_')) || 'fallback';
+  const baseName = path.basename(authDataPath);
+  const parentDir = path.dirname(authDataPath);
+  return path.join(parentDir, `${baseName}-fallback-${suffix}`);
 }
 
 function extractVersionString(payload) {
@@ -502,7 +579,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.fatalInitError = null;
   const configuredAuthPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
   const recommendedAuthPath = resolveDefaultAuthDataPath();
-  let authDataPath = resolveAuthDataPath();
+  const initialAuthDataPath = resolveAuthDataPath();
+  let authDataPath = initialAuthDataPath;
   const clearAuthSession = shouldClearAuthSession();
   const ensureAuthDataPathWritable = async (candidatePath, isConfiguredPath) => {
     try {
@@ -550,8 +628,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         `Recommended path: ${recommendedAuthPath}.`
     );
   }
-  const sessionPath = buildSessionPath(authDataPath, clientId);
-  const puppeteerProfilePath = sessionPath;
+  const baseAuthDataPath = authDataPath;
+  let activeAuthDataPath = baseAuthDataPath;
+  let fallbackAttempt = 0;
+  let lockActiveFailureCount = 0;
+  const resolveSessionPath = () => buildSessionPath(activeAuthDataPath, clientId);
+  const resolvePuppeteerProfilePath = () => resolveSessionPath();
+  const resolveFallbackBasePath = () =>
+    resolveFallbackAuthDataPath(baseAuthDataPath);
   let reinitInProgress = false;
   let connectInProgress = null;
   let connectStartedAt = null;
@@ -563,8 +647,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     resolvePuppeteerProtocolTimeoutConfig(clientId);
   const puppeteerProtocolTimeoutMs = puppeteerProtocolTimeoutConfig.timeoutMs;
   const protocolTimeoutEnvVarName = puppeteerProtocolTimeoutConfig.envVarName;
+  const connectRetryAttempts = resolveConnectRetryAttempts();
+  const connectRetryBackoffMs = resolveConnectRetryBackoffMs();
+  const connectRetryBackoffMultiplier = resolveConnectRetryBackoffMultiplier();
+  const lockFallbackThreshold = resolveLockFallbackThreshold();
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
+    authStrategy: new LocalAuth({ clientId, dataPath: activeAuthDataPath }),
     puppeteer: {
       args: ['--no-sandbox'],
       headless: true,
@@ -581,14 +669,38 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     delete client.options.webVersion;
   };
 
-  const cleanupPuppeteerLocks = async () => {
-    if (!puppeteerProfilePath) {
+  const applyAuthDataPath = async (nextPath, reasonLabel) => {
+    if (!nextPath || nextPath === activeAuthDataPath) {
+      return false;
+    }
+    const isWritable = await ensureAuthDataPathWritable(nextPath, false);
+    if (!isWritable) {
+      console.warn(
+        `[WWEBJS] Fallback auth data path is not writable for clientId=${clientId}: ${nextPath}.`
+      );
+      return false;
+    }
+    activeAuthDataPath = nextPath;
+    const authStrategy =
+      client.authStrategy || client.options?.authStrategy || null;
+    if (authStrategy && 'dataPath' in authStrategy) {
+      authStrategy.dataPath = nextPath;
+    }
+    emitter.sessionPath = resolveSessionPath();
+    console.warn(
+      `[WWEBJS] Using fallback auth data path for clientId=${clientId} (${reasonLabel}): ${nextPath}.`
+    );
+    return true;
+  };
+
+  const cleanupPuppeteerLocks = async (profilePath = resolvePuppeteerProfilePath()) => {
+    if (!profilePath) {
       return;
     }
     const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
     await Promise.all(
       lockFiles.map(async (lockFile) => {
-        const lockPath = path.join(puppeteerProfilePath, lockFile);
+        const lockPath = path.join(profilePath, lockFile);
         try {
           await rm(lockPath, { force: true });
         } catch (err) {
@@ -601,9 +713,53 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     );
   };
 
+  const hasPuppeteerLocks = async (profilePath) => {
+    const lockFiles = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+    const results = await Promise.all(
+      lockFiles.map(async (lockFile) => {
+        const lockPath = path.join(profilePath, lockFile);
+        try {
+          await stat(lockPath);
+          return true;
+        } catch (err) {
+          if (err?.code === 'ENOENT') {
+            return false;
+          }
+          return false;
+        }
+      })
+    );
+    return results.some(Boolean);
+  };
+
+  const cleanupStaleBrowserLocks = async (contextLabel) => {
+    const profilePath = resolvePuppeteerProfilePath();
+    if (!profilePath) {
+      return false;
+    }
+    const activeLockStatus = await detectActiveBrowserLock(profilePath);
+    if (activeLockStatus.isActive) {
+      console.warn(
+        `[WWEBJS] Active browser lock detected before ${contextLabel} for clientId=${clientId} ` +
+          `(reason: ${activeLockStatus.reason}); skipping lock cleanup.`
+      );
+      return false;
+    }
+    const hasLocks = await hasPuppeteerLocks(profilePath);
+    if (!hasLocks) {
+      return false;
+    }
+    await cleanupPuppeteerLocks(profilePath);
+    console.warn(
+      `[WWEBJS] Stale browser locks cleaned before ${contextLabel} for clientId=${clientId} at ${profilePath}.`
+    );
+    return true;
+  };
+
   const recoverFromBrowserAlreadyRunning = async (triggerLabel, err) => {
     const strictLockRecovery = shouldUseStrictLockRecovery();
-    const activeLockStatus = await detectActiveBrowserLock(puppeteerProfilePath);
+    const profilePath = resolvePuppeteerProfilePath();
+    const activeLockStatus = await detectActiveBrowserLock(profilePath);
     const isActiveLock = activeLockStatus.isActive;
     const backoffMs = isActiveLock
       ? resolveActiveBrowserLockBackoffMs()
@@ -634,6 +790,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     if (isActiveLock) {
+      lockActiveFailureCount += 1;
       if (strictLockRecovery) {
         console.warn(
           `[WWEBJS] Active browser lock detected for clientId=${clientId}; ` +
@@ -646,11 +803,33 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         );
       }
     } else {
-      await cleanupPuppeteerLocks();
+      lockActiveFailureCount = 0;
+      await cleanupPuppeteerLocks(profilePath);
     }
 
     if (backoffMs > 0) {
       await delay(backoffMs);
+    }
+
+    if (isActiveLock && lockActiveFailureCount >= lockFallbackThreshold) {
+      fallbackAttempt += 1;
+      const fallbackBasePath = resolveFallbackBasePath();
+      const fallbackPath = buildFallbackAuthDataPath(
+        fallbackBasePath,
+        clientId,
+        fallbackAttempt
+      );
+      const fallbackApplied = await applyAuthDataPath(
+        fallbackPath,
+        `lock active fallback attempt ${fallbackAttempt}`
+      );
+      if (fallbackApplied) {
+        console.warn(
+          `[WWEBJS] Applying unique userDataDir fallback for clientId=${clientId} ` +
+            `after ${lockActiveFailureCount} lock failures.`
+        );
+        lockActiveFailureCount = 0;
+      }
     }
 
     if (isActiveLock && strictLockRecovery) {
@@ -667,6 +846,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     emitter.fatalInitError = null;
     try {
       await client.initialize();
+      lockActiveFailureCount = 0;
     } catch (err) {
       if (isMissingChromeError(err)) {
         const taggedError =
@@ -750,12 +930,45 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     });
   };
 
+  const initializeClientWithRetry = async (triggerLabel) => {
+    let lastError = null;
+    for (let attempt = 1; attempt <= connectRetryAttempts; attempt += 1) {
+      try {
+        await initializeClientWithTimeout(`${triggerLabel}:attempt-${attempt}`);
+        return;
+      } catch (err) {
+        lastError = err;
+        if (err?.isMissingChromeError) {
+          throw err;
+        }
+        if (attempt >= connectRetryAttempts) {
+          break;
+        }
+        const backoffMs = Math.round(
+          connectRetryBackoffMs * connectRetryBackoffMultiplier ** (attempt - 1)
+        );
+        console.warn(
+          `[WWEBJS] initialize attempt ${attempt} failed for clientId=${clientId} (${triggerLabel}). ` +
+            `Retrying in ${backoffMs}ms.`,
+          err?.message || err
+        );
+        if (backoffMs > 0) {
+          await delay(backoffMs);
+        }
+      }
+    }
+    throw lastError;
+  };
+
   const startConnect = (triggerLabel) => {
     if (connectInProgress) {
       return connectInProgress;
     }
     connectStartedAt = Date.now();
-    connectInProgress = initializeClientWithTimeout(triggerLabel).finally(() => {
+    connectInProgress = (async () => {
+      await cleanupStaleBrowserLocks(triggerLabel);
+      await initializeClientWithRetry(triggerLabel);
+    })().finally(() => {
       connectInProgress = null;
       connectStartedAt = null;
     });
@@ -801,10 +1014,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     if (shouldClearSession) {
+      const currentSessionPath = resolveSessionPath();
       try {
-        await rm(sessionPath, { recursive: true, force: true });
+        await rm(currentSessionPath, { recursive: true, force: true });
         console.warn(
-          `[WWEBJS] Cleared auth session for clientId=${clientId} at ${sessionPath}.`
+          `[WWEBJS] Cleared auth session for clientId=${clientId} at ${currentSessionPath}.`
         );
       } catch (err) {
         console.warn(
@@ -1028,7 +1242,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.clientId = clientId;
-  emitter.sessionPath = sessionPath;
+  emitter.sessionPath = resolveSessionPath();
+  emitter.getSessionPath = () => resolveSessionPath();
 
   return emitter;
 }

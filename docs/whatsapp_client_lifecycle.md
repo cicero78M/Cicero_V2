@@ -89,6 +89,17 @@ Adapter `src/service/wwebjsAdapter.js` memakai `LocalAuth` dan menyimpan session
 - Default: `~/.cicero/wwebjs_auth/session-<clientId>`
 - Override: `WA_AUTH_DATA_PATH` (env) → path absolut, tetap menghasilkan folder `session-<clientId>`.
 
+Lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`) berada di
+folder `session-<clientId>` yang sama, misalnya:
+`<authPath>/session-wa-gateway-prod/SingletonLock`.
+
+Jika perlu memindahkan profil browser (userDataDir), atur:
+
+- `WA_AUTH_DATA_PATH` untuk lokasi utama userDataDir/session.
+- `WA_WWEBJS_FALLBACK_AUTH_DATA_PATH` untuk base path fallback (opsional).
+- `WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX` untuk menambahkan suffix khusus
+  saat fallback unik dipakai (mis. `NODE_ENV`/cluster label).
+
 Pastikan path ini writable oleh user yang menjalankan service.
 
 Catatan penting: `GATEWAY_WA_CLIENT_ID` **harus lowercase** dan **tidak boleh
@@ -146,6 +157,9 @@ menyebut “koneksi macet”/timeout dan `connect()` akan melempar error agar
 Konfigurasi timeout dan ambang monitoring:
 
 - `WA_CONNECT_TIMEOUT_MS` (default 180000ms) → batas maksimal `initialize()`.
+- `WA_WWEBJS_CONNECT_RETRY_ATTEMPTS` (default 3) → jumlah retry `initialize()` per connect.
+- `WA_WWEBJS_CONNECT_RETRY_BACKOFF_MS` (default 5000ms) → backoff awal retry.
+- `WA_WWEBJS_CONNECT_RETRY_BACKOFF_MULTIPLIER` (default 2) → multiplier backoff.
 - `WA_CONNECT_INFLIGHT_WARN_MS` (default 120000ms) → log warning ketika
   `connectInFlight` terlalu lama.
 - `WA_CONNECT_INFLIGHT_REINIT_MS` (default 300000ms) → trigger reinit otomatis
@@ -177,6 +191,9 @@ ulang setelah cleanup otomatis ini terjadi.
 Jika `initialize()` gagal dengan pesan seperti `browser is already running for ...`,
 adapter akan:
 
+0. **Sebelum** memulai `initialize()`, adapter mengecek lock di `session-<clientId>`.
+   Jika lock ada tetapi proses browser sudah tidak aktif, lock akan dibersihkan.
+   Jika proses browser masih aktif, cleanup dilewati dan hanya dicatat di log.
 1. Memanggil `client.destroy()` hanya jika Puppeteer sudah terinisialisasi (`pupBrowser`/`pupPage`).
    Jika belum, destroy dilewati dan hanya dicatat debug agar recovery tetap bersih.
 2. Memverifikasi apakah lock masih aktif dengan membaca `SingletonLock` (PID) dan
@@ -188,11 +205,16 @@ adapter akan:
    lebih panjang sebelum retry. Dengan `WA_WWEBJS_LOCK_RECOVERY_STRICT=true`, adapter
    akan **bail out** dengan error jelas agar operator memakai sesi yang sama atau
    menghentikan proses lama secara eksplisit.
+5. Jika lock **aktif** berulang kali dan koneksi tetap gagal, adapter akan
+   menggunakan **fallback userDataDir** yang unik (berbasis hostname/PID/attempt
+   dan optional suffix) agar sesi baru bisa berjalan tanpa menimpa lock lama.
 
 Durasi backoff dasar dapat diatur via `WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS`
 (default 20000ms). Saat lock aktif, backoff akan dinaikkan otomatis. Gunakan
 `WA_WWEBJS_LOCK_RECOVERY_STRICT=true` untuk mode aman (tanpa menghapus lock
 ketika lock aktif) dan memaksa operator melakukan cleanup manual sebelum reinit.
+Ambang aktivasi fallback lock dapat diatur via `WA_WWEBJS_LOCK_FALLBACK_THRESHOLD`
+(default 2).
 
 Langkah operasional saat lock aktif:
 
