@@ -1,6 +1,5 @@
 import { env } from '../../config/env.js';
 import { scheduleCronJob } from '../../utils/cronScheduler.js';
-import { runCron as runFetchDirRequest, JOB_KEY as FETCH_SOSMED_JOB_KEY } from '../cronDirRequestFetchSosmed.js';
 import { runCron as runNotificationReminder, JOB_KEY as NOTIFICATION_REMINDER_JOB_KEY } from '../cronWaNotificationReminder.js';
 import { runCron as runSatbinmasOfficialMedia, JOB_KEY as SATBINMAS_OFFICIAL_MEDIA_JOB_KEY } from '../cronDirRequestSatbinmasOfficialMedia.js';
 import {
@@ -99,22 +98,6 @@ const createDitbinmasRecapAndCustomSequenceHandler = waGatewayClient => {
 };
 
 const dirRequestCrons = [
-  {
-    jobKey: FETCH_SOSMED_JOB_KEY,
-    description:
-      'Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas.',
-    schedules: [
-      { cronExpression: '30 6 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0,30 7-14 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '30 15 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0,30 16-17 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0,30 19 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0 20 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '0,30 21 * * *', handler: () => runFetchDirRequest(), options: DEFAULT_CRON_OPTIONS },
-
-
-    ],
-  },
   {
     jobKey: NOTIFICATION_REMINDER_JOB_KEY,
     description:

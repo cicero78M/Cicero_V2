@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { scheduleCronJob } from "../utils/cronScheduler.js";
 import waClient, { waGatewayClient, waUserClient } from "../service/waService.js";
 import { findAllActiveDirektoratWithTiktok } from "../model/clientModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
@@ -290,7 +291,7 @@ export async function runCron(options = {}) {
           phase: "init",
           action: "loadClients",
           result: "empty",
-          message: "Tidak ada client direktorat aktif dengan TikTok aktif",
+          message: "Tidak ada client direktorat aktif dengan Instagram & TikTok aktif",
         })
       );
       return;
@@ -609,3 +610,10 @@ export async function runCron(options = {}) {
 }
 
 export const JOB_KEY = "./src/cron/cronDirRequestFetchSosmed.js";
+
+const CRON_SCHEDULES = ["0,30 6-21 * * *", "0 22 * * *"];
+const CRON_OPTIONS = { timezone: "Asia/Jakarta" };
+
+CRON_SCHEDULES.forEach((cronExpression) => {
+  scheduleCronJob(JOB_KEY, cronExpression, runCron, CRON_OPTIONS);
+});

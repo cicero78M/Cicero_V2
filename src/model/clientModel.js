@@ -98,6 +98,7 @@ export const findAllActiveDirektoratWithTiktok = async () => {
      FROM clients
      WHERE client_status = true
        AND LOWER(client_type) = LOWER('direktorat')
+       AND client_insta_status = true
        AND client_tiktok_status = true
      ORDER BY client_id`
   );

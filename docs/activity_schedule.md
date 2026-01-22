@@ -1,7 +1,7 @@
 # System Activity Schedule
 *Last updated: 2026-01-21*
 
-This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together while applying per-run WhatsApp readiness checks where needed.【F:src/cron/dirRequest/index.js†L1-L151】
+This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together while applying per-run WhatsApp readiness checks where needed.【F:src/cron/dirRequest/index.js†L1-L131】
 
 ## Runtime safeguards & configuration sync
 
@@ -9,7 +9,7 @@ Every cron file calls `scheduleCronJob`, which delegates to `src/utils/cronSched
 
 The configuration data lives in the migration `sql/migrations/20251022_create_cron_job_config.sql` and is surfaced in the cron configuration menu, keeping this schedule synchronized with the controls that ops staff use to enable or pause jobs.【F:sql/migrations/20251022_create_cron_job_config.sql†L1-L34】
 
-dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed. Every dirRequest job key is single-flight: if a previous run is still in-flight, the next scheduled run logs a skip message and exits early to prevent overlap.【F:src/cron/dirRequest/index.js†L1-L151】
+dirRequest cron registration happens immediately at boot (subject to `ENABLE_DIRREQUEST_GROUP`), while the custom-sequence handler now waits for the WhatsApp gateway to become ready on each run with a bounded timeout to avoid hanging the schedule when readiness is delayed. Every dirRequest job key is single-flight: if a previous run is still in-flight, the next scheduled run logs a skip message and exits early to prevent overlap.【F:src/cron/dirRequest/index.js†L1-L131】
 
 ## Cron Jobs
 
@@ -30,6 +30,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | `cronAmplifyLinkMonthly.js` | `0 23 28-31 * *` | Generate and deliver monthly amplification spreadsheets on the last day of the month. |
 | `cronDirRequestRekapUpdate.js` | `0 8-18/4 * * *` | Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups. |
 | `cronDirRequestRekapBelumLengkapDitsamapta.js` | `15 7-21 * * *` | Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only. |
+| `cronDirRequestFetchSosmed.js` | `0,30 6-21 * * *<br>0 22 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas; delivery now triggers when the Instagram/TikTok link set changes even if post counts stay flat (pengiriman grup dikunci setelah 17:15 WIB, tetapi fetch post & refresh engagement tetap jalan supaya komentar malam memakai data terbaru). Fetch ini bersifat single-flight: saat job masih berjalan, pemanggilan berikutnya akan mencatat “skip due to in-flight” dan keluar. |
 | `cronDashboardSubscriptionExpiry.js` | `*/30 * * * *` | Mark overdue dashboard subscriptions as expired and send WhatsApp reminders when a destination number is available. |
 | `cronPremiumExpiry.js` | `0 0 * * *` | Expire mobile premium users when `premium_end_date` is in the past. |
 | `cronDashboardPremiumRequestExpiry.js` | `0 * * * *` | Expire pending/confirmed dashboard premium requests after their `expired_at` deadline and send requester/admin WhatsApp notifications. |
@@ -40,7 +41,6 @@ The schedules below are bundled inside `src/cron/dirRequest/index.js` and regist
 
 | File | Schedule (Asia/Jakarta) | Description |
 |------|-------------------------|-------------|
-| `cronDirRequestFetchSosmed.js` | `30 6 * * *<br>0,30 7-21 * * *` | Fetch Ditbinmas Instagram/TikTok posts, refresh engagement metrics, and broadcast status deltas; delivery now triggers when the Instagram/TikTok link set changes even if post counts stay flat (pengiriman grup dikunci setelah 17:15 WIB, tetapi fetch post & refresh engagement tetap jalan supaya komentar malam memakai data terbaru). Fetch ini bersifat single-flight: saat job masih berjalan, pemanggilan berikutnya akan mencatat “skip due to in-flight” dan keluar. |
 | `cronWaNotificationReminder.js` | `5 19 * * *<br>45 19 * * *<br>15 20 * * *` | Send WhatsApp task reminders to Ditbinmas and BIDHUMAS users who opted in, spacing each WhatsApp delivery by 3 seconds and persisting each recipient's last stage/completion in `wa_notification_reminder_state` so completed users are skipped on reruns while pending users continue their follow-up stage. |
 | `cronDirRequestSatbinmasOfficialMedia.js` | `5 23 * * *` | Share Satbinmas official media updates with Ditbinmas recipients. |
 | `cronDirRequestCustomSequence.js` (custom menus) | `0 15 * * *<br>0 18 * * *<br>30 20 * * *` | Chain sosmed fetches, run Ditsamapta menus 6/9/28/29 (plus optional extras) to the Ditsamapta group, super admins, and operators, deliver Ditbinmas menu 21 to the Ditbinmas group, then send BIDHUMAS menus 6, 9, 28, and 29 to the BIDHUMAS group and its super admins. The 20:30 slot now aligns with the Ditbinmas recap and BIDHUMAS 20:30 dispatch without blocking either flow. |
