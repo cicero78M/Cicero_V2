@@ -59,8 +59,8 @@ const dirRequestCrons = [
     jobKey: DITBINMAS_GROUP_RECAP_JOB_KEY,
     description: 'Send Ditbinmas group recap for menu 21/19/20/22 (today).',
     schedules: [
-      { cronExpression: '20 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '20 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '10 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '12 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   {
