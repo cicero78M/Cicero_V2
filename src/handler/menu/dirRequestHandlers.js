@@ -1967,51 +1967,100 @@ async function performAction(
       }
       case "21": {
         const dirPath = "laphar";
-        await mkdir(dirPath, { recursive: true });
-        const [ig, tt] = await Promise.all([
-          lapharDitbinmas(clientId),
-          lapharTiktokDitbinmas(clientId),
-        ]);
-        const client = await findClientById(clientId);
-        const clientName = client?.nama || clientId;
-        const narrative = await formatRekapAllSosmed(
-          ig.narrative,
-          tt.narrative,
-          clientName,
-          clientId,
-          {
-            igRankingData: ig.rankingData,
-            ttRankingData: tt.rankingData,
+        const tempFiles = [];
+        try {
+          await mkdir(dirPath, { recursive: true });
+          const [ig, tt] = await Promise.all([
+            lapharDitbinmas(clientId),
+            lapharTiktokDitbinmas(clientId),
+          ]);
+          const client = await findClientById(clientId);
+          const clientName = client?.nama || clientId;
+          const narrative = await formatRekapAllSosmed(
+            ig.narrative,
+            tt.narrative,
+            clientName,
+            clientId,
+            {
+              igRankingData: ig.rankingData,
+              ttRankingData: tt.rankingData,
+            }
+          );
+          if (narrative) {
+            await sendMenuMessage(waClient, chatId, narrative, fallbackPayload);
           }
-        );
-        if (narrative) {
-          await sendMenuMessage(waClient, chatId, narrative, fallbackPayload);
-        }
-        if (ig.text && ig.filename) {
-          const buffer = Buffer.from(ig.text, "utf-8");
-          const filePath = join(dirPath, ig.filename);
-          await writeFile(filePath, buffer);
-          await sendWAFile(waClient, buffer, ig.filename, chatId, "text/plain");
-        }
-        const igRecap = await collectLikesRecap(clientId);
-        if (igRecap.shortcodes.length) {
-          const excelPath = await saveLikesRecapExcel(igRecap, clientId);
-          const bufferExcel = await readFile(excelPath);
-          await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-          await unlink(excelPath);
-        }
-        if (tt.text && tt.filename) {
-          const buffer = Buffer.from(tt.text, "utf-8");
-          const filePath = join(dirPath, tt.filename);
-          await writeFile(filePath, buffer);
-          await sendWAFile(waClient, buffer, tt.filename, chatId, "text/plain");
-        }
-        const ttRecap = await collectKomentarRecap(clientId);
-        if (ttRecap.videoIds.length) {
-          const excelPath = await saveCommentRecapExcel(ttRecap, clientId);
-          const bufferExcel = await readFile(excelPath);
-          await sendWAFile(waClient, bufferExcel, basename(excelPath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-          await unlink(excelPath);
+          if (ig.text && ig.filename) {
+            const buffer = Buffer.from(ig.text, "utf-8");
+            const filePath = join(dirPath, ig.filename);
+            tempFiles.push(filePath);
+            await writeFile(filePath, buffer);
+            await sendWAFile(waClient, buffer, ig.filename, chatId, "text/plain");
+          }
+          const igRecap = await collectLikesRecap(clientId);
+          if (typeof igRecap === "string") {
+            await sendMenuMessage(waClient, chatId, igRecap, fallbackPayload);
+          } else if (igRecap?.shortcodes?.length) {
+            const excelPath = await saveLikesRecapExcel(igRecap, clientId);
+            tempFiles.push(excelPath);
+            const bufferExcel = await readFile(excelPath);
+            await sendWAFile(
+              waClient,
+              bufferExcel,
+              basename(excelPath),
+              chatId,
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+          }
+          if (tt.text && tt.filename) {
+            const buffer = Buffer.from(tt.text, "utf-8");
+            const filePath = join(dirPath, tt.filename);
+            tempFiles.push(filePath);
+            await writeFile(filePath, buffer);
+            await sendWAFile(waClient, buffer, tt.filename, chatId, "text/plain");
+          }
+          let ttRecap;
+          try {
+            ttRecap = await collectKomentarRecap(clientId);
+          } catch (error) {
+            console.error("Gagal menyiapkan rekap komentar TikTok:", error);
+            await sendMenuMessage(
+              waClient,
+              chatId,
+              "❌ Gagal menyiapkan rekap komentar TikTok. Silakan coba lagi.",
+              fallbackPayload
+            );
+            return;
+          }
+          if (ttRecap?.videoIds?.length) {
+            const excelPath = await saveCommentRecapExcel(ttRecap, clientId);
+            tempFiles.push(excelPath);
+            const bufferExcel = await readFile(excelPath);
+            await sendWAFile(
+              waClient,
+              bufferExcel,
+              basename(excelPath),
+              chatId,
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+          }
+        } catch (error) {
+          console.error("Gagal memproses menu 21:", error);
+          await sendMenuMessage(
+            waClient,
+            chatId,
+            "❌ Terjadi kendala saat memproses menu 21. Silakan coba lagi nanti. Kembali ke menu utama.",
+            fallbackPayload
+          );
+        } finally {
+          await Promise.all(
+            tempFiles.map(async (filePath) => {
+              try {
+                await unlink(filePath);
+              } catch (err) {
+                console.error("Gagal menghapus file sementara:", err);
+              }
+            })
+          );
         }
         return;
       }
