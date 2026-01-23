@@ -12,6 +12,7 @@ import {
   isAdminWhatsApp,
   formatToWhatsAppId,
   getAdminWAIds,
+  minPhoneDigitLength,
   normalizeWhatsappNumber,
   safeSendMessage,
 } from "../utils/waHelper.js";
@@ -602,6 +603,12 @@ router.post('/user-register', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'nrp, nama, dan client_id wajib diisi' });
   }
+  const normalizedWhatsapp = normalizeWhatsappNumber(whatsapp);
+  if (whatsapp && normalizedWhatsapp.length < minPhoneDigitLength) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'whatsapp tidak valid' });
+  }
   const existing = await query('SELECT * FROM "user" WHERE user_id = $1', [nrp]);
   if (existing.rows.length) {
     return res
@@ -612,7 +619,7 @@ router.post('/user-register', async (req, res) => {
     user_id: nrp,
     nama,
     client_id,
-    whatsapp,
+    whatsapp: normalizedWhatsapp,
     divisi,
     jabatan,
     title
