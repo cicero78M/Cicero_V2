@@ -5,6 +5,7 @@ import { absensiKomentarInstagram } from "../fetchabsensi/insta/absensiKomentarI
 import { absensiKomentar } from "../fetchabsensi/tiktok/absensiKomentarTiktok.js";
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 async function formatRekapUserData(clientId, roleFlag = null) {
   const filterRole = ["ditbinmas", "ditlantas", "bidhumas"].includes(
@@ -203,7 +204,9 @@ export const dashRequestHandlers = {
       );
       await waClient.sendMessage(
         chatId,
-        `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `Pilih Client:\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -257,7 +260,9 @@ export const dashRequestHandlers = {
         );
         await waClient.sendMessage(
           chatId,
-          `Pilih Client:\n\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+          appendSubmenuBackInstruction(
+            `Pilih Client:\n\n${list.join("\n")}\n\nBalas angka untuk memilih atau *batal* untuk keluar.`
+          )
         );
         session.step = "choose_client";
         return;
@@ -348,4 +353,3 @@ export const dashRequestHandlers = {
 };
 
 export default dashRequestHandlers;
-

@@ -46,6 +46,7 @@ import {
 import { extractVideoId } from "../../utils/tiktokHelper.js";
 import * as satbinmasOfficialAccountService from "../../service/satbinmasOfficialAccountService.js";
 import { clearSession } from "../../utils/sessionsHelper.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 function ignore(..._args) {}
 
@@ -383,14 +384,15 @@ async function sendKelolaClientMenu(session, chatId, waClient) {
     ? `Kelola Client (${client.client_id})\n`
     : "Kelola Client\n";
 
-  const menuText =
+  const menuText = appendSubmenuBackInstruction(
     `${clientLine}` +
-    `1️⃣ Update Data Client\n` +
-    `2️⃣ Hapus Client\n` +
-    `3️⃣ Info Client\n` +
-    `4️⃣ Ubah Status Massal\n` +
-    `5️⃣ Input Akun Resmi Satbinmas\n` +
-    `Ketik angka menu di atas atau *batal* untuk keluar.`;
+      `1️⃣ Update Data Client\n` +
+      `2️⃣ Hapus Client\n` +
+      `3️⃣ Info Client\n` +
+      `4️⃣ Ubah Status Massal\n` +
+      `5️⃣ Input Akun Resmi Satbinmas\n` +
+      `Ketik angka menu di atas atau *batal* untuk keluar.`
+  );
 
   session.step = "kelolaClient_menu";
   await waClient.sendMessage(chatId, menuText);
@@ -626,7 +628,10 @@ async function sendBulkRolePrompt(session, chatId, waClient) {
     "Balas angka sesuai pilihan atau ketik *batal* untuk membatalkan proses."
   );
   session.step = "bulkStatus_applySelection";
-  await waClient.sendMessage(chatId, promptLines.join("\n"));
+  await waClient.sendMessage(
+    chatId,
+    appendSubmenuBackInstruction(promptLines.join("\n"))
+  );
 }
 
 async function applyBulkDeletionChoice({
@@ -2202,7 +2207,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
       return;
     }
 
-    const msg = `
+    const msg = appendSubmenuBackInstruction(`
 ┏━━━ *Manajemen Client & User* ━━━
 1️⃣ Tambah client baru
 2️⃣ Kelola client (update/hapus/info)
@@ -2212,7 +2217,7 @@ Ketik *angka* menu, atau *batal* untuk keluar.
 6️⃣ Refresh Aggregator Direktorat
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
-`.trim();
+`.trim());
 
     if (!/^[1-6]$/.test(text.trim())) {
       session.step = "clientMenu_management";
@@ -2287,7 +2292,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    const msg = `
+    const msg = appendSubmenuBackInstruction(`
 ┏━━━ *Operasional Media Sosial* ━━━
 1️⃣ Proses Instagram
 2️⃣ Proses TikTok
@@ -2298,7 +2303,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 7️⃣ Refresh Aggregator Direktorat
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
-`.trim();
+`.trim());
 
     if (!/^[1-7]$/.test(text.trim())) {
       session.step = "clientMenu_social";
@@ -2374,7 +2379,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    const msg = `
+    const msg = appendSubmenuBackInstruction(`
 ┏━━━ *Transfer & Laporan* ━━━
 1️⃣ Transfer User
 2️⃣ Absensi Login Web
@@ -2382,7 +2387,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 4️⃣ Absensi Official Account
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
-`.trim();
+`.trim());
 
     if (!/^[1-4]$/.test(text.trim())) {
       session.step = "clientMenu_transfer";
@@ -2455,13 +2460,13 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    const msg = `
+    const msg = appendSubmenuBackInstruction(`
 ┏━━━ *Transfer User* ━━━
 1️⃣ Dari Folder user_data
 2️⃣ Dari Google Sheet
 ┗━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* sumber data, atau *batal* untuk kembali.
-`.trim();
+`.trim());
 
     if (!/^[1-2]$/.test(text.trim())) {
       session.step = "transferUser_menu";
@@ -2532,14 +2537,14 @@ Ketik *angka* sumber data, atau *batal* untuk kembali.
       return;
     }
 
-    const msg = `
+    const msg = appendSubmenuBackInstruction(`
 ┏━━━ *Administratif* ━━━
 1️⃣ Exception Info
 2️⃣ Hapus WA Admin
 3️⃣ Download Docs
 ┗━━━━━━━━━━━━━━━━━━━━━━
 Ketik *angka* menu, atau *batal* untuk kembali.
-`.trim();
+`.trim());
 
     if (!/^[1-3]$/.test(text.trim())) {
       session.step = "clientMenu_admin";
@@ -2663,7 +2668,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       }\n`;
     });
     session.step = "kelolaClient_action";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
   kelolaClient_action: async (session, chatId, text, waClient) => {
     const idx = parseInt(text.trim()) - 1;
@@ -2737,7 +2742,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         msg += `${i + 1}. ${f.label} [${f.key}]\n`;
       });
       msg += `\nBalas dengan angka sesuai daftar di atas.`;
-      await waClient.sendMessage(chatId, msg);
+      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
     } else if (text.trim() === "2") {
       const target = findSelectedClient(session);
       const clientLine = target?.client_id
@@ -2816,7 +2821,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       fields.forEach((f, i) => {
         msg += `${i + 1}. ${f.label} [${f.key}]\n`;
       });
-      await waClient.sendMessage(chatId, msg.trim());
+      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
       return;
     }
     session.updateField = fields[idx].key;
@@ -2974,7 +2979,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    if (lowered === "kembali") {
+    if (lowered === "kembali" || lowered === "back") {
       await clientRequestHandlers.satbinmasOfficial_promptRole(
         session,
         chatId,
@@ -3027,7 +3032,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         "Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar.",
       ].join("\n");
       session.step = "satbinmasOfficial_promptPlatform";
-      await waClient.sendMessage(chatId, prompt);
+      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(prompt));
       return;
     }
 
@@ -3036,7 +3041,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    if (lowered === "kembali") {
+    if (lowered === "kembali" || lowered === "back") {
       await clientRequestHandlers.satbinmasOfficial_promptClient(
         session,
         chatId,
@@ -3057,7 +3062,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         "Ketik *kembali* untuk mengubah Client ID atau *batal* untuk keluar.",
       ].join("\n");
       session.step = "satbinmasOfficial_promptPlatform";
-      await waClient.sendMessage(chatId, prompt);
+      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(prompt));
       return;
     }
 
@@ -3090,7 +3095,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       return;
     }
 
-    if (lowered === "kembali") {
+    if (lowered === "kembali" || lowered === "back") {
       await clientRequestHandlers.satbinmasOfficial_promptPlatform(
         session,
         chatId,
@@ -3247,7 +3252,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
   ) => {
     await waClient.sendMessage(
       chatId,
-      `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\n4️⃣ Ubah Status Massal\n5️⃣ Ubah Client ID\nKetik angka menu atau *batal* untuk keluar.`
+      appendSubmenuBackInstruction(
+        `Kelola User:\n1️⃣ Update Data User\n2️⃣ Update Exception\n3️⃣ Update Status\n4️⃣ Ubah Status Massal\n5️⃣ Ubah Client ID\nKetik angka menu atau *batal* untuk keluar.`
+      )
     );
     session.step = "kelolaUser_menu";
   },
@@ -3293,7 +3300,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.target_user_id = text.trim();
     if (session.kelolaUser_mode === "1") {
       session.step = "kelolaUser_updatefield";
-      let msg = `Pilih field user yang ingin diupdate:\n1. Nama\n2. Pangkat\n3. Satfung\n4. Jabatan\n5. Instagram\n6. TikTok\n7. WhatsApp\nBalas angka field.`;
+      let msg = appendSubmenuBackInstruction(
+        `Pilih field user yang ingin diupdate:\n1. Nama\n2. Pangkat\n3. Satfung\n4. Jabatan\n5. Instagram\n6. TikTok\n7. WhatsApp\nBalas angka field.`
+      );
       await waClient.sendMessage(chatId, msg);
     } else if (session.kelolaUser_mode === "2") {
       session.step = "kelolaUser_updateexception";
@@ -3508,7 +3517,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       }\n\n`;
     });
     session.step = "prosesInstagram_action";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   prosesInstagram_action: async (
@@ -3541,7 +3550,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "prosesInstagram_menu";
     await waClient.sendMessage(
       chatId,
-      `Proses Instagram untuk *${client_id}*:\n1️⃣ Fetch Konten IG\n2️⃣ Fetch Likes IG\n3️⃣ Absensi Likes IG\nBalas angka menu di atas atau *batal* untuk keluar.`
+      appendSubmenuBackInstruction(
+        `Proses Instagram untuk *${client_id}*:\n1️⃣ Fetch Konten IG\n2️⃣ Fetch Likes IG\n3️⃣ Absensi Likes IG\nBalas angka menu di atas atau *batal* untuk keluar.`
+      )
     );
   },
   prosesInstagram_menu: async (
@@ -3584,7 +3595,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     } else if (text.trim() === "3") {
       session.step = "absensiLikes_choose_submenu";
       session.absensi_client_id = client_id;
-      let msg = `Pilih tipe rekap absensi likes IG:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`;
+      let msg = appendSubmenuBackInstruction(
+        `Pilih tipe rekap absensi likes IG:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`
+      );
       await waClient.sendMessage(chatId, msg);
       return;
     } else {
@@ -3633,7 +3646,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       }\n\n`;
     });
     session.step = "prosesTiktok_action";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   prosesTiktok_action: async (
@@ -3667,7 +3680,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "prosesTiktok_menu";
     await waClient.sendMessage(
       chatId,
-      `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\n5️⃣ Hapus Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+      appendSubmenuBackInstruction(
+        `Proses TikTok untuk *${client_id}*:\n1️⃣ Fetch Konten TikTok\n2️⃣ Fetch Komentar TikTok\n3️⃣ Absensi Komentar TikTok\n4️⃣ Manual Fetch Konten TikTok\n5️⃣ Hapus Konten TikTok\nBalas angka menu di atas atau *batal* untuk keluar.`
+      )
     );
   },
   prosesTiktok_menu: async (
@@ -3711,7 +3726,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     } else if (text.trim() === "3") {
       session.step = "absensiKomentar_choose_submenu";
       session.absensi_client_id = client_id;
-      let msg = `Pilih tipe rekap absensi komentar TikTok:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`;
+      let msg = appendSubmenuBackInstruction(
+        `Pilih tipe rekap absensi komentar TikTok:\n1. Akumulasi (Semua)\n2. Hanya Sudah\n3. Hanya Belum\n4. Per Konten (Semua)\n5. Per Konten Sudah\n6. Per Konten Belum\nBalas angka di atas.`
+      );
       await waClient.sendMessage(chatId, msg);
       return;
     } else if (text.trim() === "4") {
@@ -3946,7 +3963,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       }\n\n`;
     });
     session.step = "absensiUsernameInsta_submenu";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   absensiUsernameInsta_submenu: async (
@@ -3969,7 +3986,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const client_id = clients[idx].client_id;
     session.selected_client_id = client_id;
     session.step = "absensiUsernameInsta_menu";
-    let msg = `Absensi Username IG untuk *${client_id}*\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas!`;
+    let msg = appendSubmenuBackInstruction(
+      `Absensi Username IG untuk *${client_id}*\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas!`
+    );
     await waClient.sendMessage(chatId, msg);
   },
   absensiUsernameInsta_menu: async (
@@ -4023,7 +4042,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       }\n\n`;
     });
     session.step = "absensiUsernameTiktok_submenu";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   absensiUsernameTiktok_menu: async (
@@ -4070,7 +4089,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     const client_id = clients[idx].client_id;
     session.selected_client_id = client_id;
     session.step = "absensiUsernameTiktok_menu";
-    let msg = `Absensi Username TikTok untuk *${client_id}*\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas!`;
+    let msg = appendSubmenuBackInstruction(
+      `Absensi Username TikTok untuk *${client_id}*\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas!`
+    );
     await waClient.sendMessage(chatId, msg);
   },
 
@@ -4203,7 +4224,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "transferUser_action";
   },
   transferUser_action: async (
@@ -4277,7 +4298,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "transferUserSheet_link";
   },
   transferUserSheet_link: async (
@@ -4372,7 +4393,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "downloadSheet_action";
   },
   downloadSheet_action: async (
@@ -4438,7 +4459,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "downloadSheetPrev_action";
   },
   downloadSheetPrev_action: async (
@@ -4503,7 +4524,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     });
 
     session.step = "refreshAggregator_choosePeriode";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   refreshAggregator_choosePeriode: async (
@@ -4532,7 +4553,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     session.step = "refreshAggregator_execute";
     await waClient.sendMessage(
       chatId,
-      "Pilih periode refresh aggregator:\n1️⃣ Harian (konten hari ini)\n2️⃣ Riwayat lengkap\nBalas angka di atas."
+      appendSubmenuBackInstruction(
+        "Pilih periode refresh aggregator:\n1️⃣ Harian (konten hari ini)\n2️⃣ Riwayat lengkap\nBalas angka di atas."
+      )
     );
   },
 
@@ -4571,7 +4594,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
 
   // ================== DOWNLOAD DOCS ==================
   downloadDocs_choose: async (session, chatId, _text, waClient) => {
-    const msg = `*Download Dokumentasi*\n1️⃣ Front End\n2️⃣ Back End\nBalas angka menu atau *batal* untuk keluar.`;
+    const msg = appendSubmenuBackInstruction(
+      `*Download Dokumentasi*\n1️⃣ Front End\n2️⃣ Back End\nBalas angka menu atau *batal* untuk keluar.`
+    );
     session.step = "downloadDocs_send";
     await waClient.sendMessage(chatId, msg);
   },
@@ -4632,7 +4657,7 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "exceptionInfo_show";
   },
   exceptionInfo_show: async (

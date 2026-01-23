@@ -1,5 +1,6 @@
 import { clearSession } from "../../utils/sessionsHelper.js";
 import * as cronJobConfigService from "../../service/cronJobConfigService.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 const MAIN_MENU_MESSAGE = `┏━━━ *MENU WABOT DITBINMAS* ━━━
 1️⃣ User Summary
@@ -38,13 +39,13 @@ const SUB_MENU_OPTIONS = {
 };
 
 function buildSubMenuMessage(title) {
-  return (
+  return appendSubmenuBackInstruction(
     `*${title}*\n` +
-    "1️⃣ Excel Data\n" +
-    "2️⃣ Chart\n" +
-    "3️⃣ Narasi\n" +
-    "0️⃣ Kembali ke menu utama\n\n" +
-    "Ketik angka menu atau *batal* untuk keluar."
+      "1️⃣ Excel Data\n" +
+      "2️⃣ Chart\n" +
+      "3️⃣ Narasi\n" +
+      "0️⃣ Kembali ke menu utama\n\n" +
+      "Ketik angka menu atau *batal* untuk keluar."
   );
 }
 
@@ -59,7 +60,7 @@ function handleSubMenuFactory(key) {
       return;
     }
 
-    if (choice === "0") {
+    if (choice === "0" || choice.toLowerCase() === "back") {
       session.step = "main";
       session.time = Date.now();
       await wabotDitbinmasHandlers.main(session, chatId, "", waClient);
@@ -81,11 +82,11 @@ function handleSubMenuFactory(key) {
 
 function buildCronJobListMessage(jobs) {
   if (!jobs.length) {
-    return (
+    return appendSubmenuBackInstruction(
       "*⚙️ Konfigurasi Cron Job*\n" +
-      "Belum ada cron job yang terdaftar.\n" +
-      "0️⃣ Kembali ke menu utama\n" +
-      "Ketik angka menu atau *batal* untuk keluar."
+        "Belum ada cron job yang terdaftar.\n" +
+        "0️⃣ Kembali ke menu utama\n" +
+        "Ketik angka menu atau *batal* untuk keluar."
     );
   }
 
@@ -97,38 +98,38 @@ function buildCronJobListMessage(jobs) {
     })
     .join("\n\n");
 
-  return (
+  return appendSubmenuBackInstruction(
     "*⚙️ Konfigurasi Cron Job*\n" +
-    "Berikut daftar cron job yang tersedia:\n\n" +
-    `${list}\n\n` +
-    "Balas dengan nomor cron job untuk mengatur statusnya.\n" +
-    "0️⃣ Kembali ke menu utama\n" +
-    "Ketik *batal* kapan saja untuk keluar."
+      "Berikut daftar cron job yang tersedia:\n\n" +
+      `${list}\n\n` +
+      "Balas dengan nomor cron job untuk mengatur statusnya.\n" +
+      "0️⃣ Kembali ke menu utama\n" +
+      "Ketik *batal* kapan saja untuk keluar."
   );
 }
 
 function buildCronJobActionMessage(job) {
   const statusText = job.is_active ? "✅ Aktif" : "❌ Nonaktif";
   const name = job.display_name || job.job_key;
-  return (
+  return appendSubmenuBackInstruction(
     `*⚙️ Atur Cron Job: ${name}*\n` +
-    `Kode: ${job.job_key}\n` +
-    `Status saat ini: ${statusText}\n\n` +
-    "Pilih aksi:\n" +
-    "1️⃣ Aktifkan cron job\n" +
-    "2️⃣ Nonaktifkan cron job\n" +
-    "0️⃣ Kembali ke daftar cron job\n" +
-    "Ketik *menu* untuk kembali ke menu utama atau *batal* untuk keluar."
+      `Kode: ${job.job_key}\n` +
+      `Status saat ini: ${statusText}\n\n` +
+      "Pilih aksi:\n" +
+      "1️⃣ Aktifkan cron job\n" +
+      "2️⃣ Nonaktifkan cron job\n" +
+      "0️⃣ Kembali ke daftar cron job\n" +
+      "Ketik *menu* untuk kembali ke menu utama atau *batal* untuk keluar."
   );
 }
 
 function buildCronJobConfirmationMessage(job, nextStatus) {
   const name = job.display_name || job.job_key;
   const statusText = nextStatus ? "Aktif" : "Nonaktif";
-  return (
+  return appendSubmenuBackInstruction(
     `Anda akan mengubah status cron job *${name}* (${job.job_key}) menjadi *${statusText}*.\n` +
-    "Balas *YA* untuk konfirmasi atau ketik *0* untuk kembali memilih aksi.\n" +
-    "Ketik *menu* untuk kembali ke menu utama atau *batal* untuk keluar."
+      "Balas *YA* untuk konfirmasi atau ketik *0* untuk kembali memilih aksi.\n" +
+      "Ketik *menu* untuk kembali ke menu utama atau *batal* untuk keluar."
   );
 }
 
@@ -157,7 +158,7 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (choice === "0") {
+    if (choice === "0" || choice.toLowerCase() === "back") {
       clearSession(chatId);
       await waClient.sendMessage(chatId, "✅ Menu Wabot Ditbinmas ditutup.");
       return;
@@ -205,7 +206,12 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (choice === "0" || lowerChoice === "menu" || lowerChoice === "batal") {
+    if (
+      choice === "0" ||
+      lowerChoice === "menu" ||
+      lowerChoice === "back" ||
+      lowerChoice === "batal"
+    ) {
       await backToMainMenu(session, chatId, waClient);
       return;
     }
@@ -254,7 +260,7 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (choice === "0") {
+    if (choice === "0" || choice.toLowerCase() === "back") {
       delete session.cronConfig?.selectedJobKey;
       session.step = "cronConfig_menu";
       session.time = Date.now();
@@ -262,7 +268,7 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (lowerChoice === "menu" || lowerChoice === "batal") {
+    if (lowerChoice === "menu" || lowerChoice === "back" || lowerChoice === "batal") {
       await backToMainMenu(session, chatId, waClient);
       return;
     }
@@ -304,7 +310,7 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (choice === "0") {
+    if (choice === "0" || choice.toLowerCase() === "back") {
       delete cronSession.pendingStatus;
       session.step = "cronConfig_jobAction";
       session.time = Date.now();
@@ -312,7 +318,7 @@ export const wabotDitbinmasHandlers = {
       return;
     }
 
-    if (lowerChoice === "menu" || lowerChoice === "batal") {
+    if (lowerChoice === "menu" || lowerChoice === "back" || lowerChoice === "batal") {
       await backToMainMenu(session, chatId, waClient);
       return;
     }

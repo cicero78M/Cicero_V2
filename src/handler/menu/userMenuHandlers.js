@@ -7,6 +7,7 @@ import {
 } from "../../utils/utilsHelper.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { formatToWhatsAppId } from "../../utils/waHelper.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 // --- Helper Format Pesan ---
 function formatUserReport(user) {
@@ -28,7 +29,7 @@ function formatUserReport(user) {
 }
 
 function formatFieldList(showDesa = false) {
-  return `
+  return appendSubmenuBackInstruction(`
 ✏️ *Pilih field yang ingin diupdate:*
 1. Nama
 2. Pangkat
@@ -38,7 +39,7 @@ function formatFieldList(showDesa = false) {
 6. TikTok${showDesa ? "\n7. Desa Binaan" : ""}
 
 Balas angka field di atas atau *batal* untuk keluar.
-`.trim();
+`.trim());
 }
 
 

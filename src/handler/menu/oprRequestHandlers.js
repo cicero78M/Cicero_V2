@@ -7,6 +7,7 @@ import {
   sortDivisionKeys,
   sortTitleKeys,
 } from "../../utils/utilsHelper.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 function ignore(..._args) {}
 
@@ -130,7 +131,7 @@ async function resolveClientId(session, chatId, pool) {
 }
 
 function formatUpdateFieldList() {
-  return `
+  return appendSubmenuBackInstruction(`
 ✏️ *Pilih field yang ingin diupdate:*
 1. Nama
 2. Pangkat
@@ -141,7 +142,7 @@ function formatUpdateFieldList() {
 7. TikTok
 8. Hapus WhatsApp
 
-Balas angka field di atas atau *batal* untuk keluar.`.trim();
+Balas angka field di atas atau *batal* untuk keluar.`.trim());
 }
 
 async function getOperatorUserIds(userModel, clientId) {
@@ -165,7 +166,7 @@ export const oprRequestHandlers = {
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
     session.step = "chooseMenuGroup";
-    await waClient.sendMessage(chatId, msg);
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
   },
 
   chooseMenuGroup: async (session, chatId, text, waClient, pool, userModel) => {
@@ -187,7 +188,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaUser_menu";
       await waClient.sendMessage(
         chatId,
-        `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -204,7 +207,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_menu";
       await waClient.sendMessage(
         chatId,
-        `*Menu Manajemen Amplifikasi*\n1️⃣ Tugas Amplifikasi\n2️⃣ Laporan Amplifikasi\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen Amplifikasi*\n1️⃣ Tugas Amplifikasi\n2️⃣ Laporan Amplifikasi\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -227,7 +232,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.availableSatfung;
       delete session.updateStatusNRP;
     };
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
@@ -308,7 +313,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   },
 
   kelolaAmplifikasi_menu: async (session, chatId, text, waClient, pool, userModel) => {
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
@@ -322,7 +327,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_tugas";
       await waClient.sendMessage(
         chatId,
-        `*Menu Tugas Amplifikasi*\n1️⃣ Update tugas rutin\n2️⃣ Input tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Menu Tugas Amplifikasi*\n1️⃣ Update tugas rutin\n2️⃣ Input tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -330,7 +337,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_laporan";
       await waClient.sendMessage(
         chatId,
-        `*Menu Laporan Amplifikasi*\n1️⃣ Laporan tugas rutin\n2️⃣ Laporan tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Menu Laporan Amplifikasi*\n1️⃣ Laporan tugas rutin\n2️⃣ Laporan tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -346,7 +355,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.availableSatfung;
       delete session.updateStatusNRP;
     };
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "kelolaAmplifikasi_menu";
       return oprRequestHandlers.kelolaAmplifikasi_menu(
         session,
@@ -393,7 +402,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   },
 
   kelolaAmplifikasi_laporan: async (session, chatId, text, waClient, pool, userModel) => {
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "kelolaAmplifikasi_menu";
       return oprRequestHandlers.kelolaAmplifikasi_menu(
         session,
@@ -414,7 +423,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_laporan_rutin";
       await waClient.sendMessage(
         chatId,
-        `*Laporan Tugas Rutin*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi amplifikasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Laporan Tugas Rutin*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi amplifikasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -422,7 +433,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_laporan_khusus";
       await waClient.sendMessage(
         chatId,
-        `*Laporan Tugas Khusus*\n1️⃣ Rekap link tugas khusus\n2️⃣ Rekap per post khusus\n3️⃣ Absensi amplifikasi khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        appendSubmenuBackInstruction(
+          `*Laporan Tugas Khusus*\n1️⃣ Rekap link tugas khusus\n2️⃣ Rekap per post khusus\n3️⃣ Absensi amplifikasi khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
       );
       return;
     }
@@ -438,7 +451,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.availableSatfung;
       delete session.updateStatusNRP;
     };
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "kelolaAmplifikasi_laporan";
       return oprRequestHandlers.kelolaAmplifikasi_laporan(
         session,
@@ -531,7 +544,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.availableSatfung;
       delete session.updateStatusNRP;
     };
-    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "kelolaAmplifikasi_laporan";
       return oprRequestHandlers.kelolaAmplifikasi_laporan(
         session,
@@ -692,7 +705,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     let msg = "*Pilih Satfung* (ketik nomor atau nama sesuai daftar):\n";
     msg += sorted.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
     session.availableSatfung = sorted;
-    await waClient.sendMessage(chatId, msg);
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
   },
 
   addUser_satfung: async (session, chatId, text, waClient, pool, userModel) => {
@@ -713,13 +726,13 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       } else {
         let msg = "❌ Satfung tidak valid! Pilih sesuai daftar:\n";
         msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
-        await waClient.sendMessage(chatId, msg);
+        await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
         return;
       }
     } else if (!upperList.includes(satfung)) {
       let msg = "❌ Satfung tidak valid! Pilih sesuai daftar:\n";
       msg += satfungList.map((s, i) => ` ${i + 1}. ${s}`).join("\n");
-      await waClient.sendMessage(chatId, msg);
+      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
       return;
     }
     session.addUser.divisi = satfung;
@@ -815,7 +828,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     session.updateStatusRoles = roles;
     delete session.updateStatusRoleChoice;
     session.step = "updateStatus_value";
-    await waClient.sendMessage(chatId, msg);
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
   },
 
   rekapLink: async (session, chatId, text, waClient, pool, userModel) => {
@@ -906,7 +919,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
@@ -1001,7 +1014,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
@@ -1068,7 +1081,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
@@ -1104,7 +1117,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       msg += `${i + 1}. https://www.instagram.com/p/${sc}\n`;
     });
     session.step = "rekapLinkPerPost_action";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   rekapLinkPerPost_action: async (
@@ -1189,7 +1202,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     delete session.rekapShortcodes;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -1226,7 +1239,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       msg += `${i + 1}. https://www.instagram.com/p/${sc}\n`;
     });
     session.step = "rekapLinkKhususPerPost_action";
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
   },
 
   rekapLinkKhususPerPost_action: async (
@@ -1305,7 +1318,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join("\n") || "-"}`;
     msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join("\n") || "-"}`;
     msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join("\n") || "-"}`;
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     delete session.rekapShortcodes;
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -1365,7 +1378,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
           session.step = "updateStatus_chooseRole";
           await waClient.sendMessage(
             chatId,
-            `User memiliki lebih dari satu role. Pilih role yang akan dihapus:\n${choices}\n\nBalas angka atau ketik *batal* untuk keluar.`
+            appendSubmenuBackInstruction(
+              `User memiliki lebih dari satu role. Pilih role yang akan dihapus:\n${choices}\n\nBalas angka atau ketik *batal* untuk keluar.`
+            )
           );
           return;
         }
@@ -1687,7 +1702,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "chooseClient_first_action";
   },
 
@@ -1718,7 +1733,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "rekapLink_chooseClient_action";
   },
 
@@ -1756,7 +1771,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "rekapLinkKemarin_chooseClient_action";
   },
 
@@ -1794,7 +1809,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "rekapLinkPerPost_chooseClient_action";
   },
 
@@ -1832,7 +1847,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "rekapLinkKhusus_chooseClient_action";
   },
 
@@ -1870,7 +1885,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "rekapLinkKhususPerPost_chooseClient_action";
   },
 
@@ -1908,7 +1923,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "updateTugas_chooseClient_action";
   },
 
@@ -1946,7 +1961,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "absensiLink_chooseClient_action";
   },
 
@@ -1984,7 +1999,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "absensiLinkKhusus_chooseClient_action";
   },
 
@@ -2019,7 +2034,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_client_id = clientId;
-    let msg = `Pilih tipe laporan absensi link:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
+    let msg = appendSubmenuBackInstruction(
+      `Pilih tipe laporan absensi link:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`
+    );
     await waClient.sendMessage(chatId, msg);
     session.step = "absensiLink_menu";
   },
@@ -2066,7 +2083,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_client_id = clientId;
-    let msg = `Pilih tipe laporan absensi link khusus:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
+    let msg = appendSubmenuBackInstruction(
+      `Pilih tipe laporan absensi link khusus:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`
+    );
     await waClient.sendMessage(chatId, msg);
     session.step = "absensiLinkKhusus_menu";
   },
@@ -2120,7 +2139,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "absensiReg_chooseClient_action";
   },
 
@@ -2155,7 +2174,9 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     session.absensi_reg_client_id = clientId;
-    let msg = `Pilih tipe laporan absensi registrasi:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`;
+    let msg = appendSubmenuBackInstruction(
+      `Pilih tipe laporan absensi registrasi:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas.`
+    );
     await waClient.sendMessage(chatId, msg);
     session.step = "absensiReg_menu";
   },
@@ -2236,7 +2257,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     clients.forEach((c, i) => {
       msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
     });
-    await waClient.sendMessage(chatId, msg.trim());
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
     session.step = "cekUser_chooseClient_action";
   },
 

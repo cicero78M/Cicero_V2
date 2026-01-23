@@ -64,6 +64,7 @@ import {
 import { syncSatbinmasOfficialTiktokSecUidForOrgClients } from "../../service/satbinmasOfficialTiktokService.js";
 import { generateInstagramAllDataRecap } from "../../service/instagramAllDataRecapService.js";
 import { generateTiktokAllDataRecap } from "../../service/tiktokAllDataRecapService.js";
+import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
@@ -170,19 +171,21 @@ const DIGIT_EMOJI = {
   "9": "9️⃣",
 };
 
-const ENGAGEMENT_RECAP_MENU_TEXT =
+const ENGAGEMENT_RECAP_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih periode rekap ranking engagement jajaran:\n" +
-  Object.entries(ENGAGEMENT_RECAP_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(ENGAGEMENT_RECAP_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
-const KASATKER_REPORT_MENU_TEXT =
+const KASATKER_REPORT_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih periode Laporan Kasatker:\n" +
-  Object.entries(KASATKER_REPORT_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(KASATKER_REPORT_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
 const KASAT_BINMAS_LIKES_PERIOD_MAP = {
   "1": {
@@ -199,19 +202,21 @@ const KASAT_BINMAS_LIKES_PERIOD_MAP = {
   },
 };
 
-const KASAT_BINMAS_LIKES_MENU_TEXT =
+const KASAT_BINMAS_LIKES_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap Absensi Likes Kasat Binmas:\n" +
-  Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
-const KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT =
+const KASAT_BINMAS_LIKES_EXCEL_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap Likes Instagram Kasat Binmas (Excel):\n" +
-  Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(KASAT_BINMAS_LIKES_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
 const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
   "1": {
@@ -228,19 +233,21 @@ const KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP = {
   },
 };
 
-const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT =
+const KASAT_BINMAS_TIKTOK_COMMENT_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap Absensi Komentar TikTok Kasat Binmas:\n" +
-  Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
-const KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT =
+const KASAT_BINMAS_TIKTOK_COMMENT_EXCEL_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap Komentar TikTok Kasat Binmas (Excel):\n" +
-  Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(KASAT_BINMAS_TIKTOK_COMMENT_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
 const SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP = {
   "1": {
@@ -257,19 +264,21 @@ const SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP = {
   },
 };
 
-const SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT =
+const SATBINMAS_OFFICIAL_INSTAGRAM_RECAP_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap Instagram Satbinmas Official:\n" +
-  Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
-const SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT =
+const SATBINMAS_OFFICIAL_TIKTOK_RECAP_MENU_TEXT = appendSubmenuBackInstruction(
   "Silakan pilih rekap TikTok Satbinmas Official:\n" +
-  Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
-    .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
-    .join("\n") +
-  "\n\nBalas angka pilihan atau ketik *batal* untuk kembali.";
+    Object.entries(SATBINMAS_OFFICIAL_RECAP_PERIOD_MAP)
+      .map(([key, option]) => `${DIGIT_EMOJI[key] || key} ${option.description}`)
+      .join("\n") +
+    "\n\nBalas angka pilihan atau ketik *batal* untuk kembali."
+);
 
 const SATBINMAS_OFFICIAL_METADATA_PROMPT = (clientId) =>
   "🔎 *Monitoring Satbinmas Official*\n" +
@@ -3172,7 +3181,12 @@ export const dirRequestHandlers = {
     }
 
     const normalizedInput = input.toLowerCase();
-    if (normalizedInput === "batal" || normalizedInput === "menu" || input === "0") {
+    if (
+      normalizedInput === "batal" ||
+      normalizedInput === "menu" ||
+      normalizedInput === "back" ||
+      input === "0"
+    ) {
       await waClient.sendMessage(
         chatId,
         "✅ Menu rekap Instagram Satbinmas Official ditutup."
@@ -3214,7 +3228,12 @@ export const dirRequestHandlers = {
     }
 
     const normalizedInput = input.toLowerCase();
-    if (normalizedInput === "batal" || normalizedInput === "menu" || input === "0") {
+    if (
+      normalizedInput === "batal" ||
+      normalizedInput === "menu" ||
+      normalizedInput === "back" ||
+      input === "0"
+    ) {
       await waClient.sendMessage(chatId, "✅ Menu rekap TikTok Satbinmas Official ditutup.");
       session.step = "main";
       await dirRequestHandlers.main(session, chatId, "", waClient);

@@ -175,6 +175,8 @@ dirrequest tanpa langkah tambahan.
 - Semua submenu dirrequest (rekap, absensi, monitoring Satbinmas Official,
   dan lainnya) dijalankan berdasarkan *Client ID* yang dipilih sehingga tidak
   selalu bergantung pada default `DITBINMAS`.
+- Instruksi di setiap submenu kini menambahkan opsi `back` untuk kembali ke
+  menu sebelumnya, sehingga navigasi submenu menjadi seragam.
 - Seluruh menu pada kelompok **Absensi** (opsi 5–11) menggunakan *Client ID*
   pilihan operator untuk rekap dan narasi, termasuk nama direktorat/klien yang
   ditampilkan pada pesan hasil.
