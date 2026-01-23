@@ -203,6 +203,18 @@ dirrequest tanpa langkah tambahan.
   mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
   kembali ke menu tanpa menampilkan pesan kosong.
 
+## Rekap Komentar TikTok (Excel) (Menu 2️⃣0️⃣)
+- Menu **2️⃣0️⃣** menyiapkan rekap komentar TikTok dalam format Excel berdasarkan
+  data `collectKomentarRecap` untuk *Client ID* yang aktif.
+- Jika pengambilan data komentar gagal/throw, bot mengirim pesan error yang
+  menjelaskan bahwa pengambilan data rekap gagal lalu menghentikan eksekusi
+  menu tanpa mencoba membuat file.
+- Jika pembuatan file Excel, pembacaan berkas, atau pengiriman ke WhatsApp
+  gagal, bot mengirim pesan kegagalan yang jelas agar operator tahu file tidak
+  berhasil dikirim.
+- File sementara yang berhasil dibuat tetap dibersihkan di blok `finally`
+  sehingga tidak tertinggal di storage meskipun terjadi error.
+
 ## Laporan Harian Ditbinmas (Menu 2️⃣1️⃣)
 - Menu **2️⃣1️⃣** mengirim ringkasan gabungan Instagram dan TikTok untuk
   *Client ID* yang dipilih. Narasi utama disusun lewat
