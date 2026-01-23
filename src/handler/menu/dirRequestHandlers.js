@@ -27,7 +27,7 @@ import { absensiRegistrasiDashboardDirektorat } from "../fetchabsensi/dashboard/
 import { findClientById } from "../../service/clientService.js";
 import { getGreeting, sortDivisionKeys, formatNama } from "../../utils/utilsHelper.js";
 import { sendWAFile, safeSendMessage, sendWithClientFallback } from "../../utils/waHelper.js";
-import { writeFile, mkdir, readFile, unlink } from "fs/promises";
+import { writeFile, mkdir, readFile, unlink, stat } from "fs/promises";
 import { join, basename } from "path";
 import {
   saveLikesRecapExcel,
@@ -1929,20 +1929,59 @@ async function performAction(
         return;
       }
       case "19": {
-        const data = await collectLikesRecap(clientId);
-        if (typeof data === "string") {
-          msg = data;
-          break;
+        let filePath;
+        try {
+          const data = await collectLikesRecap(clientId);
+          if (typeof data === "string") {
+            msg = data;
+            break;
+          }
+          if (!data.shortcodes.length) {
+            msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
+            break;
+          }
+          try {
+            filePath = await saveLikesRecapExcel(data, clientId);
+          } catch (error) {
+            console.error("Gagal membuat rekap likes Instagram (Excel):", error);
+            msg =
+              "❌ Gagal membuat rekap likes Instagram (Excel). Workbook kosong atau data tidak valid.";
+            break;
+          }
+          let buffer;
+          try {
+            buffer = await readFile(filePath);
+          } catch (error) {
+            console.error("Gagal membaca file rekap likes Instagram (Excel):", error);
+            msg = "❌ Gagal membaca file rekap likes Instagram (Excel).";
+            break;
+          }
+          try {
+            await sendWAFile(
+              waClient,
+              buffer,
+              basename(filePath),
+              chatId,
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+            msg = "✅ File Excel dikirim.";
+          } catch (error) {
+            console.error("Gagal mengirim rekap likes Instagram (Excel):", error);
+            msg =
+              "❌ Gagal mengirim rekap likes Instagram (Excel). Silakan coba lagi.";
+          }
+        } finally {
+          if (filePath) {
+            try {
+              await stat(filePath);
+              await unlink(filePath);
+            } catch (error) {
+              if (error?.code !== "ENOENT") {
+                console.error("Gagal menghapus file sementara:", error);
+              }
+            }
+          }
         }
-        if (!data.shortcodes.length) {
-          msg = `Tidak ada konten IG untuk *${clientId}* hari ini.`;
-          break;
-        }
-        const filePath = await saveLikesRecapExcel(data, clientId);
-        const buffer = await readFile(filePath);
-        await sendWAFile(waClient, buffer, basename(filePath), chatId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        await unlink(filePath);
-        msg = "✅ File Excel dikirim.";
         break;
       }
       case "20": {
