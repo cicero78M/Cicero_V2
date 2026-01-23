@@ -1,22 +1,23 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-09-27*
+*Last updated: 2026-01-23*
 
-Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client dengan role **operator** yang dapat mengakses menu ini, dan seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**.
+Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator dan super admin client yang terdaftar pada data client yang dapat mengakses menu ini, serta seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**. Nomor Admin WhatsApp (`ADMIN_WHATSAPP`) dapat masuk ke menu operator dengan memilih client bertipe **org** terlebih dahulu.
 Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
-2. Bot menampilkan pilihan utama:
+2. Jika nomor Anda adalah Admin WhatsApp, bot menampilkan daftar client bertipe **org**. Pilih client dengan membalas nomor atau `client_id` untuk melanjutkan.
+3. Jika nomor Anda terdaftar sebagai operator/super admin client, bot langsung menampilkan pilihan utama:
    - 1️⃣ Manajemen User
    - 2️⃣ Manajemen Amplifikasi
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
-3. Di dalam *Manajemen User*, menu yang tersedia:
+4. Di dalam *Manajemen User*, menu yang tersedia:
    - 1️⃣ Tambah user baru
    - 2️⃣ Perbarui data user
    - 3️⃣ Ubah status user (aktif/nonaktif)
    - 4️⃣ Cek data user berdasarkan NRP/NIP
    - 5️⃣ Absensi registrasi user
-4. Di dalam *Manajemen Amplifikasi*, terdapat dua kelompok:
+5. Di dalam *Manajemen Amplifikasi*, terdapat dua kelompok:
    - **Tugas**
      - 1️⃣ Update tugas rutin
      - 2️⃣ Input tugas khusus

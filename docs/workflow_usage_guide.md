@@ -1,5 +1,5 @@
 # Panduan Lengkap Penggunaan Cicero_V2
-*Last updated: 2025-07-10*
+*Last updated: 2026-01-23*
 
 Dokumen ini menjelaskan alur fungsi utama dan langkah penggunaan aplikasi **Cicero_V2**. Backend ini berjalan bersama dashboard Next.js (lihat repository `Cicero_Web`).
 
@@ -31,7 +31,7 @@ Server Express akan aktif di port yang ditentukan dan memuat semua route API ser
 ## 4. Fitur WhatsApp Bot
 
 Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
-- `oprrequest` → mengelola data user dan rekap link harian. Detail pada `docs/wa_operator_request.md`.
+- `oprrequest` → mengelola data user dan rekap link harian. Admin WhatsApp wajib memilih client bertipe **org** sebelum masuk menu operator. Detail pada `docs/wa_operator_request.md`.
 - `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
 - *Bulk Penghapusan Status User* menggunakan format pesan
   `Permohonan Penghapusan Data Personil – <SATKER>` yang berisi daftar ber-

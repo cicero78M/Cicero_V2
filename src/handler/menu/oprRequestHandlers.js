@@ -13,7 +13,7 @@ function ignore(..._args) {}
 
 const OPERATOR_ROLE = "operator";
 
-function normalizeOperatorNumbers(rawNumber) {
+function normalizeAccessNumbers(rawNumber) {
   const digitsOnly = String(rawNumber || "").replace(/\D/g, "");
   if (!digitsOnly) return [];
 
@@ -33,6 +33,10 @@ function normalizeOperatorNumbers(rawNumber) {
   return Array.from(variants);
 }
 
+function buildSuperAdminPatterns(numbers) {
+  return numbers.map((number) => `(^|\\D)${number}(\\D|$)`);
+}
+
 async function resolveClientProfile(session, chatId, pool) {
   if (session.selected_client_id) {
     const { rows } = await pool.query(
@@ -42,11 +46,19 @@ async function resolveClientProfile(session, chatId, pool) {
     return rows[0] || null;
   }
 
-  const candidates = normalizeOperatorNumbers(chatId);
+  const candidates = normalizeAccessNumbers(chatId);
   if (candidates.length) {
     const { rows } = await pool.query(
-      "SELECT * FROM clients WHERE client_operator = ANY($1::text[]) LIMIT 1",
-      [candidates]
+      `SELECT *
+       FROM clients
+       WHERE client_operator = ANY($1::text[])
+          OR (
+            client_super IS NOT NULL
+            AND client_super <> ''
+            AND client_super ~ ANY($2::text[])
+          )
+       LIMIT 1`,
+      [candidates, buildSuperAdminPatterns(candidates)]
     );
     if (rows[0]) {
       session.selected_client_id = rows[0].client_id;
@@ -108,15 +120,23 @@ async function resolveClientId(session, chatId, pool) {
     return session.selected_client_id;
   }
 
-  const candidates = normalizeOperatorNumbers(chatId);
+  const candidates = normalizeAccessNumbers(chatId);
   if (!candidates.length) {
     return null;
   }
 
   try {
     const { rows } = await pool.query(
-      "SELECT client_id FROM clients WHERE client_operator = ANY($1::text[]) LIMIT 1",
-      [candidates]
+      `SELECT client_id
+       FROM clients
+       WHERE client_operator = ANY($1::text[])
+          OR (
+            client_super IS NOT NULL
+            AND client_super <> ''
+            AND client_super ~ ANY($2::text[])
+          )
+       LIMIT 1`,
+      [candidates, buildSuperAdminPatterns(candidates)]
     );
     const clientId = rows[0]?.client_id;
     if (clientId) {
@@ -145,6 +165,18 @@ function formatUpdateFieldList() {
 Balas angka field di atas atau *batal* untuk keluar.`.trim());
 }
 
+function formatClientSelectionMessage(clients) {
+  const items = clients
+    .map((client, index) => {
+      const label = client.nama ? `${client.client_id} - ${client.nama}` : client.client_id;
+      return `${index + 1}. ${label}`;
+    })
+    .join("\n");
+  return appendSubmenuBackInstruction(
+    `*Pilih client (tipe Org) untuk Menu Operator:*\n${items}\n\nBalas *nomor* atau *client_id* untuk melanjutkan, atau *batal* untuk keluar.`
+  );
+}
+
 async function getOperatorUserIds(userModel, clientId) {
   const operators = await userModel.getUsersByClient(clientId, OPERATOR_ROLE);
   return new Set(operators.map((operator) => operator.user_id));
@@ -167,6 +199,67 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
     session.step = "chooseMenuGroup";
     await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
+  },
+
+  choose_client: async (session, chatId, text, waClient, pool, userModel) => {
+    const clients = Array.isArray(session.opr_clients) ? session.opr_clients : [];
+    const trimmedText = (text || "").trim();
+
+    if (!clients.length) {
+      delete session.opr_clients;
+      session.step = "main";
+      await waClient.sendMessage(
+        chatId,
+        "❌ Tidak ada client Org yang dapat dipilih untuk menu operator."
+      );
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+
+    if (!trimmedText || /^(menu|kembali|back|0)$/i.test(trimmedText)) {
+      await waClient.sendMessage(chatId, formatClientSelectionMessage(clients));
+      return;
+    }
+
+    if (/^(batal|cancel|exit)$/i.test(trimmedText)) {
+      session.menu = null;
+      session.step = null;
+      delete session.opr_clients;
+      delete session.selected_client_id;
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+
+    let selectedClient = null;
+    if (/^\d+$/.test(trimmedText)) {
+      const index = Number.parseInt(trimmedText, 10);
+      if (index >= 1 && index <= clients.length) {
+        selectedClient = clients[index - 1];
+      }
+    }
+
+    if (!selectedClient) {
+      selectedClient = clients.find(
+        (client) =>
+          String(client.client_id || "").toLowerCase() === trimmedText.toLowerCase()
+      );
+    }
+
+    if (!selectedClient) {
+      await waClient.sendMessage(
+        chatId,
+        "❌ Pilihan client tidak valid. Balas nomor atau client_id yang tersedia."
+      );
+      return;
+    }
+
+    session.selected_client_id = selectedClient.client_id;
+    delete session.opr_clients;
+    session.step = "main";
+    await waClient.sendMessage(
+      chatId,
+      `✅ Client ${selectedClient.client_id} dipilih.`
+    );
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   chooseMenuGroup: async (session, chatId, text, waClient, pool, userModel) => {
