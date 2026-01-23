@@ -842,11 +842,36 @@ function resetHardInitRetryCount(client) {
   }
 }
 
+function hasChromeExecutable(client) {
+  const executablePath =
+    typeof client?.getPuppeteerExecutablePath === "function"
+      ? client.getPuppeteerExecutablePath()
+      : client?.puppeteerExecutablePath;
+  if (!executablePath) {
+    return false;
+  }
+  try {
+    fs.accessSync(executablePath, fs.constants.X_OK);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
 function isFatalMissingChrome(client, err) {
-  return (
+  const hasMissingChromeError =
     err?.isMissingChromeError === true ||
-    client?.fatalInitError?.type === "missing-chrome"
-  );
+    client?.fatalInitError?.type === "missing-chrome";
+  if (!hasMissingChromeError) {
+    return false;
+  }
+  if (hasChromeExecutable(client)) {
+    if (client?.fatalInitError?.type === "missing-chrome") {
+      client.fatalInitError = null;
+    }
+    return false;
+  }
+  return true;
 }
 
 const missingChromeRemediationHint =

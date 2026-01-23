@@ -374,7 +374,9 @@ Interpretasi cepat:
 - Jika terdeteksi missing Chrome (`fatalInitError.type=missing-chrome`), helper
   akan langsung reject sebelum timer berjalan dengan error "WhatsApp client not ready:
   missing Chrome executable" beserta konteks readiness di atas agar leak resolver
-  bisa dihindari.
+  bisa dihindari. Deteksi ini kini memverifikasi executable path terlebih dulu; jika
+  path ternyata bisa diakses, `fatalInitError` akan di-clear agar retry/inisialisasi
+  tetap berjalan.
 
 ## Deferral pesan gateway sebelum ready
 
@@ -446,7 +448,8 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Jika Chrome sudah terpasang atau path cache diubah, set `WA_PUPPETEER_EXECUTABLE_PATH`
      (prioritas) atau `PUPPETEER_EXECUTABLE_PATH`, dan/atau `PUPPETEER_CACHE_DIR`.
    - Contoh log yang sering muncul: `Error: Could not find Chrome (ver. 121.0.6167.85)` atau `Error: Could not find browser executable`.
-   - Inisialisasi akan menganggap error ini sebagai fatal dan **melewati retry otomatis** sampai Chrome tersedia.
+   - Inisialisasi akan menganggap error ini sebagai fatal dan **melewati retry otomatis** sampai Chrome tersedia, tetapi hanya setelah path executable diverifikasi tidak tersedia/invalid.
+   - Jika executable path valid, error dianggap misleading, `fatalInitError` di-clear, dan retry/inisialisasi tetap berjalan.
    - Error readiness terkait Chrome kini menyertakan hint: “Set `WA_PUPPETEER_EXECUTABLE_PATH` atau jalankan `npx puppeteer browsers install chrome`”.
 
 4. **Stuck setelah authenticated**

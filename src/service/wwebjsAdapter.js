@@ -63,6 +63,18 @@ function resolvePuppeteerExecutablePath() {
   return configuredPath || null;
 }
 
+async function isExecutableAccessible(executablePath) {
+  if (!executablePath) {
+    return false;
+  }
+  try {
+    await fs.promises.access(executablePath, fs.constants.X_OK);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
 function resolveBrowserLockBackoffMs() {
   const configured = Number.parseInt(
     process.env.WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS || '',
@@ -849,20 +861,31 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       lockActiveFailureCount = 0;
     } catch (err) {
       if (isMissingChromeError(err)) {
-        const taggedError =
-          err instanceof Error ? err : new Error(err?.message || String(err));
-        taggedError.isMissingChromeError = true;
-        emitter.fatalInitError = {
-          type: 'missing-chrome',
-          error: taggedError,
-        };
-        console.error(
-          `[WWEBJS] Chrome executable not found for clientId=${clientId} (${triggerLabel}). ` +
-            'Set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome" ' +
-            'to populate the Puppeteer cache.',
+        const executableAccessible = await isExecutableAccessible(
+          puppeteerExecutablePath
+        );
+        if (!executableAccessible) {
+          const taggedError =
+            err instanceof Error ? err : new Error(err?.message || String(err));
+          taggedError.isMissingChromeError = true;
+          emitter.fatalInitError = {
+            type: 'missing-chrome',
+            error: taggedError,
+          };
+          console.error(
+            `[WWEBJS] Chrome executable not found for clientId=${clientId} (${triggerLabel}). ` +
+              'Set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome" ' +
+              'to populate the Puppeteer cache.',
+            err?.message || err
+          );
+          throw taggedError;
+        }
+        console.warn(
+          `[WWEBJS] Missing Chrome error reported for clientId=${clientId} (${triggerLabel}) ` +
+            `but executablePath is accessible at ${puppeteerExecutablePath}. ` +
+            'Continuing initialization without marking fatalInitError.',
           err?.message || err
         );
-        throw taggedError;
       }
       if (isBrowserAlreadyRunningError(err)) {
         await recoverFromBrowserAlreadyRunning(triggerLabel, err);
@@ -1244,6 +1267,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.clientId = clientId;
   emitter.sessionPath = resolveSessionPath();
   emitter.getSessionPath = () => resolveSessionPath();
+  emitter.puppeteerExecutablePath = puppeteerExecutablePath;
+  emitter.getPuppeteerExecutablePath = () => puppeteerExecutablePath;
 
   return emitter;
 }
