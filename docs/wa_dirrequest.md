@@ -203,6 +203,24 @@ dirrequest tanpa langkah tambahan.
   mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
   kembali ke menu tanpa menampilkan pesan kosong.
 
+## Laporan Harian Ditbinmas (Menu 2️⃣1️⃣)
+- Menu **2️⃣1️⃣** mengirim ringkasan gabungan Instagram dan TikTok untuk
+  *Client ID* yang dipilih. Narasi utama disusun lewat
+  `formatRekapAllSosmed` berdasarkan hasil `lapharDitbinmas` dan
+  `lapharTiktokDitbinmas`, termasuk data ranking jika tersedia.
+- Jika laporan teks (`.txt`) tersedia, bot menyimpan sementara berkas di
+  folder `laphar`, mengirimkannya ke WhatsApp, lalu menghapus file temp
+  setelah proses selesai.
+- Rekap Excel likes Instagram hanya dibuat ketika `collectLikesRecap`
+  mengembalikan data valid berisi `shortcodes`. Jika helper tersebut
+  mengembalikan pesan string (misalnya karena data kosong), bot mengirim
+  pesan tersebut dan melewati pembuatan file Excel.
+- Rekap Excel komentar TikTok dibuat setelah `collectKomentarRecap` sukses
+  mengembalikan `videoIds`. Jika terjadi error saat koleksi data, bot
+  mengirim pesan kegagalan dan tidak melanjutkan proses file.
+- Seluruh file sementara (teks maupun Excel) dibersihkan di blok `finally`
+  untuk mencegah file temp tertinggal.
+
 ## Monitoring Kasatker – Rekap Likes IG Kasat Binmas (Excel)
 - Blok Monitoring Kasatker kini menambahkan entri **4️⃣4️⃣ Rekap likes Instagram
   Kasat Binmas (Excel)**. Opsi ini berjalan berdampingan dengan menu absensi
