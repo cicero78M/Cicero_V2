@@ -35,6 +35,7 @@ Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_t
 - **Menu** dipakai untuk level utama (contoh: *Menu Manajemen User*, *Menu Laporan Amplifikasi*).
 - **Submenu** dipakai untuk kelompok di bawahnya, misalnya *Laporan Tugas Rutin* dan *Laporan Tugas Khusus*.
 - Setiap judul memakai format Title Case, sementara instruksi selalu menyebutkan cara kembali (contoh: ketik *menu* untuk kembali).
+- Semua submenu kini menambahkan instruksi **ketik back** untuk kembali ke menu sebelumnya agar navigasi konsisten.
 
 ## Alur Singkat Setiap Menu
 - **Tambah User Baru**
