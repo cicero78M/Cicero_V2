@@ -14,6 +14,8 @@ const DEFAULT_BROWSER_LOCK_BACKOFF_MS = 20000;
 const DEFAULT_ACTIVE_BROWSER_LOCK_BACKOFF_MULTIPLIER = 3;
 const MIN_ACTIVE_BROWSER_LOCK_BACKOFF_MS = 30000;
 const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS = 120000;
+const DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MAX_MS = 300000;
+const DEFAULT_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER = 1.5;
 const DEFAULT_CONNECT_TIMEOUT_MS = 180000;
 const DEFAULT_CONNECT_RETRY_ATTEMPTS = 3;
 const DEFAULT_CONNECT_RETRY_BACKOFF_MS = 5000;
@@ -233,6 +235,26 @@ function resolvePuppeteerProtocolTimeoutConfig(clientId) {
     timeoutMs: DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MS,
     envVarName: PROTOCOL_TIMEOUT_ENV_VAR_BASE,
   };
+}
+
+function resolveProtocolTimeoutMaxMs() {
+  const configured = parseTimeoutEnvValue(
+    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_MAX_MS
+  );
+  if (configured === null) {
+    return DEFAULT_PUPPETEER_PROTOCOL_TIMEOUT_MAX_MS;
+  }
+  return Math.max(configured, 0);
+}
+
+function resolveProtocolTimeoutBackoffMultiplier() {
+  const configured = Number.parseFloat(
+    process.env.WA_WWEBJS_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER || ''
+  );
+  if (Number.isNaN(configured)) {
+    return DEFAULT_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER;
+  }
+  return Math.max(configured, 1);
 }
 
 function resolveConnectTimeoutMs() {
@@ -657,8 +679,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
   const puppeteerProtocolTimeoutConfig =
     resolvePuppeteerProtocolTimeoutConfig(clientId);
-  const puppeteerProtocolTimeoutMs = puppeteerProtocolTimeoutConfig.timeoutMs;
+  let puppeteerProtocolTimeoutMs = puppeteerProtocolTimeoutConfig.timeoutMs;
   const protocolTimeoutEnvVarName = puppeteerProtocolTimeoutConfig.envVarName;
+  const protocolTimeoutMaxMs = resolveProtocolTimeoutMaxMs();
+  const protocolTimeoutBackoffMultiplier =
+    resolveProtocolTimeoutBackoffMultiplier();
   const connectRetryAttempts = resolveConnectRetryAttempts();
   const connectRetryBackoffMs = resolveConnectRetryBackoffMs();
   const connectRetryBackoffMultiplier = resolveConnectRetryBackoffMultiplier();
@@ -675,6 +700,44 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     },
     ...webVersionOptions,
   });
+
+  const applyProtocolTimeout = (nextTimeoutMs, reasonLabel) => {
+    const normalizedTimeoutMs = Math.max(Number(nextTimeoutMs) || 0, 0);
+    if (!client.options.puppeteer) {
+      client.options.puppeteer = {};
+    }
+    client.options.puppeteer.protocolTimeout = normalizedTimeoutMs;
+    puppeteerProtocolTimeoutMs = normalizedTimeoutMs;
+    console.warn(
+      `[WWEBJS] Updated protocolTimeout to ${normalizedTimeoutMs}ms for clientId=${clientId}` +
+        `${reasonLabel ? ` (${reasonLabel})` : ''}.`
+    );
+  };
+
+  const maybeIncreaseProtocolTimeout = (triggerLabel, err) => {
+    if (!isRuntimeCallTimeout(err)) {
+      return false;
+    }
+    const resolvedMaxMs = Math.max(protocolTimeoutMaxMs, puppeteerProtocolTimeoutMs);
+    if (puppeteerProtocolTimeoutMs >= resolvedMaxMs) {
+      console.warn(
+        `[WWEBJS] Runtime.callFunctionOn timed out for clientId=${clientId} (${triggerLabel}), ` +
+          `but protocolTimeout is already at ${puppeteerProtocolTimeoutMs}ms (max ${resolvedMaxMs}ms). ` +
+          `Protocol timeout env var: ${protocolTimeoutEnvVarName}.`
+      );
+      return false;
+    }
+    const scaledTimeoutMs = Math.round(
+      puppeteerProtocolTimeoutMs * protocolTimeoutBackoffMultiplier
+    );
+    const incrementedTimeoutMs = Math.max(puppeteerProtocolTimeoutMs + 10000, scaledTimeoutMs);
+    const nextTimeoutMs = Math.min(incrementedTimeoutMs, resolvedMaxMs);
+    applyProtocolTimeout(
+      nextTimeoutMs,
+      `${triggerLabel}: Runtime.callFunctionOn timeout`
+    );
+    return true;
+  };
 
   const applyWebVersionFallback = () => {
     client.options.webVersionCache = { type: 'none' };
@@ -916,6 +979,21 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
             retryErr?.message || retryErr
           );
           throw retryErr;
+        }
+      }
+      if (isRuntimeCallTimeout(err)) {
+        const didIncrease = maybeIncreaseProtocolTimeout(triggerLabel, err);
+        if (didIncrease) {
+          try {
+            await client.initialize();
+            return;
+          } catch (retryErr) {
+            console.error(
+              `[WWEBJS] initialize retry failed after protocolTimeout bump for clientId=${clientId} (${triggerLabel}):`,
+              retryErr?.message || retryErr
+            );
+            throw retryErr;
+          }
         }
       }
       console.error(
