@@ -24,8 +24,10 @@ export async function absensiRegistrasiWa(client_id, opts = {}) {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const { nama: clientNama, clientType } = await getClientInfo(client_id);
-  const users =
-    clientType === "org"
+  const roleFlag = opts.roleFlag?.toLowerCase() === "operator" ? "operator" : null;
+  const users = roleFlag
+    ? await getOperatorsByClient(client_id)
+    : clientType === "org"
       ? await getOperatorsByClient(client_id)
       : await getUsersWithWaByClient(client_id);
 

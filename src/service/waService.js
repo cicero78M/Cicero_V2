@@ -20,7 +20,7 @@ import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import * as satbinmasOfficialAccountService from "./satbinmasOfficialAccountService.js";
-import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
+import { findByOperator } from "../model/clientModel.js";
 import * as premiumService from "./premiumService.js";
 import * as premiumReqModel from "../model/premiumRequestModel.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
@@ -1918,7 +1918,7 @@ export function createHandleMessage(waClient, options = {}) {
           menuName: "oprrequest",
           session: getSession(chatId),
           chatId,
-          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Kelola User\n2️⃣ Kelola Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Akses khusus operator client.\n\n1️⃣ Manajemen User\n2️⃣ Manajemen Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
           clientLabel,
           args: [pool, userModel],
@@ -1990,11 +1990,10 @@ export function createHandleMessage(waClient, options = {}) {
           ? userWaNum
           : "62" + userWaNum.replace(/^0/, "");
         const operator = await findByOperator(waId);
-        const superAdmin = await findBySuperAdmin(waId);
-        if (!operator && !superAdmin && !isAdmin) {
+        if (!operator) {
           await waClient.sendMessage(
             chatId,
-            "❌ Nomor Anda bukan operator atau super admin yang terdaftar."
+            "❌ Nomor Anda tidak terdaftar sebagai operator."
           );
           return;
         }
@@ -2004,7 +2003,7 @@ export function createHandleMessage(waClient, options = {}) {
           menuName: "oprrequest",
           session: getSession(chatId),
           chatId,
-          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Hanya untuk operator client.\n\n1️⃣ Kelola User\n2️⃣ Kelola Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
+          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Akses khusus operator client.\n\n1️⃣ Manajemen User\n2️⃣ Manajemen Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
           clientLabel,
           args: [pool, userModel],
@@ -2121,11 +2120,10 @@ export function createHandleMessage(waClient, options = {}) {
     const waId =
       userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
     const operator = await findByOperator(waId);
-    const superAdmin = await findBySuperAdmin(waId);
-    if (!operator && !superAdmin && !isAdmin) {
+    if (!operator) {
       await waClient.sendMessage(
         chatId,
-        "❌ Menu ini hanya dapat diakses oleh operator atau super admin yang terdaftar."
+        "❌ Menu ini hanya dapat diakses oleh operator yang terdaftar."
       );
       return;
     }
@@ -2136,10 +2134,10 @@ export function createHandleMessage(waClient, options = {}) {
       session: getSession(chatId),
       chatId,
     text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓
-👮‍♂️  Hanya untuk operator client.
+👮‍♂️  Akses khusus operator client.
 
-1️⃣ Kelola User
-2️⃣ Kelola Amplifikasi
+1️⃣ Manajemen User
+2️⃣ Manajemen Amplifikasi
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
@@ -3915,16 +3913,6 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     const res = await query(q, [waId]);
     if (res.rows && res.rows[0]) {
       operatorRow = res.rows[0];
-    } else {
-      const superAdminRow = await findBySuperAdmin(waId);
-      if (superAdminRow) {
-        operatorRow = {
-          client_id: superAdminRow.client_id,
-          nama: superAdminRow.nama,
-          client_operator: superAdminRow.client_super,
-          client_super: superAdminRow.client_super,
-        };
-      }
     }
     if (operatorRow) {
       const operatorContact =
