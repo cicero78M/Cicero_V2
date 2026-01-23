@@ -77,6 +77,7 @@ Holds users belonging to a client.
 - `user_id` – primary key (NRP/NIP string)
 - `nama`, `title`, `divisi` – user info fields
 - `insta`, `tiktok` – social media handles
+- `whatsapp` – digits-only contact number normalized to the `62` prefix (min 8 digits, no `@c.us` suffix stored)
 - `desa` – desa binaan for Ditbinmas users
 - `email` – optional, validated during OTP flows
 - `client_id` – foreign key referencing `clients(client_id)`
@@ -112,7 +113,7 @@ Credentials for the web dashboard login.
 - `password_hash` – bcrypt hashed password
 - `role_id` – foreign key referencing `roles(role_id)`
 - `status` – boolean indicating whether the account is active
-- `whatsapp` – contact number used for notifications
+- `whatsapp` – digits-only contact number normalized to the `62` prefix (min 8 digits, no `@c.us` suffix stored)
 - `created_at`, `updated_at` – timestamps
 - legacy `user_id` references have been removed; `dashboard_user_id` is the sole
   identifier for dashboard flows.

@@ -3,6 +3,7 @@
 import { query } from '../repository/db.js';
 import { PRIORITY_USER_NAMES } from '../utils/constants.js';
 import { normalizeEmail, normalizeUserId } from '../utils/utilsHelper.js';
+import { minPhoneDigitLength, normalizeWhatsappNumber } from '../utils/waHelper.js';
 
 const NAME_PRIORITY_DEFAULT = PRIORITY_USER_NAMES.length + 1;
 export const STATIC_DIVISIONS = [
@@ -115,6 +116,15 @@ function normalizeUserFields(data) {
       data[key] = data[key].toUpperCase();
     }
   }
+}
+
+function normalizeWhatsappField(value) {
+  if (value == null || value === '') return '';
+  const normalized = normalizeWhatsappNumber(value);
+  if (normalized && normalized.length < minPhoneDigitLength) {
+    throw new Error('whatsapp tidak valid');
+  }
+  return normalized;
 }
 
 // Bangun klausa filter client dengan mempertimbangkan tipe client
@@ -468,6 +478,9 @@ export async function updateUserField(user_id, field, value) {
   if (["nama", "title", "divisi", "jabatan", "desa"].includes(field) && typeof value === 'string') {
     value = value.toUpperCase();
   }
+  if (field === 'whatsapp') {
+    value = normalizeWhatsappField(value);
+  }
   if (roleFields.includes(field)) {
     if (value) await addRole(uid, field);
     else await removeRole(uid, field);
@@ -674,7 +687,7 @@ export async function createUser(userData) {
     userData.jabatan,
     userData.desa,
     userData.status ?? true, // default true
-    userData.whatsapp || "",
+    normalizeWhatsappField(userData.whatsapp),
     userData.insta || "",
     userData.tiktok || "",
     userData.client_id || null,
