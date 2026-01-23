@@ -1946,23 +1946,42 @@ async function performAction(
         break;
       }
       case "20": {
-        const recapData = await collectKomentarRecap(clientId);
-        if (!recapData?.videoIds?.length) {
-          msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
-          break;
+        let filePath;
+        try {
+          const recapData = await collectKomentarRecap(clientId);
+          if (!recapData?.videoIds?.length) {
+            msg = `Tidak ada konten TikTok untuk *${clientId}* hari ini.`;
+            break;
+          }
+          try {
+            filePath = await saveCommentRecapExcel(recapData, clientId);
+            const buffer = await readFile(filePath);
+            await sendWAFile(
+              waClient,
+              buffer,
+              basename(filePath),
+              chatId,
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+            msg = "✅ File Excel dikirim.";
+          } catch (error) {
+            console.error("Gagal mengirim rekap komentar TikTok (Excel):", error);
+            msg =
+              "❌ Gagal mengirim rekap komentar TikTok (Excel). Silakan coba lagi.";
+          }
+        } catch (error) {
+          console.error("Gagal menyiapkan rekap komentar TikTok:", error);
+          msg =
+            "❌ Gagal mengambil data komentar TikTok untuk rekap. Silakan coba lagi.";
+        } finally {
+          if (filePath) {
+            try {
+              await unlink(filePath);
+            } catch (err) {
+              console.error("Gagal menghapus file sementara:", err);
+            }
+          }
         }
-        const filePath = await saveCommentRecapExcel(recapData, clientId);
-
-        const buffer = await readFile(filePath);
-        await sendWAFile(
-          waClient,
-          buffer,
-          basename(filePath),
-          chatId,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-        await unlink(filePath);
-        msg = "✅ File Excel dikirim.";
         break;
       }
       case "21": {
