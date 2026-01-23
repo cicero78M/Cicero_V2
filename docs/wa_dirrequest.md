@@ -425,8 +425,8 @@ berpindah ke dashboard web atau menjalankan skrip manual.
 
 ## Automasi Cron Ditbinmas Group Recap
 - Cron `cronDirRequestDitbinmasGroupRecap.js` berjalan setiap hari pukul
-  **15:20** dan **18:20 WIB** untuk menjalankan menu **2️⃣1️⃣**, **1️⃣9️⃣**,
-  **2️⃣0️⃣**, dan **2️⃣2️⃣** dengan pilihan periode **hari ini**.
+  **15:10** dan **18:14 WIB** untuk menjalankan menu **2️⃣1️⃣** dan **2️⃣2️⃣**
+  dengan pilihan periode **hari ini**.
 - Pengiriman hanya ke Group WhatsApp Ditbinmas (`client_group`). Super Admin,
   Operator, maupun admin WhatsApp lain tidak menjadi target penerima.
 - Menu **2️⃣2️⃣** memakai rekap ranking engagement periode *today* sehingga file
