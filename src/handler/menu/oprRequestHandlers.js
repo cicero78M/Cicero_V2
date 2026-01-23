@@ -187,7 +187,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaUser_menu";
       await waClient.sendMessage(
         chatId,
-        `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -285,9 +285,25 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
+    if (/^5$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "absensiReg_chooseClient";
+        return oprRequestHandlers.absensiReg_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "absensiReg_submenu";
+      session.absensi_reg_client_id = null;
+      return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
+    }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-4, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-5, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
@@ -398,7 +414,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_laporan_rutin";
       await waClient.sendMessage(
         chatId,
-        `*Laporan Tugas Rutin*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi amplifikasi user\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Laporan Tugas Rutin*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi amplifikasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -503,25 +519,9 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_client_id = null;
       return oprRequestHandlers.absensiLink_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^5$/i.test(text.trim())) {
-      clean();
-      if (isAdminWhatsApp(chatId)) {
-        session.step = "absensiReg_chooseClient";
-        return oprRequestHandlers.absensiReg_chooseClient(
-          session,
-          chatId,
-          text,
-          waClient,
-          pool
-        );
-      }
-      session.step = "absensiReg_submenu";
-      session.absensi_reg_client_id = null;
-      return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
-    }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-5, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-4, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
