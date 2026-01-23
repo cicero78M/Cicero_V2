@@ -16,9 +16,10 @@ Dokumen ini menjelaskan alur fungsi utama dan langkah penggunaan aplikasi **Cice
 
 ```bash
 npm start        # menjalankan server produksi
-npm run dev      # menjalankan dengan nodemon (hot reload)
+npm run dev      # menjalankan dengan nodemon (hot reload untuk kode saja)
 ```
 Server Express akan aktif di port yang ditentukan dan memuat semua route API serta jadwal cron.
+Hot reload hanya memantau kode (`app.js` dan folder `src`). Folder data seperti `laphar/`, `logs/`, dan file `*.txt`/`*.csv` diabaikan agar tidak memicu restart saat proses impor data berjalan.
 
 ## 3. Alur Pekerjaan Backend
 
