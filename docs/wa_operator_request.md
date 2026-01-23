@@ -1,36 +1,40 @@
 # Panduan Operator WA Bot
-*Last updated: 2025-03-13*
+*Last updated: 2025-09-25*
 
-Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client yang dapat mengakses menu ini.
+Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator yang terdaftar pada data client dengan role **operator** yang dapat mengakses menu ini, dan seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**.
 Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
-2. Jika perintah dikirim dari nomor WhatsApp admin, bot terlebih dahulu
-   menampilkan daftar client untuk dipilih. Setelah memilih, nomor admin
-   dianggap terdaftar pada client tersebut selama sesi menu berlangsung.
-3. Bot menampilkan pilihan utama:
-   - 1️⃣ Kelola User
-   - 2️⃣ Kelola Amplifikasi
+2. Bot menampilkan pilihan utama:
+   - 1️⃣ Manajemen User
+   - 2️⃣ Manajemen Amplifikasi
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
-4. Di dalam *Kelola User*, menu yang tersedia:
+3. Di dalam *Manajemen User*, menu yang tersedia:
    - 1️⃣ Tambah user baru
-   - 2️⃣ Update data user
+   - 2️⃣ Perbarui data user
    - 3️⃣ Ubah status user (aktif/nonaktif)
    - 4️⃣ Cek data user berdasarkan NRP/NIP
-5. Di dalam *Kelola Amplifikasi*, terdapat dua kelompok:
+4. Di dalam *Manajemen Amplifikasi*, terdapat dua kelompok:
    - **Tugas**
-     - 1️⃣ Update tugas Instagram
-     - 2️⃣ Tugas Khusus
+     - 1️⃣ Update tugas rutin
+     - 2️⃣ Input tugas khusus
    - **Laporan**
-     - 1️⃣ Rekap link harian
-     - 2️⃣ Rekap link harian kemarin
-     - 3️⃣ Rekap link per post
-     - 4️⃣ Absensi Amplifikasi User
-     - 5️⃣ Absensi Registrasi User
-     - 6️⃣ Rekap link tugas khusus
-     - 7️⃣ Rekap per post khusus
-     - 8️⃣ Absensi Amplifikasi Khusus
+     - **Tugas Rutin**
+       - 1️⃣ Rekap link harian
+       - 2️⃣ Rekap link harian kemarin
+       - 3️⃣ Rekap link per post
+       - 4️⃣ Absensi amplifikasi user
+       - 5️⃣ Absensi registrasi user
+     - **Tugas Khusus**
+       - 1️⃣ Rekap link tugas khusus
+       - 2️⃣ Rekap per post khusus
+       - 3️⃣ Absensi amplifikasi khusus
+
+## Konvensi Penamaan Menu
+- **Menu** dipakai untuk level utama (contoh: *Menu Manajemen User*, *Menu Laporan Amplifikasi*).
+- **Submenu** dipakai untuk kelompok di bawahnya, misalnya *Laporan Tugas Rutin* dan *Laporan Tugas Khusus*.
+- Setiap judul memakai format Title Case, sementara instruksi selalu menyebutkan cara kembali (contoh: ketik *menu* untuk kembali).
 
 ## Alur Singkat Setiap Menu
 - **Tambah User Baru**
@@ -43,7 +47,7 @@ Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_t
     **SUBBID PID**, dan **SUB BAG RENMIN**. Daftar statis ini sekarang juga
     dipakai untuk memvalidasi input via web dashboard, sehingga satfung seperti
     **SUBBID MULTIMEDIA** akan selalu diterima walau belum ada di database.
-  3. Bot akan menyimpan data, mencatat `created_at`/`updated_at` otomatis, lalu mengirim ringkasan user.
+  3. Bot akan menyimpan data, mencatat `created_at`/`updated_at` otomatis, lalu mengirim ringkasan user. Role **operator** akan ditetapkan secara otomatis.
 - **Ubah Status User**
   1. Masukkan NRP/NIP yang ingin diubah.
   2. Pilih status baru: 1 untuk aktif, 2 untuk nonaktif.
@@ -52,9 +56,9 @@ Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_t
   1. Masukkan NRP/NIP user milik client Anda.
   2. Bot menampilkan detail user beserta statusnya jika ditemukan pada client yang sama.
 - **Rekap Link Harian**
-  1. Bot menampilkan rangkuman link konten yang dikumpulkan hari ini dari semua pengguna di client.
+  1. Bot menampilkan rangkuman link konten yang dikumpulkan hari ini dari pengguna dengan role **operator** di client.
 - **Rekap Link Harian Kemarin**
-  1. Bot menampilkan rangkuman link konten yang dikumpulkan kemarin dari semua pengguna di client.
+  1. Bot menampilkan rangkuman link konten yang dikumpulkan kemarin dari pengguna dengan role **operator** di client.
 - **Update Tugas Instagram**
   1. Bot menjalankan proses pengambilan tugas terbaru untuk client terkait.
 

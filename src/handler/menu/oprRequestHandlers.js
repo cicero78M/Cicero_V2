@@ -1,6 +1,5 @@
 // src/handler/menu/oprRequestHandlers.js
 import { isAdminWhatsApp, formatToWhatsAppId } from "../../utils/waHelper.js";
-import { findBySuperAdmin } from "../../model/clientModel.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
 import { hariIndo } from "../../utils/constants.js";
 import {
@@ -10,6 +9,8 @@ import {
 } from "../../utils/utilsHelper.js";
 
 function ignore(..._args) {}
+
+const OPERATOR_ROLE = "operator";
 
 function normalizeOperatorNumbers(rawNumber) {
   const digitsOnly = String(rawNumber || "").replace(/\D/g, "");
@@ -50,16 +51,6 @@ async function resolveClientProfile(session, chatId, pool) {
       session.selected_client_id = rows[0].client_id;
       return rows[0];
     }
-  }
-
-  try {
-    const superAdmin = await findBySuperAdmin(chatId);
-    if (superAdmin) {
-      session.selected_client_id = superAdmin.client_id;
-      return superAdmin;
-    }
-  } catch (err) {
-    console.error(err);
   }
 
   return null;
@@ -135,17 +126,6 @@ async function resolveClientId(session, chatId, pool) {
     console.error(err);
   }
 
-  try {
-    const superAdmin = await findBySuperAdmin(chatId);
-    const clientId = superAdmin?.client_id;
-    if (clientId) {
-      session.selected_client_id = clientId;
-      return clientId;
-    }
-  } catch (err) {
-    console.error(err);
-  }
-
   return null;
 }
 
@@ -164,24 +144,23 @@ function formatUpdateFieldList() {
 Balas angka field di atas atau *batal* untuk keluar.`.trim();
 }
 
+async function getOperatorUserIds(userModel, clientId) {
+  const operators = await userModel.getUsersByClient(clientId, OPERATOR_ROLE);
+  return new Set(operators.map((operator) => operator.user_id));
+}
+
+function hasOperatorRole(roles) {
+  return roles.some((role) => role?.toLowerCase() === OPERATOR_ROLE);
+}
+
 export const oprRequestHandlers = {
   main: async (session, chatId, text, waClient, pool, userModel) => {
-    if (isAdminWhatsApp(chatId) && !session.selected_client_id) {
-      session.step = "chooseClient_first";
-      return oprRequestHandlers.chooseClient_first(
-        session,
-        chatId,
-        text,
-        waClient,
-        pool
-      );
-    }
     const msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
-👮‍♂️  Hanya untuk operator client.
+👮‍♂️  Akses khusus operator client.
 
-1️⃣ Kelola User
-2️⃣ Kelola Amplifikasi
+1️⃣ Manajemen User
+2️⃣ Manajemen Amplifikasi
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -208,7 +187,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaUser_menu";
       await waClient.sendMessage(
         chatId,
-        `*Kelola User*\n1️⃣ Tambah user baru\n2️⃣ Update data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -225,7 +204,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_menu";
       await waClient.sendMessage(
         chatId,
-        `*Kelola Amplifikasi*\n1️⃣ Tugas\n2️⃣ Laporan\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Menu Manajemen Amplifikasi*\n1️⃣ Tugas Amplifikasi\n2️⃣ Laporan Amplifikasi\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -327,7 +306,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_tugas";
       await waClient.sendMessage(
         chatId,
-        `*Kelola Amplifikasi → Tugas*\n1️⃣ Update Tugas\n2️⃣ Tugas Khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Menu Tugas Amplifikasi*\n1️⃣ Update tugas rutin\n2️⃣ Input tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -335,7 +314,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "kelolaAmplifikasi_laporan";
       await waClient.sendMessage(
         chatId,
-        `*Kelola Amplifikasi → Laporan*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi Amplifikasi User\n5️⃣ Absensi Registrasi User\n6️⃣ Rekap link tugas khusus\n7️⃣ Rekap per post khusus\n8️⃣ Absensi Amplifikasi Khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        `*Menu Laporan Amplifikasi*\n1️⃣ Laporan tugas rutin\n2️⃣ Laporan tugas khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
       );
       return;
     }
@@ -398,14 +377,54 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   },
 
   kelolaAmplifikasi_laporan: async (session, chatId, text, waClient, pool, userModel) => {
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_menu";
+      return oprRequestHandlers.kelolaAmplifikasi_menu(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_laporan_rutin";
+      await waClient.sendMessage(
+        chatId,
+        `*Laporan Tugas Rutin*\n1️⃣ Rekap link harian\n2️⃣ Rekap link harian kemarin\n3️⃣ Rekap link per post\n4️⃣ Absensi amplifikasi user\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    if (/^2$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_laporan_khusus";
+      await waClient.sendMessage(
+        chatId,
+        `*Laporan Tugas Khusus*\n1️⃣ Rekap link tugas khusus\n2️⃣ Rekap per post khusus\n3️⃣ Absensi amplifikasi khusus\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+      );
+      return;
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-2, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaAmplifikasi_laporan_rutin: async (session, chatId, text, waClient, pool, userModel) => {
     const clean = () => {
       delete session.addUser;
       delete session.availableSatfung;
       delete session.updateStatusNRP;
     };
     if (/^(menu|kembali|0)$/i.test(text.trim())) {
-      session.step = "kelolaAmplifikasi_menu";
-      return oprRequestHandlers.kelolaAmplifikasi_menu(
+      session.step = "kelolaAmplifikasi_laporan";
+      return oprRequestHandlers.kelolaAmplifikasi_laporan(
         session,
         chatId,
         "",
@@ -500,7 +519,37 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_reg_client_id = null;
       return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
     }
-    if (/^6$/i.test(text.trim())) {
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-5, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaAmplifikasi_laporan_khusus: async (session, chatId, text, waClient, pool, userModel) => {
+    const clean = () => {
+      delete session.addUser;
+      delete session.availableSatfung;
+      delete session.updateStatusNRP;
+    };
+    if (/^(menu|kembali|0)$/i.test(text.trim())) {
+      session.step = "kelolaAmplifikasi_laporan";
+      return oprRequestHandlers.kelolaAmplifikasi_laporan(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      clean();
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhusus_chooseClient";
@@ -522,7 +571,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^7$/i.test(text.trim())) {
+    if (/^2$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "rekapLinkKhususPerPost_chooseClient";
@@ -544,7 +593,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         userModel
       );
     }
-    if (/^8$/i.test(text.trim())) {
+    if (/^3$/i.test(text.trim())) {
       clean();
       if (isAdminWhatsApp(chatId)) {
         session.step = "absensiLinkKhusus_chooseClient";
@@ -569,7 +618,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-8, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-3, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
@@ -593,7 +642,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
-    session.addUser = { user_id: nrp };
+    session.addUser = { user_id: nrp, operator: true };
     session.step = "addUser_nama";
     await waClient.sendMessage(chatId, "Masukkan *Nama Lengkap* (huruf kapital):");
   },
@@ -732,6 +781,14 @@ Status: 🟢 AKTIF, Exception: False
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
     const roles = await userModel.getUserRoles(user.user_id);
+    if (!hasOperatorRole(roles)) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ User dengan NRP/NIP *${nrp}* tidak memiliki role operator.`
+      );
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
     let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
     const roleStr = roles.length ? roles.join(", ") : "-";
     let msg = `
@@ -775,7 +832,14 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const { getReportsTodayByClient } = await import("../../model/linkReportModel.js");
     const { getShortcodesTodayByClient } = await import("../../model/instaPostModel.js");
     const reports = await getReportsTodayByClient(clientId);
-    if (!reports || reports.length === 0) {
+    const operatorIds = await getOperatorUserIds(userModel, clientId);
+    if (!operatorIds.size) {
+      await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
+    if (!filteredReports || filteredReports.length === 0) {
       await waClient.sendMessage(chatId, `Tidak ada laporan link hari ini untuk client *${clientId}*.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -789,7 +853,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       youtube: []
     };
     const users = new Set();
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -861,7 +925,14 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const { getReportsYesterdayByClient } = await import("../../model/linkReportModel.js");
     const { getShortcodesYesterdayByClient } = await import("../../model/instaPostModel.js");
     const reports = await getReportsYesterdayByClient(clientId);
-    if (!reports || reports.length === 0) {
+    const operatorIds = await getOperatorUserIds(userModel, clientId);
+    if (!operatorIds.size) {
+      await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
+    if (!filteredReports || filteredReports.length === 0) {
       await waClient.sendMessage(chatId, `Tidak ada laporan link kemarin untuk client *${clientId}*.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -875,7 +946,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       youtube: []
     };
     const users = new Set();
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -945,7 +1016,14 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const { getReportsTodayByClient } = await import("../../model/linkReportKhususModel.js");
     const { getShortcodesTodayByClient } = await import("../../model/instaPostKhususModel.js");
     const reports = await getReportsTodayByClient(clientId);
-    if (!reports || reports.length === 0) {
+    const operatorIds = await getOperatorUserIds(userModel, clientId);
+    if (!operatorIds.size) {
+      await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
+    if (!filteredReports || filteredReports.length === 0) {
       await waClient.sendMessage(chatId, `Tidak ada laporan link khusus hari ini untuk client *${clientId}*.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -953,7 +1031,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const shortcodes = await getShortcodesTodayByClient(clientId);
     const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
     const users = new Set();
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -1047,7 +1125,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const clientId = session.selected_client_id;
     const { getReportsTodayByShortcode } = await import("../../model/linkReportModel.js");
     const reports = await getReportsTodayByShortcode(clientId, sc);
-    if (!reports || reports.length === 0) {
+    const operatorIds = await getOperatorUserIds(userModel, clientId);
+    if (!operatorIds.size) {
+      await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
+      session.step = "main";
+      delete session.rekapShortcodes;
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
+    if (!filteredReports || filteredReports.length === 0) {
       await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
       session.step = "main";
       delete session.rekapShortcodes;
@@ -1061,7 +1147,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       youtube: []
     };
     const users = new Set();
-    reports.forEach(r => {
+    filteredReports.forEach(r => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -1161,7 +1247,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const clientId = session.selected_client_id;
     const { getReportsTodayByShortcode } = await import("../../model/linkReportKhususModel.js");
     const reports = await getReportsTodayByShortcode(clientId, sc);
-    if (!reports || reports.length === 0) {
+    const operatorIds = await getOperatorUserIds(userModel, clientId);
+    if (!operatorIds.size) {
+      await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
+      session.step = "main";
+      delete session.rekapShortcodes;
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
+    if (!filteredReports || filteredReports.length === 0) {
       await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
       session.step = "main";
       delete session.rekapShortcodes;
@@ -1169,7 +1263,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     }
     const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
     const users = new Set();
-    reports.forEach(r => {
+    filteredReports.forEach(r => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -1351,6 +1445,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       : await userModel.findUserById(nrp);
     if (!user) {
       await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan.`);
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    const roles = await userModel.getUserRoles(user.user_id);
+    if (!hasOperatorRole(roles)) {
+      await waClient.sendMessage(
+        chatId,
+        `❌ User dengan NRP/NIP *${nrp}* tidak memiliki role operator.`
+      );
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
@@ -1946,7 +2049,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1-3.");
         return;
       }
-      const msg = await absensiLink(clientId, { mode });
+      const msg = await absensiLink(clientId, { mode, roleFlag: OPERATOR_ROLE });
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
@@ -1993,7 +2096,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1-3.");
         return;
       }
-      const msg = await absensiLinkKhusus(clientId, { mode });
+      const msg = await absensiLinkKhusus(clientId, { mode, roleFlag: OPERATOR_ROLE });
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
@@ -2082,7 +2185,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
         await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1-3.");
         return;
       }
-      const msg = await absensiRegistrasiWa(clientId, { mode });
+      const msg = await absensiRegistrasiWa(clientId, { mode, roleFlag: OPERATOR_ROLE });
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
@@ -2182,6 +2285,15 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     if (!user) {
       await waClient.sendMessage(chatId, `❌ User dengan NRP/NIP *${nrp}* tidak ditemukan. Hubungi Opr Humas Polres Anda.`);
     } else {
+      const roles = await userModel.getUserRoles(user.user_id);
+      if (!hasOperatorRole(roles)) {
+        await waClient.sendMessage(
+          chatId,
+          `❌ User dengan NRP/NIP *${nrp}* tidak memiliki role operator.`
+        );
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
       let statusStr = user.status ? "🟢 *AKTIF*" : "🔴 *NONAKTIF*";
       let msg = `
 ━━━━━━━━━━━━━━━━━━━━━━

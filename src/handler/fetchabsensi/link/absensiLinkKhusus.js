@@ -21,15 +21,17 @@ async function getClientInfo(client_id) {
   };
 }
 
-export async function absensiLinkKhusus(client_id) {
+export async function absensiLinkKhusus(client_id, opts = {}) {
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const { nama: clientNama, clientType } = await getClientInfo(client_id);
-  const users =
-    clientType === "org"
+  const roleFlag = opts.roleFlag?.toLowerCase() === "operator" ? "operator" : null;
+  const users = roleFlag
+    ? await getOperatorsByClient(client_id)
+    : clientType === "org"
       ? await getOperatorsByClient(client_id)
       : await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
@@ -135,8 +137,10 @@ export async function absensiLinkKhususPerPost(client_id, opts = {}) {
   const jam = now.toLocaleTimeString("id-ID", { hour12: false });
 
   const { nama: clientNama, clientType } = await getClientInfo(client_id);
-  const users =
-    clientType === "org"
+  const roleFlag = opts.roleFlag?.toLowerCase() === "operator" ? "operator" : null;
+  const users = roleFlag
+    ? await getOperatorsByClient(client_id)
+    : clientType === "org"
       ? await getOperatorsByClient(client_id)
       : await getUsersByClient(client_id);
   const shortcodes = await getShortcodesTodayByClient(client_id);
