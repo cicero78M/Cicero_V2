@@ -20,7 +20,7 @@ import * as clientService from "./clientService.js";
 import * as userModel from "../model/userModel.js";
 import * as dashboardUserModel from "../model/dashboardUserModel.js";
 import * as satbinmasOfficialAccountService from "./satbinmasOfficialAccountService.js";
-import { findByOperator } from "../model/clientModel.js";
+import { findByOperator, findBySuperAdmin } from "../model/clientModel.js";
 import * as premiumService from "./premiumService.js";
 import * as premiumReqModel from "../model/premiumRequestModel.js";
 import { migrateUsersFromFolder } from "./userMigrationService.js";
@@ -167,6 +167,50 @@ function formatCurrencyId(value) {
   const numeric = Number(value);
   if (Number.isNaN(numeric)) return String(value);
   return `Rp ${numberFormatter.format(numeric)}`;
+}
+
+async function startAdminOprRequestSelection({
+  chatId,
+  waClient,
+  clientLabel,
+}) {
+  const orgClients = await clientService.findAllClientsByType("org");
+  const availableClients = (orgClients || [])
+    .filter((client) => client?.client_id)
+    .map((client) => ({
+      client_id: String(client.client_id).toUpperCase(),
+      nama: client.nama || client.client_id,
+    }));
+
+  if (availableClients.length === 0) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Tidak ada client bertipe Org yang tersedia untuk menu operator."
+    );
+    return false;
+  }
+
+  setSession(chatId, {
+    menu: "oprrequest",
+    step: "choose_client",
+    opr_clients: availableClients,
+  });
+
+  await runMenuHandler({
+    handlers: oprRequestHandlers,
+    menuName: "oprrequest",
+    session: getSession(chatId),
+    chatId,
+    text: "",
+    waClient,
+    clientLabel,
+    args: [pool, userModel],
+    invalidStepMessage:
+      "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
+    failureMessage:
+      "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
+  });
+  return true;
 }
 
 async function runMenuHandler({
@@ -2011,32 +2055,14 @@ export function createHandleMessage(waClient, options = {}) {
       }
       if (/^2$/.test(text.trim())) {
         delete adminOptionSessions[chatId];
-        const waId = userWaNum.startsWith("62")
-          ? userWaNum
-          : "62" + userWaNum.replace(/^0/, "");
-        const operator = await findByOperator(waId);
-        if (!operator) {
-          await waClient.sendMessage(
-            chatId,
-            "❌ Nomor Anda tidak terdaftar sebagai operator."
-          );
-          return;
-        }
-        setSession(chatId, { menu: "oprrequest", step: "main" });
-        await runMenuHandler({
-          handlers: oprRequestHandlers,
-          menuName: "oprrequest",
-          session: getSession(chatId),
+        const started = await startAdminOprRequestSelection({
           chatId,
-          text: `┏━━━ *MENU OPERATOR CICERO* ━━━┓\n👮‍♂️  Akses khusus operator client.\n\n1️⃣ Manajemen User\n2️⃣ Manajemen Amplifikasi\n\nKetik *angka menu* di atas, atau *batal* untuk keluar.\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
           waClient,
           clientLabel,
-          args: [pool, userModel],
-          invalidStepMessage:
-            "⚠️ Sesi menu operator tidak dikenali. Ketik *oprrequest* ulang atau *batal*.",
-          failureMessage:
-            "❌ Terjadi kesalahan pada menu operator. Ketik *oprrequest* ulang untuk memulai kembali.",
         });
+        if (!started) {
+          return;
+        }
         return;
       }
       if (/^3$/.test(text.trim())) {
@@ -2142,17 +2168,30 @@ export function createHandleMessage(waClient, options = {}) {
 
   // ===== MULAI Menu Operator dari command manual =====
   if (text.toLowerCase() === "oprrequest") {
+    if (isAdminWhatsApp(chatId)) {
+      await startAdminOprRequestSelection({
+        chatId,
+        waClient,
+        clientLabel,
+      });
+      return;
+    }
     const waId =
       userWaNum.startsWith("62") ? userWaNum : "62" + userWaNum.replace(/^0/, "");
     const operator = await findByOperator(waId);
-    if (!operator) {
+    const superAdmin = operator ? null : await findBySuperAdmin(waId);
+    if (!operator && !superAdmin) {
       await waClient.sendMessage(
         chatId,
         "❌ Menu ini hanya dapat diakses oleh operator yang terdaftar."
       );
       return;
     }
-    setSession(chatId, { menu: "oprrequest", step: "main" });
+    setSession(chatId, {
+      menu: "oprrequest",
+      step: "main",
+      selected_client_id: superAdmin?.client_id || undefined,
+    });
     await runMenuHandler({
       handlers: oprRequestHandlers,
       menuName: "oprrequest",
@@ -3930,18 +3969,21 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 
   let clientInfoText = "";
   let operatorRow = null;
+  let superAdminRow = null;
+  const normalizedUserWaId = userWaNum
+    ? userWaNum.startsWith("62")
+      ? userWaNum
+      : "62" + userWaNum.replace(/^0/, "")
+    : "";
   try {
     const q = `SELECT client_id, nama, client_operator FROM clients WHERE client_operator=$1 LIMIT 1`;
-    const waId = userWaNum.startsWith("62")
-      ? userWaNum
-      : "62" + userWaNum.replace(/^0/, "");
-    const res = await query(q, [waId]);
-    if (res.rows && res.rows[0]) {
-      operatorRow = res.rows[0];
-    }
+    const res = normalizedUserWaId ? await query(q, [normalizedUserWaId]) : null;
+    operatorRow = res?.rows?.[0] || null;
     if (operatorRow) {
       const operatorContact =
-        operatorRow.client_operator || operatorRow.client_super || waId;
+        operatorRow.client_operator ||
+        operatorRow.client_super ||
+        normalizedUserWaId;
       const waOperator = String(operatorContact).replace(/\D/g, "");
       clientInfoText =
         `\n\nHubungi operator Anda:\n` +
@@ -3967,20 +4009,25 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         );
       return;
     }
-    if (operatorRow) {
+    if (!operatorRow && normalizedUserWaId) {
+      superAdminRow = await findBySuperAdmin(normalizedUserWaId);
+    }
+    const accessRow = operatorRow || superAdminRow;
+    if (accessRow) {
       operatorOptionSessions[chatId] = {};
       setOperatorOptionTimeout(chatId);
       const salam = getGreeting();
-        await safeSendMessage(
-          waClient,
-          chatId,
-          `${salam}! Nomor ini terdaftar sebagai *operator* untuk client *${
-            operatorRow.nama || operatorRow.client_id
-          }*.` +
-            "\n1️⃣ Menu Operator" +
-            "\n2️⃣ Perubahan Data Username" +
-            "\nBalas angka *1* atau *2*."
-        );
+      const roleLabel = operatorRow ? "operator" : "super admin";
+      await safeSendMessage(
+        waClient,
+        chatId,
+        `${salam}! Nomor ini terdaftar sebagai *${roleLabel}* untuk client *${
+          accessRow.nama || accessRow.client_id
+        }*.` +
+          "\n1️⃣ Menu Operator" +
+          "\n2️⃣ Perubahan Data Username" +
+          "\nBalas angka *1* atau *2*."
+      );
       return;
     }
     if (!allowUserMenu) {
