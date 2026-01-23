@@ -203,6 +203,20 @@ dirrequest tanpa langkah tambahan.
   mengembalikan nilai kosong sehingga bot melewati pengiriman balasan dan
   kembali ke menu tanpa menampilkan pesan kosong.
 
+## Rekap Likes Instagram (Excel) (Menu 1️⃣9️⃣)
+- Menu **1️⃣9️⃣** menyiapkan rekap likes Instagram dalam format Excel berdasarkan
+  `collectLikesRecap`. Jika helper mengembalikan string (misalnya karena data
+  kosong), bot mengirim pesan tersebut dan menghentikan proses.
+- Apabila tidak ada `shortcodes`, bot mengirim pesan bahwa tidak ada konten IG
+  untuk hari ini.
+- Jika `saveLikesRecapExcel` gagal (contohnya workbook kosong atau data tidak
+  valid), bot mengirim pesan error spesifik bahwa pembuatan file Excel gagal
+  agar operator tahu penyebab kegagalan.
+- Kegagalan saat membaca file atau mengirim ke WhatsApp menghasilkan pesan
+  error yang jelas bahwa file tidak dapat dikirim.
+- File sementara dicek terlebih dahulu, lalu dihapus di blok `finally` agar
+  file temp tetap dibersihkan meskipun terjadi error.
+
 ## Rekap Komentar TikTok (Excel) (Menu 2️⃣0️⃣)
 - Menu **2️⃣0️⃣** menyiapkan rekap komentar TikTok dalam format Excel berdasarkan
   data `collectKomentarRecap` untuk *Client ID* yang aktif.

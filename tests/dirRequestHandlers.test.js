@@ -52,6 +52,7 @@ const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
 const mockReadFile = jest.fn();
 const mockUnlink = jest.fn();
+const mockStat = jest.fn();
 const mockSendWAFile = jest.fn();
 const mockSafeSendMessage = jest.fn();
 const mockFetchAndStoreTiktokContent = jest.fn();
@@ -149,6 +150,7 @@ jest.unstable_mockModule('fs/promises', () => ({
   mkdir: mockMkdir,
   readFile: mockReadFile,
   unlink: mockUnlink,
+  stat: mockStat,
 }));
 jest.unstable_mockModule('../src/utils/waHelper.js', () => ({
   sendWAFile: mockSendWAFile,
@@ -294,6 +296,7 @@ beforeEach(() => {
   mockGetRekapLikesByClient.mockReset();
   mockGetRekapKomentarByClient.mockReset();
   mockFetchTiktokSecUid.mockResolvedValue('');
+  mockStat.mockResolvedValue({});
   mockFetchTodaySatbinmasOfficialTiktokMediaForOrgClients.mockResolvedValue({
     clients: [],
     totals: {
