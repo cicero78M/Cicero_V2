@@ -27,7 +27,7 @@ CREATE TABLE dashboard_user (
 - `status` is `true` when the account is active. Admin registrations start as `false` and must be approved via WhatsApp.
 
  - `client_id` links an account to a specific organisation if needed.
- - `whatsapp` stores the contact number for operator verification and should contain digits only.
+ - `whatsapp` stores the contact number for operator verification as digits only with a `62` prefix (minimum 8 digits; no `@c.us` suffix stored).
 
 ## 2. Registration Endpoint
 

@@ -31,7 +31,7 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests u
 ```
 
 > **Note:** For legacy Android clients, the `password` field may be used instead of `whatsapp`. Both are treated equivalently.
-> The backend normalizes WhatsApp input to digits only with the `62` prefix before matching stored records.
+> The backend normalizes WhatsApp input to digits only with the `62` prefix (minimum 8 digits) and never stores the `@c.us` suffix.
 
 ### User Registration
 `POST /api/auth/user-register`
@@ -44,7 +44,7 @@ All return a JSON Web Token (JWT) that must be included in subsequent requests u
 }
 ```
 
-The `whatsapp` value is normalized and stored as digits only with the `62` prefix (e.g. `628123456789`).
+The `whatsapp` value is normalized and stored as digits only with the `62` prefix (minimum 8 digits, e.g. `628123456789`) and never stores the `@c.us` suffix.
 
 ### Dashboard Registration
 `POST /api/auth/dashboard-register`
@@ -58,7 +58,7 @@ The `whatsapp` value is normalized and stored as digits only with the `62` prefi
 }
 ```
 
-The `whatsapp` field should contain digits only; any non-numeric characters will be removed before storage and the number is normalized to a `62` prefix.
+The `whatsapp` field should contain digits only; any non-numeric characters will be removed before storage and the number is normalized to a `62` prefix (minimum 8 digits). The `@c.us` suffix is not stored.
 
 ### Dashboard Login
 `POST /api/auth/dashboard-login`
