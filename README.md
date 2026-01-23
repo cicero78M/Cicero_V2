@@ -298,10 +298,11 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     ```bash
     npm start
     ```
-    Or with PM2:
+    Or with PM2 (uses `ecosystem.config.js`):
     ```bash
-    pm2 start app.js --name cicero_v2
+    pm2 start ecosystem.config.js --env production
     ```
+    The PM2 config watches only the code paths (`app.js`, `src/`) in non-production mode and ignores data folders/files to prevent restart loops when uploads or exports change. Ignored paths include `laphar/`, `logs/`, `uploads/`, `backups/`, and file patterns such as `*.txt`, `*.csv`, `*.tsv`, `*.log`, `*.json`, `*.xlsx`, `*.xls`, `*.zip`. In production, `watch` is disabled (`watch: false`) so restarts occur only on deploy/manual restart.
 7. **Lint & Test**
     ```bash
     npm run lint
