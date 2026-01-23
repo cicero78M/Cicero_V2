@@ -31,7 +31,7 @@ Server Express akan aktif di port yang ditentukan dan memuat semua route API ser
 ## 4. Fitur WhatsApp Bot
 
 Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
-- `oprrequest` → mengelola data user dan rekap link harian. Admin WhatsApp wajib memilih client bertipe **org** sebelum masuk menu operator. Detail pada `docs/wa_operator_request.md`.
+- `oprrequest` → mengelola data user dan rekap link harian. Operator/Super Admin client dapat masuk langsung, sedangkan Admin WhatsApp wajib memilih client bertipe **org** sebelum masuk menu operator. Submenu **Absensi registrasi user** kini berada di *Kelola User* dan seluruh submenu menampilkan instruksi **ketik back** untuk kembali. Detail pada `docs/wa_operator_request.md`.
 - `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
 - *Bulk Penghapusan Status User* menggunakan format pesan
   `Permohonan Penghapusan Data Personil – <SATKER>` yang berisi daftar ber-

@@ -1,23 +1,26 @@
 # Panduan Operator WA Bot
-*Last updated: 2026-01-23*
+*Last updated: 2026-01-24*
 
-Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Hanya nomor operator dan super admin client yang terdaftar pada data client yang dapat mengakses menu ini, serta seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**. Nomor Admin WhatsApp (`ADMIN_WHATSAPP`) dapat masuk ke menu operator dengan memilih client bertipe **org** terlebih dahulu.
-Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
+Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Akses menu dibatasi sebagai berikut:
+- Nomor operator dan **Super Admin** client yang terdaftar pada data client aktif dapat langsung masuk ke menu operator.
+- Nomor **Admin WhatsApp** (`ADMIN_WHATSAPP`) dapat masuk ke menu operator setelah memilih client bertipe **org** yang aktif.
+Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**. Menu *Kelola User* hanya tersedia untuk client berstatus aktif dengan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
-2. Jika nomor Anda adalah Admin WhatsApp, bot menampilkan daftar client bertipe **org**. Pilih client dengan membalas nomor atau `client_id` untuk melanjutkan.
-3. Jika nomor Anda terdaftar sebagai operator/super admin client, bot langsung menampilkan pilihan utama:
-   - 1️⃣ Manajemen User
-   - 2️⃣ Manajemen Amplifikasi
+2. Jika nomor Anda adalah Admin WhatsApp, bot menampilkan daftar client bertipe **org** yang aktif. Pilih client dengan membalas nomor atau `client_id` untuk melanjutkan.
+3. Jika nomor Anda terdaftar sebagai operator/Super Admin client, bot langsung menampilkan pilihan utama:
+   - 1️⃣ Kelola User
+   - 2️⃣ Kelola Amplifikasi
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
-4. Di dalam *Manajemen User*, menu yang tersedia:
+4. Di dalam *Kelola User*, menu yang tersedia:
    - 1️⃣ Tambah user baru
    - 2️⃣ Perbarui data user
    - 3️⃣ Ubah status user (aktif/nonaktif)
    - 4️⃣ Cek data user berdasarkan NRP/NIP
    - 5️⃣ Absensi registrasi user
-5. Di dalam *Manajemen Amplifikasi*, terdapat dua kelompok:
+   Submenu **Absensi registrasi user** kini berada di *Kelola User*.
+5. Di dalam *Kelola Amplifikasi*, terdapat dua kelompok:
    - **Tugas**
      - 1️⃣ Update tugas rutin
      - 2️⃣ Input tugas khusus
@@ -33,10 +36,10 @@ Menu *Kelola User* hanya tersedia untuk client dengan status aktif dan `client_t
        - 3️⃣ Absensi amplifikasi khusus
 
 ## Konvensi Penamaan Menu
-- **Menu** dipakai untuk level utama (contoh: *Menu Manajemen User*, *Menu Laporan Amplifikasi*).
+- **Menu** dipakai untuk level utama (contoh: *Menu Kelola User*, *Menu Laporan Amplifikasi*).
 - **Submenu** dipakai untuk kelompok di bawahnya, misalnya *Laporan Tugas Rutin* dan *Laporan Tugas Khusus*.
 - Setiap judul memakai format Title Case, sementara instruksi selalu menyebutkan cara kembali (contoh: ketik *menu* untuk kembali).
-- Semua submenu kini menambahkan instruksi **ketik back** untuk kembali ke menu sebelumnya agar navigasi konsisten.
+- Semua submenu kini menambahkan instruksi **ketik back** untuk kembali ke menu sebelumnya agar navigasi konsisten, termasuk pada *Kelola User* dan seluruh submenu *Kelola Amplifikasi*.
 
 ## Alur Singkat Setiap Menu
 - **Tambah User Baru**
