@@ -289,6 +289,10 @@ untuk `wa-user`. Contoh untuk `wa-gateway-prod`: alias `WA_WWEBJS_PROTOCOL_TIMEO
 atau suffix eksplisit `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_WA_GATEWAY_PROD=180000`
 (client ID uppercase + non-alfanumerik jadi `_`). Dengan begitu, admin tetap memakai default sementara
 client tertentu bisa diperpanjang tanpa mengganggu WA admin.
+Adapter juga dapat menaikkan timeout secara adaptif setelah error `Runtime.callFunctionOn timed out`
+saat inisialisasi. Atur batas maksimum via `WA_WWEBJS_PROTOCOL_TIMEOUT_MAX_MS` (default 300000ms)
+dan laju kenaikan via `WA_WWEBJS_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER` (default 1.5). Pastikan nilai
+max lebih besar dari timeout per-client agar mekanisme adaptif bisa bekerja.
 
 ## Normalisasi opsi sendMessage
 

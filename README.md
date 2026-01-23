@@ -218,6 +218,8 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     WA_WWEBJS_PROTOCOL_TIMEOUT_MS=120000
     WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER=120000
     WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000
+    WA_WWEBJS_PROTOCOL_TIMEOUT_MAX_MS=300000
+    WA_WWEBJS_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER=1.5
     ENABLE_DIRREQUEST_GROUP=true
     CORS_ORIGIN=http://localhost:3000
     ALLOW_DUPLICATE_REQUESTS=false
@@ -271,6 +273,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    Perbarui pin (`WA_WEB_VERSION` atau `WA_WEB_VERSION_RECOMMENDED`) saat WhatsApp Web merilis update besar dan log `initialize`/`load` menunjukkan error setelah update (misalnya blank page atau error `LocalWebCache.persist`/`Cannot read properties of null`). Biasanya cukup sinkronkan ke versi terbaru dari payload cache yang sudah tervalidasi.
    `WA_WWEBJS_PROTOCOL_TIMEOUT_MS` sets the Puppeteer protocol timeout used by whatsapp-web.js for `Runtime.callFunctionOn` and other DevTools protocol calls. Keep the default `120000` ms for typical deployments, and increase it (for example `180000`) when you expect slow or high-latency connections to WhatsApp Web.
    Per-client override is available in two formats: a stable role alias (based on the client ID prefix) and a clientId-specific suffix. Role alias mapping uses `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY` for client IDs that start with `wa-gateway` and `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_USER` for IDs that start with `wa-user`. For example, for `wa-gateway-prod` you can set `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_GATEWAY=180000`, or use the explicit client suffix `WA_WWEBJS_PROTOCOL_TIMEOUT_MS_WA_GATEWAY_PROD=180000` (client ID uppercased with non-alphanumerics replaced by underscores). Recommended production setup: keep `WA_WWEBJS_PROTOCOL_TIMEOUT_MS=120000` for WA admin, and raise the per-client override for user/gateway clients that see frequent `Runtime.callFunctionOn timed out` errors.
+   The adapter can auto-increase the protocol timeout after runtime timeouts during initialization. Control the cap with `WA_WWEBJS_PROTOCOL_TIMEOUT_MAX_MS` (default 300000) and the growth rate with `WA_WWEBJS_PROTOCOL_TIMEOUT_BACKOFF_MULTIPLIER` (default 1.5). Set the max to a value higher than your per-client timeout if you want auto-bumps to take effect.
    `ENABLE_DIRREQUEST_GROUP=false` disables all Ditbinmas dirRequest cron jobs at once while leaving other schedules intact.
    `GOOGLE_SERVICE_ACCOUNT` may be set to a JSON string or a path to a JSON file. If the value starts with `/` or ends with `.json`, the application reads the file; otherwise it parses the variable directly as JSON. `GOOGLE_IMPERSONATE_EMAIL` should be set to the Workspace user to impersonate when performing contact operations.
    `SMTP_*` variables enable OTP and complaint notifications through email (`claimRoutes.js`). Leave them unset to disable email delivery in development.
