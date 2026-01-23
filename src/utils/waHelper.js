@@ -135,17 +135,25 @@ export function isAdminWhatsApp(number) {
 export function formatToWhatsAppId(nohp) {
   const number = extractPhoneDigits(nohp);
   if (!number) return '';
-  const normalized = number.startsWith('62') ? number : '62' + number.replace(/^0/, '');
+  const normalized = number.startsWith('62')
+    ? number
+    : '62' + number.replace(/^0/, '');
   return `${normalized}@c.us`;
 }
 
 function normalizeChatId(chatId) {
   const normalized = typeof chatId === 'string' ? chatId.trim() : '';
   if (!normalized) return '';
-  if (isValidWid(normalized)) return normalized;
+  if (isValidWid(normalized)) {
+    if (normalized.endsWith('@g.us')) return normalized;
+    const digits = extractPhoneDigits(normalized);
+    if (!isValidPhoneDigits(digits, minPhoneDigitLength)) return normalized;
+    return formatToWhatsAppId(digits);
+  }
   const digits = extractPhoneDigits(normalized);
   if (!digits) return normalized;
-  return `${digits}@c.us`;
+  if (!isValidPhoneDigits(digits, minPhoneDigitLength)) return normalized;
+  return formatToWhatsAppId(digits);
 }
 
 function isMissingLidError(err) {
@@ -186,7 +194,7 @@ async function resolveChatId(waClient, chatId) {
   const digits = extractPhoneDigits(normalized);
   const canFallback = !isGroup && isValidPhoneDigits(digits, minPhoneDigitLength);
 
-  if (!isGroup && typeof waClient?.getNumberId === 'function') {
+  if (!isGroup && isValidPhoneDigits(digits, minPhoneDigitLength) && typeof waClient?.getNumberId === 'function') {
     try {
       const numberId = await waClient.getNumberId(digits);
       if (numberId?._serialized) {
@@ -245,6 +253,7 @@ async function resolveChatId(waClient, chatId) {
 // Normalisasi nomor WhatsApp ke awalan 62 tanpa suffix @c.us
 export function normalizeWhatsappNumber(nohp) {
   let number = extractPhoneDigits(nohp);
+  if (!number) return '';
   if (!number.startsWith("62")) number = "62" + number.replace(/^0/, "");
   return number;
 }
