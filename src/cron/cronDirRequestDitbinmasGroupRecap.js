@@ -16,8 +16,6 @@ export const JOB_KEY = './src/cron/cronDirRequestDitbinmasGroupRecap.js';
 const CRON_LABEL = 'CRON DIRREQ DITBINMAS GROUP';
 const ACTIONS = [
   { action: '21' },
-  { action: '19' },
-  { action: '20' },
   { action: '22', context: { period: 'today' } },
 ];
 const waFallbackClients = [
@@ -121,7 +119,7 @@ async function executeDitbinmasMenus(recipients) {
 }
 
 export async function runCron() {
-  await logPhase('Mulai cron Ditbinmas group (menu 21, 19, 20, 22).');
+  await logPhase('Mulai cron Ditbinmas group (menu 21 dan 22).');
 
   let sendStatus = 'pending';
 
@@ -138,8 +136,8 @@ export async function runCron() {
       const failures = await executeDitbinmasMenus(recipients);
       sendStatus =
         failures.length === 0
-          ? `menu 21, 19, 20, dan 22 dikirim ke ${recipients.length} grup`
-          : `menu 21, 19, 20, dan 22 selesai dengan ${failures.length} kegagalan`;
+          ? `menu 21 dan 22 dikirim ke ${recipients.length} grup`
+          : `menu 21 dan 22 selesai dengan ${failures.length} kegagalan`;
 
       if (failures.length > 0) {
         await logToAdmins(`${sendStatus}\n${failures.join('\n')}`);
