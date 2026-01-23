@@ -1,5 +1,5 @@
 # Panduan Operator WA Bot
-*Last updated: 2026-01-24*
+*Last updated: 2026-01-23*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Akses menu dibatasi sebagai berikut:
 - Nomor operator dan **Super Admin** client yang terdaftar pada data client aktif dapat langsung masuk ke menu operator.
@@ -83,6 +83,19 @@ Untuk menambahkan akun resmi Satbinmas melalui bot:
    official lain atau mengubah data yang sudah ada. Balasan `tambah` akan
    mengulangi langkah pemilihan platform, sedangkan `ubah` memicu input ulang
    untuk memperbarui data. `selesai`/`batal` kembali ke menu kelola client.
+
+### Kelola Client: Update Data Client
+Alur *Update Data Client* kini memakai submenu kategori agar pilihan field lebih ringkas.
+
+1. Masuk menu *Client Request* → *Manajemen Client & User* → *Kelola client*.
+2. Pilih client, lalu pilih **1️⃣ Update Data Client**.
+3. Bot menampilkan kategori berikut (pilih dengan membalas angka):
+   - **Identitas & Tipe** (contoh: `client_type`, `client_group`)
+   - **Kontak WA** (contoh: `client_operator`, `client_super`)
+   - **Akun Sosmed** (contoh: `client_insta`, `client_tiktok`, `tiktok_secuid`)
+   - **Status & Amplifikasi** (contoh: `client_status`, `client_insta_status`, `client_tiktok_status`, `client_amplify_status`)
+4. Setelah memilih kategori, bot menampilkan daftar field di dalam kategori tersebut. Balas angka sesuai field yang ingin diperbarui.
+5. Ketik value baru sesuai instruksi (untuk boolean gunakan `true/false`). Gunakan `back` untuk kembali ke daftar kategori atau `batal` untuk keluar.
 
 ### Permintaan Melalui WA Gateway: `#SatbinmasOfficial`
 Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway* dengan mengirim teks `#SatbinmasOfficial` (case-insensitive). Alur dan syaratnya:

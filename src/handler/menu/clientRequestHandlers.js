@@ -216,6 +216,43 @@ const SATBINMAS_PLATFORM_CHOICES = [
   { code: "instagram", label: "Instagram" },
   { code: "tiktok", label: "TikTok" },
 ];
+const CLIENT_UPDATE_FIELD_GROUPS = [
+  {
+    key: "identitas_tipe",
+    label: "Identitas & Tipe",
+    fields: [
+      { key: "client_type", label: "Tipe Client" },
+      { key: "client_group", label: "Group Client" },
+    ],
+  },
+  {
+    key: "kontak_wa",
+    label: "Kontak WA",
+    fields: [
+      { key: "client_operator", label: "Operator Client (WA)" },
+      { key: "client_super", label: "Super Admin Client (WA)" },
+    ],
+  },
+  {
+    key: "akun_sosmed",
+    label: "Akun Sosmed",
+    fields: [
+      { key: "client_insta", label: "Username Instagram" },
+      { key: "client_tiktok", label: "Username TikTok" },
+      { key: "tiktok_secuid", label: "TikTok SecUID" },
+    ],
+  },
+  {
+    key: "status_amplifikasi",
+    label: "Status & Amplifikasi",
+    fields: [
+      { key: "client_status", label: "Status Aktif (true/false)" },
+      { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
+      { key: "client_tiktok_status", label: "Status TikTok Aktif (true/false)" },
+      { key: "client_amplify_status", label: "Status Amplifikasi (true/false)" },
+    ],
+  },
+];
 
 function findSatbinmasPlatform(choice) {
   if (!choice) return null;
@@ -396,6 +433,31 @@ async function sendKelolaClientMenu(session, chatId, waClient) {
 
   session.step = "kelolaClient_menu";
   await waClient.sendMessage(chatId, menuText);
+}
+
+async function sendKelolaClientUpdateGroupMenu(session, chatId, waClient) {
+  const client = findSelectedClient(session);
+  const header = client?.nama
+    ? `Update Data Client: *${client.nama}* (${client.client_id})`
+    : client?.client_id
+    ? `Update Data Client (${client.client_id})`
+    : "Update Data Client";
+  let msg = `${header}\nPilih kategori data yang ingin diperbarui:\n`;
+  CLIENT_UPDATE_FIELD_GROUPS.forEach((group, index) => {
+    msg += `${index + 1}. ${group.label}\n`;
+  });
+  msg += "Balas angka kategori di atas atau ketik *batal* untuk keluar.";
+  session.step = "kelolaClient_updateGroup";
+  await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
+}
+
+function buildKelolaClientUpdateFieldMenu(groupLabel, fields) {
+  let msg = `Pilih field pada kategori *${groupLabel}*:\n`;
+  fields.forEach((field, index) => {
+    msg += `${index + 1}. ${field.label} [${field.key}]\n`;
+  });
+  msg += "Balas angka field di atas atau ketik *batal* untuk keluar.";
+  return appendSubmenuBackInstruction(msg.trim());
 }
 
 function extractNarrativeName(sentence, rawId) {
@@ -2716,33 +2778,9 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     }
 
     if (text.trim() === "1") {
-      session.step = "kelolaClient_updatefield";
-      const fields = [
-        { key: "client_insta", label: "Username Instagram" },
-        { key: "client_operator", label: "Operator Client" },
-        { key: "client_super", label: "Super Admin Client" },
-        { key: "client_group", label: "Group Client" },
-        { key: "tiktok_secuid", label: "TikTok SecUID" },
-        { key: "client_tiktok", label: "Username TikTok" },
-        { key: "client_status", label: "Status Aktif (true/false)" },
-        { key: "client_insta_status", label: "Status IG Aktif (true/false)" },
-        {
-          key: "client_tiktok_status",
-          label: "Status TikTok Aktif (true/false)",
-        },
-        {
-          key: "client_amplify_status",
-          label: "Status Amplifikasi (true/false)",
-        },
-        { key: "client_type", label: "Tipe Client" },
-      ];
-      session.updateFieldList = fields;
-      let msg = `Pilih field yang ingin diupdate:\n`;
-      fields.forEach((f, i) => {
-        msg += `${i + 1}. ${f.label} [${f.key}]\n`;
-      });
-      msg += `\nBalas dengan angka sesuai daftar di atas.`;
-      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg));
+      session.updateFieldGroup = null;
+      session.updateFieldList = null;
+      await sendKelolaClientUpdateGroupMenu(session, chatId, waClient);
     } else if (text.trim() === "2") {
       const target = findSelectedClient(session);
       const clientLine = target?.client_id
@@ -2813,24 +2851,90 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     }
   },
 
-  kelolaClient_updatefield: async (session, chatId, text, waClient) => {
+  kelolaClient_updateGroup: async (session, chatId, text, waClient) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+
+    if (lowered === "batal" || lowered === "back" || lowered === "kembali") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+
+    const idx = parseInt(trimmed) - 1;
+    const groups = CLIENT_UPDATE_FIELD_GROUPS;
+    if (isNaN(idx) || !groups[idx]) {
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(
+          [
+            "Pilihan tidak valid. Balas angka sesuai daftar kategori.",
+            CLIENT_UPDATE_FIELD_GROUPS.map(
+              (group, index) => `${index + 1}. ${group.label}`
+            ).join("\n"),
+            "Ketik *batal* untuk keluar.",
+          ].join("\n")
+        )
+      );
+      return;
+    }
+
+    const selectedGroup = groups[idx];
+    session.updateFieldGroup = selectedGroup.key;
+    session.updateFieldList = selectedGroup.fields;
+    session.step = "kelolaClient_updateField";
+    await waClient.sendMessage(
+      chatId,
+      buildKelolaClientUpdateFieldMenu(
+        selectedGroup.label,
+        selectedGroup.fields
+      )
+    );
+  },
+
+  kelolaClient_updateField: async (session, chatId, text, waClient) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+    if (lowered === "back" || lowered === "kembali") {
+      await sendKelolaClientUpdateGroupMenu(session, chatId, waClient);
+      return;
+    }
+
     const idx = parseInt(text.trim()) - 1;
     const fields = session.updateFieldList || [];
     if (isNaN(idx) || !fields[idx]) {
-      let msg = `Pilihan tidak valid. Balas angka sesuai daftar di atas.\n`;
-      fields.forEach((f, i) => {
-        msg += `${i + 1}. ${f.label} [${f.key}]\n`;
-      });
-      await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
+      if (!fields.length) {
+        await sendKelolaClientUpdateGroupMenu(session, chatId, waClient);
+        return;
+      }
+      const groupLabel = CLIENT_UPDATE_FIELD_GROUPS.find(
+        (group) => group.key === session.updateFieldGroup
+      )?.label;
+      await waClient.sendMessage(
+        chatId,
+        buildKelolaClientUpdateFieldMenu(
+          groupLabel || "Kategori Terpilih",
+          fields
+        )
+      );
       return;
     }
     session.updateField = fields[idx].key;
     session.step = "kelolaClient_updatevalue";
     await waClient.sendMessage(
       chatId,
-      `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key})\nUntuk boolean, isi dengan true/false:`
+      appendSubmenuBackInstruction(
+        `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key}).\n` +
+          `Untuk boolean, isi dengan true/false.\n` +
+          `Ketik *batal* untuk keluar.`
+      )
     );
   },
+  kelolaClient_updatefield: async (...args) =>
+    clientRequestHandlers.kelolaClient_updateField(...args),
   kelolaClient_confirmDelete: async (
     session,
     chatId,
@@ -2881,10 +2985,26 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     userModel,
     clientService
   ) => {
+    const trimmed = text.trim();
+    const lowered = trimmed.toLowerCase();
+    if (lowered === "batal") {
+      await sendKelolaClientMenu(session, chatId, waClient);
+      return;
+    }
+    if (lowered === "back" || lowered === "kembali") {
+      await clientRequestHandlers.kelolaClient_updateField(
+        session,
+        chatId,
+        "",
+        waClient
+      );
+      return;
+    }
+
     try {
       const updated = await clientService.updateClient(
         session.selected_client_id,
-        { [session.updateField]: text.trim() }
+        { [session.updateField]: trimmed }
       );
       await waClient.sendMessage(
         chatId,
