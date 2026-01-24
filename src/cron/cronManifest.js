@@ -53,4 +53,10 @@ export default [
     bucket: 'waClient',
     description: 'Expire stale dashboard premium requests and notify admins plus requesters.',
   },
+  {
+    jobKey: './src/cron/cronOprRequestAbsensiUpdateDataUsername.js',
+    modulePath: './src/cron/cronOprRequestAbsensiUpdateDataUsername.js',
+    bucket: 'waClient',
+    description: 'Send hourly oprrequest absensi update data username recaps to each org client WhatsApp group.',
+  },
 ];

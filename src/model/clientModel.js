@@ -38,6 +38,24 @@ export const findAllActive = async () => {
   return res.rows;
 };
 
+export const findAllActiveOrgClients = async () => {
+  const selectColumns = await buildClientSelect([
+    "client_id",
+    "nama",
+    "client_type",
+    "client_status",
+    "client_group",
+  ]);
+  const res = await query(
+    `SELECT ${selectColumns}
+     FROM clients
+     WHERE client_status = true
+       AND LOWER(client_type) = LOWER('org')
+     ORDER BY client_id`
+  );
+  return res.rows;
+};
+
 // Ambil semua client Direktorat yang aktif
 export const findAllActiveDirektorat = async () => {
   const selectColumns = await buildClientSelect(

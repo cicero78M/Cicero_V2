@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2026-01-22*
+*Last updated: 2026-01-24*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together when needed.【F:src/cron/dirRequest/index.js†L1-L108】
 
@@ -31,6 +31,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | `cronDirRequestRekapUpdate.js` | `0 8-18/4 * * *` | Send Ditbinmas executive summaries and rekap updates to admins and broadcast groups. |
 | `cronDirRequestRekapBelumLengkapDitsamapta.js` | `15 7-21 * * *` | Send Ditsamapta incomplete Instagram/TikTok data recaps to admin recipients only. |
 | `cronDirRequestFetchSosmed.js` | `0,30 6-21 * * *<br>0 22 * * *` | Fetch Instagram/TikTok posts for all active clients (direktorat + org) with Instagram/TikTok enabled, refresh engagement metrics, and broadcast status deltas; delivery now triggers when the Instagram/TikTok link set changes even if post counts stay flat (pengiriman grup dikunci setelah 17:15 WIB, tetapi fetch post & refresh engagement tetap jalan supaya komentar malam memakai data terbaru). Fetch ini bersifat single-flight: saat job masih berjalan, pemanggilan berikutnya akan mencatat “skip due to in-flight” dan keluar. |
+| `cronOprRequestAbsensiUpdateDataUsername.js` | `45 8-15 * * *` | Send oprrequest absensi update data username recaps to each active org client WhatsApp group. |
 | `cronDashboardSubscriptionExpiry.js` | `*/30 * * * *` | Mark overdue dashboard subscriptions as expired and send WhatsApp reminders when a destination number is available. |
 | `cronPremiumExpiry.js` | `0 0 * * *` | Expire mobile premium users when `premium_end_date` is in the past. |
 | `cronDashboardPremiumRequestExpiry.js` | `0 * * * *` | Expire pending/confirmed dashboard premium requests after their `expired_at` deadline and send requester/admin WhatsApp notifications. |
