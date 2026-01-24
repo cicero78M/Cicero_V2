@@ -48,6 +48,57 @@ export function groupByDivision(arr) {
   return divGroups;
 }
 
+export function groupUsersByDivisionStatus(users = [], options = {}) {
+  const {
+    totalTarget = 0,
+    getCount = (u) => u.count || 0,
+    hasUsername = () => true,
+  } = options;
+  const divisions = {};
+  const summary = {
+    total: 0,
+    lengkap: 0,
+    kurang: 0,
+    belum: 0,
+    noUsername: 0,
+  };
+
+  users.forEach((u) => {
+    const div = u.divisi || "-";
+    if (!divisions[div]) {
+      divisions[div] = { lengkap: [], kurang: [], belum: [] };
+    }
+    summary.total += 1;
+    const count = Number(getCount(u)) || 0;
+    const payload = { ...u, count };
+    const usernameOk = hasUsername(u);
+
+    if (!usernameOk) {
+      divisions[div].belum.push(payload);
+      summary.belum += 1;
+      summary.noUsername += 1;
+      return;
+    }
+
+    if (totalTarget > 0 && count >= totalTarget) {
+      divisions[div].lengkap.push(payload);
+      summary.lengkap += 1;
+      return;
+    }
+
+    if (count > 0) {
+      divisions[div].kurang.push(payload);
+      summary.kurang += 1;
+      return;
+    }
+
+    divisions[div].belum.push(payload);
+    summary.belum += 1;
+  });
+
+  return { divisions, summary };
+}
+
 export function formatNama(u) {
   return [u.title, u.nama].filter(Boolean).join(" ");
 }
