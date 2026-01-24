@@ -267,6 +267,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.addUser;
       delete session.availableSatfung;
       delete session.updateStatusNRP;
+      delete session.absensi_update_client_id;
     };
     if (/^1$/i.test(text.trim())) {
       clean();
@@ -282,7 +283,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       await waClient.sendMessage(
         chatId,
         appendSubmenuBackInstruction(
-          `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+          `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n6️⃣ Absensi update data username\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
         )
       );
       return;
@@ -324,6 +325,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.addUser;
       delete session.availableSatfung;
       delete session.updateStatusNRP;
+      delete session.absensi_update_client_id;
     };
     if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
       session.step = "main";
@@ -399,9 +401,32 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       session.absensi_reg_client_id = null;
       return oprRequestHandlers.absensiReg_submenu(session, chatId, text, waClient, pool, userModel);
     }
+    if (/^6$/i.test(text.trim())) {
+      clean();
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "absensiUpdateData_chooseClient";
+        return oprRequestHandlers.absensiUpdateData_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      session.step = "absensiUpdateData_report";
+      session.absensi_update_client_id = null;
+      return oprRequestHandlers.absensiUpdateData_report(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-5, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-6, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
@@ -2272,6 +2297,83 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     );
     await waClient.sendMessage(chatId, msg);
     session.step = "absensiReg_menu";
+  },
+
+  absensiUpdateData_chooseClient: async (session, chatId, text, waClient, pool) => {
+    const rows = await pool.query(
+      "SELECT client_id, nama FROM clients ORDER BY client_id"
+    );
+    const clients = rows.rows;
+    if (!clients.length) {
+      await waClient.sendMessage(chatId, "Tidak ada client terdaftar.");
+      session.step = "main";
+      return;
+    }
+    session.clientList = clients;
+    let msg = `*Daftar Client*\nBalas angka untuk pilih client:\n`;
+    clients.forEach((c, i) => {
+      msg += `${i + 1}. *${c.client_id}* - ${c.nama}\n`;
+    });
+    await waClient.sendMessage(chatId, appendSubmenuBackInstruction(msg.trim()));
+    session.step = "absensiUpdateData_chooseClient_action";
+  },
+
+  absensiUpdateData_chooseClient_action: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel
+  ) => {
+    const idx = parseInt(text.trim()) - 1;
+    const clients = session.clientList || [];
+    if (isNaN(idx) || !clients[idx]) {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas angka sesuai daftar.");
+      return;
+    }
+    session.absensi_update_client_id = clients[idx].client_id;
+    session.step = "absensiUpdateData_report";
+    return oprRequestHandlers.absensiUpdateData_report(
+      session,
+      chatId,
+      "",
+      waClient,
+      pool,
+      userModel
+    );
+  },
+
+  absensiUpdateData_report: async (session, chatId, text, waClient, pool, userModel) => {
+    const clientId =
+      session.absensi_update_client_id || (await resolveClientId(session, chatId, pool));
+    if (!clientId) {
+      if (isAdminWhatsApp(chatId)) {
+        session.step = "absensiUpdateData_chooseClient";
+        return oprRequestHandlers.absensiUpdateData_chooseClient(
+          session,
+          chatId,
+          text,
+          waClient,
+          pool
+        );
+      }
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    session.absensi_update_client_id = clientId;
+    try {
+      const { absensiUpdateDataUsername } = await import(
+        "../fetchabsensi/wa/absensiUpdateDataUsername.js"
+      );
+      const msg = await absensiUpdateDataUsername(clientId, OPERATOR_ROLE);
+      await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
+    } catch (e) {
+      await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
   },
 
   absensiReg_menu: async (

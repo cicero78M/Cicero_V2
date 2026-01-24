@@ -1,5 +1,5 @@
 # Panduan Operator WA Bot
-*Last updated: 2026-01-23*
+*Last updated: 2026-02-05*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Akses menu dibatasi sebagai berikut:
 - Nomor operator dan **Super Admin** client yang terdaftar pada data client aktif dapat langsung masuk ke menu operator.
@@ -19,6 +19,7 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
    - 3️⃣ Ubah status user (aktif/nonaktif)
    - 4️⃣ Cek data user berdasarkan NRP/NIP
    - 5️⃣ Absensi registrasi user
+   - 6️⃣ Absensi update data username
    Submenu **Absensi registrasi user** kini berada di *Kelola User*.
 5. Di dalam *Kelola Amplifikasi*, terdapat dua kelompok:
    - **Tugas**
@@ -57,7 +58,11 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
   1. Masukkan NRP/NIP yang ingin diubah.
   2. Pilih status baru: 1 untuk aktif, 2 untuk nonaktif.
   3. Bot mengonfirmasi perubahan status dan memperbarui `updated_at`.
- - **Cek Data User**
+- **Absensi Update Data Username**
+  1. Bot menampilkan absensi pengisian username Instagram dan TikTok personil.
+  2. Data dikelompokkan berdasarkan satfung/divisi, lalu dipisah menjadi lengkap, kurang, dan belum.
+  3. Setiap baris menampilkan format: pangkat nama – username Instagram, username TikTok.
+- **Cek Data User**
   1. Masukkan NRP/NIP user milik client Anda.
   2. Bot menampilkan detail user beserta statusnya jika ditemukan pada client yang sama.
 - **Rekap Link Harian**
