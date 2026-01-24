@@ -15,8 +15,12 @@ menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.
    - Balas `tidak` atau `batal` untuk membatalkan proses.
 5. Setelah konfirmasi `ya`, bot memperbarui kolom `whatsapp`
    pada tabel `user` dan menampilkan pemberitahuan berhasil.
-   - Nomor disimpan dalam format kanonik **digits only** dengan awalan `62`
-     (contoh: `628123456789`).
+   - Nomor dinormalisasi ke format kanonik **digits only** dengan awalan `62`
+     (contoh: `628123456789`). Normalisasi ini juga dipakai saat bot mencocokkan
+     WhatsApp pengguna di alur `userrequest`.
+   - Setelah tersimpan, bot langsung melanjutkan ke pertanyaan
+     *"Apakah Anda ingin melakukan perubahan data?"* tanpa melakukan pencarian
+     ulang berdasarkan chat ID mentah.
 6. Ketik `userrequest` kapan saja untuk menampilkan data Anda
    atau memulai proses registrasi kembali.
 

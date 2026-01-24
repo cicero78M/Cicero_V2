@@ -6,7 +6,7 @@ import {
   getGreeting,
 } from "../../utils/utilsHelper.js";
 import { saveContactIfNew } from "../../service/googleContactsService.js";
-import { formatToWhatsAppId } from "../../utils/waHelper.js";
+import { formatToWhatsAppId, normalizeWhatsappNumber } from "../../utils/waHelper.js";
 import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 
 // --- Helper Format Pesan ---
@@ -61,7 +61,7 @@ export const closeSession = async (
 // ===== Handler utama usermenu =====
 export const userMenuHandlers = {
   main: async (session, chatId, _text, waClient, _pool, userModel) => {
-    const pengirim = chatId.replace(/[^0-9]/g, "");
+    const pengirim = normalizeWhatsappNumber(chatId);
     const userByWA = await userModel.findUserByWhatsApp(pengirim);
 
     if (userByWA) {
@@ -201,7 +201,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
 
   confirmBindUser: async (session, chatId, text, waClient, pool, userModel) => {
     const answer = text.trim().toLowerCase();
-    const waNum = chatId.replace(/[^0-9]/g, "");
+    const waNum = normalizeWhatsappNumber(chatId);
     if (answer === "ya") {
       const user_id = session.bindUserId;
       await userModel.updateUserField(user_id, "whatsapp", waNum);
@@ -215,7 +215,11 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       );
       session.identityConfirmed = true;
       session.user_id = user_id;
-      await userMenuHandlers.main(session, chatId, "", waClient, pool, userModel);
+      session.step = "tanyaUpdateMyData";
+      await waClient.sendMessage(
+        chatId,
+        "Apakah Anda ingin melakukan perubahan data?\nBalas *ya* jika ingin update data, *tidak* untuk keluar, atau *batal* untuk menutup sesi."
+      );
       return;
     }
     if (answer === "tidak") {
@@ -234,7 +238,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
 
   confirmBindUpdate: async (session, chatId, text, waClient, pool, userModel) => {
     const ans = text.trim().toLowerCase();
-    const waNum = chatId.replace(/[^0-9]/g, "");
+    const waNum = normalizeWhatsappNumber(chatId);
     if (ans === "ya") {
       const nrp = session.updateUserId;
       await userModel.updateUserField(nrp, "whatsapp", waNum);
@@ -463,7 +467,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
         return;
       }
     }
-    if (field === "whatsapp") value = value.replace(/[^0-9]/g, "");
+    if (field === "whatsapp") value = normalizeWhatsappNumber(value);
     if (["nama", "title", "divisi", "jabatan", "desa"].includes(field)) value = value.toUpperCase();
 
     await userModel.updateUserField(user_id, field, value);
