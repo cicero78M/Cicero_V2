@@ -2891,7 +2891,15 @@ Ketik *angka* menu, atau *batal* untuk kembali.
     );
   },
 
-  kelolaClient_updateField: async (session, chatId, text, waClient) => {
+  kelolaClient_updateField: async (
+    session,
+    chatId,
+    text,
+    waClient,
+    pool,
+    userModel,
+    clientService
+  ) => {
     const trimmed = text.trim();
     const lowered = trimmed.toLowerCase();
     if (lowered === "batal") {
@@ -2922,12 +2930,30 @@ Ketik *angka* menu, atau *batal* untuk kembali.
       );
       return;
     }
-    session.updateField = fields[idx].key;
+    const selectedField = fields[idx];
+    session.updateField = selectedField.key;
     session.step = "kelolaClient_updatevalue";
+    if (selectedField.key === "tiktok_secuid") {
+      await waClient.sendMessage(
+        chatId,
+        "🔎 Menyiapkan sinkronisasi TikTok SecUID dari username tersimpan."
+      );
+      await clientRequestHandlers.kelolaClient_updatevalue(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel,
+        clientService
+      );
+      return;
+    }
+
     await waClient.sendMessage(
       chatId,
       appendSubmenuBackInstruction(
-        `Masukkan value baru untuk *${fields[idx].label}* (key: ${fields[idx].key}).\n` +
+        `Masukkan value baru untuk *${selectedField.label}* (key: ${selectedField.key}).\n` +
           `Untuk boolean, isi dengan true/false.\n` +
           `Ketik *batal* untuk keluar.`
       )
@@ -2996,12 +3022,106 @@ Ketik *angka* menu, atau *batal* untuk kembali.
         session,
         chatId,
         "",
-        waClient
+        waClient,
+        pool,
+        userModel,
+        clientService
       );
       return;
     }
 
     try {
+      if (session.updateField === "client_tiktok") {
+        const normalizedHandle = normalizeHandleValue(trimmed);
+        if (!normalizedHandle) {
+          await waClient.sendMessage(
+            chatId,
+            "❌ Username TikTok tidak valid. Masukkan username TikTok tanpa spasi."
+          );
+          return;
+        }
+
+        const username = normalizedHandle.replace(/^@/, "");
+        let secUid = null;
+        let syncMessage = "⚠️ Gagal ambil secUid dari RapidAPI, tiktok_secuid diset kosong.";
+        try {
+          const profile = await fetchTiktokProfile(username);
+          secUid = profile?.secUid || null;
+          if (secUid) {
+            syncMessage = "✅ secUid berhasil disinkronkan.";
+          }
+        } catch (error) {
+          secUid = null;
+        }
+
+        const updated = await clientService.updateClient(
+          session.selected_client_id,
+          { client_tiktok: normalizedHandle, tiktok_secuid: secUid }
+        );
+        await waClient.sendMessage(
+          chatId,
+          updated
+            ? `✅ Update berhasil.\n${syncMessage}\n${formatClientInfo(updated)}`
+            : "❌ Client tidak ditemukan atau update gagal."
+        );
+        session.step = "main";
+        return;
+      }
+
+      if (session.updateField === "tiktok_secuid") {
+        const client = await clientService.findClientById(
+          session.selected_client_id
+        );
+        const storedHandle = normalizeHandleValue(client?.client_tiktok || "");
+        if (!storedHandle) {
+          await waClient.sendMessage(
+            chatId,
+            "⚠️ Username TikTok belum diisi. Update *client_tiktok* terlebih dahulu."
+          );
+          const fields = session.updateFieldList || [];
+          const groupLabel = CLIENT_UPDATE_FIELD_GROUPS.find(
+            (group) => group.key === session.updateFieldGroup
+          )?.label;
+          session.step = "kelolaClient_updateField";
+          if (fields.length) {
+            await waClient.sendMessage(
+              chatId,
+              buildKelolaClientUpdateFieldMenu(
+                groupLabel || "Kategori Terpilih",
+                fields
+              )
+            );
+          }
+          return;
+        }
+
+        const username = storedHandle.replace(/^@/, "");
+        let secUid = null;
+        let syncMessage = "❌ Gagal ambil secUid dari RapidAPI.";
+        try {
+          const profile = await fetchTiktokProfile(username);
+          secUid = profile?.secUid || null;
+          if (secUid) {
+            syncMessage = "✅ secUid berhasil disinkronkan.";
+          }
+        } catch (error) {
+          secUid = null;
+        }
+
+        const updated = await clientService.updateClient(
+          session.selected_client_id,
+          { tiktok_secuid: secUid }
+        );
+        await waClient.sendMessage(
+          chatId,
+          updated
+            ? `✅ Update berhasil.\n${syncMessage}\n${formatClientInfo(updated)}`
+            : "❌ Client tidak ditemukan atau update gagal."
+        );
+        session.step = "main";
+        return;
+      }
+
       const updated = await clientService.updateClient(
         session.selected_client_id,
         { [session.updateField]: trimmed }
