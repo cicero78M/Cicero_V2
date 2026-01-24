@@ -92,6 +92,63 @@ async function isExecutableAccessible(executablePath) {
   }
 }
 
+function formatFileMode(mode) {
+  if (typeof mode !== 'number') {
+    return 'unknown';
+  }
+  return `0${(mode & 0o777).toString(8)}`;
+}
+
+async function getExecutableDiagnostics(executablePath) {
+  if (!executablePath) {
+    return {
+      resolvedPath: null,
+      statMode: null,
+      statErrorCode: 'ENOENT',
+      accessOk: false,
+      accessErrorCode: 'ENOENT',
+    };
+  }
+  const resolvedPath = path.resolve(executablePath);
+  let statMode = null;
+  let statErrorCode = null;
+  try {
+    const stats = await fs.promises.stat(resolvedPath);
+    statMode = stats.mode;
+  } catch (err) {
+    statErrorCode = err?.code || 'UNKNOWN';
+  }
+  let accessOk = false;
+  let accessErrorCode = null;
+  try {
+    await fs.promises.access(resolvedPath, fs.constants.X_OK);
+    accessOk = true;
+  } catch (err) {
+    accessErrorCode = err?.code || 'UNKNOWN';
+  }
+  return {
+    resolvedPath,
+    statMode,
+    statErrorCode,
+    accessOk,
+    accessErrorCode,
+  };
+}
+
+function buildExecutableRemediationHints(diagnostics) {
+  const hints = [];
+  const hasExecuteBit =
+    typeof diagnostics?.statMode === 'number' &&
+    (diagnostics.statMode & 0o111) !== 0;
+  if (typeof diagnostics?.statMode === 'number' && !hasExecuteBit) {
+    hints.push('chmod +x <path>');
+  }
+  if (diagnostics?.accessErrorCode === 'EACCES' && hasExecuteBit) {
+    hints.push('mount -o remount,exec <mountpoint>');
+  }
+  return hints;
+}
+
 function resolveBrowserLockBackoffMs() {
   const configured = Number.parseInt(
     process.env.WA_WWEBJS_BROWSER_LOCK_BACKOFF_MS || '',
@@ -944,9 +1001,31 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       lockActiveFailureCount = 0;
     } catch (err) {
       if (isMissingChromeError(err)) {
-        const executableAccessible = await isExecutableAccessible(
-          puppeteerExecutablePath
-        );
+        let executableAccessible = false;
+        if (puppeteerExecutablePath) {
+          const diagnostics = await getExecutableDiagnostics(
+            puppeteerExecutablePath
+          );
+          const accessLabel = diagnostics.accessOk
+            ? 'OK'
+            : diagnostics.accessErrorCode || 'UNKNOWN';
+          const hints = buildExecutableRemediationHints(diagnostics);
+          console.warn(
+            `[WWEBJS] Missing Chrome diagnostics for clientId=${clientId} (${triggerLabel}): ` +
+              `resolvedPath=${diagnostics.resolvedPath}, ` +
+              `stat.mode=${formatFileMode(diagnostics.statMode)}, ` +
+              `access=${accessLabel}` +
+              (diagnostics.statErrorCode
+                ? `, statError=${diagnostics.statErrorCode}`
+                : '') +
+              (hints.length ? `. Remediation: ${hints.join(' or ')}.` : '.')
+          );
+          executableAccessible = diagnostics.accessOk;
+        } else {
+          executableAccessible = await isExecutableAccessible(
+            puppeteerExecutablePath
+          );
+        }
         if (!executableAccessible) {
           const taggedError =
             err instanceof Error ? err : new Error(err?.message || String(err));
