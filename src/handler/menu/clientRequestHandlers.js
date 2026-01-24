@@ -752,6 +752,11 @@ async function processBulkDeletionRequest({
       chatId,
       "Format tidak dikenali. Mohon kirimkan template lengkap atau ketik *batal*."
     );
+    if (session) {
+      delete currentSession.bulkStatusContext;
+      currentSession.step = "main";
+    }
+    clearSession(chatId);
     return { processed: false };
   }
 
@@ -770,6 +775,11 @@ async function processBulkDeletionRequest({
   }
 
   if (!BULK_STATUS_HEADER_REGEX.test(trimmed)) {
+    if (session) {
+      delete currentSession.bulkStatusContext;
+      currentSession.step = "main";
+    }
+    clearSession(chatId);
     return { processed: false };
   }
 
@@ -779,6 +789,11 @@ async function processBulkDeletionRequest({
       chatId,
       "Tidak menemukan daftar personel. Pastikan format setiap baris: `1. NAMA – USER_ID – alasan`."
     );
+    if (session) {
+      delete currentSession.bulkStatusContext;
+      currentSession.step = "main";
+    }
+    clearSession(chatId);
     return { processed: false };
   }
 

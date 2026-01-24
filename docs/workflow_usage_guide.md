@@ -39,7 +39,10 @@ Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
   nomor `Nama – NRP/NIP – Alasan`. Bot menonaktifkan status, mengosongkan
   WhatsApp, dan mengirim ringkasan sukses/gagal. Header dengan penebalan
   (mis. `📄 **Permohonan ...**`) kini juga dikenali sebagai ringkasan balasan
-  bot sehingga tidak diproses ulang jika pesan tersebut dikirim kembali.
+  bot sehingga tidak diproses ulang jika pesan tersebut dikirim kembali. Jika
+  format kosong, header tidak sesuai, atau daftar personel tidak ditemukan, bot
+  mengirim pesan penjelasan lalu menutup sesi agar pengguna kembali ke menu
+  utama.
 - Normalisasi pesan (lowercase dan trim) dilakukan di awal fungsi `processMessage`
   agar seluruh percabangan—termasuk perintah `batal` di menu interaktif—selalu
   menggunakan teks yang sudah stabil tanpa memicu `ReferenceError`.
