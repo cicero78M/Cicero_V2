@@ -56,6 +56,28 @@ export const findAllActiveOrgClients = async () => {
   return res.rows;
 };
 
+export const findAllActiveOrgClientsWithSosmed = async () => {
+  const selectColumns = await buildClientSelect([
+    "client_id",
+    "nama",
+    "client_type",
+    "client_status",
+    "client_group",
+    "client_insta_status",
+    "client_tiktok_status",
+  ]);
+  const res = await query(
+    `SELECT ${selectColumns}
+     FROM clients
+     WHERE client_status = true
+       AND LOWER(client_type) = LOWER('org')
+       AND client_insta_status = true
+       AND client_tiktok_status = true
+     ORDER BY client_id`
+  );
+  return res.rows;
+};
+
 // Ambil semua client Direktorat yang aktif
 export const findAllActiveDirektorat = async () => {
   const selectColumns = await buildClientSelect(
