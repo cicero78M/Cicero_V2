@@ -116,7 +116,9 @@ Alur *Update Data Client* kini memakai submenu kategori agar pilihan field lebih
    - **Akun Sosmed** (contoh: `client_insta`, `client_tiktok`, `tiktok_secuid`)
    - **Status & Amplifikasi** (contoh: `client_status`, `client_insta_status`, `client_tiktok_status`, `client_amplify_status`)
 4. Setelah memilih kategori, bot menampilkan daftar field di dalam kategori tersebut. Balas angka sesuai field yang ingin diperbarui.
-5. Ketik value baru sesuai instruksi (untuk boolean gunakan `true/false`). Gunakan `back` untuk kembali ke daftar kategori atau `batal` untuk keluar.
+5. Saat memperbarui **client_tiktok**, bot akan otomatis mengambil `secUid` dari RapidAPI dan menyimpan ke `tiktok_secuid` (jika gagal, nilai `tiktok_secuid` dikosongkan).
+6. Saat memilih **tiktok_secuid**, bot tidak meminta input manual dan langsung menyinkronkan `secUid` dari RapidAPI berdasarkan `client_tiktok` yang tersimpan. Jika `client_tiktok` masih kosong, bot meminta operator mengisi username TikTok terlebih dahulu.
+7. Ketik value baru sesuai instruksi (untuk boolean gunakan `true/false`). Gunakan `back` untuk kembali ke daftar kategori atau `batal` untuk keluar.
 
 ### Permintaan Melalui WA Gateway: `#SatbinmasOfficial`
 Permintaan informasi akun resmi Satbinmas dapat dikirim lewat nomor *WA Gateway* dengan mengirim teks `#SatbinmasOfficial` (case-insensitive). Alur dan syaratnya:
