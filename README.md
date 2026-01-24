@@ -324,6 +324,7 @@ The application can synchronize Google Workspace contacts using the People API. 
    - `GOOGLE_SERVICE_ACCOUNT` – JSON key or file path for the service account.
    - `GOOGLE_CONTACT_SCOPE` – OAuth scope for contacts, e.g. `https://www.googleapis.com/auth/contacts`.
    - `GOOGLE_IMPERSONATE_EMAIL` – Workspace user email to impersonate when accessing contacts.
+   - `CONTACT_AUTH_COOLDOWN_MS` – cooldown before re-attempting Google auth after missing/invalid credentials (defaults to 300000 ms).
    - `BACKUP_DIR` – temporary folder for local database dumps.
    - `GOOGLE_DRIVE_FOLDER_ID` – Google Drive folder ID to receive backups.
 

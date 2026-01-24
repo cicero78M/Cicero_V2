@@ -10,6 +10,10 @@ const CREDENTIALS_PATH = path.resolve('credentials.json');
 // Cache phone numbers that have been processed to avoid redundant DB lookups
 const processedContacts = new Map(); // phone -> expiration timestamp
 let contactCacheTtl = Number(process.env.CONTACT_CACHE_TTL_MS) || 300000; // default 5 minutes
+const authWarningHistory = new Map(); // message -> timestamp
+const authCooldownMs =
+  Number(process.env.CONTACT_AUTH_COOLDOWN_MS) || 300000; // default 5 minutes
+let authUnavailableUntil = 0;
 
 export function setContactCacheTTL(ms) {
   contactCacheTtl = ms;
@@ -17,6 +21,23 @@ export function setContactCacheTTL(ms) {
 
 export function clearContactCache() {
   processedContacts.clear();
+}
+
+function logAuthWarning(message) {
+  const now = Date.now();
+  const last = authWarningHistory.get(message) || 0;
+  if (now - last >= authCooldownMs) {
+    console.warn(message);
+    authWarningHistory.set(message, now);
+  }
+}
+
+function setAuthCooldown() {
+  authUnavailableUntil = Date.now() + authCooldownMs;
+}
+
+function shouldSkipAuthAttempt() {
+  return Date.now() < authUnavailableUntil;
 }
 
 function isCached(phone) {
@@ -31,22 +52,25 @@ function addToCache(phone) {
 }
 
 export async function authorize() {
+  if (shouldSkipAuthAttempt()) return null;
   let credentials;
   try {
     const content = await fs.readFile(CREDENTIALS_PATH, 'utf8');
     credentials = JSON.parse(content);
   } catch {
-    console.warn(
+    logAuthWarning(
       '[GOOGLE CONTACT] credentials.json not found, skipping contact save.'
     );
+    setAuthCooldown();
     return null;
   }
   const credsData = credentials.installed || credentials.web;
   const { client_secret, client_id, redirect_uris = [] } = credsData || {};
   if (!redirect_uris.length) {
-    console.warn(
+    logAuthWarning(
       '[GOOGLE CONTACT] redirect_uris missing in credentials.json, skipping contact save.'
     );
+    setAuthCooldown();
     return null;
   }
   const oAuth2Client = new google.auth.OAuth2(
@@ -68,6 +92,7 @@ export async function authorize() {
         );
       } catch (err) {
         console.error('[GOOGLE CONTACT] token refresh failed:', err.message);
+        setAuthCooldown();
         return null;
       }
     }
@@ -88,7 +113,10 @@ export async function authorize() {
       scope: SCOPES,
     });
     console.log('Authorize this app by visiting this url:', authUrl);
-    console.warn('[GOOGLE CONTACT] token.json not found, skipping contact save.');
+    logAuthWarning(
+      '[GOOGLE CONTACT] token.json not found, skipping contact save.'
+    );
+    setAuthCooldown();
     return null;
   }
   return oAuth2Client;
