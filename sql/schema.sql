@@ -616,7 +616,8 @@ VALUES
     ('./src/cron/cronDirRequestFetchSosmed.js', 'Directorate Fetch Sosmed'),
     ('./src/cron/cronWaNotificationReminder.js', 'Ditbinmas Task Reminder'),
     ('./src/cron/cronDirRequestSatbinmasOfficialMedia.js', 'Satbinmas Official Media Recap'),
-    ('./src/cron/cronDirRequestBidhumasEvening.js', 'Bidhumas Evening Menu 6 & 9')
+    ('./src/cron/cronDirRequestBidhumasEvening.js', 'Bidhumas Evening Menu 6 & 9'),
+    ('./src/cron/cronOprRequestAbsensiEngagement.js', 'Oprrequest Engagement Absensi')
 ON CONFLICT (job_key) DO NOTHING;
 
 -- No additional setup steps required beyond applying this schema.

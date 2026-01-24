@@ -59,4 +59,10 @@ export default [
     bucket: 'waClient',
     description: 'Send hourly oprrequest absensi update data username recaps to each org client WhatsApp group.',
   },
+  {
+    jobKey: './src/cron/cronOprRequestAbsensiEngagement.js',
+    modulePath: './src/cron/cronOprRequestAbsensiEngagement.js',
+    bucket: 'waClient',
+    description: 'Send oprrequest engagement absensi Instagram/TikTok recaps to org client WhatsApp group, operator, and super admin.',
+  },
 ];
