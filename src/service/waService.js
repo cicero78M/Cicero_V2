@@ -2202,6 +2202,7 @@ export function createHandleMessage(waClient, options = {}) {
 
 1️⃣ Manajemen User
 2️⃣ Manajemen Amplifikasi
+3️⃣ Manajemen Engagement
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`,
