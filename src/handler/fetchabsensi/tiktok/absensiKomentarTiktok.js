@@ -7,7 +7,12 @@ import {
 import { getPostsTodayByClient } from "../../../model/tiktokPostModel.js";
 import { getCommentsByVideoId } from "../../../model/tiktokCommentModel.js";
 import { hariIndo } from "../../../utils/constants.js";
-import { groupByDivision, sortDivisionKeys, formatNama } from "../../../utils/utilsHelper.js";
+import {
+  groupByDivision,
+  sortDivisionKeys,
+  formatNama,
+  groupUsersByDivisionStatus,
+} from "../../../utils/utilsHelper.js";
 import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { sendDebug } from "../../../middleware/debugHandler.js";
 
@@ -176,6 +181,8 @@ export async function collectKomentarRecap(clientId, opts = {}) {
 export async function absensiKomentar(client_id, opts = {}) {
   const { clientFilter } = opts;
   const roleFlag = opts.roleFlag;
+  const normalizedRole = (roleFlag || "").toLowerCase();
+  const isOperatorRole = normalizedRole === "operator";
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -258,6 +265,86 @@ export async function absensiKomentar(client_id, opts = {}) {
   });
 
   const totalKonten = posts.length;
+
+  if (isOperatorRole) {
+    const { divisions: statusByDivision, summary } = groupUsersByDivisionStatus(
+      Object.values(userStats),
+      {
+        totalTarget: totalKonten,
+        getCount: (u) => u.count || 0,
+        hasUsername: (u) => !!(u.tiktok && u.tiktok.trim() !== ""),
+      }
+    );
+
+    const kontenLinks = posts.map(
+      (p) => `https://www.tiktok.com/@${tiktokUsername}/video/${p.video_id}`
+    );
+    const mode = (opts && opts.mode) ? String(opts.mode).toLowerCase() : "all";
+    const divisionKeys = sortDivisionKeys(Object.keys(statusByDivision));
+    const formatUserLine = (u) => {
+      const handle = u.tiktok ? u.tiktok : "belum mengisi data tiktok";
+      const progress = `(${u.count || 0}/${totalKonten} konten)`;
+      return `- ${u.title ? u.title + " " : ""}${u.nama} : ${handle} ${progress}`.trim();
+    };
+
+    let msg =
+      `Mohon ijin Komandan,\n\n` +
+      `📋 *Rekap Akumulasi Komentar TikTok*\n` +
+      `*${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
+      `*Jumlah Konten:* ${totalKonten}\n` +
+      `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
+      `*Jumlah user:* ${summary.total} user\n` +
+      `✅ *Melaksanakan lengkap* : *${summary.lengkap} user*\n` +
+      `⚠️ *Melaksanakan kurang lengkap* : *${summary.kurang} user*\n` +
+      `❌ *Belum melaksanakan* : *${summary.belum} user*\n\n`;
+
+    if (mode === "all" || mode === "sudah") {
+      msg += `✅ *Melaksanakan lengkap* (${summary.lengkap} user)\n`;
+      msg += `⚠️ *Melaksanakan kurang lengkap* (${summary.kurang} user)\n`;
+    }
+    if (mode === "all" || mode === "belum") {
+      msg += `❌ *Belum melaksanakan* (${summary.belum} user)\n`;
+    }
+    msg += "\n";
+
+    if (!divisionKeys.length) {
+      msg += "-\n";
+    } else {
+      divisionKeys.forEach((div, idx, arr) => {
+        const data = statusByDivision[div];
+        const totalDiv =
+          data.lengkap.length + data.kurang.length + data.belum.length;
+        msg += `*${div}* (${totalDiv} user):\n`;
+
+        if (mode === "all" || mode === "sudah") {
+          msg += `✅ Lengkap (${data.lengkap.length} user):\n`;
+          msg += data.lengkap.length
+            ? data.lengkap.map(formatUserLine).join("\n") + "\n"
+            : "-\n";
+          msg += `⚠️ Kurang (${data.kurang.length} user):\n`;
+          msg += data.kurang.length
+            ? data.kurang.map(formatUserLine).join("\n") + "\n"
+            : "-\n";
+        }
+
+        if (mode === "all" || mode === "belum") {
+          msg += `❌ Belum (${data.belum.length} user):\n`;
+          msg += data.belum.length
+            ? data.belum.map(formatUserLine).join("\n") + "\n"
+            : "-\n";
+        }
+
+        if (idx < arr.length - 1) msg += "\n";
+      });
+    }
+
+    if (failedVideoIds.length) {
+      msg += `\n\n⚠️ Data komentar gagal diambil untuk konten: ${failedVideoIds.join(", ")}`;
+    }
+
+    msg += `\n\nTerimakasih.`;
+    return msg.trim();
+  }
 
   if (client_id.toUpperCase() === "DITBINMAS") {
     const groups = {};

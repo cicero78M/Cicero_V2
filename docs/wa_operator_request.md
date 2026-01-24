@@ -77,8 +77,10 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
   1. Bot menjalankan proses pengambilan tugas terbaru untuk client terkait.
 - **Absensi Likes Instagram**
   1. Bot menampilkan rekap absensi likes Instagram untuk user operator berdasarkan mode (semua/sudah/belum).
+  2. Mode akumulasi menampilkan daftar per satfung dengan sub-list *lengkap/kurang/belum* (lengkap = seluruh konten terpenuhi).
 - **Absensi Komentar TikTok**
   1. Bot menampilkan rekap absensi komentar TikTok untuk user operator berdasarkan mode (semua/sudah/belum).
+  2. Mode akumulasi menampilkan daftar per satfung dengan sub-list *lengkap/kurang/belum* (lengkap = seluruh konten terpenuhi).
 
 ### Input Akun Resmi Satbinmas
 Untuk menambahkan akun resmi Satbinmas melalui bot:

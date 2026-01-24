@@ -6,6 +6,7 @@ import {
   groupByDivision,
   sortDivisionKeys,
   formatNama,
+  groupUsersByDivisionStatus,
 } from "../../../utils/utilsHelper.js";
 import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { findClientById } from "../../../service/clientService.js";
@@ -275,21 +276,14 @@ export async function absensiLikes(client_id, opts = {}) {
   });
 
   const totalKonten = shortcodes.length;
-  // User must like at least 50% of content to be considered complete
-  const threshold = Math.ceil(totalKonten * 0.5);
-  let sudah = [], belum = [];
-
-  Object.values(userStats).forEach((u) => {
-    if (
-      u.insta &&
-      u.insta.trim() !== "" &&
-      u.count >= threshold
-    ) {
-      sudah.push(u);
-    } else {
-      belum.push(u);
+  const { divisions: statusByDivision, summary } = groupUsersByDivisionStatus(
+    Object.values(userStats),
+    {
+      totalTarget: totalKonten,
+      getCount: (u) => u.count || 0,
+      hasUsername: (u) => !!(u.insta && u.insta.trim() !== ""),
     }
-  });
+  );
 
   const kontenLinks = shortcodes.map(
     (sc) => `https://www.instagram.com/p/${sc}`
@@ -304,61 +298,58 @@ export async function absensiLikes(client_id, opts = {}) {
     `📋 *Rekap Akumulasi Likes Instagram*\n*Polres*: *${clientNama}*\n${hari}, ${tanggal}\nJam: ${jam}\n\n` +
     `*Jumlah Konten:* ${totalKonten}\n` +
     `*Daftar Link Konten:*\n${kontenLinks.length ? kontenLinks.join("\n") : "-"}\n\n` +
-    `*Jumlah user:* ${users.length}\n` +
-    `✅ *Sudah melaksanakan* : *${sudah.length} user*\n` +
-    `❌ *Belum melaksanakan* : *${belum.length} user*\n\n`;
+    `*Jumlah user:* ${summary.total} user\n` +
+    `✅ *Melaksanakan lengkap* : *${summary.lengkap} user*\n` +
+    `⚠️ *Melaksanakan kurang lengkap* : *${summary.kurang} user*\n` +
+    `❌ *Belum melaksanakan* : *${summary.belum} user*\n\n`;
 
-  // === List User Sudah ===
+  const divisionKeys = sortDivisionKeys(Object.keys(statusByDivision));
+  const formatUserLine = (u) => {
+    const handle = u.insta ? `@${u.insta.replace(/^@/, "")}` : "-";
+    const progress = `(${u.count || 0}/${totalKonten} konten)`;
+    return `- ${u.title ? u.title + " " : ""}${u.nama} : ${handle} ${progress}`.trim();
+  };
+
   if (mode === "all" || mode === "sudah") {
-    msg += `✅ *Sudah melaksanakan* (${sudah.length} user):\n`;
-    const sudahDiv = groupByDivision(sudah);
-    sortDivisionKeys(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
-      const list = sudahDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list
-          .map((u) => {
-            let ket = "";
-            if (u.count) ket = `(${u.count}/${totalKonten} konten)`;
-            return (
-              `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              (u.insta ? `@${u.insta.replace(/^@/, "")}` : "-") +
-              ` ${ket}`
-            );
-          })
-          .join("\n") + "\n";
-      if (idx < arr.length - 1) msg += "\n";
-    });
-    if (Object.keys(sudahDiv).length === 0) msg += "-\n";
-    msg += "\n";
+    msg += `✅ *Melaksanakan lengkap* (${summary.lengkap} user)\n`;
   }
-
-  // === List User Belum ===
+  if (mode === "all" || mode === "sudah") {
+    msg += `⚠️ *Melaksanakan kurang lengkap* (${summary.kurang} user)\n`;
+  }
   if (mode === "all" || mode === "belum") {
-    msg += `❌ *Belum melaksanakan* (${belum.length} user):\n`;
-    const belumDiv = groupByDivision(belum);
-    sortDivisionKeys(Object.keys(belumDiv)).forEach((div, idx, arr) => {
-      const list = belumDiv[div];
-      msg += `*${div}* (${list.length} user):\n`;
-      msg +=
-        list
-          .map((u) => {
-            let ket = "";
-            if (!u.count || u.count === 0) {
-              ket = `(0/${totalKonten} konten)`;
-            } else if (u.count > 0 && u.count < threshold) {
-              ket = `(${u.count}/${totalKonten} konten)`;
-            }
-            return (
-              `- ${u.title ? u.title + " " : ""}${u.nama} : ` +
-              (u.insta ? `@${u.insta.replace(/^@/, "")}` : "-") +
-              ` ${ket}`
-            );
-          })
-          .join("\n") + "\n";
+    msg += `❌ *Belum melaksanakan* (${summary.belum} user)\n`;
+  }
+  msg += "\n";
+
+  if (!divisionKeys.length) {
+    msg += "-\n\n";
+  } else {
+    divisionKeys.forEach((div, idx, arr) => {
+      const data = statusByDivision[div];
+      const totalDiv =
+        data.lengkap.length + data.kurang.length + data.belum.length;
+      msg += `*${div}* (${totalDiv} user):\n`;
+
+      if (mode === "all" || mode === "sudah") {
+        msg += `✅ Lengkap (${data.lengkap.length} user):\n`;
+        msg += data.lengkap.length
+          ? data.lengkap.map(formatUserLine).join("\n") + "\n"
+          : "-\n";
+        msg += `⚠️ Kurang (${data.kurang.length} user):\n`;
+        msg += data.kurang.length
+          ? data.kurang.map(formatUserLine).join("\n") + "\n"
+          : "-\n";
+      }
+
+      if (mode === "all" || mode === "belum") {
+        msg += `❌ Belum (${data.belum.length} user):\n`;
+        msg += data.belum.length
+          ? data.belum.map(formatUserLine).join("\n") + "\n"
+          : "-\n";
+      }
+
       if (idx < arr.length - 1) msg += "\n";
     });
-    if (Object.keys(belumDiv).length === 0) msg += "-\n";
     msg += "\n";
   }
 
