@@ -84,6 +84,7 @@ Menu ini hanya muncul jika client memiliki kanal engagement yang aktif. Aturan a
 - **Absensi Likes Instagram**
   1. Bot menampilkan rekap absensi likes Instagram untuk user operator berdasarkan mode (semua/sudah/belum).
   2. Mode akumulasi menampilkan daftar per satfung dengan sub-list *lengkap/kurang/belum* (lengkap = seluruh konten terpenuhi).
+  3. Jumlah konten dan daftar link selalu mengikuti client aktif (ORG) yang dipilih operator, bukan berdasarkan role operator.
 - **Absensi Komentar TikTok**
   1. Bot menampilkan rekap absensi komentar TikTok untuk user operator berdasarkan mode (semua/sudah/belum).
   2. Mode akumulasi menampilkan daftar per satfung dengan sub-list *lengkap/kurang/belum* (lengkap = seluruh konten terpenuhi).

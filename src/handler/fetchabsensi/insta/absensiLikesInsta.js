@@ -240,7 +240,7 @@ export async function absensiLikes(client_id, opts = {}) {
   }
 
   const users = await getUsersByClient(clientFilter || client_id, roleFlag);
-  const targetClient = roleFlag || client_id;
+  const targetClient = clientFilter || client_id;
   let shortcodes;
   try {
     shortcodes = await getShortcodesTodayByClient(targetClient);
@@ -359,6 +359,7 @@ export async function absensiLikes(client_id, opts = {}) {
 
 // === PER KONTEN ===
 export async function absensiLikesPerKonten(client_id, opts = {}) {
+  const { clientFilter } = opts;
   const now = new Date();
   const hari = hariIndo[now.getDay()];
   const tanggal = now.toLocaleDateString("id-ID");
@@ -366,8 +367,7 @@ export async function absensiLikesPerKonten(client_id, opts = {}) {
 
   const { nama: clientNama } = await getClientInfo(client_id);
   const users = await getUsersByClient(client_id);
-  const roleFlag = opts.roleFlag;
-  const targetClient = roleFlag || client_id;
+  const targetClient = clientFilter || client_id;
   let shortcodes;
   try {
     shortcodes = await getShortcodesTodayByClient(targetClient);
