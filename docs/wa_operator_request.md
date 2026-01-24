@@ -1,10 +1,10 @@
 # Panduan Operator WA Bot
-*Last updated: 2026-02-05*
+*Last updated: 2026-01-24*
 
 Dokumen ini menjelaskan cara menggunakan perintah `oprrequest` pada Bot WhatsApp **Cicero_V2**. Menu ini hanya untuk operator client dan berguna untuk mengelola data user serta update tugas harian. Akses menu dibatasi sebagai berikut:
 - Nomor operator dan **Super Admin** client yang terdaftar pada data client aktif dapat langsung masuk ke menu operator.
 - Nomor **Admin WhatsApp** (`ADMIN_WHATSAPP`) dapat masuk ke menu operator setelah memilih client bertipe **org** yang aktif.
-Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**. Menu *Kelola User* hanya tersedia untuk client berstatus aktif dengan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif.
+Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**. Menu *Kelola User* hanya tersedia untuk client berstatus aktif dengan `client_type` = **org**. Menu *Kelola Amplifikasi* hanya tersedia untuk client dengan status aktif dan `client_amplify_status` aktif. Menu *Manajemen Engagement* hanya tersedia untuk client dengan Instagram atau TikTok aktif (`client_insta_status` / `client_tiktok_status`).
 
 ## Cara Masuk Menu Operator
 1. Kirim perintah `oprrequest` ke Bot WhatsApp.
@@ -12,6 +12,7 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
 3. Jika nomor Anda terdaftar sebagai operator/Super Admin client, bot langsung menampilkan pilihan utama:
    - 1️⃣ Kelola User
    - 2️⃣ Kelola Amplifikasi
+   - 3️⃣ Manajemen Engagement
    Ketik angka menu yang diinginkan atau `batal` untuk keluar.
 4. Di dalam *Kelola User*, menu yang tersedia:
    - 1️⃣ Tambah user baru
@@ -35,6 +36,9 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
        - 1️⃣ Rekap link tugas khusus
        - 2️⃣ Rekap per post khusus
        - 3️⃣ Absensi amplifikasi khusus
+6. Di dalam *Manajemen Engagement*, operator dapat memilih:
+   - 1️⃣ Absensi Likes Instagram (hanya jika Instagram client aktif)
+   - 2️⃣ Absensi Komentar TikTok (hanya jika TikTok client aktif)
 
 ## Konvensi Penamaan Menu
 - **Menu** dipakai untuk level utama (contoh: *Menu Kelola User*, *Menu Laporan Amplifikasi*).
@@ -71,6 +75,10 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
   1. Bot menampilkan rangkuman link konten yang dikumpulkan kemarin dari pengguna dengan role **operator** di client.
 - **Update Tugas Instagram**
   1. Bot menjalankan proses pengambilan tugas terbaru untuk client terkait.
+- **Absensi Likes Instagram**
+  1. Bot menampilkan rekap absensi likes Instagram untuk user operator berdasarkan mode (semua/sudah/belum).
+- **Absensi Komentar TikTok**
+  1. Bot menampilkan rekap absensi komentar TikTok untuk user operator berdasarkan mode (semua/sudah/belum).
 
 ### Input Akun Resmi Satbinmas
 Untuk menambahkan akun resmi Satbinmas melalui bot:

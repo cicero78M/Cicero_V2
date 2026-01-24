@@ -115,6 +115,56 @@ async function ensureAmplifyMenuAccess(session, chatId, waClient, pool) {
   return client;
 }
 
+async function ensureEngagementMenuAccess(
+  session,
+  chatId,
+  waClient,
+  pool,
+  { platform } = {}
+) {
+  const client = await resolveClientProfile(session, chatId, pool);
+  if (!client) {
+    await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+    return null;
+  }
+  if (!client.client_status) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu manajemen engagement hanya tersedia untuk client dengan status aktif."
+    );
+    return null;
+  }
+  const instagramActive = Boolean(client.client_insta_status);
+  const tiktokActive = Boolean(client.client_tiktok_status);
+
+  if (platform === "instagram" && !instagramActive) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Absensi Likes Instagram hanya tersedia untuk client dengan Instagram aktif."
+    );
+    return null;
+  }
+  if (platform === "tiktok" && !tiktokActive) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Absensi Komentar TikTok hanya tersedia untuk client dengan TikTok aktif."
+    );
+    return null;
+  }
+  if (!platform && !instagramActive && !tiktokActive) {
+    await waClient.sendMessage(
+      chatId,
+      "❌ Menu manajemen engagement hanya tersedia untuk client dengan Instagram atau TikTok aktif."
+    );
+    return null;
+  }
+  return {
+    client,
+    instagramActive,
+    tiktokActive,
+  };
+}
+
 async function resolveClientId(session, chatId, pool) {
   if (session.selected_client_id) {
     return session.selected_client_id;
@@ -194,6 +244,7 @@ export const oprRequestHandlers = {
 
 1️⃣ Manajemen User
 2️⃣ Manajemen Amplifikasi
+3️⃣ Manajemen Engagement
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -268,6 +319,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.availableSatfung;
       delete session.updateStatusNRP;
       delete session.absensi_update_client_id;
+      delete session.absensi_engagement_client_id;
+      delete session.absensi_engagement_type;
     };
     if (/^1$/i.test(text.trim())) {
       clean();
@@ -307,6 +360,37 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       );
       return;
     }
+    if (/^3$/i.test(text.trim())) {
+      clean();
+      const engagementAccess = await ensureEngagementMenuAccess(
+        session,
+        chatId,
+        waClient,
+        pool
+      );
+      if (!engagementAccess) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      const { instagramActive, tiktokActive } = engagementAccess;
+      const instaLabel = instagramActive
+        ? "1️⃣ Absensi Likes Instagram"
+        : "1️⃣ Absensi Likes Instagram (nonaktif)";
+      const tiktokLabel = tiktokActive
+        ? "2️⃣ Absensi Komentar TikTok"
+        : "2️⃣ Absensi Komentar TikTok (nonaktif)";
+      session.step = "kelolaEngagement_menu";
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen Engagement*\n${instaLabel}\n${tiktokLabel}\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
+      );
+      return;
+    }
     if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
@@ -316,7 +400,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     await waClient.sendMessage(
       chatId,
-      "Menu tidak dikenal. Balas angka 1-2 atau ketik *batal* untuk keluar."
+      "Menu tidak dikenal. Balas angka 1-3 atau ketik *batal* untuk keluar."
     );
   },
 
@@ -427,6 +511,77 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     await waClient.sendMessage(
       chatId,
       "Menu tidak dikenal. Balas angka 1-6, *menu* untuk kembali, atau ketik *batal* untuk keluar."
+    );
+  },
+
+  kelolaEngagement_menu: async (session, chatId, text, waClient, pool, userModel) => {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      delete session.absensi_engagement_client_id;
+      delete session.absensi_engagement_type;
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    if (/^1$/i.test(text.trim())) {
+      const access = await ensureEngagementMenuAccess(
+        session,
+        chatId,
+        waClient,
+        pool,
+        { platform: "instagram" }
+      );
+      if (!access) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "absensiEngagement_submenu";
+      session.absensi_engagement_type = "likes";
+      return oprRequestHandlers.absensiEngagement_submenu(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^2$/i.test(text.trim())) {
+      const access = await ensureEngagementMenuAccess(
+        session,
+        chatId,
+        waClient,
+        pool,
+        { platform: "tiktok" }
+      );
+      if (!access) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "absensiEngagement_submenu";
+      session.absensi_engagement_type = "komentar";
+      return oprRequestHandlers.absensiEngagement_submenu(
+        session,
+        chatId,
+        text,
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    await waClient.sendMessage(
+      chatId,
+      "Menu tidak dikenal. Balas angka 1-2, *menu* untuk kembali, atau ketik *batal* untuk keluar."
     );
   },
 
@@ -2371,6 +2526,96 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       await waClient.sendMessage(chatId, msg || "Data tidak ditemukan.");
     } catch (e) {
       await waClient.sendMessage(chatId, `❌ Error: ${e.message}`);
+    }
+    session.step = "main";
+    return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+  },
+
+  absensiEngagement_submenu: async (session, chatId, text, waClient, pool, userModel) => {
+    const clientId =
+      session.absensi_engagement_client_id || (await resolveClientId(session, chatId, pool));
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "❌ Client tidak ditemukan untuk nomor ini.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    session.absensi_engagement_client_id = clientId;
+    await waClient.sendMessage(
+      chatId,
+      appendSubmenuBackInstruction(
+        "Pilih tipe absensi engagement:\n1. Semua\n2. Sudah\n3. Belum\nBalas angka di atas."
+      )
+    );
+    session.step = "absensiEngagement_menu";
+  },
+
+  absensiEngagement_menu: async (session, chatId, text, waClient, pool, userModel) => {
+    if (/^(menu|kembali|back|0)$/i.test(text.trim())) {
+      session.step = "kelolaEngagement_menu";
+      return oprRequestHandlers.kelolaEngagement_menu(
+        session,
+        chatId,
+        "",
+        waClient,
+        pool,
+        userModel
+      );
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
+      session.menu = null;
+      session.step = null;
+      delete session.absensi_engagement_client_id;
+      delete session.absensi_engagement_type;
+      await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
+      return;
+    }
+    const pilihan = Number.parseInt(text.trim(), 10);
+    const clientId = session.absensi_engagement_client_id;
+    if (!clientId) {
+      await waClient.sendMessage(chatId, "Client belum dipilih.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    let mode = null;
+    if (pilihan === 1) mode = "all";
+    else if (pilihan === 2) mode = "sudah";
+    else if (pilihan === 3) mode = "belum";
+    else {
+      await waClient.sendMessage(chatId, "Pilihan tidak valid. Balas 1-3.");
+      return;
+    }
+    let msg;
+    let hasError = false;
+    if (session.absensi_engagement_type === "likes") {
+      const { absensiLikes } = await import(
+        "../fetchabsensi/insta/absensiLikesInsta.js"
+      );
+      try {
+        msg = await absensiLikes(clientId, { mode, roleFlag: OPERATOR_ROLE });
+      } catch (error) {
+        hasError = true;
+        await waClient.sendMessage(chatId, `❌ Error: ${error.message}`);
+      }
+    } else if (session.absensi_engagement_type === "komentar") {
+      const { absensiKomentar } = await import(
+        "../fetchabsensi/tiktok/absensiKomentarTiktok.js"
+      );
+      try {
+        msg = await absensiKomentar(clientId, { mode, roleFlag: OPERATOR_ROLE });
+      } catch (error) {
+        hasError = true;
+        await waClient.sendMessage(chatId, `❌ Error: ${error.message}`);
+      }
+    } else {
+      await waClient.sendMessage(chatId, "Jenis absensi engagement belum dipilih.");
+      session.step = "main";
+      return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+    }
+    if (!hasError) {
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(msg || "Data tidak ditemukan.")
+      );
     }
     session.step = "main";
     return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
