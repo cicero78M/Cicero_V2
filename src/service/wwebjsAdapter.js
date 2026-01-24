@@ -1433,6 +1433,33 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       );
     }
 
+    const chatState = hydratedChat?._data;
+    if (hydratedChat && !chatState) {
+      console.warn(
+        `[WWEBJS] sendSeen skipped (jid=${jid}): chat state unavailable`,
+        {
+          chatId: jid,
+          event: 'sendSeen',
+        }
+      );
+      return false;
+    }
+    const markedUnread = chatState?.markedUnread ?? false;
+    if (
+      hydratedChat &&
+      chatState &&
+      !Object.prototype.hasOwnProperty.call(chatState, 'markedUnread')
+    ) {
+      console.warn(
+        `[WWEBJS] sendSeen fallback (jid=${jid}): markedUnread missing`,
+        {
+          chatId: jid,
+          event: 'sendSeen',
+          markedUnread,
+        }
+      );
+    }
+
     if (hydratedChat && typeof hydratedChat.sendSeen !== 'function') {
       console.warn(
         `[WWEBJS] sendSeen skipped (jid=${jid}): chat.sendSeen unavailable`

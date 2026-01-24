@@ -315,9 +315,13 @@ memastikan chat tersedia, memeriksa flag kesiapan (`isReady`, `isLoaded`,
 Jika chat belum siap atau `chat.sendSeen` tidak ada, sistem akan skip dan mencatat
 log terstruktur berisi `chatId` serta alasan skip. Di adapter `wwebjsAdapter`,
 `sendSeen` akan mencoba `getChatById(jid)` terlebih dulu untuk meng-hydrate chat.
-Jika chat tidak menyediakan `sendSeen` atau WhatsApp Web masih melempar error
-`markedUnread`, adapter akan return `false` dan menulis log berisi `jid` sehingga
-error tidak merambat ke layer atas.
+Adapter memvalidasi state chat (`chat._data`) sebelum memanggil `sendSeen`; jika
+state hilang, adapter akan log warning dengan `chatId` dan `event=sendSeen`, lalu
+keluar aman. Nilai `markedUnread` diperlakukan sebagai opsional dengan fallback
+default, dan ketika field tidak tersedia adapter mencatat log fallback agar
+troubleshooting tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp
+Web masih melempar error `markedUnread`, adapter akan return `false` dan menulis
+log berisi `jid` sehingga error tidak merambat ke layer atas.
 
 ## Fallback pengiriman pesan (gateway → utama → user)
 
