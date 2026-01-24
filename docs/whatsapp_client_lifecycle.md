@@ -458,6 +458,7 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Inisialisasi akan menganggap error ini sebagai fatal dan **melewati retry otomatis** sampai Chrome tersedia, tetapi hanya setelah path executable diverifikasi tidak tersedia/invalid.
    - Jika executable path valid, error dianggap misleading, `fatalInitError` di-clear, dan retry/inisialisasi tetap berjalan.
    - Error readiness terkait Chrome kini menyertakan hint: “Set `WA_PUPPETEER_EXECUTABLE_PATH` atau jalankan `npx puppeteer browsers install chrome`”.
+   - Saat error ini muncul dengan `WA_PUPPETEER_EXECUTABLE_PATH`/`PUPPETEER_EXECUTABLE_PATH` terisi, log menampilkan `resolvedPath`, `stat.mode`, dan kode error `access` (mis. `EACCES`, `ENOENT`) plus hint perbaikan seperti `chmod +x` atau `mount -o remount,exec` bila relevan.
 
 4. **Stuck setelah authenticated**
    - Lihat warning fallback: “Authenticated but no ready event”.
