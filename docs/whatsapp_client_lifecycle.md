@@ -309,19 +309,16 @@ Log peringatan akan menyertakan `jid` dan tipe konten untuk investigasi. Caller
 disarankan memakai `safeSendMessage` atau menangkap error lokal saat membutuhkan
 penanganan kegagalan yang konsisten.
 
-Guard `sendSeen` kini dilakukan di dua level. Pada handler pesan masuk, sistem
-memastikan chat tersedia, memeriksa flag kesiapan (`isReady`, `isLoaded`,
-`isInitialized` bila tersedia), dan memakai `chat.sendSeen()` jika tersedia.
-Jika chat belum siap atau `chat.sendSeen` tidak ada, sistem akan skip dan mencatat
-log terstruktur berisi `chatId` serta alasan skip. Di adapter `wwebjsAdapter`,
-`sendSeen` akan mencoba `getChatById(jid)` terlebih dulu untuk meng-hydrate chat.
-Adapter memvalidasi state chat (`chat._data`) sebelum memanggil `sendSeen`; jika
-state hilang, adapter akan log warning dengan `chatId` dan `event=sendSeen`, lalu
-keluar aman. Nilai `markedUnread` diperlakukan sebagai opsional dengan fallback
-default, dan ketika field tidak tersedia adapter mencatat log fallback agar
-troubleshooting tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp
-Web masih melempar error `markedUnread`, adapter akan return `false` dan menulis
-log berisi `jid` sehingga error tidak merambat ke layer atas.
+Guard `sendSeen` kini dipusatkan di adapter. Handler pesan masuk memanggil
+`waClient.sendSeen(chatId)` setelah jeda singkat, dan adapter `wwebjsAdapter`
+melakukan hidrasi chat via `getChatById(jid)` sebelum mengirim status read. Adapter
+memvalidasi state chat (`chat._data`) sebelum memanggil `sendSeen`; jika state
+hilang, adapter akan log warning dengan `chatId` dan `event=sendSeen`, lalu keluar
+aman. Nilai `markedUnread` diperlakukan sebagai opsional dengan fallback default,
+dan ketika field tidak tersedia adapter mencatat log fallback agar troubleshooting
+tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp Web masih
+melempar error `markedUnread`, adapter akan return `false` dan menulis log berisi
+`jid` sehingga error tidak merambat ke layer atas.
 
 ## Fallback pengiriman pesan (gateway → utama → user)
 
