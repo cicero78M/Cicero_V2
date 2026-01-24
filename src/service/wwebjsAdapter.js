@@ -23,6 +23,12 @@ const DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
 const DEFAULT_LOCK_FALLBACK_THRESHOLD = 2;
+const COMMON_CHROME_EXECUTABLE_PATHS = [
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
+  '/opt/google/chrome/chrome',
+];
 const PROTOCOL_TIMEOUT_ENV_VAR_BASE = 'WA_WWEBJS_PROTOCOL_TIMEOUT_MS';
 const PROTOCOL_TIMEOUT_ROLE_ALIASES = [
   { prefix: 'wa-gateway', suffix: 'GATEWAY' },
@@ -56,13 +62,22 @@ const LOGOUT_DISCONNECT_REASONS = new Set([
   'UNPAIRED_IDLE',
 ]);
 
-function resolvePuppeteerExecutablePath() {
+async function resolvePuppeteerExecutablePath() {
   const configuredPath = (
     process.env.WA_PUPPETEER_EXECUTABLE_PATH ||
     process.env.PUPPETEER_EXECUTABLE_PATH ||
     ''
   ).trim();
-  return configuredPath || null;
+  if (configuredPath) {
+    const isAccessible = await isExecutableAccessible(configuredPath);
+    return isAccessible ? configuredPath : null;
+  }
+  for (const candidatePath of COMMON_CHROME_EXECUTABLE_PATHS) {
+    if (await isExecutableAccessible(candidatePath)) {
+      return candidatePath;
+    }
+  }
+  return null;
 }
 
 async function isExecutableAccessible(executablePath) {
@@ -676,7 +691,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
-  const puppeteerExecutablePath = resolvePuppeteerExecutablePath();
+  const puppeteerExecutablePath = await resolvePuppeteerExecutablePath();
+  if (puppeteerExecutablePath) {
+    console.info(
+      `[WWEBJS] Resolved Puppeteer executable for clientId=${clientId}: ${puppeteerExecutablePath}.`
+    );
+  }
   const puppeteerProtocolTimeoutConfig =
     resolvePuppeteerProtocolTimeoutConfig(clientId);
   let puppeteerProtocolTimeoutMs = puppeteerProtocolTimeoutConfig.timeoutMs;
