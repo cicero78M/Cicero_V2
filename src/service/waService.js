@@ -1487,18 +1487,54 @@ export function createHandleMessage(waClient, options = {}) {
       try {
         if (typeof waClient.getChat !== "function") {
           console.warn(
-            `${clientLabel} Skip sendSeen for ${chatId}: getChat is unavailable`
+            `${clientLabel} Skip sendSeen`,
+            {
+              chatId,
+              reason: "getChat is unavailable",
+            }
           );
           return;
         }
         const chat = await waClient.getChat(chatId);
         if (!chat) {
           console.warn(
-            `${clientLabel} Skip sendSeen for ${chatId}: chat not found`
+            `${clientLabel} Skip sendSeen`,
+            {
+              chatId,
+              reason: "chat not found",
+            }
           );
           return;
         }
-        await waClient.sendSeen(chatId);
+        const readinessFlags = [
+          { key: "isReady", value: chat.isReady },
+          { key: "isLoaded", value: chat.isLoaded },
+          { key: "isInitialized", value: chat.isInitialized },
+        ];
+        const notReadyFlag = readinessFlags.find(
+          (flag) => flag.value === false
+        );
+        if (notReadyFlag) {
+          console.warn(
+            `${clientLabel} Skip sendSeen`,
+            {
+              chatId,
+              reason: `chat.${notReadyFlag.key} is false`,
+            }
+          );
+          return;
+        }
+        if (typeof chat.sendSeen !== "function") {
+          console.warn(
+            `${clientLabel} Skip sendSeen`,
+            {
+              chatId,
+              reason: "chat.sendSeen is unavailable",
+            }
+          );
+          return;
+        }
+        await chat.sendSeen();
       } catch (err) {
         console.warn(
           `${clientLabel} Failed to mark ${chatId} as read: ${err?.message || err}`
