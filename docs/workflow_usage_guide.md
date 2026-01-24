@@ -32,7 +32,7 @@ Hot reload hanya memantau kode (`app.js` dan folder `src`). Folder data seperti 
 ## 4. Fitur WhatsApp Bot
 
 Bot WhatsApp menyediakan beberapa perintah untuk operator dan pengguna:
-- `oprrequest` → mengelola data user, rekap link harian, serta absensi engagement (Likes Instagram/Komentar TikTok) sesuai status aktif akun client. Operator/Super Admin client dapat masuk langsung, sedangkan Admin WhatsApp wajib memilih client bertipe **org** sebelum masuk menu operator. Submenu **Absensi registrasi user** dan **Absensi update data username** berada di *Kelola User* dan seluruh submenu menampilkan instruksi **ketik back** untuk kembali. Detail pada `docs/wa_operator_request.md`.
+- `oprrequest` → mengelola data user, rekap link harian, serta **Menu Manajemen Engagement** untuk absensi Likes Instagram/Komentar TikTok sesuai status aktif akun client. Laporan absensi engagement pada mode akumulasi kini dikelompokkan per satfung dengan sub-list **lengkap/kurang/belum**. Operator/Super Admin client dapat masuk langsung, sedangkan Admin WhatsApp wajib memilih client bertipe **org** sebelum masuk menu operator. Submenu **Absensi registrasi user** dan **Absensi update data username** berada di *Kelola User* dan seluruh submenu menampilkan instruksi **ketik back** untuk kembali. Detail pada `docs/wa_operator_request.md`.
 - `userrequest` → registrasi dan pengelolaan data user. Lihat `docs/wa_user_registration.md`.
 - *Bulk Penghapusan Status User* menggunakan format pesan
   `Permohonan Penghapusan Data Personil – <SATKER>` yang berisi daftar ber-

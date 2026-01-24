@@ -119,6 +119,8 @@ Example:
 - **regional_id** – atribut regional dari client yang ditampilkan untuk setiap user.
 - **usersWithComments / usersWithoutComments** – field lama yang tetap disediakan untuk kompatibilitas klien.
 
+**Catatan operator:** saat endpoint ini dipakai untuk menu *Absensi Komentar TikTok* di WhatsApp, mode akumulasi menampilkan grouping per satfung dengan sub-list **lengkap/kurang/belum** untuk memudahkan rekap operator.
+
 ## Scope Handling
 
 Ketika `role` dan `scope` dikirim, filter mengikuti aturan berikut:

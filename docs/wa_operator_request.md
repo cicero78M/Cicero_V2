@@ -40,6 +40,12 @@ Seluruh laporan di menu ini hanya menampilkan data user dengan role **operator**
    - 1️⃣ Absensi Likes Instagram (hanya jika Instagram client aktif)
    - 2️⃣ Absensi Komentar TikTok (hanya jika TikTok client aktif)
 
+## Menu Manajemen Engagement
+Menu ini hanya muncul jika client memiliki kanal engagement yang aktif. Aturan aksesnya:
+- **Absensi Likes Instagram** tersedia jika `client_insta_status` aktif.
+- **Absensi Komentar TikTok** tersedia jika `client_tiktok_status` aktif.
+- Jika hanya salah satu platform aktif, bot hanya menampilkan submenu tersebut. Jika kedua status aktif, kedua submenu tampil di menu yang sama.
+
 ## Konvensi Penamaan Menu
 - **Menu** dipakai untuk level utama (contoh: *Menu Kelola User*, *Menu Laporan Amplifikasi*).
 - **Submenu** dipakai untuk kelompok di bawahnya, misalnya *Laporan Tugas Rutin* dan *Laporan Tugas Khusus*.
