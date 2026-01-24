@@ -1,5 +1,5 @@
 # Google Contacts Integration
-*Last updated: 2025-08-13*
+*Last updated: 2025-08-15*
 
 This guide explains how to configure and use the Google Contacts integration in **Cicero_V2**. The backend can create or look up contacts in a Google Workspace directory using the People API.
 
@@ -45,6 +45,6 @@ npm test
 
 ## Tips
 - The contact scope defaults to `https://www.googleapis.com/auth/contacts`.
+- Set `CONTACT_AUTH_COOLDOWN_MS` (milliseconds) to throttle repeated auth attempts when credentials are missing or invalid.
 - Keep credential files and environment variables secure.
 - When using service account impersonation, ensure the impersonated user has permission to manage contacts.
-
