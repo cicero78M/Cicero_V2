@@ -9,7 +9,9 @@ menghubungkan nomor WhatsApp ke akun di sistem **Cicero_V2**.
 1. **Simpan nomor bot** di kontak WhatsApp Anda dan kirim pesan apa saja.
 2. Bot akan memeriksa apakah nomor tersebut sudah terdaftar.
    - Jika belum terdaftar, bot membalas meminta NRP/NIP Anda.
-3. **Kirim NRP/NIP** sesuai yang ada di database.
+3. **Kirim NRP/NIP** sesuai yang ada di database (6–18 digit angka).
+   - Contoh NRP: `87020990`
+   - Contoh NIP 18 digit: `198765432012345678`
 4. Bot menampilkan ringkasan data dan meminta konfirmasi.
    - Balas `ya` untuk menghubungkan nomor WhatsApp.
    - Balas `tidak` atau `batal` untuk membatalkan proses.

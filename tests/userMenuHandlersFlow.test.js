@@ -61,7 +61,7 @@ describe("userMenuHandlers conversational flow", () => {
     expect(waClient.sendMessage).toHaveBeenCalledWith(
       chatId,
       [
-        "Untuk menampilkan data Anda, silakan ketik NRP Anda (hanya angka).",
+        "Untuk menampilkan data Anda, silakan ketik NRP/NIP Anda (hanya angka).",
         "Ketik *batal* untuk keluar.",
         "",
         "Contoh:",
@@ -164,12 +164,59 @@ describe("userMenuHandlers conversational flow", () => {
     expect(waClient.sendMessage).toHaveBeenNthCalledWith(
       1,
       chatId,
-      "❌ NRP *123456* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda."
+      "❌ NRP/NIP *123456* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda."
     );
     expect(waClient.sendMessage).toHaveBeenNthCalledWith(
       2,
       chatId,
-      "Silakan masukkan NRP lain atau ketik *batal* untuk keluar."
+      "Silakan masukkan NRP/NIP lain atau ketik *batal* untuk keluar."
+    );
+  });
+
+  it("accepts 18-digit NRP/NIP input when binding account", async () => {
+    const session = { step: "inputUserId" };
+    const userModel = {
+      findUserById: jest.fn().mockResolvedValue({
+        user_id: "123456789012345678",
+        nama: "Bripka Seno",
+      }),
+    };
+
+    await userMenuHandlers.inputUserId(
+      session,
+      chatId,
+      "123456789012345678",
+      waClient,
+      null,
+      userModel
+    );
+
+    expect(session.step).toBe("confirmBindUser");
+    expect(session.bindUserId).toBe("123456789012345678");
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining("NRP/NIP *123456789012345678* ditemukan.")
+    );
+  });
+
+  it("rejects NRP/NIP input outside length range", async () => {
+    const session = { step: "inputUserId" };
+    const userModel = {
+      findUserById: jest.fn(),
+    };
+
+    await userMenuHandlers.inputUserId(
+      session,
+      chatId,
+      "12345",
+      waClient,
+      null,
+      userModel
+    );
+
+    expect(waClient.sendMessage).toHaveBeenCalledWith(
+      chatId,
+      expect.stringContaining("NRP/NIP harus terdiri dari 6-18 digit")
     );
   });
 

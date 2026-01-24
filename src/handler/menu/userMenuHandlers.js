@@ -92,7 +92,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     await waClient.sendMessage(
       chatId,
       [
-        "Untuk menampilkan data Anda, silakan ketik NRP Anda (hanya angka).",
+        "Untuk menampilkan data Anda, silakan ketik NRP/NIP Anda (hanya angka).",
         "Ketik *batal* untuk keluar.",
         "",
         "Contoh:",
@@ -161,16 +161,16 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     if (!digits) {
       await waClient.sendMessage(
         chatId,
-        "❌ NRP harus berupa angka. Sistem otomatis menghapus karakter non-angka sehingga pastikan angka yang tersisa membentuk NRP yang benar.\nContoh: 87020990\nKetik *batal* untuk keluar."
+        "❌ NRP/NIP harus berupa angka. Sistem otomatis menghapus karakter non-angka sehingga pastikan angka yang tersisa membentuk NRP/NIP yang benar.\nContoh: 87020990\nKetik *batal* untuk keluar."
       );
       return;
     }
     const minLength = 6;
-    const maxLength = 12;
+    const maxLength = 18;
     if (digits.length < minLength || digits.length > maxLength) {
       await waClient.sendMessage(
         chatId,
-        `❌ NRP harus terdiri dari ${minLength}-${maxLength} digit angka setelah karakter non-angka dibuang.\nContoh: 87020990\nKetik *batal* untuk keluar.`
+        `❌ NRP/NIP harus terdiri dari ${minLength}-${maxLength} digit angka setelah karakter non-angka dibuang.\nContoh: 87020990\nKetik *batal* untuk keluar.`
       );
       return;
     }
@@ -179,15 +179,15 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       if (!user) {
         await waClient.sendMessage(
           chatId,
-          `❌ NRP *${digits}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
+          `❌ NRP/NIP *${digits}* tidak ditemukan. Jika yakin benar, hubungi Opr Humas Polres Anda.`
         );
-        await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
+        await waClient.sendMessage(chatId, "Silakan masukkan NRP/NIP lain atau ketik *batal* untuk keluar.");
       } else {
         session.step = "confirmBindUser";
         session.bindUserId = digits;
         await waClient.sendMessage(
           chatId,
-          `NRP *${digits}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
+          `NRP/NIP *${digits}* ditemukan. Nomor WhatsApp ini belum terdaftar.\n` +
             "Apakah Anda ingin menghubungkannya dengan akun tersebut?\n" +
             "Balas *ya* untuk menghubungkan atau *tidak* untuk membatalkan."
         );
@@ -195,7 +195,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       }
     } catch (err) {
       await waClient.sendMessage(chatId, `❌ Gagal mengambil data: ${err.message}`);
-      await waClient.sendMessage(chatId, "Silakan masukkan NRP lain atau ketik *batal* untuk keluar.");
+      await waClient.sendMessage(chatId, "Silakan masukkan NRP/NIP lain atau ketik *batal* untuk keluar.");
     }
   },
 
@@ -210,7 +210,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       session.isDitbinmas = !!user.ditbinmas;
       await waClient.sendMessage(
         chatId,
-        `✅ Nomor WhatsApp telah dihubungkan ke NRP *${user_id}*. Berikut datanya:\n` +
+        `✅ Nomor WhatsApp telah dihubungkan ke NRP/NIP *${user_id}*. Berikut datanya:\n` +
           formatUserReport(user)
       );
       session.identityConfirmed = true;
@@ -225,7 +225,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     if (answer === "tidak") {
       await waClient.sendMessage(
         chatId,
-        "Nomor WhatsApp ini tetap tidak terhubung dengan NRP. Jika ingin mencoba lagi, ketik *userrequest* atau hubungi operator bila membutuhkan bantuan."
+        "Nomor WhatsApp ini tetap tidak terhubung dengan NRP/NIP. Jika ingin mencoba lagi, ketik *userrequest* atau hubungi operator bila membutuhkan bantuan."
       );
       session.exit = true;
       return;
@@ -243,7 +243,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
       const nrp = session.updateUserId;
       await userModel.updateUserField(nrp, "whatsapp", waNum);
       await saveContactIfNew(formatToWhatsAppId(waNum));
-      await waClient.sendMessage(chatId, `✅ Nomor berhasil dihubungkan ke NRP *${nrp}*.`);
+      await waClient.sendMessage(chatId, `✅ Nomor berhasil dihubungkan ke NRP/NIP *${nrp}*.`);
       session.identityConfirmed = true;
       session.user_id = nrp;
       session.step = "updateAskField";
@@ -253,7 +253,7 @@ Balas *ya* jika benar, *tidak* jika bukan, atau *batal* untuk menutup sesi.
     if (ans === "tidak") {
       await waClient.sendMessage(
         chatId,
-        "Nomor WhatsApp ini tidak dihubungkan ke NRP. Ketik *userrequest* untuk kembali ke menu atau hubungi operator bila membutuhkan bantuan."
+        "Nomor WhatsApp ini tidak dihubungkan ke NRP/NIP. Ketik *userrequest* untuk kembali ke menu atau hubungi operator bila membutuhkan bantuan."
       );
       session.exit = true;
       return;
