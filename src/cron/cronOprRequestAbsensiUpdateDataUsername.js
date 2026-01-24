@@ -1,7 +1,7 @@
 import { scheduleCronJob } from '../utils/cronScheduler.js';
 import { sendDebug } from '../middleware/debugHandler.js';
 import { absensiUpdateDataUsername } from '../handler/fetchabsensi/wa/absensiUpdateDataUsername.js';
-import { findAllActiveOrgClients } from '../model/clientModel.js';
+import { findAllActiveOrgClientsWithSosmed } from '../model/clientModel.js';
 import { sendWithClientFallback } from '../utils/waHelper.js';
 import waClient, { waGatewayClient, waUserClient } from '../service/waService.js';
 import { normalizeGroupId } from './cronDirRequestFetchSosmed.js';
@@ -59,7 +59,7 @@ export async function runCron() {
   });
 
   try {
-    const clients = await findAllActiveOrgClients();
+    const clients = await findAllActiveOrgClientsWithSosmed();
     if (!clients.length) {
       sendDebug({ tag: CRON_TAG, msg: 'Tidak ada client org aktif untuk diproses.' });
       return;
