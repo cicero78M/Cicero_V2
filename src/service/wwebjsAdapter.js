@@ -1418,10 +1418,43 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.sendSeen = async (jid) => {
+    let hydratedChat = null;
     try {
+      hydratedChat = await withRuntimeTimeoutRetry(
+        () => client.getChatById(jid),
+        'sendSeen.getChatById',
+        protocolTimeoutEnvVarName,
+        clientId
+      );
+    } catch (err) {
+      console.warn(
+        `[WWEBJS] sendSeen hydration failed (jid=${jid}):`,
+        err?.message || err
+      );
+    }
+
+    if (hydratedChat && typeof hydratedChat.sendSeen !== 'function') {
+      console.warn(
+        `[WWEBJS] sendSeen skipped (jid=${jid}): chat.sendSeen unavailable`
+      );
+      return false;
+    }
+
+    try {
+      if (hydratedChat && typeof hydratedChat.sendSeen === 'function') {
+        return await hydratedChat.sendSeen();
+      }
       return await client.sendSeen(jid);
     } catch (err) {
-      console.warn('[WWEBJS] sendSeen failed:', err?.message || err);
+      const message = err?.message || err;
+      if (String(message).includes('markedUnread')) {
+        console.warn(
+          `[WWEBJS] sendSeen markedUnread error (jid=${jid}):`,
+          message
+        );
+        return false;
+      }
+      console.warn(`[WWEBJS] sendSeen failed (jid=${jid}):`, message);
       return false;
     }
   };
