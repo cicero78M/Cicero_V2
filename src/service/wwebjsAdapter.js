@@ -62,6 +62,77 @@ const LOGOUT_DISCONNECT_REASONS = new Set([
   'UNPAIRED_IDLE',
 ]);
 
+function resolvePuppeteerCacheDir() {
+  const configuredPath = (process.env.PUPPETEER_CACHE_DIR || '').trim();
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+  const homeDir = os.homedir?.();
+  const baseDir = homeDir || process.cwd();
+  return path.join(baseDir, '.cache', 'puppeteer');
+}
+
+function parsePuppeteerLinuxCacheVersion(dirName) {
+  if (!dirName.startsWith('linux-')) {
+    return null;
+  }
+  const version = dirName.slice('linux-'.length);
+  if (!version) {
+    return null;
+  }
+  const parts = version.split('.').map((segment) => Number.parseInt(segment, 10));
+  if (parts.some((part) => Number.isNaN(part))) {
+    return null;
+  }
+  return { dirName, parts, version };
+}
+
+function compareVersionParts(left, right) {
+  const maxLength = Math.max(left.length, right.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = left[index] ?? 0;
+    const rightValue = right[index] ?? 0;
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+  return 0;
+}
+
+async function resolveCachedPuppeteerExecutable() {
+  const cacheDir = resolvePuppeteerCacheDir();
+  const chromeBaseDir = path.join(cacheDir, 'chrome');
+  let entries = [];
+  try {
+    entries = await fs.promises.readdir(chromeBaseDir, { withFileTypes: true });
+  } catch (err) {
+    return null;
+  }
+  const versions = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => parsePuppeteerLinuxCacheVersion(entry.name))
+    .filter(Boolean)
+    .sort((left, right) => compareVersionParts(left.parts, right.parts));
+  if (!versions.length) {
+    return null;
+  }
+  const latest = versions[versions.length - 1];
+  const candidatePath = path.join(
+    chromeBaseDir,
+    latest.dirName,
+    'chrome-linux64',
+    'chrome'
+  );
+  const isAccessible = await isExecutableAccessible(candidatePath);
+  if (!isAccessible) {
+    return null;
+  }
+  return {
+    executablePath: candidatePath,
+    source: `puppeteer-cache:${latest.version}`,
+  };
+}
+
 async function resolvePuppeteerExecutablePath() {
   const configuredPath = (
     process.env.WA_PUPPETEER_EXECUTABLE_PATH ||
@@ -70,11 +141,17 @@ async function resolvePuppeteerExecutablePath() {
   ).trim();
   if (configuredPath) {
     const isAccessible = await isExecutableAccessible(configuredPath);
-    return isAccessible ? configuredPath : null;
+    return isAccessible
+      ? { executablePath: configuredPath, source: 'env' }
+      : null;
+  }
+  const cachedExecutable = await resolveCachedPuppeteerExecutable();
+  if (cachedExecutable) {
+    return cachedExecutable;
   }
   for (const candidatePath of COMMON_CHROME_EXECUTABLE_PATHS) {
     if (await isExecutableAccessible(candidatePath)) {
-      return candidatePath;
+      return { executablePath: candidatePath, source: 'system' };
     }
   }
   return null;
@@ -748,10 +825,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const webVersionOptions = sanitizeWebVersionOptions(
     await resolveWebVersionOptions()
   );
-  const puppeteerExecutablePath = await resolvePuppeteerExecutablePath();
+  const puppeteerExecutable = await resolvePuppeteerExecutablePath();
+  const puppeteerExecutablePath = puppeteerExecutable?.executablePath ?? null;
   if (puppeteerExecutablePath) {
     console.info(
-      `[WWEBJS] Resolved Puppeteer executable for clientId=${clientId}: ${puppeteerExecutablePath}.`
+      `[WWEBJS] Resolved Puppeteer executable for clientId=${clientId} ` +
+        `(${puppeteerExecutable?.source ?? 'unknown'}): ${puppeteerExecutablePath}.`
     );
   }
   const puppeteerProtocolTimeoutConfig =
