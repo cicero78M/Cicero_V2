@@ -462,9 +462,13 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Install Chrome lewat `npx puppeteer browsers install chrome` (menggunakan cache Puppeteer) atau via package OS (Chrome/Chromium).
    - Jika Chrome sudah terpasang atau path cache diubah, set `WA_PUPPETEER_EXECUTABLE_PATH`
      (prioritas) atau `PUPPETEER_EXECUTABLE_PATH`, dan/atau `PUPPETEER_CACHE_DIR`.
+   - Jika env path kosong, adapter akan mencari Chrome di cache Puppeteer. Cache memakai
+     `PUPPETEER_CACHE_DIR` bila di-set, jika tidak fallback ke `~/.cache/puppeteer`.
+     Adapter memilih folder `chrome/linux-*/chrome-linux64/chrome` dengan versi tertinggi
+     dan hanya memakai path yang lolos `X_OK`.
    - Jika env path kosong, adapter akan mencoba beberapa path umum (mis. `/usr/bin/google-chrome`,
      `/usr/bin/chromium-browser`, `/usr/bin/chromium`, `/opt/google/chrome/chrome`) dan menulis log
-     `Resolved Puppeteer executable` sekali saat inisialisasi (termasuk `clientId`).
+     `Resolved Puppeteer executable` sekali saat inisialisasi (termasuk `clientId` dan sumber).
    - Contoh log yang sering muncul: `Error: Could not find Chrome (ver. 121.0.6167.85)` atau `Error: Could not find browser executable`.
    - Inisialisasi akan menganggap error ini sebagai fatal dan **melewati retry otomatis** sampai Chrome tersedia, tetapi hanya setelah path executable diverifikasi tidak tersedia/invalid.
    - Jika executable path valid, error dianggap misleading, `fatalInitError` di-clear, dan retry/inisialisasi tetap berjalan.
