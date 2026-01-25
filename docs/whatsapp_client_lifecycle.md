@@ -465,7 +465,8 @@ Adapter `wwebjsAdapter` sekarang memastikan `getNumberId` hanya berjalan setelah
    - Jika env path kosong, adapter akan mencari Chrome di cache Puppeteer. Cache memakai
      `PUPPETEER_CACHE_DIR` bila di-set, jika tidak fallback ke `~/.cache/puppeteer`.
      Adapter memilih folder `chrome/linux-*/chrome-linux64/chrome` dengan versi tertinggi
-     dan hanya memakai path yang lolos `X_OK`.
+     dan hanya memakai path yang lolos `X_OK`. Contoh path cache:
+     `/home/gonet/.cache/puppeteer/chrome/linux-143.0.7499.192/chrome-linux64/chrome`.
    - Jika env path kosong, adapter akan mencoba beberapa path umum (mis. `/usr/bin/google-chrome`,
      `/usr/bin/chromium-browser`, `/usr/bin/chromium`, `/opt/google/chrome/chrome`) dan menulis log
      `Resolved Puppeteer executable` sekali saat inisialisasi (termasuk `clientId` dan sumber).
