@@ -113,7 +113,7 @@ Example:
 - **noUsernameUsersDetails** – daftar akun yang perlu dibantu melengkapi username Instagram.
 - **regional_id** – atribut regional dari client yang ditampilkan untuk setiap user.
 
-**Catatan operator:** saat endpoint ini dipakai untuk menu *Absensi Likes Instagram* di WhatsApp, mode akumulasi menampilkan grouping per satfung dengan sub-list **lengkap/kurang/belum** untuk memudahkan rekap operator.
+**Catatan operator:** saat endpoint ini dipakai untuk menu *Absensi Likes Instagram* di WhatsApp, mode akumulasi menampilkan grouping per satfung dengan sub-list **lengkap/kurang/belum**. Urutan personel di dalam list mengikuti prioritas pangkat berikut: AKP (jabatan Kasat didahulukan), IPTU, IPDA, AIPTU, AIPDA, BRIPKA, BRIGADIR, BRIPTU, BRIPDA, PENATA, PENGATUR TINGKAT I, PENGATUR MUDA TINGKAT I, PENGATUR, JURU, PPPK, PHL.
 
 ## Scope Handling
 
