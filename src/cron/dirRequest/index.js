@@ -107,7 +107,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas absensi recap (menu 5 & 10, today) to the dedicated recipient only.',
     schedules: [
-      { cronExpression: '14 18 * * *', handler: () => runDitbinmasAbsensiToday(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '16 18 * * *', handler: () => runDitbinmasAbsensiToday(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
