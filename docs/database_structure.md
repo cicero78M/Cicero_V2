@@ -173,6 +173,8 @@ Cached comments for an Instagram post.
 - `shortcode` – primary key and foreign key to `insta_post(shortcode)`
 - `comments` – JSON array of comment payloads
 - `updated_at`
+- Some deployments may not yet have this table; cleanup routines skip deletion when
+  the table is absent.
 
 ### `insta_post_roles`
 Restricts `insta_post` visibility by role.
