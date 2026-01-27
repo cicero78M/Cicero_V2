@@ -65,6 +65,15 @@ async function deleteShortcodes(shortcodesToDelete, clientId = null) {
     sql += ` AND client_id = $3`;
     params.push(clientId);
   }
+  await query(`DELETE FROM insta_like_audit WHERE shortcode = ANY($1)`, [
+    shortcodesToDelete,
+  ]);
+  await query(`DELETE FROM insta_like WHERE shortcode = ANY($1)`, [
+    shortcodesToDelete,
+  ]);
+  await query(`DELETE FROM insta_comment WHERE shortcode = ANY($1)`, [
+    shortcodesToDelete,
+  ]);
   await query(sql, params);
 }
 
