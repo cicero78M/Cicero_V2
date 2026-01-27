@@ -80,7 +80,7 @@ const dirRequestCrons = [
     description: 'Send Ditbinmas group recap for menu 21/22 (today).',
     schedules: [
       { cronExpression: '10 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '14 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '10 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas super admin daily recap at 18:10
@@ -89,7 +89,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas super admin daily recap (menus 6/9/34/35) with today period only.',
     schedules: [
-      { cronExpression: '10 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '12 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas operator daily recap at 18:12
@@ -98,7 +98,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas operator daily report (menu 30) with today period only.',
     schedules: [
-      { cronExpression: '12 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '14 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas absensi today at 18:14
