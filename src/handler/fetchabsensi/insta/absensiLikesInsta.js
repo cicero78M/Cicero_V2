@@ -19,9 +19,6 @@ import { getClientInfo } from "../../../service/instagram/instagramReport.js";
 import { computeDitbinmasLikesStats } from "./ditbinmasLikesUtils.js";
 
 const pangkatOrder = [
-  "KOMISARIS BESAR POLISI",
-  "AKBP",
-  "KOMPOL",
   "AKP",
   "IPTU",
   "IPDA",
@@ -31,6 +28,13 @@ const pangkatOrder = [
   "BRIGADIR",
   "BRIPTU",
   "BRIPDA",
+  "PENATA",
+  "PENGATUR TINGKAT I",
+  "PENGATUR MUDA TINGKAT I",
+  "PENGATUR",
+  "JURU",
+  "PPPK",
+  "PHL",
 ];
 
 const rankIdx = (title) => {
@@ -39,15 +43,25 @@ const rankIdx = (title) => {
   return index === -1 ? pangkatOrder.length : index;
 };
 
+const isKasatJabatan = (jabatan) =>
+  (jabatan || "").toString().toUpperCase().includes("KASAT");
+
 const sortUsersByRankAndName = (users = []) =>
   users
     .slice()
     .sort((a, b) => {
+      const rankDiff = rankIdx(a.title) - rankIdx(b.title);
+      if (rankDiff !== 0) return rankDiff;
+      const isAkpRank = rankIdx(a.title) === rankIdx("AKP");
+      if (isAkpRank) {
+        const kasatDiff =
+          Number(isKasatJabatan(b?.jabatan)) -
+          Number(isKasatJabatan(a?.jabatan));
+        if (kasatDiff !== 0) return kasatDiff;
+      }
       const priorityDiff =
         getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
       if (priorityDiff !== 0) return priorityDiff;
-      const rankDiff = rankIdx(a.title) - rankIdx(b.title);
-      if (rankDiff !== 0) return rankDiff;
       return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
         sensitivity: "base",
       });
@@ -331,20 +345,23 @@ export async function absensiLikes(client_id, opts = {}) {
       msg += `*${div}* (${totalDiv} user):\n`;
 
       if (mode === "all" || mode === "sudah") {
+        const lengkapUsers = sortUsersByRankAndName(data.lengkap);
+        const kurangUsers = sortUsersByRankAndName(data.kurang);
         msg += `✅ Lengkap (${data.lengkap.length} user):\n`;
         msg += data.lengkap.length
-          ? data.lengkap.map(formatUserLine).join("\n") + "\n"
+          ? lengkapUsers.map(formatUserLine).join("\n") + "\n"
           : "-\n";
         msg += `⚠️ Kurang (${data.kurang.length} user):\n`;
         msg += data.kurang.length
-          ? data.kurang.map(formatUserLine).join("\n") + "\n"
+          ? kurangUsers.map(formatUserLine).join("\n") + "\n"
           : "-\n";
       }
 
       if (mode === "all" || mode === "belum") {
+        const belumUsers = sortUsersByRankAndName(data.belum);
         msg += `❌ Belum (${data.belum.length} user):\n`;
         msg += data.belum.length
-          ? data.belum.map(formatUserLine).join("\n") + "\n"
+          ? belumUsers.map(formatUserLine).join("\n") + "\n"
           : "-\n";
       }
 

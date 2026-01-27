@@ -64,9 +64,6 @@ export function normalizeUsername(username) {
 }
 
 const pangkatOrderPriority = [
-  "KOMISARIS BESAR POLISI",
-  "AKBP",
-  "KOMPOL",
   "AKP",
   "IPTU",
   "IPDA",
@@ -76,6 +73,13 @@ const pangkatOrderPriority = [
   "BRIGADIR",
   "BRIPTU",
   "BRIPDA",
+  "PENATA",
+  "PENGATUR TINGKAT I",
+  "PENGATUR MUDA TINGKAT I",
+  "PENGATUR",
+  "JURU",
+  "PPPK",
+  "PHL",
 ];
 
 const getRankIndex = (title) => {
@@ -84,15 +88,25 @@ const getRankIndex = (title) => {
   return index === -1 ? pangkatOrderPriority.length : index;
 };
 
+const isKasatJabatan = (jabatan) =>
+  (jabatan || "").toString().toUpperCase().includes("KASAT");
+
 const sortUsersByRankAndName = (users = []) =>
   users
     .slice()
     .sort((a, b) => {
+      const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
+      if (rankDiff !== 0) return rankDiff;
+      const isAkpRank = getRankIndex(a.title) === getRankIndex("AKP");
+      if (isAkpRank) {
+        const kasatDiff =
+          Number(isKasatJabatan(b?.jabatan)) -
+          Number(isKasatJabatan(a?.jabatan));
+        if (kasatDiff !== 0) return kasatDiff;
+      }
       const priorityDiff =
         getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
       if (priorityDiff !== 0) return priorityDiff;
-      const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
-      if (rankDiff !== 0) return rankDiff;
       return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
         sensitivity: "base",
       });
@@ -318,19 +332,22 @@ export async function absensiKomentar(client_id, opts = {}) {
 
         if (mode === "all" || mode === "sudah") {
           msg += `✅ Lengkap (${data.lengkap.length} user):\n`;
+          const lengkapUsers = sortUsersByRankAndName(data.lengkap);
+          const kurangUsers = sortUsersByRankAndName(data.kurang);
           msg += data.lengkap.length
-            ? data.lengkap.map(formatUserLine).join("\n") + "\n"
+            ? lengkapUsers.map(formatUserLine).join("\n") + "\n"
             : "-\n";
           msg += `⚠️ Kurang (${data.kurang.length} user):\n`;
           msg += data.kurang.length
-            ? data.kurang.map(formatUserLine).join("\n") + "\n"
+            ? kurangUsers.map(formatUserLine).join("\n") + "\n"
             : "-\n";
         }
 
         if (mode === "all" || mode === "belum") {
+          const belumUsers = sortUsersByRankAndName(data.belum);
           msg += `❌ Belum (${data.belum.length} user):\n`;
           msg += data.belum.length
-            ? data.belum.map(formatUserLine).join("\n") + "\n"
+            ? belumUsers.map(formatUserLine).join("\n") + "\n"
             : "-\n";
         }
 
@@ -565,7 +582,7 @@ export async function absensiKomentar(client_id, opts = {}) {
     const sudahDiv = groupByDivision(sudah);
     const lines = [];
     sortDivisionKeys(Object.keys(sudahDiv)).forEach((div, idx, arr) => {
-      const list = sudahDiv[div];
+      const list = sortUsersByRankAndName(sudahDiv[div]);
       lines.push(`*${div}* (${list.length} user):`);
       lines.push(
         list
@@ -592,7 +609,7 @@ export async function absensiKomentar(client_id, opts = {}) {
     const belumDiv = groupByDivision(belum);
     const lines = [];
     sortDivisionKeys(Object.keys(belumDiv)).forEach((div, idx, arr) => {
-      const list = belumDiv[div];
+      const list = sortUsersByRankAndName(belumDiv[div]);
       lines.push(`*${div}* (${list.length} user):`);
       lines.push(
         list
@@ -1039,9 +1056,6 @@ export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
   const failedVideoSet = new Set(failedVideoIds);
 
   const pangkatOrder = [
-    "KOMISARIS BESAR POLISI",
-    "AKBP",
-    "KOMPOL",
     "AKP",
     "IPTU",
     "IPDA",
@@ -1051,6 +1065,13 @@ export async function lapharTiktokDitbinmas(clientId = "DITBINMAS") {
     "BRIGADIR",
     "BRIPTU",
     "BRIPDA",
+    "PENATA",
+    "PENGATUR TINGKAT I",
+    "PENGATUR MUDA TINGKAT I",
+    "PENGATUR",
+    "JURU",
+    "PPPK",
+    "PHL",
   ];
   const rankIdx = (t) => {
     const i = pangkatOrder.indexOf((t || "").toUpperCase());
