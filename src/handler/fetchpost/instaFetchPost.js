@@ -51,6 +51,13 @@ async function getShortcodesToday(clientId = null) {
   return res.rows.map((r) => r.shortcode);
 }
 
+async function tableExists(tableName) {
+  const res = await query(`SELECT to_regclass($1) AS table_name`, [
+    `public.${tableName}`,
+  ]);
+  return Boolean(res.rows[0]?.table_name);
+}
+
 async function deleteShortcodes(shortcodesToDelete, clientId = null) {
   if (!shortcodesToDelete.length) return;
   // ig_ext_posts rows cascade when insta_post entries are deleted
@@ -71,9 +78,16 @@ async function deleteShortcodes(shortcodesToDelete, clientId = null) {
   await query(`DELETE FROM insta_like WHERE shortcode = ANY($1)`, [
     shortcodesToDelete,
   ]);
-  await query(`DELETE FROM insta_comment WHERE shortcode = ANY($1)`, [
-    shortcodesToDelete,
-  ]);
+  if (await tableExists("insta_comment")) {
+    await query(`DELETE FROM insta_comment WHERE shortcode = ANY($1)`, [
+      shortcodesToDelete,
+    ]);
+  } else {
+    sendDebug({
+      tag: "IG FETCH",
+      msg: "Skip delete from insta_comment: table not found.",
+    });
+  }
   await query(sql, params);
 }
 
