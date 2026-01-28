@@ -823,6 +823,46 @@ function clearAuthenticatedFallbackTimer(client) {
   }
 }
 
+async function inferClientReadyState(client, label, contextLabel) {
+  const state = getClientReadinessState(client, label);
+  if (state.ready) {
+    return true;
+  }
+  let readySource = null;
+  if (typeof client?.isReady === "function") {
+    try {
+      if ((await client.isReady()) === true) {
+        readySource = "isReady";
+      }
+    } catch (error) {
+      console.warn(
+        `[${state.label}] isReady check failed: ${error?.message || error}`
+      );
+    }
+  }
+  if (!readySource && typeof client?.getState === "function") {
+    try {
+      const clientState = await client.getState();
+      if (clientState === "CONNECTED" || clientState === "open") {
+        readySource = `getState:${clientState}`;
+      }
+    } catch (error) {
+      console.warn(
+        `[${state.label}] getState check failed: ${error?.message || error}`
+      );
+    }
+  }
+  if (readySource) {
+    const contextInfo = contextLabel ? ` during ${contextLabel}` : "";
+    console.warn(
+      `[${state.label}] Readiness inferred via ${readySource}${contextInfo}; marking ready.`
+    );
+    markClientReady(client, readySource);
+    return true;
+  }
+  return false;
+}
+
 function scheduleAuthenticatedReadyFallback(client, label) {
   clearAuthenticatedFallbackTimer(client);
   const { label: stateLabel } = getClientReadinessState(client, label);
@@ -1129,6 +1169,7 @@ export function flushAdminNotificationQueue() {
 async function waitForClientReady(client, timeoutMs) {
   const state = getClientReadinessState(client);
   if (state.ready) return;
+  if (await inferClientReadyState(client, state.label, "pre-wait")) return;
 
   const formatClientReadyTimeoutContext = (readinessState) => {
     const label = readinessState?.label || "WA";
@@ -1181,7 +1222,10 @@ async function waitForClientReady(client, timeoutMs) {
       reject(missingChromeError);
       return;
     }
-    timer = setTimeout(() => {
+    timer = setTimeout(async () => {
+      if (await inferClientReadyState(client, state.label, "timeout-check")) {
+        return;
+      }
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
       const timeoutContext = formatClientReadyTimeoutContext(state);

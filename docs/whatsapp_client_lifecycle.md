@@ -454,6 +454,10 @@ Interpretasi cepat:
   bisa dihindari. Deteksi ini kini memverifikasi executable path terlebih dulu; jika
   path ternyata bisa diakses, `fatalInitError` akan di-clear agar retry/inisialisasi
   tetap berjalan.
+- `waitForWaReady`/`waitForClientReady` juga akan melakukan pengecekan ulang
+  `isReady()` dan `getState()` sebelum timeout benar-benar menolak promise. Jika
+  readiness bisa diinfer dari dua sinyal tersebut (misalnya event `ready`
+  terlewat), helper akan menandai client siap dan menghindari timeout palsu.
 
 ## Deferral pesan gateway sebelum ready
 
