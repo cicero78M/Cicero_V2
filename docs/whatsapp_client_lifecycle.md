@@ -64,6 +64,17 @@ pesan yang sebelumnya ditunda tetap diproses tanpa diblokir deduplikasi. Alur
 ini memastikan pesan yang diterima sebelum ready tetap ditangani setelah client
 siap, sementara dedup tetap aktif untuk pesan normal.
 
+## Throttling pengiriman pesan per client
+
+Pengiriman pesan keluar dibungkus `wrapSendMessage` di `src/service/waService.js`
+dan kini memakai antrean terpisah untuk tiap WhatsApp client. Setiap instance
+client menyimpan queue sendiri (concurrency 1) sehingga throttle/delay tidak
+lagi bersifat global lintas client. Dampaknya:
+
+- Pesan dari `[WA]`, `[WA-USER]`, dan `[WA-GATEWAY]` tidak saling memblokir.
+- Delay respons (`responseDelayMs`) tetap konsisten per client, tetapi tidak
+  memperlambat client lain.
+
 ## Guard error sesi menu WA
 
 `src/service/waService.js` kini memvalidasi handler menu WhatsApp untuk
