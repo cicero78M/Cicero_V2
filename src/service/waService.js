@@ -707,6 +707,14 @@ const logoutDisconnectReasons = new Set([
   "CONFLICT",
   "UNPAIRED_IDLE",
 ]);
+const disconnectChangeStates = new Set([
+  "DISCONNECTED",
+  "UNPAIRED",
+  "UNPAIRED_IDLE",
+  "CONFLICT",
+  "LOGGED_OUT",
+  "CLOSE",
+]);
 const authSessionIgnoreEntries = new Set([
   "SingletonLock",
   "SingletonCookie",
@@ -765,6 +773,8 @@ function getClientReadinessState(client, label = "WA") {
       lastQrAt: null,
       lastQrPayloadSeen: null,
       unknownStateRetryCount: 0,
+      fallbackCheckCompleted: false,
+      fallbackCheckInFlight: false,
     });
   }
   return clientReadiness.get(client);
@@ -813,6 +823,18 @@ function clearLogoutAwaitingQr(client) {
     state.awaitingQrScan = false;
     state.lastDisconnectReason = null;
   }
+}
+
+function resetFallbackReadyState(client) {
+  const state = getClientReadinessState(client);
+  state.fallbackCheckCompleted = false;
+  state.fallbackCheckInFlight = false;
+}
+
+function markFallbackCheckCompleted(client) {
+  const state = getClientReadinessState(client);
+  state.fallbackCheckCompleted = true;
+  state.fallbackCheckInFlight = false;
 }
 
 function clearAuthenticatedFallbackTimer(client) {
@@ -907,7 +929,7 @@ function scheduleAuthenticatedReadyFallback(client, label) {
         console.warn(
           `[${stateLabel}] Reinitializing client after authenticated timeout`
         );
-        client.connect().catch((err) => {
+        reconnectClient(client).catch((err) => {
           console.error(
             `[${stateLabel}] Reinit failed after authenticated timeout: ${err?.message}`
           );
@@ -945,6 +967,7 @@ export function getWaReadinessSummary() {
 function setClientNotReady(client) {
   const state = getClientReadinessState(client);
   state.ready = false;
+  resetFallbackReadyState(client);
 }
 
 function resetHardInitRetryCount(client) {
@@ -987,6 +1010,24 @@ function isFatalMissingChrome(client, err) {
 
 const missingChromeRemediationHint =
   "Set WA_PUPPETEER_EXECUTABLE_PATH or run `npx puppeteer browsers install chrome`.";
+
+function isDisconnectChangeState(state) {
+  const normalizedState = String(state || "").trim().toUpperCase();
+  if (!normalizedState) {
+    return false;
+  }
+  return disconnectChangeStates.has(normalizedState);
+}
+
+function reconnectClient(client, options = {}) {
+  resetFallbackReadyState(client);
+  return client.connect(options);
+}
+
+function reinitializeClient(client, options = {}) {
+  resetFallbackReadyState(client);
+  return client.reinitialize(options);
+}
 
 function scheduleHardInitRetry(client, label, err) {
   setClientNotReady(client);
@@ -1031,8 +1072,7 @@ function scheduleHardInitRetry(client, label, err) {
         return;
       }
     }
-    client
-      .connect()
+    reconnectClient(client)
       .then(() => {
         resetHardInitRetryCount(client);
       })
@@ -1132,7 +1172,7 @@ function handleClientDisconnect(client, label, reason) {
       }
       return;
     }
-    client.connect().catch((err) => {
+    reconnectClient(client).catch((err) => {
       console.error(`[${label}] Reconnect failed:`, err.message);
     });
   }, 5000);
@@ -1335,6 +1375,7 @@ export function sendGatewayMessage(jid, text) {
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
+  resetFallbackReadyState(waClient);
   const state = getClientReadinessState(waClient, "WA");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1346,6 +1387,7 @@ waClient.on("qr", (qr) => {
 waClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA] Authenticated (${sessionInfo}); menunggu ready.`);
+  resetFallbackReadyState(waClient);
   clearLogoutAwaitingQr(waClient);
   scheduleAuthenticatedReadyFallback(waClient, "WA");
 });
@@ -1373,10 +1415,13 @@ waClient.on("change_state", (state) => {
     clearAuthenticatedFallbackTimer(waClient);
     clearLogoutAwaitingQr(waClient);
     markClientReady(waClient, "state");
+  } else if (isDisconnectChangeState(state)) {
+    setClientNotReady(waClient);
   }
 });
 
 waUserClient.on("qr", (qr) => {
+  resetFallbackReadyState(waUserClient);
   const state = getClientReadinessState(waUserClient, "WA-USER");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1388,6 +1433,7 @@ waUserClient.on("qr", (qr) => {
 waUserClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-USER] Authenticated (${sessionInfo}); menunggu ready.`);
+  resetFallbackReadyState(waUserClient);
   clearLogoutAwaitingQr(waUserClient);
   scheduleAuthenticatedReadyFallback(waUserClient, "WA-USER");
 });
@@ -1413,10 +1459,13 @@ waUserClient.on("change_state", (state) => {
     clearAuthenticatedFallbackTimer(waUserClient);
     clearLogoutAwaitingQr(waUserClient);
     markClientReady(waUserClient, "state");
+  } else if (isDisconnectChangeState(state)) {
+    setClientNotReady(waUserClient);
   }
 });
 
 waGatewayClient.on("qr", (qr) => {
+  resetFallbackReadyState(waGatewayClient);
   const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1428,6 +1477,7 @@ waGatewayClient.on("qr", (qr) => {
 waGatewayClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-GATEWAY] Authenticated (${sessionInfo}); menunggu ready.`);
+  resetFallbackReadyState(waGatewayClient);
   clearLogoutAwaitingQr(waGatewayClient);
   scheduleAuthenticatedReadyFallback(waGatewayClient, "WA-GATEWAY");
 });
@@ -1453,6 +1503,8 @@ waGatewayClient.on("change_state", (state) => {
     clearAuthenticatedFallbackTimer(waGatewayClient);
     clearLogoutAwaitingQr(waGatewayClient);
     markClientReady(waGatewayClient, "state");
+  } else if (isDisconnectChangeState(state)) {
+    setClientNotReady(waGatewayClient);
   }
 });
 
@@ -4721,7 +4773,7 @@ if (shouldInitWhatsAppClients) {
 
   const initPromises = clientsToInit.map(({ label, client }) => {
     console.log(`[${label}] Starting WhatsApp client initialization`);
-    return client.connect()
+    return reconnectClient(client)
       .then(() => {
         resetHardInitRetryCount(client);
       })
@@ -4735,6 +4787,14 @@ if (shouldInitWhatsAppClients) {
     client,
     delayMs = fallbackReadyCheckDelayMs
   ) => {
+    const readinessState = getClientReadinessState(client);
+    if (readinessState.fallbackCheckCompleted) {
+      return;
+    }
+    if (readinessState.fallbackCheckInFlight) {
+      return;
+    }
+    readinessState.fallbackCheckInFlight = true;
     const isConnectInFlight = () =>
       typeof client?.getConnectPromise === "function" &&
       Boolean(client.getConnectPromise());
@@ -4791,7 +4851,12 @@ if (shouldInitWhatsAppClients) {
     };
     setTimeout(async () => {
       const state = getClientReadinessState(client);
+      state.fallbackCheckInFlight = false;
+      if (state.fallbackCheckCompleted) {
+        return;
+      }
       if (state.ready) {
+        markFallbackCheckCompleted(client);
         return;
       }
       const { label } = state;
@@ -4832,8 +4897,7 @@ if (shouldInitWhatsAppClients) {
                 connectInFlightDurationMs
               )}; triggering reinit.`
             );
-            client
-              .reinitialize({
+            reinitializeClient(client, {
                 trigger: "connect-inflight-timeout",
                 reason: `connect in progress for ${formatConnectDurationMs(
                   connectInFlightDurationMs
@@ -4888,7 +4952,7 @@ if (shouldInitWhatsAppClients) {
             fallbackStateRetryCounts.set(client, 0);
             fallbackReinitCounts.set(client, 0);
             state.unknownStateRetryCount = 0;
-            scheduleFallbackReadyCheck(client, delayMs);
+            markFallbackCheckCompleted(client);
             return;
           }
           if (client?.info !== undefined) {
@@ -4948,7 +5012,7 @@ if (shouldInitWhatsAppClients) {
           console.log(
             `[${label}] getState=${normalizedState}; awaiting ready event`
           );
-          scheduleFallbackReadyCheck(client, delayMs);
+          markFallbackCheckCompleted(client);
           return;
         }
 
@@ -5028,8 +5092,7 @@ if (shouldInitWhatsAppClients) {
                 getConnectInFlightDurationMs()
               )
           );
-          client
-            .reinitialize({
+          reinitializeClient(client, {
               clearAuthSession: true,
               trigger: "fallback-unknown-escalation",
               reason: `unknown state after ${unknownStateRetryCount} retry cycles`,
@@ -5056,8 +5119,7 @@ if (shouldInitWhatsAppClients) {
                 getConnectInFlightDurationMs()
               )
           );
-          client
-            .reinitialize({
+          reinitializeClient(client, {
               clearAuthSession: true,
               trigger: "fallback-unknown-auth",
               reason: clearReason,
@@ -5093,7 +5155,7 @@ if (shouldInitWhatsAppClients) {
           console.warn(
             `[${label}] getState=${normalizedState} after retries; reinitializing (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
           );
-          client.connect().catch((err) => {
+          reconnectClient(client).catch((err) => {
             console.error(
               `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
             );
