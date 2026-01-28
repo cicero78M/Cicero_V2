@@ -1357,14 +1357,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       emitter.emit('ready');
     }
   });
-  client.on('authenticated', (session) => {
-    emitter.emit('authenticated', session);
-  });
-  client.on('change_state', (state) => {
-    emitter.emit('change_state', state);
-  });
   client.on('auth_failure', async (message) => {
-    emitter.emit('auth_failure', message);
     console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
     await reinitializeClient('auth_failure', message);
   });
@@ -1395,8 +1388,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       body: msg.body,
       id: msg.id,
       author: msg.author,
-      fromMe: msg.fromMe,
-      isStatus: msg.isStatus,
       timestamp: msg.timestamp,
       ...contactMeta,
     });
