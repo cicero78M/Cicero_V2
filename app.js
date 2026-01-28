@@ -8,6 +8,7 @@ import routes from './src/routes/index.js';
 import authRoutes from './src/routes/authRoutes.js';
 import passwordResetAliasRoutes from './src/routes/passwordResetAliasRoutes.js';
 import claimRoutes from './src/routes/claimRoutes.js';
+import waHealthRoutes from './src/routes/waHealthRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 import { authRequired } from './src/middleware/authMiddleware.js';
 import { dedupRequest } from './src/middleware/dedupRequestMiddleware.js';
@@ -101,6 +102,7 @@ app.all('/_next/dev/', (req, res) => res.status(200).json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/claim', claimRoutes);
 app.use('/api/password-reset', passwordResetAliasRoutes);
+app.use('/api/health/wa', waHealthRoutes);
 
 // ===== ROUTE LAIN (WAJIB TOKEN) =====
 app.use('/api', authRequired, routes);

@@ -44,6 +44,40 @@ Semua handler log menyertakan label:
 - `[WA-USER]` untuk user menu.
 - `[WA-GATEWAY]` untuk gateway broadcast.
 
+## Endpoint status readiness
+
+Endpoint ringan untuk memeriksa readiness tiap client tersedia di:
+
+- `GET /api/health/wa`
+
+Response contoh:
+
+```json
+{
+  "status": "ok",
+  "clients": [
+    {
+      "label": "WA",
+      "ready": true,
+      "awaitingQrScan": false,
+      "lastDisconnectReason": null
+    },
+    {
+      "label": "WA-USER",
+      "ready": false,
+      "awaitingQrScan": true,
+      "lastDisconnectReason": "LOGGED_OUT"
+    }
+  ]
+}
+```
+
+Field yang disediakan per client:
+
+- `ready`: status readiness saat ini.
+- `awaitingQrScan`: `true` bila sesi menunggu QR scan ulang.
+- `lastDisconnectReason`: reason terakhir dari event `disconnected` (bisa `null`).
+
 ## Agregasi message & deduplikasi
 
 `handleIncoming` di `src/service/waEventAggregator.js` dipakai untuk menghindari
