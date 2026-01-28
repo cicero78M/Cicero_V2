@@ -34,5 +34,5 @@ muncul.
 ## Indikator Koneksi & Readiness
 
 - Saat bot meminta pemindaian QR, operator akan melihat log seperti `[WA-USER] Scan QR dengan WhatsApp Anda!`.
-- Setelah sesi terhubung, log readiness akan muncul: `[WA-USER] READY via ready`, `[WA-USER] READY via state`, atau fallback `[WA-USER] getState: CONNECTED` lalu `READY via getState` bila event `ready`/`change_state` terlewat.
-- Jika koneksi tidak stabil, pastikan sesi WA-USER aktif dan ulangi scan QR. Log `getState error` menandakan koneksi belum siap atau sesi terputus sehingga proses registrasi belum bisa dilanjutkan.
+- Setelah sesi terhubung, log readiness akan muncul dari event WWebJS seperti `[WA-USER] READY via ready` atau `[WA-USER] READY via state`.
+- Jika koneksi tidak stabil, pastikan sesi WA-USER aktif dan ulangi scan QR. Log `getState error` menandakan koneksi belum siap atau sesi terputus sehingga proses registrasi belum bisa dilanjutkan, sementara log `getState=<status>` hanya bersifat diagnostik dan tidak menandai ready.

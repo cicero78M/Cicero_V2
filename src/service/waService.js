@@ -841,8 +841,9 @@ function scheduleAuthenticatedReadyFallback(client, label) {
         try {
           const isReady = (await client.isReady()) === true;
           if (isReady) {
-            markClientReady(client, "authenticated-timeout-isReady");
-            return;
+            console.warn(
+              `[${stateLabel}] isReady=true after authenticated timeout; waiting for ready event`
+            );
           }
         } catch (error) {
           console.warn(
@@ -856,10 +857,6 @@ function scheduleAuthenticatedReadyFallback(client, label) {
           console.warn(
             `[${stateLabel}] getState after authenticated timeout: ${currentState}`
           );
-          if (currentState === "CONNECTED" || currentState === "open") {
-            markClientReady(client, "authenticated-timeout-getState");
-            return;
-          }
         } catch (error) {
           console.warn(
             `[${stateLabel}] getState failed after authenticated timeout: ${error?.message}`
@@ -1132,25 +1129,6 @@ export function flushAdminNotificationQueue() {
 async function waitForClientReady(client, timeoutMs) {
   const state = getClientReadinessState(client);
   if (state.ready) return;
-  let isReady = false;
-  if (client?.isReady) {
-    try {
-      isReady = (await client.isReady()) === true;
-    } catch (error) {
-      console.warn("[WA] isReady check failed:", error?.message);
-    }
-  }
-  if (isReady) {
-    markClientReady(client, "isReady");
-    return;
-  }
-  if (client?.getState) {
-    const currentState = await client.getState().catch(() => undefined);
-    if (currentState === "CONNECTED" || currentState === "open") {
-      markClientReady(client, "getState");
-      return;
-    }
-  }
 
   const formatClientReadyTimeoutContext = (readinessState) => {
     const label = readinessState?.label || "WA";
@@ -4856,19 +4834,17 @@ if (shouldInitWhatsAppClients) {
         scheduleFallbackReadyCheck(client, delayMs);
         return;
       }
-      let hasReadySignal = false;
       if (typeof client?.isReady === "function") {
         try {
           const isReady = (await client.isReady()) === true;
           if (isReady) {
-            hasReadySignal = true;
             console.log(
-              `[${label}] fallback isReady indicates ready; marking ready`
+              `[${label}] fallback isReady indicates ready; awaiting ready event`
             );
             fallbackStateRetryCounts.set(client, 0);
             fallbackReinitCounts.set(client, 0);
             state.unknownStateRetryCount = 0;
-            markClientReady(client, "fallback-isReady");
+            scheduleFallbackReadyCheck(client, delayMs);
             return;
           }
           if (client?.info !== undefined) {
@@ -4925,8 +4901,10 @@ if (shouldInitWhatsAppClients) {
           fallbackStateRetryCounts.set(client, 0);
           fallbackReinitCounts.set(client, 0);
           state.unknownStateRetryCount = 0;
-          hasReadySignal = true;
-          markClientReady(client, "getState");
+          console.log(
+            `[${label}] getState=${normalizedState}; awaiting ready event`
+          );
+          scheduleFallbackReadyCheck(client, delayMs);
           return;
         }
 
@@ -5084,12 +5062,8 @@ if (shouldInitWhatsAppClients) {
         }
       } catch (e) {
         console.log(`[${label}] getState error: ${e?.message}`);
-        if (!hasReadySignal) {
-          console.warn(
-            `[${label}] fallback readiness deferred after getState error`
-          );
-          scheduleFallbackReadyCheck(client, delayMs);
-        }
+        console.warn(`[${label}] fallback readiness deferred after getState error`);
+        scheduleFallbackReadyCheck(client, delayMs);
       }
     }, delayMs);
   };
