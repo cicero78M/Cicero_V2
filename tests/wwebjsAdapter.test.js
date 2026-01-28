@@ -43,7 +43,13 @@ test('wwebjs adapter relays messages', async () => {
   client.on('change_state', onStateChange);
   client.on('auth_failure', onAuthFailure);
   await client.connect();
-  const incoming = { from: '123', body: 'hi', id: { id: 'm1', _serialized: 'm1' } };
+  const incoming = {
+    from: '123',
+    body: 'hi',
+    id: { id: 'm1', _serialized: 'm1' },
+    fromMe: false,
+    isStatus: false,
+  };
   listeners['message'](incoming);
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming));
   listeners['authenticated']({ session: 'ok' });

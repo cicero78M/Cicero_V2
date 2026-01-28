@@ -1395,6 +1395,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       body: msg.body,
       id: msg.id,
       author: msg.author,
+      fromMe: msg.fromMe,
+      isStatus: msg.isStatus,
       timestamp: msg.timestamp,
       ...contactMeta,
     });
