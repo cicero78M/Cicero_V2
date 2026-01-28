@@ -4787,34 +4787,46 @@ if (shouldInitWhatsAppClients) {
         scheduleFallbackReadyCheck(client, delayMs);
         return;
       }
-      let fallbackReadySource = null;
+      let hasReadySignal = false;
       if (typeof client?.isReady === "function") {
         try {
           const isReady = (await client.isReady()) === true;
           if (isReady) {
-            fallbackReadySource = "isReady";
+            hasReadySignal = true;
+            console.log(
+              `[${label}] fallback isReady indicates ready; marking ready`
+            );
+            fallbackStateRetryCounts.set(client, 0);
+            fallbackReinitCounts.set(client, 0);
+            state.unknownStateRetryCount = 0;
+            markClientReady(client, "fallback-isReady");
+            return;
+          }
+          if (client?.info !== undefined) {
+            console.warn(
+              `[${label}] fallback readiness deferred; isReady=false while client.info is present`
+            );
           }
         } catch (error) {
           console.warn(
             `[${label}] fallback isReady check failed: ${error?.message}`
           );
+          if (client?.info !== undefined) {
+            console.warn(
+              `[${label}] fallback readiness deferred; client.info present but isReady errored`
+            );
+          }
         }
-      }
-      if (!fallbackReadySource && client?.info !== undefined) {
-        fallbackReadySource = "info";
-      }
-      if (fallbackReadySource) {
-        console.log(
-          `[${label}] fallback ${fallbackReadySource} indicates ready; marking ready`
+      } else if (client?.info !== undefined) {
+        console.warn(
+          `[${label}] fallback readiness deferred; client.info present but isReady not available`
         );
-        fallbackStateRetryCounts.set(client, 0);
-        fallbackReinitCounts.set(client, 0);
-        state.unknownStateRetryCount = 0;
-        markClientReady(client, "fallback-isReady");
-        return;
       }
       if (typeof client?.getState !== "function") {
-        console.log(`[${label}] getState not available for fallback readiness`);
+        console.log(
+          `[${label}] getState not available for fallback readiness; deferring readiness`
+        );
+        scheduleFallbackReadyCheck(client, delayMs);
         return;
       }
       try {
@@ -4844,6 +4856,7 @@ if (shouldInitWhatsAppClients) {
           fallbackStateRetryCounts.set(client, 0);
           fallbackReinitCounts.set(client, 0);
           state.unknownStateRetryCount = 0;
+          hasReadySignal = true;
           markClientReady(client, "getState");
           return;
         }
@@ -5002,6 +5015,12 @@ if (shouldInitWhatsAppClients) {
         }
       } catch (e) {
         console.log(`[${label}] getState error: ${e?.message}`);
+        if (!hasReadySignal) {
+          console.warn(
+            `[${label}] fallback readiness deferred after getState error`
+          );
+          scheduleFallbackReadyCheck(client, delayMs);
+        }
       }
     }, delayMs);
   };
