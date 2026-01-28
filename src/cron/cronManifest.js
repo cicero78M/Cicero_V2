@@ -65,4 +65,10 @@ export default [
     bucket: 'waClient',
     description: 'Send oprrequest engagement absensi Instagram/TikTok recaps to org client WhatsApp group, operator, and super admin.',
   },
+  {
+    jobKey: './src/cron/cronOprRequestAmplifyRoutineUpdate.js',
+    modulePath: './src/cron/cronOprRequestAmplifyRoutineUpdate.js',
+    bucket: 'always',
+    description: 'Refresh oprrequest tugas rutin amplification content for active org clients with amplification enabled during business hours.',
+  },
 ];

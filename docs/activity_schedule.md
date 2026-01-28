@@ -1,5 +1,5 @@
 # System Activity Schedule
-*Last updated: 2026-01-24*
+*Last updated: 2026-01-28*
 
 This document summarizes the automated jobs ("activity") that run inside Cicero_V2. All jobs use `node-cron`, are registered from `src/cron/*.js` during `app.js` boot, and execute in the **Asia/Jakarta** timezone unless stated otherwise. Base jobs still come from the manifest in `src/cron/cronManifest.js`, while Ditbinmas (dirRequest) jobs are grouped in `src/cron/dirRequest/index.js` so they can be toggled together when needed.【F:src/cron/dirRequest/index.js†L1-L108】
 
@@ -33,6 +33,7 @@ Then paste the output into this section. The table is sourced from `src/cron/cro
 | `cronDirRequestFetchSosmed.js` | `0,30 6-21 * * *<br>0 22 * * *` | Fetch Instagram/TikTok posts for all active clients (direktorat + org) with Instagram/TikTok enabled, refresh engagement metrics, and broadcast status deltas; delivery now triggers when the Instagram/TikTok link set changes even if post counts stay flat (pengiriman grup dikunci setelah 17:15 WIB, tetapi fetch post & refresh engagement tetap jalan supaya komentar malam memakai data terbaru). Fetch ini bersifat single-flight dengan antrean rerun: saat job masih berjalan, pemanggilan berikutnya dicatat sebagai **queued** dan otomatis dijalankan ulang setelah proses selesai (permintaan ganda digabung agar tidak menumpuk). |
 | `cronOprRequestAbsensiUpdateDataUsername.js` | `45 8-15 * * *` | Send oprrequest absensi update data username recaps to active org clients with Instagram + TikTok enabled, delivered to each WhatsApp group. |
 | `cronOprRequestAbsensiEngagement.js` | `5 15,18,20 * * *` | Send oprrequest engagement absensi Instagram (likes) and TikTok (comments) recaps with the "all" mode to each org WhatsApp group plus operator and super admin recipients. |
+| `cronOprRequestAmplifyRoutineUpdate.js` | `0,30 8-21 * * *` | Refresh oprrequest tugas rutin amplification content for active org clients with amplification enabled. |
 | `cronDashboardSubscriptionExpiry.js` | `*/30 * * * *` | Mark overdue dashboard subscriptions as expired and send WhatsApp reminders when a destination number is available. |
 | `cronPremiumExpiry.js` | `0 0 * * *` | Expire mobile premium users when `premium_end_date` is in the past. |
 | `cronDashboardPremiumRequestExpiry.js` | `0 * * * *` | Expire pending/confirmed dashboard premium requests after their `expired_at` deadline and send requester/admin WhatsApp notifications. |
