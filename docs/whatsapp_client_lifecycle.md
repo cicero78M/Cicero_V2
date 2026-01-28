@@ -130,8 +130,11 @@ diinisialisasi **secara paralel**. Artinya:
 - Log error tetap terpisah per label (`[WA]`, `[WA-USER]`, `[WA-GATEWAY]`) agar mudah
   melacak sesi yang bermasalah.
 - Fallback readiness (`getState()` setelah ~60 detik) tetap dijadwalkan untuk semua
-  client segera setelah inisialisasi dimulai, dan akan berhenti otomatis ketika
-  event `ready` atau `change_state` menandai client siap.
+  client segera setelah inisialisasi dimulai, namun sekarang **one-shot per siklus**
+  start/restart: ketika `isReady()` atau `getState()` mengembalikan `CONNECTED/open`,
+  fallback dianggap selesai dan tidak dijadwalkan ulang hingga siklus baru dimulai
+  (reset saat event `qr`, `authenticated`, `auth_failure`, disconnect/change_state
+  yang menandakan putus, atau saat `connect()`/`reinitialize()` dipanggil).
 - `connect()` dapat **reject** (hard failure) jika inisialisasi gagal, misalnya setelah
   retry fallback webVersion tetap gagal. Saat ini, `waService.js` menandai client
   sebagai tidak siap dan menjadwalkan reinit dengan backoff lebih panjang
@@ -476,6 +479,12 @@ readiness tercapai.
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
 ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 
+Catatan: fallback readiness bersifat **one-shot per siklus start/restart**. Jika
+`isReady()` atau `getState()` sudah menunjukkan `CONNECTED/open`, fallback dianggap
+selesai dan tidak dijadwalkan ulang hingga ada siklus baru (reset saat `qr`,
+`authenticated`, `auth_failure`, disconnect/change_state yang menandakan putus,
+atau saat `connect()`/`reinitialize()` dipanggil).
+
 1. Sebelum memanggil `getState()`, fallback readiness mengecek `isReady()` sebagai sinyal
    diagnostik untuk menunda reinit jika client terlihat siap, **tanpa** menandai ready.
    `client.info` **tidak** dipakai sebagai sinyal ready; jika hanya `client.info` yang
@@ -502,10 +511,11 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    dijadwalkan ulang agar tidak menambah retry atau reinit yang redundan.
    Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan
    fallback readiness dapat memicu reinit untuk memutus koneksi yang macet.
-6. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
-   `markClientReady` **hanya** dipanggil dari event tersebut (bukan dari fallback readiness),
-   sehingga timer authenticated fallback dan status `awaitingQrScan` dibersihkan saat
-   event resmi diterima.
+6. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi,
+   atau jika `isReady()`/`getState()` sudah menunjukkan koneksi `CONNECTED/open`
+   (fallback ditandai selesai tanpa reschedule). `markClientReady` **hanya** dipanggil
+   dari event resmi tersebut (bukan dari fallback readiness), sehingga timer authenticated
+   fallback dan status `awaitingQrScan` dibersihkan saat event resmi diterima.
 7. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
    **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.
 
