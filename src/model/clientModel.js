@@ -86,6 +86,7 @@ export const findAllActiveOrgAmplifyClients = async () => {
     "client_status",
     "client_amplify_status",
     "client_insta",
+    "client_operator",
   ]);
   const res = await query(
     `SELECT ${selectColumns}

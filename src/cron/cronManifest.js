@@ -71,4 +71,10 @@ export default [
     bucket: 'always',
     description: 'Refresh oprrequest tugas rutin amplification content for active org clients with amplification enabled during business hours.',
   },
+  {
+    jobKey: './src/cron/cronOprRequestDailyReport.js',
+    modulePath: './src/cron/cronOprRequestDailyReport.js',
+    bucket: 'waClient',
+    description: 'Send oprrequest daily amplification reports (tugas rutin no 1 and no 2) to operator WhatsApp for active org clients with amplification enabled.',
+  },
 ];
