@@ -1593,10 +1593,6 @@ export function createHandleMessage(waClient, options = {}) {
       ? getAdminWAIds().find((wid) => wid === normalizedSenderAdminId) || null
       : null;
     console.log(`${clientLabel} Incoming message from ${chatId}: ${text}`);
-    if (msg.fromMe) {
-      console.log(`${clientLabel} Ignored outgoing message from ${chatId}`);
-      return;
-    }
     if (msg.isStatus || chatId === "status@broadcast") {
       console.log(`${clientLabel} Ignored status message from ${chatId}`);
       return;
