@@ -10,9 +10,10 @@ import { getGreeting } from '../utils/utilsHelper.js';
 async function getOperatorUserIds(clientId) {
   const result = await query(
     `SELECT u.user_id 
-     FROM users u
+     FROM "user" u
      JOIN user_roles ur ON u.user_id = ur.user_id
-     WHERE ur.role = 'operator' 
+     JOIN roles r ON ur.role_id = r.role_id
+     WHERE r.role_name = 'operator' 
        AND u.client_id = $1 
        AND u.status = true`,
     [clientId]
