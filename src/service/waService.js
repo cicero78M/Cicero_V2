@@ -124,7 +124,7 @@ import {
 
 dotenv.config();
 
-const messageQueue = new PQueue({ concurrency: 1 });
+const messageQueues = new WeakMap();
 const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
@@ -1227,6 +1227,11 @@ waGatewayClient.waitForWaReady = () => waitForClientReady(waGatewayClient);
 function wrapSendMessage(client) {
   const original = client.sendMessage;
   client._originalSendMessage = original;
+  let queueForClient = messageQueues.get(client);
+  if (!queueForClient) {
+    queueForClient = new PQueue({ concurrency: 1 });
+    messageQueues.set(client, queueForClient);
+  }
 
   async function sendWithRetry(args, attempt = 0) {
     const waitFn =
@@ -1251,7 +1256,9 @@ function wrapSendMessage(client) {
   }
 
   client.sendMessage = (...args) => {
-    return messageQueue.add(() => sendWithRetry(args), { delay: responseDelayMs });
+    return queueForClient.add(() => sendWithRetry(args), {
+      delay: responseDelayMs,
+    });
   };
 }
 wrapSendMessage(waClient);
