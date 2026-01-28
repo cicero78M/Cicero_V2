@@ -7,7 +7,7 @@ import waClient, { waGatewayClient, waUserClient } from '../service/waService.js
 import { normalizeGroupId } from './cronDirRequestFetchSosmed.js';
 
 export const JOB_KEY = './src/cron/cronOprRequestAbsensiUpdateDataUsername.js';
-const CRON_EXPRESSION = '45 8-19 * * *';
+const CRON_EXPRESSION = '45 6 * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const CRON_TAG = 'CRON OPRREQUEST ABSENSI UPDATE USERNAME';
 const ROLE_FLAG = 'operator';
