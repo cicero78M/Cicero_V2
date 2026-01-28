@@ -128,6 +128,11 @@ const messageQueues = new WeakMap();
 const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
+if (!shouldInitWhatsAppClients) {
+  console.warn(
+    "[WA] WA_SERVICE_SKIP_INIT=true; WA clients will not receive messages"
+  );
+}
 
 // Fixed delay to ensure consistent 3-second response timing
 const responseDelayMs = 3000;
@@ -883,6 +888,23 @@ function registerClientReadiness(client, label) {
   getClientReadinessState(client, label);
 }
 
+export function getWaReadinessSummary() {
+  const clients = [
+    { label: "WA", client: waClient },
+    { label: "WA-USER", client: waUserClient },
+    { label: "WA-GATEWAY", client: waGatewayClient },
+  ];
+  return clients.map(({ label, client }) => {
+    const state = getClientReadinessState(client, label);
+    return {
+      label,
+      ready: Boolean(state.ready),
+      awaitingQrScan: Boolean(state.awaitingQrScan),
+      lastDisconnectReason: state.lastDisconnectReason || null,
+    };
+  });
+}
+
 function setClientNotReady(client) {
   const state = getClientReadinessState(client);
   state.ready = false;
@@ -1193,9 +1215,18 @@ async function waitForClientReady(client, timeoutMs) {
         `awaitingQrScan=${timeoutContext.awaitingQrScan} ` +
         `lastDisconnectReason=${timeoutContext.lastDisconnectReason} ` +
         `lastAuthFailureAt=${timeoutContext.lastAuthFailureAt}`;
-      console.warn(
-        `[${timeoutContext.label}] waitForClientReady timeout after ${resolvedTimeoutMs}ms; ${contextMessage}`
+      const remediationMessage =
+        "Remediation: scan QR terbaru (jika awaitingQrScan=true), cek WA_AUTH_DATA_PATH, WA_PUPPETEER_EXECUTABLE_PATH.";
+      console.error(
+        `[${timeoutContext.label}] waitForClientReady timeout after ${resolvedTimeoutMs}ms; ${contextMessage}; ${remediationMessage}`
       );
+      const waState = getClientReadinessState(waClient, "WA");
+      if (waState.ready) {
+        queueAdminNotification(
+          `[${timeoutContext.label}] WA client not ready after ${resolvedTimeoutMs}ms. ${remediationMessage}`
+        );
+        flushAdminNotificationQueue();
+      }
       if (missingChrome) {
         timeoutContext.remediationHint = missingChromeRemediationHint;
         const missingChromeError = new Error(
