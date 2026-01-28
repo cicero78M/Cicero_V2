@@ -35,14 +35,28 @@ beforeEach(() => {
 test('wwebjs adapter relays messages', async () => {
   const client = await createWwebjsClient();
   const onMessage = jest.fn();
+  const onAuthenticated = jest.fn();
+  const onStateChange = jest.fn();
+  const onAuthFailure = jest.fn();
   client.onMessage(onMessage);
+  client.on('authenticated', onAuthenticated);
+  client.on('change_state', onStateChange);
+  client.on('auth_failure', onAuthFailure);
   await client.connect();
   const incoming = { from: '123', body: 'hi', id: { id: 'm1', _serialized: 'm1' } };
   listeners['message'](incoming);
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming));
+  listeners['authenticated']({ session: 'ok' });
+  listeners['change_state']('CONNECTED');
+  await listeners['auth_failure']('invalid');
+  expect(onAuthenticated).toHaveBeenCalledWith({ session: 'ok' });
+  expect(onStateChange).toHaveBeenCalledWith('CONNECTED');
+  expect(onAuthFailure).toHaveBeenCalledWith('invalid');
   const id = await client.sendMessage('123', 'hello');
   expect(id).toBe('abc');
-  expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {});
+  expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {
+    sendSeen: false,
+  });
   await client.disconnect();
   expect(mockClient.destroy).toHaveBeenCalled();
 });
@@ -61,12 +75,14 @@ test('wwebjs adapter configures web version cache and overrides', async () => {
   expect(ClientMock).toHaveBeenCalledWith(
     expect.objectContaining({
       authStrategy: expect.anything(),
-      puppeteer: { args: ['--no-sandbox'], headless: true },
+      puppeteer: expect.objectContaining({ args: ['--no-sandbox'], headless: true }),
       webVersionCache: { type: 'remote', remotePath: 'https://example.com/wa.json' },
       webVersion: '2.3000.0',
     })
   );
-  expect(LocalAuthMock).toHaveBeenCalledWith({ clientId: 'custom-client' });
+  expect(LocalAuthMock).toHaveBeenCalledWith(
+    expect.objectContaining({ clientId: 'custom-client' })
+  );
 });
 
 test('wwebjs adapter sends documents as MessageMedia', async () => {
@@ -91,5 +107,6 @@ test('wwebjs adapter sends documents as MessageMedia', async () => {
   const mediaInstance = MessageMedia.mock.instances[0];
   expect(mockClient.sendMessage).toHaveBeenCalledWith('123', mediaInstance, {
     sendMediaAsDocument: true,
+    sendSeen: false,
   });
 });
