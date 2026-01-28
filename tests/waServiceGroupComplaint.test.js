@@ -68,7 +68,7 @@ describe('waService createHandleMessage group complaints', () => {
     }));
 
     jest.unstable_mockModule('../src/db/index.js', () => ({
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     }));
 
     jest.unstable_mockModule('../src/config/env.js', () => ({
@@ -89,6 +89,9 @@ describe('waService createHandleMessage group complaints', () => {
     jest.unstable_mockModule('../src/model/clientModel.js', () => ({
       findByOperator: jest.fn(),
       findBySuperAdmin: jest.fn(),
+      findAllActiveDirektoratWithSosmed: jest.fn().mockResolvedValue([]),
+      findById: jest.fn(),
+      findByRegionalId: jest.fn().mockResolvedValue([]),
     }));
     jest.unstable_mockModule('../src/service/premiumService.js', () => ({}));
     jest.unstable_mockModule('../src/model/premiumRequestModel.js', () => ({}));
@@ -189,6 +192,7 @@ describe('waService createHandleMessage group complaints', () => {
       ].join('\n'),
       author: 'admin-987@s.whatsapp.net',
       isStatus: false,
+      fromMe: false,
       isMyContact: null,
     });
 
@@ -201,4 +205,3 @@ describe('waService createHandleMessage group complaints', () => {
     );
   });
 });
-
