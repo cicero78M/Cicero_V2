@@ -992,6 +992,8 @@ function flushPendingMessages(client) {
 }
 
 function markClientReady(client, src = "unknown") {
+  clearAuthenticatedFallbackTimer(client);
+  clearLogoutAwaitingQr(client);
   const state = getClientReadinessState(client);
   if (!state.ready) {
     state.ready = true;
