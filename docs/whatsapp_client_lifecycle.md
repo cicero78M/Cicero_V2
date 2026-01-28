@@ -366,14 +366,16 @@ penanganan kegagalan yang konsisten.
 
 Guard `sendSeen` kini dipusatkan di adapter. Handler pesan masuk memanggil
 `waClient.sendSeen(chatId)` setelah jeda singkat, dan adapter `wwebjsAdapter`
-melakukan hidrasi chat via `getChatById(jid)` sebelum mengirim status read. Adapter
-memvalidasi state chat (`chat._data`) sebelum memanggil `sendSeen`; jika state
-hilang, adapter akan log warning dengan `chatId` dan `event=sendSeen`, lalu keluar
-aman. Nilai `markedUnread` diperlakukan sebagai opsional dengan fallback default,
-dan ketika field tidak tersedia adapter mencatat log fallback agar troubleshooting
-tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp Web masih
-melempar error `markedUnread`, adapter akan return `false` dan menulis log berisi
-`jid` sehingga error tidak merambat ke layer atas.
+melakukan hidrasi chat via `getChatById(jid)` sebelum mengirim status read. Pemanggilan
+ini dikendalikan oleh opsi handler `markSeen` (default aktif) sehingga seluruh
+client WA dapat menandai pesan sebagai dibaca tanpa bergantung pada logika menu
+pengguna. Adapter memvalidasi state chat (`chat._data`) sebelum memanggil `sendSeen`;
+jika state hilang, adapter akan log warning dengan `chatId` dan `event=sendSeen`,
+lalu keluar aman. Nilai `markedUnread` diperlakukan sebagai opsional dengan fallback
+default, dan ketika field tidak tersedia adapter mencatat log fallback agar
+troubleshooting tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp
+Web masih melempar error `markedUnread`, adapter akan return `false` dan menulis
+log berisi `jid` sehingga error tidak merambat ke layer atas.
 
 Untuk pemanggilan `getChat`, adapter kini melakukan validasi awal: `jid` harus
 bernilai string non-kosong dan `WidFactory` harus tersedia sebelum memanggil

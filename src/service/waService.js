@@ -1518,7 +1518,7 @@ async function handleClientRequestSessionStep({
 }
 
 export function createHandleMessage(waClient, options = {}) {
-  const { allowUserMenu = true, clientLabel = "[WA]" } = options;
+  const { allowUserMenu = true, clientLabel = "[WA]", markSeen = true } = options;
   const userMenuRedirectMessage =
     "Menu pengguna hanya tersedia melalui nomor *WA-USER*. Silakan hubungi nomor tersebut dan ketik *userrequest* untuk melanjutkan.";
 
@@ -1569,7 +1569,7 @@ export function createHandleMessage(waClient, options = {}) {
       return;
     }
 
-    if (allowUserMenu && typeof waClient.sendSeen === "function") {
+    if (markSeen && typeof waClient.sendSeen === "function") {
       await sleep(1000);
       try {
         await waClient.sendSeen(chatId);
