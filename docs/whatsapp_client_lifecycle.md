@@ -320,6 +320,13 @@ tetap jelas. Jika chat tidak menyediakan `sendSeen` atau WhatsApp Web masih
 melempar error `markedUnread`, adapter akan return `false` dan menulis log berisi
 `jid` sehingga error tidak merambat ke layer atas.
 
+Untuk pemanggilan `getChat`, adapter kini melakukan validasi awal: `jid` harus
+bernilai string non-kosong dan `WidFactory` harus tersedia sebelum memanggil
+`getChatById`. Jika salah satu kondisi gagal, adapter mencatat warning ringan dan
+langsung mengembalikan `null` untuk mencegah error internal seperti
+`Cannot read properties of undefined (reading 'update')` saat store WhatsApp Web
+belum siap.
+
 ## Fallback pengiriman pesan (gateway → utama → user)
 
 Untuk notifikasi/broadcast, helper `sendWithClientFallback` dipakai agar pengiriman
