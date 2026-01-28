@@ -125,6 +125,7 @@ import {
 dotenv.config();
 
 const messageQueue = new PQueue({ concurrency: 1 });
+const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
 
@@ -135,6 +136,13 @@ const sleep = (ms) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+function registerClientMessageHandler(client, fromAdapter, handler) {
+  if (!client || typeof handler !== "function") {
+    return;
+  }
+  clientMessageHandlers.set(client, { fromAdapter, handler });
+}
 
 // Helper ringkas untuk menampilkan data user
 function formatUserSummary(user) {
@@ -984,9 +992,26 @@ function flushPendingMessages(client) {
     console.log(
       `[${state.label}] Processing ${state.pendingMessages.length} deferred message(s)`
     );
-    state.pendingMessages.splice(0).forEach((msg) => {
-      console.log(`[${state.label}] Processing deferred message from ${msg.from}`);
-      client.emit("message", msg);
+    const handlerInfo = clientMessageHandlers.get(client);
+    state.pendingMessages.splice(0).forEach((pending) => {
+      const entry =
+        pending && typeof pending === "object" && "msg" in pending
+          ? pending
+          : { msg: pending, allowReplay: false };
+      const deferredMsg = entry.msg;
+      const allowReplay = Boolean(entry.allowReplay);
+      console.log(
+        `[${state.label}] Processing deferred message from ${deferredMsg?.from}`
+      );
+      if (!handlerInfo?.handler) {
+        console.warn(
+          `[${state.label}] Missing handler for deferred message replay`
+        );
+        return;
+      }
+      handleIncoming(handlerInfo.fromAdapter, deferredMsg, handlerInfo.handler, {
+        allowReplay,
+      });
     });
   }
 }
@@ -1473,7 +1498,7 @@ export function createHandleMessage(waClient, options = {}) {
         `${clientLabel} Client not ready, message from ${msg.from} deferred`
       );
       const readinessState = getClientReadinessState(waClient);
-      readinessState.pendingMessages.push(msg);
+      readinessState.pendingMessages.push({ msg, allowReplay: true });
       waClient
         .sendMessage(msg.from, "🤖 Bot sedang memuat, silakan tunggu")
         .catch(() => {
@@ -4298,7 +4323,7 @@ export async function handleGatewayMessage(msg) {
           `[WA-GATEWAY] waitForWaReady failed before message handling: ${err?.message || err}`
         );
       });
-    readinessState.pendingMessages.push(msg);
+    readinessState.pendingMessages.push({ msg, allowReplay: true });
     console.log(
       `[WA-GATEWAY] Deferred gateway message from ${msg?.from || "unknown"} until ready`
     );
@@ -4608,6 +4633,10 @@ export async function handleGatewayMessage(msg) {
     await processGatewayBulkDeletion(chatId, text);
   }
 }
+
+registerClientMessageHandler(waClient, "wwebjs", handleMessage);
+registerClientMessageHandler(waUserClient, "wwebjs-user", handleUserMessage);
+registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMessage);
 
 if (shouldInitWhatsAppClients) {
   waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));

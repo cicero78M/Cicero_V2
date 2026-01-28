@@ -7,8 +7,10 @@ const seen = new Set();
  * @param {string} fromAdapter
  * @param {object} msg
  * @param {(msg: object) => void} handler
+ * @param {{ allowReplay?: boolean }} [options]
  */
-export function handleIncoming(fromAdapter, msg, handler) {
+export function handleIncoming(fromAdapter, msg, handler, options = {}) {
+  const { allowReplay = false } = options;
   const jid = msg.key?.remoteJid || msg.from;
   const id = msg.key?.id || msg.id?.id || msg.id?._serialized;
   const invokeHandler = () =>
@@ -25,6 +27,11 @@ export function handleIncoming(fromAdapter, msg, handler) {
     return;
   }
   const key = `${jid}:${id}`;
+  if (allowReplay) {
+    seen.add(key);
+    invokeHandler();
+    return;
+  }
   if (seen.has(key)) return;
 
   if (fromAdapter === "baileys") {
