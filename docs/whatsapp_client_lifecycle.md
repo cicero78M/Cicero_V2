@@ -408,8 +408,10 @@ readiness tercapai.
 Pada fallback readiness, `getState()` bisa mengembalikan status selain `CONNECTED/open`
 ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
 
-1. Sebelum memanggil `getState()`, melakukan fallback `isReady()` (atau cek `client.info`)
-   agar client yang sudah siap tetap ditandai ready walau event `ready` terlewat.
+1. Sebelum memanggil `getState()`, melakukan fallback `isReady()` agar client yang sudah
+   siap tetap ditandai ready walau event `ready` terlewat. `client.info` **tidak**
+   dipakai sebagai sinyal ready; jika hanya `client.info` yang tersedia, log akan
+   mencatat bahwa readiness ditunda.
 2. Melakukan retry `getState()` beberapa kali (maksimal 3x) dengan jeda acak 15–30 detik.
 3. Jika tetap belum `CONNECTED/open`, log alasan state terakhir dan panggil `connect()`
    ulang secara terbatas (maksimal beberapa kali per client) agar tidak loop tanpa batas.
