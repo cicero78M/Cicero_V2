@@ -54,6 +54,16 @@ meskipun adapter tidak mengirim `id` yang lengkap.
 Pemanggilan handler kini dibungkus `Promise.resolve` dan akan mencatat error
 dengan konteks `jid`, `id`, dan `fromAdapter` agar akar masalah mudah ditelusuri.
 
+## Defer & replay pesan saat belum ready
+
+Ketika readiness belum tercapai, handler pesan di `src/service/waService.js`
+menunda pesan ke `pendingMessages` dan menandainya dengan metadata replay
+(misalnya `allowReplay`). Saat client dinyatakan ready, `flushPendingMessages`
+akan memanggil handler lewat `handleIncoming(..., { allowReplay: true })` agar
+pesan yang sebelumnya ditunda tetap diproses tanpa diblokir deduplikasi. Alur
+ini memastikan pesan yang diterima sebelum ready tetap ditangani setelah client
+siap, sementara dedup tetap aktif untuk pesan normal.
+
 ## Guard error sesi menu WA
 
 `src/service/waService.js` kini memvalidasi handler menu WhatsApp untuk
