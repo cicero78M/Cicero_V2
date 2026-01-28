@@ -435,6 +435,9 @@ ketika koneksi belum stabil atau ada glitch sementara. Sistem akan:
    Saat durasi in-flight melewati ambang, log akan menyertakan durasi dan
    fallback readiness dapat memicu reinit untuk memutus koneksi yang macet.
 6. Proses retry ini otomatis berhenti jika event `ready` atau `change_state` sudah terjadi.
+   Saat `markClientReady` dipanggil (baik dari event maupun fallback readiness),
+   sistem juga membersihkan timer authenticated fallback dan status `awaitingQrScan`
+   agar state logout tidak tertinggal.
 7. Jika status terakhir menandakan logout/unpaired, fallback readiness akan
    **menunggu QR discan ulang** sebelum mencoba `getState()` kembali.
 
