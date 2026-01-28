@@ -1429,9 +1429,18 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.getChat = async (jid) => {
+    const normalizedJid = typeof jid === 'string' ? jid.trim() : '';
+    if (!normalizedJid) {
+      console.warn('[WWEBJS] getChat skipped: jid kosong atau tidak valid.');
+      return null;
+    }
+    const widReady = await ensureWidFactory('getChat');
+    if (!widReady) {
+      return null;
+    }
     try {
       return await withRuntimeTimeoutRetry(
-        () => client.getChatById(jid),
+        () => client.getChatById(normalizedJid),
         'getChat',
         protocolTimeoutEnvVarName,
         clientId
