@@ -20,6 +20,11 @@ const LOG_TAG = "CRON DIRFETCH SOSMED";
 const lastStateByClient = new Map();
 const adminRecipients = new Set(getAdminWAIds());
 let isFetchInFlight = false;
+let rerunScheduled = false;
+let pendingRun = false;
+let pendingRunCount = 0;
+let pendingRunOptions = null;
+let pendingRunRequestedAt = null;
 const waFallbackClients = [
   { client: waGatewayClient, label: "WA-GATEWAY" },
   { client: waClient, label: "WA" },
@@ -105,6 +110,25 @@ function buildLogEntry({
     message,
     meta,
   };
+}
+
+function mergeRunOptions(existing = {}, incoming = {}) {
+  const existingForce = Boolean(existing.forceEngagementOnly);
+  const incomingForce = Boolean(incoming.forceEngagementOnly);
+  return {
+    ...existing,
+    ...incoming,
+    forceEngagementOnly: existingForce && incomingForce,
+  };
+}
+
+function queueNextRun(options = {}) {
+  pendingRun = true;
+  pendingRunCount += 1;
+  pendingRunOptions = mergeRunOptions(pendingRunOptions || {}, options);
+  if (!pendingRunRequestedAt) {
+    pendingRunRequestedAt = new Date();
+  }
 }
 
 function formatCountsDelta(countsBefore, countsAfter) {
@@ -227,13 +251,22 @@ async function ensureClientState(clientId) {
 export async function runCron(options = {}) {
   const { forceEngagementOnly = false } = options;
 
-  if (isFetchInFlight) {
+  if (isFetchInFlight || rerunScheduled) {
+    const wasPending = pendingRun;
+    queueNextRun(options);
     await sendStructuredLog(
       buildLogEntry({
         phase: "lock",
-        action: "inFlight",
-        result: "skipped",
-        message: "skip due to in-flight",
+        action: isFetchInFlight ? "inFlight" : "rerunScheduled",
+        result: wasPending ? "coalesced" : "queued",
+        message: wasPending
+          ? "Run sebelumnya masih berjalan; permintaan baru digabung ke antrean."
+          : "Run sebelumnya masih berjalan; permintaan baru akan dijalankan setelah selesai.",
+        meta: {
+          pendingRunCount,
+          pendingRunRequestedAt: pendingRunRequestedAt?.toISOString(),
+          requestedOptions: pendingRunOptions,
+        },
       })
     );
     return;
@@ -605,6 +638,46 @@ export async function runCron(options = {}) {
     );
   } finally {
     isFetchInFlight = false;
+    if (pendingRun && !rerunScheduled) {
+      const queuedOptions = pendingRunOptions || {};
+      const queuedAt = pendingRunRequestedAt?.toISOString();
+      const coalescedCount = pendingRunCount;
+      pendingRun = false;
+      pendingRunCount = 0;
+      pendingRunOptions = null;
+      pendingRunRequestedAt = null;
+      rerunScheduled = true;
+      await sendStructuredLog(
+        buildLogEntry({
+          phase: "lock",
+          action: "rerun",
+          result: "start",
+          message: "Menjalankan ulang setelah in-flight selesai.",
+          meta: {
+            queuedAt,
+            coalescedCount,
+            requestedOptions: queuedOptions,
+          },
+        })
+      );
+      setTimeout(() => {
+        rerunScheduled = false;
+        runCron(queuedOptions).catch(async (error) => {
+          await sendStructuredLog(
+            buildLogEntry({
+              phase: "lock",
+              action: "rerun",
+              result: "error",
+              message: error?.message || String(error),
+              meta: {
+                name: error?.name,
+                stack: error?.stack,
+              },
+            })
+          );
+        });
+      }, 0);
+    }
   }
 }
 
