@@ -4,7 +4,7 @@ import { fetchAndStoreInstaContent } from '../handler/fetchpost/instaFetchPost.j
 import { findAllActiveOrgAmplifyClients } from '../model/clientModel.js';
 
 export const JOB_KEY = './src/cron/cronOprRequestAmplifyRoutineUpdate.js';
-const CRON_EXPRESSION = '0,30 8-21 * * *';
+const CRON_EXPRESSION = '55,25 8-21 * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const CRON_TAG = 'CRON OPRREQUEST UPDATE TUGAS RUTIN AMPLIFIKASI';
 
