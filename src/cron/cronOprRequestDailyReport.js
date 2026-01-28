@@ -15,6 +15,10 @@ const CRON_EXPRESSION = '0 9 * * *'; // Every day at 9:00 AM Jakarta time
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const CRON_TAG = 'CRON OPRREQUEST DAILY REPORT';
 
+// Delay constants (in milliseconds)
+const MESSAGE_DELAY_MS = 2000; // Delay between messages to the same recipient
+const CLIENT_DELAY_MS = 3000; // Delay between processing different clients
+
 /**
  * Normalize WhatsApp ID for recipient
  */
@@ -93,7 +97,7 @@ async function processClientReports(client) {
     if (todayReport) {
       await sendReportToOperator(client, todayReport);
       // Add small delay between messages
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, MESSAGE_DELAY_MS));
     } else {
       sendDebug({
         tag: CRON_TAG,
@@ -150,7 +154,7 @@ export async function runCron() {
     for (const client of clients) {
       await processClientReports(client);
       // Add delay between clients to avoid overwhelming WhatsApp
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, CLIENT_DELAY_MS));
     }
     
     sendDebug({

@@ -97,15 +97,15 @@ export async function generateDailyAmplificationReport(clientId) {
     msg += '-\n\n';
   }
   
-  msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+  msg += `Jumlah Personil yang melaksanakan : ${users.size}\n`;
   msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
   
   msg += `Link Sebagai Berikut :\n`;
-  msg += `Facebook (${list.facebook.length}):\n${list.facebook.join('\n') || '-'}`;
-  msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join('\n') || '-'}`;
-  msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join('\n') || '-'}`;
-  msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join('\n') || '-'}`;
-  msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join('\n') || '-'}`;
+  msg += `Facebook (${list.facebook.length}):\n${list.facebook.length > 0 ? list.facebook.join('\n') : '-'}`;
+  msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.length > 0 ? list.instagram.join('\n') : '-'}`;
+  msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.length > 0 ? list.twitter.join('\n') : '-'}`;
+  msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.length > 0 ? list.tiktok.join('\n') : '-'}`;
+  msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.length > 0 ? list.youtube.join('\n') : '-'}`;
   
   return msg.trim();
 }
@@ -189,15 +189,15 @@ export async function generateYesterdayAmplificationReport(clientId) {
     msg += '-\n\n';
   }
   
-  msg += `Jumlah Personil yang melaksnakan : ${users.size}\n`;
+  msg += `Jumlah Personil yang melaksanakan : ${users.size}\n`;
   msg += `Jumlah Total Link dari 5 Platform Sosial Media : ${totalLinks}\n\n`;
   
   msg += `Link Sebagai Berikut :\n`;
-  msg += `Facebook (${list.facebook.length}):\n${list.facebook.join('\n') || '-'}`;
-  msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.join('\n') || '-'}`;
-  msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.join('\n') || '-'}`;
-  msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.join('\n') || '-'}`;
-  msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.join('\n') || '-'}`;
+  msg += `Facebook (${list.facebook.length}):\n${list.facebook.length > 0 ? list.facebook.join('\n') : '-'}`;
+  msg += `\n\nInstagram (${list.instagram.length}):\n${list.instagram.length > 0 ? list.instagram.join('\n') : '-'}`;
+  msg += `\n\nTwitter (${list.twitter.length}):\n${list.twitter.length > 0 ? list.twitter.join('\n') : '-'}`;
+  msg += `\n\nTikTok (${list.tiktok.length}):\n${list.tiktok.length > 0 ? list.tiktok.join('\n') : '-'}`;
+  msg += `\n\nYoutube (${list.youtube.length}):\n${list.youtube.length > 0 ? list.youtube.join('\n') : '-'}`;
   
   return msg.trim();
 }
