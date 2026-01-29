@@ -1273,8 +1273,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         
         // Give stores additional time to initialize, especially GroupMetadata for group chats
         // This helps prevent "GroupMetadata not available" errors when processing early messages
-        // Configurable via WA_STORE_INIT_DELAY_MS (default: 2000ms)
-        const storeInitDelayMs = parseInt(process.env.WA_STORE_INIT_DELAY_MS || '2000', 10);
+        // Configurable via WA_STORE_INIT_DELAY_MS (default: 2000ms, set to 0 to disable)
+        const envDelayMs = parseInt(process.env.WA_STORE_INIT_DELAY_MS, 10);
+        const storeInitDelayMs = Number.isNaN(envDelayMs) ? 2000 : Math.max(0, envDelayMs);
         if (storeInitDelayMs > 0) {
           await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
         }
@@ -1282,7 +1283,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         if (debugLoggingEnabled) {
           console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
         }
-      } finally {
+        
+        emitter.emit('ready');
+      } catch (err) {
+        console.warn(
+          `[WWEBJS] Ready handler initialization error for clientId=${clientId}:`,
+          err?.message || err
+        );
+        // Emit ready anyway to maintain backward compatibility and not block client usage
         emitter.emit('ready');
       }
     });
