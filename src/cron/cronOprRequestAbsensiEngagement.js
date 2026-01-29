@@ -11,7 +11,7 @@ import {
 import waClient, { waGatewayClient, waUserClient } from '../service/waService.js';
 
 export const JOB_KEY = './src/cron/cronOprRequestAbsensiEngagement.js';
-const CRON_EXPRESSION = '20 15,18,20 * * *';
+const CRON_EXPRESSION = '43 15,18,20 * * *';
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const CRON_TAG = 'CRON OPRREQUEST ABSENSI ENGAGEMENT';
 const ROLE_FLAG = 'operator';

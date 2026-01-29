@@ -61,7 +61,7 @@ const dirRequestCrons = [
     description:
       'Send Bidhumas 22.00 evening recap..',
     schedules: [
-      { cronExpression: '15 15 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '45 15 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '15 20 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '15 22 * * *', handler: () => runBidhumasEvening(), options: DEFAULT_CRON_OPTIONS },
     ],
@@ -79,7 +79,7 @@ const dirRequestCrons = [
     jobKey: DITBINMAS_GROUP_RECAP_JOB_KEY,
     description: 'Send Ditbinmas group recap for menu 21/22 (today).',
     schedules: [
-      { cronExpression: '10 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '45 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '10 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
