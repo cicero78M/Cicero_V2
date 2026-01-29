@@ -79,7 +79,7 @@ const dirRequestCrons = [
     jobKey: DITBINMAS_GROUP_RECAP_JOB_KEY,
     description: 'Send Ditbinmas group recap for menu 21/22 (today).',
     schedules: [
-      { cronExpression: '45 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '15 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
       { cronExpression: '10 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
@@ -89,7 +89,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas super admin daily recap (menus 6/9/34/35) with today period only.',
     schedules: [
-      { cronExpression: '35 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '16 18 * * *', handler: () => runDitbinmasSuperAdminDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas operator daily recap at 18:12
@@ -98,7 +98,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas operator daily report (menu 30) with today period only.',
     schedules: [
-      { cronExpression: '14 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '17 18 * * *', handler: () => runDitbinmasOperatorDaily(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas absensi today at 18:14
@@ -107,7 +107,7 @@ const dirRequestCrons = [
     description:
       'Send Ditbinmas absensi recap (menu 5 & 10, today) to the dedicated recipient only.',
     schedules: [
-      { cronExpression: '16 18 * * *', handler: () => runDitbinmasAbsensiToday(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '18 18 * * *', handler: () => runDitbinmasAbsensiToday(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
 ];
