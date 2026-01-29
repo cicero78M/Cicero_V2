@@ -113,6 +113,69 @@ WA_SERVICE_SKIP_INIT=true node scripts/test-wa-setup.js
 
 ## Prevention
 
+## Operational Runbook: WA_SERVICE_SKIP_INIT Production Guard
+
+Use this checklist any time message reception drops to zero or before/after a deployment.
+
+### 1) Audit all environment sources (must be unset or "false")
+
+Check every place the environment could be injected:
+
+- **.env / env files**
+  - Verify `WA_SERVICE_SKIP_INIT` is **unset** or set to `"false"`.
+  - Example:
+    ```bash
+    rg "WA_SERVICE_SKIP_INIT" .env .env.* || true
+    ```
+- **PM2 (ecosystem config)**
+  - Ensure `env`/`env_production` explicitly set `WA_SERVICE_SKIP_INIT="false"`.
+  - Example:
+    ```bash
+    rg "WA_SERVICE_SKIP_INIT" ecosystem.config.js
+    pm2 show cicero_v2 | rg WA_SERVICE_SKIP_INIT -n
+    ```
+- **systemd**
+  - Check unit files and drop-in overrides (`Environment=` / `EnvironmentFile=`).
+  - Example:
+    ```bash
+    systemctl cat cicero_v2.service | rg WA_SERVICE_SKIP_INIT -n
+    ```
+- **Docker / Docker Compose / K8s**
+  - Verify secrets/configmaps/env vars do **not** set it to `"true"`.
+  - Example:
+    ```bash
+    rg "WA_SERVICE_SKIP_INIT" docker-compose*.yml k8s/*.y*ml || true
+    kubectl describe deploy <deployment> | rg WA_SERVICE_SKIP_INIT -n
+    ```
+
+### 2) Enforce a production default (guard)
+
+Ensure the deployment config forces the default to `"false"` in production (e.g., PM2).
+
+### 3) Restart service and verify startup logs
+
+After any environment change, restart the service and confirm the listeners attach:
+
+```bash
+pm2 restart cicero_v2 --env production
+pm2 logs cicero_v2 --lines 200 | rg "Attaching message event listeners|listener"
+```
+
+Expected logs:
+```
+[WA] Attaching message event listeners to WhatsApp clients...
+[WA DIAGNOSTICS] ✓ waClient has 1 'message' listener(s)
+[WA DIAGNOSTICS] ✓ waUserClient has 1 'message' listener(s)
+[WA DIAGNOSTICS] ✓ waGatewayClient has 1 'message' listener(s)
+```
+
+Listener counts must be **> 0**.
+
+### 4) Record the incident and remediation
+
+Log the change, including which env source was corrected, the restart time, and the
+verification log snippet.
+
 ### In .env file
 ```bash
 # WhatsApp Service Configuration
