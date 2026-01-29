@@ -5,6 +5,9 @@ const mockClient = {
   on: jest.fn((event, handler) => {
     listeners[event] = handler;
   }),
+  removeAllListeners: jest.fn((event) => {
+    delete listeners[event];
+  }),
   initialize: jest.fn().mockResolvedValue(),
   destroy: jest.fn().mockResolvedValue(),
   sendMessage: jest.fn().mockResolvedValue({ id: { id: 'abc' } }),
@@ -42,7 +45,9 @@ test('wwebjs adapter relays messages', async () => {
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming));
   const id = await client.sendMessage('123', 'hello');
   expect(id).toBe('abc');
-  expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {});
+  expect(mockClient.sendMessage).toHaveBeenCalledWith('123', 'hello', {
+    sendSeen: false,
+  });
   await client.disconnect();
   expect(mockClient.destroy).toHaveBeenCalled();
 });
@@ -61,12 +66,17 @@ test('wwebjs adapter configures web version cache and overrides', async () => {
   expect(ClientMock).toHaveBeenCalledWith(
     expect.objectContaining({
       authStrategy: expect.anything(),
-      puppeteer: { args: ['--no-sandbox'], headless: true },
+      puppeteer: expect.objectContaining({
+        args: ['--no-sandbox'],
+        headless: true,
+      }),
       webVersionCache: { type: 'remote', remotePath: 'https://example.com/wa.json' },
       webVersion: '2.3000.0',
     })
   );
-  expect(LocalAuthMock).toHaveBeenCalledWith({ clientId: 'custom-client' });
+  expect(LocalAuthMock).toHaveBeenCalledWith(
+    expect.objectContaining({ clientId: 'custom-client' })
+  );
 });
 
 test('wwebjs adapter sends documents as MessageMedia', async () => {
@@ -91,5 +101,39 @@ test('wwebjs adapter sends documents as MessageMedia', async () => {
   const mediaInstance = MessageMedia.mock.instances[0];
   expect(mockClient.sendMessage).toHaveBeenCalledWith('123', mediaInstance, {
     sendMediaAsDocument: true,
+    sendSeen: false,
   });
+});
+
+test('wwebjs adapter re-registers event listeners after reinitialization', async () => {
+  const client = await createWwebjsClient('test-reinit');
+  const onMessage = jest.fn();
+  client.onMessage(onMessage);
+  await client.connect();
+  
+  // Verify initial message handling works
+  const incoming1 = { from: '123', body: 'first', id: { id: 'm1', _serialized: 'm1' } };
+  listeners['message'](incoming1);
+  expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming1));
+  
+  // Reinitialize the client
+  jest.clearAllMocks();
+  await client.reinitialize({ trigger: 'test' });
+  
+  // Verify event listeners were removed and re-registered
+  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('message');
+  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('qr');
+  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('ready');
+  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('auth_failure');
+  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('disconnected');
+  
+  // The on() calls should have been made again for re-registration
+  const onCallsAfterReinit = mockClient.on.mock.calls;
+  const messageListenerAdded = onCallsAfterReinit.some(call => call[0] === 'message');
+  expect(messageListenerAdded).toBe(true);
+  
+  // Verify message handling still works after reinitialization
+  const incoming2 = { from: '456', body: 'second', id: { id: 'm2', _serialized: 'm2' } };
+  listeners['message'](incoming2);
+  expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming2));
 });
