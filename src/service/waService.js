@@ -3518,8 +3518,12 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
         let groupName = "";
         try {
           const groupData = await waClient.getChatById(groupId);
-          groupName = groupData.name ? `\nNama Group: *${groupData.name}*` : "";
-        } catch (e) {}
+          if (groupData && groupData.name) {
+            groupName = `\nNama Group: *${groupData.name}*`;
+          }
+        } catch (e) {
+          console.warn('[WA] Failed to get group name:', e?.message || e);
+        }
         let dataText = `✅ Group ID berhasil disimpan untuk *${client_id}*:\n*${groupId}*${groupName}`;
         await waClient.sendMessage(senderId, dataText);
         await waClient.sendMessage(
