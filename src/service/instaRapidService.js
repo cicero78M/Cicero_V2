@@ -63,15 +63,24 @@ async function fetchRapidApiResponse(path, params) {
   });
 }
 
-async function axiosGetRapidApi(path, params) {
+async function axiosGetRapidApi(path, params, options = {}) {
   assertRapidApiKey();
   try {
     return await axios.get(`https://${RAPIDAPI_HOST}/${path}`, {
       params,
-      headers: buildRapidApiHeaders(RAPIDAPI_HOST, RAPIDAPI_KEY),
+      headers: {
+        ...buildRapidApiHeaders(RAPIDAPI_HOST, RAPIDAPI_KEY),
+        ...(options.headers || {}),
+      },
     });
   } catch (err) {
     const statusCode = err.response?.status;
+    if (shouldUseRapidApiFallback(statusCode)) {
+      sendConsoleDebug('RapidAPI auth error', {
+        status: statusCode,
+        data: err.response?.data,
+      });
+    }
     if (shouldUseRapidApiFallback(statusCode)) {
       const fallback = getRapidApiFallbackConfig();
       if (fallback) {
@@ -82,7 +91,10 @@ async function axiosGetRapidApi(path, params) {
         });
         return axios.get(`https://${fallback.host}/${path}`, {
           params,
-          headers: buildRapidApiHeaders(fallback.host, fallback.key),
+          headers: {
+            ...buildRapidApiHeaders(fallback.host, fallback.key),
+            ...(options.headers || {}),
+          },
         });
       }
     }
@@ -140,9 +152,17 @@ export async function fetchInstagramInfo(username) {
   assertRapidApiKey();
   try {
     sendConsoleDebug('fetchInstagramInfo request', username);
-    const response = await axiosGetRapidApi('v1/info', {
-      username_or_id_or_url: username,
-    });
+    const response = await axiosGetRapidApi(
+      'v1/info',
+      {
+        username_or_id_or_url: username,
+      },
+      {
+        headers: {
+          'x-cache-control': 'no-cache',
+        },
+      }
+    );
     sendConsoleDebug('fetchInstagramInfo success');
     return response.data?.data || null;
   } catch (err) {
