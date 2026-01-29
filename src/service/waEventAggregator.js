@@ -1,5 +1,8 @@
 const seen = new Set();
 
+// Enable debug logging only when WA_DEBUG_LOGGING is set to "true"
+const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === 'true';
+
 /**
  * Deduplicate incoming messages from multiple adapters.
  * Messages received via wwebjs are preferred; baileys messages are delayed
@@ -14,7 +17,9 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
   const jid = msg.key?.remoteJid || msg.from;
   const id = msg.key?.id || msg.id?.id || msg.id?._serialized;
   
-  console.log(`[WA-EVENT-AGGREGATOR] Message received from adapter: ${fromAdapter}, jid: ${jid}, id: ${id}`);
+  if (debugLoggingEnabled) {
+    console.log(`[WA-EVENT-AGGREGATOR] Message received from adapter: ${fromAdapter}, jid: ${jid}, id: ${id}`);
+  }
   
   const invokeHandler = () =>
     Promise.resolve(handler(msg)).catch((error) => {
@@ -26,37 +31,51 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
       });
     });
   if (!jid || !id) {
-    console.log(`[WA-EVENT-AGGREGATOR] Invoking handler without jid/id (jid: ${jid}, id: ${id})`);
+    if (debugLoggingEnabled) {
+      console.log(`[WA-EVENT-AGGREGATOR] Invoking handler without jid/id (jid: ${jid}, id: ${id})`);
+    }
     invokeHandler();
     return;
   }
   const key = `${jid}:${id}`;
   if (allowReplay) {
-    console.log(`[WA-EVENT-AGGREGATOR] Allowing replay for message: ${key}`);
+    if (debugLoggingEnabled) {
+      console.log(`[WA-EVENT-AGGREGATOR] Allowing replay for message: ${key}`);
+    }
     seen.add(key);
     invokeHandler();
     return;
   }
   if (seen.has(key)) {
-    console.log(`[WA-EVENT-AGGREGATOR] Duplicate message detected, skipping: ${key}`);
+    if (debugLoggingEnabled) {
+      console.log(`[WA-EVENT-AGGREGATOR] Duplicate message detected, skipping: ${key}`);
+    }
     return;
   }
 
   if (fromAdapter === "baileys") {
-    console.log(`[WA-EVENT-AGGREGATOR] Baileys message, delaying 200ms: ${key}`);
+    if (debugLoggingEnabled) {
+      console.log(`[WA-EVENT-AGGREGATOR] Baileys message, delaying 200ms: ${key}`);
+    }
     setTimeout(() => {
       if (seen.has(key)) {
-        console.log(`[WA-EVENT-AGGREGATOR] Baileys message already handled: ${key}`);
+        if (debugLoggingEnabled) {
+          console.log(`[WA-EVENT-AGGREGATOR] Baileys message already handled: ${key}`);
+        }
         return;
       }
-      console.log(`[WA-EVENT-AGGREGATOR] Processing delayed baileys message: ${key}`);
+      if (debugLoggingEnabled) {
+        console.log(`[WA-EVENT-AGGREGATOR] Processing delayed baileys message: ${key}`);
+      }
       seen.add(key);
       invokeHandler();
     }, 200);
     return;
   }
 
-  console.log(`[WA-EVENT-AGGREGATOR] Processing wwebjs message: ${key}`);
+  if (debugLoggingEnabled) {
+    console.log(`[WA-EVENT-AGGREGATOR] Processing wwebjs message: ${key}`);
+  }
   seen.add(key);
   invokeHandler();
 }

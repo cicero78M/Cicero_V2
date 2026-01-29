@@ -6,6 +6,9 @@ import net from 'net';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
+// Enable debug logging only when WA_DEBUG_LOGGING is set to "true"
+const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === 'true';
+
 const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
@@ -1283,7 +1286,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       emitter.emit('disconnected', reason);
     });
     client.on('message', async (msg) => {
-      console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      if (debugLoggingEnabled) {
+        console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      }
       let contactMeta = {};
       try {
         const contact = await msg.getContact();
@@ -1295,7 +1300,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       } catch (err) {
         contactMeta = { error: err?.message || 'contact_fetch_failed' };
       }
-      console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
+      if (debugLoggingEnabled) {
+        console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
+      }
       emitter.emit('message', {
         from: msg.from,
         body: msg.body,

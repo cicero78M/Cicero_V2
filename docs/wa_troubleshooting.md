@@ -72,7 +72,12 @@ npm restart
 
 ## Message Flow Debugging
 
-When a message is sent to the bot, you should see these logs in sequence:
+To enable verbose debug logging for message flow troubleshooting, set:
+```bash
+export WA_DEBUG_LOGGING="true"
+```
+
+When enabled and a message is sent to the bot, you'll see these logs in sequence:
 
 ```
 1. [WWEBJS-ADAPTER] Raw message received for clientId=wa-admin, from=628xxx@c.us
