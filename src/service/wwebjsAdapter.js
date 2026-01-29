@@ -1464,13 +1464,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return null;
     }
     
+    // Check if this is a group chat (JIDs ending with @g.us are group chats)
+    const isGroupChat = normalizedJid.endsWith('@g.us');
+    
     // Ensure WidFactory and GroupMetadata are ready with retries
-    // GroupMetadata is required because getChatById calls GroupMetadata.update() for group chats
-    let widReady = await ensureWidFactory('getChat', true);
+    // GroupMetadata is only required for group chats because getChatById calls GroupMetadata.update() for them
+    let widReady = await ensureWidFactory('getChat', isGroupChat);
     if (!widReady) {
       // Retry once after a short delay for stores to initialize
       await new Promise(resolve => setTimeout(resolve, STORE_READINESS_RETRY_DELAY_MS));
-      widReady = await ensureWidFactory('getChat (retry)', true);
+      widReady = await ensureWidFactory('getChat (retry)', isGroupChat);
       if (!widReady) {
         return null;
       }
@@ -1544,8 +1547,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.sendSeen = async (jid) => {
+    // Check if this is a group chat (JIDs ending with @g.us are group chats)
+    const isGroupChat = jid?.endsWith('@g.us') ?? false;
+    
     // Ensure stores are ready before calling getChatById
-    const widReady = await ensureWidFactory('sendSeen', true);
+    // GroupMetadata is only required for group chats
+    const widReady = await ensureWidFactory('sendSeen', isGroupChat);
     if (!widReady) {
       console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready`);
       return false;
