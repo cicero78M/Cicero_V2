@@ -4,10 +4,91 @@ import { env } from '../config/env.js';
 
 const RAPIDAPI_KEY = env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = 'social-api4.p.rapidapi.com';
+const RAPIDAPI_FALLBACK_KEY = env.RAPIDAPI_FALLBACK_KEY;
+const RAPIDAPI_FALLBACK_HOST = env.RAPIDAPI_FALLBACK_HOST;
 const DEBUG_FETCH_IG = env.DEBUG_FETCH_INSTAGRAM;
 
 function sendConsoleDebug(...args) {
   if (DEBUG_FETCH_IG) console.log('[DEBUG IG]', ...args);
+}
+
+function ensureRapidApiKey() {
+  if (!RAPIDAPI_KEY) {
+    const error = new Error(
+      'RapidAPI key is missing. Set RAPIDAPI_KEY in the environment configuration.'
+    );
+    error.statusCode = 500;
+    throw error;
+  }
+}
+
+function getRapidApiFallbackConfig() {
+  if (RAPIDAPI_FALLBACK_KEY && RAPIDAPI_FALLBACK_HOST) {
+    return { key: RAPIDAPI_FALLBACK_KEY, host: RAPIDAPI_FALLBACK_HOST };
+  }
+  return null;
+}
+
+function shouldUseRapidApiFallback(statusCode) {
+  return statusCode === 401 || statusCode === 403;
+}
+
+function buildRapidApiHeaders(host, key) {
+  return {
+    'X-RapidAPI-Key': key,
+    'X-RapidAPI-Host': host,
+    'x-cache-control': 'no-cache',
+  };
+}
+
+async function fetchRapidApiResponse(path, params) {
+  ensureRapidApiKey();
+  const url = `https://${RAPIDAPI_HOST}/${path}?${params.toString()}`;
+  const res = await fetch(url, {
+    headers: buildRapidApiHeaders(RAPIDAPI_HOST, RAPIDAPI_KEY),
+  });
+  if (res.ok || !shouldUseRapidApiFallback(res.status)) return res;
+
+  const fallback = getRapidApiFallbackConfig();
+  if (!fallback) return res;
+
+  sendConsoleDebug('RapidAPI fallback attempt', {
+    path,
+    status: res.status,
+    host: fallback.host,
+  });
+
+  const fallbackUrl = `https://${fallback.host}/${path}?${params.toString()}`;
+  return fetch(fallbackUrl, {
+    headers: buildRapidApiHeaders(fallback.host, fallback.key),
+  });
+}
+
+async function axiosGetRapidApi(path, params) {
+  ensureRapidApiKey();
+  try {
+    return await axios.get(`https://${RAPIDAPI_HOST}/${path}`, {
+      params,
+      headers: buildRapidApiHeaders(RAPIDAPI_HOST, RAPIDAPI_KEY),
+    });
+  } catch (err) {
+    const statusCode = err.response?.status;
+    if (shouldUseRapidApiFallback(statusCode)) {
+      const fallback = getRapidApiFallbackConfig();
+      if (fallback) {
+        sendConsoleDebug('RapidAPI fallback attempt', {
+          path,
+          status: statusCode,
+          host: fallback.host,
+        });
+        return axios.get(`https://${fallback.host}/${path}`, {
+          params,
+          headers: buildRapidApiHeaders(fallback.host, fallback.key),
+        });
+      }
+    }
+    throw err;
+  }
 }
 
 export async function fetchInstagramPosts(username, limit = 10) {
@@ -40,13 +121,7 @@ export async function fetchInstagramProfile(username) {
 
   sendConsoleDebug('fetchInstagramProfile request', params.toString());
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/info?${params.toString()}`, {
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await fetchRapidApiResponse('v1/info', params);
   if (!res.ok) {
     const text = await res.text();
     const err = new Error(text);
@@ -63,12 +138,8 @@ export async function fetchInstagramInfo(username) {
   if (!username) return null;
   try {
     sendConsoleDebug('fetchInstagramInfo request', username);
-    const response = await axios.get(`https://${RAPIDAPI_HOST}/v1/info`, {
-      params: { username_or_id_or_url: username },
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-      },
+    const response = await axiosGetRapidApi('v1/info', {
+      username_or_id_or_url: username,
     });
     sendConsoleDebug('fetchInstagramInfo success');
     return response.data?.data || null;
@@ -90,13 +161,7 @@ export async function fetchInstagramPostsPage(username, cursor = null) {
 
   sendConsoleDebug('fetchInstagramPostsPage request', { username, cursor });
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await fetchRapidApiResponse('v1/posts', params);
   if (!res.ok) {
     const text = await res.text();
     const err = new Error(text);
@@ -161,13 +226,7 @@ export async function fetchInstagramPostsPageToken(username, token = null) {
 
   sendConsoleDebug('fetchInstagramPostsPageToken request', { token });
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/posts?${params.toString()}`, {
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await fetchRapidApiResponse('v1/posts', params);
   if (!res.ok) {
     const text = await res.text();
     const err = new Error(text);
@@ -237,13 +296,7 @@ export async function fetchInstagramLikesPage(shortcode, cursor = null) {
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (cursor) params.append('cursor', cursor);
 
-  const res = await fetch(`https://${RAPIDAPI_HOST}/v1/likes?${params.toString()}`, {
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await fetchRapidApiResponse('v1/likes', params);
   if (!res.ok) {
     const text = await res.text();
     const err = new Error(text);
@@ -320,12 +373,8 @@ async function searchInstagramUsers(query, limit = 10) {
   if (!query) return [];
   try {
     sendConsoleDebug('searchInstagramUsers request', query);
-    const response = await axios.get(`https://${RAPIDAPI_HOST}/v1/search_users`, {
-      params: { search_query: query },
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-      },
+    const response = await axiosGetRapidApi('v1/search_users', {
+      search_query: query,
     });
     const users = Array.isArray(response.data?.data?.users)
       ? response.data.data.users
@@ -346,14 +395,7 @@ async function fetchInstagramCommentsPage(shortcode, token = null) {
   if (!shortcode) return { comments: [], next_token: null, has_more: false };
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (token) params.append('pagination_token', token);
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/comments`, {
-    params,
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await axiosGetRapidApi('v1/comments', params);
   const items = Array.isArray(res.data?.data?.items) ? res.data.data.items : [];
   const next_token = res.data?.pagination_token || res.data?.data?.pagination_token || null;
   const has_more = (res.data?.data?.has_more || false) || (next_token && next_token !== '');
@@ -380,14 +422,7 @@ export async function fetchInstagramHashtag(tag, token = null) {
   if (!tag) return { info: null, items: [], next_token: null, has_more: false };
   const params = new URLSearchParams({ hashtag: tag.replace(/^#/, '') });
   if (token) params.append('pagination_token', token);
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/hashtag`, {
-    params,
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'x-cache-control': 'no-cache'
-    }
-  });
+  const res = await axiosGetRapidApi('v1/hashtag', params);
   const data = res.data?.data || {};
   const info = data?.additional_data || null;
   const items = Array.isArray(data?.items) ? data.items : [];
@@ -399,12 +434,6 @@ export async function fetchInstagramHashtag(tag, token = null) {
 export async function fetchInstagramPostInfo(code) {
   if (!code) return null;
   const params = new URLSearchParams({ code_or_id_or_url: code });
-  const res = await axios.get(`https://${RAPIDAPI_HOST}/v1/post_info`, {
-    params,
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST
-    }
-  });
+  const res = await axiosGetRapidApi('v1/post_info', params);
   return res.data?.data || null;
 }

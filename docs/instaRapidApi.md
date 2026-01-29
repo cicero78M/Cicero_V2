@@ -2,6 +2,11 @@
 
 Dokumen ini menjelaskan endpoint Instagram berbasis RapidAPI yang membutuhkan autentikasi dan pembatasan role.
 
+## Konfigurasi Environment
+
+- `RAPIDAPI_KEY` **wajib diisi**. Jika kosong, service akan mengembalikan error konfigurasi (HTTP 500) sebelum mencoba request ke RapidAPI.
+- `RAPIDAPI_FALLBACK_KEY` dan `RAPIDAPI_FALLBACK_HOST` bersifat opsional. Jika tersedia, service akan otomatis mencoba host cadangan ketika host utama mengembalikan HTTP 401/403 (mis. key utama invalid atau rate limit).
+
 ## Autentikasi & Role
 
 Semua endpoint Rapid Instagram berada di bawah prefix `/api/insta` sehingga memerlukan token JWT (`Authorization: Bearer <token>` atau cookie `token`).
