@@ -100,6 +100,8 @@ export async function getTiktokRekapKomentar(req, res) {
   const scopeLower = requestedScope
     ? String(requestedScope).toLowerCase()
     : null;
+  const isOrgOperatorScope =
+    scopeLower === 'org' && roleLower === 'operator';
   const directorateRoles = [
     'ditbinmas',
     'ditlantas',
@@ -110,6 +112,9 @@ export async function getTiktokRekapKomentar(req, res) {
 
   if (!usesStandardPayload && roleLower === 'ditbinmas') {
     client_id = 'ditbinmas';
+  }
+  if (isOrgOperatorScope && req.user?.client_id) {
+    client_id = req.user.client_id;
   }
 
   if (!client_id) {
@@ -123,8 +128,12 @@ export async function getTiktokRekapKomentar(req, res) {
       ? req.user.client_ids
       : [req.user.client_ids];
     const idsLower = userClientIds.map((c) => c.toLowerCase());
+    const matchesTokenClient =
+      req.user?.client_id &&
+      req.user.client_id.toLowerCase() === client_id.toLowerCase();
     if (
       !idsLower.includes(client_id.toLowerCase()) &&
+      !matchesTokenClient &&
       roleLower !== client_id.toLowerCase()
     ) {
       return res

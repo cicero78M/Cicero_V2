@@ -138,6 +138,7 @@ Ketika `role` dan `scope` dikirim, filter mengikuti aturan berikut:
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
   - **Data personil** dibatasi pada role `operator`.
+  - Kombinasi `role=operator` + `scope=org` diizinkan; nilai `client_id` pada query diabaikan dan diganti dengan `client_id` dari token.
 - Selain kondisi di atas:
   - **Data tugas** dan **personil** mengikuti `client_id` yang diminta.
 
