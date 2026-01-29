@@ -2,7 +2,7 @@
 
 import { scheduleCronJob } from '../utils/cronScheduler.js';
 import { sendDebug } from '../middleware/debugHandler.js';
-import waClient from '../service/waService.js';
+import waClient, { waitForAllMessageQueues } from '../service/waService.js';
 import { findAllActiveOrgAmplifyClients } from '../model/clientModel.js';
 import {
   generateDailyAmplificationReport,
@@ -160,6 +160,18 @@ export async function runCron() {
     sendDebug({
       tag: CRON_TAG,
       msg: 'Selesai memproses semua laporan harian',
+    });
+    
+    // Wait for all message queues to be fully drained before completing
+    sendDebug({
+      tag: CRON_TAG,
+      msg: 'Menunggu semua pesan selesai terkirim...',
+    });
+    await waitForAllMessageQueues();
+    
+    sendDebug({
+      tag: CRON_TAG,
+      msg: 'Semua pesan telah terkirim, cron selesai',
     });
   } catch (err) {
     sendDebug({

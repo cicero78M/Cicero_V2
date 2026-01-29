@@ -14,6 +14,10 @@ const pool = { query };
 // WhatsApp client using whatsapp-web.js
 import { createWwebjsClient } from "./wwebjsAdapter.js";
 import { handleIncoming } from "./waEventAggregator.js";
+import {
+  logWaServiceDiagnostics,
+  checkMessageListenersAttached,
+} from "../utils/waDiagnostics.js";
 
 // Service & Utility Imports
 import * as clientService from "./clientService.js";
@@ -1357,6 +1361,26 @@ function wrapSendMessage(client) {
 wrapSendMessage(waClient);
 wrapSendMessage(waUserClient);
 wrapSendMessage(waGatewayClient);
+
+/**
+ * Wait for all WhatsApp client message queues to be idle (empty and no pending tasks)
+ * This ensures all messages have been sent before the caller continues
+ */
+export async function waitForAllMessageQueues() {
+  const clients = [waClient, waUserClient, waGatewayClient];
+  const idlePromises = [];
+  
+  for (const client of clients) {
+    const queue = messageQueues.get(client);
+    if (queue) {
+      idlePromises.push(queue.onIdle());
+    }
+  }
+  
+  if (idlePromises.length > 0) {
+    await Promise.all(idlePromises);
+  }
+}
 
 export function sendGatewayMessage(jid, text) {
   const waFallbackClients = [
@@ -4751,6 +4775,8 @@ registerClientMessageHandler(waUserClient, "wwebjs-user", handleUserMessage);
 registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMessage);
 
 if (shouldInitWhatsAppClients) {
+  console.log('[WA] Attaching message event listeners to WhatsApp clients...');
+  
   waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
 
   waUserClient.on('message', (msg) => {
@@ -4764,6 +4790,9 @@ if (shouldInitWhatsAppClients) {
   waGatewayClient.on('message', (msg) => {
     handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
+
+  console.log('[WA] Message event listeners attached successfully.');
+
 
   const clientsToInit = [
     { label: "WA", client: waClient },
@@ -5179,6 +5208,10 @@ if (shouldInitWhatsAppClients) {
   scheduleFallbackReadyCheck(waGatewayClient);
 
   await Promise.allSettled(initPromises);
+
+  // Diagnostic checks to ensure message listeners are attached
+  logWaServiceDiagnostics(waClient, waUserClient, waGatewayClient);
+  checkMessageListenersAttached(waClient, waUserClient, waGatewayClient);
 }
 
 export default waClient;

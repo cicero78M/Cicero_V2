@@ -6,6 +6,9 @@ import net from 'net';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
 
+// Enable debug logging only when WA_DEBUG_LOGGING is set to "true"
+const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === 'true';
+
 const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
 const DEFAULT_AUTH_DATA_PARENT_DIR = '.cicero';
@@ -1254,6 +1257,63 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     return connectInProgress;
   };
 
+  const registerEventListeners = () => {
+    client.removeAllListeners('qr');
+    client.removeAllListeners('ready');
+    client.removeAllListeners('auth_failure');
+    client.removeAllListeners('disconnected');
+    client.removeAllListeners('message');
+
+    client.on('qr', (qr) => emitter.emit('qr', qr));
+    client.on('ready', async () => {
+      try {
+        await ensureWidFactory(`ready handler for clientId=${clientId}`);
+      } finally {
+        emitter.emit('ready');
+      }
+    });
+    client.on('auth_failure', async (message) => {
+      console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
+      await reinitializeClient('auth_failure', message);
+    });
+    client.on('disconnected', async (reason) => {
+      const normalizedReason = String(reason || '').toUpperCase();
+      if (LOGOUT_DISCONNECT_REASONS.has(normalizedReason)) {
+        await reinitializeClient('disconnected', reason, {
+          clearAuthSessionOverride: true,
+        });
+      }
+      emitter.emit('disconnected', reason);
+    });
+    client.on('message', async (msg) => {
+      if (debugLoggingEnabled) {
+        console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      }
+      let contactMeta = {};
+      try {
+        const contact = await msg.getContact();
+        contactMeta = {
+          contactName: contact?.name || null,
+          contactPushname: contact?.pushname || null,
+          isMyContact: contact?.isMyContact ?? null,
+        };
+      } catch (err) {
+        contactMeta = { error: err?.message || 'contact_fetch_failed' };
+      }
+      if (debugLoggingEnabled) {
+        console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
+      }
+      emitter.emit('message', {
+        from: msg.from,
+        body: msg.body,
+        id: msg.id,
+        author: msg.author,
+        timestamp: msg.timestamp,
+        ...contactMeta,
+      });
+    });
+  };
+
   const reinitializeClient = async (trigger, reason, options = {}) => {
     if (reinitInProgress) {
       console.warn(
@@ -1308,13 +1368,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     try {
+      registerEventListeners();
       await startConnect(`reinitialize:${trigger}`);
     } finally {
       reinitInProgress = false;
     }
   };
 
-  client.on('qr', (qr) => emitter.emit('qr', qr));
+  registerEventListeners();
   const ensureWidFactory = async (contextLabel) => {
     if (!client.pupPage) {
       if (client.info?.wid) {
@@ -1350,48 +1411,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return false;
     }
   };
-  client.on('ready', async () => {
-    try {
-      await ensureWidFactory(`ready handler for clientId=${clientId}`);
-    } finally {
-      emitter.emit('ready');
-    }
-  });
-  client.on('auth_failure', async (message) => {
-    console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
-    await reinitializeClient('auth_failure', message);
-  });
-
-  client.on('disconnected', async (reason) => {
-    const normalizedReason = String(reason || '').toUpperCase();
-    if (LOGOUT_DISCONNECT_REASONS.has(normalizedReason)) {
-      await reinitializeClient('disconnected', reason, {
-        clearAuthSessionOverride: true,
-      });
-    }
-    emitter.emit('disconnected', reason);
-  });
-  client.on('message', async (msg) => {
-    let contactMeta = {};
-    try {
-      const contact = await msg.getContact();
-      contactMeta = {
-        contactName: contact?.name || null,
-        contactPushname: contact?.pushname || null,
-        isMyContact: contact?.isMyContact ?? null,
-      };
-    } catch (err) {
-      contactMeta = { error: err?.message || 'contact_fetch_failed' };
-    }
-    emitter.emit('message', {
-      from: msg.from,
-      body: msg.body,
-      id: msg.id,
-      author: msg.author,
-      timestamp: msg.timestamp,
-      ...contactMeta,
-    });
-  });
 
   emitter.connect = async () => startConnect('connect');
   emitter.reinitialize = async (options = {}) => {
