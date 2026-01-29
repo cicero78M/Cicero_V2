@@ -80,7 +80,7 @@ const dirRequestCrons = [
     description: 'Send Ditbinmas group recap for menu 21/22 (today).',
     schedules: [
       { cronExpression: '15 15 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
-      { cronExpression: '50 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
+      { cronExpression: '19 18 * * *', handler: () => runDitbinmasGroupRecap(), options: DEFAULT_CRON_OPTIONS },
     ],
   },
   // Ditbinmas super admin daily recap at 18:10
