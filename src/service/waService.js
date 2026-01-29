@@ -622,6 +622,11 @@ export let waClient = await createWwebjsClient();
 export let waUserClient = await createWwebjsClient(env.USER_WA_CLIENT_ID);
 export let waGatewayClient = await createWwebjsClient(resolvedGatewayClientId);
 
+// Note: Handler creation and registration MUST happen immediately after client creation
+// to ensure no messages are lost during the initialization race condition.
+// See: createHandleMessage() defined at line 1596, and handleGatewayMessage at line 4452
+// These will be created and registered in the handler setup section below
+
 const logClientIdIssue = (envVar, issueMessage) => {
   console.error(`[WA] ${envVar} ${issueMessage}; clientId harus unik.`);
 };
@@ -4770,28 +4775,33 @@ export async function handleGatewayMessage(msg) {
   }
 }
 
+// Register handlers in the map for deferred message replay
 registerClientMessageHandler(waClient, "wwebjs", handleMessage);
 registerClientMessageHandler(waUserClient, "wwebjs-user", handleUserMessage);
 registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMessage);
 
+// CRITICAL: Attach message event listeners BEFORE client initialization
+// This must happen regardless of shouldInitWhatsAppClients to ensure no messages are lost
+console.log('[WA] Attaching message event listeners to WhatsApp clients...');
+
+waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
+
+waUserClient.on('message', (msg) => {
+  const from = msg.from || '';
+  if (from.endsWith('@g.us') || from === 'status@broadcast') {
+    return;
+  }
+  handleIncoming('wwebjs-user', msg, handleUserMessage);
+});
+
+waGatewayClient.on('message', (msg) => {
+  handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
+});
+
+console.log('[WA] Message event listeners attached successfully.');
+
 if (shouldInitWhatsAppClients) {
-  console.log('[WA] Attaching message event listeners to WhatsApp clients...');
-  
-  waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
-
-  waUserClient.on('message', (msg) => {
-    const from = msg.from || '';
-    if (from.endsWith('@g.us') || from === 'status@broadcast') {
-      return;
-    }
-    handleIncoming('wwebjs-user', msg, handleUserMessage);
-  });
-
-  waGatewayClient.on('message', (msg) => {
-    handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
-  });
-
-  console.log('[WA] Message event listeners attached successfully.');
+  console.log('[WA] Initializing WhatsApp clients...');
 
 
   const clientsToInit = [
