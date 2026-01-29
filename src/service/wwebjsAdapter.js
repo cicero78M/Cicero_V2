@@ -1359,8 +1359,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
 
     try {
-      await startConnect(`reinitialize:${trigger}`);
       registerEventListeners();
+      await startConnect(`reinitialize:${trigger}`);
     } finally {
       reinitInProgress = false;
     }
