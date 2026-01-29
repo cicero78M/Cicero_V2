@@ -4800,6 +4800,14 @@ waGatewayClient.on('message', (msg) => {
 
 console.log('[WA] Message event listeners attached successfully.');
 
+// Verify that all message listeners are properly attached
+checkMessageListenersAttached(waClient, waUserClient, waGatewayClient);
+
+// Log comprehensive diagnostics
+if (process.env.WA_DEBUG_LOGGING === 'true') {
+  logWaServiceDiagnostics(waClient, waUserClient, waGatewayClient);
+}
+
 if (shouldInitWhatsAppClients) {
   console.log('[WA] Initializing WhatsApp clients...');
 
