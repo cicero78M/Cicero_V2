@@ -15,6 +15,12 @@ import * as profileCache from "../service/profileCacheService.js";
 import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
+import { normalizeHandleValue } from "../utils/handleNormalizer.js";
+
+function normalizeInstagramUsername(value) {
+  const normalizedHandle = normalizeHandleValue(value);
+  return normalizedHandle ? normalizedHandle.replace(/^@/, "") : "";
+}
 
 export async function getInstaRekapLikes(req, res) {
   let client_id = req.query.client_id;
@@ -313,7 +319,7 @@ export async function getInstagramPostsFiltered(req, res) {
 
 export async function getRapidInstagramPosts(req, res) {
   try {
-    const username = req.query.username;
+    const username = normalizeInstagramUsername(req.query.username);
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
     else if (limit > 100) limit = 100;
@@ -360,7 +366,7 @@ export async function getRapidInstagramPosts(req, res) {
 
 export async function getRapidInstagramPostsStore(req, res) {
   try {
-    const username = req.query.username;
+    const username = normalizeInstagramUsername(req.query.username);
     let limit = parseInt(req.query.limit);
     if (Number.isNaN(limit) || limit <= 0) limit = 10;
     else if (limit > 100) limit = 100;
@@ -409,7 +415,7 @@ export async function getRapidInstagramPostsByMonth(req, res) {
 
         sendConsoleDebug({ tag: "INSTA", msg: `Executed` });
 
-    const username = req.query.username;
+    const username = normalizeInstagramUsername(req.query.username);
     const monthInput = parseInt(req.query.month);
     const yearInput = parseInt(req.query.year);
     if (!username) {
@@ -460,7 +466,7 @@ export async function getRapidInstagramPostsByMonth(req, res) {
 
 export async function getRapidInstagramProfile(req, res) {
   try {
-    const username = req.query.username;
+    const username = normalizeInstagramUsername(req.query.username);
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }
@@ -527,7 +533,7 @@ export async function getRapidInstagramProfile(req, res) {
 
 export async function getRapidInstagramInfo(req, res) {
   try {
-    const username = req.query.username;
+    const username = normalizeInstagramUsername(req.query.username);
     if (!username) {
       return res.status(400).json({ success: false, message: 'username wajib diisi' });
     }

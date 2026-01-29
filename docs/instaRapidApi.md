@@ -20,7 +20,7 @@ Aturan akses:
 Mengambil profil Instagram via RapidAPI berdasarkan username dan menyimpan cache serta metrik profil ke database.
 
 ### Query Params
-- `username` (wajib): username Instagram yang akan diambil.
+- `username` (wajib): username Instagram yang akan diambil. Input akan dinormalisasi (trim spasi, menghapus awalan `@`). Format yang diterima: `username`, `@username`, atau URL profil Instagram.
 
 ### Contoh Request
 ```
