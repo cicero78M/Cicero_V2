@@ -6,8 +6,11 @@ import { getUsersByClient } from "../model/userModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 import { sendWAFile } from "../utils/waHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
-import { kasatBinmasRankWeight } from "./kasatBinmasLikesRecapService.js";
 import { describeKasatBinmasTiktokCommentPeriod } from "./kasatBinmasTiktokCommentRecapService.js";
+import { 
+  getPositionIndex, 
+  getRankIndex 
+} from "../utils/sortingHelper.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
@@ -33,8 +36,16 @@ function sortByComments(entries) {
   return entries.slice().sort((a, b) => {
     const commentDiff = (b.totalComments || 0) - (a.totalComments || 0);
     if (commentDiff !== 0) return commentDiff;
-    const rankDiff = kasatBinmasRankWeight(a.title) - kasatBinmasRankWeight(b.title);
+    
+    // Sort by position (jabatan) first
+    const positionDiff = getPositionIndex(a.jabatan) - getPositionIndex(b.jabatan);
+    if (positionDiff !== 0) return positionDiff;
+    
+    // Then sort by rank (pangkat)
+    const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
     if (rankDiff !== 0) return rankDiff;
+    
+    // Finally sort by name
     const nameA = a.displayName || "";
     const nameB = b.displayName || "";
     return nameA.localeCompare(nameB, "id-ID", { sensitivity: "base" });
@@ -106,6 +117,7 @@ export async function generateKasatBinmasTiktokCommentRecapExcel({
       polres,
       displayName,
       title: user?.title,
+      jabatan: user?.jabatan,
       totalComments: commentMap.get(user.user_id) || 0,
     };
   });

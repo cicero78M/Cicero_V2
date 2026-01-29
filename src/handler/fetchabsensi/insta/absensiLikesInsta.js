@@ -8,7 +8,6 @@ import {
   formatNama,
   groupUsersByDivisionStatus,
 } from "../../../utils/utilsHelper.js";
-import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { findClientById } from "../../../service/clientService.js";
 import {
   normalizeUsername,
@@ -17,55 +16,10 @@ import {
 } from "../../../utils/likesHelper.js";
 import { getClientInfo } from "../../../service/instagram/instagramReport.js";
 import { computeDitbinmasLikesStats } from "./ditbinmasLikesUtils.js";
+import { sortUsersByPositionRankAndName } from "../../../utils/sortingHelper.js";
 
-const pangkatOrder = [
-  "AKP",
-  "IPTU",
-  "IPDA",
-  "AIPTU",
-  "AIPDA",
-  "BRIPKA",
-  "BRIGADIR",
-  "BRIPTU",
-  "BRIPDA",
-  "PENATA",
-  "PENGATUR TINGKAT I",
-  "PENGATUR MUDA TINGKAT I",
-  "PENGATUR",
-  "JURU",
-  "PPPK",
-  "PHL",
-];
-
-const rankIdx = (title) => {
-  const normalized = (title || "").toUpperCase();
-  const index = pangkatOrder.indexOf(normalized);
-  return index === -1 ? pangkatOrder.length : index;
-};
-
-const isKasatJabatan = (jabatan) =>
-  (jabatan || "").toString().toUpperCase().includes("KASAT");
-
-const sortUsersByRankAndName = (users = []) =>
-  users
-    .slice()
-    .sort((a, b) => {
-      const rankDiff = rankIdx(a.title) - rankIdx(b.title);
-      if (rankDiff !== 0) return rankDiff;
-      const isAkpRank = rankIdx(a.title) === rankIdx("AKP");
-      if (isAkpRank) {
-        const kasatDiff =
-          Number(isKasatJabatan(b?.jabatan)) -
-          Number(isKasatJabatan(a?.jabatan));
-        if (kasatDiff !== 0) return kasatDiff;
-      }
-      const priorityDiff =
-        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
-      if (priorityDiff !== 0) return priorityDiff;
-      return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
-        sensitivity: "base",
-      });
-    });
+// Use the comprehensive sorting function from sortingHelper
+const sortUsersByRankAndName = sortUsersByPositionRankAndName;
 
 export async function collectLikesRecap(clientId, opts = {}) {
   const roleName = String(clientId || "").toLowerCase();
