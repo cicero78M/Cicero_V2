@@ -85,6 +85,7 @@ const dirRequestCrons = [
   },
   // Ditbinmas super admin daily recap at 18:10
   {
+    jobKey: DITBINMAS_SUPER_ADMIN_DAILY_JOB_KEY,
     description:
       'Send Ditbinmas super admin daily recap (menus 6/9/34/35) with today period only.',
     schedules: [
