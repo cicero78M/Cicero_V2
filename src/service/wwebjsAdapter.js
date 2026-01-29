@@ -1268,8 +1268,29 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('qr', (qr) => emitter.emit('qr', qr));
     client.on('ready', async () => {
       try {
-        await ensureWidFactory(`ready handler for clientId=${clientId}`);
-      } finally {
+        // Wait for WidFactory to be available (max 3 attempts)
+        await ensureWidFactory(`ready handler for clientId=${clientId}`, false, 3);
+        
+        // Give stores additional time to initialize, especially GroupMetadata for group chats
+        // This helps prevent "GroupMetadata not available" errors when processing early messages
+        // Configurable via WA_STORE_INIT_DELAY_MS (default: 2000ms, set to 0 to disable)
+        const envDelayMs = parseInt(process.env.WA_STORE_INIT_DELAY_MS, 10);
+        const storeInitDelayMs = Number.isNaN(envDelayMs) ? 2000 : Math.max(0, envDelayMs);
+        if (storeInitDelayMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
+        }
+        
+        if (debugLoggingEnabled) {
+          console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
+        }
+        
+        emitter.emit('ready');
+      } catch (err) {
+        console.warn(
+          `[WWEBJS] Ready handler initialization error for clientId=${clientId}:`,
+          err?.message || err
+        );
+        // Emit ready anyway to maintain backward compatibility and not block client usage
         emitter.emit('ready');
       }
     });
@@ -1377,7 +1398,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   registerEventListeners();
-  const ensureWidFactory = async (contextLabel, requireGroupMetadata = false) => {
+  const ensureWidFactory = async (contextLabel, requireGroupMetadata = false, retryAttempts = 1) => {
     if (!client.pupPage) {
       if (client.info?.wid) {
         return true;
@@ -1387,39 +1408,68 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       );
       return false;
     }
-    try {
-      const storeReadiness = await client.pupPage.evaluate((checkGroupMeta) => {
-        if (!window.Store?.WidFactory) {
-          return { ready: false, reason: 'WidFactory not available' };
-        }
-        if (!window.Store.WidFactory.toUserWidOrThrow) {
-          window.Store.WidFactory.toUserWidOrThrow = (jid) =>
-            window.Store.WidFactory.createWid(jid);
-        }
-        // Check for GroupMetadata store availability only if required (e.g., for group chat operations)
-        if (checkGroupMeta) {
-          if (!window.Store?.GroupMetadata) {
-            return { ready: false, reason: 'GroupMetadata not available' };
+    
+    for (let attempt = 1; attempt <= retryAttempts; attempt++) {
+      try {
+        const storeReadiness = await client.pupPage.evaluate((checkGroupMeta) => {
+          if (!window.Store?.WidFactory) {
+            return { ready: false, reason: 'WidFactory not available' };
           }
-          if (typeof window.Store.GroupMetadata.update !== 'function') {
-            return { ready: false, reason: 'GroupMetadata.update not a function' };
+          if (!window.Store.WidFactory.toUserWidOrThrow) {
+            window.Store.WidFactory.toUserWidOrThrow = (jid) =>
+              window.Store.WidFactory.createWid(jid);
           }
+          // Check for GroupMetadata store availability only if required (e.g., for group chat operations)
+          if (checkGroupMeta) {
+            if (!window.Store?.GroupMetadata) {
+              return { ready: false, reason: 'GroupMetadata not available' };
+            }
+            if (typeof window.Store.GroupMetadata.update !== 'function') {
+              return { ready: false, reason: 'GroupMetadata.update not a function' };
+            }
+          }
+          return { ready: true, reason: 'all required stores available' };
+        }, requireGroupMetadata);
+        
+        if (storeReadiness.ready) {
+          return true;
         }
-        return { ready: true, reason: 'all required stores available' };
-      }, requireGroupMetadata);
-      if (!storeReadiness.ready) {
-        console.warn(
-          `[WWEBJS] ${contextLabel} skipped: ${storeReadiness.reason}`
-        );
+        
+        // If not ready and we have more attempts, wait before retrying
+        if (attempt < retryAttempts) {
+          const delayMs = STORE_READINESS_RETRY_DELAY_MS * attempt;
+          if (debugLoggingEnabled) {
+            console.log(
+              `[WWEBJS] ${contextLabel}: ${storeReadiness.reason}, retrying in ${delayMs}ms (attempt ${attempt}/${retryAttempts})`
+            );
+          }
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else {
+          // Only log warning on final attempt
+          console.warn(
+            `[WWEBJS] ${contextLabel} skipped after ${retryAttempts} attempts: ${storeReadiness.reason}`
+          );
+        }
+      } catch (err) {
+        if (debugLoggingEnabled && attempt < retryAttempts) {
+          console.log(
+            `[WWEBJS] ${contextLabel} check error, retrying (attempt ${attempt}/${retryAttempts}):`,
+            err?.message || err
+          );
+        }
+        if (attempt === retryAttempts) {
+          console.warn(
+            `[WWEBJS] ${contextLabel} WidFactory check failed:`,
+            err?.message || err
+          );
+        }
+        if (attempt < retryAttempts) {
+          await new Promise(resolve => setTimeout(resolve, STORE_READINESS_RETRY_DELAY_MS * attempt));
+        }
       }
-      return storeReadiness.ready;
-    } catch (err) {
-      console.warn(
-        `[WWEBJS] ${contextLabel} WidFactory check failed:`,
-        err?.message || err
-      );
-      return false;
     }
+    
+    return false;
   };
 
   emitter.connect = async () => startConnect('connect');
@@ -1440,7 +1490,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.getNumberId = async (phone) => {
-    const widReady = await ensureWidFactory('getNumberId');
+    const widReady = await ensureWidFactory('getNumberId', false, 2);
     if (!widReady) {
       return null;
     }
@@ -1467,16 +1517,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     // Check if this is a group chat (JIDs ending with @g.us are group chats)
     const isGroupChat = normalizedJid.endsWith('@g.us');
     
-    // Ensure WidFactory and GroupMetadata are ready with retries
+    // Ensure WidFactory and GroupMetadata are ready with retries (up to 3 attempts for groups, 2 for others)
     // GroupMetadata is only required for group chats because getChatById calls GroupMetadata.update() for them
-    let widReady = await ensureWidFactory('getChat', isGroupChat);
+    const maxAttempts = isGroupChat ? 3 : 2;
+    let widReady = await ensureWidFactory('getChat', isGroupChat, maxAttempts);
     if (!widReady) {
-      // Retry once after a short delay for stores to initialize
-      await new Promise(resolve => setTimeout(resolve, STORE_READINESS_RETRY_DELAY_MS));
-      widReady = await ensureWidFactory('getChat (retry)', isGroupChat);
-      if (!widReady) {
-        return null;
-      }
+      return null;
     }
     
     try {
@@ -1551,10 +1597,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     const isGroupChat = jid?.endsWith('@g.us') ?? false;
     
     // Ensure stores are ready before calling getChatById
-    // GroupMetadata is only required for group chats
-    const widReady = await ensureWidFactory('sendSeen', isGroupChat);
+    // GroupMetadata is only required for group chats, use 2 retry attempts
+    const widReady = await ensureWidFactory('sendSeen', isGroupChat, 2);
     if (!widReady) {
-      console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready`);
+      if (debugLoggingEnabled) {
+        console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready`);
+      }
       return false;
     }
     
