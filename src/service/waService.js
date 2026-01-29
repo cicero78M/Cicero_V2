@@ -1358,6 +1358,26 @@ wrapSendMessage(waClient);
 wrapSendMessage(waUserClient);
 wrapSendMessage(waGatewayClient);
 
+/**
+ * Wait for all WhatsApp client message queues to be idle (empty and no pending tasks)
+ * This ensures all messages have been sent before the caller continues
+ */
+export async function waitForAllMessageQueues() {
+  const clients = [waClient, waUserClient, waGatewayClient];
+  const idlePromises = [];
+  
+  for (const client of clients) {
+    const queue = messageQueues.get(client);
+    if (queue) {
+      idlePromises.push(queue.onIdle());
+    }
+  }
+  
+  if (idlePromises.length > 0) {
+    await Promise.all(idlePromises);
+  }
+}
+
 export function sendGatewayMessage(jid, text) {
   const waFallbackClients = [
     { client: waGatewayClient, label: "WA-GATEWAY" },
