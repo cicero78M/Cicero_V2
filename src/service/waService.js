@@ -133,6 +133,12 @@ const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
 if (!shouldInitWhatsAppClients) {
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[WA] WA_SERVICE_SKIP_INIT=true is not allowed in production; refusing to start."
+    );
+    process.exit(1);
+  }
   console.warn(
     "[WA] WA_SERVICE_SKIP_INIT=true; WA clients will not receive messages"
   );
