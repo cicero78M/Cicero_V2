@@ -150,8 +150,10 @@ describe("sortingHelper", () => {
       const sorted = sortUsersByPositionRankAndName(users);
 
       expect(sorted[0].nama).toBe("User1"); // Has position and rank
-      expect(sorted[1].nama).toBe("User3"); // No position, no rank (User2 and User3 both have Infinity for everything)
-      expect(sorted[2].nama).toBe("User2"); // No rank, name comes after User3 alphabetically
+      // User2 and User3 have the same sort keys (Infinity position, Infinity rank, same priority)
+      // JavaScript's Array.sort is stable, so original order is preserved: User3 before User2
+      expect(sorted[1].nama).toBe("User3");
+      expect(sorted[2].nama).toBe("User2");
     });
 
     it("should not mutate original array", () => {

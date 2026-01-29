@@ -52,12 +52,6 @@ function resolveWeeklyRange(baseDate = new Date()) {
   };
 }
 
-// Legacy function for backward compatibility
-// This function is used by kasatBinmasLikesRecapExcelService.js and kasatBinmasTiktokCommentRecapExcelService.js
-export function kasatBinmasRankWeight(rank) {
-  return getRankIndex(rank);
-}
-
 export function describeKasatBinmasLikesPeriod(period = "daily", referenceDate) {
   const baseDate = referenceDate ? new Date(referenceDate) : new Date();
   const today = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
