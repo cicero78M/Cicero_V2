@@ -17,11 +17,9 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
   const jid = msg.key?.remoteJid || msg.from;
   const id = msg.key?.id || msg.id?.id || msg.id?._serialized;
   
-  // Always log message arrival to help diagnose issues
-  console.log(`[WA-EVENT-AGGREGATOR] Message from ${fromAdapter}: jid=${jid}, hasHandler=${typeof handler === 'function'}`);
-  
   if (debugLoggingEnabled) {
     console.log(`[WA-EVENT-AGGREGATOR] Message received from adapter: ${fromAdapter}, jid: ${jid}, id: ${id}`);
+    console.log(`[WA-EVENT-AGGREGATOR] Message from ${fromAdapter}: jid=${jid}, hasHandler=${typeof handler === 'function'}`);
   }
   
   if (typeof handler !== 'function') {

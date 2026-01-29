@@ -1288,9 +1288,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('message', async (msg) => {
       if (debugLoggingEnabled) {
         console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+        console.log(`[WWEBJS-ADAPTER:${clientId}] Message received from ${msg.from}`);
       }
-      // Always log message reception to help diagnose issues
-      console.log(`[WWEBJS-ADAPTER:${clientId}] Message received from ${msg.from}`);
       
       let contactMeta = {};
       try {
