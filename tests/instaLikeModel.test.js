@@ -169,3 +169,23 @@ test('rekap likes applies priority ordering with fallback alphabetical', async (
   expect(sql).toContain('CASE WHEN');
   expect(sql).toContain('UPPER(u.nama)');
 });
+
+test('org operator rekap limits tasks to official instagram accounts', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  mockQuery.mockResolvedValueOnce({ rows: [{ total_post: 0 }] });
+  await getRekapLikesByClient(
+    'ORG1',
+    'harian',
+    undefined,
+    undefined,
+    undefined,
+    'operator',
+    { officialAccountsOnly: true }
+  );
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('satbinmas_official_media');
+  expect(sql).toContain('satbinmas_official_accounts');
+  expect(sql).toContain("LOWER(soa.platform) = 'instagram'");
+  expect(sql).toContain('soa.is_active = TRUE');
+  expectPriorityParams(mockQuery.mock.calls[0][1], ['ORG1']);
+});

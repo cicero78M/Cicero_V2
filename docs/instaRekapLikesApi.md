@@ -132,6 +132,9 @@ When `role` and `scope` are provided, the endpoint follows these rules:
   - **Perhitungan like** tetap mengikuti shortcode tugas direktorat, meskipun `client_id` personil berbeda.
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
+  - Untuk client bertipe **ORG**, daftar tugas dibatasi ke konten Instagram dari akun official
+    yang tersimpan di `satbinmas_official_accounts` (platform `instagram`, `is_active = true`)
+    melalui relasi `satbinmas_official_media`.
   - **Data personil** dibatasi pada role `operator`.
   - **Otorisasi** tetap mengikuti `client_id` pada token. Jika `client_id` pada query berbeda, sistem akan menyelaraskannya ke `client_id` token agar operator ORG tetap bisa mengakses endpoint.
 - Selain kondisi di atas:
