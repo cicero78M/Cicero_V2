@@ -50,7 +50,7 @@ test('accepts tanggal_mulai and tanggal_selesai', async () => {
     '2024-01-01',
     '2024-01-31',
     undefined,
-    {}
+    { regionalId: null }
   );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ chartHeight: 320 }));
 });
@@ -85,7 +85,7 @@ test('allows authorized client_id', async () => {
     undefined,
     undefined,
     undefined,
-    {}
+    { regionalId: null }
   );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
@@ -107,7 +107,36 @@ test('supports client_ids as string', async () => {
     undefined,
     undefined,
     undefined,
-    {}
+    { regionalId: null }
+  );
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+});
+
+test('allows org operator scope using token client_id', async () => {
+  mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
+  const req = {
+    query: { client_id: 'DIR1', role: 'operator', scope: 'ORG' },
+    user: { client_id: 'ORG1', client_ids: ['DIR1'] }
+  };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getInstaRekapLikes(req, res);
+  expect(res.status).not.toHaveBeenCalledWith(403);
+  expect(mockGetRekap).toHaveBeenCalledWith(
+    'ORG1',
+    'harian',
+    undefined,
+    undefined,
+    undefined,
+    'operator',
+    {
+      postClientId: 'ORG1',
+      userClientId: 'ORG1',
+      userRoleFilter: 'operator',
+      includePostRoleFilter: false,
+      matchLikeClientId: true,
+      regionalId: null,
+    }
   );
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });

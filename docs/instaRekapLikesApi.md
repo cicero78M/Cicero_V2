@@ -133,6 +133,7 @@ When `role` and `scope` are provided, the endpoint follows these rules:
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
   - **Data personil** dibatasi pada role `operator`.
+  - **Otorisasi** tetap mengikuti `client_id` pada token. Jika `client_id` pada query berbeda, sistem akan menyelaraskannya ke `client_id` token agar operator ORG tetap bisa mengakses endpoint.
 - Selain kondisi di atas:
   - **Data tugas** dan **personil** mengikuti `client_id` yang diminta.
 
