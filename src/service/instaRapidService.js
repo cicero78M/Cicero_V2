@@ -12,12 +12,11 @@ function sendConsoleDebug(...args) {
   if (DEBUG_FETCH_IG) console.log('[DEBUG IG]', ...args);
 }
 
-function ensureRapidApiKey() {
+function assertRapidApiKey() {
   if (!RAPIDAPI_KEY) {
-    const error = new Error(
-      'RapidAPI key is missing. Set RAPIDAPI_KEY in the environment configuration.'
-    );
-    error.statusCode = 500;
+    const error = new Error('RAPIDAPI_KEY belum di-set');
+    error.statusCode = 503;
+    error.code = 'RAPIDAPI_KEY_MISSING';
     throw error;
   }
 }
@@ -42,7 +41,7 @@ function buildRapidApiHeaders(host, key) {
 }
 
 async function fetchRapidApiResponse(path, params) {
-  ensureRapidApiKey();
+  assertRapidApiKey();
   const url = `https://${RAPIDAPI_HOST}/${path}?${params.toString()}`;
   const res = await fetch(url, {
     headers: buildRapidApiHeaders(RAPIDAPI_HOST, RAPIDAPI_KEY),
@@ -65,7 +64,7 @@ async function fetchRapidApiResponse(path, params) {
 }
 
 async function axiosGetRapidApi(path, params) {
-  ensureRapidApiKey();
+  assertRapidApiKey();
   try {
     return await axios.get(`https://${RAPIDAPI_HOST}/${path}`, {
       params,
@@ -93,6 +92,7 @@ async function axiosGetRapidApi(path, params) {
 
 export async function fetchInstagramPosts(username, limit = 10) {
   if (!username) return [];
+  assertRapidApiKey();
 
   sendConsoleDebug('fetchInstagramPosts start', { username, limit });
 
@@ -117,6 +117,7 @@ export async function fetchInstagramPosts(username, limit = 10) {
 
 export async function fetchInstagramProfile(username) {
   if (!username) return null;
+  assertRapidApiKey();
   const params = new URLSearchParams({ username_or_id_or_url: username });
 
   sendConsoleDebug('fetchInstagramProfile request', params.toString());
@@ -136,6 +137,7 @@ export async function fetchInstagramProfile(username) {
 
 export async function fetchInstagramInfo(username) {
   if (!username) return null;
+  assertRapidApiKey();
   try {
     sendConsoleDebug('fetchInstagramInfo request', username);
     const response = await axiosGetRapidApi('v1/info', {
@@ -156,6 +158,7 @@ export async function fetchInstagramInfo(username) {
 
 export async function fetchInstagramPostsPage(username, cursor = null) {
   if (!username) return { items: [], next_cursor: null, has_more: false };
+  assertRapidApiKey();
   const params = new URLSearchParams({ username_or_id_or_url: username });
   if (cursor) params.append('pagination_token', cursor);
 
@@ -221,6 +224,7 @@ export async function fetchInstagramPostsByMonth(username, month, year) {
 
 export async function fetchInstagramPostsPageToken(username, token = null) {
   if (!username) return { items: [], next_token: null, has_more: false};
+  assertRapidApiKey();
   const params = new URLSearchParams({ username_or_id_or_url: username });
   if (token) params.append('pagination_token', token);
 
@@ -293,6 +297,7 @@ export async function fetchInstagramPostsByMonthToken(username, month, year) {
 
 export async function fetchInstagramLikesPage(shortcode, cursor = null) {
   if (!shortcode) return { usernames: [], items: [], next_cursor: null, has_more: false };
+  assertRapidApiKey();
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (cursor) params.append('cursor', cursor);
 
@@ -393,6 +398,7 @@ async function searchInstagramUsers(query, limit = 10) {
 
 async function fetchInstagramCommentsPage(shortcode, token = null) {
   if (!shortcode) return { comments: [], next_token: null, has_more: false };
+  assertRapidApiKey();
   const params = new URLSearchParams({ code_or_id_or_url: shortcode });
   if (token) params.append('pagination_token', token);
   const res = await axiosGetRapidApi('v1/comments', params);
@@ -420,6 +426,7 @@ export async function fetchAllInstagramComments(shortcode, maxPage = 10) {
 
 export async function fetchInstagramHashtag(tag, token = null) {
   if (!tag) return { info: null, items: [], next_token: null, has_more: false };
+  assertRapidApiKey();
   const params = new URLSearchParams({ hashtag: tag.replace(/^#/, '') });
   if (token) params.append('pagination_token', token);
   const res = await axiosGetRapidApi('v1/hashtag', params);
@@ -433,6 +440,7 @@ export async function fetchInstagramHashtag(tag, token = null) {
 
 export async function fetchInstagramPostInfo(code) {
   if (!code) return null;
+  assertRapidApiKey();
   const params = new URLSearchParams({ code_or_id_or_url: code });
   const res = await axiosGetRapidApi('v1/post_info', params);
   return res.data?.data || null;

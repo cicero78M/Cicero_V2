@@ -536,6 +536,12 @@ export async function getRapidInstagramInfo(req, res) {
     sendSuccess(res, info);
   } catch (err) {
     sendConsoleDebug({ tag: "INSTA", msg: `Error getRapidInstagramInfo: ${err.message}` });
+    if (err.code === 'RAPIDAPI_KEY_MISSING') {
+      return res.status(err.statusCode || 503).json({
+        success: false,
+        message: 'RAPIDAPI_KEY belum di-set',
+      });
+    }
     const code = err.statusCode || err.response?.status || 500;
     res.status(code).json({ success: false, message: err.message });
   }
