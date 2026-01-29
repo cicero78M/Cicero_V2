@@ -1288,7 +1288,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('message', async (msg) => {
       if (debugLoggingEnabled) {
         console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+        console.log(`[WWEBJS-ADAPTER:${clientId}] Message received from ${msg.from}`);
       }
+      
       let contactMeta = {};
       try {
         const contact = await msg.getContact();
@@ -1303,6 +1305,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       if (debugLoggingEnabled) {
         console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
       }
+      // Check if there are listeners before emitting
+      const listenerCount = emitter.listenerCount('message');
+      if (listenerCount === 0) {
+        console.error(`[WWEBJS-ADAPTER:${clientId}] WARNING: No message listeners attached! Message will be lost!`);
+      } else if (debugLoggingEnabled) {
+        console.log(`[WWEBJS-ADAPTER:${clientId}] Emitting to ${listenerCount} listener(s)`);
+      }
+      
       emitter.emit('message', {
         from: msg.from,
         body: msg.body,
