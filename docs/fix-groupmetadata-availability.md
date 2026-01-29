@@ -19,8 +19,9 @@ The fix improves the robustness of store initialization checking with the follow
 
 ### 2. Updated 'ready' Event Handler
 - **Waits for WidFactory**: Uses 3 retry attempts to ensure WidFactory is available
-- **Additional 2-second delay**: Gives GroupMetadata and other stores time to initialize
+- **Configurable delay**: Waits for stores to initialize (configurable via `WA_STORE_INIT_DELAY_MS`, default: 2000ms)
 - **Debug confirmation**: Logs when stores are fully initialized (when debug logging enabled)
+- **Can be disabled**: Set `WA_STORE_INIT_DELAY_MS=0` to skip the initialization delay
 
 ### 3. Configured Retry Attempts for Operations
 Different operations now use appropriate retry counts:
@@ -48,9 +49,10 @@ Different operations now use appropriate retry counts:
 5. Enable `WA_DEBUG_LOGGING=true` to see detailed retry progress
 
 ## Configuration
-The following environment variable can be used for debugging:
+The following environment variables can be used for configuration and debugging:
 ```bash
-WA_DEBUG_LOGGING=true  # Enable detailed logging of retry attempts and store initialization
+WA_DEBUG_LOGGING=true          # Enable detailed logging of retry attempts and store initialization
+WA_STORE_INIT_DELAY_MS=2000   # Delay in ms to wait for stores after 'ready' event (default: 2000, set to 0 to disable)
 ```
 
 ## Files Modified

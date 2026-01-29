@@ -1273,7 +1273,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         
         // Give stores additional time to initialize, especially GroupMetadata for group chats
         // This helps prevent "GroupMetadata not available" errors when processing early messages
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Configurable via WA_STORE_INIT_DELAY_MS (default: 2000ms)
+        const storeInitDelayMs = parseInt(process.env.WA_STORE_INIT_DELAY_MS || '2000', 10);
+        if (storeInitDelayMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
+        }
         
         if (debugLoggingEnabled) {
           console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
@@ -1439,6 +1443,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
           );
         }
       } catch (err) {
+        if (debugLoggingEnabled && attempt < retryAttempts) {
+          console.log(
+            `[WWEBJS] ${contextLabel} check error, retrying (attempt ${attempt}/${retryAttempts}):`,
+            err?.message || err
+          );
+        }
         if (attempt === retryAttempts) {
           console.warn(
             `[WWEBJS] ${contextLabel} WidFactory check failed:`,
@@ -1583,7 +1593,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     const widReady = await ensureWidFactory('sendSeen', isGroupChat, 2);
     if (!widReady) {
       if (debugLoggingEnabled) {
-        console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready, will retry on next message`);
+        console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready`);
       }
       return false;
     }
