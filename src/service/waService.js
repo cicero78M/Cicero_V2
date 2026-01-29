@@ -951,21 +951,33 @@ function registerClientReadiness(client, label) {
   getClientReadinessState(client, label);
 }
 
+function getListenerCount(client, eventName) {
+  if (typeof client?.listenerCount !== "function") {
+    return null;
+  }
+  return client.listenerCount(eventName);
+}
+
 export function getWaReadinessSummary() {
   const clients = [
     { label: "WA", client: waClient },
     { label: "WA-USER", client: waUserClient },
     { label: "WA-GATEWAY", client: waGatewayClient },
   ];
-  return clients.map(({ label, client }) => {
-    const state = getClientReadinessState(client, label);
-    return {
-      label,
-      ready: Boolean(state.ready),
-      awaitingQrScan: Boolean(state.awaitingQrScan),
-      lastDisconnectReason: state.lastDisconnectReason || null,
-    };
-  });
+  return {
+    shouldInitWhatsAppClients,
+    clients: clients.map(({ label, client }) => {
+      const state = getClientReadinessState(client, label);
+      return {
+        label,
+        ready: Boolean(state.ready),
+        awaitingQrScan: Boolean(state.awaitingQrScan),
+        lastDisconnectReason: state.lastDisconnectReason || null,
+        messageListenerCount: getListenerCount(client, "message"),
+        readyListenerCount: getListenerCount(client, "ready"),
+      };
+    }),
+  };
 }
 
 function setClientNotReady(client) {

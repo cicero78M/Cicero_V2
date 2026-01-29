@@ -4,9 +4,10 @@ import { getWaReadinessSummary } from '../service/waService.js';
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  const clients = getWaReadinessSummary();
+  const { clients, shouldInitWhatsAppClients } = getWaReadinessSummary();
   res.status(200).json({
     status: 'ok',
+    shouldInitWhatsAppClients,
     clients,
   });
 });

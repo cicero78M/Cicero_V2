@@ -55,6 +55,16 @@ npm restart
 
 **Symptom**: No log messages showing message reception despite WhatsApp being connected.
 
+**Health check**: Use the WA health endpoint to confirm listener counts and skip-init state:
+```bash
+curl -s http://localhost:<PORT>/wa-health | jq
+```
+
+Expected fields in the response:
+- `shouldInitWhatsAppClients`: `true` means WA clients should be initialized (skip-init is off).
+- `clients[].messageListenerCount`: must be **> 0** for message reception.
+- `clients[].readyListenerCount`: should be **> 0** when ready listeners are attached.
+
 **Diagnostic**: Run the diagnostic checker:
 ```javascript
 // In your startup logs, look for:
