@@ -13,8 +13,8 @@ import {
   formatNama,
   groupUsersByDivisionStatus,
 } from "../../../utils/utilsHelper.js";
-import { getNamaPriorityIndex } from "../../../utils/sqlPriority.js";
 import { sendDebug } from "../../../middleware/debugHandler.js";
+import { sortUsersByPositionRankAndName } from "../../../utils/sortingHelper.js";
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
 
@@ -63,54 +63,8 @@ export function normalizeUsername(username) {
     .toLowerCase();
 }
 
-const pangkatOrderPriority = [
-  "AKP",
-  "IPTU",
-  "IPDA",
-  "AIPTU",
-  "AIPDA",
-  "BRIPKA",
-  "BRIGADIR",
-  "BRIPTU",
-  "BRIPDA",
-  "PENATA",
-  "PENGATUR TINGKAT I",
-  "PENGATUR MUDA TINGKAT I",
-  "PENGATUR",
-  "JURU",
-  "PPPK",
-  "PHL",
-];
-
-const getRankIndex = (title) => {
-  const normalized = (title || "").toUpperCase();
-  const index = pangkatOrderPriority.indexOf(normalized);
-  return index === -1 ? pangkatOrderPriority.length : index;
-};
-
-const isKasatJabatan = (jabatan) =>
-  (jabatan || "").toString().toUpperCase().includes("KASAT");
-
-const sortUsersByRankAndName = (users = []) =>
-  users
-    .slice()
-    .sort((a, b) => {
-      const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
-      if (rankDiff !== 0) return rankDiff;
-      const isAkpRank = getRankIndex(a.title) === getRankIndex("AKP");
-      if (isAkpRank) {
-        const kasatDiff =
-          Number(isKasatJabatan(b?.jabatan)) -
-          Number(isKasatJabatan(a?.jabatan));
-        if (kasatDiff !== 0) return kasatDiff;
-      }
-      const priorityDiff =
-        getNamaPriorityIndex(a?.nama) - getNamaPriorityIndex(b?.nama);
-      if (priorityDiff !== 0) return priorityDiff;
-      return (a.nama || "").localeCompare(b.nama || "", "id-ID", {
-        sensitivity: "base",
-      });
-    });
+// Use the comprehensive sorting function from sortingHelper
+const sortUsersByRankAndName = sortUsersByPositionRankAndName;
 
 export async function collectKomentarRecap(clientId, opts = {}) {
   const { selfOnly, clientFilter, referenceDate } = opts;
