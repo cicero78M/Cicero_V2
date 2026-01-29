@@ -8,8 +8,11 @@ import { sendWAFile, safeSendMessage } from "../utils/waHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
 import {
   describeKasatBinmasLikesPeriod,
-  kasatBinmasRankWeight,
 } from "./kasatBinmasLikesRecapService.js";
+import { 
+  getPositionIndex, 
+  getRankIndex 
+} from "../utils/sortingHelper.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
@@ -36,8 +39,16 @@ function sortByLikes(entries) {
   return entries.slice().sort((a, b) => {
     const likeDiff = (b.totalLikes || 0) - (a.totalLikes || 0);
     if (likeDiff !== 0) return likeDiff;
-    const rankDiff = kasatBinmasRankWeight(a.title) - kasatBinmasRankWeight(b.title);
+    
+    // Sort by position (jabatan) first
+    const positionDiff = getPositionIndex(a.jabatan) - getPositionIndex(b.jabatan);
+    if (positionDiff !== 0) return positionDiff;
+    
+    // Then sort by rank (pangkat)
+    const rankDiff = getRankIndex(a.title) - getRankIndex(b.title);
     if (rankDiff !== 0) return rankDiff;
+    
+    // Finally sort by name
     const nameA = a.displayName || "";
     const nameB = b.displayName || "";
     return nameA.localeCompare(nameB, "id-ID", { sensitivity: "base" });
@@ -127,6 +138,7 @@ export async function generateKasatBinmasLikesRecapExcel({
       polres,
       displayName,
       title: user?.title,
+      jabatan: user?.jabatan,
       totalLikes: likeMap.get(user.user_id) || 0,
     };
   });

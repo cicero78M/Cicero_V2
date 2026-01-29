@@ -2,26 +2,13 @@ import { getRekapLikesByClient } from "../model/instaLikeModel.js";
 import { getUsersByClient } from "../model/userModel.js";
 import { formatNama } from "../utils/utilsHelper.js";
 import { matchesKasatBinmasJabatan } from "./kasatkerAttendanceService.js";
+import { 
+  getPositionIndex, 
+  getRankIndex 
+} from "../utils/sortingHelper.js";
 
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 const TARGET_ROLE = "ditbinmas";
-
-export const PANGKAT_ORDER = [
-  "KOMISARIS BESAR POLISI",
-  "AKBP",
-  "KOMPOL",
-  "AKP",
-  "IPTU",
-  "IPDA",
-  "AIPTU",
-  "AIPDA",
-  "BRIPKA",
-  "BRIGPOL",
-  "BRIGADIR",
-  "BRIGADIR POLISI",
-  "BRIPTU",
-  "BRIPDA",
-];
 
 const STATUS_SECTIONS = [
   { key: "lengkap", icon: "✅", label: "Melaksanakan Lengkap" },
@@ -65,10 +52,10 @@ function resolveWeeklyRange(baseDate = new Date()) {
   };
 }
 
+// Legacy function for backward compatibility
+// This function is used by kasatBinmasLikesRecapExcelService.js and kasatBinmasTiktokCommentRecapExcelService.js
 export function kasatBinmasRankWeight(rank) {
-  const normalized = String(rank || "").toUpperCase();
-  const idx = PANGKAT_ORDER.indexOf(normalized);
-  return idx === -1 ? PANGKAT_ORDER.length : idx;
+  return getRankIndex(rank);
 }
 
 export function describeKasatBinmasLikesPeriod(period = "daily", referenceDate) {
@@ -149,9 +136,16 @@ function sortKasatList(entries) {
   return entries.slice().sort((a, b) => {
     const countDiff = (b.count || 0) - (a.count || 0);
     if (countDiff !== 0) return countDiff;
-    const rankDiff =
-      kasatBinmasRankWeight(a.user?.title) - kasatBinmasRankWeight(b.user?.title);
+    
+    // Sort by position (jabatan) first
+    const positionDiff = getPositionIndex(a.user?.jabatan) - getPositionIndex(b.user?.jabatan);
+    if (positionDiff !== 0) return positionDiff;
+    
+    // Then sort by rank (pangkat)
+    const rankDiff = getRankIndex(a.user?.title) - getRankIndex(b.user?.title);
     if (rankDiff !== 0) return rankDiff;
+    
+    // Finally sort by name
     const nameA = formatNama(a.user) || "";
     const nameB = formatNama(b.user) || "";
     return nameA.localeCompare(nameB, "id-ID", { sensitivity: "base" });
