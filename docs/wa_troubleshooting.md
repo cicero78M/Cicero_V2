@@ -123,6 +123,16 @@ WA_SERVICE_SKIP_INIT=true node scripts/test-wa-setup.js
 
 ## Prevention
 
+### Release Checklist (before deploy)
+
+- [ ] Confirm `WA_SERVICE_SKIP_INIT` is **unset** or `"false"` in production config.
+- [ ] Validate the resolved runtime env (example):
+  ```bash
+  rg "WA_SERVICE_SKIP_INIT" .env .env.* ecosystem.config.js || true
+  pm2 show cicero_v2 | rg WA_SERVICE_SKIP_INIT -n
+  ```
+- [ ] If `NODE_ENV=production` and `WA_SERVICE_SKIP_INIT="true"`, the service will exit on startup.
+
 ## Operational Runbook: WA_SERVICE_SKIP_INIT Production Guard
 
 Use this checklist any time message reception drops to zero or before/after a deployment.
