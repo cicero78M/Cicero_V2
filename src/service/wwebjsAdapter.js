@@ -26,6 +26,7 @@ const DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
 const DEFAULT_LOCK_FALLBACK_THRESHOLD = 2;
+const STORE_READINESS_RETRY_DELAY_MS = 1000;
 const COMMON_CHROME_EXECUTABLE_PATHS = [
   '/usr/bin/google-chrome',
   '/usr/bin/chromium-browser',
@@ -1376,7 +1377,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   registerEventListeners();
-  const ensureWidFactory = async (contextLabel) => {
+  const ensureWidFactory = async (contextLabel, requireGroupMetadata = false) => {
     if (!client.pupPage) {
       if (client.info?.wid) {
         return true;
@@ -1387,7 +1388,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return false;
     }
     try {
-      const storeReadiness = await client.pupPage.evaluate(() => {
+      const storeReadiness = await client.pupPage.evaluate((checkGroupMeta) => {
         if (!window.Store?.WidFactory) {
           return { ready: false, reason: 'WidFactory not available' };
         }
@@ -1395,15 +1396,17 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
           window.Store.WidFactory.toUserWidOrThrow = (jid) =>
             window.Store.WidFactory.createWid(jid);
         }
-        // Check for GroupMetadata store availability to prevent 'update' errors
-        if (!window.Store?.GroupMetadata) {
-          return { ready: false, reason: 'GroupMetadata not available' };
+        // Check for GroupMetadata store availability only if required (e.g., for group chat operations)
+        if (checkGroupMeta) {
+          if (!window.Store?.GroupMetadata) {
+            return { ready: false, reason: 'GroupMetadata not available' };
+          }
+          if (typeof window.Store.GroupMetadata.update !== 'function') {
+            return { ready: false, reason: 'GroupMetadata.update not a function' };
+          }
         }
-        if (typeof window.Store.GroupMetadata.update !== 'function') {
-          return { ready: false, reason: 'GroupMetadata.update not a function' };
-        }
-        return { ready: true, reason: 'all stores available' };
-      });
+        return { ready: true, reason: 'all required stores available' };
+      }, requireGroupMetadata);
       if (!storeReadiness.ready) {
         console.warn(
           `[WWEBJS] ${contextLabel} skipped: ${storeReadiness.reason}`
@@ -1462,11 +1465,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
     
     // Ensure WidFactory and GroupMetadata are ready with retries
-    let widReady = await ensureWidFactory('getChat');
+    // GroupMetadata is required because getChatById calls GroupMetadata.update() for group chats
+    let widReady = await ensureWidFactory('getChat', true);
     if (!widReady) {
       // Retry once after a short delay for stores to initialize
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      widReady = await ensureWidFactory('getChat (retry)');
+      await new Promise(resolve => setTimeout(resolve, STORE_READINESS_RETRY_DELAY_MS));
+      widReady = await ensureWidFactory('getChat (retry)', true);
       if (!widReady) {
         return null;
       }
@@ -1540,6 +1544,13 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   emitter.sendSeen = async (jid) => {
+    // Ensure stores are ready before calling getChatById
+    const widReady = await ensureWidFactory('sendSeen', true);
+    if (!widReady) {
+      console.warn(`[WWEBJS] sendSeen skipped (jid=${jid}): stores not ready`);
+      return false;
+    }
+    
     let hydratedChat = null;
     try {
       hydratedChat = await withRuntimeTimeoutRetry(
