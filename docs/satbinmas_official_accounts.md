@@ -146,7 +146,9 @@ business rules before calling the model:
    perhitungan tugas ke konten Instagram yang sudah terekam sebagai akun
    official di `satbinmas_official_accounts` (platform `instagram`, `is_active`
    true) dengan memanfaatkan relasi `satbinmas_official_media`, sehingga
-   laporan likes tetap konsisten dengan daftar akun resmi yang tersentral.
+   laporan likes tetap konsisten dengan daftar akun resmi yang tersentral. Akses
+   operator ORG ke endpoint ini telah dibuka melalui allowlist autentikasi agar
+   endpoint bisa dipakai langsung oleh operator yang memenuhi scope.
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:
