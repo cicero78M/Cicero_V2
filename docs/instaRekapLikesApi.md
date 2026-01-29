@@ -6,6 +6,10 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 
 `GET /api/insta/rekap-likes`
 
+## Access Control
+
+Operator dengan client bertipe **ORG** sekarang diizinkan mengakses endpoint ini melalui allowlist autentikasi, selama token dan scope valid. Untuk operator ORG, sistem akan menyesuaikan `client_id` mengikuti token agar otorisasi tetap aman.
+
 ### Query Parameters
 
 - `client_id` (required)
