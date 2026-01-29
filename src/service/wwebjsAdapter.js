@@ -1387,22 +1387,29 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return false;
     }
     try {
-      const hasWidFactory = await client.pupPage.evaluate(() => {
+      const storeReadiness = await client.pupPage.evaluate(() => {
         if (!window.Store?.WidFactory) {
-          return false;
+          return { ready: false, reason: 'WidFactory not available' };
         }
         if (!window.Store.WidFactory.toUserWidOrThrow) {
           window.Store.WidFactory.toUserWidOrThrow = (jid) =>
             window.Store.WidFactory.createWid(jid);
         }
-        return true;
+        // Check for GroupMetadata store availability to prevent 'update' errors
+        if (!window.Store?.GroupMetadata) {
+          return { ready: false, reason: 'GroupMetadata not available' };
+        }
+        if (typeof window.Store.GroupMetadata.update !== 'function') {
+          return { ready: false, reason: 'GroupMetadata.update not a function' };
+        }
+        return { ready: true, reason: 'all stores available' };
       });
-      if (!hasWidFactory) {
+      if (!storeReadiness.ready) {
         console.warn(
-          `[WWEBJS] ${contextLabel} skipped: WidFactory belum tersedia di window.Store.`
+          `[WWEBJS] ${contextLabel} skipped: ${storeReadiness.reason}`
         );
       }
-      return hasWidFactory;
+      return storeReadiness.ready;
     } catch (err) {
       console.warn(
         `[WWEBJS] ${contextLabel} WidFactory check failed:`,
@@ -1453,10 +1460,18 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       console.warn('[WWEBJS] getChat skipped: jid kosong atau tidak valid.');
       return null;
     }
-    const widReady = await ensureWidFactory('getChat');
+    
+    // Ensure WidFactory and GroupMetadata are ready with retries
+    let widReady = await ensureWidFactory('getChat');
     if (!widReady) {
-      return null;
+      // Retry once after a short delay for stores to initialize
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      widReady = await ensureWidFactory('getChat (retry)');
+      if (!widReady) {
+        return null;
+      }
     }
+    
     try {
       return await withRuntimeTimeoutRetry(
         () => client.getChatById(normalizedJid),
