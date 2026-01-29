@@ -16,10 +16,18 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 - `scope` (recommended; values: `direktorat` or `org`)
 - `regional_id` (optional; filter hasil hanya untuk client dengan `regional_id` tertentu, mis. `JATIM`)
 
+Catatan: role `operator` untuk client bertipe **ORG** diizinkan menggunakan endpoint ini. Pada kondisi tersebut, data tugas akan disaring menggunakan akun Instagram official berdasarkan `client_id` (lihat penjelasan scope `org` di bawah).
+
 Example:
 
 ```
 /api/insta/rekap-likes?client_id=DITBINMAS&periode=harian&tanggal=2025-12-22&role=ditbinmas&scope=direktorat
+```
+
+Example (operator ORG):
+
+```
+/api/insta/rekap-likes?client_id=SATBINMAS_JATIM&periode=harian&tanggal=2025-12-22&role=operator&scope=org
 ```
 
 ## Response
@@ -134,7 +142,7 @@ When `role` and `scope` are provided, the endpoint follows these rules:
   - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
   - Untuk client bertipe **ORG**, daftar tugas dibatasi ke konten Instagram dari akun official
     yang tersimpan di `satbinmas_official_accounts` (platform `instagram`, `is_active = true`)
-    melalui relasi `satbinmas_official_media`.
+    melalui relasi `satbinmas_official_media`, dengan filter `client_id` pada akun official.
   - **Data personil** dibatasi pada role `operator`.
   - **Otorisasi** tetap mengikuti `client_id` pada token. Jika `client_id` pada query berbeda, sistem akan menyelaraskannya ke `client_id` token agar operator ORG tetap bisa mengakses endpoint.
 - Selain kondisi di atas:
@@ -143,6 +151,43 @@ When `role` and `scope` are provided, the endpoint follows these rules:
 ## Regional Filter
 
 Jika `regional_id` dikirim, data post dan personil hanya akan dihitung untuk client yang berada pada regional tersebut. Contoh: `regional_id=JATIM` membatasi rekap ke struktur Polda Jatim.
+
+## Example Response (operator ORG)
+
+```
+{
+  "success": true,
+  "data": [
+    {
+      "user_id": "U-21",
+      "nama": "Operator Jatim",
+      "username": "operator_jatim",
+      "regional_id": "JATIM",
+      "jumlah_like": 3,
+      "ranking": 1,
+      "completionRate": 0.75,
+      "completionPercentage": 75,
+      "missingLikes": 1,
+      "status": "kurang",
+      "badges": ["⚠️ Masih ada konten yang belum di-like."]
+    }
+  ],
+  "summary": {
+    "totalPosts": 4,
+    "totalUsers": 1,
+    "totalLikes": 3,
+    "averageCompletionPercentage": 75,
+    "participationRatePercentage": 100,
+    "distribution": {
+      "sudah": 0,
+      "kurang": 1,
+      "belum": 0,
+      "noUsername": 0,
+      "noPosts": 0
+    }
+  }
+}
+```
 
 ## Ditbinmas Shortcut
 
