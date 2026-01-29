@@ -1,8 +1,12 @@
 import { jest } from '@jest/globals';
 
 const mockGetRekap = jest.fn();
+const mockFindClientById = jest.fn();
 jest.unstable_mockModule('../src/model/instaLikeModel.js', () => ({
   getRekapLikesByClient: mockGetRekap
+}));
+jest.unstable_mockModule('../src/model/clientModel.js', () => ({
+  findById: mockFindClientById,
 }));
 jest.unstable_mockModule('../src/middleware/debugHandler.js', () => ({
   sendConsoleDebug: jest.fn()
@@ -28,6 +32,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockGetRekap.mockReset();
+  mockFindClientById.mockReset();
 });
 
 test('accepts tanggal_mulai and tanggal_selesai', async () => {
@@ -114,6 +119,7 @@ test('supports client_ids as string', async () => {
 
 test('allows org operator scope using token client_id', async () => {
   mockGetRekap.mockResolvedValue({ rows: [], totalKonten: 0 });
+  mockFindClientById.mockResolvedValueOnce({ client_type: 'org' });
   const req = {
     query: { client_id: 'DIR1', role: 'operator', scope: 'ORG' },
     user: { client_id: 'ORG1', client_ids: ['DIR1'] }
@@ -135,6 +141,7 @@ test('allows org operator scope using token client_id', async () => {
       userRoleFilter: 'operator',
       includePostRoleFilter: false,
       matchLikeClientId: true,
+      officialAccountsOnly: true,
       regionalId: null,
     }
   );

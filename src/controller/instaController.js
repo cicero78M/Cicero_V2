@@ -16,6 +16,7 @@ import { sendSuccess } from "../utils/response.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 import { normalizeHandleValue } from "../utils/handleNormalizer.js";
+import * as clientModel from "../model/clientModel.js";
 
 function normalizeInstagramUsername(value) {
   const normalizedHandle = normalizeHandleValue(value);
@@ -113,6 +114,8 @@ export async function getInstaRekapLikes(req, res) {
       let includePostRoleFilter = false;
       let matchLikeClientId = true;
 
+      let officialAccountsOnly = false;
+
       if (resolvedScope === "direktorat") {
         postClientId = client_id;
         userClientId = null;
@@ -129,6 +132,9 @@ export async function getInstaRekapLikes(req, res) {
           postClientId = tokenClientId;
           userClientId = tokenClientId;
           userRoleFilter = "operator";
+          const tokenClient = await clientModel.findById(tokenClientId);
+          officialAccountsOnly =
+            tokenClient?.client_type?.toLowerCase() === "org";
         } else if (directorateRoles.includes(resolvedRole)) {
           postClientId = resolvedRole;
           userClientId = req.user?.client_id || client_id;
@@ -143,6 +149,7 @@ export async function getInstaRekapLikes(req, res) {
         userRoleFilter,
         includePostRoleFilter,
         matchLikeClientId,
+        officialAccountsOnly,
         regionalId,
       };
       roleForQuery = resolvedRole;

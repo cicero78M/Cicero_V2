@@ -237,6 +237,8 @@ export async function hasUserLikedBetween(
  * Rekap likes IG per user, per hari/bulan ini
  * @param {string} client_id
  * @param {string} periode "harian"|"bulanan"
+ * @param {Object} options
+ * @param {boolean} [options.officialAccountsOnly=false] Batasi konten ke akun Instagram official klien.
  * @returns {Promise<Array>}
  */
 
@@ -257,6 +259,7 @@ export async function getRekapLikesByClient(
     includePostRoleFilter = null,
     postRoleFilterName = null,
     matchLikeClientId = true,
+    officialAccountsOnly = false,
     regionalId = null,
   } = options;
   const normalizedRegionalId = regionalId
@@ -348,12 +351,19 @@ export async function getRekapLikesByClient(
   const tanggalFilter = buildTanggalFilter(addParam);
   const postTanggalFilter = buildTanggalFilter(addPostParam);
 
-  const buildPostFilters = (addParamFn, sharedClientIdx = null, sharedRoleIdx = null) => {
+  const buildPostFilters = (
+    addParamFn,
+    sharedClientIdx = null,
+    sharedRoleIdx = null,
+    useOfficialAccounts = false
+  ) => {
     let postClientFilter = '1=1';
     let postRoleJoin = '';
     let postRoleFilter = '';
     let postRegionalJoin = '';
     let postRegionalFilter = '';
+    let postOfficialJoin = '';
+    let postOfficialFilter = '';
 
     if (resolvedPostClientId) {
       const postClientIdx =
@@ -375,12 +385,25 @@ export async function getRekapLikesByClient(
       postRegionalFilter = `AND UPPER(cp.regional_id) = UPPER($${regionalIdx})`;
     }
 
+    if (useOfficialAccounts) {
+      postOfficialJoin = `
+      JOIN satbinmas_official_media som
+        ON som.code = p.shortcode
+       AND LOWER(som.client_id) = LOWER(p.client_id)
+      JOIN satbinmas_official_accounts soa
+        ON soa.satbinmas_account_id = som.satbinmas_account_id`;
+      postOfficialFilter =
+        "AND soa.is_active = TRUE AND LOWER(soa.platform) = 'instagram'";
+    }
+
     return {
       postClientFilter,
       postRoleJoin,
       postRoleFilter,
       postRegionalJoin,
       postRegionalFilter,
+      postOfficialJoin,
+      postOfficialFilter,
     };
   };
 
@@ -390,14 +413,23 @@ export async function getRekapLikesByClient(
     postRoleFilter,
     postRegionalJoin: postRegionalJoinLikes,
     postRegionalFilter: postRegionalFilterLikes,
-  } = buildPostFilters(addParam, sharedClientParamIdx, sharedRoleParamIdx);
+    postOfficialJoin: postOfficialJoinLikes,
+    postOfficialFilter: postOfficialFilterLikes,
+  } = buildPostFilters(
+    addParam,
+    sharedClientParamIdx,
+    sharedRoleParamIdx,
+    officialAccountsOnly
+  );
   const {
     postClientFilter: postClientFilterPosts,
     postRoleJoin: postRoleJoinPosts,
     postRoleFilter: postRoleFilterPosts,
     postRegionalJoin: postRegionalJoinPosts,
     postRegionalFilter: postRegionalFilterPosts,
-  } = buildPostFilters(addPostParam);
+    postOfficialJoin: postOfficialJoinPosts,
+    postOfficialFilter: postOfficialFilterPosts,
+  } = buildPostFilters(addPostParam, null, null, officialAccountsOnly);
 
   let userWhere = '1=1';
   let likeCountsSelect = `
@@ -461,6 +493,7 @@ export async function getRekapLikesByClient(
       JOIN insta_post p ON p.shortcode = l.shortcode
       ${postRegionalJoinLikes}
       ${postRoleJoinLikes}
+      ${postOfficialJoinLikes}
       JOIN LATERAL (
         SELECT COALESCE(elem->>'username', trim(both '"' FROM elem::text)) AS username
         FROM jsonb_array_elements(l.likes) AS elem
@@ -468,6 +501,7 @@ export async function getRekapLikesByClient(
       WHERE ${postClientFilter}
         ${postRoleFilter}
         ${postRegionalFilterLikes}
+        ${postOfficialFilterLikes}
         AND ${tanggalFilter}
     ),
     like_counts AS (
@@ -507,9 +541,11 @@ export async function getRekapLikesByClient(
       FROM insta_post p
       ${postRegionalJoinPosts}
       ${postRoleJoinPosts}
+      ${postOfficialJoinPosts}
       WHERE ${postClientFilterPosts}
         ${postRoleFilterPosts}
         ${postRegionalFilterPosts}
+        ${postOfficialFilterPosts}
         AND ${postTanggalFilter}
     )
     SELECT COUNT(DISTINCT shortcode) AS total_post FROM posts`,
