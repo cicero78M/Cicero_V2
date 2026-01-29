@@ -8,6 +8,7 @@ const operatorAllowlist = [
   { path: '/dashboard/stats', type: 'exact' },
   { path: '/dashboard/login-web/recap', type: 'exact' },
   { path: '/dashboard/social-media/instagram/analysis', type: 'exact' },
+  { path: '/insta/rapid-profile', type: 'exact' },
   { path: '/users', type: 'exact' },
   { path: '/users/create', type: 'exact' },
   { path: '/users/list', type: 'exact' },
