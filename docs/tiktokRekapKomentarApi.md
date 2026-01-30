@@ -162,6 +162,24 @@ Ketika `role` dan `scope` dikirim, filter mengikuti aturan berikut:
 - Selain kondisi di atas:
   - **Data tugas** dan **personil** mengikuti `client_id` yang diminta.
 
+## Filter Personil (User Source)
+
+Rekap personil berasal dari tabel `"user"` yang digabung dengan `clients`, lalu
+disaring dengan aturan yang konsisten dengan dashboard stats:
+
+- **Client direktorat (`client_type = direktorat`)**
+  - Personil diambil berdasarkan **role** (`role` query).
+  - Jika `role` tidak dikirim, fallback ke `role_name = client_id` agar tetap
+    konsisten dengan penandaan role direktorat di dashboard.
+- **Client non-direktorat**
+  - Personil diambil jika **`user.client_id = client_id`** **atau**
+    **punya role `role_name = client_id`** (fallback untuk user lintas client).
+  - Jika `role` dikirim dan termasuk allowlist
+    (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`, `operator`), maka role
+    tersebut diterapkan **sebagai filter tambahan** di atas klausa dasar.
+- **Filter `regional_id`** (jika dikirim) diterapkan **setelah** aturan di atas
+  untuk membatasi personil ke client dengan regional tertentu.
+
 ## Regional Filter
 
 Jika `regional_id` dikirim, data post dan personil hanya akan dihitung untuk client yang berada pada regional tersebut. Contoh: `regional_id=JATIM` membatasi rekap ke struktur Polda Jatim.
