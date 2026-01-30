@@ -129,18 +129,6 @@ export async function getInstaRekapLikes(req, res) {
               message: "client_id pengguna tidak ditemukan",
             });
           }
-          if (client_id && client_id.toLowerCase() !== tokenClientId.toLowerCase()) {
-            sendConsoleDebug({
-              tag: "INSTA",
-              msg: `getInstaRekapLikes operator/org menggunakan client_id token (${tokenClientId}) menggantikan query (${client_id})`,
-            });
-          } else {
-            sendConsoleDebug({
-              tag: "INSTA",
-              msg: `getInstaRekapLikes operator/org menggunakan client_id token (${tokenClientId})`,
-            });
-          }
-          client_id = tokenClientId;
           postClientId = tokenClientId;
           userClientId = tokenClientId;
           userRoleFilter = "operator";
