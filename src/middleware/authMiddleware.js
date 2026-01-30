@@ -10,6 +10,7 @@ const operatorAllowlist = [
   { path: '/dashboard/social-media/instagram/analysis', type: 'exact' },
   { path: '/insta/rekap-likes', type: 'exact' },
   { path: '/insta/rapid-profile', type: 'exact' },
+  { path: '/tiktok/rekap-komentar', type: 'exact' },
   { path: '/users', type: 'exact' },
   { path: '/users/create', type: 'exact' },
   { path: '/users/list', type: 'exact' },
