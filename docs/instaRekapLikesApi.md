@@ -19,8 +19,9 @@ Operator dengan client bertipe **ORG** sekarang diizinkan mengakses endpoint ini
 - `role` (recommended; used for standardized scope handling)
 - `scope` (recommended; values: `direktorat` or `org`)
 - `regional_id` (optional; filter hasil hanya untuk client dengan `regional_id` tertentu, mis. `JATIM`)
+- `official_only` (optional; jika `true`, membatasi data tugas ke akun Instagram official untuk client ORG ketika `scope=org` dan `role=operator`)
 
-Catatan: role `operator` untuk client bertipe **ORG** diizinkan menggunakan endpoint ini. Pada kondisi tersebut, data tugas akan disaring menggunakan akun Instagram official berdasarkan `client_id` (lihat penjelasan scope `org` di bawah).
+Catatan: role `operator` untuk client bertipe **ORG** diizinkan menggunakan endpoint ini. Filter akun official kini **opsional** melalui `official_only=true` (lihat penjelasan scope `org` di bawah). Defaultnya menghitung semua `insta_post` milik client.
 
 Example:
 
@@ -145,9 +146,10 @@ When `role` and `scope` are provided, the endpoint follows these rules:
 - Jika `role` adalah `operator`:
   - **Data tugas** diambil berdasarkan `client_id` yang dipilih pada query (atau default ke `client_id` token bila tidak ada query).
   - Jika `client_id` berbeda dari token, server akan mengecek hak akses (mis. `client_ids`) sebelum melanjutkan.
-  - Untuk client bertipe **ORG**, daftar tugas dibatasi ke konten Instagram dari akun official
+  - Untuk client bertipe **ORG**, daftar tugas **hanya** dibatasi ke konten Instagram dari akun official
     yang tersimpan di `satbinmas_official_accounts` (platform `instagram`, `is_active = true`)
-    melalui relasi `satbinmas_official_media`, dengan filter `client_id` pada akun official.
+    melalui relasi `satbinmas_official_media`, **jika** `official_only=true`.
+  - Default `official_only=false` sehingga rekap menghitung semua `insta_post` milik client pada periode yang diminta.
   - **Data personil** dibatasi pada role `operator`.
   - **Otorisasi** memverifikasi `client_id` yang dipilih sesuai akses pengguna (token atau daftar `client_ids`).
 - Selain kondisi di atas:

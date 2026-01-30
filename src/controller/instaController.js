@@ -18,6 +18,13 @@ import { formatLikesRecapResponse } from "../utils/likesRecapFormatter.js";
 import { normalizeHandleValue } from "../utils/handleNormalizer.js";
 import * as clientModel from "../model/clientModel.js";
 
+function parseOfficialOnlyFlag(value) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  return ["true", "1", "yes", "y"].includes(normalized);
+}
+
 function normalizeInstagramUsername(value) {
   const normalizedHandle = normalizeHandleValue(value);
   return normalizedHandle ? normalizedHandle.replace(/^@/, "") : "";
@@ -33,6 +40,7 @@ export async function getInstaRekapLikes(req, res) {
   const requestedRole = req.query.role || req.user?.role;
   const requestedScope = req.query.scope;
   const requestedRegionalId = req.query.regional_id || req.user?.regional_id;
+  const officialOnlyFlag = parseOfficialOnlyFlag(req.query.official_only);
   const regionalId = requestedRegionalId
     ? String(requestedRegionalId).trim().toUpperCase()
     : null;
@@ -141,9 +149,11 @@ export async function getInstaRekapLikes(req, res) {
           postClientId = client_id;
           userClientId = client_id;
           userRoleFilter = "operator";
-          const tokenClient = await clientModel.findById(client_id);
-          officialAccountsOnly =
-            tokenClient?.client_type?.toLowerCase() === "org";
+          if (officialOnlyFlag) {
+            const tokenClient = await clientModel.findById(client_id);
+            officialAccountsOnly =
+              tokenClient?.client_type?.toLowerCase() === "org";
+          }
         } else if (directorateRoles.includes(resolvedRole)) {
           postClientId = resolvedRole;
           userClientId = req.user?.client_id || client_id;

@@ -142,13 +142,15 @@ business rules before calling the model:
    `secUid` terbaru per akun dengan jeda bawaan 1,5 detik. Setiap keberhasilan
    atau kegagalan dicatat per client agar rekap WA dapat menampilkan akun
    tersinkron, error, dan client tanpa akun TikTok sama sekali.【F:src/service/satbinmasOfficialTiktokService.js†L1-L143】
-8. Endpoint `GET /api/insta/rekap-likes` untuk operator ORG kini membatasi
-   perhitungan tugas ke konten Instagram yang sudah terekam sebagai akun
-   official di `satbinmas_official_accounts` (platform `instagram`, `is_active`
-   true) dengan memanfaatkan relasi `satbinmas_official_media`, sehingga
-   laporan likes tetap konsisten dengan daftar akun resmi yang tersentral. Akses
-   operator ORG ke endpoint ini telah dibuka melalui allowlist autentikasi agar
-   endpoint bisa dipakai langsung oleh operator yang memenuhi scope.
+8. Endpoint `GET /api/insta/rekap-likes` untuk operator ORG kini menggunakan
+   filter akun official secara **opsional**. Tambahkan query
+   `official_only=true` untuk membatasi perhitungan tugas ke konten Instagram
+   yang sudah terekam sebagai akun official di `satbinmas_official_accounts`
+   (platform `instagram`, `is_active` true) dengan memanfaatkan relasi
+   `satbinmas_official_media`. Tanpa flag tersebut, rekap menghitung seluruh
+   `insta_post` milik client. Akses operator ORG ke endpoint ini telah dibuka
+   melalui allowlist autentikasi agar endpoint bisa dipakai langsung oleh
+   operator yang memenuhi scope.
 
 ## Controller & Routing
 Three authenticated endpoints are exposed under the client routes namespace:
