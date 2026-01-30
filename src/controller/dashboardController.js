@@ -97,9 +97,13 @@ export async function getDashboardStats(req, res) {
       }
     }
 
+    const shouldFilterOperatorUsers =
+      resolvedScope === "org" && resolvedRole === "operator";
+    const userRoleFilter = shouldFilterOperatorUsers ? "operator" : null;
+
     const [clients, users, igPostCount, ttPostCount] = await Promise.all([
       getAllClients(),
-      getAllUsers(postClientId),
+      getAllUsers(postClientId, userRoleFilter),
       getInstaPostCount(postClientId, periode, tanggal, start_date, end_date, {
         role: resolvedRole,
         scope: resolvedScope,
