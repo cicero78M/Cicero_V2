@@ -22,6 +22,10 @@ Endpoint ini menerima **dua** jenis token:
 Perilaku `role`/`scope` tetap sama dengan logic di controller:
 `role` default ke `req.user.role`, dan kombinasi `role=operator` + `scope=org` akan menggunakan `req.user.client_id` sebagai sumber `client_id`.
 
+**Operator allowlist (authRequired):**
+- Endpoint ini termasuk allowlist operator dengan path **exact** `/tiktok/rekap-komentar`.
+- Pencocokan dilakukan secara exact terhadap `req.path`, sehingga subpath seperti `/tiktok/rekap-komentar/summary` **tidak** otomatis diizinkan.
+
 ### Query Parameters
 
 - `client_id` (required)
