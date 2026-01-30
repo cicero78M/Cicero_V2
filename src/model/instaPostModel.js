@@ -368,9 +368,19 @@ export async function countPostsByClient(
 
   const normalizedClientId = client_id ? String(client_id).trim() : null;
   const normalizedRole = options.role ? String(options.role).trim().toLowerCase() : null;
+  const normalizedScope = options.scope ? String(options.scope).trim().toLowerCase() : null;
+  const normalizedIgClientIdOverride = options.igClientIdOverride
+    ? String(options.igClientIdOverride).trim()
+    : null;
   const normalizedRegionalId = options.regionalId
     ? String(options.regionalId).trim().toUpperCase()
     : null;
+  const shouldForceClientFilter =
+    normalizedScope === 'org' && normalizedRole === 'operator';
+  const resolvedClientId =
+    shouldForceClientFilter && normalizedIgClientIdOverride
+      ? normalizedIgClientIdOverride
+      : normalizedClientId;
 
   const addDateFilter = (addParamFn) => {
     let filter = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
@@ -404,7 +414,7 @@ export async function countPostsByClient(
     return filter;
   };
 
-  const shouldUseRoleFilter = Boolean(normalizedRole);
+  const shouldUseRoleFilter = Boolean(normalizedRole) && !shouldForceClientFilter;
 
   const executeCount = async (useRoleFilter) => {
     const params = [];
@@ -420,8 +430,8 @@ export async function countPostsByClient(
       joins.push('JOIN insta_post_roles pr ON pr.shortcode = p.shortcode');
       const roleIdx = addParam(normalizedRole);
       whereClauses.push(`LOWER(TRIM(pr.role_name)) = LOWER(${roleIdx})`);
-    } else if (normalizedClientId) {
-      const clientIdx = addParam(normalizedClientId);
+    } else if (resolvedClientId) {
+      const clientIdx = addParam(resolvedClientId);
       whereClauses.push(`LOWER(TRIM(p.client_id)) = LOWER(${clientIdx})`);
     }
 
