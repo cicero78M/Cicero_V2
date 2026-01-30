@@ -3,6 +3,16 @@ import * as dashboardUserModel from '../model/dashboardUserModel.js';
 import { query } from '../repository/db.js';
 import redis from '../config/redis.js';
 
+function getTokenFromRequest(req) {
+  const authHeader = req.headers.authorization;
+  return (
+    req.cookies?.token ||
+    (authHeader?.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : authHeader)
+  );
+}
+
 function normalizeClientIds(clientIds) {
   if (!Array.isArray(clientIds)) {
     return [];
@@ -28,12 +38,7 @@ async function resolveDashboardRole(dashboardUser) {
 }
 
 export async function verifyDashboardToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token =
-    req.cookies?.token ||
-    (authHeader?.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : authHeader);
+  const token = getTokenFromRequest(req);
   if (!token) {
     return res.status(401).json({ success: false, message: 'Token required' });
   }
@@ -81,6 +86,42 @@ export async function verifyDashboardToken(req, res, next) {
     next();
   } catch (err) {
     console.error('[AUTH] Failed to verify dashboard token:', err);
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+}
+
+export async function verifyDashboardOrClientToken(req, res, next) {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token required' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    console.error('[AUTH] Failed to verify token:', err);
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+
+  try {
+    const exists = await redis.get(`login_token:${token}`);
+    if (!exists) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    if (String(exists).startsWith('dashboard:')) {
+      return verifyDashboardToken(req, res, next);
+    }
+
+    const userPayload = { ...payload };
+    if (!userPayload.client_id && typeof exists === 'string' && !exists.includes(':')) {
+      userPayload.client_id = exists;
+    }
+    req.user = userPayload;
+    return next();
+  } catch (err) {
+    console.error('[AUTH] Failed to validate login token:', err);
     return res.status(401).json({ success: false, message: 'Invalid token' });
   }
 }
