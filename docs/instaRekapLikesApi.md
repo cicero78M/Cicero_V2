@@ -8,7 +8,7 @@ The `getInstaRekapLikes` endpoint returns Instagram like summaries for a client.
 
 ## Access Control
 
-Operator dengan client bertipe **ORG** sekarang diizinkan mengakses endpoint ini melalui allowlist autentikasi, selama token dan scope valid. Untuk operator ORG, sistem akan menyesuaikan `client_id` mengikuti token agar otorisasi tetap aman.
+Operator dengan client bertipe **ORG** sekarang diizinkan mengakses endpoint ini melalui allowlist autentikasi, selama token dan scope valid. Untuk operator ORG, sistem selalu mengambil `client_id` dari token (query `client_id` diabaikan bila berbeda) agar otorisasi tetap aman.
 
 ### Query Parameters
 
@@ -143,7 +143,7 @@ When `role` and `scope` are provided, the endpoint follows these rules:
   - **Data personil** mengikuti `client_id` pengguna yang sedang login (token) dan dibatasi pada role direktorat yang sama.
   - **Perhitungan like** tetap mengikuti shortcode tugas direktorat, meskipun `client_id` personil berbeda.
 - Jika `role` adalah `operator`:
-  - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token).
+  - **Data tugas** diambil berdasarkan `client_id` asli pengguna (token). Jika query mengirim `client_id` yang berbeda, nilainya akan diabaikan dan diselaraskan ke `client_id` token.
   - Untuk client bertipe **ORG**, daftar tugas dibatasi ke konten Instagram dari akun official
     yang tersimpan di `satbinmas_official_accounts` (platform `instagram`, `is_active = true`)
     melalui relasi `satbinmas_official_media`, dengan filter `client_id` pada akun official.
