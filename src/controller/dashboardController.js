@@ -61,6 +61,7 @@ export async function getDashboardStats(req, res) {
     const tanggal = req.query.tanggal;
     const start_date = req.query.start_date || req.query.tanggal_mulai;
     const end_date = req.query.end_date || req.query.tanggal_selesai;
+    const requiresRealtimeConsistency = Boolean(tanggal);
 
     let resolvedRole = roleLower || null;
     let resolvedScope = scopeLower || req.user?.scope || null;
@@ -121,11 +122,13 @@ export async function getDashboardStats(req, res) {
         scope: resolvedScope,
         regionalId,
         igClientIdOverride,
+        useCache: !requiresRealtimeConsistency,
       }),
       getTiktokPostCount(postClientId, periode, tanggal, start_date, end_date, {
         role: resolvedRole,
         scope: resolvedScope,
         regionalId,
+        useCache: !requiresRealtimeConsistency,
       }),
     ]);
 

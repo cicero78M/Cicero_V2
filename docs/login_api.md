@@ -280,6 +280,7 @@ Resolusi konteks:
 - `scope=direktorat` memakai `role` dan `regional_id` sebagai filter tambahan pada data post.
 - Jika `role`/`scope` tidak dikirim, perilaku lama dipertahankan (mis. fallback `client_id=ditbinmas` bila token ber-role `ditbinmas`), tetapi perhitungan post tetap membawa `regional_id` dari token jika ada.
 - Untuk hitungan Instagram, `scope=direktorat` akan memakai `role` sebagai filter `insta_post_roles` terlebih dahulu. Jika hasilnya kosong dan `client_id` yang diminta adalah client bertipe direktorat, backend otomatis fallback ke filter `client_id` langsung (mirroring TikTok). Parameter `regional_id` membatasi hitungan hanya pada klien dengan `regional_id` yang cocok sehingga dashboard bisa meminta agregasi per-wilayah tanpa mencampur regional lain.
+- Cache post count memakai Redis dengan TTL default 60 detik. Jika payload memuat `tanggal`, TTL cache dipersingkat (10 detik) untuk menjaga data lebih segar; khusus endpoint dashboard stats, permintaan dengan `tanggal` menonaktifkan cache agar konsisten dengan rekap likes real-time.
 
 Contoh response:
 ```json
