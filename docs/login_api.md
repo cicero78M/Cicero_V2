@@ -275,7 +275,7 @@ Endpoint ini sekarang mengikuti aturan `role`/`scope`/`regional_id` yang sama de
 
 Resolusi konteks:
 - Jika `scope`/`role` dikirim, backend akan mewajibkan `role` dan memvalidasi `scope` (`org`/`direktorat`).
-- `scope=org` dengan `role=operator` selalu memakai `client_id` dari token (bukan dari query/header).
+- `scope=org` dengan `role=operator` selalu memakai `client_id` dari token (bukan dari query/header). Untuk `igPosts`, penghitungan **selalu** dikunci ke `client_id` token tersebut meski ada penyesuaian konteks direktorat lainnya.
 - `scope=org` dengan role direktorat (`ditbinmas`, `ditlantas`, `bidhumas`, `ditsamapta`) menghitung post berdasarkan role tersebut sebagai `client_id` efektif.
 - `scope=direktorat` memakai `role` dan `regional_id` sebagai filter tambahan pada data post.
 - Jika `role`/`scope` tidak dikirim, perilaku lama dipertahankan (mis. fallback `client_id=ditbinmas` bila token ber-role `ditbinmas`), tetapi perhitungan post tetap membawa `regional_id` dari token jika ada.

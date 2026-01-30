@@ -48,9 +48,10 @@ async function getCachedCount(platform, clientId, periode, tanggal, startDate, e
 
 export function getInstaPostCount(clientId, periode, tanggal, startDate, endDate, roleOrOptions, scopeOrOptions, regionalIdArg) {
   const options = normalizeOptions(roleOrOptions, scopeOrOptions, regionalIdArg);
+  const cacheClientId = options.igClientIdOverride || clientId;
   return getCachedCount(
     'instagram',
-    clientId,
+    cacheClientId,
     periode,
     tanggal,
     startDate,

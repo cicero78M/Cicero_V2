@@ -65,6 +65,8 @@ export async function getDashboardStats(req, res) {
     let resolvedRole = roleLower || null;
     let resolvedScope = scopeLower || req.user?.scope || null;
     let postClientId = client_id;
+    const tokenClientId = req.user?.client_id || null;
+    let igClientIdOverride = null;
 
     if (usesStandardPayload) {
       resolvedScope = scopeLower || "org";
@@ -83,18 +85,28 @@ export async function getDashboardStats(req, res) {
         postClientId = client_id;
       } else if (resolvedScope === "org") {
         if (resolvedRole === "operator") {
-          const tokenClientId = req.user?.client_id;
           if (!tokenClientId) {
             return res.status(400).json({
               success: false,
               message: "client_id pengguna tidak ditemukan",
             });
           }
+          igClientIdOverride = tokenClientId;
           postClientId = tokenClientId;
         } else if (DIRECTORATE_ROLES.includes(resolvedRole)) {
           postClientId = resolvedRole;
         }
       }
+    }
+
+    if (resolvedScope === "org" && resolvedRole === "operator") {
+      if (!tokenClientId) {
+        return res.status(400).json({
+          success: false,
+          message: "client_id pengguna tidak ditemukan",
+        });
+      }
+      igClientIdOverride = tokenClientId;
     }
 
     const shouldFilterOperatorUsers =
@@ -108,6 +120,7 @@ export async function getDashboardStats(req, res) {
         role: resolvedRole,
         scope: resolvedScope,
         regionalId,
+        igClientIdOverride,
       }),
       getTiktokPostCount(postClientId, periode, tanggal, start_date, end_date, {
         role: resolvedRole,
