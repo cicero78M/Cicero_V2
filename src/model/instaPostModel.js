@@ -375,20 +375,8 @@ export async function countPostsByClient(
   const normalizedRegionalId = options.regionalId
     ? String(options.regionalId).trim().toUpperCase()
     : null;
-
-  let clientType = null;
-  if (normalizedClientId) {
-    const typeRes = await query(
-      'SELECT client_type FROM clients WHERE LOWER(TRIM(client_id)) = $1 LIMIT 1',
-      [normalizedClientId.toLowerCase()]
-    );
-    clientType = typeRes.rows[0]?.client_type?.toLowerCase() || null;
-  }
-
   const shouldForceClientFilter =
     normalizedScope === 'org' && normalizedRole === 'operator';
-  const shouldUseClientIdForDirektorat =
-    normalizedScope === 'direktorat' || clientType === 'direktorat';
   const resolvedClientId =
     shouldForceClientFilter && normalizedIgClientIdOverride
       ? normalizedIgClientIdOverride
@@ -426,10 +414,7 @@ export async function countPostsByClient(
     return filter;
   };
 
-  const shouldUseRoleFilter =
-    Boolean(normalizedRole) &&
-    !shouldForceClientFilter &&
-    !shouldUseClientIdForDirektorat;
+  const shouldUseRoleFilter = Boolean(normalizedRole) && !shouldForceClientFilter;
 
   const executeCount = async (useRoleFilter) => {
     const params = [];
