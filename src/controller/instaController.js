@@ -53,7 +53,7 @@ export async function getInstaRekapLikes(req, res) {
   if (!usesStandardPayload && roleLower === "ditbinmas") {
     client_id = "ditbinmas";
   }
-  if (isOrgOperatorScope && req.user?.client_id) {
+  if (isOrgOperatorScope && req.user?.client_id && !client_id) {
     client_id = req.user.client_id;
   }
 
@@ -63,18 +63,26 @@ export async function getInstaRekapLikes(req, res) {
       .json({ success: false, message: "client_id wajib diisi" });
   }
 
-  if (req.user?.client_ids) {
-    const userClientIds = Array.isArray(req.user.client_ids)
+  const normalizedClientId = String(client_id).toLowerCase();
+  const userClientIds = req.user?.client_ids
+    ? Array.isArray(req.user.client_ids)
       ? req.user.client_ids
-      : [req.user.client_ids];
-    const idsLower = userClientIds.map((c) => c.toLowerCase());
-    const matchesTokenClient =
-      req.user?.client_id &&
-      req.user.client_id.toLowerCase() === client_id.toLowerCase();
+      : [req.user.client_ids]
+    : [];
+  const idsLower = userClientIds.map((c) => String(c).toLowerCase());
+  const matchesTokenClient =
+    req.user?.client_id &&
+    req.user.client_id.toLowerCase() === normalizedClientId;
+  const hasClientIdsAccess =
+    idsLower.includes(normalizedClientId) ||
+    matchesTokenClient ||
+    roleLower === normalizedClientId;
+
+  if (req.user?.client_ids) {
     if (
-      !idsLower.includes(client_id.toLowerCase()) &&
+      !idsLower.includes(normalizedClientId) &&
       !matchesTokenClient &&
-      roleLower !== client_id.toLowerCase()
+      roleLower !== normalizedClientId
     ) {
       return res
         .status(403)
@@ -83,8 +91,9 @@ export async function getInstaRekapLikes(req, res) {
   }
   if (
     req.user?.client_id &&
-    req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
-    roleLower !== client_id.toLowerCase()
+    req.user.client_id.toLowerCase() !== normalizedClientId &&
+    roleLower !== normalizedClientId &&
+    !hasClientIdsAccess
   ) {
     return res
       .status(403)
@@ -129,10 +138,10 @@ export async function getInstaRekapLikes(req, res) {
               message: "client_id pengguna tidak ditemukan",
             });
           }
-          postClientId = tokenClientId;
-          userClientId = tokenClientId;
+          postClientId = client_id;
+          userClientId = client_id;
           userRoleFilter = "operator";
-          const tokenClient = await clientModel.findById(tokenClientId);
+          const tokenClient = await clientModel.findById(client_id);
           officialAccountsOnly =
             tokenClient?.client_type?.toLowerCase() === "org";
         } else if (directorateRoles.includes(resolvedRole)) {
