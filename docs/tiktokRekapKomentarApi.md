@@ -7,6 +7,21 @@ client tertentu.
 
 `GET /api/tiktok/rekap-komentar`
 
+## Authentication
+
+Endpoint ini menerima **dua** jenis token:
+
+- **Dashboard token** (login dashboard): tersimpan di Redis dengan prefix `login_token:<token> = dashboard:<dashboard_user_id>`.
+  - Token divalidasi lewat flow dashboard dan data user diambil dari tabel dashboard.
+  - `req.user.role` mengikuti role dashboard yang sudah disesuaikan (jika hanya satu `client_id` dan client tersebut bertipe direktorat, role diset ke nama direktorat).
+  - `req.user.client_id` diisi bila dashboard user hanya memiliki satu `client_id`; daftar lengkap ada di `req.user.client_ids`.
+- **Operator/client token** dari `/login`: tersimpan di Redis sebagai `login_token:<token> = <client_id>` (tanpa prefix).
+  - JWT diverifikasi dengan `JWT_SECRET`, lalu payload dipakai sebagai `req.user`.
+  - `req.user.client_id` dan `req.user.role` mengikuti payload login (role biasanya `client` atau nama direktorat).
+
+Perilaku `role`/`scope` tetap sama dengan logic di controller:
+`role` default ke `req.user.role`, dan kombinasi `role=operator` + `scope=org` akan menggunakan `req.user.client_id` sebagai sumber `client_id`.
+
 ### Query Parameters
 
 - `client_id` (required)
