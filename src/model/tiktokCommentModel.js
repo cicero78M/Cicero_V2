@@ -394,20 +394,55 @@ export async function getRekapKomentarByClient(
     postClientFilter = `LOWER(p.client_id) = LOWER($${postClientIdx})`;
   }
 
-  let userWhere = "1=1";
-  if (resolvedUserClientId) {
-    const userClientIdx = addParam(resolvedUserClientId);
-    userWhere = `LOWER(u.client_id) = LOWER($${userClientIdx})`;
+  const baseUserClientId = resolvedUserClientId ?? client_id;
+  let resolvedUserClientType = clientType;
+  if (!resolvedUserClientType && baseUserClientId) {
+    const clientTypeRes = await query(
+      'SELECT client_type FROM clients WHERE client_id = $1',
+      [baseUserClientId]
+    );
+    resolvedUserClientType =
+      clientTypeRes.rows[0]?.client_type?.toLowerCase() || null;
   }
 
-  if (resolvedUserRole) {
-    const roleParamIndex = addParam(resolvedUserRole);
-    const roleFilter = `EXISTS (
+  const allowedRoles = [
+    'ditbinmas',
+    'ditlantas',
+    'bidhumas',
+    'ditsamapta',
+    'operator',
+  ];
+
+  let userWhere = "1=1";
+  if (resolvedUserClientType === 'direktorat') {
+    const roleName = resolvedUserRole || baseUserClientId;
+    if (roleName) {
+      const roleParamIndex = addParam(roleName);
+      userWhere = `EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = u.user_id AND r.role_name = $${roleParamIndex}
+      )`;
+    }
+  } else if (baseUserClientId) {
+    const userClientIdx = addParam(baseUserClientId);
+    userWhere = `(LOWER(u.client_id) = LOWER($${userClientIdx}) OR EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
-      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
-    )`;
-    userWhere = userWhere === "1=1" ? roleFilter : `${userWhere} AND ${roleFilter}`;
+      WHERE ur.user_id = u.user_id AND r.role_name = $${userClientIdx}
+    ))`;
+
+    if (
+      resolvedUserRole &&
+      allowedRoles.includes(String(resolvedUserRole).toLowerCase())
+    ) {
+      const roleParamIndex = addParam(resolvedUserRole);
+      userWhere += ` AND EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.role_id
+        WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${roleParamIndex})
+      )`;
+    }
   }
 
   if (regionalParamIdx !== null) {
