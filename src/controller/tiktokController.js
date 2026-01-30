@@ -14,6 +14,19 @@ import { formatTiktokCommentRecapResponse } from '../utils/tiktokCommentRecapFor
 const TIKTOK_PROFILE_URL_REGEX =
   /^https?:\/\/(www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?(\?.*)?$/i;
 
+function normalizeClientId(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeClientIdLower(value) {
+  const normalized = normalizeClientId(value);
+  return normalized ? normalized.toLowerCase() : null;
+}
+
 export function normalizeTikTokUsername(value) {
   if (typeof value !== 'string') {
     return null;
@@ -117,24 +130,29 @@ export async function getTiktokRekapKomentar(req, res) {
     client_id = req.user.client_id;
   }
 
-  if (!client_id) {
+  const normalizedClientId = normalizeClientId(client_id);
+  if (!normalizedClientId) {
     return res
       .status(400)
       .json({ success: false, message: 'client_id wajib diisi' });
   }
+  client_id = normalizedClientId;
+  const normalizedClientIdLower = normalizeClientIdLower(client_id);
 
   if (req.user?.client_ids) {
     const userClientIds = Array.isArray(req.user.client_ids)
       ? req.user.client_ids
       : [req.user.client_ids];
-    const idsLower = userClientIds.map((c) => c.toLowerCase());
+    const idsLower = userClientIds
+      .map((c) => normalizeClientIdLower(c))
+      .filter(Boolean);
     const matchesTokenClient =
       req.user?.client_id &&
-      req.user.client_id.toLowerCase() === client_id.toLowerCase();
+      normalizeClientIdLower(req.user.client_id) === normalizedClientIdLower;
     if (
-      !idsLower.includes(client_id.toLowerCase()) &&
+      !idsLower.includes(normalizedClientIdLower) &&
       !matchesTokenClient &&
-      roleLower !== client_id.toLowerCase()
+      roleLower !== normalizedClientIdLower
     ) {
       return res
         .status(403)
@@ -143,8 +161,8 @@ export async function getTiktokRekapKomentar(req, res) {
   }
   if (
     req.user?.client_id &&
-    req.user.client_id.toLowerCase() !== client_id.toLowerCase() &&
-    roleLower !== client_id.toLowerCase()
+    normalizeClientIdLower(req.user.client_id) !== normalizedClientIdLower &&
+    roleLower !== normalizedClientIdLower
   ) {
     return res
       .status(403)

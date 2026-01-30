@@ -16,6 +16,7 @@ client tertentu.
 - `role` (recommended; dipakai untuk standardisasi scope)
 - `scope` (recommended; value: `direktorat` atau `org`)
 - `regional_id` (optional; filter hasil hanya untuk client dengan `regional_id` tertentu, mis. `JATIM`)
+- `client_id` dibaca secara **case-insensitive** dan mengabaikan spasi di awal/akhir (mis. `JOMBANG ` tetap dianggap `JOMBANG`).
 
 Example:
 
