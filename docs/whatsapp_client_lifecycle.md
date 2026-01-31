@@ -55,18 +55,30 @@ Response contoh:
 ```json
 {
   "status": "ok",
+  "shouldInitWhatsAppClients": true,
   "clients": [
     {
       "label": "WA",
       "ready": true,
       "awaitingQrScan": false,
-      "lastDisconnectReason": null
+      "lastDisconnectReason": null,
+      "lastAuthFailureAt": null,
+      "fatalInitError": null,
+      "puppeteerExecutablePath": "/usr/bin/google-chrome",
+      "sessionPath": "/home/node/.cicero/wwebjs_auth/session-wa-prod"
     },
     {
       "label": "WA-USER",
       "ready": false,
       "awaitingQrScan": true,
-      "lastDisconnectReason": "LOGGED_OUT"
+      "lastDisconnectReason": "LOGGED_OUT",
+      "lastAuthFailureAt": "2024-01-10T08:30:00.000Z",
+      "fatalInitError": {
+        "type": "missing-chrome",
+        "message": "Chrome executable not found"
+      },
+      "puppeteerExecutablePath": null,
+      "sessionPath": "/home/node/.cicero/wwebjs_auth/session-wa-user"
     }
   ]
 }
@@ -77,6 +89,10 @@ Field yang disediakan per client:
 - `ready`: status readiness saat ini.
 - `awaitingQrScan`: `true` bila sesi menunggu QR scan ulang.
 - `lastDisconnectReason`: reason terakhir dari event `disconnected` (bisa `null`).
+- `lastAuthFailureAt`: waktu terakhir event `auth_failure` (ISO string atau `null`).
+- `fatalInitError`: detail error fatal saat init (mis. `{ type, message }`) atau `null`.
+- `puppeteerExecutablePath`: path executable Chrome yang dipakai (atau `null`).
+- `sessionPath`: path sesi WhatsApp untuk client tersebut (atau `null`).
 
 ## Agregasi message & deduplikasi
 
