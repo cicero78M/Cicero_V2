@@ -133,15 +133,18 @@ const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
 if (!shouldInitWhatsAppClients) {
-  if (process.env.NODE_ENV === "production") {
-    console.error(
-      "[WA] WA_SERVICE_SKIP_INIT=true is not allowed in production; refusing to start."
-    );
-    process.exit(1);
+  const isTestEnv = process.env.NODE_ENV === "test";
+  const expectsMessages = process.env.WA_EXPECT_MESSAGES === "true";
+  const skipInitMessage =
+    "[WA] WA_SERVICE_SKIP_INIT=true; message listeners will not be attached and the bot will not receive chats.";
+
+  if (!isTestEnv || expectsMessages) {
+    const failFastMessage = `${skipInitMessage} Refusing to start because this environment is expected to receive messages.`;
+    console.error(failFastMessage);
+    throw new Error(failFastMessage);
   }
-  console.warn(
-    "[WA] WA_SERVICE_SKIP_INIT=true; WA clients will not receive messages"
-  );
+
+  console.warn(skipInitMessage);
 }
 
 // Fixed delay to ensure consistent 3-second response timing
