@@ -916,14 +916,17 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       return false;
     }
     activeAuthDataPath = nextPath;
-    const authStrategy =
-      client.authStrategy || client.options?.authStrategy || null;
-    if (authStrategy && 'dataPath' in authStrategy) {
-      authStrategy.dataPath = nextPath;
+    // Update Puppeteer userDataDir instead of modifying LocalAuth dataPath
+    // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
+    const sessionPath = buildSessionPath(nextPath, clientId);
+    if (!client.options.puppeteer) {
+      client.options.puppeteer = {};
     }
-    emitter.sessionPath = resolveSessionPath();
+    client.options.puppeteer.userDataDir = sessionPath;
+    emitter.sessionPath = sessionPath;
     console.warn(
-      `[WWEBJS] Using fallback auth data path for clientId=${clientId} (${reasonLabel}): ${nextPath}.`
+      `[WWEBJS] Using fallback auth data path for clientId=${clientId} (${reasonLabel}): ${nextPath} ` +
+        `(userDataDir=${sessionPath}).`
     );
     return true;
   };
