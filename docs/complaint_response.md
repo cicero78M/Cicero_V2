@@ -32,7 +32,8 @@ Dashboard menyediakan endpoint untuk menyusun pesan respon komplain yang akan di
 - `POST /api/dashboard/komplain/tiktok`
 
 **Header**
-- `Authorization: Bearer <token-dashboard>`
+- Gunakan token dari login dashboard (`POST /api/auth/dashboard-login`), bukan token client `/api/auth/login`.
+- Kirim token sebagai `Authorization: Bearer <token-dashboard>` atau simpan pada cookie `token`.
 
 **Payload minimal**
 ```json
