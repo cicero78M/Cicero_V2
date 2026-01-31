@@ -27,6 +27,8 @@ Operators are also allowed to call `GET /users/list`. The handler now supports m
 
 Operator UI flows that create users are supported by the operator allowlist in `authMiddleware`. Operator tokens may access `POST /users` (mounted as `POST /api/users`) and `POST /users/create` so the user creation screen can submit either route without triggering the operator `403 Forbidden` guard.
 
+Operator tokens can also update a user record via `PUT /users/:id`. The auth middleware now allows operator requests when the method is `PUT` and the path matches `/users/<id>`; other `/users/*` paths still rely on the explicit allowlist entries above.
+
 `GET /users/list` also honors the `scope` and `role` query params when present. Use `scope=DIREKTORAT` to return all personnel who carry the requested directorate role (`role=ditbinmas`, `role=ditlantas`, `role=bidhumas`, or `role=ditsamapta`). Use `scope=ORG` to return personnel whose `client_id` matches the request and who also have the requested role. Invalid directorate roles return HTTP 400.
 
 The listing payload now includes `regional_id` (sourced from the matched `clients` row) for each user entry, so directory consumers can identify the regional scope alongside `client_id`.
