@@ -920,11 +920,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
     const sessionPath = buildSessionPath(nextPath, clientId);
     if (!client.options) {
-      console.warn(
-        `[WWEBJS] client.options is undefined for clientId=${clientId}; initializing options object. ` +
-          'This may indicate an unexpected client state.'
+      console.error(
+        `[WWEBJS] Cannot apply fallback auth data path for clientId=${clientId} because ` +
+          'client.options is undefined. This indicates an unexpected client state. Fallback aborted.'
       );
-      client.options = {};
+      return false;
     }
     if (!client.options.puppeteer) {
       client.options.puppeteer = {};
