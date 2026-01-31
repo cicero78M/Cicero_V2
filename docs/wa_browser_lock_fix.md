@@ -39,6 +39,13 @@ Instead of modifying the `LocalAuth` strategy's `dataPath` after client creation
 // Update Puppeteer userDataDir instead of modifying LocalAuth dataPath
 // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
 const sessionPath = buildSessionPath(nextPath, clientId);
+if (!client.options) {
+  console.warn(
+    `[WWEBJS] client.options is undefined for clientId=${clientId}; initializing options object. ` +
+      'This may indicate an unexpected client state.'
+  );
+  client.options = {};
+}
 if (!client.options.puppeteer) {
   client.options.puppeteer = {};
 }

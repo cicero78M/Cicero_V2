@@ -920,6 +920,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
     const sessionPath = buildSessionPath(nextPath, clientId);
     if (!client.options) {
+      console.warn(
+        `[WWEBJS] client.options is undefined for clientId=${clientId}; initializing options object. ` +
+          'This may indicate an unexpected client state.'
+      );
       client.options = {};
     }
     if (!client.options.puppeteer) {
