@@ -167,6 +167,24 @@ Lock Puppeteer (`SingletonLock`, `SingletonCookie`, `SingletonSocket`) berada di
 folder `session-<clientId>` yang sama, misalnya:
 `<authPath>/session-wa-gateway-prod/SingletonLock`.
 
+## Guard sesi bersama (shared session)
+
+Adapter kini memeriksa **lock aktif** sebelum `client.initialize()` untuk
+mendeteksi proses lain yang memakai `clientId`/`sessionPath` yang sama. Jika
+lock aktif ditemukan, inisialisasi akan gagal cepat agar tidak terjadi bentrok
+profil browser.
+
+Rekomendasi untuk multi-instance (PM2, systemd, container paralel):
+
+- Gunakan `WA_AUTH_DATA_PATH` **berbeda** per proses.
+- Atur `WA_WWEBJS_FALLBACK_AUTH_DATA_PATH` bila ingin fallback path terpisah.
+- Tambahkan suffix unik per proses dengan
+  `WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX` (contoh:
+  `WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX=worker-${PM2_INSTANCE_ID}`).
+
+Guard ini dapat dilewati secara eksplisit dengan
+`WA_WWEBJS_ALLOW_SHARED_SESSION=true` (default: `false`).
+
 Jika perlu memindahkan profil browser (userDataDir), atur:
 
 - `WA_AUTH_DATA_PATH` untuk lokasi utama userDataDir/session.

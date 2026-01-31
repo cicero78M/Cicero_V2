@@ -252,6 +252,10 @@ function shouldUseStrictLockRecovery() {
   return process.env.WA_WWEBJS_LOCK_RECOVERY_STRICT === 'true';
 }
 
+function shouldAllowSharedSession() {
+  return process.env.WA_WWEBJS_ALLOW_SHARED_SESSION === 'true';
+}
+
 function parseTimeoutEnvValue(rawValue) {
   const configured = Number.parseInt(rawValue || '', 10);
   if (Number.isNaN(configured)) {
@@ -343,6 +347,20 @@ async function detectActiveBrowserLock(profilePath) {
     };
   }
   return { isActive: false, reason: null, pid };
+}
+
+function buildSharedSessionGuardMessage({ clientId, sessionPath, activeLockStatus }) {
+  const pid = activeLockStatus?.pid ?? 'unknown';
+  const reason = activeLockStatus?.reason || 'active lock';
+  return (
+    `[WWEBJS] Shared session lock detected for clientId=${clientId} ` +
+    `(sessionPath=${sessionPath}, reason=${reason}, pid=${pid}). ` +
+    'Another process appears to be using this session. ' +
+    'Use distinct WA_AUTH_DATA_PATH per process or configure ' +
+    'WA_WWEBJS_FALLBACK_AUTH_DATA_PATH / WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX ' +
+    '(example: WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX=worker-\\${PM2_INSTANCE_ID}). ' +
+    'Set WA_WWEBJS_ALLOW_SHARED_SESSION=true to bypass this guard.'
+  );
 }
 
 function normalizeClientIdEnvSuffix(clientId) {
@@ -1293,6 +1311,19 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
     connectStartedAt = Date.now();
     connectInProgress = (async () => {
+      const sessionPath = resolveSessionPath();
+      const activeLockStatus = await detectActiveBrowserLock(sessionPath);
+      if (activeLockStatus.isActive && !shouldAllowSharedSession()) {
+        const warningMessage = buildSharedSessionGuardMessage({
+          clientId,
+          sessionPath,
+          activeLockStatus,
+        });
+        console.warn(warningMessage);
+        const error = new Error(warningMessage);
+        error.code = 'WA_WWEBJS_SHARED_SESSION_LOCK';
+        throw error;
+      }
       await cleanupStaleBrowserLocks(triggerLabel);
       await initializeClientWithRetry(triggerLabel);
     })().finally(() => {
