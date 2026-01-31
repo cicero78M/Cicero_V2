@@ -1,7 +1,5 @@
-import {
-  clientRequestHandlers,
-  parseComplaintMessage,
-} from '../handler/menu/clientRequestHandlers.js';
+import { clientRequestHandlers } from '../handler/menu/clientRequestHandlers.js';
+import { parseComplaintMessage } from './complaintService.js';
 import { normalizeUserId } from '../utils/utilsHelper.js';
 
 function normalizeWhatsAppId(value) {

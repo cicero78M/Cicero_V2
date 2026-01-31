@@ -43,4 +43,12 @@ Dashboard menyediakan endpoint untuk menyusun pesan respon komplain yang akan di
 }
 ```
 
-Field `issue`/`solution` boleh diganti dengan `kendala`, `solusi`, atau `tindak_lanjut`. Jika tidak diisi, sistem akan memakai narasi default untuk platform terkait. Respons API akan mengembalikan string pesan dengan format yang mengikuti `sendComplaintResponse` (sapaan, identitas pelapor, kendala, dan solusi), beserta data pelapor dan nomor WhatsApp dashboard user bila tersedia.
+Field `issue`/`solution` boleh diganti dengan `kendala`, `solusi`, atau `tindak_lanjut`. Jika tidak diisi, sistem akan mencoba menyusun kendala dan solusi otomatis dengan logika yang sama seperti responder WhatsApp (memakai modul `complaintService`). Anda dapat mengirimkan `message`/`pesan` berisi format *Pesan Komplain* agar sistem mengekstrak daftar kendala dan menghasilkan solusi otomatis sesuai akun Instagram/TikTok pelapor. Respons API akan mengembalikan string pesan dengan format yang mengikuti `sendComplaintResponse` (sapaan, identitas pelapor, kendala, dan solusi), beserta data pelapor dan nomor WhatsApp dashboard user bila tersedia.
+
+**Payload komplain otomatis**
+```json
+{
+  "nrp": "75020201",
+  "message": "Pesan Komplain\\nNRP: 75020201\\nNama: Nama Pelapor\\nUsername IG: @username\\n\\nKendala\\n- Sudah melaksanakan Instagram belum terdata."
+}
+```
