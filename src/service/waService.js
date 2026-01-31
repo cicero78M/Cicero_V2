@@ -537,6 +537,7 @@ const defaultGatewayClientId = "wa-gateway";
 const rawUserClientId = String(env.USER_WA_CLIENT_ID || "");
 const rawGatewayClientId = String(env.GATEWAY_WA_CLIENT_ID || "");
 const normalizedUserClientId = rawUserClientId.trim();
+const normalizedUserClientIdLower = normalizedUserClientId.toLowerCase();
 const trimmedGatewayClientId = rawGatewayClientId.trim();
 const normalizedGatewayClientId = trimmedGatewayClientId.toLowerCase();
 const resolvedGatewayClientId = normalizedGatewayClientId || undefined;
@@ -551,7 +552,7 @@ const resolveAuthDataPath = () => {
     path.join(baseDir, DEFAULT_AUTH_DATA_PARENT_DIR, DEFAULT_AUTH_DATA_DIR)
   );
 };
-const findGatewaySessionCaseMismatch = (authDataPath, clientId) => {
+const findSessionCaseMismatch = (authDataPath, clientId) => {
   if (!authDataPath || !clientId) {
     return null;
   }
@@ -582,8 +583,51 @@ const findGatewaySessionCaseMismatch = (authDataPath, clientId) => {
   return null;
 };
 
-const throwGatewayClientIdError = (message) => {
+const throwClientIdError = (message) => {
   throw new Error(`[WA] ${message}`);
+};
+
+const ensureUserClientIdConsistency = () => {
+  const authDataPath = resolveAuthDataPath();
+  if (!normalizedUserClientIdLower) {
+    throwClientIdError(
+      "USER_WA_CLIENT_ID kosong; set nilai unik lowercase (contoh: wa-userrequest-prod)."
+    );
+  }
+  if (
+    normalizedUserClientId &&
+    normalizedUserClientIdLower &&
+    normalizedUserClientId !== normalizedUserClientIdLower
+  ) {
+    const sessionPath = findSessionCaseMismatch(
+      authDataPath,
+      normalizedUserClientIdLower
+    );
+    const sessionHint = sessionPath
+      ? ` Ditemukan session berbeda di ${sessionPath}.`
+      : "";
+    throwClientIdError(
+      `USER_WA_CLIENT_ID harus lowercase. Nilai "${normalizedUserClientId}" tidak konsisten.${sessionHint} ` +
+        "Perbarui env/folder session agar cocok sebelum menjalankan proses."
+    );
+  }
+  if (normalizedUserClientIdLower === defaultUserClientId) {
+    throwClientIdError(
+      `USER_WA_CLIENT_ID masih default (${defaultUserClientId}); clientId harus unik dan lowercase. ` +
+        `Perbarui env dan bersihkan session lama di ${authDataPath}.`
+    );
+  }
+  const mismatchedSessionPath = findSessionCaseMismatch(
+    authDataPath,
+    normalizedUserClientIdLower
+  );
+  if (mismatchedSessionPath) {
+    throwClientIdError(
+      `Folder session "${path.basename(mismatchedSessionPath)}" tidak konsisten dengan ` +
+        `USER_WA_CLIENT_ID="${normalizedUserClientIdLower}". Rename atau hapus session lama di ` +
+        `${mismatchedSessionPath} agar konsisten.`
+    );
+  }
 };
 
 const ensureGatewayClientIdConsistency = () => {
@@ -593,30 +637,30 @@ const ensureGatewayClientIdConsistency = () => {
     normalizedGatewayClientId &&
     trimmedGatewayClientId !== normalizedGatewayClientId
   ) {
-    const sessionPath = findGatewaySessionCaseMismatch(
+    const sessionPath = findSessionCaseMismatch(
       authDataPath,
       normalizedGatewayClientId
     );
     const sessionHint = sessionPath
       ? ` Ditemukan session berbeda di ${sessionPath}.`
       : "";
-    throwGatewayClientIdError(
+    throwClientIdError(
       `GATEWAY_WA_CLIENT_ID harus lowercase. Nilai "${trimmedGatewayClientId}" tidak konsisten.${sessionHint} ` +
         "Perbarui env/folder session agar cocok sebelum menjalankan proses."
     );
   }
   if (normalizedGatewayClientId === defaultGatewayClientId) {
-    throwGatewayClientIdError(
+    throwClientIdError(
       `GATEWAY_WA_CLIENT_ID masih default (${defaultGatewayClientId}); clientId harus unik dan lowercase. ` +
         `Perbarui env dan bersihkan session lama di ${authDataPath}.`
     );
   }
-  const mismatchedSessionPath = findGatewaySessionCaseMismatch(
+  const mismatchedSessionPath = findSessionCaseMismatch(
     authDataPath,
     normalizedGatewayClientId
   );
   if (mismatchedSessionPath) {
-    throwGatewayClientIdError(
+    throwClientIdError(
       `Folder session "${path.basename(mismatchedSessionPath)}" tidak konsisten dengan ` +
         `GATEWAY_WA_CLIENT_ID="${normalizedGatewayClientId}". Rename atau hapus session lama di ` +
         `${mismatchedSessionPath} agar konsisten.`
@@ -624,7 +668,18 @@ const ensureGatewayClientIdConsistency = () => {
   }
 };
 
+const ensureClientIdUniqueness = () => {
+  if (normalizedUserClientIdLower === normalizedGatewayClientId) {
+    throwClientIdError(
+      `USER_WA_CLIENT_ID dan GATEWAY_WA_CLIENT_ID sama (${normalizedGatewayClientId}); ` +
+        "clientId harus unik. Perbarui env sebelum menjalankan proses."
+    );
+  }
+};
+
+ensureUserClientIdConsistency();
 ensureGatewayClientIdConsistency();
+ensureClientIdUniqueness();
 
 // Initialize WhatsApp client via whatsapp-web.js
 export let waClient = await createWwebjsClient();
