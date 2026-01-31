@@ -16,12 +16,25 @@ const operatorAllowlist = [
   { path: '/users/list', type: 'exact' },
 ];
 
-function isOperatorAllowedPath(pathname) {
-  return operatorAllowlist.some(({ path, type }) => {
+const operatorMethodAllowlist = [
+  { method: 'PUT', pattern: /^\/users\/[^/]+$/ },
+];
+
+function isOperatorAllowedPath(method, pathname) {
+  const isPathAllowed = operatorAllowlist.some(({ path, type }) => {
     if (type === 'prefix') {
       return pathname === path || pathname.startsWith(`${path}/`);
     }
     return pathname === path;
+  });
+  if (isPathAllowed) {
+    return true;
+  }
+  return operatorMethodAllowlist.some(({ method: allowedMethod, pattern }) => {
+    if (allowedMethod !== method) {
+      return false;
+    }
+    return pattern.test(pathname);
   });
 }
 
@@ -31,7 +44,7 @@ export function authRequired(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    if (decoded.role === 'operator' && !isOperatorAllowedPath(req.path)) {
+    if (decoded.role === 'operator' && !isOperatorAllowedPath(req.method, req.path)) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     next();
