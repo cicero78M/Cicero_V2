@@ -70,6 +70,14 @@ GET /api/analytics?client_id=demo_client
 
 This allows operators to scope responses to the correct client.
 
+### Dashboard Complaint Response Endpoints
+
+Dashboard operators can request formatted complaint responses (including WhatsApp delivery status) via:
+- `POST /api/dashboard/komplain/insta`
+- `POST /api/dashboard/komplain/tiktok`
+
+Payload and response details are documented in [docs/complaint_response.md](docs/complaint_response.md).
+
 ### Dashboard Anev Endpoint (`/api/dashboard/anev`)
 
 This endpoint surfaces premium analytics and engagement compliance for dashboard users. Access is guarded by:

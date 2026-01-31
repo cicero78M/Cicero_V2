@@ -45,6 +45,25 @@ Dashboard menyediakan endpoint untuk menyusun pesan respon komplain yang akan di
 
 Field `issue`/`solution` boleh diganti dengan `kendala`, `solusi`, atau `tindak_lanjut`. Jika tidak diisi, sistem akan mencoba menyusun kendala dan solusi otomatis dengan logika yang sama seperti responder WhatsApp (memakai modul `complaintService`). Anda dapat mengirimkan `message`/`pesan` berisi format *Pesan Komplain* agar sistem mengekstrak daftar kendala dan menghasilkan solusi otomatis sesuai akun Instagram/TikTok pelapor. Respons API akan mengembalikan string pesan dengan format yang mengikuti `sendComplaintResponse` (sapaan, identitas pelapor, kendala, dan solusi), beserta data pelapor dan nomor WhatsApp dashboard user bila tersedia.
 
+**Format payload**
+```json
+{
+  "nrp": "75020201",
+  "issue": "Sudah melaksanakan Instagram belum terdata.",
+  "solution": "Mohon cek kembali data like di dashboard dan kirim bukti jika masih belum tercatat.",
+  "message": "Pesan Komplain\\nNRP: 75020201\\nNama: Nama Pelapor\\nUsername IG: @username\\n\\nKendala\\n- Sudah melaksanakan Instagram belum terdata.",
+  "instagram": "@username",
+  "tiktok": "@username",
+  "complaint": "Isi komplain mentah (opsional)."
+}
+```
+
+Keterangan:
+- `nrp` **wajib** diisi dengan NRP/NIP personel yang terdaftar.
+- `issue`/`solution` **opsional**. Jika kosong, sistem akan menggunakan fallback berdasarkan platform dan status akun.
+- `message`/`pesan`/`complaint`/`raw`/`text` **opsional** untuk menyuplai format *Pesan Komplain* agar parser mengekstrak `nrp`, `nama`, `polres`, `instagram`, `tiktok`, dan daftar kendala otomatis.
+- `instagram`/`insta`/`username_ig`/`username_instagram` dan `tiktok`/`username_tiktok` **opsional** sebagai fallback bila handle tidak tercantum di pesan.
+
 **Payload komplain otomatis**
 ```json
 {
@@ -62,6 +81,31 @@ Contoh ringkas objek `whatsappDelivery` pada response:
   "whatsappDelivery": {
     "personnel": { "status": "sent", "target": "6281234567890@c.us" },
     "dashboardUser": { "status": "invalid", "reason": "invalid_number" }
+  }
+}
+```
+
+**Contoh response lengkap (ringkas)**
+```json
+{
+  "success": true,
+  "data": {
+    "platform": "Instagram",
+    "message": "Selamat pagi! Kami menindaklanjuti laporan yang Anda sampaikan.\\n\\n*Pelapor*: Nama Pelapor\\n\\n*NRP/NIP*: 75020201\\n\\n*Kendala*:\\n- Sudah melaksanakan Instagram belum terdata.\\n\\n*Solusi/Tindak Lanjut*:\\n1) Pastikan like dan komentar dilakukan menggunakan akun yang tercatat (Instagram: @username).\\n2) Pastikan sudah mengisi absensi likes Instagram di dashboard.",
+    "issue": "Pesan Komplain\\nNRP/NIP: 75020201\\nNama: Nama Pelapor\\nInstagram: @username\\n\\nKendala\\n- Sudah melaksanakan Instagram belum terdata.",
+    "solution": "1) Pastikan like dan komentar dilakukan menggunakan akun yang tercatat (Instagram: @username).\\n2) Pastikan sudah mengisi absensi likes Instagram di dashboard.",
+    "channel": "whatsapp",
+    "whatsappDelivery": {
+      "personnel": { "status": "sent", "target": "6281234567890@c.us" },
+      "dashboardUser": { "status": "sent", "target": "6289876543210@c.us" }
+    },
+    "reporter": {
+      "nrp": "75020201",
+      "name": "Nama Pelapor",
+      "whatsapp": "6281234567890",
+      "email": "pelapor@example.com"
+    },
+    "dashboard": { "whatsapp": "6289876543210" }
   }
 }
 ```
