@@ -1028,15 +1028,31 @@ export function getWaReadinessSummary() {
     { label: "WA-USER", client: waUserClient },
     { label: "WA-GATEWAY", client: waGatewayClient },
   ];
+  const formatTimestamp = (value) =>
+    value ? new Date(value).toISOString() : null;
   return {
     shouldInitWhatsAppClients,
     clients: clients.map(({ label, client }) => {
       const state = getClientReadinessState(client, label);
+      const puppeteerExecutablePath =
+        typeof client?.getPuppeteerExecutablePath === "function"
+          ? client.getPuppeteerExecutablePath()
+          : client?.puppeteerExecutablePath;
+      const fatalInitError = client?.fatalInitError
+        ? {
+            type: client.fatalInitError.type || null,
+            message: client.fatalInitError.error?.message || null,
+          }
+        : null;
       return {
         label,
         ready: Boolean(state.ready),
         awaitingQrScan: Boolean(state.awaitingQrScan),
         lastDisconnectReason: state.lastDisconnectReason || null,
+        lastAuthFailureAt: formatTimestamp(state.lastAuthFailureAt),
+        fatalInitError,
+        puppeteerExecutablePath: puppeteerExecutablePath || null,
+        sessionPath: client?.sessionPath || null,
         messageListenerCount: getListenerCount(client, "message"),
         readyListenerCount: getListenerCount(client, "ready"),
       };
@@ -5290,7 +5306,12 @@ if (shouldInitWhatsAppClients) {
   await Promise.allSettled(initPromises);
 
   // Diagnostic checks to ensure message listeners are attached
-  logWaServiceDiagnostics(waClient, waUserClient, waGatewayClient);
+  logWaServiceDiagnostics(
+    waClient,
+    waUserClient,
+    waGatewayClient,
+    getWaReadinessSummary()
+  );
   checkMessageListenersAttached(waClient, waUserClient, waGatewayClient);
 }
 
