@@ -919,6 +919,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     // Update Puppeteer userDataDir instead of modifying LocalAuth dataPath
     // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
     const sessionPath = buildSessionPath(nextPath, clientId);
+    if (!client.options) {
+      client.options = {};
+    }
     if (!client.options.puppeteer) {
       client.options.puppeteer = {};
     }

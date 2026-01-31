@@ -28,7 +28,7 @@ This approach caused a conflict because:
 2. Modifying `dataPath` after client creation created a mismatch between:
    - What `LocalAuth` expected (its original path)
    - What Puppeteer was using (the modified path)
-3. WhatsApp-web.js detects this mismatch and throws: "LocalAuth is not compatible with a user-supplied userDataDir"
+3. whatsapp-web.js detects this mismatch and throws: "LocalAuth is not compatible with a user-supplied userDataDir"
 
 ## Solution
 
