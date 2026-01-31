@@ -328,13 +328,21 @@ async function detectActiveBrowserLock(profilePath) {
   const socketPath = path.join(profilePath, 'SingletonSocket');
   const pid = await readLockPid(lockPath);
   if (pid && isProcessRunning(pid)) {
-    return { isActive: true, reason: `pid=${pid}` };
+    return {
+      isActive: true,
+      reason: `pid=${pid}`,
+      pid,
+    };
   }
   const socketActive = await isSingletonSocketActive(socketPath);
   if (socketActive) {
-    return { isActive: true, reason: 'singleton socket active' };
+    return {
+      isActive: true,
+      reason: 'singleton socket active',
+      pid,
+    };
   }
-  return { isActive: false, reason: null };
+  return { isActive: false, reason: null, pid };
 }
 
 function normalizeClientIdEnvSuffix(clientId) {
@@ -984,9 +992,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     }
     const activeLockStatus = await detectActiveBrowserLock(profilePath);
     if (activeLockStatus.isActive) {
+      const activeLockPid = activeLockStatus.pid ?? 'unknown';
       console.warn(
         `[WWEBJS] Active browser lock detected before ${contextLabel} for clientId=${clientId} ` +
-          `(reason: ${activeLockStatus.reason}); skipping lock cleanup.`
+          `(reason: ${activeLockStatus.reason}, profilePath=${profilePath}, pid=${activeLockPid}); ` +
+          'skipping lock cleanup.'
       );
       return false;
     }
@@ -1012,8 +1022,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     const activeReason = activeLockStatus.reason
       ? ` (active lock: ${activeLockStatus.reason})`
       : '';
+    const activeLockDetails = isActiveLock
+      ? ` (profilePath=${profilePath}, pid=${activeLockStatus.pid ?? 'unknown'})`
+      : '';
     console.warn(
-      `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel})${activeReason}. ` +
+      `[WWEBJS] Detected browser lock for clientId=${clientId} (${triggerLabel})${activeReason}${activeLockDetails}. ` +
         `Waiting ${backoffMs}ms before retry to avoid hammering userDataDir.`,
       err?.message || err
     );
@@ -1056,6 +1069,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       await delay(backoffMs);
     }
 
+    let fallbackApplied = false;
     if (isActiveLock && lockActiveFailureCount >= lockFallbackThreshold) {
       fallbackAttempt += 1;
       const fallbackBasePath = resolveFallbackBasePath();
@@ -1064,7 +1078,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         clientId,
         fallbackAttempt
       );
-      const fallbackApplied = await applyAuthDataPath(
+      fallbackApplied = await applyAuthDataPath(
         fallbackPath,
         `lock active fallback attempt ${fallbackAttempt}`
       );
@@ -1075,6 +1089,23 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         );
         lockActiveFailureCount = 0;
       }
+    }
+
+    if (
+      isActiveLock &&
+      !strictLockRecovery &&
+      lockActiveFailureCount >= lockFallbackThreshold &&
+      !fallbackApplied
+    ) {
+      const activeLockPid = activeLockStatus.pid ?? 'unknown';
+      const error = new Error(
+        `[WWEBJS] Browser lock still active for clientId=${clientId} after ` +
+          `${lockActiveFailureCount} attempts (profilePath=${profilePath}, pid=${activeLockPid}). ` +
+          `Fallback userDataDir could not be applied. Stop the existing Chromium process or ` +
+          'configure a writable fallback path before retrying.'
+      );
+      error.code = 'WA_WWEBJS_LOCK_ACTIVE';
+      throw error;
     }
 
     if (isActiveLock && strictLockRecovery) {
@@ -1232,6 +1263,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       } catch (err) {
         lastError = err;
         if (err?.isMissingChromeError) {
+          throw err;
+        }
+        if (err?.code === 'WA_WWEBJS_LOCK_ACTIVE') {
           throw err;
         }
         if (attempt >= connectRetryAttempts) {

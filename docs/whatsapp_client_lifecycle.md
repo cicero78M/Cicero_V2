@@ -285,7 +285,9 @@ adapter akan:
 4. Jika lock **aktif**, adapter tidak menghapus file lock dan menggunakan backoff
    lebih panjang sebelum retry. Dengan `WA_WWEBJS_LOCK_RECOVERY_STRICT=true`, adapter
    akan **bail out** dengan error jelas agar operator memakai sesi yang sama atau
-   menghentikan proses lama secara eksplisit.
+   menghentikan proses lama secara eksplisit. Jika strict **false** tetapi fallback
+   userDataDir gagal diterapkan setelah melewati ambang `WA_WWEBJS_LOCK_FALLBACK_THRESHOLD`,
+   adapter juga akan melempar error terminal agar retry tidak terus berulang.
 5. Jika lock **aktif** berulang kali dan koneksi tetap gagal, adapter akan
    menggunakan **fallback userDataDir** yang unik (berbasis hostname/PID/attempt
    dan optional suffix) agar sesi baru bisa berjalan tanpa menimpa lock lama.
@@ -312,13 +314,16 @@ Langkah operasional saat lock aktif:
 Lock aktif biasanya terlihat dari salah satu log berikut:
 
 - `[WWEBJS] Active browser lock detected before <context> for clientId=...`
-  → ada proses Chromium yang masih hidup sehingga cleanup dilewati.
-- `[WWEBJS] Detected browser lock for clientId=... (<trigger>) (active lock: ...)`
+  → ada proses Chromium yang masih hidup sehingga cleanup dilewati, sekarang log
+  membawa `profilePath` dan `pid` agar operator bisa mematikan proses yang tepat.
+- `[WWEBJS] Detected browser lock for clientId=... (<trigger>) (active lock: ...) (profilePath=..., pid=...)`
   → fallback recovery berjalan dan akan menunggu backoff.
 - `[WWEBJS] Active browser lock detected for clientId=...; skipping lock cleanup`
   → mode aman/strict mencegah penghapusan lock aktif.
 - `[WWEBJS] Browser lock still active for clientId=... Reuse the existing session...`
   → strict mode menolak reinit; hentikan instance lama atau pakai userDataDir lain.
+- `[WWEBJS] Browser lock still active for clientId=... after <n> attempts (profilePath=..., pid=...)`
+  → fallback gagal diterapkan setelah melewati ambang, sehingga adapter berhenti retry.
 
 ### Lokasi userDataDir & file lock
 
