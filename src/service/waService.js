@@ -1015,6 +1015,69 @@ function registerClientReadiness(client, label) {
   getClientReadinessState(client, label);
 }
 
+function getInitReadinessIssue({ label, client }) {
+  const readinessState = getClientReadinessState(client, label);
+  const fatalInitError = client?.fatalInitError || null;
+  const missingChrome =
+    isFatalMissingChrome(client) || fatalInitError?.type === "missing-chrome";
+  const awaitingQrScan = Boolean(readinessState?.awaitingQrScan);
+  const authFailure = Boolean(readinessState?.lastAuthFailureAt);
+  const hasReadyState = Boolean(readinessState?.ready);
+
+  if (!missingChrome && !fatalInitError && hasReadyState) {
+    return null;
+  }
+
+  if (missingChrome) {
+    return {
+      label,
+      reason: "missing-chrome",
+      detail: fatalInitError?.error?.message || "Chrome executable not found",
+      remediation: missingChromeRemediationHint,
+    };
+  }
+
+  if (authFailure) {
+    return {
+      label,
+      reason: "auth-failure",
+      detail:
+        readinessState?.lastAuthFailureMessage ||
+        "WhatsApp auth failure detected",
+      remediation:
+        "Pastikan WA_AUTH_DATA_PATH benar, hapus sesi auth yang rusak, lalu scan QR ulang.",
+    };
+  }
+
+  if (awaitingQrScan) {
+    return {
+      label,
+      reason: "awaiting-qr",
+      detail:
+        readinessState?.lastDisconnectReason ||
+        "Awaiting QR scan for WhatsApp client",
+      remediation: "Scan QR terbaru pada log/terminal agar sesi tersambung.",
+    };
+  }
+
+  if (fatalInitError) {
+    return {
+      label,
+      reason: fatalInitError.type || "fatal-init",
+      detail: fatalInitError.error?.message || "Fatal WhatsApp init error",
+      remediation:
+        "Periksa konfigurasi WhatsApp (WA_WEB_VERSION*, WA_AUTH_DATA_PATH) dan ulangi init.",
+    };
+  }
+
+  return {
+    label,
+    reason: "not-ready",
+    detail: "WhatsApp client belum siap setelah inisialisasi",
+    remediation: "Cek log init, koneksi jaringan, lalu restart jika perlu.",
+  };
+}
+
 function getListenerCount(client, eventName) {
   if (typeof client?.listenerCount !== "function") {
     return null;
@@ -5304,6 +5367,30 @@ if (shouldInitWhatsAppClients) {
   scheduleFallbackReadyCheck(waGatewayClient);
 
   await Promise.allSettled(initPromises);
+
+  const shouldFailFastOnInit =
+    process.env.WA_EXPECT_MESSAGES === "true" ||
+    process.env.NODE_ENV === "production";
+  if (shouldFailFastOnInit) {
+    const initIssues = clientsToInit
+      .map((clientEntry) => getInitReadinessIssue(clientEntry))
+      .filter(Boolean);
+    if (initIssues.length > 0) {
+      initIssues.forEach((issue) => {
+        console.error(
+          `[WA] ${issue.label} init issue: ${issue.reason}. Remediation: ${issue.remediation}`
+        );
+      });
+      const summary = initIssues
+        .map(
+          (issue) => `${issue.label}:${issue.reason}${issue.detail ? ` (${issue.detail})` : ""}`
+        )
+        .join("; ");
+      throw new Error(
+        `[WA] WhatsApp clients not ready while expecting messages. ${summary}`
+      );
+    }
+  }
 
   // Diagnostic checks to ensure message listeners are attached
   logWaServiceDiagnostics(

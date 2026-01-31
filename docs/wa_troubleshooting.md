@@ -58,6 +58,15 @@ npm restart
 3. Check for authentication failures in logs
 4. Restart the application to trigger re-initialization
 
+**Fail-fast in production/expected-message environments**:
+- Setelah proses init selesai, service akan mengecek fatal init error dan readiness semua client.
+- Jika `WA_EXPECT_MESSAGES="true"` **atau** `NODE_ENV=production`, service **akan throw error** agar proses restart otomatis dan masalah terlihat.
+- Skenario yang memicu fail-fast:
+  - Missing Chrome (`missing-chrome`)
+  - Auth failure (sesi WA gagal/invalid)
+  - Awaiting QR scan (belum scan QR)
+- Log akan memberi langkah perbaikan singkat, misalnya set `WA_PUPPETEER_EXECUTABLE_PATH` atau scan QR ulang.
+
 ### 3. Message Event Listeners Not Attached
 
 **Symptom**: No log messages showing message reception despite WhatsApp being connected.
