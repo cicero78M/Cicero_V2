@@ -24,16 +24,18 @@ Catatan: Narasi lama yang menyebut "Absensi Amplifikasi" sudah diganti agar sela
   ```
 - Admin dapat membuka kembali menu dengan perintah `clientrequest` bila diperlukan.
 
-## API respon komplain dashboard
-Dashboard menyediakan endpoint untuk menyusun pesan respon komplain yang akan ditampilkan kembali di frontend sebelum dikirimkan melalui kanal lain.
+## API respon komplain
+Endpoint komplain dipakai untuk menyusun pesan respon yang akan ditampilkan kembali di frontend sebelum dikirimkan melalui kanal lain.
 
 **Endpoint**
 - `POST /api/dashboard/komplain/insta`
-- `POST /api/dashboard/komplain/tiktok`
+- `POST /api/tiktok/komplain`
 
 **Header**
-- Gunakan token dari login dashboard (`POST /api/auth/dashboard-login`), bukan token client `/api/auth/login`.
-- Kirim token sebagai `Authorization: Bearer <token-dashboard>` atau simpan pada cookie `token`.
+- Untuk Instagram: gunakan token login dashboard (`POST /api/auth/dashboard-login`).
+- Untuk TikTok: gunakan token login dashboard atau token client (`POST /api/auth/login`).
+- Kirim token sebagai `Authorization: Bearer <token>` atau simpan pada cookie `token`.
+- Jika memakai token client, akses hanya diizinkan untuk personel dengan `client_id` yang sama.
 
 **Payload minimal**
 ```json
@@ -74,7 +76,7 @@ Keterangan:
 ```
 
 ## Status pengiriman WhatsApp
-Ketika endpoint komplain dipanggil, sistem akan mencoba mengirimkan pesan yang sudah diformat ke dua target WhatsApp: nomor personel (`user.whatsapp`) dan nomor dashboard user (`req.dashboardUser.whatsapp`). Status pengiriman selalu dikembalikan di response frontend agar UI dapat menampilkan hasil pengiriman per nomor.
+Ketika endpoint komplain dipanggil, sistem akan mencoba mengirimkan pesan yang sudah diformat ke dua target WhatsApp: nomor personel (`user.whatsapp`) dan (bila token dashboard digunakan) nomor dashboard user (`req.dashboardUser.whatsapp`). Status pengiriman selalu dikembalikan di response frontend agar UI dapat menampilkan hasil pengiriman per nomor.
 
 Contoh ringkas objek `whatsappDelivery` pada response:
 ```json
