@@ -219,6 +219,17 @@ The `verifyDashboardToken` middleware revalidates dashboard JWTs against Redis a
 - `client_ids` always match the current `dashboard_user_clients` mapping.
 - When exactly one client is allowed, `client_id` is derived from the refreshed list; otherwise the field is omitted to prevent stale single-client scopes.
 
+Jika dashboard login atau request mengembalikan `403` dengan pesan **Operator belum memiliki klien yang diizinkan**, pastikan relasi `dashboard_user_clients` sudah terisi. Gunakan script berikut untuk memeriksa dan menambahkan `client_ids` yang sesuai (mis. `JOMBANG`) ke akun dashboard yang sedang login:
+
+```bash
+node scripts/updateDashboardUserClients.js --username <username> --client-ids JOMBANG
+```
+
+Script ini akan:
+- Memuat data dashboard user berdasarkan `--dashboard-user-id`, `--username`, atau `--whatsapp`.
+- Memverifikasi `client_id` di tabel `clients`.
+- Menambahkan relasi baru ke `dashboard_user_clients` dan menampilkan daftar terbaru `client_ids`.
+
 ## 4. Operator Access Allowlist
 
 Role `operator` hanya diperbolehkan mengakses endpoint tertentu di bawah `/api`. Permintaan ke endpoint lain akan tetap diblokir dengan status `403` untuk menjaga keamanan.
