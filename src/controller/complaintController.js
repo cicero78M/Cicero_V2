@@ -14,6 +14,7 @@ import {
   buildUpdateDataInstructions,
   normalizeComplaintHandle,
   parseComplaintMessage,
+  sendComplaintWhatsappResponse,
 } from "../service/complaintService.js";
 
 function normalizeText(value) {
@@ -216,6 +217,11 @@ async function handleComplaint(req, res, platformLabel) {
     : user?.email
     ? "email"
     : "unknown";
+  const whatsappDelivery = await sendComplaintWhatsappResponse({
+    message,
+    personnelWhatsapp: user?.whatsapp,
+    dashboardWhatsapp,
+  });
 
   sendSuccess(res, {
     platform: platformLabel,
@@ -223,6 +229,7 @@ async function handleComplaint(req, res, platformLabel) {
     issue,
     solution,
     channel,
+    whatsappDelivery,
     reporter: {
       nrp,
       name: reporterName,

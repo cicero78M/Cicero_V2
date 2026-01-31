@@ -4,6 +4,8 @@ import { fetchInstagramInfo } from "./instaRapidService.js";
 import { fetchTiktokProfile } from "./tiktokRapidService.js";
 import { hasUserLikedBetween } from "../model/instaLikeModel.js";
 import { hasUserCommentedBetween } from "../model/tiktokCommentModel.js";
+import { normalizeUserWhatsAppId, safeSendMessage } from "../utils/waHelper.js";
+import waClient, { waitForWaReady } from "./waService.js";
 
 const numberFormatter = new Intl.NumberFormat("id-ID");
 export const UPDATE_DATA_LINK = "https://papiqo.com/claim";
@@ -1058,4 +1060,55 @@ export async function buildComplaintSolutionsFromIssues(parsed, user, accountSta
   }
 
   return { solutionText: solutions.join("\n\n"), handledKeys };
+}
+
+function buildWhatsappDeliveryStatus(rawNumber) {
+  const normalizedRaw =
+    typeof rawNumber === "string" ? rawNumber.trim() : rawNumber ?? "";
+  if (!normalizedRaw) {
+    return { status: "skipped", reason: "empty", target: null };
+  }
+  const normalizedTarget = normalizeUserWhatsAppId(normalizedRaw);
+  if (!normalizedTarget) {
+    return { status: "invalid", reason: "invalid_number", target: null };
+  }
+  return { status: "pending", reason: null, target: normalizedTarget };
+}
+
+export async function sendComplaintWhatsappResponse({
+  message,
+  personnelWhatsapp,
+  dashboardWhatsapp,
+} = {}) {
+  const personnel = buildWhatsappDeliveryStatus(personnelWhatsapp);
+  const dashboardUser = buildWhatsappDeliveryStatus(dashboardWhatsapp);
+
+  const targets = [personnel, dashboardUser].filter(
+    (entry) => entry.status === "pending"
+  );
+
+  if (!targets.length) {
+    return { personnel, dashboardUser };
+  }
+
+  try {
+    await waitForWaReady();
+  } catch (err) {
+    const reason = `wa_not_ready: ${err?.message || "unknown_error"}`;
+    targets.forEach((entry) => {
+      entry.status = "failed";
+      entry.reason = reason;
+    });
+    return { personnel, dashboardUser };
+  }
+
+  for (const entry of targets) {
+    const sent = await safeSendMessage(waClient, entry.target, message);
+    entry.status = sent ? "sent" : "failed";
+    if (!sent) {
+      entry.reason = "send_failed";
+    }
+  }
+
+  return { personnel, dashboardUser };
 }

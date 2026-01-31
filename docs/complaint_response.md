@@ -52,3 +52,22 @@ Field `issue`/`solution` boleh diganti dengan `kendala`, `solusi`, atau `tindak_
   "message": "Pesan Komplain\\nNRP: 75020201\\nNama: Nama Pelapor\\nUsername IG: @username\\n\\nKendala\\n- Sudah melaksanakan Instagram belum terdata."
 }
 ```
+
+## Status pengiriman WhatsApp
+Ketika endpoint komplain dipanggil, sistem akan mencoba mengirimkan pesan yang sudah diformat ke dua target WhatsApp: nomor personel (`user.whatsapp`) dan nomor dashboard user (`req.dashboardUser.whatsapp`). Status pengiriman selalu dikembalikan di response frontend agar UI dapat menampilkan hasil pengiriman per nomor.
+
+Contoh ringkas objek `whatsappDelivery` pada response:
+```json
+{
+  "whatsappDelivery": {
+    "personnel": { "status": "sent", "target": "6281234567890@c.us" },
+    "dashboardUser": { "status": "invalid", "reason": "invalid_number" }
+  }
+}
+```
+
+Nilai status yang mungkin:
+- `sent`: pesan berhasil dikirim.
+- `failed`: pengiriman gagal (contoh: client WA belum siap atau error saat kirim).
+- `invalid`: nomor WA tidak valid.
+- `skipped`: nomor WA kosong/tidak tersedia.
