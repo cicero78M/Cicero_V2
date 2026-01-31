@@ -49,6 +49,27 @@ function resolveComplaintSource(body) {
   );
 }
 
+function normalizeClientId(value) {
+  if (!value) return "";
+  return String(value).trim().toLowerCase();
+}
+
+function isDashboardAuthorized(dashboardUser, targetClientId) {
+  if (!dashboardUser) return false;
+  const clientIds = Array.isArray(dashboardUser.client_ids)
+    ? dashboardUser.client_ids
+    : [];
+  const normalizedTarget = normalizeClientId(targetClientId);
+  return clientIds.some((clientId) => normalizeClientId(clientId) === normalizedTarget);
+}
+
+function isClientAuthorized(clientIdFromToken, targetClientId) {
+  if (!clientIdFromToken) return false;
+  return (
+    normalizeClientId(clientIdFromToken) === normalizeClientId(targetClientId)
+  );
+}
+
 function resolveComplaintHandles(body) {
   const instagram =
     normalizeComplaintHandle(body.instagram) ||
@@ -137,6 +158,22 @@ async function handleComplaint(req, res, platformLabel) {
     return res
       .status(404)
       .json({ success: false, message: "User tidak ditemukan" });
+  }
+
+  const targetClientId = user.client_id;
+  const clientIdFromToken = req.user?.client_id;
+  if (req.dashboardUser) {
+    if (!isDashboardAuthorized(req.dashboardUser, targetClientId)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden" });
+    }
+  } else if (clientIdFromToken) {
+    if (!isClientAuthorized(clientIdFromToken, targetClientId)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden" });
+    }
   }
 
   const reporterName = formatNama(user) || user.nama || nrp;
