@@ -160,11 +160,12 @@ Jika perlu memindahkan profil browser (userDataDir), atur:
 
 Pastikan path ini writable oleh user yang menjalankan service.
 
-Catatan penting: `GATEWAY_WA_CLIENT_ID` **harus lowercase** dan **tidak boleh
-default `wa-gateway`**. Service akan menghentikan proses sejak awal jika nilai
-masih default, mengandung huruf besar, atau folder `session-<clientId>` di
-`WA_AUTH_DATA_PATH` memakai casing berbeda. Karena nama folder session mengikuti
-`clientId`, pastikan nilai env dan folder session selalu konsisten.
+Catatan penting: `USER_WA_CLIENT_ID` dan `GATEWAY_WA_CLIENT_ID` **harus lowercase**
+dan **tidak boleh default** (`wa-userrequest`/`wa-gateway`). Service akan
+menghentikan proses sejak awal jika nilai masih default, mengandung huruf besar,
+atau folder `session-<clientId>` di `WA_AUTH_DATA_PATH` memakai casing berbeda.
+Karena nama folder session mengikuti `clientId`, pastikan nilai env dan folder
+session selalu konsisten.
 
 Checklist operasional (casing & path):
 
@@ -176,7 +177,8 @@ Checklist operasional (casing & path):
      agar sesuai dengan `GATEWAY_WA_CLIENT_ID` yang baru.
    - Saat mengganti `GATEWAY_WA_CLIENT_ID`, hapus atau rename folder session lama
      di `WA_AUTH_DATA_PATH` agar sesi usang tidak tertinggal.
-3. Pastikan nilai `GATEWAY_WA_CLIENT_ID` lowercase dan unik di semua konfigurasi proses
+3. Pastikan nilai `USER_WA_CLIENT_ID` dan `GATEWAY_WA_CLIENT_ID` lowercase serta unik di
+   semua konfigurasi proses
    (deployment, PM2/daemon, systemd, atau env file) agar tidak membuat session baru
    saat restart.
 

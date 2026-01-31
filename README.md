@@ -252,6 +252,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `USER_WA_CLIENT_ID` dan `GATEWAY_WA_CLIENT_ID` wajib unik (berbeda dari default maupun satu sama lain). Contoh benar: `USER_WA_CLIENT_ID=wa-userrequest-prod` dan `GATEWAY_WA_CLIENT_ID=wa-gateway-prod`.
+   `USER_WA_CLIENT_ID` **harus lowercase dan tidak boleh default `wa-userrequest`**. Service akan menghentikan proses sejak awal jika nilai masih default, mengandung huruf besar, atau folder `session-<clientId>` di `WA_AUTH_DATA_PATH` memakai casing berbeda.
    `GATEWAY_WA_CLIENT_ID` **harus lowercase dan tidak boleh default `wa-gateway`**. Service akan menghentikan proses sejak awal jika nilai masih default, mengandung huruf besar, atau folder `session-<clientId>` di `WA_AUTH_DATA_PATH` memakai casing berbeda.
    Saat mengganti `GATEWAY_WA_CLIENT_ID`, bersihkan session lama di `WA_AUTH_DATA_PATH` dengan cara rename atau hapus folder `session-<clientId>` yang lama agar tidak meninggalkan sesi usang.
    `GATEWAY_WHATSAPP_ADMIN` identifies the WhatsApp account that receives gateway connection updates.
