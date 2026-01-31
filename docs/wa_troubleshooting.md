@@ -18,6 +18,13 @@ The WhatsApp bot cannot read chat messages or receive messages, causing all menu
 - No messages can be received
 - Bot is completely non-functional for message handling
 
+**Fail-fast behavior**:
+- If `WA_SERVICE_SKIP_INIT="true"` **and** the environment is expected to receive messages, the service will **refuse to start**.
+- An environment is considered "expected to receive messages" when:
+  - `NODE_ENV` is **not** `"test"`, **or**
+  - `WA_EXPECT_MESSAGES="true"` is explicitly set.
+- Startup logs will state that listeners are not attached and the bot will not receive chats.
+
 **Solution**:
 ```bash
 # Check if the variable is set
@@ -32,7 +39,7 @@ export WA_SERVICE_SKIP_INIT="false"
 npm restart
 ```
 
-**Note**: This variable should ONLY be set to `"true"` during automated testing. NEVER in production.
+**Note**: This variable should ONLY be set to `"true"` during automated testing. NEVER in production or any environment that should receive chats. If you must run with it in a non-test environment (e.g., maintenance), ensure `WA_EXPECT_MESSAGES` is **unset** or `"false"` and understand the service will remain offline for chat handling.
 
 ### 2. Client Not Ready
 
