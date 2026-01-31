@@ -23,3 +23,24 @@ Catatan: Narasi lama yang menyebut "Absensi Amplifikasi" sudah diganti agar sela
   Ketik *angka* menu, atau *batal* untuk keluar.
   ```
 - Admin dapat membuka kembali menu dengan perintah `clientrequest` bila diperlukan.
+
+## API respon komplain dashboard
+Dashboard menyediakan endpoint untuk menyusun pesan respon komplain yang akan ditampilkan kembali di frontend sebelum dikirimkan melalui kanal lain.
+
+**Endpoint**
+- `POST /api/dashboard/komplain/insta`
+- `POST /api/dashboard/komplain/tiktok`
+
+**Header**
+- `Authorization: Bearer <token-dashboard>`
+
+**Payload minimal**
+```json
+{
+  "nrp": "75020201",
+  "issue": "Sudah melaksanakan Instagram belum terdata.",
+  "solution": "Mohon cek kembali data like di dashboard dan kirim bukti jika masih belum tercatat."
+}
+```
+
+Field `issue`/`solution` boleh diganti dengan `kendala`, `solusi`, atau `tindak_lanjut`. Jika tidak diisi, sistem akan memakai narasi default untuk platform terkait. Respons API akan mengembalikan string pesan dengan format yang mengikuti `sendComplaintResponse` (sapaan, identitas pelapor, kendala, dan solusi), beserta data pelapor dan nomor WhatsApp dashboard user bila tersedia.
