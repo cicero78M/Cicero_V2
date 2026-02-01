@@ -218,7 +218,7 @@ export async function getUsersByClient(client_id, roleFilter = null) {
   const { clause, params } = await buildClientFilter(client_id, 'u', 1, roleFilter);
   const res = await query(
     `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
-            u.client_id, c.nama AS client_name, c.regional_id AS regional_id
+            u.whatsapp, u.email, u.client_id, c.nama AS client_name, c.regional_id AS regional_id
      FROM "user" u
      LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
      WHERE ${clause} AND status = true`,
@@ -231,7 +231,7 @@ export async function getUsersByClient(client_id, roleFilter = null) {
 export async function getUsersByClientAndRole(client_id, roleFilter = null) {
   const params = [client_id];
   let sql = `SELECT u.user_id, u.nama, u.tiktok, u.insta, u.divisi, u.title, u.status, u.exception, u.jabatan,
-            u.client_id, c.nama AS client_name, c.regional_id AS regional_id
+            u.whatsapp, u.email, u.client_id, c.nama AS client_name, c.regional_id AS regional_id
      FROM "user" u
      LEFT JOIN clients c ON LOWER(c.client_id) = LOWER(u.client_id)
      WHERE LOWER(u.client_id) = LOWER($1)`;
