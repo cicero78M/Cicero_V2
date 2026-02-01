@@ -164,4 +164,56 @@ describe('updateUserData', () => {
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
+
+  test('normalizes and validates whatsapp number', async () => {
+    const req = {
+      body: {
+        nrp: '1',
+        email: 'user@example.com',
+        whatsapp: '081234567890'
+      }
+    };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    expect(userModel.updateUser).toHaveBeenCalledWith('1', expect.objectContaining({
+      whatsapp: '6281234567890'
+    }));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+
+  test('rejects invalid whatsapp number with too few digits', async () => {
+    const req = {
+      body: {
+        nrp: '1',
+        email: 'user@example.com',
+        whatsapp: '123'
+      }
+    };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Nomor telepon tidak valid. Pastikan nomor telepon minimal 8 digit.'
+    });
+    expect(userModel.updateUser).not.toHaveBeenCalled();
+  });
+
+  test('allows empty whatsapp number', async () => {
+    const req = {
+      body: {
+        nrp: '1',
+        email: 'user@example.com',
+        whatsapp: ''
+      }
+    };
+    const res = createRes();
+    await updateUserData(req, res, () => {});
+    expect(userModel.updateUser).toHaveBeenCalledWith('1', expect.objectContaining({
+      whatsapp: ''
+    }));
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
 });
