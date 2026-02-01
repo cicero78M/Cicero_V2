@@ -15,7 +15,7 @@ Backend memerlukan token dari dashboard login (`POST /api/auth/dashboard-login`)
 Dashboard user harus memenuhi syarat:
 - Status = `true` (aktif)
 - Array `client_ids` tidak kosong
-- Token sudah tersimpan di Redis dengan prefix `dashboard:`
+- Token sudah tersimpan di Redis dengan key pattern `login_token:<token>` dan value `dashboard:<dashboard_user_id>`
 
 ## Solusi untuk Frontend
 

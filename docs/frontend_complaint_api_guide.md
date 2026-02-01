@@ -1,5 +1,7 @@
 # Panduan Frontend untuk API Komplain (Instagram & TikTok)
 
+> **Note**: This guide uses mixed Indonesian and English to best serve Indonesian developers working with English code examples. Key sections are in Indonesian, while code examples and technical details use English for clarity.
+
 ## Ringkasan
 
 Dokumen ini memberikan panduan lengkap untuk frontend dalam mengintegrasikan endpoint komplain Instagram dan TikTok. Dokumen ini dibuat untuk mengatasi error 403 yang sering terjadi dan memastikan sinkronisasi antara frontend dan backend.
