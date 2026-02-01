@@ -54,15 +54,6 @@ function normalizeClientId(value) {
   return String(value).trim().toLowerCase();
 }
 
-function isDashboardAuthorized(dashboardUser, targetClientId) {
-  if (!dashboardUser) return false;
-  const clientIds = Array.isArray(dashboardUser.client_ids)
-    ? dashboardUser.client_ids
-    : [];
-  const normalizedTarget = normalizeClientId(targetClientId);
-  return clientIds.some((clientId) => normalizeClientId(clientId) === normalizedTarget);
-}
-
 function isClientAuthorized(clientIdFromToken, targetClientId) {
   if (!clientIdFromToken) return false;
   return (
@@ -162,13 +153,9 @@ async function handleComplaint(req, res, platformLabel) {
 
   const targetClientId = user.client_id;
   const clientIdFromToken = req.user?.client_id;
-  if (req.dashboardUser) {
-    if (!isDashboardAuthorized(req.dashboardUser, targetClientId)) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Forbidden" });
-    }
-  } else if (clientIdFromToken) {
+  // Dashboard users can handle complaints for any client
+  // Only check authorization for regular client users
+  if (!req.dashboardUser && clientIdFromToken) {
     if (!isClientAuthorized(clientIdFromToken, targetClientId)) {
       return res
         .status(403)
