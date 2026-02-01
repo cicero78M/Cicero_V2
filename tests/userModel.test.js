@@ -19,6 +19,7 @@ let updateUserRolesUserId;
 let updateUser;
 let deactivateRoleOrUser;
 let getUserRoles;
+let getUsersByClientAndRole;
 
 beforeAll(async () => {
   const mod = await import('../src/model/userModel.js');
@@ -35,6 +36,7 @@ beforeAll(async () => {
   updateUser = mod.updateUser;
   deactivateRoleOrUser = mod.deactivateRoleOrUser;
   getUserRoles = mod.getUserRoles;
+  getUsersByClientAndRole = mod.getUsersByClientAndRole;
 });
 
 beforeEach(() => {
@@ -410,4 +412,25 @@ test('deactivateRoleOrUser sets status false when last role is removed', async (
   expect(user.status).toBe(false);
   const updateSql = mockQuery.mock.calls[3][0];
   expect(updateSql).toContain('status=false');
+});
+
+test('getUsersByClientAndRole includes whatsapp and email fields', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '1', whatsapp: '08123456789', email: 'test@example.com' }] });
+  const users = await getUsersByClientAndRole('C1', 'operator');
+  expect(users).toEqual([{ user_id: '1', whatsapp: '08123456789', email: 'test@example.com' }]);
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('u.whatsapp');
+  expect(sql).toContain('u.email');
+  expect(mockQuery.mock.calls[0][1]).toEqual(['C1', 'operator']);
+});
+
+test('getUsersByClient includes whatsapp and email fields', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ client_type: 'instansi' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '2', whatsapp: '08987654321', email: 'user@test.com' }] });
+  const users = await getUsersByClient('C2');
+  expect(users).toEqual([{ user_id: '2', whatsapp: '08987654321', email: 'user@test.com' }]);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toContain('u.whatsapp');
+  expect(sql).toContain('u.email');
 });
