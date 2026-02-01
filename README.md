@@ -78,6 +78,8 @@ Dashboard operators can request formatted complaint responses (including WhatsAp
 
 Payload and response details are documented in [docs/complaint_response.md](docs/complaint_response.md).
 
+**Frontend Integration Guide**: For frontend developers experiencing 403 errors or needing to integrate the complaint endpoints, see the comprehensive guide in [docs/frontend_complaint_api_guide.md](docs/frontend_complaint_api_guide.md) which covers authentication requirements, payload structure, error handling, and complete implementation examples.
+
 ### Dashboard Anev Endpoint (`/api/dashboard/anev`)
 
 This endpoint surfaces premium analytics and engagement compliance for dashboard users. Access is guarded by:

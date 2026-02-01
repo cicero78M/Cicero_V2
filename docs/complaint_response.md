@@ -1,5 +1,7 @@
 # Panduan Respon Komplain
 
+> **Untuk Frontend Developers**: Jika Anda mengalami error 403 atau ingin mengintegrasikan endpoint komplain, lihat panduan lengkap di [frontend_complaint_api_guide.md](./frontend_complaint_api_guide.md) yang mencakup solusi troubleshooting, contoh implementasi, dan penjelasan detail tentang authentication.
+
 Modul `respondComplaint` menyampaikan langkah tindak lanjut kepada pelapor saat laporan aktivitas media sosial belum tercatat. Ringkasan panduan yang dikirim ke pelapor menekankan pengecekan kembali likes Instagram dan komentar TikTok.
 
 ## Langkah verifikasi yang dikirim
