@@ -21,19 +21,22 @@ const limit = pLimit(6);
  */
 function isTodayJakarta(unixTimestamp) {
   if (!unixTimestamp) return false;
-  const d = new Date(
-    new Date(unixTimestamp * 1000).toLocaleString("en-US", {
-      timeZone: "Asia/Jakarta",
-    })
-  );
-  const today = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-  );
-  return (
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate()
-  );
+  
+  // Convert Unix timestamp to Date object
+  const postDate = new Date(unixTimestamp * 1000);
+  
+  // Get the date string in Jakarta timezone (format: YYYY-MM-DD)
+  const postDateJakarta = postDate.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
+  
+  // Get today's date string in Jakarta timezone (format: YYYY-MM-DD)
+  const todayJakarta = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
+  
+  // Compare the date strings directly
+  return postDateJakarta === todayJakarta;
 }
 
 async function getShortcodesToday(clientId = null) {
