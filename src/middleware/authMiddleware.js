@@ -8,6 +8,8 @@ const operatorAllowlist = [
   { path: '/dashboard/stats', type: 'exact' },
   { path: '/dashboard/login-web/recap', type: 'exact' },
   { path: '/dashboard/social-media/instagram/analysis', type: 'exact' },
+  { path: '/dashboard/komplain/insta', type: 'exact' },
+  { path: '/dashboard/komplain/tiktok', type: 'exact' },
   { path: '/insta/rekap-likes', type: 'exact' },
   { path: '/insta/rapid-profile', type: 'exact' },
   { path: '/tiktok/rekap-komentar', type: 'exact' },
