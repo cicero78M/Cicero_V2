@@ -11,7 +11,7 @@ import {
 import { normalizeUserWhatsAppId, minPhoneDigitLength } from '../utils/waHelper.js';
 
 export const JOB_KEY = './src/cron/cronOprRequestDailyReport.js';
-const CRON_EXPRESSION = '00 23 * * *'; // Every day at 22:30 PM Jakarta time
+const CRON_EXPRESSION = '5 20 * * *'; // Every day at 22:30 PM Jakarta time
 const CRON_OPTIONS = { timezone: 'Asia/Jakarta' };
 const CRON_TAG = 'CRON OPRREQUEST DAILY REPORT';
 
