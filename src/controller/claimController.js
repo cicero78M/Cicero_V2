@@ -317,13 +317,15 @@ export async function updateUserData(req, res, next) {
       if (whatsapp === null || whatsapp === '') {
         normalizedWhatsapp = '';
       } else {
-        normalizedWhatsapp = normalizeWhatsappNumber(whatsapp);
-        if (normalizedWhatsapp && normalizedWhatsapp.length < minPhoneDigitLength) {
+        // Extract digits and validate before normalization
+        const digits = String(whatsapp).replace(/\D/g, '');
+        if (digits.length < minPhoneDigitLength) {
           return res.status(400).json({
             success: false,
-            message: 'Nomor telepon tidak valid. Pastikan nomor telepon minimal 8 digit.',
+            message: 'Nomor telepon tidak valid. Masukkan minimal 8 digit angka.',
           });
         }
+        normalizedWhatsapp = normalizeWhatsappNumber(whatsapp);
       }
     }
     const data = { nama, title, divisi, jabatan, desa };
