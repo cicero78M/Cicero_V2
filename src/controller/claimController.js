@@ -8,6 +8,7 @@ import {
   isVerified,
   refreshVerification,
 } from '../service/otpService.js';
+import { normalizeWhatsappNumber, minPhoneDigitLength } from '../utils/waHelper.js';
 import dns from 'dns/promises';
 import validator from 'validator';
 
@@ -274,6 +275,7 @@ export async function updateUserData(req, res, next) {
       desa,
       insta,
       tiktok,
+      whatsapp,
       otp,
     } = req.body;
     const nrp = normalizeUserId(rawNrp);
@@ -310,7 +312,26 @@ export async function updateUserData(req, res, next) {
     if (!verified) {
       return res.status(403).json({ success: false, message: 'OTP belum diverifikasi' });
     }
+    let normalizedWhatsapp;
+    if (whatsapp !== undefined) {
+      if (whatsapp === null || whatsapp === '') {
+        normalizedWhatsapp = '';
+      } else {
+        // Extract digits and validate before normalization
+        const digits = String(whatsapp).replace(/\D/g, '');
+        if (digits.length < minPhoneDigitLength) {
+          return res.status(400).json({
+            success: false,
+            message: 'Nomor telepon tidak valid. Masukkan minimal 8 digit angka.',
+          });
+        }
+        normalizedWhatsapp = normalizeWhatsappNumber(whatsapp);
+      }
+    }
     const data = { nama, title, divisi, jabatan, desa };
+    if (whatsapp !== undefined) {
+      data.whatsapp = normalizedWhatsapp;
+    }
     if (insta !== undefined) {
       if (igUsername === 'cicero_devs') {
         return res
