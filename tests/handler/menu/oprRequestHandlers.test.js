@@ -55,7 +55,6 @@ describe('oprRequestHandlers - Conditional Menu Display', () => {
   
   afterEach(() => {
     jest.resetAllMocks();
-    jest.clearAllMocks();
   });
   
   describe('main - Menu Display', () => {

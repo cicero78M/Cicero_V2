@@ -444,7 +444,8 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
     }
     
     // Invalid menu selection
-    const maxMenuNumber = Math.max(...Object.keys(menuMapping).map(Number));
+    const menuNumbers = Object.keys(menuMapping).map(Number);
+    const maxMenuNumber = menuNumbers.length > 0 ? Math.max(...menuNumbers) : 1;
     await waClient.sendMessage(
       chatId,
       `Menu tidak dikenal. Balas angka 1-${maxMenuNumber} atau ketik *batal* untuk keluar.`
