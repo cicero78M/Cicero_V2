@@ -238,41 +238,13 @@ function hasOperatorRole(roles) {
 
 export const oprRequestHandlers = {
   main: async (session, chatId, text, waClient, pool, userModel) => {
-    // Fetch client data to determine which menus to show
-    const client = await resolveClientProfile(session, chatId, pool);
-    
-    // Build menu items based on client status
-    const menuItems = [];
-    const menuMapping = {};
-    let menuNumber = 1;
-    
-    // Manajemen User - always shown for ORG clients
-    menuItems.push(`${menuNumber}️⃣ Manajemen User`);
-    menuMapping[menuNumber] = 'user';
-    menuNumber++;
-    
-    // Manajemen Amplifikasi (Diseminasi) - only if client_status AND client_amplify_status
-    if (client && client.client_status && client.client_amplify_status) {
-      menuItems.push(`${menuNumber}️⃣ Manajemen Amplifikasi`);
-      menuMapping[menuNumber] = 'amplifikasi';
-      menuNumber++;
-    }
-    
-    // Manajemen Engagement - only if client_status AND (instagram OR tiktok)
-    if (client && client.client_status && (client.client_insta_status || client.client_tiktok_status)) {
-      menuItems.push(`${menuNumber}️⃣ Manajemen Engagement`);
-      menuMapping[menuNumber] = 'engagement';
-      menuNumber++;
-    }
-    
-    // Store menu mapping in session for chooseMenuGroup handler
-    session.menuMapping = menuMapping;
-    
     const msg =
       `┏━━━ *MENU OPERATOR CICERO* ━━━┓
 👮‍♂️  Akses khusus operator client.
 
-${menuItems.join('\n')}
+1️⃣ Manajemen User
+2️⃣ Manajemen Amplifikasi
+3️⃣ Manajemen Engagement
 
 Ketik *angka menu* di atas, atau *batal* untuk keluar.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -350,105 +322,85 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       delete session.absensi_engagement_client_id;
       delete session.absensi_engagement_type;
     };
-    
-    // Get menu mapping from session (set in main function)
-    const menuMapping = session.menuMapping || {};
-    const trimmedText = text.trim();
-    
-    // Check for cancel command
-    if (/^(batal|cancel|exit)$/i.test(trimmedText)) {
+    if (/^1$/i.test(text.trim())) {
+      clean();
+      const client = await ensureUserMenuAccess(session, chatId, waClient, pool);
+      if (!client) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "kelolaUser_menu";
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n6️⃣ Absensi update data username\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
+      );
+      return;
+    }
+    if (/^2$/i.test(text.trim())) {
+      clean();
+      const client = await ensureAmplifyMenuAccess(session, chatId, waClient, pool);
+      if (!client) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      session.step = "kelolaAmplifikasi_menu";
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen Amplifikasi*\n1️⃣ Tugas Amplifikasi\n2️⃣ Laporan Amplifikasi\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
+      );
+      return;
+    }
+    if (/^3$/i.test(text.trim())) {
+      clean();
+      const engagementAccess = await ensureEngagementMenuAccess(
+        session,
+        chatId,
+        waClient,
+        pool
+      );
+      if (!engagementAccess) {
+        if (isAdminWhatsApp(chatId)) {
+          delete session.selected_client_id;
+        }
+        session.step = "main";
+        return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
+      }
+      const { instagramActive, tiktokActive } = engagementAccess;
+      const instaLabel = instagramActive
+        ? "1️⃣ Absensi Likes Instagram"
+        : "1️⃣ Absensi Likes Instagram (nonaktif)";
+      const tiktokLabel = tiktokActive
+        ? "2️⃣ Absensi Komentar TikTok"
+        : "2️⃣ Absensi Komentar TikTok (nonaktif)";
+      session.step = "kelolaEngagement_menu";
+      await waClient.sendMessage(
+        chatId,
+        appendSubmenuBackInstruction(
+          `*Menu Manajemen Engagement*\n${instaLabel}\n${tiktokLabel}\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
+        )
+      );
+      return;
+    }
+    if (/^(batal|cancel|exit)$/i.test(text.trim())) {
       session.menu = null;
       session.step = null;
       clean();
-      delete session.menuMapping;
       await waClient.sendMessage(chatId, "❎ Keluar dari menu operator.");
       return;
     }
-    
-    // Check if input is a valid menu number
-    const menuNumber = parseInt(trimmedText, 10);
-    if (!isNaN(menuNumber) && menuMapping[menuNumber]) {
-      const selectedMenu = menuMapping[menuNumber];
-      
-      if (selectedMenu === 'user') {
-        clean();
-        const client = await ensureUserMenuAccess(session, chatId, waClient, pool);
-        if (!client) {
-          if (isAdminWhatsApp(chatId)) {
-            delete session.selected_client_id;
-          }
-          session.step = "main";
-          return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-        }
-        session.step = "kelolaUser_menu";
-        await waClient.sendMessage(
-          chatId,
-          appendSubmenuBackInstruction(
-            `*Menu Manajemen User*\n1️⃣ Tambah user baru\n2️⃣ Perbarui data user\n3️⃣ Ubah status user (aktif/nonaktif)\n4️⃣ Cek data user (NRP/NIP)\n5️⃣ Absensi registrasi user\n6️⃣ Absensi update data username\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
-          )
-        );
-        return;
-      }
-      
-      if (selectedMenu === 'amplifikasi') {
-        clean();
-        const client = await ensureAmplifyMenuAccess(session, chatId, waClient, pool);
-        if (!client) {
-          if (isAdminWhatsApp(chatId)) {
-            delete session.selected_client_id;
-          }
-          session.step = "main";
-          return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-        }
-        session.step = "kelolaAmplifikasi_menu";
-        await waClient.sendMessage(
-          chatId,
-          appendSubmenuBackInstruction(
-            `*Menu Manajemen Amplifikasi*\n1️⃣ Tugas Amplifikasi\n2️⃣ Laporan Amplifikasi\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
-          )
-        );
-        return;
-      }
-      
-      if (selectedMenu === 'engagement') {
-        clean();
-        const engagementAccess = await ensureEngagementMenuAccess(
-          session,
-          chatId,
-          waClient,
-          pool
-        );
-        if (!engagementAccess) {
-          if (isAdminWhatsApp(chatId)) {
-            delete session.selected_client_id;
-          }
-          session.step = "main";
-          return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
-        }
-        const { instagramActive, tiktokActive } = engagementAccess;
-        const instaLabel = instagramActive
-          ? "1️⃣ Absensi Likes Instagram"
-          : "1️⃣ Absensi Likes Instagram (nonaktif)";
-        const tiktokLabel = tiktokActive
-          ? "2️⃣ Absensi Komentar TikTok"
-          : "2️⃣ Absensi Komentar TikTok (nonaktif)";
-        session.step = "kelolaEngagement_menu";
-        await waClient.sendMessage(
-          chatId,
-          appendSubmenuBackInstruction(
-            `*Menu Manajemen Engagement*\n${instaLabel}\n${tiktokLabel}\n\nKetik *angka menu* di atas, *menu* untuk kembali, atau *batal* untuk keluar.`
-          )
-        );
-        return;
-      }
-    }
-    
-    // Invalid menu selection
-    const menuNumbers = Object.keys(menuMapping).map(Number);
-    const maxMenuNumber = menuNumbers.length > 0 ? Math.max(...menuNumbers) : 1;
     await waClient.sendMessage(
       chatId,
-      `Menu tidak dikenal. Balas angka 1-${maxMenuNumber} atau ketik *batal* untuk keluar.`
+      "Menu tidak dikenal. Balas angka 1-3 atau ketik *batal* untuk keluar."
     );
   },
 
