@@ -1407,8 +1407,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('disconnected', internalDisconnectedHandler);
     
     internalMessageHandler = async (msg) => {
+      // ALWAYS log message reception (not just in debug mode) to help diagnose reception issues
+      console.log(`[WWEBJS-ADAPTER] Message received by internal handler - clientId=${clientId}, from=${msg.from}`);
       if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+        console.log(`[WWEBJS-ADAPTER] Raw message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
       }
       let contactMeta = {};
       try {
@@ -1421,8 +1423,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       } catch (err) {
         contactMeta = { error: err?.message || 'contact_fetch_failed' };
       }
+      // ALWAYS log before emitting to emitter (critical for diagnosing reception issues)
+      console.log(`[WWEBJS-ADAPTER] Emitting 'message' event to emitter - clientId=${clientId}, from=${msg.from}`);
       if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
+        console.log(`[WWEBJS-ADAPTER] Message ID: ${msg.id?.id || msg.id?._serialized || 'unknown'}`);
       }
       emitter.emit('message', {
         from: msg.from,
