@@ -1340,6 +1340,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   let internalDisconnectedHandler = null;
 
   const registerEventListeners = () => {
+    console.log(`[WWEBJS] Registering event listeners for clientId=${clientId}`);
     // Remove only internal listeners, preserving external ones (e.g., from waService.js)
     if (internalMessageHandler) {
       client.removeListener('message', internalMessageHandler);
@@ -1360,6 +1361,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('qr', (qr) => emitter.emit('qr', qr));
     
     internalReadyHandler = async () => {
+      console.log(`[WWEBJS] Client ready event received for clientId=${clientId}`);
       try {
         // Wait for WidFactory to be available (max 3 attempts)
         await ensureWidFactory(`ready handler for clientId=${clientId}`, false, 3);
@@ -1373,6 +1375,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
           await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
         }
         
+        console.log(`[WWEBJS] Client ${clientId} fully initialized and ready to receive messages`);
         if (debugLoggingEnabled) {
           console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
         }
@@ -1407,8 +1410,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('disconnected', internalDisconnectedHandler);
     
     internalMessageHandler = async (msg) => {
+      // ALWAYS log message reception (not just in debug mode) to help diagnose reception issues
+      console.log(`[WWEBJS-ADAPTER] Message received by internal handler - clientId=${clientId}, from=${msg.from}`);
       if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+        console.log(`[WWEBJS-ADAPTER] Raw message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
       }
       let contactMeta = {};
       try {
@@ -1421,8 +1426,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       } catch (err) {
         contactMeta = { error: err?.message || 'contact_fetch_failed' };
       }
+      // ALWAYS log before emitting to emitter (critical for diagnosing reception issues)
+      console.log(`[WWEBJS-ADAPTER] Emitting 'message' event to emitter - clientId=${clientId}, from=${msg.from}`);
       if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Emitting 'message' event for clientId=${clientId}, from=${msg.from}`);
+        console.log(`[WWEBJS-ADAPTER] Message ID: ${msg.id?.id || msg.id?._serialized || 'unknown'}`);
       }
       emitter.emit('message', {
         from: msg.from,
@@ -1434,6 +1441,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       });
     };
     client.on('message', internalMessageHandler);
+    console.log(`[WWEBJS] Internal message handler registered for clientId=${clientId}`);
   };
 
   const reinitializeClient = async (trigger, reason, options = {}) => {

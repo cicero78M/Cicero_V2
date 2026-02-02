@@ -4937,8 +4937,10 @@ if (shouldInitWhatsAppClients) {
   console.log('[WA] Attaching message event listeners to WhatsApp clients...');
   
   waClient.on('message', (msg) => {
+    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
+    console.log(`[WA-SERVICE] waClient 'message' event received - from=${msg.from}`);
     if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      console.log(`[WA-SERVICE] waClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
     }
     handleIncoming('wwebjs', msg, handleMessage);
   });
@@ -4951,20 +4953,26 @@ if (shouldInitWhatsAppClients) {
       }
       return;
     }
+    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
+    console.log(`[WA-SERVICE] waUserClient 'message' event received - from=${msg.from}`);
     if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waUserClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      console.log(`[WA-SERVICE] waUserClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
     }
     handleIncoming('wwebjs-user', msg, handleUserMessage);
   });
 
   waGatewayClient.on('message', (msg) => {
+    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
+    console.log(`[WA-SERVICE] waGatewayClient 'message' event received - from=${msg.from}`);
     if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waGatewayClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+      console.log(`[WA-SERVICE] waGatewayClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
     }
     handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
 
   console.log('[WA] Message event listeners attached successfully.');
+  // Verify listeners are actually attached
+  console.log(`[WA] Listener counts - waClient: ${waClient.listenerCount('message')}, waUserClient: ${waUserClient.listenerCount('message')}, waGatewayClient: ${waGatewayClient.listenerCount('message')}`);
 
 
   const clientsToInit = [
