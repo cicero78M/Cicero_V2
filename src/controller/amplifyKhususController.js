@@ -1,6 +1,8 @@
 import { getRekapLinkByClient } from '../model/linkReportKhususModel.js';
 import { sendConsoleDebug } from '../middleware/debugHandler.js';
 
+const OPERATOR_ROLE = 'operator';
+
 export async function getAmplifyKhususRekap(req, res) {
   const client_id = req.query.client_id;
   const periode = req.query.periode || 'harian';
@@ -41,7 +43,7 @@ export async function getAmplifyKhususRekap(req, res) {
       let userClientId = client_id;
       let userRoleFilter = null;
 
-      if (resolvedScope === 'org' && resolvedRole === 'operator') {
+      if (resolvedScope === 'org' && resolvedRole === OPERATOR_ROLE) {
         const tokenClientId = req.user?.client_id;
         if (!tokenClientId) {
           return res.status(400).json({
@@ -50,7 +52,7 @@ export async function getAmplifyKhususRekap(req, res) {
           });
         }
         userClientId = tokenClientId;
-        userRoleFilter = 'operator';
+        userRoleFilter = OPERATOR_ROLE;
       }
 
       rekapOptions = {

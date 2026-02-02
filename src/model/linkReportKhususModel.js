@@ -221,8 +221,10 @@ export async function getRekapLinkByClient(
     )`;
   }
 
+  // Apply additional client_id filter when explicitly overridden (e.g., for operator role in ORG scope)
+  // This ensures we filter by the authenticated user's client_id rather than the requested client_id
   let userClientFilter = '';
-  if (userClientIdOverride) {
+  if (userClientIdOverride && userClientIdOverride !== client_id) {
     linkParams.push(resolvedUserClientId);
     userClientFilter = `AND u.client_id = $${linkParams.length}`;
   }
