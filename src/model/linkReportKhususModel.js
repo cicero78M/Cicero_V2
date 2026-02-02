@@ -156,8 +156,13 @@ export async function getRekapLinkByClient(
   client_id,
   periode = 'harian',
   tanggal,
-  roleFlag = null
+  roleFlag = null,
+  options = {}
 ) {
+  const {
+    userClientId: userClientIdOverride = null,
+    userRoleFilter = null
+  } = options;
   let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   const params = [client_id];
@@ -203,14 +208,23 @@ export async function getRekapLinkByClient(
   const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
   const priorityExpr = `(${priorityCase})`;
 
+  const resolvedUserClientId = userClientIdOverride ?? client_id;
+  const resolvedUserRole = userRoleFilter ?? (roleFlag ? roleFlag.toLowerCase() : null);
+  
   let operatorRoleFilter = '';
-  if (roleFlag && roleFlag.toLowerCase() === OPERATOR_ROLE_NAME) {
+  if (resolvedUserRole === OPERATOR_ROLE_NAME) {
     linkParams.push(OPERATOR_ROLE_NAME);
     operatorRoleFilter = `AND EXISTS (
       SELECT 1 FROM user_roles ur
       JOIN roles r ON ur.role_id = r.role_id
       WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${linkParams.length})
     )`;
+  }
+
+  let userClientFilter = '';
+  if (userClientIdOverride) {
+    linkParams.push(resolvedUserClientId);
+    userClientFilter = `AND u.client_id = $${linkParams.length}`;
   }
 
   const { rows } = await query(
@@ -251,6 +265,7 @@ export async function getRekapLinkByClient(
         )
       )
       ${operatorRoleFilter}
+      ${userClientFilter}
     ORDER BY
       ${priorityExpr} ASC,
       CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,

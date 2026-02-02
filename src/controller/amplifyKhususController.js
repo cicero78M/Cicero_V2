@@ -21,6 +21,7 @@ export async function getAmplifyKhususRekap(req, res) {
   }
 
   try {
+    let rekapOptions = {};
     let roleForQuery = null;
 
     if (usesStandardPayload) {
@@ -37,6 +38,9 @@ export async function getAmplifyKhususRekap(req, res) {
           .json({ success: false, message: 'scope tidak valid' });
       }
 
+      let userClientId = client_id;
+      let userRoleFilter = null;
+
       if (resolvedScope === 'org' && resolvedRole === 'operator') {
         const tokenClientId = req.user?.client_id;
         if (!tokenClientId) {
@@ -45,15 +49,22 @@ export async function getAmplifyKhususRekap(req, res) {
             message: 'client_id pengguna tidak ditemukan'
           });
         }
-        roleForQuery = 'operator';
+        userClientId = tokenClientId;
+        userRoleFilter = 'operator';
       }
+
+      rekapOptions = {
+        userClientId,
+        userRoleFilter
+      };
+      roleForQuery = resolvedRole;
     }
 
     sendConsoleDebug({ 
       tag: 'AMPLIFY_KHUSUS', 
       msg: `getAmplifyKhususRekap ${client_id} ${periode} ${tanggal || ''} ${roleLower || ''} ${scopeLower || ''}` 
     });
-    const data = await getRekapLinkByClient(client_id, periode, tanggal, roleForQuery);
+    const data = await getRekapLinkByClient(client_id, periode, tanggal, roleForQuery, rekapOptions);
     res.json({ success: true, data });
   } catch (err) {
     sendConsoleDebug({ tag: 'AMPLIFY_KHUSUS', msg: `Error getAmplifyKhususRekap: ${err.message}` });

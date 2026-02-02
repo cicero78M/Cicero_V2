@@ -34,7 +34,7 @@ test('allows authorized client_id', async () => {
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyKhususRekap(req, res);
   expect(res.status).not.toHaveBeenCalledWith(403);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, null);
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, null, {});
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
@@ -47,7 +47,7 @@ test('passes null roleFlag when scope and role not provided', async () => {
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyKhususRekap(req, res);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'bulanan', '2024-01', null);
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'bulanan', '2024-01', null, {});
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
@@ -60,7 +60,10 @@ test('filters by operator role when scope is org', async () => {
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyKhususRekap(req, res);
-  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, 'operator');
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, 'operator', {
+    userClientId: 'c1',
+    userRoleFilter: 'operator'
+  });
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
