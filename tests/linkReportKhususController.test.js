@@ -126,7 +126,7 @@ describe('createLinkReport', () => {
     expect(mockCreateLinkReport).not.toHaveBeenCalled();
   });
 
-  test('fetches post metadata from Instagram using RapidAPI', async () => {
+  test('creates link report after successful metadata fetch', async () => {
     const instagramUrl = 'https://www.instagram.com/p/ABC123/';
     const expectedShortcode = 'ABC123';
     mockFetchSinglePostKhusus.mockResolvedValueOnce({
