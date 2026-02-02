@@ -1340,6 +1340,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   let internalDisconnectedHandler = null;
 
   const registerEventListeners = () => {
+    console.log(`[WWEBJS] Registering event listeners for clientId=${clientId}`);
     // Remove only internal listeners, preserving external ones (e.g., from waService.js)
     if (internalMessageHandler) {
       client.removeListener('message', internalMessageHandler);
@@ -1360,6 +1361,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('qr', (qr) => emitter.emit('qr', qr));
     
     internalReadyHandler = async () => {
+      console.log(`[WWEBJS] Client ready event received for clientId=${clientId}`);
       try {
         // Wait for WidFactory to be available (max 3 attempts)
         await ensureWidFactory(`ready handler for clientId=${clientId}`, false, 3);
@@ -1373,6 +1375,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
           await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
         }
         
+        console.log(`[WWEBJS] Client ${clientId} fully initialized and ready to receive messages`);
         if (debugLoggingEnabled) {
           console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
         }
@@ -1438,6 +1441,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       });
     };
     client.on('message', internalMessageHandler);
+    console.log(`[WWEBJS] Internal message handler registered for clientId=${clientId}`);
   };
 
   const reinitializeClient = async (trigger, reason, options = {}) => {
