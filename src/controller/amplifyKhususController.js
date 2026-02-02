@@ -1,6 +1,8 @@
 import { getRekapLinkByClient } from '../model/linkReportKhususModel.js';
 import { sendConsoleDebug } from '../middleware/debugHandler.js';
 
+const OPERATOR_ROLE = 'operator';
+
 export async function getAmplifyKhususRekap(req, res) {
   const client_id = req.query.client_id;
   const periode = req.query.periode || 'harian';
@@ -21,6 +23,7 @@ export async function getAmplifyKhususRekap(req, res) {
   }
 
   try {
+    let rekapOptions = {};
     let roleForQuery = null;
 
     if (usesStandardPayload) {
@@ -37,7 +40,10 @@ export async function getAmplifyKhususRekap(req, res) {
           .json({ success: false, message: 'scope tidak valid' });
       }
 
-      if (resolvedScope === 'org' && resolvedRole === 'operator') {
+      let userClientId = client_id;
+      let userRoleFilter = null;
+
+      if (resolvedScope === 'org' && resolvedRole === OPERATOR_ROLE) {
         const tokenClientId = req.user?.client_id;
         if (!tokenClientId) {
           return res.status(400).json({
@@ -45,15 +51,22 @@ export async function getAmplifyKhususRekap(req, res) {
             message: 'client_id pengguna tidak ditemukan'
           });
         }
-        roleForQuery = 'operator';
+        userClientId = tokenClientId;
+        userRoleFilter = OPERATOR_ROLE;
+        roleForQuery = OPERATOR_ROLE;
       }
+
+      rekapOptions = {
+        userClientId,
+        userRoleFilter
+      };
     }
 
     sendConsoleDebug({ 
       tag: 'AMPLIFY_KHUSUS', 
       msg: `getAmplifyKhususRekap ${client_id} ${periode} ${tanggal || ''} ${roleLower || ''} ${scopeLower || ''}` 
     });
-    const data = await getRekapLinkByClient(client_id, periode, tanggal, roleForQuery);
+    const data = await getRekapLinkByClient(client_id, periode, tanggal, roleForQuery, rekapOptions);
     res.json({ success: true, data });
   } catch (err) {
     sendConsoleDebug({ tag: 'AMPLIFY_KHUSUS', msg: `Error getAmplifyKhususRekap: ${err.message}` });

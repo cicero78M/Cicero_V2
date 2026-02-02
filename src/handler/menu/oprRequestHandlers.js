@@ -1349,15 +1349,14 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     }
     const { getReportsTodayByClient } = await import("../../model/linkReportKhususModel.js");
     const { getShortcodesTodayByClient } = await import("../../model/instaPostKhususModel.js");
-    const reports = await getReportsTodayByClient(clientId);
+    const reports = await getReportsTodayByClient(clientId, OPERATOR_ROLE);
     const operatorIds = await getOperatorUserIds(userModel, clientId);
     if (!operatorIds.size) {
       await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
-    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
-    if (!filteredReports || filteredReports.length === 0) {
+    if (!reports || reports.length === 0) {
       await waClient.sendMessage(chatId, `Tidak ada laporan link khusus hari ini untuk client *${clientId}*.`);
       session.step = "main";
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
@@ -1365,7 +1364,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const shortcodes = await getShortcodesTodayByClient(clientId);
     const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
     const users = new Set();
-    filteredReports.forEach((r) => {
+    reports.forEach((r) => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
@@ -1580,7 +1579,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     const sc = shortcodes[idx];
     const clientId = session.selected_client_id;
     const { getReportsTodayByShortcode } = await import("../../model/linkReportKhususModel.js");
-    const reports = await getReportsTodayByShortcode(clientId, sc);
+    const reports = await getReportsTodayByShortcode(clientId, sc, OPERATOR_ROLE);
     const operatorIds = await getOperatorUserIds(userModel, clientId);
     if (!operatorIds.size) {
       await waClient.sendMessage(chatId, `Tidak ada user operator aktif untuk client *${clientId}*.`);
@@ -1588,8 +1587,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
       delete session.rekapShortcodes;
       return oprRequestHandlers.main(session, chatId, "", waClient, pool, userModel);
     }
-    const filteredReports = reports.filter((report) => operatorIds.has(report.user_id));
-    if (!filteredReports || filteredReports.length === 0) {
+    if (!reports || reports.length === 0) {
       await waClient.sendMessage(chatId, `Belum ada laporan link untuk post tersebut.`);
       session.step = "main";
       delete session.rekapShortcodes;
@@ -1597,7 +1595,7 @@ Balas *angka* (1/2) sesuai status baru, atau *batal* untuk keluar.
     }
     const list = { facebook: [], instagram: [], twitter: [], tiktok: [], youtube: [] };
     const users = new Set();
-    filteredReports.forEach(r => {
+    reports.forEach(r => {
       users.add(r.user_id);
       if (r.facebook_link) list.facebook.push(r.facebook_link);
       if (r.instagram_link) list.instagram.push(r.instagram_link);
