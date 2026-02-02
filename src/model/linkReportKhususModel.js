@@ -112,22 +112,38 @@ export async function deleteLinkReport(shortcode, user_id) {
   return res.rows[0] || null;
 }
 
-export async function getReportsTodayByClient(client_id) {
+export async function getReportsTodayByClient(client_id, roleFlag = null) {
+  let whereClause = 'u.client_id = $1';
+  let joinClause = 'JOIN "user" u ON u.user_id = r.user_id';
+  
+  if (roleFlag && roleFlag.toLowerCase() === 'operator') {
+    joinClause += ' JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles ro ON ur.role_id = ro.role_id';
+    whereClause += " AND LOWER(ro.role_name) = 'operator'";
+  }
+  
   const res = await query(
     `SELECT r.* FROM link_report_khusus r
-     JOIN "user" u ON u.user_id = r.user_id
-     WHERE u.client_id = $1 AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
+     ${joinClause}
+     WHERE ${whereClause} AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
      ORDER BY r.created_at ASC`,
     [client_id]
   );
   return res.rows;
 }
 
-export async function getReportsTodayByShortcode(client_id, shortcode) {
+export async function getReportsTodayByShortcode(client_id, shortcode, roleFlag = null) {
+  let whereClause = 'u.client_id = $1 AND r.shortcode = $2';
+  let joinClause = 'JOIN "user" u ON u.user_id = r.user_id';
+  
+  if (roleFlag && roleFlag.toLowerCase() === 'operator') {
+    joinClause += ' JOIN user_roles ur ON ur.user_id = u.user_id JOIN roles ro ON ur.role_id = ro.role_id';
+    whereClause += " AND LOWER(ro.role_name) = 'operator'";
+  }
+  
   const res = await query(
     `SELECT r.* FROM link_report_khusus r
-     JOIN "user" u ON u.user_id = r.user_id
-     WHERE u.client_id = $1 AND r.shortcode = $2
+     ${joinClause}
+     WHERE ${whereClause}
        AND r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
      ORDER BY r.created_at ASC`,
     [client_id, shortcode]

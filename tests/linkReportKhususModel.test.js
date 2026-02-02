@@ -79,12 +79,40 @@ test('getReportsTodayByClient filters by client', async () => {
   );
 });
 
+test('getReportsTodayByClient filters by client and operator role', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'x' }] });
+  const rows = await getReportsTodayByClient('POLRES', 'operator');
+  expect(rows).toEqual([{ shortcode: 'x' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringMatching(/JOIN user_roles ur ON ur\.user_id = u\.user_id/),
+    ['POLRES']
+  );
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringMatching(/LOWER\(ro\.role_name\) = 'operator'/),
+    ['POLRES']
+  );
+});
+
 test('getReportsTodayByShortcode filters by client and shortcode', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
   const rows = await getReportsTodayByShortcode('POLRES', 'abc');
   expect(rows).toEqual([{ shortcode: 'abc' }]);
   expect(mockQuery).toHaveBeenCalledWith(
     expect.stringContaining('r.shortcode = $2'),
+    ['POLRES', 'abc']
+  );
+});
+
+test('getReportsTodayByShortcode filters by client, shortcode and operator role', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ shortcode: 'abc' }] });
+  const rows = await getReportsTodayByShortcode('POLRES', 'abc', 'operator');
+  expect(rows).toEqual([{ shortcode: 'abc' }]);
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringMatching(/JOIN user_roles ur ON ur\.user_id = u\.user_id/),
+    ['POLRES', 'abc']
+  );
+  expect(mockQuery).toHaveBeenCalledWith(
+    expect.stringMatching(/LOWER\(ro\.role_name\) = 'operator'/),
     ['POLRES', 'abc']
   );
 });

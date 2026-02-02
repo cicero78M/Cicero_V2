@@ -38,7 +38,7 @@ export async function absensiLinkKhusus(client_id, opts = {}) {
   if (!shortcodes.length)
     return `Tidak ada konten IG untuk *${clientNama}* hari ini.`;
 
-  const reports = await getReportsTodayByClient(client_id);
+  const reports = await getReportsTodayByClient(client_id, roleFlag);
   const userStats = {};
   users.forEach((u) => {
     userStats[u.user_id] = { ...u, tasksDone: 0, linkCount: 0 };
@@ -157,7 +157,7 @@ export async function absensiLinkKhususPerPost(client_id, opts = {}) {
   msg += `*Jumlah Konten:* ${shortcodes.length}\n`;
 
   for (const sc of shortcodes) {
-    const reports = await getReportsTodayByShortcode(client_id, sc);
+    const reports = await getReportsTodayByShortcode(client_id, sc, roleFlag);
     const userSudah = [];
     const userBelum = [];
     const reportUsers = new Set(reports.map((r) => r.user_id));
