@@ -3,6 +3,10 @@
 /**
  * Diagnostic script to check if WhatsApp message listeners are properly attached
  * Usage: node scripts/diagnose-wa-listeners.js
+ * 
+ * NOTE: This script sets WA_SERVICE_SKIP_INIT=true to prevent actual WhatsApp initialization,
+ * which means it only shows the client objects' structure, not the runtime listener state.
+ * For runtime diagnostics, check the application logs during normal operation.
  */
 
 // Set environment to skip actual initialization but allow module loading
