@@ -203,6 +203,16 @@ export async function getRekapLinkByClient(
   const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
   const priorityExpr = `(${priorityCase})`;
 
+  let operatorRoleFilter = '';
+  if (roleFlag && roleFlag.toLowerCase() === OPERATOR_ROLE_NAME) {
+    linkParams.push(OPERATOR_ROLE_NAME);
+    operatorRoleFilter = `AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${linkParams.length})
+    )`;
+  }
+
   const { rows } = await query(
     `WITH cli AS (
        SELECT client_type FROM clients WHERE client_id = $1
@@ -240,11 +250,7 @@ export async function getRekapLinkByClient(
           WHERE ur.user_id = u.user_id AND r.role_name = $1
         )
       )
-      ${roleFlag && roleFlag.toLowerCase() === OPERATOR_ROLE_NAME ? `AND EXISTS (
-        SELECT 1 FROM user_roles ur
-        JOIN roles r ON ur.role_id = r.role_id
-        WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = '${OPERATOR_ROLE_NAME}'
-      )` : ''}
+      ${operatorRoleFilter}
     ORDER BY
       ${priorityExpr} ASC,
       CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,

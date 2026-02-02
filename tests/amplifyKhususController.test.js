@@ -38,6 +38,19 @@ test('allows authorized client_id', async () => {
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
+test('passes null roleFlag when scope and role not provided', async () => {
+  mockGetRekap.mockResolvedValue([]);
+  const req = { 
+    query: { client_id: 'c1', periode: 'bulanan', tanggal: '2024-01' }, 
+    user: { client_ids: ['c1'] } 
+  };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getAmplifyKhususRekap(req, res);
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'bulanan', '2024-01', null);
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+});
+
 test('filters by operator role when scope is org', async () => {
   mockGetRekap.mockResolvedValue([]);
   const req = { 

@@ -135,7 +135,9 @@ test('getRekapLinkByClient_khusus filters by operator role', async () => {
   await getRekapLinkByClient('POLRES', 'harian', null, 'operator');
   expect(mockQuery).toHaveBeenCalledTimes(2);
   const sql = mockQuery.mock.calls[1][0];
+  const params = mockQuery.mock.calls[1][1];
   expect(sql).toMatch(/AND EXISTS \(/);
   expect(sql).toMatch(/JOIN roles r ON ur\.role_id = r\.role_id/);
-  expect(sql).toMatch(/LOWER\(r\.role_name\) = 'operator'/);
+  expect(sql).toMatch(/LOWER\(r\.role_name\) = LOWER\(\$\d+\)/);
+  expect(params[params.length - 1]).toBe('operator');
 });
