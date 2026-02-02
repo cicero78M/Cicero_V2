@@ -4936,17 +4936,31 @@ registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMes
 if (shouldInitWhatsAppClients) {
   console.log('[WA] Attaching message event listeners to WhatsApp clients...');
   
-  waClient.on('message', (msg) => handleIncoming('wwebjs', msg, handleMessage));
+  waClient.on('message', (msg) => {
+    if (process.env.WA_DEBUG_LOGGING === 'true') {
+      console.log(`[WA-SERVICE] waClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+    }
+    handleIncoming('wwebjs', msg, handleMessage);
+  });
 
   waUserClient.on('message', (msg) => {
     const from = msg.from || '';
     if (from.endsWith('@g.us') || from === 'status@broadcast') {
+      if (process.env.WA_DEBUG_LOGGING === 'true') {
+        console.log(`[WA-SERVICE] waUserClient ignoring group/status message from=${from}`);
+      }
       return;
+    }
+    if (process.env.WA_DEBUG_LOGGING === 'true') {
+      console.log(`[WA-SERVICE] waUserClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
     }
     handleIncoming('wwebjs-user', msg, handleUserMessage);
   });
 
   waGatewayClient.on('message', (msg) => {
+    if (process.env.WA_DEBUG_LOGGING === 'true') {
+      console.log(`[WA-SERVICE] waGatewayClient received message from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
+    }
     handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
 

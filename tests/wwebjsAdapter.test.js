@@ -3,10 +3,25 @@ import { jest } from '@jest/globals';
 const listeners = {};
 const mockClient = {
   on: jest.fn((event, handler) => {
-    listeners[event] = handler;
+    if (!listeners[event]) {
+      listeners[event] = [];
+    }
+    listeners[event].push(handler);
+  }),
+  removeListener: jest.fn((event, handler) => {
+    if (listeners[event]) {
+      const index = listeners[event].indexOf(handler);
+      if (index > -1) {
+        listeners[event].splice(index, 1);
+      }
+    }
   }),
   removeAllListeners: jest.fn((event) => {
-    delete listeners[event];
+    if (event) {
+      delete listeners[event];
+    } else {
+      Object.keys(listeners).forEach(key => delete listeners[key]);
+    }
   }),
   initialize: jest.fn().mockResolvedValue(),
   destroy: jest.fn().mockResolvedValue(),
@@ -41,7 +56,10 @@ test('wwebjs adapter relays messages', async () => {
   client.onMessage(onMessage);
   await client.connect();
   const incoming = { from: '123', body: 'hi', id: { id: 'm1', _serialized: 'm1' } };
-  listeners['message'](incoming);
+  // Trigger all message listeners
+  if (listeners['message']) {
+    listeners['message'].forEach(handler => handler(incoming));
+  }
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming));
   const id = await client.sendMessage('123', 'hello');
   expect(id).toBe('abc');
@@ -113,27 +131,79 @@ test('wwebjs adapter re-registers event listeners after reinitialization', async
   
   // Verify initial message handling works
   const incoming1 = { from: '123', body: 'first', id: { id: 'm1', _serialized: 'm1' } };
-  listeners['message'](incoming1);
+  if (listeners['message']) {
+    listeners['message'].forEach(handler => handler(incoming1));
+  }
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming1));
+  
+  // Count initial listeners
+  const initialMessageListenerCount = listeners['message']?.length || 0;
   
   // Reinitialize the client
   jest.clearAllMocks();
   await client.reinitialize({ trigger: 'test' });
   
-  // Verify event listeners were removed and re-registered
-  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('message');
+  // Verify that removeListener was called (not removeAllListeners for message event)
+  // QR events should still use removeAllListeners
   expect(mockClient.removeAllListeners).toHaveBeenCalledWith('qr');
-  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('ready');
-  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('auth_failure');
-  expect(mockClient.removeAllListeners).toHaveBeenCalledWith('disconnected');
+  // Other events should use removeListener
+  expect(mockClient.removeListener).toHaveBeenCalled();
   
   // The on() calls should have been made again for re-registration
   const onCallsAfterReinit = mockClient.on.mock.calls;
   const messageListenerAdded = onCallsAfterReinit.some(call => call[0] === 'message');
   expect(messageListenerAdded).toBe(true);
   
+  // Verify we still have the same number of message listeners (internal listener was removed and re-added)
+  const finalMessageListenerCount = listeners['message']?.length || 0;
+  expect(finalMessageListenerCount).toBe(initialMessageListenerCount);
+  
   // Verify message handling still works after reinitialization
   const incoming2 = { from: '456', body: 'second', id: { id: 'm2', _serialized: 'm2' } };
-  listeners['message'](incoming2);
+  if (listeners['message']) {
+    listeners['message'].forEach(handler => handler(incoming2));
+  }
   expect(onMessage).toHaveBeenCalledWith(expect.objectContaining(incoming2));
+});
+
+test('wwebjs adapter preserves external message listeners during reinitialization', async () => {
+  const client = await createWwebjsClient('test-external-listeners');
+  const adapterOnMessage = jest.fn();
+  const externalOnMessage = jest.fn();
+  
+  // Attach adapter's message handler
+  client.onMessage(adapterOnMessage);
+  await client.connect();
+  
+  // Simulate external listener attachment (like waService.js does)
+  mockClient.on('message', externalOnMessage);
+  
+  // Count listeners before reinitialization
+  const listenerCountBefore = listeners['message']?.length || 0;
+  
+  // Verify initial message handling works for both handlers
+  const incoming1 = { from: '123', body: 'before', id: { id: 'm1', _serialized: 'm1' } };
+  if (listeners['message']) {
+    listeners['message'].forEach(handler => handler(incoming1));
+  }
+  expect(adapterOnMessage).toHaveBeenCalledWith(expect.objectContaining(incoming1));
+  expect(externalOnMessage).toHaveBeenCalledWith(incoming1);
+  
+  // Reinitialize the client
+  jest.clearAllMocks();
+  await client.reinitialize({ trigger: 'test' });
+  
+  // Count listeners after reinitialization
+  const listenerCountAfter = listeners['message']?.length || 0;
+  
+  // External listener should still be present
+  expect(listenerCountAfter).toBe(listenerCountBefore);
+  
+  // Verify both handlers still work after reinitialization
+  const incoming2 = { from: '456', body: 'after', id: { id: 'm2', _serialized: 'm2' } };
+  if (listeners['message']) {
+    listeners['message'].forEach(handler => handler(incoming2));
+  }
+  expect(adapterOnMessage).toHaveBeenCalledWith(expect.objectContaining(incoming2));
+  expect(externalOnMessage).toHaveBeenCalledWith(incoming2);
 });
