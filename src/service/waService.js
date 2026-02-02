@@ -4973,6 +4973,7 @@ if (shouldInitWhatsAppClients) {
   console.log('[WA] Message event listeners attached successfully.');
   // Verify listeners are actually attached
   console.log(`[WA] Listener counts - waClient: ${waClient.listenerCount('message')}, waUserClient: ${waUserClient.listenerCount('message')}, waGatewayClient: ${waGatewayClient.listenerCount('message')}`);
+  console.log('[WA] ** IMPORTANT: If you send a message to the bot and see NO logs, the client may not be connected or authenticated. Check for "Client ready event received" logs above. **');
 
 
   const clientsToInit = [
