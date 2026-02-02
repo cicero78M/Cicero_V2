@@ -55,7 +55,8 @@ test('getLinkReports joins with insta_post_khusus', async () => {
   const rows = await getLinkReports();
   expect(rows).toEqual([{ shortcode: 'abc', caption: 'c' }]);
   expect(mockQuery).toHaveBeenCalledWith(
-    expect.stringContaining('FROM link_report_khusus r')
+    expect.stringContaining('FROM link_report_khusus r'),
+    expect.any(Array)
   );
 });
 
@@ -125,4 +126,16 @@ test('getRekapLinkByClient_khusus orders by priority list first', async () => {
   expect(matches.length).toBeGreaterThanOrEqual(PRIORITY_UPPER.length);
   expect(sql).toContain('CASE WHEN');
   expect(sql).toContain('UPPER(u.nama)');
+});
+
+test('getRekapLinkByClient_khusus filters by operator role', async () => {
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ jumlah_post: '5' }] })
+    .mockResolvedValueOnce({ rows: [{ user_id: '1', nama: 'User 1', jumlah_link: '10' }] });
+  await getRekapLinkByClient('POLRES', 'harian', null, 'operator');
+  expect(mockQuery).toHaveBeenCalledTimes(2);
+  const sql = mockQuery.mock.calls[1][0];
+  expect(sql).toMatch(/AND EXISTS \(/);
+  expect(sql).toMatch(/JOIN roles r ON ur\.role_id = r\.role_id/);
+  expect(sql).toMatch(/LOWER\(r\.role_name\) = 'operator'/);
 });
