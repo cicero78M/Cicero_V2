@@ -1410,6 +1410,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('disconnected', internalDisconnectedHandler);
     
     internalMessageHandler = async (msg) => {
+      // CRITICAL: This log proves whatsapp-web.js is emitting message events
+      console.log(`[WWEBJS-ADAPTER] *** WHATSAPP-WEB.JS MESSAGE EVENT TRIGGERED *** clientId=${clientId}, from=${msg.from}`);
       // ALWAYS log message reception (not just in debug mode) to help diagnose reception issues
       console.log(`[WWEBJS-ADAPTER] Message received by internal handler - clientId=${clientId}, from=${msg.from}`);
       if (debugLoggingEnabled) {
@@ -1442,6 +1444,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     };
     client.on('message', internalMessageHandler);
     console.log(`[WWEBJS] Internal message handler registered for clientId=${clientId}`);
+    console.log(`[WWEBJS] Message handler function signature: ${typeof internalMessageHandler === 'function' ? 'valid' : 'INVALID'}`);
+    console.log(`[WWEBJS] If you send a message and see "[WWEBJS-ADAPTER] *** WHATSAPP-WEB.JS MESSAGE EVENT TRIGGERED ***", ` +
+      `the whatsapp-web.js library is working. If not, check client connection/authentication.`);
   };
 
   const reinitializeClient = async (trigger, reason, options = {}) => {
@@ -1506,6 +1511,12 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   };
 
   registerEventListeners();
+  
+  // Log initial state for diagnostics
+  console.log(`[WWEBJS] Client created for clientId=${clientId}, event listeners registered`);
+  console.log(`[WWEBJS] To diagnose message reception, watch for:` +
+    ` 1) 'Client ready event received', 2) 'fully initialized and ready to receive messages', 3) 'Message received by internal handler'`);
+  
   const ensureWidFactory = async (contextLabel, requireGroupMetadata = false, retryAttempts = 1) => {
     if (!client.pupPage) {
       if (client.info?.wid) {
