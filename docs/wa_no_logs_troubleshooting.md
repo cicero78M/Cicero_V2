@@ -77,9 +77,10 @@ When the application starts, you should see these log messages in order:
 Look for error messages in your logs:
 
 #### Common Error 1: Missing Chrome/Chromium
+Error output:
 ```
-missing-chrome
-Chrome executable not found
+[WWEBJS] Initialization failed: Error: missing-chrome: Chrome executable not found
+Hint: set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome".
 ```
 
 **Solution:**
@@ -94,8 +95,9 @@ npx puppeteer browsers install chrome
 ```
 
 #### Common Error 2: Authentication Failure
+Error output:
 ```
-auth_failure for clientId=wa-admin
+[WWEBJS] auth_failure for clientId=wa-admin: Session auth failed
 ```
 
 **Solution:**
@@ -107,9 +109,10 @@ auth_failure for clientId=wa-admin
   ```
 
 #### Common Error 3: Session Lock (Multiple Instances)
+Error output:
 ```
-WA_WWEBJS_SHARED_SESSION_LOCK
-Browser lock is active
+[WWEBJS] WA_WWEBJS_SHARED_SESSION_LOCK: Browser lock is active
+Another WhatsApp client instance is using this session
 ```
 
 **Solution:**
@@ -153,8 +156,7 @@ Once the client shows `ready: true`, send a test message to your WhatsApp number
 
 **Expected log sequence:**
 ```
-[WWEBJS-ADAPTER] *** WHATSAPP-WEB.JS MESSAGE EVENT TRIGGERED *** clientId=wa-admin, from=628xxx
-[WWEBJS-ADAPTER] Message received by internal handler - clientId=wa-admin, from=628xxx  
+[WWEBJS-ADAPTER] *** MESSAGE EVENT TRIGGERED *** clientId=wa-admin, from=628xxx
 [WWEBJS-ADAPTER] Emitting 'message' event to emitter - clientId=wa-admin, from=628xxx
 [WA-SERVICE] waClient 'message' event received - from=628xxx@c.us
 [WA-EVENT-AGGREGATOR] Message received from adapter: wwebjs, jid: 628xxx@c.us
@@ -295,7 +297,7 @@ If you've checked all of the above and messages still don't appear in logs:
 
 2. Look for the CRITICAL diagnostic log:
    ```
-   [WWEBJS-ADAPTER] *** WHATSAPP-WEB.JS MESSAGE EVENT TRIGGERED ***
+   [WWEBJS-ADAPTER] *** MESSAGE EVENT TRIGGERED ***
    ```
    - If you see this → Event relay issue
    - If you don't see this → Connection/authentication issue
