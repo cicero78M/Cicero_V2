@@ -223,6 +223,7 @@ export async function getRekapLinkByClient(
 
   // Apply additional client_id filter when explicitly overridden (e.g., for operator role in ORG scope)
   // This ensures we filter by the authenticated user's client_id rather than the requested client_id
+  // Only apply when they differ; if they're equal, the base WHERE clause already handles it
   let userClientFilter = '';
   if (userClientIdOverride && userClientIdOverride !== client_id) {
     linkParams.push(resolvedUserClientId);

@@ -53,13 +53,13 @@ export async function getAmplifyKhususRekap(req, res) {
         }
         userClientId = tokenClientId;
         userRoleFilter = OPERATOR_ROLE;
+        roleForQuery = OPERATOR_ROLE;
       }
 
       rekapOptions = {
         userClientId,
         userRoleFilter
       };
-      roleForQuery = resolvedRole;
     }
 
     sendConsoleDebug({ 
