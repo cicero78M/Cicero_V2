@@ -155,7 +155,8 @@ export async function getReportsTodayByShortcode(client_id, shortcode, roleFlag 
 export async function getRekapLinkByClient(
   client_id,
   periode = 'harian',
-  tanggal
+  tanggal,
+  roleFlag = null
 ) {
   let dateFilterPost = "p.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
   let dateFilterReport = "r.created_at::date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date";
@@ -202,6 +203,16 @@ export async function getRekapLinkByClient(
   const { priorityCase, fallbackRank } = buildPriorityOrderClause('u.nama', addPriorityParam);
   const priorityExpr = `(${priorityCase})`;
 
+  let operatorRoleFilter = '';
+  if (roleFlag && roleFlag.toLowerCase() === OPERATOR_ROLE_NAME) {
+    linkParams.push(OPERATOR_ROLE_NAME);
+    operatorRoleFilter = `AND EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.role_id
+      WHERE ur.user_id = u.user_id AND LOWER(r.role_name) = LOWER($${linkParams.length})
+    )`;
+  }
+
   const { rows } = await query(
     `WITH cli AS (
        SELECT client_type FROM clients WHERE client_id = $1
@@ -239,6 +250,7 @@ export async function getRekapLinkByClient(
           WHERE ur.user_id = u.user_id AND r.role_name = $1
         )
       )
+      ${operatorRoleFilter}
     ORDER BY
       ${priorityExpr} ASC,
       CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
