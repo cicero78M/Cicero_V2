@@ -1,4 +1,54 @@
-const seen = new Set();
+// TTL-based cache for message deduplication to prevent memory leak
+// Messages are kept for 24 hours by default (configurable via WA_MESSAGE_DEDUP_TTL_MS)
+const seenMessages = new Map(); // key -> timestamp
+const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+// Parse TTL from environment, with validation
+function parseMessageDedupTTL() {
+  const envValue = process.env.WA_MESSAGE_DEDUP_TTL_MS;
+  if (!envValue) return DEFAULT_TTL_MS;
+  
+  const parsed = parseInt(envValue, 10);
+  if (Number.isNaN(parsed) || parsed < 60000) {
+    console.warn(
+      `[WA-EVENT-AGGREGATOR] Invalid WA_MESSAGE_DEDUP_TTL_MS="${envValue}", ` +
+      `using default ${DEFAULT_TTL_MS}ms (must be >= 60000ms)`
+    );
+    return DEFAULT_TTL_MS;
+  }
+  return parsed;
+}
+
+const MESSAGE_DEDUP_TTL_MS = parseMessageDedupTTL();
+
+// Periodic cleanup of expired entries to prevent memory leak
+function cleanupExpiredMessages() {
+  const now = Date.now();
+  let removedCount = 0;
+  
+  for (const [key, timestamp] of seenMessages.entries()) {
+    if (now - timestamp > MESSAGE_DEDUP_TTL_MS) {
+      seenMessages.delete(key);
+      removedCount++;
+    }
+  }
+  
+  if (removedCount > 0 && debugLoggingEnabled) {
+    console.log(
+      `[WA-EVENT-AGGREGATOR] Cleaned up ${removedCount} expired message(s), ` +
+      `current cache size: ${seenMessages.size}`
+    );
+  }
+}
+
+// Start periodic cleanup
+const cleanupTimer = setInterval(cleanupExpiredMessages, CLEANUP_INTERVAL_MS);
+
+// Ensure cleanup timer doesn't prevent process from exiting
+if (cleanupTimer.unref) {
+  cleanupTimer.unref();
+}
 
 // Enable debug logging only when WA_DEBUG_LOGGING is set to "true"
 const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === 'true';
@@ -34,6 +84,13 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
     if (debugLoggingEnabled) {
       console.log(`[WA-EVENT-AGGREGATOR] Invoking handler without jid/id (jid: ${jid}, id: ${id})`);
     }
+    // Log warning for missing IDs to track potential issues
+    if (!debugLoggingEnabled && (!jid || !id)) {
+      console.warn(
+        `[WA-EVENT-AGGREGATOR] Message missing identifier - jid: ${jid}, id: ${id}, ` +
+        `fromAdapter: ${fromAdapter}`
+      );
+    }
     invokeHandler();
     return;
   }
@@ -42,11 +99,11 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
     if (debugLoggingEnabled) {
       console.log(`[WA-EVENT-AGGREGATOR] Allowing replay for message: ${key}`);
     }
-    seen.add(key);
+    seenMessages.set(key, Date.now());
     invokeHandler();
     return;
   }
-  if (seen.has(key)) {
+  if (seenMessages.has(key)) {
     if (debugLoggingEnabled) {
       console.log(`[WA-EVENT-AGGREGATOR] Duplicate message detected, skipping: ${key}`);
     }
@@ -58,7 +115,7 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
       console.log(`[WA-EVENT-AGGREGATOR] Baileys message, delaying 200ms: ${key}`);
     }
     setTimeout(() => {
-      if (seen.has(key)) {
+      if (seenMessages.has(key)) {
         if (debugLoggingEnabled) {
           console.log(`[WA-EVENT-AGGREGATOR] Baileys message already handled: ${key}`);
         }
@@ -67,7 +124,7 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
       if (debugLoggingEnabled) {
         console.log(`[WA-EVENT-AGGREGATOR] Processing delayed baileys message: ${key}`);
       }
-      seen.add(key);
+      seenMessages.set(key, Date.now());
       invokeHandler();
     }, 200);
     return;
@@ -76,6 +133,27 @@ export function handleIncoming(fromAdapter, msg, handler, options = {}) {
   if (debugLoggingEnabled) {
     console.log(`[WA-EVENT-AGGREGATOR] Processing wwebjs message: ${key}`);
   }
-  seen.add(key);
+  seenMessages.set(key, Date.now());
   invokeHandler();
+}
+
+/**
+ * Get statistics about the message deduplication cache
+ * @returns {{ size: number, ttlMs: number, oldestEntryAgeMs: number }}
+ */
+export function getMessageDedupStats() {
+  const now = Date.now();
+  let oldestTimestamp = now;
+  
+  for (const timestamp of seenMessages.values()) {
+    if (timestamp < oldestTimestamp) {
+      oldestTimestamp = timestamp;
+    }
+  }
+  
+  return {
+    size: seenMessages.size,
+    ttlMs: MESSAGE_DEDUP_TTL_MS,
+    oldestEntryAgeMs: now - oldestTimestamp,
+  };
 }
