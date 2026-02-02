@@ -23,6 +23,7 @@ describe('authRequired middleware', () => {
     router.post('/dashboard/komplain/insta', (req, res) => res.json({ success: true }));
     router.post('/dashboard/komplain/tiktok', (req, res) => res.json({ success: true }));
     router.get('/amplify/rekap', (req, res) => res.json({ success: true }));
+    router.get('/amplify-khusus/rekap', (req, res) => res.json({ success: true }));
     router.get('/other', (req, res) => res.json({ success: true }));
     app.use('/api', authRequired, router);
   });
@@ -85,6 +86,15 @@ describe('authRequired middleware', () => {
     const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
     const res = await request(app)
       .get('/api/amplify/rekap')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role on amplify khusus rekap route', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .get('/api/amplify-khusus/rekap')
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
