@@ -1333,15 +1333,33 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     return connectInProgress;
   };
 
+  // Store references to internal event handlers so they can be removed without affecting external listeners
+  let internalMessageHandler = null;
+  let internalReadyHandler = null;
+  let internalAuthFailureHandler = null;
+  let internalDisconnectedHandler = null;
+
   const registerEventListeners = () => {
+    // Remove only internal listeners, preserving external ones (e.g., from waService.js)
+    if (internalMessageHandler) {
+      client.removeListener('message', internalMessageHandler);
+    }
+    if (internalReadyHandler) {
+      client.removeListener('ready', internalReadyHandler);
+    }
+    if (internalAuthFailureHandler) {
+      client.removeListener('auth_failure', internalAuthFailureHandler);
+    }
+    if (internalDisconnectedHandler) {
+      client.removeListener('disconnected', internalDisconnectedHandler);
+    }
+    
+    // Note: qr events are transient and safe to remove all
     client.removeAllListeners('qr');
-    client.removeAllListeners('ready');
-    client.removeAllListeners('auth_failure');
-    client.removeAllListeners('disconnected');
-    client.removeAllListeners('message');
 
     client.on('qr', (qr) => emitter.emit('qr', qr));
-    client.on('ready', async () => {
+    
+    internalReadyHandler = async () => {
       try {
         // Wait for WidFactory to be available (max 3 attempts)
         await ensureWidFactory(`ready handler for clientId=${clientId}`, false, 3);
@@ -1368,12 +1386,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         // Emit ready anyway to maintain backward compatibility and not block client usage
         emitter.emit('ready');
       }
-    });
-    client.on('auth_failure', async (message) => {
+    };
+    client.on('ready', internalReadyHandler);
+    
+    internalAuthFailureHandler = async (message) => {
       console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
       await reinitializeClient('auth_failure', message);
-    });
-    client.on('disconnected', async (reason) => {
+    };
+    client.on('auth_failure', internalAuthFailureHandler);
+    
+    internalDisconnectedHandler = async (reason) => {
       const normalizedReason = String(reason || '').toUpperCase();
       if (LOGOUT_DISCONNECT_REASONS.has(normalizedReason)) {
         await reinitializeClient('disconnected', reason, {
@@ -1381,8 +1403,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         });
       }
       emitter.emit('disconnected', reason);
-    });
-    client.on('message', async (msg) => {
+    };
+    client.on('disconnected', internalDisconnectedHandler);
+    
+    internalMessageHandler = async (msg) => {
       if (debugLoggingEnabled) {
         console.log(`[WWEBJS-ADAPTER] Raw message received for clientId=${clientId}, from=${msg.from}, body=${msg.body?.substring(0, 50) || '(empty)'}`);
       }
@@ -1408,7 +1432,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
         timestamp: msg.timestamp,
         ...contactMeta,
       });
-    });
+    };
+    client.on('message', internalMessageHandler);
   };
 
   const reinitializeClient = async (trigger, reason, options = {}) => {
