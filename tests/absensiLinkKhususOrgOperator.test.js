@@ -41,3 +41,15 @@ test('uses operator role for org clients', async () => {
   expect(mockGetUsersByClient).not.toHaveBeenCalled();
 });
 
+test('passes operator roleFlag to getReportsTodayByClient when roleFlag is operator', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ nama: 'TEST', client_type: 'polres' }] });
+  mockGetOperatorsByClient.mockResolvedValueOnce([{ user_id: '1', nama: 'User 1' }]);
+  mockGetShortcodesTodayByClient.mockResolvedValueOnce(['abc123']);
+  mockGetReportsTodayByClient.mockResolvedValueOnce([]);
+
+  await absensiLinkKhusus('TEST', { roleFlag: 'operator' });
+
+  expect(mockGetOperatorsByClient).toHaveBeenCalledWith('TEST');
+  expect(mockGetReportsTodayByClient).toHaveBeenCalledWith('TEST', 'operator');
+});
+
