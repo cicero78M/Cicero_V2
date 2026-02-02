@@ -221,8 +221,6 @@ export async function getRekapLinkByClient(
           WHERE ur.user_id = u.user_id AND r.role_name = $1
         )
       )
-    )
-    GROUP BY u.user_id, u.title, u.nama, u.insta, u.divisi, u.exception, ls.jumlah_link
     ORDER BY
       ${priorityExpr} ASC,
       CASE WHEN ${priorityExpr} = ${fallbackRank} THEN UPPER(u.nama) END ASC,
