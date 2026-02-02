@@ -10,6 +10,7 @@ describe('authRequired middleware', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'testsecret';
     app = express();
+    app.use(express.json());
     const router = express.Router();
     router.get('/claim/ok', (req, res) => res.json({ success: true }));
     router.get('/clients/data', (req, res) => res.json({ success: true }));
@@ -23,7 +24,12 @@ describe('authRequired middleware', () => {
     router.post('/dashboard/komplain/insta', (req, res) => res.json({ success: true }));
     router.post('/dashboard/komplain/tiktok', (req, res) => res.json({ success: true }));
     router.get('/amplify/rekap', (req, res) => res.json({ success: true }));
+    router.get('/amplify/rekap-khusus', (req, res) => res.json({ success: true }));
     router.get('/amplify-khusus/rekap', (req, res) => res.json({ success: true }));
+    router.post('/link-reports', (req, res) => res.json({ success: true }));
+    router.post('/link-reports-khusus', (req, res) => res.json({ success: true }));
+    router.put('/link-reports/abc123', (req, res) => res.json({ success: true }));
+    router.put('/link-reports-khusus/xyz789', (req, res) => res.json({ success: true }));
     router.get('/other', (req, res) => res.json({ success: true }));
     app.use('/api', authRequired, router);
   });
@@ -96,6 +102,55 @@ describe('authRequired middleware', () => {
     const res = await request(app)
       .get('/api/amplify-khusus/rekap')
       .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role on amplify rekap-khusus route', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .get('/api/amplify/rekap-khusus')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role to POST link-reports', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .post('/api/link-reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ shortcode: 'abc123', user_id: 'o1' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role to POST link-reports-khusus', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .post('/api/link-reports-khusus')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ shortcode: 'xyz789', user_id: 'o1' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role to PUT link-reports', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .put('/api/link-reports/abc123')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ user_id: 'o1', instagram_link: 'https://instagram.com/p/abc123' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('allows operator role to PUT link-reports-khusus', async () => {
+    const token = jwt.sign({ user_id: 'o1', role: 'operator' }, process.env.JWT_SECRET);
+    const res = await request(app)
+      .put('/api/link-reports-khusus/xyz789')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ user_id: 'o1', instagram_link: 'https://instagram.com/p/xyz789' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });

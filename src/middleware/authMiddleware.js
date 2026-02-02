@@ -5,6 +5,7 @@ const operatorAllowlist = [
   { path: '/clients/profile', type: 'exact' },
   { path: '/aggregator', type: 'prefix' },
   { path: '/amplify/rekap', type: 'exact' },
+  { path: '/amplify/rekap-khusus', type: 'exact' },
   { path: '/amplify-khusus/rekap', type: 'exact' },
   { path: '/dashboard/stats', type: 'exact' },
   { path: '/dashboard/login-web/recap', type: 'exact' },
@@ -21,6 +22,10 @@ const operatorAllowlist = [
 
 const operatorMethodAllowlist = [
   { method: 'PUT', pattern: /^\/users\/[^/]+$/ },
+  { method: 'POST', pattern: /^\/link-reports$/ },
+  { method: 'POST', pattern: /^\/link-reports-khusus$/ },
+  { method: 'PUT', pattern: /^\/link-reports\/[^/]+$/ },
+  { method: 'PUT', pattern: /^\/link-reports-khusus\/[^/]+$/ },
 ];
 
 function isOperatorAllowedPath(method, pathname) {
