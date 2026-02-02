@@ -64,7 +64,8 @@ test('filters by operator role when scope is org', async () => {
   expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
-test('returns 400 when role missing with scope', async () => {
+test('passes null roleFlag when only scope is provided', async () => {
+  mockGetRekap.mockResolvedValue([]);
   const req = { 
     query: { client_id: 'c1', scope: 'org' }, 
     user: { client_ids: ['c1'] } 
@@ -72,8 +73,8 @@ test('returns 400 when role missing with scope', async () => {
   const json = jest.fn();
   const res = { json, status: jest.fn().mockReturnThis() };
   await getAmplifyKhususRekap(req, res);
-  expect(res.status).toHaveBeenCalledWith(400);
-  expect(json).toHaveBeenCalledWith({ success: false, message: 'role wajib diisi' });
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, null);
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
 
 test('returns 400 when scope is invalid', async () => {
@@ -86,4 +87,29 @@ test('returns 400 when scope is invalid', async () => {
   await getAmplifyKhususRekap(req, res);
   expect(res.status).toHaveBeenCalledWith(400);
   expect(json).toHaveBeenCalledWith({ success: false, message: 'scope tidak valid' });
+});
+
+test('returns 400 when user client_id is missing for org scope operator', async () => {
+  const req = { 
+    query: { client_id: 'c1', scope: 'org', role: 'operator' }, 
+    user: { client_ids: ['c1'] } 
+  };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getAmplifyKhususRekap(req, res);
+  expect(res.status).toHaveBeenCalledWith(400);
+  expect(json).toHaveBeenCalledWith({ success: false, message: 'client_id pengguna tidak ditemukan' });
+});
+
+test('passes null roleFlag when only role is provided', async () => {
+  mockGetRekap.mockResolvedValue([]);
+  const req = { 
+    query: { client_id: 'c1', role: 'operator' }, 
+    user: { client_ids: ['c1'] } 
+  };
+  const json = jest.fn();
+  const res = { json, status: jest.fn().mockReturnThis() };
+  await getAmplifyKhususRekap(req, res);
+  expect(mockGetRekap).toHaveBeenCalledWith('c1', 'harian', undefined, null);
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
 });
