@@ -30,10 +30,17 @@ export async function createLinkReport(req, res, next) {
   try {
     const data = { ...req.body };
     
+    // Validate required fields first (fail fast)
+    if (!data.client_id) {
+      const error = new Error('client_id is required');
+      error.statusCode = 400;
+      throw error;
+    }
+    
     // Extract Instagram link from payload
     const instagramLink = data.instagram_link ? extractFirstUrl(data.instagram_link) : null;
     
-    // Validate that only Instagram link is provided
+    // Validate that Instagram link is provided
     if (!instagramLink) {
       const error = new Error('instagram_link is required');
       error.statusCode = 400;
@@ -58,12 +65,9 @@ export async function createLinkReport(req, res, next) {
     }
     
     // Fetch metadata from Instagram using RapidAPI
-    if (!data.client_id) {
-      const error = new Error('client_id is required');
-      error.statusCode = 400;
-      throw error;
-    }
-    
+    // This function stores the post data to insta_post_khusus and insta_post tables
+    // The return value contains the stored post data but we don't need to use it
+    // as the createLinkReport model function will reference the shortcode from insta_post_khusus
     await fetchSinglePostKhusus(instagramLink, data.client_id);
     
     // Create link report with validated Instagram link

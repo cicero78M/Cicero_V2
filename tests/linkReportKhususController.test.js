@@ -38,6 +38,28 @@ beforeEach(() => {
 });
 
 describe('createLinkReport', () => {
+  test('rejects when client_id is missing', async () => {
+    const req = {
+      body: {
+        instagram_link: 'https://www.instagram.com/p/ABC123/',
+        user_id: '1'
+      }
+    };
+    const next = jest.fn();
+    const res = {};
+
+    await createLinkReport(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'client_id is required',
+        statusCode: 400
+      })
+    );
+    expect(mockFetchSinglePostKhusus).not.toHaveBeenCalled();
+    expect(mockCreateLinkReport).not.toHaveBeenCalled();
+  });
+
   test('rejects when instagram_link is missing', async () => {
     const req = {
       body: { user_id: '1', client_id: 'POLRES' }
@@ -104,36 +126,15 @@ describe('createLinkReport', () => {
     expect(mockCreateLinkReport).not.toHaveBeenCalled();
   });
 
-  test('rejects when client_id is missing', async () => {
-    const req = {
-      body: {
-        instagram_link: 'https://www.instagram.com/p/ABC123/',
-        user_id: '1'
-      }
-    };
-    const next = jest.fn();
-    const res = {};
-
-    await createLinkReport(req, res, next);
-
-    expect(next).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'client_id is required',
-        statusCode: 400
-      })
-    );
-    expect(mockFetchSinglePostKhusus).not.toHaveBeenCalled();
-    expect(mockCreateLinkReport).not.toHaveBeenCalled();
-  });
-
   test('fetches post metadata from Instagram using RapidAPI', async () => {
     const instagramUrl = 'https://www.instagram.com/p/ABC123/';
+    const expectedShortcode = 'ABC123';
     mockFetchSinglePostKhusus.mockResolvedValueOnce({
-      shortcode: 'ABC123',
+      shortcode: expectedShortcode,
       caption: 'Test caption'
     });
     mockCreateLinkReport.mockResolvedValueOnce({
-      shortcode: 'ABC123',
+      shortcode: expectedShortcode,
       instagram_link: instagramUrl
     });
 
@@ -156,7 +157,7 @@ describe('createLinkReport', () => {
     expect(mockCreateLinkReport).toHaveBeenCalledWith(
       expect.objectContaining({
         instagram_link: instagramUrl,
-        shortcode: 'ABC123',
+        shortcode: expectedShortcode,
         facebook_link: null,
         twitter_link: null,
         tiktok_link: null,
