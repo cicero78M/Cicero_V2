@@ -1581,7 +1581,7 @@ waClient.on("auth_failure", (message) => {
 });
 
 // Wa Bot siap
-waClient.once("ready", () => {
+waClient.on("ready", () => {
   clearAuthenticatedFallbackTimer(waClient);
   clearLogoutAwaitingQr(waClient);
   markClientReady(waClient, "ready");
@@ -1626,7 +1626,7 @@ waUserClient.on("auth_failure", (message) => {
   console.error(`[WA-USER] Auth failure: ${message}`);
 });
 
-waUserClient.once("ready", () => {
+waUserClient.on("ready", () => {
   clearAuthenticatedFallbackTimer(waUserClient);
   clearLogoutAwaitingQr(waUserClient);
   markClientReady(waUserClient, "ready");
@@ -1670,7 +1670,7 @@ waGatewayClient.on("auth_failure", (message) => {
   console.error(`[WA-GATEWAY] Auth failure: ${message}`);
 });
 
-waGatewayClient.once("ready", () => {
+waGatewayClient.on("ready", () => {
   clearAuthenticatedFallbackTimer(waGatewayClient);
   clearLogoutAwaitingQr(waGatewayClient);
   markClientReady(waGatewayClient, "ready");
