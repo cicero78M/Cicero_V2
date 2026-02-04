@@ -228,4 +228,36 @@ describe('TelegramService - Chat ID Validation', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('Polling Error Handling', () => {
+    beforeEach(() => {
+      process.env.TELEGRAM_BOT_TOKEN = 'test-token';
+      process.env.TELEGRAM_ADMIN_CHAT_ID = '123456789';
+    });
+
+    test('should initialize with polling error handling', () => {
+      const result = telegramService.initTelegramBot();
+      
+      expect(result).toBe(true);
+      expect(mockBot.on).toHaveBeenCalledWith('polling_error', expect.any(Function));
+    });
+
+    test('should track bot status correctly', () => {
+      telegramService.initTelegramBot();
+      const status = telegramService.getBotStatus();
+      
+      expect(status.isInitialized).toBe(true);
+      expect(status.isPollingEnabled).toBe(true);
+      expect(status.pollingErrorCount).toBe(0);
+      expect(status.hasBot).toBe(true);
+    });
+
+    test('should reset polling errors', () => {
+      telegramService.initTelegramBot();
+      telegramService.resetPollingErrors();
+      
+      const status = telegramService.getBotStatus();
+      expect(status.pollingErrorCount).toBe(0);
+    });
+  });
 });
