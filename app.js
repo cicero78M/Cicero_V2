@@ -16,6 +16,7 @@ import { sensitivePathGuard } from './src/middleware/sensitivePathGuard.js';
 import cronManifest from './src/cron/cronManifest.js';
 import { registerDirRequestCrons } from './src/cron/dirRequest/index.js';
 import { waClient, waGatewayClient } from './src/service/waService.js';
+import { initTelegramBot } from './src/service/telegramService.js';
 import { startOtpWorker } from './src/service/otpQueue.js';
 
 const cronBuckets = cronManifest.reduce((buckets, { bucket, modulePath }) => {
@@ -78,6 +79,9 @@ loadCronModules(cronBuckets.always)
 
 scheduleCronBucket(waClient, 'waClient', 'WA client');
 registerDirRequestCrons(waGatewayClient);
+
+// Initialize Telegram bot
+initTelegramBot();
 
 startOtpWorker().catch(err => console.error('[OTP] worker error', err));
 

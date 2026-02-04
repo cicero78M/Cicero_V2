@@ -21,6 +21,8 @@ export const env = cleanEnv(process.env, {
   RAPIDAPI_FALLBACK_HOST: str({ default: '' }),
   ADMIN_WHATSAPP: str({ default: '' }),
   GATEWAY_WHATSAPP_ADMIN: str({ default: '' }),
+  TELEGRAM_BOT_TOKEN: str({ default: '' }),
+  TELEGRAM_ADMIN_CHAT_ID: str({ default: '' }),
   APP_SESSION_NAME: str({ default: '' }),
   USER_WA_CLIENT_ID: str({ default: 'wa-userrequest' }),
   GATEWAY_WA_CLIENT_ID: str({ default: 'wa-gateway' }),

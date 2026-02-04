@@ -4051,13 +4051,14 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
 
 
   // =========================
-  // === APPROVE / DENY DASHBOARD ADMIN
+  // === APPROVE / DENY DASHBOARD ADMIN (DEPRECATED)
   // =========================
   if (text.toLowerCase().startsWith("approvedash#")) {
+    console.warn('[DEPRECATED] WhatsApp approval command used. Please use Telegram bot instead.');
     const [, usernameRaw] = text.split("#");
     const username = usernameRaw?.trim();
     if (!username) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: approvedash#username");
+      await waClient.sendMessage(chatId, "⚠️ [DEPRECATED] Format salah! Gunakan: approvedash#username\n\nCatatan: Mekanisme approval via WA akan segera dihapus. Gunakan Telegram bot.");
       return;
     }
     const usr = await dashboardUserModel.findByUsername(username);
@@ -4066,7 +4067,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       return;
     }
     await dashboardUserModel.updateStatus(usr.dashboard_user_id, true);
-    await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.`);
+    await waClient.sendMessage(chatId, `✅ User ${usr.username} disetujui.\n\n⚠️ [DEPRECATED] Mekanisme approval via WA akan segera dihapus. Gunakan Telegram bot.`);
     if (usr.whatsapp) {
       await safeSendMessage(
         waClient,
@@ -4078,10 +4079,11 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
   }
 
   if (text.toLowerCase().startsWith("denydash#")) {
+    console.warn('[DEPRECATED] WhatsApp denial command used. Please use Telegram bot instead.');
     const [, usernameRaw] = text.split("#");
     const username = usernameRaw?.trim();
     if (!username) {
-      await waClient.sendMessage(chatId, "Format salah! Gunakan: denydash#username");
+      await waClient.sendMessage(chatId, "⚠️ [DEPRECATED] Format salah! Gunakan: denydash#username\n\nCatatan: Mekanisme approval via WA akan segera dihapus. Gunakan Telegram bot.");
       return;
     }
     const usr = await dashboardUserModel.findByUsername(username);
@@ -4090,7 +4092,7 @@ Ketik *angka menu* di atas, atau *batal* untuk keluar.
       return;
     }
     await dashboardUserModel.updateStatus(usr.dashboard_user_id, false);
-    await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.`);
+    await waClient.sendMessage(chatId, `❌ User ${usr.username} ditolak.\n\n⚠️ [DEPRECATED] Mekanisme approval via WA akan segera dihapus. Gunakan Telegram bot.`);
     if (usr.whatsapp) {
       await safeSendMessage(
         waClient,

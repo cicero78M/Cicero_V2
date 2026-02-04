@@ -216,6 +216,8 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     REDIS_URL=redis://localhost:6379
     ADMIN_WHATSAPP=628xxxxxx,628yyyyyy
     GATEWAY_WHATSAPP_ADMIN=628zzzzzz
+    TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+    TELEGRAM_ADMIN_CHAT_ID=your-telegram-admin-chat-id
     APP_SESSION_NAME=wa-admin
     USER_WA_CLIENT_ID=wa-userrequest-prod
     GATEWAY_WA_CLIENT_ID=wa-gateway-prod
@@ -260,6 +262,7 @@ Application logs are timestamped using the Asia/Jakarta timezone by the console 
     ```
    Use `DB_DRIVER=postgres`, `postgresql`, or `pg` when connecting to Postgres so the backend applies the session settings (`app.current_*`) required by database row-level security. Switching `DB_DRIVER` to another value disables these Postgres-only settings.
    `ADMIN_WHATSAPP` accepts numbers with or without the `@c.us` suffix. When the suffix is omitted, the application automatically appends it.
+   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ADMIN_CHAT_ID` configure the Telegram bot for dashboard user approval (see [docs/telegram_bot_setup.md](docs/telegram_bot_setup.md)). When configured, approval notifications are sent via Telegram instead of WhatsApp. The WhatsApp approval mechanism (`approvedash#`, `denydash#`) is now deprecated.
    `USER_WA_CLIENT_ID` defines the session identifier used by the user-facing WhatsApp client. Change it to isolate session data if needed.
    `USER_WA_CLIENT_ID` dan `GATEWAY_WA_CLIENT_ID` wajib unik (berbeda dari default maupun satu sama lain). Contoh benar: `USER_WA_CLIENT_ID=wa-userrequest-prod` dan `GATEWAY_WA_CLIENT_ID=wa-gateway-prod`.
    `USER_WA_CLIENT_ID` **harus lowercase dan tidak boleh default `wa-userrequest`**. Service akan menghentikan proses sejak awal jika nilai masih default, mengandung huruf besar, atau folder `session-<clientId>` di `WA_AUTH_DATA_PATH` memakai casing berbeda.
