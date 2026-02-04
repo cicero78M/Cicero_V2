@@ -5,7 +5,7 @@ import {
   getUsersByDirektorat,
 } from '../model/userModel.js';
 
-const DIREKTORAT_ROLES = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
+const DIREKTORAT_ROLES = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam'];
 
 export class UserDirectoryError extends Error {
   constructor(message, status = 400) {
