@@ -135,6 +135,46 @@ Setelah approval/denial:
    ```
 3. Test dengan registrasi user baru
 
+### Polling Error: EFATAL: AggregateError
+
+Error ini biasanya terjadi karena:
+
+1. **Multiple bot instances**: Ada beberapa instance aplikasi yang mencoba polling bot yang sama secara bersamaan
+   - **Solusi**: Pastikan hanya ada satu instance aplikasi yang berjalan
+   - Cek dengan `pm2 list` atau `ps aux | grep node`
+   - Stop instance duplikat dengan `pm2 stop <id>` atau `kill <pid>`
+
+2. **Invalid bot token**: Token bot tidak valid atau telah dicabut
+   - **Solusi**: Verifikasi token di [@BotFather](https://t.me/BotFather)
+   - Generate token baru jika perlu dan update `.env`
+
+3. **Network connectivity**: Masalah koneksi ke server Telegram
+   - **Solusi**: Cek koneksi internet dan firewall
+   - Test koneksi: `curl https://api.telegram.org/bot<TOKEN>/getMe`
+
+4. **Rate limiting**: Terlalu banyak request ke Telegram API
+   - **Solusi**: Bot akan otomatis berhenti setelah 5 error berturut-turut
+   - Tunggu beberapa menit, kemudian restart aplikasi
+
+#### Fitur Auto-Recovery
+
+Bot sekarang dilengkapi dengan mekanisme auto-recovery:
+- Tracking jumlah polling error
+- Automatic shutdown setelah 5 error berturut-turut untuk mencegah spam log
+- Log yang informatif untuk diagnosis masalah
+- Status bot dapat dicek melalui `getBotStatus()` function
+
+Jika bot berhenti karena terlalu banyak error, log akan menampilkan:
+```
+[TELEGRAM] Polling error #5: EFATAL
+[TELEGRAM] Fatal polling error detected: ...
+[TELEGRAM] Too many polling errors (5). Stopping polling to prevent continuous failures.
+[TELEGRAM] Please check: 1) Bot token is valid, 2) No other bot instance is running, 3) Network connectivity
+[TELEGRAM] Polling stopped successfully
+```
+
+Setelah memperbaiki masalah, restart aplikasi untuk mengaktifkan kembali bot.
+
 ## Contoh Log
 
 ### Sukses

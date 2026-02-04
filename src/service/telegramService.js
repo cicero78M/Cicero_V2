@@ -190,7 +190,7 @@ export function initTelegramBot() {
       if (error.code === 'EFATAL' || error.code === 'ETELEGRAM') {
         console.error('[TELEGRAM] Fatal polling error detected:', error.message);
         
-        // If too many errors, stop polling to prevent continuous errors
+        // If too many errors and polling is still enabled, stop polling to prevent continuous errors
         if (pollingErrorCount >= MAX_POLLING_ERRORS && isPollingEnabled) {
           console.error(`[TELEGRAM] Too many polling errors (${pollingErrorCount}). Stopping polling to prevent continuous failures.`);
           console.error('[TELEGRAM] Please check: 1) Bot token is valid, 2) No other bot instance is running, 3) Network connectivity');
@@ -202,6 +202,7 @@ export function initTelegramBot() {
           } catch (stopErr) {
             console.error('[TELEGRAM] Error stopping polling:', stopErr.message);
           }
+          return; // Exit early to prevent further error handling
         }
       } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
         console.error('[TELEGRAM] Network connectivity issue. Will retry automatically.');
@@ -232,7 +233,7 @@ export function initTelegramBot() {
 export async function sendTelegramApprovalRequest(data) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isInitialized || !adminChatId) {
+  if (!bot || !isBotInitialized() || !adminChatId) {
     console.warn('[TELEGRAM] Bot not initialized or admin chat ID not configured');
     return false;
   }
@@ -274,7 +275,7 @@ Gunakan perintah berikut untuk menyetujui atau menolak:
 export async function sendTelegramNotification(message) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isInitialized || !adminChatId) {
+  if (!bot || !isBotInitialized() || !adminChatId) {
     return false;
   }
 
@@ -296,7 +297,14 @@ export async function sendTelegramNotification(message) {
 }
 
 /**
- * Check if Telegram bot is enabled and initialized
+ * Check if Telegram bot is initialized (regardless of polling status)
+ */
+export function isBotInitialized() {
+  return isInitialized && bot !== null;
+}
+
+/**
+ * Check if Telegram bot is enabled and polling is active
  */
 export function isTelegramEnabled() {
   return isInitialized && bot !== null && isPollingEnabled;
@@ -353,6 +361,7 @@ export default {
   sendTelegramApprovalRequest,
   sendTelegramNotification,
   isTelegramEnabled,
+  isBotInitialized,
   getTelegramBot,
   stopTelegramBot,
   getBotStatus,

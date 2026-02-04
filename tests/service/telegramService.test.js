@@ -252,12 +252,53 @@ describe('TelegramService - Chat ID Validation', () => {
       expect(status.hasBot).toBe(true);
     });
 
-    test('should reset polling errors', () => {
+    test('should reset polling errors after incrementing', () => {
+      // Initialize bot
       telegramService.initTelegramBot();
+      
+      // Get the polling_error handler
+      const pollingErrorHandler = mockBot.on.mock.calls.find(
+        call => call[0] === 'polling_error'
+      )?.[1];
+      
+      // Simulate a polling error
+      if (pollingErrorHandler) {
+        pollingErrorHandler({ code: 'ECONNREFUSED', message: 'Connection refused' });
+      }
+      
+      // Verify error count increased
+      let status = telegramService.getBotStatus();
+      expect(status.pollingErrorCount).toBeGreaterThan(0);
+      
+      // Reset errors
       telegramService.resetPollingErrors();
       
-      const status = telegramService.getBotStatus();
+      // Verify error count is reset
+      status = telegramService.getBotStatus();
       expect(status.pollingErrorCount).toBe(0);
+    });
+
+    test('should distinguish between bot initialized and polling enabled', () => {
+      telegramService.initTelegramBot();
+      
+      // Initially both should be true
+      expect(telegramService.isBotInitialized()).toBe(true);
+      expect(telegramService.isTelegramEnabled()).toBe(true);
+      
+      // Simulate 5 fatal errors to trigger auto-shutdown
+      const pollingErrorHandler = mockBot.on.mock.calls.find(
+        call => call[0] === 'polling_error'
+      )?.[1];
+      
+      if (pollingErrorHandler) {
+        for (let i = 0; i < 5; i++) {
+          pollingErrorHandler({ code: 'EFATAL', message: 'Fatal error' });
+        }
+      }
+      
+      // Bot should still be initialized but polling should be disabled
+      expect(telegramService.isBotInitialized()).toBe(true);
+      expect(telegramService.isTelegramEnabled()).toBe(false);
     });
   });
 });
