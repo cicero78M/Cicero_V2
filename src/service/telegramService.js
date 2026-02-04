@@ -233,7 +233,7 @@ export function initTelegramBot() {
 export async function sendTelegramApprovalRequest(data) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isBotInitialized() || !adminChatId) {
+  if (!isBotInitialized() || !adminChatId) {
     console.warn('[TELEGRAM] Bot not initialized or admin chat ID not configured');
     return false;
   }
@@ -275,7 +275,7 @@ Gunakan perintah berikut untuk menyetujui atau menolak:
 export async function sendTelegramNotification(message) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isBotInitialized() || !adminChatId) {
+  if (!isBotInitialized() || !adminChatId) {
     return false;
   }
 
