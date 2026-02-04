@@ -328,6 +328,21 @@ test('getUsersByDirektorat filters by client and flag', async () => {
   expect(sql.match(/EXISTS/g).length).toBe(1);
 });
 
+test('getUsersByDirektorat accepts ditintelkam flag', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ user_id: '4', ditintelkam: true, ditbinmas: false, ditlantas: false, bidhumas: false, ditsamapta: false }] });
+  const users = await getUsersByDirektorat('ditintelkam');
+  expect(users).toEqual([{ user_id: '4', ditintelkam: true, ditbinmas: false, ditlantas: false, bidhumas: false, ditsamapta: false }]);
+  const sql = mockQuery.mock.calls[0][0];
+  expect(sql).toContain('user_roles');
+  expect(sql).toContain('r1.role_name = $1');
+  expect(sql).toContain("bool_or(r.role_name='ditintelkam')");
+  expect(mockQuery.mock.calls[0][1]).toEqual(['ditintelkam']);
+});
+
+test('getUsersByDirektorat throws error for invalid flag', async () => {
+  await expect(getUsersByDirektorat('invalid_flag')).rejects.toThrow('Direktorat flag tidak valid');
+});
+
 test('getClientsByRole returns lowercase client ids', async () => {
   mockQuery.mockResolvedValueOnce({ rows: [{ client_id: 'c1' }, { client_id: 'c2' }] });
   const clients = await getClientsByRole('operator');

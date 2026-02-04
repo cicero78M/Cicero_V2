@@ -217,7 +217,7 @@ export const updateUserRoles = async (req, res, next) => {
     const roles = Array.isArray(req.body.roles)
       ? req.body.roles.map((r) => r.toLowerCase())
       : [];
-    const allowed = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'operator'];
+    const allowed = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam', 'operator'];
     const data = {};
     for (const r of allowed) {
       data[r] = roles.includes(r);
@@ -281,7 +281,7 @@ export const getUsersByClient = async (req, res, next) => {
       clientId = tokenClientIds[matchedIndex];
     }
     if (
-      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
+      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam'].includes(role) &&
       tokenClientId
     ) {
       clientId = tokenClientId;
@@ -323,7 +323,7 @@ export const getUsersByClientFull = async (req, res, next) => {
       clientId = tokenClientIds[matchedIndex];
     }
     if (
-      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'].includes(role) &&
+      ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam'].includes(role) &&
       tokenClientId
     ) {
       clientId = tokenClientId;
