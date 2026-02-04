@@ -158,3 +158,24 @@ test('safeSendMessage retries after hydrating when Lid is missing', async () => 
   expect(waClient.getChat).toHaveBeenCalledWith('123@c.us');
   expect(waClient.sendMessage).toHaveBeenCalledTimes(2); // Initial attempt + retry after hydration
 });
+
+test('safeSendMessage handles persistent Lid errors properly', async () => {
+  const lidError = new Error('Evaluation failed: Error: Lid is missing in chat table');
+  const waClient = {
+    waitForWaReady: jest.fn().mockResolvedValue(),
+    getChat: jest.fn().mockResolvedValue({ id: { _serialized: '123@c.us' } }),
+    sendMessage: jest
+      .fn()
+      .mockRejectedValueOnce(lidError) // First attempt fails
+      .mockRejectedValueOnce(lidError) // Retry after hydration also fails
+      .mockResolvedValueOnce({ id: { _serialized: 'msg-123' } }), // Outer retry succeeds
+  };
+
+  const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
+    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0 },
+  });
+
+  expect(result).toBe(true);
+  // sendMessage is called: initial attempt + immediate retry + outer retry mechanism
+  expect(waClient.sendMessage).toHaveBeenCalledTimes(3);
+});

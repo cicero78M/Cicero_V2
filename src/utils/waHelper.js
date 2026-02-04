@@ -504,8 +504,13 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
       } catch (err) {
         if (isMissingLidError(err)) {
           await hydrateChat(waClient, resolvedChatId);
-          await waClient.sendMessage(resolvedChatId, message, sendOptions);
-          return;
+          try {
+            await waClient.sendMessage(resolvedChatId, message, sendOptions);
+            return;
+          } catch (retryErr) {
+            console.warn('[WA] Retry after Lid hydration failed:', retryErr?.message || retryErr);
+            throw retryErr;
+          }
         }
         throw err;
       }
