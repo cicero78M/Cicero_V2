@@ -236,7 +236,7 @@ export const getClientProfile = async (req, res, next) => {
     const regionalId = requestedRegionalId
       ? String(requestedRegionalId).trim().toUpperCase()
       : null;
-    const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta"];
+    const directorateRoles = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta", "ditintelkam"];
     const usesStandardPayload = Boolean(
       req.query.role || req.query.scope || req.query.regional_id
     );

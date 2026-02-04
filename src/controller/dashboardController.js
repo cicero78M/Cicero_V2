@@ -4,7 +4,7 @@ import { getAllUsers } from "../model/userModel.js";
 import { getInstaPostCount, getTiktokPostCount } from "../service/postCountService.js";
 import { sendConsoleDebug } from "../middleware/debugHandler.js";
 
-const DIRECTORATE_ROLES = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta"];
+const DIRECTORATE_ROLES = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta", "ditintelkam"];
 
 export async function getDashboardStats(req, res) {
   try {

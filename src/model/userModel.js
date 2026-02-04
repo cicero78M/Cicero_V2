@@ -419,7 +419,7 @@ export async function getUsersSocialByClient(clientId, roleFilter = null) {
 export async function findUserById(user_id) {
   const uid = normalizeUserId(user_id);
   const { rows } = await query(
-      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1\n     GROUP BY u.user_id`,
+      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1\n     GROUP BY u.user_id`,
     [uid]
   );
   return rows[0];
@@ -437,7 +437,7 @@ export async function findUserByIdAndClient(user_id, client_id, roleFilter = nul
   const uid = normalizeUserId(user_id);
   const { clause, params: clientParams } = await buildClientFilter(client_id, 'u', 2, roleFilter);
   const { rows } = await query(
-      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND ${clause}\n     GROUP BY u.user_id`,
+      `SELECT u.*,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id=$1 AND ${clause}\n     GROUP BY u.user_id`,
     [uid, ...clientParams]
   );
   return rows[0];
@@ -473,7 +473,7 @@ export async function updateUserField(user_id, field, value) {
     "premium_end_date",
     "wa_notification_opt_in",
   ];
-  const roleFields = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta", "operator"];
+  const roleFields = ["ditbinmas", "ditlantas", "bidhumas", "ditsamapta", "ditintelkam", "operator"];
   if (!allowed.includes(field) && !roleFields.includes(field)) throw new Error("Field tidak diizinkan!");
   if (["nama", "title", "divisi", "jabatan", "desa"].includes(field) && typeof value === 'string') {
     value = value.toUpperCase();
@@ -530,7 +530,7 @@ export async function getExceptionUsersByClient(client_id, roleFilter = null) {
 
 // Ambil user dengan flag direktorat binmas atau lantas
 export async function getDirektoratUsers(clientId = null) {
-  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas,\n    bool_or(r.role_name='ditsamapta') AS ditsamapta\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name IN ('ditbinmas','ditlantas','bidhumas','ditsamapta')`;
+  let sql = `SELECT u.*,\n    bool_or(r.role_name='ditbinmas') AS ditbinmas,\n    bool_or(r.role_name='ditlantas') AS ditlantas,\n    bool_or(r.role_name='bidhumas') AS bidhumas,\n    bool_or(r.role_name='ditsamapta') AS ditsamapta,\n    bool_or(r.role_name='ditintelkam') AS ditintelkam\n  FROM "user" u\n  JOIN user_roles ur ON u.user_id = ur.user_id\n  JOIN roles r ON ur.role_id = r.role_id\n  WHERE r.role_name IN ('ditbinmas','ditlantas','bidhumas','ditsamapta','ditintelkam')`;
   const params = [];
   if (clientId) {
     sql += ' AND u.client_id = $1';
@@ -546,7 +546,7 @@ export async function getDirektoratUsers(clientId = null) {
 // Selalu memastikan user memiliki role yang sama dengan client_id-nya.
 export async function getUsersByDirektorat(flag, clientId = null) {
   console.log(`[USER MODEL] getUsersByDirektorat called with flag=${flag}, clientId=${JSON.stringify(clientId)}`);
-  const validFlags = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta'];
+  const validFlags = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam'];
   if (!validFlags.includes(flag)) {
     console.log(`[USER MODEL] Invalid flag passed to getUsersByDirektorat: ${flag}`);
     throw new Error('Direktorat flag tidak valid');
@@ -561,7 +561,8 @@ export async function getUsersByDirektorat(flag, clientId = null) {
       bool_or(r.role_name='ditbinmas') AS ditbinmas,
       bool_or(r.role_name='ditlantas') AS ditlantas,
       bool_or(r.role_name='bidhumas') AS bidhumas,
-      bool_or(r.role_name='ditsamapta') AS ditsamapta
+      bool_or(r.role_name='ditsamapta') AS ditsamapta,
+      bool_or(r.role_name='ditintelkam') AS ditintelkam
     FROM "user" u
     LEFT JOIN user_roles ur ON ur.user_id = u.user_id
     LEFT JOIN roles r ON r.role_id = ur.role_id
@@ -602,7 +603,7 @@ export async function getUsersByDirektorat(flag, clientId = null) {
 export async function findUserByInsta(insta) {
   if (!insta) return null;
   const { rows } = await query(
-      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.insta) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.insta) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
     [insta]
   );
   return rows[0];
@@ -611,7 +612,7 @@ export async function findUserByInsta(insta) {
 export async function findUserByTiktok(tiktok) {
   if (!tiktok) return null;
   const { rows } = await query(
-      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.tiktok) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE LOWER(u.tiktok) = LOWER($1)\n     GROUP BY u.user_id, c.nama`,
     [tiktok]
   );
   return rows[0];
@@ -620,7 +621,7 @@ export async function findUserByTiktok(tiktok) {
 export async function findUserByWhatsApp(wa) {
   if (!wa) return null;
   const { rows } = await query(
-      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.whatsapp = $1\n     GROUP BY u.user_id, c.nama`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.whatsapp = $1\n     GROUP BY u.user_id, c.nama`,
     [wa]
   );
   return rows[0];
@@ -630,7 +631,7 @@ export async function findUserByIdAndWhatsApp(userId, wa) {
   if (!userId || !wa) return null;
   const uid = normalizeUserId(userId);
   const { rows } = await query(
-      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id, c.nama`,
+      `SELECT u.*,\n      c.nama AS client_name,\n      bool_or(r.role_name='ditbinmas') AS ditbinmas,\n      bool_or(r.role_name='ditlantas') AS ditlantas,\n      bool_or(r.role_name='bidhumas') AS bidhumas,\n      bool_or(r.role_name='ditsamapta') AS ditsamapta,\n      bool_or(r.role_name='ditintelkam') AS ditintelkam,\n      bool_or(r.role_name='operator') AS operator\n     FROM "user" u\n     LEFT JOIN clients c ON c.client_id = u.client_id\n     LEFT JOIN user_roles ur ON u.user_id = ur.user_id\n     LEFT JOIN roles r ON ur.role_id = r.role_id\n     WHERE u.user_id = $1 AND u.whatsapp = $2\n     GROUP BY u.user_id, c.nama`,
     [uid, wa]
   );
   return rows[0];
@@ -672,7 +673,7 @@ export async function createUser(userData) {
   // Sesuaikan dengan struktur dan database-mu!
   userData.user_id = normalizeUserId(userData.user_id);
   normalizeUserFields(userData);
-  const roles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'operator'].filter(
+  const roles = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam', 'operator'].filter(
     (r) => userData[r]
   );
   const q = `
@@ -714,7 +715,7 @@ export async function updateUser(userId, userData) {
     delete userData.user_id;
   }
 
-  const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'operator'];
+  const roleFields = ['ditbinmas', 'ditlantas', 'bidhumas', 'ditsamapta', 'ditintelkam', 'operator'];
   const roles = {};
   let hasRoleUpdates = false;
   for (const rf of roleFields) {
