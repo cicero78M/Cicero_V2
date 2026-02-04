@@ -8,6 +8,34 @@ let isInitialized = false;
 let initError = null;
 
 /**
+ * Validate Telegram chat ID format
+ * @param {string} chatId - Chat ID to validate
+ * @returns {boolean} True if valid, false otherwise
+ */
+function isValidChatId(chatId) {
+  return chatId && chatId.match(/^-?\d+$/) !== null;
+}
+
+/**
+ * Handle Telegram API errors with helpful messages
+ * @param {Error} err - The error object
+ * @param {string} adminChatId - The chat ID that was used
+ * @param {string} context - Context for the error (e.g., "approval request", "notification")
+ */
+function handleTelegramError(err, adminChatId, context) {
+  if (err.response?.body?.error_code === 400) {
+    console.error(
+      `[TELEGRAM] Chat not found (ID: ${adminChatId}). Please ensure:\n` +
+        '  1. The bot is added to the chat/group\n' +
+        '  2. The chat ID is correct (get it by sending /start to the bot)\n' +
+        '  3. The bot has permission to send messages'
+    );
+  } else {
+    console.error(`[TELEGRAM] Failed to send ${context}:`, err.message || err);
+  }
+}
+
+/**
  * Initialize Telegram bot
  */
 export function initTelegramBot() {
@@ -17,6 +45,14 @@ export function initTelegramBot() {
   if (!token || !adminChatId) {
     console.log(
       '[TELEGRAM] Telegram bot is disabled. Set TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID to enable.'
+    );
+    return false;
+  }
+
+  // Validate chat ID format
+  if (!isValidChatId(adminChatId)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID (e.g., "123456789" or "-123456789" for groups).`
     );
     return false;
   }
@@ -163,6 +199,14 @@ export async function sendTelegramApprovalRequest(data) {
     return false;
   }
 
+  // Validate chat ID format
+  if (!isValidChatId(adminChatId)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID.`
+    );
+    return false;
+  }
+
   try {
     const message = `📋 Permintaan User Approval
 
@@ -180,7 +224,7 @@ Gunakan perintah berikut untuk menyetujui atau menolak:
     console.log(`[TELEGRAM] Approval request sent for ${data.username}`);
     return true;
   } catch (err) {
-    console.error('[TELEGRAM] Failed to send approval request:', err);
+    handleTelegramError(err, adminChatId, 'approval request');
     return false;
   }
 }
@@ -196,11 +240,19 @@ export async function sendTelegramNotification(message) {
     return false;
   }
 
+  // Validate chat ID format
+  if (!isValidChatId(adminChatId)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID.`
+    );
+    return false;
+  }
+
   try {
     await bot.sendMessage(adminChatId, message);
     return true;
   } catch (err) {
-    console.error('[TELEGRAM] Failed to send notification:', err);
+    handleTelegramError(err, adminChatId, 'notification');
     return false;
   }
 }
