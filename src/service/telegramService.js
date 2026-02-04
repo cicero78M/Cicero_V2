@@ -21,6 +21,14 @@ export function initTelegramBot() {
     return false;
   }
 
+  // Validate chat ID format
+  if (!adminChatId.match(/^-?\d+$/)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID (e.g., "123456789" or "-123456789" for groups).`
+    );
+    return false;
+  }
+
   try {
     bot = new TelegramBot(token, { polling: true });
     isInitialized = true;
@@ -163,6 +171,14 @@ export async function sendTelegramApprovalRequest(data) {
     return false;
   }
 
+  // Validate chat ID format
+  if (!adminChatId.match(/^-?\d+$/)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID.`
+    );
+    return false;
+  }
+
   try {
     const message = `📋 Permintaan User Approval
 
@@ -180,7 +196,16 @@ Gunakan perintah berikut untuk menyetujui atau menolak:
     console.log(`[TELEGRAM] Approval request sent for ${data.username}`);
     return true;
   } catch (err) {
-    console.error('[TELEGRAM] Failed to send approval request:', err);
+    if (err.response?.body?.error_code === 400) {
+      console.error(
+        `[TELEGRAM] Chat not found (ID: ${adminChatId}). Please ensure:\n` +
+          '  1. The bot is added to the chat/group\n' +
+          '  2. The chat ID is correct (get it by sending /start to the bot)\n' +
+          '  3. The bot has permission to send messages'
+      );
+    } else {
+      console.error('[TELEGRAM] Failed to send approval request:', err.message || err);
+    }
     return false;
   }
 }
@@ -196,11 +221,28 @@ export async function sendTelegramNotification(message) {
     return false;
   }
 
+  // Validate chat ID format
+  if (!adminChatId.match(/^-?\d+$/)) {
+    console.error(
+      `[TELEGRAM] Invalid TELEGRAM_ADMIN_CHAT_ID format: "${adminChatId}". Must be a numeric chat ID.`
+    );
+    return false;
+  }
+
   try {
     await bot.sendMessage(adminChatId, message);
     return true;
   } catch (err) {
-    console.error('[TELEGRAM] Failed to send notification:', err);
+    if (err.response?.body?.error_code === 400) {
+      console.error(
+        `[TELEGRAM] Chat not found (ID: ${adminChatId}). Please ensure:\n` +
+          '  1. The bot is added to the chat/group\n' +
+          '  2. The chat ID is correct (get it by sending /start to the bot)\n' +
+          '  3. The bot has permission to send messages'
+      );
+    } else {
+      console.error('[TELEGRAM] Failed to send notification:', err.message || err);
+    }
     return false;
   }
 }
