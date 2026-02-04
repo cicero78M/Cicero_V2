@@ -68,6 +68,7 @@ test('operator adds user with defaults', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
     operator: true,
   });
   expect(status).toHaveBeenCalledWith(201);
@@ -116,6 +117,7 @@ test('operator assigns multiple roles simultaneously', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
   });
   expect(status).toHaveBeenCalledWith(201);
 });
@@ -138,6 +140,7 @@ test('operator reactivates existing user and attaches operator role', async () =
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
     operator: true
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
@@ -176,6 +179,7 @@ test('operator reactivates existing user with multiple roles', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
     operator: true
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
@@ -201,6 +205,7 @@ test('updateUserRoles updates roles based on array', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
   });
   const req = { params: { id: '1' }, body: { roles: ['operator', 'ditbinmas'] } };
   const json = jest.fn();
@@ -215,6 +220,7 @@ test('updateUserRoles updates roles based on array', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
   });
     expect(status).toHaveBeenCalledWith(200);
     expect(json).toHaveBeenCalledWith({
@@ -226,6 +232,7 @@ test('updateUserRoles updates roles based on array', async () => {
         ditlantas: false,
         bidhumas: false,
         ditsamapta: false,
+        ditintelkam: false,
       },
     });
   });
@@ -263,6 +270,7 @@ test('reactivates existing user and attaches ditbinmas role', async () => {
     ditlantas: false,
     bidhumas: false,
     ditsamapta: false,
+    ditintelkam: false,
     operator: false
   });
   expect(mockUpdateUserField).not.toHaveBeenCalled();
