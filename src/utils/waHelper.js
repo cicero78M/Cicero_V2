@@ -504,6 +504,8 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
       } catch (err) {
         if (isMissingLidError(err)) {
           await hydrateChat(waClient, resolvedChatId);
+          await waClient.sendMessage(resolvedChatId, message, sendOptions);
+          return;
         }
         throw err;
       }

@@ -136,3 +136,25 @@ test('isUnsupportedVersionError detects update prompts', () => {
   ).toBe(true);
   expect(isUnsupportedVersionError(new Error('random error'))).toBe(false);
 });
+
+test('safeSendMessage retries after hydrating when Lid is missing', async () => {
+  const lidError = new Error('Evaluation failed: Error: Lid is missing in chat table');
+  const waClient = {
+    waitForWaReady: jest.fn().mockResolvedValue(),
+    getChat: jest.fn().mockResolvedValue({ id: { _serialized: '123@c.us' } }),
+    sendMessage: jest
+      .fn()
+      .mockRejectedValueOnce(lidError)
+      .mockResolvedValueOnce({ id: { _serialized: 'msg-123' } }),
+  };
+
+  const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
+    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0 },
+  });
+
+  expect(result).toBe(true);
+  expect(waClient.waitForWaReady).toHaveBeenCalledTimes(1);
+  // getChat is called multiple times: during resolveChatId, before send, and after Lid error
+  expect(waClient.getChat).toHaveBeenCalledWith('123@c.us');
+  expect(waClient.sendMessage).toHaveBeenCalledTimes(2); // Initial attempt + retry after hydration
+});
