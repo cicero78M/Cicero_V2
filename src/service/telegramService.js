@@ -6,6 +6,9 @@ import waClient, { waitForWaReady } from './waService.js';
 let bot = null;
 let isInitialized = false;
 let initError = null;
+let pollingErrorCount = 0;
+const MAX_POLLING_ERRORS = 5;
+let isPollingEnabled = true;
 
 /**
  * Validate Telegram chat ID format
@@ -58,8 +61,18 @@ export function initTelegramBot() {
   }
 
   try {
-    bot = new TelegramBot(token, { polling: true });
+    bot = new TelegramBot(token, { 
+      polling: {
+        autoStart: true,
+        interval: 300,
+        params: {
+          timeout: 10
+        }
+      }
+    });
     isInitialized = true;
+    pollingErrorCount = 0;
+    isPollingEnabled = true;
 
     // Handle /start command
     bot.onText(/\/start/, (msg) => {
@@ -166,9 +179,35 @@ export function initTelegramBot() {
       }
     });
 
-    // Error handling
+    // Error handling with exponential backoff
     bot.on('polling_error', (error) => {
-      console.error('[TELEGRAM] Polling error:', error.message);
+      pollingErrorCount++;
+      
+      // Log the error with more details
+      console.error(`[TELEGRAM] Polling error #${pollingErrorCount}:`, error.code || error.message);
+      
+      // Handle specific error types
+      if (error.code === 'EFATAL' || error.code === 'ETELEGRAM') {
+        console.error('[TELEGRAM] Fatal polling error detected:', error.message);
+        
+        // If too many errors and polling is still enabled, stop polling to prevent continuous errors
+        if (pollingErrorCount >= MAX_POLLING_ERRORS && isPollingEnabled) {
+          console.error(`[TELEGRAM] Too many polling errors (${pollingErrorCount}). Stopping polling to prevent continuous failures.`);
+          console.error('[TELEGRAM] Please check: 1) Bot token is valid, 2) No other bot instance is running, 3) Network connectivity');
+          isPollingEnabled = false;
+          
+          try {
+            bot.stopPolling();
+            console.log('[TELEGRAM] Polling stopped successfully');
+          } catch (stopErr) {
+            console.error('[TELEGRAM] Error stopping polling:', stopErr.message);
+          }
+          return; // Exit early to prevent further error handling
+        }
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        console.error('[TELEGRAM] Network connectivity issue. Will retry automatically.');
+      }
+      
       initError = error;
     });
 
@@ -194,7 +233,7 @@ export function initTelegramBot() {
 export async function sendTelegramApprovalRequest(data) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isInitialized || !adminChatId) {
+  if (!isBotInitialized() || !adminChatId) {
     console.warn('[TELEGRAM] Bot not initialized or admin chat ID not configured');
     return false;
   }
@@ -236,7 +275,7 @@ Gunakan perintah berikut untuk menyetujui atau menolak:
 export async function sendTelegramNotification(message) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
-  if (!bot || !isInitialized || !adminChatId) {
+  if (!isBotInitialized() || !adminChatId) {
     return false;
   }
 
@@ -258,10 +297,38 @@ export async function sendTelegramNotification(message) {
 }
 
 /**
- * Check if Telegram bot is enabled and initialized
+ * Check if Telegram bot is initialized (regardless of polling status)
+ */
+export function isBotInitialized() {
+  return isInitialized && bot !== null;
+}
+
+/**
+ * Check if Telegram bot is enabled and polling is active
  */
 export function isTelegramEnabled() {
-  return isInitialized && bot !== null;
+  return isInitialized && bot !== null && isPollingEnabled;
+}
+
+/**
+ * Get bot polling status
+ */
+export function getBotStatus() {
+  return {
+    isInitialized,
+    isPollingEnabled,
+    pollingErrorCount,
+    hasBot: bot !== null,
+    lastError: initError ? initError.message : null
+  };
+}
+
+/**
+ * Reset polling error count (for manual intervention)
+ */
+export function resetPollingErrors() {
+  pollingErrorCount = 0;
+  console.log('[TELEGRAM] Polling error count reset');
 }
 
 /**
@@ -276,10 +343,16 @@ export function getTelegramBot() {
  */
 export function stopTelegramBot() {
   if (bot && isInitialized) {
-    bot.stopPolling();
-    bot = null;
-    isInitialized = false;
-    console.log('[TELEGRAM] Telegram bot stopped');
+    try {
+      bot.stopPolling();
+      isPollingEnabled = false;
+      bot = null;
+      isInitialized = false;
+      pollingErrorCount = 0;
+      console.log('[TELEGRAM] Telegram bot stopped');
+    } catch (err) {
+      console.error('[TELEGRAM] Error stopping bot:', err.message);
+    }
   }
 }
 
@@ -288,6 +361,9 @@ export default {
   sendTelegramApprovalRequest,
   sendTelegramNotification,
   isTelegramEnabled,
+  isBotInitialized,
   getTelegramBot,
-  stopTelegramBot
+  stopTelegramBot,
+  getBotStatus,
+  resetPollingErrors
 };
