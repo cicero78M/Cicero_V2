@@ -12,6 +12,7 @@ Dokumen ini menjelaskan perilaku endpoint `createUser` pada controller `src/cont
 ## Reaktivasi User Lama
 - **User masih aktif:** role baru hanya ditambahkan (di-set ke `true`) tanpa menghapus role yang sudah ada.
 - **User tidak aktif:** status diubah menjadi aktif dan **seluruh role di-reset** agar hanya sesuai dengan role user yang sedang login ketika melakukan input. Role lain dihapus sehingga hak akses mengikuti role pembuat perubahan.
+- Pada kedua kondisi di atas, jika payload `createUser` membawa `client_id` yang berbeda dengan data lama, maka `client_id` user existing akan diperbarui mengikuti `client_id` baru (selama `client_id` valid di tabel `clients`).
 - Setiap perubahan data user akan memperbarui `updated_at` secara otomatis untuk kebutuhan audit.
 
 Perubahan ini memastikan penambahan role tidak pernah menghilangkan izin yang sudah ada, sementara reaktivasi user selalu menyelaraskan role dengan identitas admin yang melakukan aksi.
