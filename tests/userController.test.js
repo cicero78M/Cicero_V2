@@ -329,7 +329,7 @@ test('ditlantas creates new user with flag', async () => {
 test('ditintelkam creates new user with flag', async () => {
   mockFindUserById.mockResolvedValue(null);
   mockCreateUser.mockResolvedValue({ user_id: '10', ditintelkam: true, client_id: 'DITINTELKAM' });
-  const req = { body: { user_id: '10', nama: 'J' }, user: { role: 'ditintelkam', client_id: 'DITINTELKAM' } };
+  const req = { body: { user_id: '10', nama: 'Test User' }, user: { role: 'ditintelkam', client_id: 'DITINTELKAM' } };
   const json = jest.fn();
   const status = jest.fn().mockReturnThis();
   const res = { status, json };
@@ -339,7 +339,7 @@ test('ditintelkam creates new user with flag', async () => {
   expect(mockCreateUser).toHaveBeenCalledWith(
     expect.objectContaining({
       user_id: '10',
-      nama: 'J',
+      nama: 'Test User',
       client_id: 'DITINTELKAM',
       ditintelkam: true,
     })
