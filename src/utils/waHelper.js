@@ -465,6 +465,8 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
     baseDelayMs: 500,
     maxDelayMs: 5000,
     jitterRatio: 0.2,
+    maxLidRetries: 3,
+    lidRetryDelayMs: 5000,
     shouldRetry: (err, attempt) => {
       if (isMissingLidError(err) && attempt < 2) {
         return true;
@@ -503,8 +505,36 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
         await waClient.sendMessage(resolvedChatId, message, sendOptions);
       } catch (err) {
         if (isMissingLidError(err)) {
-          await hydrateChat(waClient, resolvedChatId);
-          await waClient.sendMessage(resolvedChatId, message, sendOptions);
+          // Retry mechanism for Lid missing error with configurable delays
+          const maxLidRetries = retryConfig.maxLidRetries || 3;
+          const lidRetryDelayMs = retryConfig.lidRetryDelayMs || 5000;
+          let lastLidError = err;
+          
+          for (let lidAttempt = 0; lidAttempt < maxLidRetries; lidAttempt += 1) {
+            console.warn(
+              `[WA] Lid missing error, retry attempt ${lidAttempt + 1}/${maxLidRetries} for ${resolvedChatId}`
+            );
+            
+            // Wait 5 seconds before retry
+            await new Promise((resolve) => setTimeout(resolve, lidRetryDelayMs));
+            
+            try {
+              await hydrateChat(waClient, resolvedChatId);
+              await waClient.sendMessage(resolvedChatId, message, sendOptions);
+              // Success - exit early to avoid unnecessary processing
+              return;
+            } catch (retryErr) {
+              lastLidError = retryErr;
+              if (!isMissingLidError(retryErr)) {
+                // Different error, throw it immediately
+                throw retryErr;
+              }
+              // Same Lid error, continue to next retry
+            }
+          }
+          
+          // All Lid retries exhausted, throw the last error
+          throw lastLidError;
         } else {
           throw err;
         }
