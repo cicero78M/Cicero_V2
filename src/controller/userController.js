@@ -32,6 +32,7 @@ export const createUser = async (req, res, next) => {
       ditlantas: false,
       bidhumas: false,
       ditsamapta: false,
+      ditintelkam: false,
       operator: false,
     };
 
@@ -42,6 +43,8 @@ export const createUser = async (req, res, next) => {
       if (role === 'bidhumas') return { ...defaultRoleFlags, bidhumas: true };
       if (role === 'ditsamapta')
         return { ...defaultRoleFlags, ditsamapta: true };
+      if (role === 'ditintelkam')
+        return { ...defaultRoleFlags, ditintelkam: true };
       return {};
     };
 
@@ -49,13 +52,15 @@ export const createUser = async (req, res, next) => {
       role === 'ditbinmas' ||
       role === 'ditlantas' ||
       role === 'bidhumas' ||
-      role === 'ditsamapta'
+      role === 'ditsamapta' ||
+      role === 'ditintelkam'
     ) {
       if (adminClientId) data.client_id = adminClientId;
       if (role === 'ditbinmas') data.ditbinmas = true;
       if (role === 'ditlantas') data.ditlantas = true;
       if (role === 'bidhumas') data.bidhumas = true;
       if (role === 'ditsamapta') data.ditsamapta = true;
+      if (role === 'ditintelkam') data.ditintelkam = true;
     }
 
     if (role === 'operator') {
@@ -79,6 +84,8 @@ export const createUser = async (req, res, next) => {
           data.bidhumas = false;
         if (!roles.includes('ditsamapta') && data.ditsamapta === undefined)
           data.ditsamapta = false;
+        if (!roles.includes('ditintelkam') && data.ditintelkam === undefined)
+          data.ditintelkam = false;
       }
 
       const existing = await userModel.findUserById(data.user_id);
@@ -117,7 +124,8 @@ export const createUser = async (req, res, next) => {
           role === 'ditbinmas' ||
           role === 'ditlantas' ||
           role === 'bidhumas' ||
-          role === 'ditsamapta'
+          role === 'ditsamapta' ||
+          role === 'ditintelkam'
         ) {
           rolesToAdd.push(role);
         }

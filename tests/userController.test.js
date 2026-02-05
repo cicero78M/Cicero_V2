@@ -326,6 +326,27 @@ test('ditlantas creates new user with flag', async () => {
   expect(status).toHaveBeenCalledWith(201);
 });
 
+test('ditintelkam creates new user with flag', async () => {
+  mockFindUserById.mockResolvedValue(null);
+  mockCreateUser.mockResolvedValue({ user_id: '10', ditintelkam: true, client_id: 'DITINTELKAM' });
+  const req = { body: { user_id: '10', nama: 'J' }, user: { role: 'ditintelkam', client_id: 'DITINTELKAM' } };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { status, json };
+
+  await createUser(req, res, () => {});
+
+  expect(mockCreateUser).toHaveBeenCalledWith(
+    expect.objectContaining({
+      user_id: '10',
+      nama: 'J',
+      client_id: 'DITINTELKAM',
+      ditintelkam: true,
+    })
+  );
+  expect(status).toHaveBeenCalledWith(201);
+});
+
 test('ditbinmas role with matching client_id shows all users', async () => {
   mockFindClientById.mockResolvedValue({ client_type: 'direktorat' });
   mockGetUsersByDirektorat.mockResolvedValue([{ user_id: '1', ditbinmas: true }]);
