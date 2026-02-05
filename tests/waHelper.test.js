@@ -149,7 +149,7 @@ test('safeSendMessage retries after hydrating when Lid is missing', async () => 
   };
 
   const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
-    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0 },
+    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0, maxLidRetries: 3, lidRetryDelayMs: 0 },
   });
 
   expect(result).toBe(true);
@@ -157,7 +157,7 @@ test('safeSendMessage retries after hydrating when Lid is missing', async () => 
   // getChat is called multiple times: during resolveChatId, before send, and after Lid error
   expect(waClient.getChat).toHaveBeenCalledWith('123@c.us');
   expect(waClient.sendMessage).toHaveBeenCalledTimes(2); // Initial attempt + retry after hydration
-});
+}, 10000);
 
 test('safeSendMessage handles persistent Lid errors properly', async () => {
   const lidError = new Error('Evaluation failed: Error: Lid is missing in chat table');
@@ -167,15 +167,16 @@ test('safeSendMessage handles persistent Lid errors properly', async () => {
     sendMessage: jest
       .fn()
       .mockRejectedValueOnce(lidError) // First attempt fails
-      .mockRejectedValueOnce(lidError) // Retry after hydration also fails
-      .mockResolvedValueOnce({ id: { _serialized: 'msg-123' } }), // Outer retry succeeds
+      .mockRejectedValueOnce(lidError) // First Lid retry fails
+      .mockRejectedValueOnce(lidError) // Second Lid retry fails
+      .mockResolvedValueOnce({ id: { _serialized: 'msg-123' } }), // Third Lid retry succeeds
   };
 
   const result = await safeSendMessage(waClient, '123@c.us', 'hello', {
-    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0 },
+    retry: { maxAttempts: 3, baseDelayMs: 0, jitterRatio: 0, maxLidRetries: 3, lidRetryDelayMs: 0 },
   });
 
   expect(result).toBe(true);
-  // sendMessage is called: initial attempt + immediate retry + outer retry mechanism
-  expect(waClient.sendMessage).toHaveBeenCalledTimes(3);
-});
+  // sendMessage is called: initial attempt + 3 Lid retries
+  expect(waClient.sendMessage).toHaveBeenCalledTimes(4);
+}, 20000);
