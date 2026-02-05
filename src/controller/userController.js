@@ -48,6 +48,17 @@ export const createUser = async (req, res, next) => {
       return {};
     };
 
+    const syncExistingUserClientId = async (existingUserId, existingClientId) => {
+      if (!data.client_id) return;
+
+      const incomingClientId = data.client_id.toUpperCase();
+      const currentClientId = existingClientId?.toUpperCase();
+
+      if (incomingClientId !== currentClientId) {
+        await userModel.updateUserField(existingUserId, 'client_id', incomingClientId);
+      }
+    };
+
     if (
       role === 'ditbinmas' ||
       role === 'ditlantas' ||
@@ -90,6 +101,8 @@ export const createUser = async (req, res, next) => {
 
       const existing = await userModel.findUserById(data.user_id);
       if (existing) {
+        await syncExistingUserClientId(existing.user_id, existing.client_id);
+
         if (existing.status === false) {
           await userModel.updateUser(existing.user_id, {
             status: true,
@@ -113,6 +126,8 @@ export const createUser = async (req, res, next) => {
 
     const existing = await userModel.findUserById(data.user_id);
     if (existing) {
+      await syncExistingUserClientId(existing.user_id, existing.client_id);
+
       if (existing.status === false) {
         await userModel.updateUser(existing.user_id, {
           status: true,
