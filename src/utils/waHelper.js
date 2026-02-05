@@ -515,13 +515,13 @@ export async function safeSendMessage(waClient, chatId, message, options = {}) {
               `[WA] Lid missing error, retry attempt ${lidAttempt + 1}/${maxLidRetries} for ${resolvedChatId}`
             );
             
-            // Wait before retry (configurable delay)
+            // Wait 5 seconds before retry
             await new Promise((resolve) => setTimeout(resolve, lidRetryDelayMs));
             
             try {
               await hydrateChat(waClient, resolvedChatId);
               await waClient.sendMessage(resolvedChatId, message, sendOptions);
-              // Success - exit the loop
+              // Success - exit early to avoid unnecessary processing
               return;
             } catch (retryErr) {
               lastLidError = retryErr;
