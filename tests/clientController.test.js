@@ -116,3 +116,61 @@ test('maps client_level to tier aliases in profile response', async () => {
     },
   });
 });
+
+test('allows ditintelkam role with ORG scope regardless of roleClient regional_id', async () => {
+  mockFindClientById
+    .mockResolvedValueOnce({
+      client_id: 'BOJONEGORO',
+      client_type: 'org',
+      regional_id: 'JATIM',
+      client_insta: 'bojonegoro_insta',
+      client_insta_status: false,
+      client_tiktok: 'bojonegoro_tiktok',
+      client_tiktok_status: false,
+      client_amplify_status: false,
+    })
+    .mockResolvedValueOnce({
+      client_id: 'DITINTELKAM',
+      client_type: 'direktorat',
+      regional_id: 'DIFFERENT_REGION',
+      client_insta: 'ditintelkam_insta',
+      client_insta_status: true,
+      client_tiktok: 'ditintelkam_tiktok',
+      client_tiktok_status: true,
+      client_amplify_status: true,
+    });
+
+  const req = {
+    params: {},
+    query: {
+      client_id: 'BOJONEGORO',
+      role: 'ditintelkam',
+      scope: 'ORG',
+      regional_id: 'JATIM',
+    },
+    body: {},
+    user: {},
+  };
+  const json = jest.fn();
+  const status = jest.fn().mockReturnThis();
+  const res = { json, status };
+
+  await getClientProfile(req, res, () => {});
+
+  expect(mockFindClientById).toHaveBeenNthCalledWith(1, 'BOJONEGORO');
+  expect(mockFindClientById).toHaveBeenNthCalledWith(2, 'DITINTELKAM');
+  expect(json).toHaveBeenCalledWith({
+    success: true,
+    client: expect.objectContaining({
+      client_id: 'BOJONEGORO',
+      client_type: 'org',
+      regional_id: 'JATIM',
+      client_insta: 'ditintelkam_insta',
+      client_insta_status: true,
+      client_tiktok: 'ditintelkam_tiktok',
+      client_tiktok_status: true,
+      client_amplify_status: true,
+    }),
+  });
+  expect(status).not.toHaveBeenCalled();
+});
