@@ -313,7 +313,11 @@ export const getClientProfile = async (req, res, next) => {
     ) {
       const roleClient = await clientService.findClientById(role.toUpperCase());
       if (roleClient) {
+        // When scope=org, we overlay social media info from the directorate role client
+        // without validating its regional_id, since the org client's regional_id
+        // has already been validated above (lines 301-306)
         if (
+          resolvedScope !== "org" &&
           regionalId &&
           normalizeClientId(roleClient.regional_id) !== regionalId
         ) {
