@@ -64,6 +64,20 @@ Event failure yang penting:
 
 Saat timeout terjadi, error menyertakan konteks readiness (`label`, `clientId`, `sessionPath`, `awaitingQrScan`, `lastDisconnectReason`, `lastAuthFailureAt`).
 
+## Perilaku pengiriman pesan (`wrapSendMessage`)
+
+Untuk setiap client WA (`WA`, `WA-USER`, `WA-GATEWAY`), `wrapSendMessage` menerapkan aturan berikut:
+
+1. **Antrean per client** memakai `PQueue` dengan `concurrency: 1`.
+2. **Readiness gate** wajib lolos lewat `waitForWaReady()` sebelum `sendMessage` dijalankan.
+3. **Eksekusi kirim satu kali** (`original.sendMessage`) tanpa retry otomatis, tanpa backoff, dan tanpa jitter.
+4. Jika kirim gagal, service:
+   - melempar **error asli** (tidak dibungkus error baru),
+   - menambahkan metadata `sendFailureMetadata` berisi `jid`, `clientLabel`, dan `messageType`,
+   - menulis log terstruktur `event=wa_send_message_failed` plus metrik kegagalan per client (`failed`, `lastFailureAt`).
+
+Dengan kontrak ini, keputusan retry/fallback manual berada di caller atau lapisan orkestrasi yang memanggil service.
+
 ## Endpoint status readiness
 
 Endpoint:

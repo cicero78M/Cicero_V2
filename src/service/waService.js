@@ -129,6 +129,7 @@ import {
 dotenv.config();
 
 const messageQueues = new WeakMap();
+const sendFailureMetrics = new Map();
 const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
@@ -1033,7 +1034,36 @@ function wrapSendMessage(client) {
     messageQueues.set(client, queueForClient);
   }
 
-  async function sendWithRetry(args, attempt = 0) {
+  function inferMessageType(messageContent) {
+    if (typeof messageContent === "string") {
+      return "text";
+    }
+    if (messageContent?.type && typeof messageContent.type === "string") {
+      return messageContent.type;
+    }
+    if (messageContent?.mimetype) {
+      return "media";
+    }
+    if (Buffer.isBuffer(messageContent)) {
+      return "buffer";
+    }
+    if (messageContent === null || messageContent === undefined) {
+      return "unknown";
+    }
+    return typeof messageContent;
+  }
+
+  function getSendFailureMetric(clientLabel) {
+    if (!sendFailureMetrics.has(clientLabel)) {
+      sendFailureMetrics.set(clientLabel, {
+        failed: 0,
+        lastFailureAt: null,
+      });
+    }
+    return sendFailureMetrics.get(clientLabel);
+  }
+
+  async function sendOnce(args) {
     const waitFn =
       typeof client.waitForWaReady === "function"
         ? client.waitForWaReady
@@ -1043,20 +1073,44 @@ function wrapSendMessage(client) {
       console.warn("[WA] sendMessage called before ready");
       throw new Error("WhatsApp client not ready");
     });
+
+    const [jid, message] = args;
+    const readinessState = getClientReadinessState(client);
+    const clientLabel = readinessState?.label || "WA";
+    const messageType = inferMessageType(message);
+
     try {
       return await original.apply(client, args);
     } catch (err) {
-      const isRateLimit = err?.data === 429 || err?.message === "rate-overlimit";
-      if (!isRateLimit || attempt >= 4) throw err;
-      const baseDelay = 2 ** attempt * 800;
-      const jitter = Math.floor(Math.random() * 0.2 * baseDelay);
-      await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
-      return sendWithRetry(args, attempt + 1);
+      const failureMetric = getSendFailureMetric(clientLabel);
+      failureMetric.failed += 1;
+      failureMetric.lastFailureAt = new Date().toISOString();
+
+      const sendFailureMetadata = {
+        jid,
+        clientLabel,
+        messageType,
+      };
+
+      if (err && typeof err === "object") {
+        err.sendFailureMetadata = sendFailureMetadata;
+      }
+
+      console.error("[WA] sendMessage failed", {
+        event: "wa_send_message_failed",
+        jid,
+        clientLabel,
+        messageType,
+        errorMessage: err?.message || String(err),
+        failureMetric,
+      });
+
+      throw err;
     }
   }
 
   client.sendMessage = (...args) => {
-    return queueForClient.add(() => sendWithRetry(args), {
+    return queueForClient.add(() => sendOnce(args), {
       delay: responseDelayMs,
     });
   };
