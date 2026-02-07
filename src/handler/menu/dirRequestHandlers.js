@@ -69,6 +69,8 @@ import { appendSubmenuBackInstruction } from "./menuPromptHelpers.js";
 const dirRequestGroup = "120363419830216549@g.us";
 const DITBINMAS_CLIENT_ID = "DITBINMAS";
 
+const isGroupChatId = (value) => String(value || "").trim().endsWith("@g.us");
+
 const sendMenuMessage = async (waClient, chatId, message, options = {}) => {
   const {
     fallbackClients,
@@ -86,8 +88,13 @@ const sendMenuMessage = async (waClient, chatId, message, options = {}) => {
       reportContext: fallbackContext,
     });
   }
-  // Always use safeSendMessage for proper error handling including Lid retry logic
-  return safeSendMessage(waClient, chatId, message, sendOptions);
+  if (isGroupChatId(chatId)) {
+    return safeSendMessage(waClient, chatId, message, sendOptions);
+  }
+  if (!sendOptions || Object.keys(sendOptions).length === 0) {
+    return waClient.sendMessage(chatId, message);
+  }
+  return waClient.sendMessage(chatId, message, sendOptions);
 };
 
 const isDitbinmas = (value) =>
