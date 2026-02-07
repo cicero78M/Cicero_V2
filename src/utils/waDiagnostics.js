@@ -14,8 +14,13 @@ export function logWaServiceDiagnostics(
     { name: 'waUserClient', label: 'WA-USER', client: waUserClient },
     { name: 'waGatewayClient', label: 'WA-GATEWAY', client: waGatewayClient },
   ];
+  const readinessClientEntries = Array.isArray(readinessSummary?.clients)
+    ? readinessSummary.clients
+    : Object.values(readinessSummary?.clients || {});
   const readinessByLabel = new Map(
-    readinessSummary?.clients?.map((entry) => [entry.label, entry]) || []
+    readinessClientEntries
+      .filter((entry) => entry && typeof entry === 'object' && entry.label)
+      .map((entry) => [entry.label, entry])
   );
   const missingChromeHint =
     'Hint: set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome".';

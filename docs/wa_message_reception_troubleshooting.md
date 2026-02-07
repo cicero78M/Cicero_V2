@@ -12,6 +12,14 @@ This guide helps diagnose issues when the WhatsApp bot can send messages but can
 
 The system includes comprehensive diagnostic logging to identify where the message reception flow breaks. These logs ALWAYS appear (not just in debug mode) to ensure visibility when troubleshooting.
 
+### Readiness Summary Compatibility
+
+`logWaServiceDiagnostics` now supports readiness summaries where `clients` is either:
+- an array of client entries, or
+- an object keyed by client alias (for example `wa`, `waUser`, `waGateway`).
+
+This prevents startup crashes like `TypeError: readinessSummary?.clients?.map is not a function` when the diagnostics logger receives object-shaped readiness data.
+
 ### Expected Log Sequence
 
 #### 1. Initialization Phase
