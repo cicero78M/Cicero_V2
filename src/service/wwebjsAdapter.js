@@ -78,6 +78,7 @@ const DEFAULT_CONNECT_RETRY_BACKOFF_MS = 5000;
 const DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
+const DEFAULT_EXECUTION_CONTEXT_RETRY_BACKOFF_MS = 1500;
 const STORE_READINESS_RETRY_DELAY_MS = 1000;
 const COMMON_CHROME_EXECUTABLE_PATHS = [
   '/usr/bin/google-chrome',
@@ -735,6 +736,10 @@ const MISSING_CHROME_ERROR_PATTERNS = [
   /could not find chrome/i,
   /could not find browser executable/i,
 ];
+const EXECUTION_CONTEXT_DESTROYED_PATTERNS = [
+  'Execution context was destroyed',
+  'Cannot find context with specified id',
+];
 
 function shouldFallbackWebVersion(err) {
   const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
@@ -756,6 +761,24 @@ function isMissingChromeError(err) {
   return MISSING_CHROME_ERROR_PATTERNS.some((pattern) =>
     pattern.test(errorDetails)
   );
+}
+
+function isExecutionContextDestroyedError(err) {
+  const errorDetails = [err?.stack, err?.message].filter(Boolean).join(' ');
+  return EXECUTION_CONTEXT_DESTROYED_PATTERNS.some((needle) =>
+    errorDetails.includes(needle)
+  );
+}
+
+function resolveExecutionContextRetryBackoffMs() {
+  const parsed = Number.parseInt(
+    process.env.WA_WWEBJS_EXECUTION_CONTEXT_RETRY_BACKOFF_MS,
+    10
+  );
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return DEFAULT_EXECUTION_CONTEXT_RETRY_BACKOFF_MS;
+  }
+  return parsed;
 }
 
 function delay(durationMs) {
@@ -1166,6 +1189,27 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
             );
             throw retryErr;
           }
+        }
+      }
+      if (isExecutionContextDestroyedError(err)) {
+        const backoffMs = resolveExecutionContextRetryBackoffMs();
+        console.warn(
+          `[WWEBJS] initialize hit execution-context-destroyed for clientId=${clientId} ` +
+            `(${triggerLabel}). Retrying in ${backoffMs}ms.`,
+          err?.message || err
+        );
+        if (backoffMs > 0) {
+          await delay(backoffMs);
+        }
+        try {
+          await client.initialize();
+          return;
+        } catch (retryErr) {
+          console.error(
+            `[WWEBJS] initialize retry failed after execution context reset for clientId=${clientId} (${triggerLabel}):`,
+            retryErr?.message || retryErr
+          );
+          throw retryErr;
         }
       }
       console.error(
