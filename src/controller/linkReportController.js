@@ -6,7 +6,7 @@ import {
   formatNama,
 } from '../utils/utilsHelper.js';
 import { generateLinkReportExcelBuffer } from '../service/amplifyExportService.js';
-import waClient, { waitForWaReady } from '../service/waService.js';
+import waClient, { isWaReady, waitForWaReady } from '../service/waService.js';
 import { findUserById } from '../model/userModel.js';
 import { formatToWhatsAppId, safeSendMessage } from '../utils/waHelper.js';
 
@@ -89,9 +89,15 @@ export async function createLinkReport(req, res) {
 
     if (data.user_id) {
       try {
-        await waitForWaReady();
+        if (!isWaReady()) {
+          console.warn(
+            '[WA] Skipping link report notification: admin WhatsApp client is not ready yet.'
+          );
+        } else {
+          await waitForWaReady(5000);
+        }
         const user = await findUserById(data.user_id);
-        if (user?.whatsapp) {
+        if (isWaReady() && user?.whatsapp) {
           const wid = formatToWhatsAppId(user.whatsapp);
           const greeting = getGreeting();
           const fullName = formatNama(user);

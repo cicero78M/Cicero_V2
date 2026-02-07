@@ -1305,6 +1305,10 @@ export function waitForWaReady(timeoutMs) {
   return waitForClientReady(waClient, timeoutMs);
 }
 
+export function isWaReady() {
+  return getClientReadinessState(waClient, "WA").ready;
+}
+
 // Expose readiness helper for consumers like safeSendMessage
 waClient.waitForWaReady = () => waitForClientReady(waClient);
 waUserClient.waitForWaReady = () => waitForClientReady(waUserClient);
