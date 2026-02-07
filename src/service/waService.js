@@ -187,6 +187,8 @@ const sendFailureMetrics = new Map();
 const clientMessageHandlers = new Map();
 
 const shouldInitWhatsAppClients = process.env.WA_SERVICE_SKIP_INIT !== "true";
+const missingChromeRemediationHint =
+  'Set WA_PUPPETEER_EXECUTABLE_PATH or run "npx puppeteer browsers install chrome" to populate the Puppeteer cache.';
 if (!shouldInitWhatsAppClients) {
   const isTestEnv = process.env.NODE_ENV === "test";
   const expectsMessages = process.env.WA_EXPECT_MESSAGES === "true";
@@ -209,6 +211,13 @@ const sleep = (ms) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+function isFatalMissingChrome(client) {
+  return (
+    client?.fatalInitError?.type === "missing-chrome" ||
+    client?.fatalInitError?.error?.isMissingChromeError === true
+  );
+}
 
 function registerClientMessageHandler(client, fromAdapter, handler) {
   if (!client || typeof handler !== "function") {
@@ -1128,6 +1137,28 @@ export async function getWaReadinessSummary() {
   );
 
   return summary;
+}
+
+function getInitReadinessIssue({ label, client }) {
+  const readinessState = getClientReadinessState(client, label);
+  if (isFatalMissingChrome(client)) {
+    return {
+      label,
+      reason: "missing Chrome executable",
+      remediation: missingChromeRemediationHint,
+      detail: client?.fatalInitError?.error?.message || null,
+    };
+  }
+  if (!readinessState?.ready) {
+    return {
+      label,
+      reason: "client is not ready",
+      remediation:
+        "Pastikan QR discan bila awaitingQrScan=true dan periksa WA_AUTH_DATA_PATH untuk sesi yang valid.",
+      detail: readinessState?.lastDisconnectReason || null,
+    };
+  }
+  return null;
 }
 
 function startReadinessDiagnosticsLogger() {

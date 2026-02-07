@@ -100,6 +100,8 @@ Event failure yang penting:
 
 Saat timeout terjadi, error menyertakan konteks readiness (`label`, `clientId`, `sessionPath`, `awaitingQrScan`, `lastDisconnectReason`, `lastAuthFailureAt`).
 
+Jika adapter menandai `fatalInitError.type=missing-chrome`, `waitForClientReady` akan langsung me-reject tanpa menunggu timeout penuh, dengan hint remediation untuk set `WA_PUPPETEER_EXECUTABLE_PATH` atau install Chrome Puppeteer cache.
+
 ## Perilaku pengiriman pesan (`wrapSendMessage`)
 
 Untuk setiap client WA (`WA`, `WA-USER`, `WA-GATEWAY`), `wrapSendMessage` menerapkan aturan berikut:
@@ -124,6 +126,13 @@ Dengan kontrak ini, keputusan retry/fallback manual berada di caller atau lapisa
 - Saat lock aktif terdeteksi (`SingletonLock`/`SingletonSocket` masih dipakai proses lain), recovery langsung fail-fast dengan error terstruktur `WA_WWEBJS_LOCK_ACTIVE`.
   - Adapter tidak melakukan perpindahan path session.
   - Remediation: hentikan proses Chromium lama yang masih memakai session, atau gunakan `WA_AUTH_DATA_PATH` berbeda per process.
+
+## Validasi fail-fast saat startup (WA_EXPECT_MESSAGES / production)
+
+Saat service berjalan dalam mode yang mengharuskan WA siap (`WA_EXPECT_MESSAGES=true` atau `NODE_ENV=production`), startup akan mengumpulkan issue readiness per client (`WA`, `WA-USER`, `WA-GATEWAY`).
+
+- Jika issue bertipe `missing Chrome executable`, startup akan gagal dengan remediation yang sama seperti adapter.
+- Jika client belum `ready`, startup juga akan gagal dengan konteks penyebab terakhir agar operator bisa memperbaiki sesi/QR scan lebih cepat.
 
 ## Endpoint status readiness
 
