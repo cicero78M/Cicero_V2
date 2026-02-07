@@ -251,3 +251,77 @@ If the issue persists after checking all the above:
 3. Check WhatsApp Web.js library version compatibility
 4. Verify Chrome/Chromium installation
 5. Check for filesystem permission issues (session data directory)
+
+## Kasus Khusus: `waitForClientReady timeout after 60000ms`
+
+Gejala yang Anda kirimkan:
+- `awaitingQrScan=false` tetapi `ready` tidak pernah tercapai dalam 60 detik.
+- Error muncul dari helper `waitForClientReady(...)` di `waService`.
+
+### Ringkasan Temuan Komunitas (Internet)
+
+Kasus ini sering dibahas di komunitas `whatsapp-web.js`, terutama:
+- GitHub Issues resmi `pedroslopez/whatsapp-web.js` (contoh: #5768, #5792, #3830, #3732, #5758).
+- Banyak laporan menyatakan sesi sudah `authenticated`, tetapi event `ready` tidak muncul saat versi WhatsApp Web berubah atau saat ada mismatch web cache/version.
+
+Pola solusi yang paling sering berhasil di thread-thread tersebut:
+1. **Upgrade whatsapp-web.js ke rilis terbaru** saat ada regressi `ready` event.
+2. **Pastikan sinkronisasi versi WA Web** (gunakan cache URL yang valid atau pin `webVersion` saat endpoint cache bermasalah).
+3. **Validasi profil browser + executable Chrome/Chromium** (permission/path benar, tidak ada lock profile zombie).
+4. **Reset session secara terukur** ketika state auth korup (hapus `session-<clientId>` hanya untuk client terdampak, lalu scan QR ulang).
+5. **Tambahkan observability state transisi** (`authenticated`, `ready`, `disconnected`, `auth_failure`) agar timeout tidak “silent”.
+
+### Best Practice Operasional untuk Cicero_V2
+
+1. **Jangan hanya menunggu `ready`; sertakan health gate bertahap**
+   - Tahap 1: tunggu `authenticated`.
+   - Tahap 2: cek `getState()`/status adapter periodik.
+   - Tahap 3: jika timeout, log context lengkap (sudah ada), lalu trigger recovery terkontrol.
+
+2. **Atur timeout berdasarkan lingkungan**
+   - Gunakan `WA_READY_TIMEOUT_MS` > 60000 ms pada server dengan I/O lambat atau cold start sering.
+   - Pertahankan default 60000 ms untuk dev cepat, naikkan ke 90000–120000 ms untuk production yang resource-sharing.
+
+3. **Stabilisasi versi WhatsApp Web**
+   - Set `WA_WEB_VERSION_CACHE_URL` ke endpoint stabil.
+   - Jika endpoint cache sering timeout/invalid, pin sementara `WA_WEB_VERSION` lalu review berkala.
+
+4. **Higiene sesi dan profile Puppeteer**
+   - Pastikan `WA_AUTH_DATA_PATH` persisten, writable, dan tidak dipakai lintas instance secara bersamaan.
+   - Pastikan `WA_PUPPETEER_EXECUTABLE_PATH` menunjuk binary valid (`chmod +x` jika perlu).
+   - Cegah profile lock dengan one-client-one-session-path.
+
+5. **Recovery policy yang aman**
+   - Retry inisialisasi dengan exponential backoff.
+   - Jika `auth_failure`/logout: hapus sesi client terdampak saja, minta scan QR ulang.
+   - Jika berkali-kali timeout dengan `awaitingQrScan=false`: restart browser context, lalu fallback ke reset session terarah.
+
+### Daftar Referensi Komunitas
+
+- https://github.com/pedroslopez/whatsapp-web.js/issues/5768
+- https://github.com/pedroslopez/whatsapp-web.js/issues/5792
+- https://github.com/pedroslopez/whatsapp-web.js/issues/3830
+- https://github.com/pedroslopez/whatsapp-web.js/issues/3732
+- https://github.com/pedroslopez/whatsapp-web.js/issues/5758
+- https://wwebjs.dev/guide/creating-your-bot/authentication.html
+
+### Checklist Investigasi Cepat (Saat Incident Berulang)
+
+```bash
+# 1) Pastikan versi paket
+npm ls whatsapp-web.js
+
+# 2) Validasi env krusial
+printenv | rg 'WA_READY_TIMEOUT_MS|WA_AUTH_DATA_PATH|WA_PUPPETEER_EXECUTABLE_PATH|WA_WEB_VERSION|WA_WEB_VERSION_CACHE_URL'
+
+# 3) Cek apakah session path benar-benar ada dan writable
+ls -ld "$WA_AUTH_DATA_PATH" "$WA_AUTH_DATA_PATH"/session-wa-admin
+
+# 4) Cek executable browser
+ls -l "$WA_PUPPETEER_EXECUTABLE_PATH"
+
+# 5) Pantau log lifecycle (ready/auth/disconnect)
+pm2 logs cicero_V2 --lines 300 | rg '\[WA\]|ready|authenticated|auth_failure|disconnected|waitForClientReady'
+```
+
+Jika setelah checklist di atas masih timeout konsisten, lakukan **reinit client bertahap** (bukan restart total semua proses dulu), lalu eskalasi ke reset session pada client terdampak.
