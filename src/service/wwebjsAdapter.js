@@ -1336,6 +1336,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   // Store references to internal event handlers so they can be removed without affecting external listeners
   let internalMessageHandler = null;
   let internalReadyHandler = null;
+  let internalAuthenticatedHandler = null;
   let internalAuthFailureHandler = null;
   let internalDisconnectedHandler = null;
 
@@ -1348,6 +1349,9 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     if (internalReadyHandler) {
       client.removeListener('ready', internalReadyHandler);
     }
+    if (internalAuthenticatedHandler) {
+      client.removeListener('authenticated', internalAuthenticatedHandler);
+    }
     if (internalAuthFailureHandler) {
       client.removeListener('auth_failure', internalAuthFailureHandler);
     }
@@ -1359,6 +1363,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.removeAllListeners('qr');
 
     client.on('qr', (qr) => emitter.emit('qr', qr));
+
+    internalAuthenticatedHandler = (session) => {
+      emitter.emit('authenticated', session);
+    };
+    client.on('authenticated', internalAuthenticatedHandler);
     
     internalReadyHandler = async () => {
       console.log(`[WWEBJS] Client ready event received for clientId=${clientId}`);
@@ -1394,6 +1403,7 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     
     internalAuthFailureHandler = async (message) => {
       console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
+      emitter.emit('auth_failure', message);
       await reinitializeClient('auth_failure', message);
     };
     client.on('auth_failure', internalAuthFailureHandler);
