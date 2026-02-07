@@ -8,6 +8,59 @@ import pkg from 'whatsapp-web.js';
 
 // Enable debug logging only when WA_DEBUG_LOGGING is set to "true"
 const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === 'true';
+const ADAPTER_LABEL = 'WWEBJS-ADAPTER';
+const LOG_RATE_LIMIT_WINDOW_MS = 60000;
+const rateLimitedLogState = new Map();
+
+function buildStructuredLog({
+  clientId,
+  label = ADAPTER_LABEL,
+  event,
+  jid = null,
+  messageId = null,
+  errorCode = null,
+  ...extra
+}) {
+  return {
+    clientId,
+    label,
+    event,
+    jid,
+    messageId,
+    errorCode,
+    ...extra,
+  };
+}
+
+function writeStructuredLog(level, payload, options = {}) {
+  if (options.debugOnly && !debugLoggingEnabled) {
+    return;
+  }
+  const message = JSON.stringify(payload);
+  if (level === 'debug') {
+    console.debug(message);
+    return;
+  }
+  if (level === 'warn') {
+    console.warn(message);
+    return;
+  }
+  if (level === 'error') {
+    console.error(message);
+    return;
+  }
+  console.info(message);
+}
+
+function writeRateLimitedWarn(rateKey, payload) {
+  const now = Date.now();
+  const previous = rateLimitedLogState.get(rateKey);
+  if (previous && now - previous < LOG_RATE_LIMIT_WINDOW_MS) {
+    return;
+  }
+  rateLimitedLogState.set(rateKey, now);
+  writeStructuredLog('warn', payload);
+}
 
 const DEFAULT_WEB_VERSION_CACHE_URL = '';
 const DEFAULT_AUTH_DATA_DIR = 'wwebjs_auth';
@@ -1219,7 +1272,11 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   let internalDisconnectedHandler = null;
 
   const registerEventListeners = () => {
-    console.log(`[WWEBJS] Registering event listeners for clientId=${clientId}`);
+    writeStructuredLog(
+      'debug',
+      buildStructuredLog({ clientId, event: 'listener_registration' }),
+      { debugOnly: true }
+    );
     // Remove only internal listeners, preserving external ones (e.g., from waService.js)
     if (internalMessageHandler) {
       client.removeListener('message', internalMessageHandler);
@@ -1248,7 +1305,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('authenticated', internalAuthenticatedHandler);
     
     internalReadyHandler = async () => {
-      console.log(`[WWEBJS] Client ready event received for clientId=${clientId}`);
+      writeStructuredLog(
+        'info',
+        buildStructuredLog({ clientId, event: 'ready' })
+      );
       try {
         // Wait for WidFactory to be available (max 3 attempts)
         await ensureWidFactory(`ready handler for clientId=${clientId}`, false, 3);
@@ -1262,16 +1322,22 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
           await new Promise(resolve => setTimeout(resolve, storeInitDelayMs));
         }
         
-        console.log(`[WWEBJS] Client ${clientId} fully initialized and ready to receive messages`);
-        if (debugLoggingEnabled) {
-          console.log(`[WWEBJS] Client ${clientId} ready, stores initialized`);
-        }
+        writeStructuredLog(
+          'debug',
+          buildStructuredLog({ clientId, event: 'stores_initialized' }),
+          { debugOnly: true }
+        );
         
         emitter.emit('ready');
       } catch (err) {
-        console.warn(
-          `[WWEBJS] Ready handler initialization error for clientId=${clientId}:`,
-          err?.message || err
+        writeRateLimitedWarn(
+          `ready-handler-init-error:${clientId}`,
+          buildStructuredLog({
+            clientId,
+            event: 'ready_handler_init_error',
+            errorCode: err?.code || 'READY_HANDLER_INIT_ERROR',
+            errorMessage: err?.message || String(err),
+          })
         );
         // Emit ready anyway to maintain backward compatibility and not block client usage
         emitter.emit('ready');
@@ -1280,7 +1346,15 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('ready', internalReadyHandler);
     
     internalAuthFailureHandler = async (message) => {
-      console.warn(`[WWEBJS] auth_failure for clientId=${clientId}:`, message);
+      writeStructuredLog(
+        'warn',
+        buildStructuredLog({
+          clientId,
+          event: 'auth_failure',
+          errorCode: 'AUTH_FAILURE',
+          errorMessage: message || null,
+        })
+      );
       emitter.emit('auth_failure', message);
       await reinitializeClient('auth_failure', message);
     };
@@ -1288,6 +1362,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     
     internalDisconnectedHandler = async (reason) => {
       const normalizedReason = String(reason || '').toUpperCase();
+      writeStructuredLog(
+        'warn',
+        buildStructuredLog({
+          clientId,
+          event: 'disconnected',
+          errorCode: normalizedReason || null,
+        })
+      );
       if (LOGOUT_DISCONNECT_REASONS.has(normalizedReason)) {
         await reinitializeClient('disconnected', reason, {
           clearAuthSessionOverride: true,
@@ -1298,11 +1380,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
     client.on('disconnected', internalDisconnectedHandler);
     
     internalMessageHandler = async (msg) => {
-      // CRITICAL: This log proves whatsapp-web.js is emitting message events
-      console.log(`[WWEBJS-ADAPTER] *** MESSAGE EVENT TRIGGERED *** clientId=${clientId}, from=${msg.from}`);
-      if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Raw message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
-      }
+      writeStructuredLog(
+        'debug',
+        buildStructuredLog({
+          clientId,
+          event: 'message_received',
+          jid: msg?.from || null,
+          messageId: msg?.id?.id || msg?.id?._serialized || null,
+        }),
+        { debugOnly: true }
+      );
       let contactMeta = {};
       try {
         const contact = await msg.getContact();
@@ -1314,11 +1401,16 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       } catch (err) {
         contactMeta = { error: err?.message || 'contact_fetch_failed' };
       }
-      // ALWAYS log before emitting to emitter (critical for diagnosing reception issues)
-      console.log(`[WWEBJS-ADAPTER] Emitting 'message' event to emitter - clientId=${clientId}, from=${msg.from}`);
-      if (debugLoggingEnabled) {
-        console.log(`[WWEBJS-ADAPTER] Message ID: ${msg.id?.id || msg.id?._serialized || 'unknown'}`);
-      }
+      writeStructuredLog(
+        'debug',
+        buildStructuredLog({
+          clientId,
+          event: 'message_emit',
+          jid: msg?.from || null,
+          messageId: msg?.id?.id || msg?.id?._serialized || null,
+        }),
+        { debugOnly: true }
+      );
       emitter.emit('message', {
         from: msg.from,
         body: msg.body,
@@ -1329,10 +1421,15 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       });
     };
     client.on('message', internalMessageHandler);
-    console.log(`[WWEBJS] Internal message handler registered for clientId=${clientId}`);
-    console.log(`[WWEBJS] Message handler function signature: ${typeof internalMessageHandler === 'function' ? 'valid' : 'INVALID'}`);
-    console.log(`[WWEBJS] When messages arrive, watch for "[WWEBJS-ADAPTER] *** MESSAGE EVENT TRIGGERED ***" ` +
-      `to confirm whatsapp-web.js is working. If missing, check client connection/authentication.`);
+    writeStructuredLog(
+      'debug',
+      buildStructuredLog({
+        clientId,
+        event: 'message_handler_registered',
+        errorCode: typeof internalMessageHandler === 'function' ? 'valid' : 'INVALID',
+      }),
+      { debugOnly: true }
+    );
   };
 
   const reinitializeClient = async (trigger, reason, options = {}) => {
@@ -1398,10 +1495,10 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
   registerEventListeners();
   
-  // Log initial state for diagnostics
-  console.log(`[WWEBJS] Client created for clientId=${clientId}, event listeners registered`);
-  console.log(`[WWEBJS] To diagnose message reception, watch for:` +
-    ` 1) 'Client ready event received', 2) 'fully initialized and ready to receive messages', 3) 'Message received by internal handler'`);
+  writeStructuredLog(
+    'info',
+    buildStructuredLog({ clientId, event: 'startup' })
+  );
   
   const ensureWidFactory = async (contextLabel, requireGroupMetadata = false, retryAttempts = 1) => {
     if (!client.pupPage) {
@@ -1568,8 +1665,15 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       message = await client.sendMessage(jid, text, normalizedOptions);
     }
     if (!message || !message.id) {
-      console.warn(
-        `[WWEBJS] sendMessage returned no id (jid=${jid}, contentType=${contentType}).`
+      writeRateLimitedWarn(
+        `send-message-missing-id:${clientId}:${jid}`,
+        buildStructuredLog({
+          clientId,
+          event: 'send_message_missing_id',
+          jid: jid || null,
+          errorCode: 'SEND_MESSAGE_NO_ID',
+          contentType,
+        })
       );
       const error = new Error('sendMessage returned no id');
       error.jid = jid;
@@ -1628,12 +1732,14 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
 
     const chatState = hydratedChat?._data;
     if (hydratedChat && !chatState) {
-      console.warn(
-        `[WWEBJS] sendSeen skipped (jid=${jid}): chat state unavailable`,
-        {
-          chatId: jid,
-          event: 'sendSeen',
-        }
+      writeRateLimitedWarn(
+        `send-seen-chat-state-unavailable:${clientId}:${jid}`,
+        buildStructuredLog({
+          clientId,
+          event: 'send_seen_chat_state_unavailable',
+          jid: jid || null,
+          errorCode: 'CHAT_STATE_UNAVAILABLE',
+        })
       );
       return false;
     }
@@ -1643,13 +1749,15 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       chatState &&
       !Object.prototype.hasOwnProperty.call(chatState, 'markedUnread')
     ) {
-      console.warn(
-        `[WWEBJS] sendSeen fallback (jid=${jid}): markedUnread missing`,
-        {
-          chatId: jid,
-          event: 'sendSeen',
+      writeRateLimitedWarn(
+        `send-seen-marked-unread-missing:${clientId}:${jid}`,
+        buildStructuredLog({
+          clientId,
+          event: 'send_seen_marked_unread_missing',
+          jid: jid || null,
+          errorCode: 'MARKED_UNREAD_MISSING',
           markedUnread,
-        }
+        })
       );
     }
 

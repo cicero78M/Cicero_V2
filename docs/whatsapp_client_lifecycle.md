@@ -147,3 +147,33 @@ Field utama per client:
 2. Jika startup gagal dengan `WA_WWEBJS_SESSION_PATH_INVALID`, perbaiki permission/ownership `WA_AUTH_DATA_PATH` atau arahkan env ke path yang writable lalu restart.
 3. Jika `disconnected` berulang dan muncul `WA_WWEBJS_LOCK_ACTIVE`, hentikan proses Chromium lama yang masih menahan lock lalu jalankan ulang service (tanpa mengubah path session secara dinamis).
 4. Gunakan `GET /api/health/wa` untuk verifikasi status readiness masing-masing client.
+
+
+## Panduan logging lifecycle (update)
+
+Logging WA sekarang memakai format JSON/structured untuk event inti agar mudah difilter:
+
+- field inti: `clientId`, `label`, `event`, `jid`, `messageId`, `errorCode`
+- event penting level `info/warn/error` yang dipertahankan:
+  - `startup`
+  - `ready`
+  - `disconnected`
+  - `auth_failure`
+  - `fatal_init_error`
+
+Hot-path logging (`message_received`, replay deferred message, listener diagnostics periodik) dipindahkan ke level `debug` dan hanya aktif saat:
+
+- `WA_DEBUG_LOGGING=true`
+
+### Rate-limit warning berulang
+
+Untuk mencegah spam log, warning berulang dibatasi per key (window 60 detik), termasuk:
+
+- unknown `change_state` pada `waService`
+- `sendMessage` tanpa id (`send_message_missing_id`) pada adapter
+- warning berulang lain terkait missing handler/state yang sering muncul di jalur panas
+
+### Contoh filter cepat
+
+- event inti: cari `"event":"ready"` / `"event":"disconnected"` / `"event":"auth_failure"`
+- debugging pesan masuk (sementara): set `WA_DEBUG_LOGGING=true`, lalu cari `"event":"message_received"`
