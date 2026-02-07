@@ -17,7 +17,9 @@ Dokumen ini menjelaskan lifecycle WhatsApp client pada Cicero_V2 setelah penyede
 4. `disconnected`
 5. `auth_failure`
 
-Tidak ada lagi jalur fallback/retry berlapis di service (`getState()` polling, fallback readiness monitor, hard-init retry loop, connect in-flight timeout loop).
+Tidak ada lagi jalur fallback/retry berlapis di service (`getState()` polling untuk recovery, fallback readiness monitor, hard-init retry loop, connect in-flight timeout loop).
+
+`getState()` kini dibatasi hanya untuk observability (`GET /api/health/wa`) dan logging diagnostik periodik, tanpa side-effect operasional (tidak memicu reinit/reconnect otomatis).
 
 ## Peran adapter vs service
 
@@ -31,9 +33,43 @@ Tidak ada lagi jalur fallback/retry berlapis di service (`getState()` polling, f
 ### Service (`waService`)
 
 - Tidak memanggil retry tambahan di luar startup `client.connect()`.
-- Tidak melakukan fallback readiness berbasis `getState()`.
+- Tidak melakukan fallback readiness operasional berbasis `getState()`.
 - Hanya memperbarui readiness state berdasarkan event resmi.
 - Menunda pemrosesan pesan ketika belum ready dan memutar ulang saat `ready`.
+
+## Sumber kebenaran readiness final
+
+Readiness final mengikuti event lifecycle berikut:
+
+- `ready` atau `change_state(CONNECTED|open)` → `ready = true`
+- `disconnected` atau `auth_failure` → `ready = false`
+
+Event observability seperti hasil `getState()` hanya dicatat sebagai `observedState` untuk endpoint health dan log diagnostik.
+
+## Diagram transisi state sederhana
+
+```text
+            +-------------------+
+            |   INITIALIZED     |
+            |   ready = false   |
+            +---------+---------+
+                      |
+                      | ready / change_state(CONNECTED|open)
+                      v
+            +-------------------+
+            |      READY        |
+            |   ready = true    |
+            +----+---------+----+
+                 |         |
+                 |         |
+    disconnected |         | auth_failure
+                 |         |
+                 v         v
+            +-------------------+
+            |     NOT_READY     |
+            |   ready = false   |
+            +-------------------+
+```
 
 ## Guard single transition in-flight
 
