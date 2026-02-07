@@ -142,6 +142,18 @@ Adapter kini menambahkan retry khusus saat `client.initialize()` gagal dengan in
 - Backoff dikontrol oleh env `WA_WWEBJS_EXECUTION_CONTEXT_RETRY_BACKOFF_MS` (default `1500` ms).
 - Tujuan: mengurangi kegagalan inisialisasi sporadis pada momen reload/navigasi internal WhatsApp Web saat cron berjalan.
 
+
+## Notifikasi opsional tanpa blocking request
+
+Untuk notifikasi yang sifatnya _best effort_ (contoh: notifikasi Link Report ke user), controller bisa memakai helper `isWaReady()` sebelum memanggil `waitForWaReady()`.
+
+Pola yang direkomendasikan:
+
+- Jika `isWaReady() === false`, lewati pengiriman notifikasi dan tulis log warning yang jelas.
+- Jika `isWaReady() === true`, gunakan `waitForWaReady()` dengan timeout singkat (mis. 5 detik) sebelum kirim.
+
+Tujuan pendekatan ini adalah mencegah request API tertahan lama ketika client WA sedang belum siap, tanpa mengubah kontrak readiness utama di service.
+
 ## Endpoint status readiness
 
 Endpoint:
