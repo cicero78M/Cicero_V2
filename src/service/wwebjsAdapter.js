@@ -25,7 +25,6 @@ const DEFAULT_CONNECT_RETRY_BACKOFF_MS = 5000;
 const DEFAULT_CONNECT_RETRY_BACKOFF_MULTIPLIER = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_ATTEMPTS = 2;
 const DEFAULT_RUNTIME_TIMEOUT_RETRY_BACKOFF_MS = 250;
-const DEFAULT_LOCK_FALLBACK_THRESHOLD = 2;
 const STORE_READINESS_RETRY_DELAY_MS = 1000;
 const COMMON_CHROME_EXECUTABLE_PATHS = [
   '/usr/bin/google-chrome',
@@ -356,9 +355,7 @@ function buildSharedSessionGuardMessage({ clientId, sessionPath, activeLockStatu
     `[WWEBJS] Shared session lock detected for clientId=${clientId} ` +
     `(sessionPath=${sessionPath}, reason=${reason}, pid=${pid}). ` +
     'Another process appears to be using this session. ' +
-    'Use distinct WA_AUTH_DATA_PATH per process or configure ' +
-    'WA_WWEBJS_FALLBACK_AUTH_DATA_PATH / WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX ' +
-    '(example: WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX=worker-\\${PM2_INSTANCE_ID}). ' +
+    'Use distinct WA_AUTH_DATA_PATH per process. ' +
     'Set WA_WWEBJS_ALLOW_SHARED_SESSION=true to bypass this guard.'
   );
 }
@@ -476,49 +473,15 @@ function resolveConnectRetryBackoffMultiplier() {
   return Math.max(configured, 1);
 }
 
-function resolveLockFallbackThreshold() {
-  const configured = Number.parseInt(
-    process.env.WA_WWEBJS_LOCK_FALLBACK_THRESHOLD || '',
-    10
-  );
-  if (Number.isNaN(configured)) {
-    return DEFAULT_LOCK_FALLBACK_THRESHOLD;
-  }
-  return Math.max(configured, 1);
-}
-
 function buildSessionPath(authDataPath, clientId) {
   return path.join(authDataPath, `session-${clientId}`);
 }
 
-function resolveFallbackAuthDataPath(authDataPath) {
-  const configuredPath = (process.env.WA_WWEBJS_FALLBACK_AUTH_DATA_PATH || '').trim();
-  if (configuredPath) {
-    return path.resolve(configuredPath);
-  }
-  return authDataPath;
-}
-
-function sanitizePathSegment(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function buildFallbackAuthDataPath(authDataPath, clientId, attempt) {
-  const hostname = sanitizePathSegment(os.hostname());
-  const pid = sanitizePathSegment(String(process.pid));
-  const envSuffix = sanitizePathSegment(
-    (process.env.WA_WWEBJS_FALLBACK_USER_DATA_DIR_SUFFIX || '').trim()
-  );
-  const suffixParts = [clientId, hostname, pid, `attempt${attempt}`, envSuffix].filter(
-    Boolean
-  );
-  const suffix = sanitizePathSegment(suffixParts.join('_')) || 'fallback';
-  const baseName = path.basename(authDataPath);
-  const parentDir = path.dirname(authDataPath);
-  return path.join(parentDir, `${baseName}-fallback-${suffix}`);
+function createStructuredWwebjsError(code, message, details = {}) {
+  const error = new Error(message);
+  error.code = code;
+  error.details = details;
+  return error;
 }
 
 function extractVersionString(payload) {
@@ -792,63 +755,38 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   emitter.fatalInitError = null;
   const configuredAuthPath = (process.env.WA_AUTH_DATA_PATH || '').trim();
   const recommendedAuthPath = resolveDefaultAuthDataPath();
-  const initialAuthDataPath = resolveAuthDataPath();
-  let authDataPath = initialAuthDataPath;
+  const authDataPath = resolveAuthDataPath();
+  const sessionPath = buildSessionPath(authDataPath, clientId);
   const clearAuthSession = shouldClearAuthSession();
-  const ensureAuthDataPathWritable = async (candidatePath, isConfiguredPath) => {
+  const validateSessionPathWritable = async () => {
     try {
-      await fs.promises.mkdir(candidatePath, { recursive: true });
-      await fs.promises.access(candidatePath, fs.constants.W_OK);
-      return true;
+      await fs.promises.mkdir(authDataPath, { recursive: true });
+      await fs.promises.access(authDataPath, fs.constants.W_OK);
+      await fs.promises.mkdir(sessionPath, { recursive: true });
+      await fs.promises.access(sessionPath, fs.constants.W_OK);
     } catch (err) {
-      if (isConfiguredPath) {
-        console.error(
-          `[WWEBJS] WA_AUTH_DATA_PATH must be writable by the runtime user. ` +
-            `Failed to access ${candidatePath}. Recommended path: ${recommendedAuthPath}.`,
-          err?.message || err
-        );
-      } else {
-        console.error(
-          `[WWEBJS] Auth data path must be writable by the runtime user. ` +
-            `Failed to access ${candidatePath}.`,
-          err?.message || err
-        );
-      }
-      return false;
-    }
-  };
-  let authPathWritable = await ensureAuthDataPathWritable(
-    authDataPath,
-    Boolean(configuredAuthPath)
-  );
-  if (!authPathWritable && configuredAuthPath) {
-    console.warn(
-      `[WWEBJS] Falling back to recommended auth path ${recommendedAuthPath} ` +
-        `because WA_AUTH_DATA_PATH is not writable.`
-    );
-    authDataPath = recommendedAuthPath;
-    authPathWritable = await ensureAuthDataPathWritable(authDataPath, false);
-  }
-  if (!authPathWritable) {
-    if (configuredAuthPath) {
-      throw new Error(
-        `[WWEBJS] WA_AUTH_DATA_PATH is not writable: ${configuredAuthPath}. ` +
-          `Fallback path is also not writable: ${authDataPath}.`
+      const remediationHint = configuredAuthPath
+        ? `Perbaiki WA_AUTH_DATA_PATH (${configuredAuthPath}) agar valid dan writable.`
+        : `Set WA_AUTH_DATA_PATH ke path writable (contoh: ${recommendedAuthPath}).`;
+      throw createStructuredWwebjsError(
+        'WA_WWEBJS_SESSION_PATH_INVALID',
+        `[WWEBJS] Session path tidak valid/tidak writable untuk clientId=${clientId}: ` +
+          `${sessionPath}. ${remediationHint}`,
+        {
+          clientId,
+          authDataPath,
+          sessionPath,
+          configuredAuthPath: configuredAuthPath || null,
+          recommendedAuthPath,
+          causeCode: err?.code || 'UNKNOWN',
+        }
       );
     }
-    throw new Error(
-      `[WWEBJS] Auth data path is not writable: ${authDataPath}. ` +
-        `Recommended path: ${recommendedAuthPath}.`
-    );
-  }
-  const baseAuthDataPath = authDataPath;
-  let activeAuthDataPath = baseAuthDataPath;
-  let fallbackAttempt = 0;
+  };
+  await validateSessionPathWritable();
   let lockActiveFailureCount = 0;
-  const resolveSessionPath = () => buildSessionPath(activeAuthDataPath, clientId);
+  const resolveSessionPath = () => buildSessionPath(authDataPath, clientId);
   const resolvePuppeteerProfilePath = () => resolveSessionPath();
-  const resolveFallbackBasePath = () =>
-    resolveFallbackAuthDataPath(baseAuthDataPath);
   let reinitInProgress = false;
   let connectInProgress = null;
   let connectStartedAt = null;
@@ -873,9 +811,8 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const connectRetryAttempts = resolveConnectRetryAttempts();
   const connectRetryBackoffMs = resolveConnectRetryBackoffMs();
   const connectRetryBackoffMultiplier = resolveConnectRetryBackoffMultiplier();
-  const lockFallbackThreshold = resolveLockFallbackThreshold();
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId, dataPath: activeAuthDataPath }),
+    authStrategy: new LocalAuth({ clientId, dataPath: authDataPath }),
     puppeteer: {
       args: ['--no-sandbox'],
       headless: true,
@@ -928,40 +865,6 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
   const applyWebVersionFallback = () => {
     client.options.webVersionCache = { type: 'none' };
     delete client.options.webVersion;
-  };
-
-  const applyAuthDataPath = async (nextPath, reasonLabel) => {
-    if (!nextPath || nextPath === activeAuthDataPath) {
-      return false;
-    }
-    const isWritable = await ensureAuthDataPathWritable(nextPath, false);
-    if (!isWritable) {
-      console.warn(
-        `[WWEBJS] Fallback auth data path is not writable for clientId=${clientId}: ${nextPath}.`
-      );
-      return false;
-    }
-    activeAuthDataPath = nextPath;
-    // Update Puppeteer userDataDir instead of modifying LocalAuth dataPath
-    // to avoid "LocalAuth is not compatible with a user-supplied userDataDir" error
-    const sessionPath = buildSessionPath(nextPath, clientId);
-    if (!client.options) {
-      console.error(
-        `[WWEBJS] Cannot apply fallback auth data path for clientId=${clientId} because ` +
-          'client.options is undefined. This indicates an unexpected client state. Fallback aborted.'
-      );
-      return false;
-    }
-    if (!client.options.puppeteer) {
-      client.options.puppeteer = {};
-    }
-    client.options.puppeteer.userDataDir = sessionPath;
-    emitter.sessionPath = sessionPath;
-    console.warn(
-      `[WWEBJS] Using fallback auth data path for clientId=${clientId} (${reasonLabel}): ${nextPath} ` +
-        `(userDataDir=${sessionPath}).`
-    );
-    return true;
   };
 
   const cleanupPuppeteerLocks = async (profilePath = resolvePuppeteerProfilePath()) => {
@@ -1087,52 +990,27 @@ export async function createWwebjsClient(clientId = 'wa-admin') {
       await delay(backoffMs);
     }
 
-    let fallbackApplied = false;
-    if (isActiveLock && lockActiveFailureCount >= lockFallbackThreshold) {
-      fallbackAttempt += 1;
-      const fallbackBasePath = resolveFallbackBasePath();
-      const fallbackPath = buildFallbackAuthDataPath(
-        fallbackBasePath,
-        clientId,
-        fallbackAttempt
-      );
-      fallbackApplied = await applyAuthDataPath(
-        fallbackPath,
-        `lock active fallback attempt ${fallbackAttempt}`
-      );
-      if (fallbackApplied) {
-        console.warn(
-          `[WWEBJS] Applying unique userDataDir fallback for clientId=${clientId} ` +
-            `after ${lockActiveFailureCount} lock failures.`
-        );
-        lockActiveFailureCount = 0;
-      }
-    }
-
-    if (
-      isActiveLock &&
-      !strictLockRecovery &&
-      lockActiveFailureCount >= lockFallbackThreshold &&
-      !fallbackApplied
-    ) {
+    if (isActiveLock) {
       const activeLockPid = activeLockStatus.pid ?? 'unknown';
-      const error = new Error(
-        `[WWEBJS] Browser lock still active for clientId=${clientId} after ` +
-          `${lockActiveFailureCount} attempts (profilePath=${profilePath}, pid=${activeLockPid}). ` +
-          `Fallback userDataDir could not be applied. Stop the existing Chromium process or ` +
-          'configure a writable fallback path before retrying.'
+      const lockReason = strictLockRecovery
+        ? 'strict lock recovery enabled'
+        : 'active lock detected';
+      throw createStructuredWwebjsError(
+        'WA_WWEBJS_LOCK_ACTIVE',
+        `[WWEBJS] Browser lock masih aktif untuk clientId=${clientId} ` +
+          `(profilePath=${profilePath}, pid=${activeLockPid}). ` +
+          'Fail-fast tanpa fallback userDataDir untuk menjaga LocalAuth dataPath tetap statis.',
+        {
+          clientId,
+          profilePath,
+          pid: activeLockPid,
+          reason: activeLockStatus.reason || lockReason,
+          strictLockRecovery,
+          lockActiveFailureCount,
+          remediation:
+            'Stop proses Chromium yang memakai session ini atau gunakan WA_AUTH_DATA_PATH berbeda per proses.',
+        }
       );
-      error.code = 'WA_WWEBJS_LOCK_ACTIVE';
-      throw error;
-    }
-
-    if (isActiveLock && strictLockRecovery) {
-      const error = new Error(
-        `[WWEBJS] Browser lock still active for clientId=${clientId}. ` +
-          'Reuse the existing session or stop the previous Chromium process before reinit.'
-      );
-      error.code = 'WA_WWEBJS_LOCK_ACTIVE';
-      throw error;
     }
   };
 
