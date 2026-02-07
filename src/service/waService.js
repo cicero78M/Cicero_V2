@@ -721,100 +721,24 @@ if (
 
 const clientReadiness = new Map();
 const adminNotificationQueue = [];
-const authenticatedReadyFallbackTimers = new Map();
-const authenticatedReadyTimeoutMs = Number.isNaN(
-  Number(process.env.WA_AUTH_READY_TIMEOUT_MS)
-)
-  ? 45000
-  : Number(process.env.WA_AUTH_READY_TIMEOUT_MS);
-const fallbackReadyCheckDelayMs = Number.isNaN(
-  Number(process.env.WA_FALLBACK_READY_DELAY_MS)
-)
-  ? 60000
-  : Number(process.env.WA_FALLBACK_READY_DELAY_MS);
-const fallbackReadyCooldownMs = Number.isNaN(
-  Number(process.env.WA_FALLBACK_READY_COOLDOWN_MS)
-)
-  ? 300000
-  : Math.max(0, Number(process.env.WA_FALLBACK_READY_COOLDOWN_MS));
 const defaultReadyTimeoutMs = Number.isNaN(
   Number(process.env.WA_READY_TIMEOUT_MS)
 )
-  ? Math.max(authenticatedReadyTimeoutMs, fallbackReadyCheckDelayMs + 5000)
+  ? 60000
   : Number(process.env.WA_READY_TIMEOUT_MS);
 const gatewayReadyTimeoutMs = Number.isNaN(
   Number(process.env.WA_GATEWAY_READY_TIMEOUT_MS)
 )
-  ? defaultReadyTimeoutMs + fallbackReadyCheckDelayMs
+  ? defaultReadyTimeoutMs
   : Number(process.env.WA_GATEWAY_READY_TIMEOUT_MS);
-const fallbackStateRetryCounts = new WeakMap();
-const fallbackReinitCounts = new WeakMap();
-const maxFallbackStateRetries = 3;
-const maxFallbackReinitAttempts = 2;
-const maxUnknownStateEscalationRetries = 2;
-const fallbackStateRetryMinDelayMs = 15000;
-const fallbackStateRetryMaxDelayMs = 30000;
-const connectInFlightWarnMs = Number.isNaN(
-  Number(process.env.WA_CONNECT_INFLIGHT_WARN_MS)
-)
-  ? 120000
-  : Number(process.env.WA_CONNECT_INFLIGHT_WARN_MS);
-const connectInFlightReinitMs = Number.isNaN(
-  Number(process.env.WA_CONNECT_INFLIGHT_REINIT_MS)
-)
-  ? 300000
-  : Number(process.env.WA_CONNECT_INFLIGHT_REINIT_MS);
-const hardInitRetryCounts = new WeakMap();
-const maxHardInitRetries = 3;
-const hardInitRetryBaseDelayMs = 120000;
-const hardInitRetryMaxDelayMs = 900000;
-const qrAwaitingReinitGraceMs = 120000;
+const lifecycleEventInFlight = new WeakMap();
+const lifecycleEventQueued = new WeakMap();
 const logoutDisconnectReasons = new Set([
   "LOGGED_OUT",
   "UNPAIRED",
   "CONFLICT",
   "UNPAIRED_IDLE",
 ]);
-const disconnectChangeStates = new Set([
-  "DISCONNECTED",
-  "UNPAIRED",
-  "UNPAIRED_IDLE",
-  "CONFLICT",
-  "LOGGED_OUT",
-  "CLOSE",
-]);
-const authSessionIgnoreEntries = new Set([
-  "SingletonLock",
-  "SingletonCookie",
-  "SingletonSocket",
-]);
-
-function getFallbackStateRetryDelayMs() {
-  const jitterRange = fallbackStateRetryMaxDelayMs - fallbackStateRetryMinDelayMs;
-  return (
-    fallbackStateRetryMinDelayMs + Math.floor(Math.random() * jitterRange)
-  );
-}
-
-function getHardInitRetryDelayMs(attempt) {
-  const baseDelay = hardInitRetryBaseDelayMs * 2 ** Math.max(0, attempt - 1);
-  const cappedDelay = Math.min(baseDelay, hardInitRetryMaxDelayMs);
-  const jitter = Math.floor(Math.random() * 0.2 * cappedDelay);
-  return cappedDelay + jitter;
-}
-
-function formatConnectDurationMs(durationMs) {
-  const seconds = Math.round(durationMs / 1000);
-  return `${durationMs}ms (${seconds}s)`;
-}
-
-function hasRecentQrScan(state, graceMs = qrAwaitingReinitGraceMs) {
-  if (!state?.lastQrAt) {
-    return false;
-  }
-  const elapsedMs = Date.now() - state.lastQrAt;
-  return elapsedMs >= 0 && elapsedMs <= graceMs;
-}
 
 function getClientReadyTimeoutMs(client) {
   const clientOverride = client?.readyTimeoutMs;
@@ -840,9 +764,6 @@ function getClientReadinessState(client, label = "WA") {
       lastAuthFailureMessage: null,
       lastQrAt: null,
       lastQrPayloadSeen: null,
-      unknownStateRetryCount: 0,
-      fallbackCheckCompleted: false,
-      fallbackCheckInFlight: false,
     });
   }
   return clientReadiness.get(client);
@@ -857,34 +778,6 @@ function isLogoutDisconnectReason(reason) {
   return logoutDisconnectReasons.has(normalizedReason);
 }
 
-function hasAuthFailureIndicator(state) {
-  return (
-    isLogoutDisconnectReason(state?.lastDisconnectReason) ||
-    Boolean(state?.lastAuthFailureAt)
-  );
-}
-
-function hasPersistedAuthSession(sessionPath) {
-  if (!sessionPath) {
-    return false;
-  }
-  try {
-    if (!fs.existsSync(sessionPath)) {
-      return false;
-    }
-    const entries = fs.readdirSync(sessionPath, { withFileTypes: true });
-    return entries.some(
-      (entry) => !authSessionIgnoreEntries.has(entry.name)
-    );
-  } catch (err) {
-    console.warn(
-      `[WA] Gagal memeriksa isi session di ${sessionPath}:`,
-      err?.message || err
-    );
-    return false;
-  }
-}
-
 function clearLogoutAwaitingQr(client) {
   const state = getClientReadinessState(client);
   if (state.awaitingQrScan || state.lastDisconnectReason) {
@@ -893,355 +786,66 @@ function clearLogoutAwaitingQr(client) {
   }
 }
 
-function resetFallbackReadyState(client) {
-  const state = getClientReadinessState(client);
-  state.fallbackCheckCompleted = false;
-  state.fallbackCheckInFlight = false;
-}
-
-function markFallbackCheckCompleted(client) {
-  const state = getClientReadinessState(client);
-  state.fallbackCheckCompleted = true;
-  state.fallbackCheckInFlight = false;
-}
-
-function clearAuthenticatedFallbackTimer(client) {
-  const timer = authenticatedReadyFallbackTimers.get(client);
-  if (timer) {
-    clearTimeout(timer);
-    authenticatedReadyFallbackTimers.delete(client);
-  }
-}
-
-async function inferClientReadyState(client, label, contextLabel) {
-  const state = getClientReadinessState(client, label);
-  if (state.ready) {
-    return true;
-  }
-  let readySource = null;
-  if (typeof client?.isReady === "function") {
-    try {
-      if ((await client.isReady()) === true) {
-        readySource = "isReady";
-      }
-    } catch (error) {
-      console.warn(
-        `[${state.label}] isReady check failed: ${error?.message || error}`
-      );
-    }
-  }
-  if (!readySource && typeof client?.getState === "function") {
-    try {
-      const clientState = await client.getState();
-      if (clientState === "CONNECTED" || clientState === "open") {
-        readySource = `getState:${clientState}`;
-      }
-    } catch (error) {
-      console.warn(
-        `[${state.label}] getState check failed: ${error?.message || error}`
-      );
-    }
-  }
-  if (readySource) {
-    const contextInfo = contextLabel ? ` during ${contextLabel}` : "";
-    console.warn(
-      `[${state.label}] Readiness inferred via ${readySource}${contextInfo}; marking ready.`
-    );
-    markClientReady(client, readySource);
-    return true;
-  }
-  return false;
-}
-
-function scheduleAuthenticatedReadyFallback(client, label) {
-  clearAuthenticatedFallbackTimer(client);
-  const { label: stateLabel } = getClientReadinessState(client, label);
-  const timeoutMs = authenticatedReadyTimeoutMs;
-  authenticatedReadyFallbackTimers.set(
-    client,
-    setTimeout(async () => {
-      const state = getClientReadinessState(client, stateLabel);
-      if (state.ready) {
-        return;
-      }
-      console.warn(
-        `[${stateLabel}] Authenticated but no ready event after ${timeoutMs}ms`
-      );
-      if (client?.isReady) {
-        try {
-          const isReady = (await client.isReady()) === true;
-          if (isReady) {
-            console.warn(
-              `[${stateLabel}] isReady=true after authenticated timeout; waiting for ready event`
-            );
-          }
-        } catch (error) {
-          console.warn(
-            `[${stateLabel}] isReady check failed after authenticated timeout: ${error?.message}`
-          );
-        }
-      }
-      if (client?.getState) {
-        try {
-          const currentState = await client.getState();
-          console.warn(
-            `[${stateLabel}] getState after authenticated timeout: ${currentState}`
-          );
-        } catch (error) {
-          console.warn(
-            `[${stateLabel}] getState failed after authenticated timeout: ${error?.message}`
-          );
-        }
-      }
-      if (typeof client?.connect === "function") {
-        console.warn(
-          `[${stateLabel}] Reinitializing client after authenticated timeout`
-        );
-        reconnectClient(client).catch((err) => {
-          console.error(
-            `[${stateLabel}] Reinit failed after authenticated timeout: ${err?.message}`
-          );
-        });
-      } else {
-        console.warn(
-          `[${stateLabel}] connect not available; unable to reinit after authenticated timeout`
-        );
-      }
-    }, timeoutMs)
-  );
-}
-
 function registerClientReadiness(client, label) {
   getClientReadinessState(client, label);
 }
 
-function getInitReadinessIssue({ label, client }) {
-  const readinessState = getClientReadinessState(client, label);
-  const fatalInitError = client?.fatalInitError || null;
-  const missingChrome =
-    isFatalMissingChrome(client) || fatalInitError?.type === "missing-chrome";
-  const awaitingQrScan = Boolean(readinessState?.awaitingQrScan);
-  const authFailure = Boolean(readinessState?.lastAuthFailureAt);
-  const hasReadyState = Boolean(readinessState?.ready);
-
-  if (!missingChrome && !fatalInitError && hasReadyState) {
-    return null;
-  }
-
-  if (missingChrome) {
-    return {
-      label,
-      reason: "missing-chrome",
-      detail: fatalInitError?.error?.message || "Chrome executable not found",
-      remediation: missingChromeRemediationHint,
-    };
-  }
-
-  if (authFailure) {
-    return {
-      label,
-      reason: "auth-failure",
-      detail:
-        readinessState?.lastAuthFailureMessage ||
-        "WhatsApp auth failure detected",
-      remediation:
-        "Pastikan WA_AUTH_DATA_PATH benar, hapus sesi auth yang rusak, lalu scan QR ulang.",
-    };
-  }
-
-  if (awaitingQrScan) {
-    return {
-      label,
-      reason: "awaiting-qr",
-      detail:
-        readinessState?.lastDisconnectReason ||
-        "Awaiting QR scan for WhatsApp client",
-      remediation: "Scan QR terbaru pada log/terminal agar sesi tersambung.",
-    };
-  }
-
-  if (fatalInitError) {
-    return {
-      label,
-      reason: fatalInitError.type || "fatal-init",
-      detail: fatalInitError.error?.message || "Fatal WhatsApp init error",
-      remediation:
-        "Periksa konfigurasi WhatsApp (WA_WEB_VERSION*, WA_AUTH_DATA_PATH) dan ulangi init.",
-    };
-  }
-
-  return {
-    label,
-    reason: "not-ready",
-    detail: "WhatsApp client belum siap setelah inisialisasi",
-    remediation: "Cek log init, koneksi jaringan, lalu restart jika perlu.",
-  };
-}
-
-function getListenerCount(client, eventName) {
-  if (typeof client?.listenerCount !== "function") {
-    return null;
-  }
-  return client.listenerCount(eventName);
-}
-
-export function getWaReadinessSummary() {
-  const clients = [
-    { label: "WA", client: waClient },
-    { label: "WA-USER", client: waUserClient },
-    { label: "WA-GATEWAY", client: waGatewayClient },
-  ];
-  const formatTimestamp = (value) =>
-    value ? new Date(value).toISOString() : null;
-  return {
-    shouldInitWhatsAppClients,
-    clients: clients.map(({ label, client }) => {
-      const state = getClientReadinessState(client, label);
-      const puppeteerExecutablePath =
-        typeof client?.getPuppeteerExecutablePath === "function"
-          ? client.getPuppeteerExecutablePath()
-          : client?.puppeteerExecutablePath;
-      const fatalInitError = client?.fatalInitError
-        ? {
-            type: client.fatalInitError.type || null,
-            message: client.fatalInitError.error?.message || null,
-          }
-        : null;
-      return {
-        label,
-        ready: Boolean(state.ready),
-        awaitingQrScan: Boolean(state.awaitingQrScan),
-        lastDisconnectReason: state.lastDisconnectReason || null,
-        lastAuthFailureAt: formatTimestamp(state.lastAuthFailureAt),
-        fatalInitError,
-        puppeteerExecutablePath: puppeteerExecutablePath || null,
-        sessionPath: client?.sessionPath || null,
-        messageListenerCount: getListenerCount(client, "message"),
-        readyListenerCount: getListenerCount(client, "ready"),
-      };
-    }),
-  };
-}
-
-function setClientNotReady(client) {
-  const state = getClientReadinessState(client);
-  state.ready = false;
-  resetFallbackReadyState(client);
-}
-
-function resetHardInitRetryCount(client) {
-  if (hardInitRetryCounts.has(client)) {
-    hardInitRetryCounts.set(client, 0);
-  }
-}
-
-function hasChromeExecutable(client) {
-  const executablePath =
-    typeof client?.getPuppeteerExecutablePath === "function"
-      ? client.getPuppeteerExecutablePath()
-      : client?.puppeteerExecutablePath;
-  if (!executablePath) {
-    return false;
-  }
-  try {
-    fs.accessSync(executablePath, fs.constants.X_OK);
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function isFatalMissingChrome(client, err) {
-  const hasMissingChromeError =
-    err?.isMissingChromeError === true ||
-    client?.fatalInitError?.type === "missing-chrome";
-  if (!hasMissingChromeError) {
-    return false;
-  }
-  if (hasChromeExecutable(client)) {
-    if (client?.fatalInitError?.type === "missing-chrome") {
-      client.fatalInitError = null;
-    }
-    return false;
-  }
-  return true;
-}
-
-const missingChromeRemediationHint =
-  "Set WA_PUPPETEER_EXECUTABLE_PATH or run `npx puppeteer browsers install chrome`.";
-
-function isDisconnectChangeState(state) {
-  const normalizedState = String(state || "").trim().toUpperCase();
-  if (!normalizedState) {
-    return false;
-  }
-  return disconnectChangeStates.has(normalizedState);
-}
-
-function reconnectClient(client, options = {}) {
-  resetFallbackReadyState(client);
-  return client.connect(options);
-}
-
-function reinitializeClient(client, options = {}) {
-  resetFallbackReadyState(client);
-  return client.reinitialize(options);
-}
-
-function scheduleHardInitRetry(client, label, err) {
-  setClientNotReady(client);
-  clearAuthenticatedFallbackTimer(client);
-  if (isFatalMissingChrome(client, err)) {
-    console.error(
-      `[${label}] Missing Chrome executable; skipping hard init retries until Chrome is installed.`
-    );
-    return;
-  }
-  const currentAttempts = hardInitRetryCounts.get(client) || 0;
-  if (currentAttempts >= maxHardInitRetries) {
-    console.error(
-      `[${label}] Hard init failure; aborting after ${currentAttempts} attempt(s): ${err?.message}`
-    );
-    return;
-  }
-  const nextAttempt = currentAttempts + 1;
-  hardInitRetryCounts.set(client, nextAttempt);
-  const delayMs = getHardInitRetryDelayMs(nextAttempt);
-  console.warn(
-    `[${label}] Hard init failure; scheduling reinit attempt ${nextAttempt}/${maxHardInitRetries} in ${delayMs}ms`
-  );
-  setTimeout(async () => {
-    const connectPromise =
-      typeof client?.getConnectPromise === "function"
-        ? client.getConnectPromise()
-        : null;
-    if (connectPromise) {
+function runSingleLifecycleTransition(client, label, eventName, reason, transitionHandler) {
+  if (lifecycleEventInFlight.get(client)) {
+    const queuedEvent = lifecycleEventQueued.get(client);
+    const currentReason = reason ?? null;
+    if (queuedEvent?.eventName !== eventName || queuedEvent?.reason !== currentReason) {
+      lifecycleEventQueued.set(client, { eventName, reason: currentReason });
       console.warn(
-        `[${label}] Hard init retry ${nextAttempt} waiting for in-flight connect.`
+        `[${label}] Lifecycle transition in-flight; queueing ${eventName}${
+          currentReason ? ` (${currentReason})` : ""
+        }.`
       );
-      try {
-        await connectPromise;
-        resetHardInitRetryCount(client);
-        return;
-      } catch (retryErr) {
-        console.error(
-          `[${label}] In-flight connect failed before hard init retry ${nextAttempt}: ${retryErr?.message}`
-        );
-        scheduleHardInitRetry(client, label, retryErr);
+    }
+    return;
+  }
+
+  lifecycleEventInFlight.set(client, true);
+  Promise.resolve()
+    .then(transitionHandler)
+    .catch((error) => {
+      console.error(
+        `[${label}] Lifecycle transition failed for ${eventName}: ${error?.message || error}`
+      );
+    })
+    .finally(() => {
+      lifecycleEventInFlight.set(client, false);
+      const queuedEvent = lifecycleEventQueued.get(client);
+      if (!queuedEvent) {
         return;
       }
-    }
-    reconnectClient(client)
-      .then(() => {
-        resetHardInitRetryCount(client);
-      })
-      .catch((retryErr) => {
-        console.error(
-          `[${label}] Hard init retry ${nextAttempt} failed: ${retryErr?.message}`
-        );
-        scheduleHardInitRetry(client, label, retryErr);
-      });
-  }, delayMs);
+      lifecycleEventQueued.delete(client);
+      runSingleLifecycleTransition(
+        client,
+        label,
+        queuedEvent.eventName,
+        queuedEvent.reason,
+        () => {
+          if (queuedEvent.eventName === "auth_failure") {
+            const state = getClientReadinessState(client, label);
+            state.lastAuthFailureAt = Date.now();
+            state.lastAuthFailureMessage = queuedEvent.reason || null;
+            setClientNotReady(client);
+            console.error(`[${label}] Auth failure: ${queuedEvent.reason}`);
+            return;
+          }
+          if (queuedEvent.eventName === "disconnected") {
+            const normalizedReason = normalizeDisconnectReason(queuedEvent.reason);
+            const shouldAwaitQr = isLogoutDisconnectReason(normalizedReason);
+            const state = getClientReadinessState(client, label);
+            state.lastDisconnectReason = normalizedReason || null;
+            state.awaitingQrScan = shouldAwaitQr;
+            setClientNotReady(client);
+            console.warn(`[${label}] Client disconnected:`, queuedEvent.reason);
+          }
+        }
+      );
+    });
 }
 
 function flushPendingMessages(client) {
@@ -1275,7 +879,6 @@ function flushPendingMessages(client) {
 }
 
 function markClientReady(client, src = "unknown") {
-  clearAuthenticatedFallbackTimer(client);
   clearLogoutAwaitingQr(client);
   const state = getClientReadinessState(client);
   if (!state.ready) {
@@ -1287,7 +890,6 @@ function markClientReady(client, src = "unknown") {
     state.lastAuthFailureAt = null;
     state.lastAuthFailureMessage = null;
   }
-  resetHardInitRetryCount(client);
   flushPendingMessages(client);
   if (client === waClient) {
     flushAdminNotificationQueue();
@@ -1298,56 +900,6 @@ registerClientReadiness(waClient, "WA");
 registerClientReadiness(waUserClient, "WA-USER");
 registerClientReadiness(waGatewayClient, "WA-GATEWAY");
 waGatewayClient.readyTimeoutMs = gatewayReadyTimeoutMs;
-
-function handleClientDisconnect(client, label, reason) {
-  setClientNotReady(client);
-  clearAuthenticatedFallbackTimer(client);
-  const normalizedReason = normalizeDisconnectReason(reason);
-  const shouldAwaitQr = isLogoutDisconnectReason(normalizedReason);
-  const state = getClientReadinessState(client);
-  state.lastDisconnectReason = normalizedReason || null;
-  state.awaitingQrScan = shouldAwaitQr;
-  console.warn(`[${label}] Client disconnected:`, reason);
-  if (shouldAwaitQr) {
-    console.warn(
-      `[${label}] Disconnect reason=${normalizedReason}; waiting for QR scan before reconnect.`
-    );
-    return;
-  }
-  setTimeout(async () => {
-    const connectPromise =
-      typeof client?.getConnectPromise === "function"
-        ? client.getConnectPromise()
-        : null;
-    if (connectPromise) {
-      console.warn(`[${label}] Reconnect skipped; connect already in progress.`);
-      try {
-        await connectPromise;
-      } catch (err) {
-        console.error(
-          `[${label}] In-flight connect failed after disconnect:`,
-          err?.message || err
-        );
-      }
-      return;
-    }
-    reconnectClient(client).catch((err) => {
-      console.error(`[${label}] Reconnect failed:`, err.message);
-    });
-  }, 5000);
-}
-
-waClient.on("disconnected", (reason) => {
-  handleClientDisconnect(waClient, "WA", reason);
-});
-
-waUserClient.on("disconnected", (reason) => {
-  handleClientDisconnect(waUserClient, "WA-USER", reason);
-});
-
-waGatewayClient.on("disconnected", (reason) => {
-  handleClientDisconnect(waGatewayClient, "WA-GATEWAY", reason);
-});
 
 export function queueAdminNotification(message) {
   adminNotificationQueue.push(message);
@@ -1368,7 +920,6 @@ export function flushAdminNotificationQueue() {
 async function waitForClientReady(client, timeoutMs) {
   const state = getClientReadinessState(client);
   if (state.ready) return;
-  if (await inferClientReadyState(client, state.label, "pre-wait")) return;
 
   const formatClientReadyTimeoutContext = (readinessState) => {
     const label = readinessState?.label || "WA";
@@ -1421,10 +972,7 @@ async function waitForClientReady(client, timeoutMs) {
       reject(missingChromeError);
       return;
     }
-    timer = setTimeout(async () => {
-      if (await inferClientReadyState(client, state.label, "timeout-check")) {
-        return;
-      }
+    timer = setTimeout(() => {
       const idx = state.readyResolvers.indexOf(resolver);
       if (idx !== -1) state.readyResolvers.splice(idx, 1);
       const timeoutContext = formatClientReadyTimeoutContext(state);
@@ -1554,7 +1102,6 @@ export function sendGatewayMessage(jid, text) {
 
 // Handle QR code (scan)
 waClient.on("qr", (qr) => {
-  resetFallbackReadyState(waClient);
   const state = getClientReadinessState(waClient, "WA");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1566,41 +1113,42 @@ waClient.on("qr", (qr) => {
 waClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA] Authenticated (${sessionInfo}); menunggu ready.`);
-  resetFallbackReadyState(waClient);
   clearLogoutAwaitingQr(waClient);
-  scheduleAuthenticatedReadyFallback(waClient, "WA");
 });
 
 waClient.on("auth_failure", (message) => {
-  clearAuthenticatedFallbackTimer(waClient);
-  setClientNotReady(waClient);
-  const state = getClientReadinessState(waClient, "WA");
-  state.lastAuthFailureAt = Date.now();
-  state.lastAuthFailureMessage = message || null;
-  console.error(`[WA] Auth failure: ${message}`);
+  runSingleLifecycleTransition(
+    waClient,
+    "WA",
+    "auth_failure",
+    message,
+    () => {
+      setClientNotReady(waClient);
+      const state = getClientReadinessState(waClient, "WA");
+      state.lastAuthFailureAt = Date.now();
+      state.lastAuthFailureMessage = message || null;
+      console.error(`[WA] Auth failure: ${message}`);
+    }
+  );
 });
 
-// Wa Bot siap
+waClient.on("disconnected", (reason) => {
+  runSingleLifecycleTransition(waClient, "WA", "disconnected", reason, () => {
+    const normalizedReason = normalizeDisconnectReason(reason);
+    const state = getClientReadinessState(waClient, "WA");
+    state.lastDisconnectReason = normalizedReason || null;
+    state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
+    setClientNotReady(waClient);
+    console.warn(`[WA] Client disconnected:`, reason);
+  });
+});
+
 waClient.on("ready", () => {
-  clearAuthenticatedFallbackTimer(waClient);
   clearLogoutAwaitingQr(waClient);
   markClientReady(waClient, "ready");
 });
 
-// Log client state changes if available
-waClient.on("change_state", (state) => {
-  console.log(`[WA] Client state changed: ${state}`);
-  if (state === "CONNECTED" || state === "open") {
-    clearAuthenticatedFallbackTimer(waClient);
-    clearLogoutAwaitingQr(waClient);
-    markClientReady(waClient, "state");
-  } else if (isDisconnectChangeState(state)) {
-    setClientNotReady(waClient);
-  }
-});
-
 waUserClient.on("qr", (qr) => {
-  resetFallbackReadyState(waUserClient);
   const state = getClientReadinessState(waUserClient, "WA-USER");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1612,39 +1160,48 @@ waUserClient.on("qr", (qr) => {
 waUserClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-USER] Authenticated (${sessionInfo}); menunggu ready.`);
-  resetFallbackReadyState(waUserClient);
   clearLogoutAwaitingQr(waUserClient);
-  scheduleAuthenticatedReadyFallback(waUserClient, "WA-USER");
 });
 
 waUserClient.on("auth_failure", (message) => {
-  clearAuthenticatedFallbackTimer(waUserClient);
-  setClientNotReady(waUserClient);
-  const state = getClientReadinessState(waUserClient, "WA-USER");
-  state.lastAuthFailureAt = Date.now();
-  state.lastAuthFailureMessage = message || null;
-  console.error(`[WA-USER] Auth failure: ${message}`);
+  runSingleLifecycleTransition(
+    waUserClient,
+    "WA-USER",
+    "auth_failure",
+    message,
+    () => {
+      setClientNotReady(waUserClient);
+      const state = getClientReadinessState(waUserClient, "WA-USER");
+      state.lastAuthFailureAt = Date.now();
+      state.lastAuthFailureMessage = message || null;
+      console.error(`[WA-USER] Auth failure: ${message}`);
+    }
+  );
+});
+
+waUserClient.on("disconnected", (reason) => {
+  runSingleLifecycleTransition(
+    waUserClient,
+    "WA-USER",
+    "disconnected",
+    reason,
+    () => {
+      const normalizedReason = normalizeDisconnectReason(reason);
+      const state = getClientReadinessState(waUserClient, "WA-USER");
+      state.lastDisconnectReason = normalizedReason || null;
+      state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
+      setClientNotReady(waUserClient);
+      console.warn(`[WA-USER] Client disconnected:`, reason);
+    }
+  );
 });
 
 waUserClient.on("ready", () => {
-  clearAuthenticatedFallbackTimer(waUserClient);
   clearLogoutAwaitingQr(waUserClient);
   markClientReady(waUserClient, "ready");
 });
 
-waUserClient.on("change_state", (state) => {
-  console.log(`[WA-USER] Client state changed: ${state}`);
-  if (state === "CONNECTED" || state === "open") {
-    clearAuthenticatedFallbackTimer(waUserClient);
-    clearLogoutAwaitingQr(waUserClient);
-    markClientReady(waUserClient, "state");
-  } else if (isDisconnectChangeState(state)) {
-    setClientNotReady(waUserClient);
-  }
-});
-
 waGatewayClient.on("qr", (qr) => {
-  resetFallbackReadyState(waGatewayClient);
   const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
   state.lastQrAt = Date.now();
   state.lastQrPayloadSeen = qr;
@@ -1656,35 +1213,45 @@ waGatewayClient.on("qr", (qr) => {
 waGatewayClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
   console.log(`[WA-GATEWAY] Authenticated (${sessionInfo}); menunggu ready.`);
-  resetFallbackReadyState(waGatewayClient);
   clearLogoutAwaitingQr(waGatewayClient);
-  scheduleAuthenticatedReadyFallback(waGatewayClient, "WA-GATEWAY");
 });
 
 waGatewayClient.on("auth_failure", (message) => {
-  clearAuthenticatedFallbackTimer(waGatewayClient);
-  setClientNotReady(waGatewayClient);
-  const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
-  state.lastAuthFailureAt = Date.now();
-  state.lastAuthFailureMessage = message || null;
-  console.error(`[WA-GATEWAY] Auth failure: ${message}`);
+  runSingleLifecycleTransition(
+    waGatewayClient,
+    "WA-GATEWAY",
+    "auth_failure",
+    message,
+    () => {
+      setClientNotReady(waGatewayClient);
+      const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
+      state.lastAuthFailureAt = Date.now();
+      state.lastAuthFailureMessage = message || null;
+      console.error(`[WA-GATEWAY] Auth failure: ${message}`);
+    }
+  );
+});
+
+waGatewayClient.on("disconnected", (reason) => {
+  runSingleLifecycleTransition(
+    waGatewayClient,
+    "WA-GATEWAY",
+    "disconnected",
+    reason,
+    () => {
+      const normalizedReason = normalizeDisconnectReason(reason);
+      const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
+      state.lastDisconnectReason = normalizedReason || null;
+      state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
+      setClientNotReady(waGatewayClient);
+      console.warn(`[WA-GATEWAY] Client disconnected:`, reason);
+    }
+  );
 });
 
 waGatewayClient.on("ready", () => {
-  clearAuthenticatedFallbackTimer(waGatewayClient);
   clearLogoutAwaitingQr(waGatewayClient);
   markClientReady(waGatewayClient, "ready");
-});
-
-waGatewayClient.on("change_state", (state) => {
-  console.log(`[WA-GATEWAY] Client state changed: ${state}`);
-  if (state === "CONNECTED" || state === "open") {
-    clearAuthenticatedFallbackTimer(waGatewayClient);
-    clearLogoutAwaitingQr(waGatewayClient);
-    markClientReady(waGatewayClient, "state");
-  } else if (isDisconnectChangeState(state)) {
-    setClientNotReady(waGatewayClient);
-  }
 });
 
 // =======================
@@ -4986,410 +4553,10 @@ if (shouldInitWhatsAppClients) {
 
   const initPromises = clientsToInit.map(({ label, client }) => {
     console.log(`[${label}] Starting WhatsApp client initialization`);
-    return reconnectClient(client)
-      .then(() => {
-        resetHardInitRetryCount(client);
-      })
-      .catch((err) => {
-        console.error(`[${label}] Initialization failed (hard failure):`, err?.message);
-        scheduleHardInitRetry(client, label, err);
-      });
+    return client.connect().catch((err) => {
+      console.error(`[${label}] Initialization failed (hard failure):`, err?.message);
+    });
   });
-
-  const scheduleFallbackReadyCheck = (
-    client,
-    delayMs = fallbackReadyCheckDelayMs
-  ) => {
-    const readinessState = getClientReadinessState(client);
-    if (readinessState.fallbackCheckCompleted) {
-      return;
-    }
-    if (readinessState.fallbackCheckInFlight) {
-      return;
-    }
-    readinessState.fallbackCheckInFlight = true;
-    const isConnectInFlight = () =>
-      typeof client?.getConnectPromise === "function" &&
-      Boolean(client.getConnectPromise());
-    const getConnectInFlightDurationMs = () => {
-      if (typeof client?.getConnectStartedAt !== "function") {
-        return null;
-      }
-      const startedAt = client.getConnectStartedAt();
-      if (!startedAt) {
-        return null;
-      }
-      const durationMs = Date.now() - startedAt;
-      return durationMs >= 0 ? durationMs : null;
-    };
-    const formatFallbackReadyContext = (
-      readinessState,
-      connectInFlight,
-      connectInFlightDurationMs = null
-    ) => {
-      const clientId = client?.clientId || "unknown";
-      const sessionPath = client?.sessionPath || "unknown";
-      const awaitingQrScan = readinessState?.awaitingQrScan ? "true" : "false";
-      const lastDisconnectReason = readinessState?.lastDisconnectReason || "none";
-      const lastAuthFailureAt = readinessState?.lastAuthFailureAt
-        ? new Date(readinessState.lastAuthFailureAt).toISOString()
-        : "none";
-      const lastQrAt = readinessState?.lastQrAt
-        ? new Date(readinessState.lastQrAt).toISOString()
-        : "none";
-      const connectInFlightLabel = connectInFlight ? "true" : "false";
-      const connectInFlightDuration =
-        connectInFlightDurationMs !== null
-          ? formatConnectDurationMs(connectInFlightDurationMs)
-          : "n/a";
-      return (
-        `clientId=${clientId} ` +
-        `connectInFlight=${connectInFlightLabel} ` +
-        `connectInFlightDuration=${connectInFlightDuration} ` +
-        `awaitingQrScan=${awaitingQrScan} ` +
-        `lastDisconnectReason=${lastDisconnectReason} ` +
-        `lastAuthFailureAt=${lastAuthFailureAt} ` +
-        `lastQrAt=${lastQrAt} ` +
-        `sessionPath=${sessionPath}`
-      );
-    };
-    const scheduleFallbackCooldown = (cooldownMs) => {
-      setTimeout(() => {
-        fallbackReinitCounts.set(client, 0);
-        fallbackStateRetryCounts.set(client, 0);
-        const readinessState = getClientReadinessState(client);
-        readinessState.unknownStateRetryCount = 0;
-        scheduleFallbackReadyCheck(client, delayMs);
-      }, cooldownMs);
-    };
-    setTimeout(async () => {
-      const state = getClientReadinessState(client);
-      state.fallbackCheckInFlight = false;
-      if (state.fallbackCheckCompleted) {
-        return;
-      }
-      if (state.ready) {
-        markFallbackCheckCompleted(client);
-        return;
-      }
-      const { label } = state;
-      const connectInFlightDurationMs = getConnectInFlightDurationMs();
-      if (isConnectInFlight()) {
-        if (
-          connectInFlightDurationMs !== null &&
-          connectInFlightDurationMs >= connectInFlightWarnMs
-        ) {
-          console.warn(
-            `[${label}] connect in progress for ${formatConnectDurationMs(
-              connectInFlightDurationMs
-            )}; ${formatFallbackReadyContext(
-              state,
-              true,
-              connectInFlightDurationMs
-            )}`
-          );
-        }
-        if (
-          connectInFlightDurationMs !== null &&
-          connectInFlightDurationMs >= connectInFlightReinitMs
-        ) {
-          if (state.awaitingQrScan && hasRecentQrScan(state)) {
-            console.warn(
-              `[${label}] QR baru muncul; reinit ditunda; ${formatFallbackReadyContext(
-                state,
-                true,
-                connectInFlightDurationMs
-              )}`
-            );
-            scheduleFallbackReadyCheck(client, delayMs);
-            return;
-          }
-          if (typeof client?.reinitialize === "function") {
-            console.warn(
-              `[${label}] connect in progress for ${formatConnectDurationMs(
-                connectInFlightDurationMs
-              )}; triggering reinit.`
-            );
-            reinitializeClient(client, {
-                trigger: "connect-inflight-timeout",
-                reason: `connect in progress for ${formatConnectDurationMs(
-                  connectInFlightDurationMs
-                )}`,
-              })
-              .catch((err) => {
-                console.error(
-                  `[${label}] Reinit failed after connect in-flight timeout: ${err?.message}`
-                );
-              });
-          } else {
-            console.warn(
-              `[${label}] connect in progress for ${formatConnectDurationMs(
-                connectInFlightDurationMs
-              )}; reinit unavailable.`
-            );
-          }
-          scheduleFallbackReadyCheck(client, delayMs);
-          return;
-        }
-        console.log(
-          `[${label}] fallback readiness skipped; connect in progress; ${formatFallbackReadyContext(
-            state,
-            true,
-            connectInFlightDurationMs
-          )}`
-        );
-        scheduleFallbackReadyCheck(client, delayMs);
-        return;
-      }
-      if (isFatalMissingChrome(client)) {
-        console.warn(
-          `[${label}] Missing Chrome executable; skipping fallback readiness until Chrome is installed.`
-        );
-        return;
-      }
-      if (state.awaitingQrScan) {
-        const reasonLabel = state.lastDisconnectReason || "LOGOUT";
-        console.warn(
-          `[${label}] Awaiting QR scan after ${reasonLabel}; skipping fallback readiness`
-        );
-        scheduleFallbackReadyCheck(client, delayMs);
-        return;
-      }
-      if (typeof client?.isReady === "function") {
-        try {
-          const isReady = (await client.isReady()) === true;
-          if (isReady) {
-            console.log(
-              `[${label}] fallback isReady indicates ready; awaiting ready event`
-            );
-            fallbackStateRetryCounts.set(client, 0);
-            fallbackReinitCounts.set(client, 0);
-            state.unknownStateRetryCount = 0;
-            markFallbackCheckCompleted(client);
-            return;
-          }
-          if (client?.info !== undefined) {
-            console.warn(
-              `[${label}] fallback readiness deferred; isReady=false while client.info is present`
-            );
-          }
-        } catch (error) {
-          console.warn(
-            `[${label}] fallback isReady check failed: ${error?.message}`
-          );
-          if (client?.info !== undefined) {
-            console.warn(
-              `[${label}] fallback readiness deferred; client.info present but isReady errored`
-            );
-          }
-        }
-      } else if (client?.info !== undefined) {
-        console.warn(
-          `[${label}] fallback readiness deferred; client.info present but isReady not available`
-        );
-      }
-      if (typeof client?.getState !== "function") {
-        console.log(
-          `[${label}] getState not available for fallback readiness; deferring readiness`
-        );
-        scheduleFallbackReadyCheck(client, delayMs);
-        return;
-      }
-      try {
-        const currentState = await client.getState();
-        const normalizedState =
-          currentState === null || currentState === undefined
-            ? "unknown"
-            : currentState;
-        const normalizedStateLower =
-          normalizedState === "unknown"
-            ? "unknown"
-            : String(normalizedState).toLowerCase();
-        console.log(`[${label}] getState: ${normalizedState}`);
-        if (normalizedStateLower === "unknown") {
-          console.warn(
-            `[${label}] fallback getState unknown; ${formatFallbackReadyContext(
-              state,
-              isConnectInFlight(),
-              getConnectInFlightDurationMs()
-            )}`
-          );
-        }
-        if (
-          normalizedStateLower === "connected" ||
-          normalizedStateLower === "open"
-        ) {
-          fallbackStateRetryCounts.set(client, 0);
-          fallbackReinitCounts.set(client, 0);
-          state.unknownStateRetryCount = 0;
-          console.log(
-            `[${label}] getState=${normalizedState}; awaiting ready event`
-          );
-          markFallbackCheckCompleted(client);
-          return;
-        }
-
-        const currentRetryCount = fallbackStateRetryCounts.get(client) || 0;
-        if (currentRetryCount < maxFallbackStateRetries) {
-          const nextRetryCount = currentRetryCount + 1;
-          fallbackStateRetryCounts.set(client, nextRetryCount);
-          const retryDelayMs = getFallbackStateRetryDelayMs();
-          console.warn(
-            `[${label}] getState=${normalizedState}; retrying ` +
-              `(${nextRetryCount}/${maxFallbackStateRetries}) in ${retryDelayMs}ms; ` +
-              formatFallbackReadyContext(
-                state,
-                isConnectInFlight(),
-                getConnectInFlightDurationMs()
-              )
-          );
-          scheduleFallbackReadyCheck(client, retryDelayMs);
-          return;
-        }
-
-        fallbackStateRetryCounts.set(client, 0);
-        const reinitAttempts = fallbackReinitCounts.get(client) || 0;
-        if (reinitAttempts >= maxFallbackReinitAttempts) {
-          console.warn(
-            `[${label}] getState=${normalizedState} after retries; reinit skipped ` +
-              `(max ${maxFallbackReinitAttempts} attempts); cooldown ` +
-              `${fallbackReadyCooldownMs}ms before retrying fallback checks`
-          );
-          scheduleFallbackCooldown(fallbackReadyCooldownMs);
-          return;
-        }
-        fallbackReinitCounts.set(client, reinitAttempts + 1);
-        if (normalizedStateLower !== "unknown") {
-          state.unknownStateRetryCount = 0;
-        }
-        const unknownStateRetryCount = normalizedStateLower === "unknown"
-          ? (state.unknownStateRetryCount || 0) + 1
-          : 0;
-        if (normalizedStateLower === "unknown") {
-          state.unknownStateRetryCount = unknownStateRetryCount;
-        }
-        const shouldEscalateUnknownState =
-          normalizedStateLower === "unknown" &&
-          label === "WA-GATEWAY" &&
-          unknownStateRetryCount >= maxUnknownStateEscalationRetries;
-        const shouldClearFallbackSession =
-          normalizedStateLower === "unknown" &&
-          (label === "WA-GATEWAY" || label === "WA-USER");
-        const hasAuthIndicators = hasAuthFailureIndicator(state);
-        const sessionPath = client?.sessionPath || null;
-        const sessionPathExists = sessionPath ? fs.existsSync(sessionPath) : false;
-        const hasSessionContent =
-          sessionPathExists && hasPersistedAuthSession(sessionPath);
-        const shouldClearCloseSession =
-          normalizedStateLower === "close" &&
-          label === "WA-GATEWAY" &&
-          hasSessionContent;
-        const canClearFallbackSession =
-          sessionPathExists &&
-          ((shouldClearFallbackSession && hasAuthIndicators) ||
-            shouldClearCloseSession);
-        if (
-          shouldEscalateUnknownState &&
-          sessionPathExists &&
-          typeof client?.reinitialize === "function"
-        ) {
-          state.lastAuthFailureAt = Date.now();
-          state.lastAuthFailureMessage = "fallback-unknown-escalation";
-          console.warn(
-            `[${label}] getState=${normalizedState} after retries; ` +
-              `escalating unknown-state retries (${unknownStateRetryCount}/${maxUnknownStateEscalationRetries}); ` +
-              `reinitializing with clear session; ` +
-              formatFallbackReadyContext(
-                state,
-                isConnectInFlight(),
-                getConnectInFlightDurationMs()
-              )
-          );
-          reinitializeClient(client, {
-              clearAuthSession: true,
-              trigger: "fallback-unknown-escalation",
-              reason: `unknown state after ${unknownStateRetryCount} retry cycles`,
-            })
-            .catch((err) => {
-              console.error(
-                `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
-              );
-            });
-          scheduleFallbackReadyCheck(client, delayMs);
-          return;
-        }
-        if (canClearFallbackSession && typeof client?.reinitialize === "function") {
-          const clearReason =
-            shouldClearCloseSession && !hasAuthIndicators
-              ? "getState close with persisted session"
-              : "getState unknown with auth indicator";
-          console.warn(
-            `[${label}] getState=${normalizedState} after retries; ` +
-              `reinitializing with clear session (${reinitAttempts + 1}/${maxFallbackReinitAttempts}); ` +
-              formatFallbackReadyContext(
-                state,
-                isConnectInFlight(),
-                getConnectInFlightDurationMs()
-              )
-          );
-          reinitializeClient(client, {
-              clearAuthSession: true,
-              trigger: "fallback-unknown-auth",
-              reason: clearReason,
-            })
-            .catch((err) => {
-              console.error(
-                `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
-              );
-            });
-          scheduleFallbackReadyCheck(client, delayMs);
-          return;
-        }
-        if (
-          (shouldClearFallbackSession || shouldClearCloseSession) &&
-          !canClearFallbackSession
-        ) {
-          const skipReason = shouldClearCloseSession
-            ? "session path missing"
-            : !hasAuthIndicators
-            ? "no auth indicator"
-            : "session path missing";
-          console.warn(
-            `[${label}] getState=${normalizedState} after retries; ` +
-              `skip clear session (${skipReason}); ` +
-              formatFallbackReadyContext(
-                state,
-                isConnectInFlight(),
-                getConnectInFlightDurationMs()
-              )
-          );
-        }
-        if (typeof client?.connect === "function") {
-          console.warn(
-            `[${label}] getState=${normalizedState} after retries; reinitializing (${reinitAttempts + 1}/${maxFallbackReinitAttempts})`
-          );
-          reconnectClient(client).catch((err) => {
-            console.error(
-              `[${label}] Reinit failed after fallback getState=${normalizedState}: ${err?.message}`
-            );
-          });
-          scheduleFallbackReadyCheck(client, delayMs);
-        } else {
-          console.warn(
-            `[${label}] connect not available; unable to reinit after fallback getState=${normalizedState}`
-          );
-        }
-      } catch (e) {
-        console.log(`[${label}] getState error: ${e?.message}`);
-        console.warn(`[${label}] fallback readiness deferred after getState error`);
-        scheduleFallbackReadyCheck(client, delayMs);
-      }
-    }, delayMs);
-  };
-
-  scheduleFallbackReadyCheck(waClient);
-  scheduleFallbackReadyCheck(waUserClient);
-  scheduleFallbackReadyCheck(waGatewayClient);
 
   await Promise.allSettled(initPromises);
 
