@@ -4,8 +4,8 @@ import { getMessageDedupStats } from '../service/waEventAggregator.js';
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  const { clients, shouldInitWhatsAppClients } = getWaReadinessSummary();
+router.get('/', async (req, res) => {
+  const { clients, shouldInitWhatsAppClients } = await getWaReadinessSummary();
   const dedupStats = getMessageDedupStats();
   
   res.status(200).json({

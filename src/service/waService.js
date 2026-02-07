@@ -722,6 +722,10 @@ if (
 
 const clientReadiness = new Map();
 const adminNotificationQueue = [];
+const readinessDiagnosticsIntervalMs = Math.max(
+  30000,
+  Number(process.env.WA_READINESS_DIAGNOSTIC_INTERVAL_MS) || 120000
+);
 const defaultReadyTimeoutMs = Number.isNaN(
   Number(process.env.WA_READY_TIMEOUT_MS)
 )
@@ -757,6 +761,8 @@ function getClientReadinessState(client, label = "WA") {
     clientReadiness.set(client, {
       label,
       ready: false,
+      lastLifecycleEvent: "initialized",
+      lastLifecycleAt: Date.now(),
       pendingMessages: [],
       readyResolvers: [],
       awaitingQrScan: false,
@@ -785,6 +791,16 @@ function clearLogoutAwaitingQr(client) {
     state.awaitingQrScan = false;
     state.lastDisconnectReason = null;
   }
+}
+
+function setClientNotReady(client, eventName = "unknown") {
+  const state = getClientReadinessState(client);
+  if (state.ready) {
+    console.log(`[${state.label}] NOT_READY via ${eventName}`);
+  }
+  state.ready = false;
+  state.lastLifecycleEvent = eventName;
+  state.lastLifecycleAt = Date.now();
 }
 
 function registerClientReadiness(client, label) {
@@ -882,6 +898,8 @@ function flushPendingMessages(client) {
 function markClientReady(client, src = "unknown") {
   clearLogoutAwaitingQr(client);
   const state = getClientReadinessState(client);
+  state.lastLifecycleEvent = src;
+  state.lastLifecycleAt = Date.now();
   if (!state.ready) {
     state.ready = true;
     console.log(`[${state.label}] READY via ${src}`);
@@ -895,6 +913,110 @@ function markClientReady(client, src = "unknown") {
   if (client === waClient) {
     flushAdminNotificationQueue();
   }
+}
+
+function inferClientReadyState({ readinessState, observedState }) {
+  const normalizedObservedState = String(observedState || "").toLowerCase();
+  const isObservedConnected =
+    normalizedObservedState === "connected" || normalizedObservedState === "open";
+  const lifecycleEvent = String(readinessState?.lastLifecycleEvent || "").toLowerCase();
+
+  if (lifecycleEvent === "disconnected" || lifecycleEvent === "auth_failure") {
+    return false;
+  }
+
+  if (lifecycleEvent === "ready" || lifecycleEvent === "change_state_connected" || lifecycleEvent === "change_state_open") {
+    return true;
+  }
+
+  return readinessState?.ready || isObservedConnected;
+}
+
+function snapshotReadinessState({ readinessState, client, observedState = null }) {
+  return {
+    label: readinessState.label,
+    ready: inferClientReadyState({ readinessState, observedState }),
+    pendingMessages: readinessState.pendingMessages.length,
+    awaitingQrScan: readinessState.awaitingQrScan,
+    lastDisconnectReason: readinessState.lastDisconnectReason,
+    lastAuthFailureAt: readinessState.lastAuthFailureAt
+      ? new Date(readinessState.lastAuthFailureAt).toISOString()
+      : null,
+    lastAuthFailureMessage: readinessState.lastAuthFailureMessage,
+    lastQrAt: readinessState.lastQrAt ? new Date(readinessState.lastQrAt).toISOString() : null,
+    lastLifecycleEvent: readinessState.lastLifecycleEvent,
+    lastLifecycleAt: readinessState.lastLifecycleAt
+      ? new Date(readinessState.lastLifecycleAt).toISOString()
+      : null,
+    observedState,
+    fatalInitError: client?.fatalInitError || null,
+    puppeteerExecutablePath: client?.puppeteerExecutablePath || null,
+    sessionPath: client?.sessionPath || null,
+    clientId: client?.clientId || null,
+  };
+}
+
+function getWaReadinessSummarySync() {
+  const clientEntries = [
+    { key: "wa", client: waClient, label: "WA" },
+    { key: "waUser", client: waUserClient, label: "WA-USER" },
+    { key: "waGateway", client: waGatewayClient, label: "WA-GATEWAY" },
+  ];
+
+  const clients = {};
+  clientEntries.forEach(({ key, client, label }) => {
+    const readinessState = getClientReadinessState(client, label);
+    clients[key] = snapshotReadinessState({ readinessState, client });
+  });
+
+  return {
+    shouldInitWhatsAppClients,
+    clients,
+  };
+}
+
+export async function getWaReadinessSummary() {
+  const summary = getWaReadinessSummarySync();
+  const clientEntries = [
+    { key: "wa", client: waClient },
+    { key: "waUser", client: waUserClient },
+    { key: "waGateway", client: waGatewayClient },
+  ];
+
+  await Promise.all(
+    clientEntries.map(async ({ key, client }) => {
+      if (typeof client?.getState !== "function") return;
+      try {
+        const observedState = await client.getState();
+        summary.clients[key] = {
+          ...summary.clients[key],
+          observedState,
+          ready: inferClientReadyState({
+            readinessState: getClientReadinessState(client),
+            observedState,
+          }),
+        };
+      } catch (error) {
+        summary.clients[key] = {
+          ...summary.clients[key],
+          observedState: "unavailable",
+          observedStateError: error?.message || String(error),
+        };
+      }
+    })
+  );
+
+  return summary;
+}
+
+function startReadinessDiagnosticsLogger() {
+  setInterval(async () => {
+    const summary = await getWaReadinessSummary();
+    console.log("[WA] Periodic readiness diagnostics", {
+      intervalMs: readinessDiagnosticsIntervalMs,
+      clients: summary.clients,
+    });
+  }, readinessDiagnosticsIntervalMs).unref?.();
 }
 
 registerClientReadiness(waClient, "WA");
@@ -1202,6 +1324,13 @@ waClient.on("ready", () => {
   markClientReady(waClient, "ready");
 });
 
+waClient.on("change_state", (state) => {
+  const normalizedState = String(state || "").toLowerCase();
+  if (normalizedState === "connected" || normalizedState === "open") {
+    markClientReady(waClient, `change_state_${normalizedState}`);
+  }
+});
+
 waUserClient.on("qr", (qr) => {
   const state = getClientReadinessState(waUserClient, "WA-USER");
   state.lastQrAt = Date.now();
@@ -1255,6 +1384,13 @@ waUserClient.on("ready", () => {
   markClientReady(waUserClient, "ready");
 });
 
+waUserClient.on("change_state", (state) => {
+  const normalizedState = String(state || "").toLowerCase();
+  if (normalizedState === "connected" || normalizedState === "open") {
+    markClientReady(waUserClient, `change_state_${normalizedState}`);
+  }
+});
+
 waGatewayClient.on("qr", (qr) => {
   const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
   state.lastQrAt = Date.now();
@@ -1306,6 +1442,13 @@ waGatewayClient.on("disconnected", (reason) => {
 waGatewayClient.on("ready", () => {
   clearLogoutAwaitingQr(waGatewayClient);
   markClientReady(waGatewayClient, "ready");
+});
+
+waGatewayClient.on("change_state", (state) => {
+  const normalizedState = String(state || "").toLowerCase();
+  if (normalizedState === "connected" || normalizedState === "open") {
+    markClientReady(waGatewayClient, `change_state_${normalizedState}`);
+  }
 });
 
 // =======================
@@ -4557,6 +4700,7 @@ registerClientMessageHandler(waUserClient, "wwebjs-user", handleUserMessage);
 registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMessage);
 
 if (shouldInitWhatsAppClients) {
+  startReadinessDiagnosticsLogger();
   console.log('[WA] Attaching message event listeners to WhatsApp clients...');
   
   waClient.on('message', (msg) => {
@@ -4643,7 +4787,7 @@ if (shouldInitWhatsAppClients) {
     waClient,
     waUserClient,
     waGatewayClient,
-    getWaReadinessSummary()
+    getWaReadinessSummarySync()
   );
   checkMessageListenersAttached(waClient, waUserClient, waGatewayClient);
 }
