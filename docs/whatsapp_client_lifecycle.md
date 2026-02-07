@@ -134,6 +134,14 @@ Saat service berjalan dalam mode yang mengharuskan WA siap (`WA_EXPECT_MESSAGES=
 - Jika issue bertipe `missing Chrome executable`, startup akan gagal dengan remediation yang sama seperti adapter.
 - Jika client belum `ready`, startup juga akan gagal dengan konteks penyebab terakhir agar operator bisa memperbaiki sesi/QR scan lebih cepat.
 
+## Mitigasi error `Execution context was destroyed`
+
+Adapter kini menambahkan retry khusus saat `client.initialize()` gagal dengan indikasi context Chromium berubah karena navigasi (`Execution context was destroyed` / `Cannot find context with specified id`).
+
+- Pada pola error tersebut, adapter akan menunggu backoff lalu mencoba `initialize()` sekali lagi sebelum menandai startup gagal.
+- Backoff dikontrol oleh env `WA_WWEBJS_EXECUTION_CONTEXT_RETRY_BACKOFF_MS` (default `1500` ms).
+- Tujuan: mengurangi kegagalan inisialisasi sporadis pada momen reload/navigasi internal WhatsApp Web saat cron berjalan.
+
 ## Endpoint status readiness
 
 Endpoint:
