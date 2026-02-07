@@ -114,6 +114,17 @@ Untuk setiap client WA (`WA`, `WA-USER`, `WA-GATEWAY`), `wrapSendMessage` menera
 
 Dengan kontrak ini, keputusan retry/fallback manual berada di caller atau lapisan orkestrasi yang memanggil service.
 
+
+## Kebijakan path session & lock recovery (terbaru)
+
+- `LocalAuth` memakai satu `dataPath` statis per process: `WA_AUTH_DATA_PATH` (atau default `~/.cicero/wwebjs_auth` bila env kosong).
+- Tidak ada lagi fallback dinamis yang memindahkan `userDataDir`/`dataPath` saat lock aktif.
+- Saat startup, adapter memvalidasi writable path untuk `<WA_AUTH_DATA_PATH>/session-<clientId>`.
+  - Jika path invalid/tidak writable, init dihentikan dengan error terstruktur `WA_WWEBJS_SESSION_PATH_INVALID` dan remediation jelas di message/details.
+- Saat lock aktif terdeteksi (`SingletonLock`/`SingletonSocket` masih dipakai proses lain), recovery langsung fail-fast dengan error terstruktur `WA_WWEBJS_LOCK_ACTIVE`.
+  - Adapter tidak melakukan perpindahan path session.
+  - Remediation: hentikan proses Chromium lama yang masih memakai session, atau gunakan `WA_AUTH_DATA_PATH` berbeda per process.
+
 ## Endpoint status readiness
 
 Endpoint:
@@ -133,6 +144,6 @@ Field utama per client:
 ## Troubleshooting cepat
 
 1. Pastikan urutan log event terlihat: `qr` → `authenticated` → `ready`.
-2. Jika `auth_failure` berulang, cek integritas auth path (`WA_AUTH_DATA_PATH`) dan sesi terkait.
-3. Jika `disconnected` berulang, cek log adapter untuk penyebab reinitialize/recovery.
+2. Jika startup gagal dengan `WA_WWEBJS_SESSION_PATH_INVALID`, perbaiki permission/ownership `WA_AUTH_DATA_PATH` atau arahkan env ke path yang writable lalu restart.
+3. Jika `disconnected` berulang dan muncul `WA_WWEBJS_LOCK_ACTIVE`, hentikan proses Chromium lama yang masih menahan lock lalu jalankan ulang service (tanpa mengubah path session secara dinamis).
 4. Gunakan `GET /api/health/wa` untuk verifikasi status readiness masing-masing client.
