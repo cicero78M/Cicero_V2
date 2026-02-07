@@ -128,6 +128,60 @@ import {
 
 dotenv.config();
 
+const debugLoggingEnabled = process.env.WA_DEBUG_LOGGING === "true";
+const LOG_RATE_LIMIT_WINDOW_MS = 60000;
+const rateLimitedLogState = new Map();
+
+function buildWaStructuredLog({
+  clientId = null,
+  label = "WA-SERVICE",
+  event,
+  jid = null,
+  messageId = null,
+  errorCode = null,
+  ...extra
+}) {
+  return {
+    clientId,
+    label,
+    event,
+    jid,
+    messageId,
+    errorCode,
+    ...extra,
+  };
+}
+
+function writeWaStructuredLog(level, payload, options = {}) {
+  if (options.debugOnly && !debugLoggingEnabled) {
+    return;
+  }
+  const message = JSON.stringify(payload);
+  if (level === "debug") {
+    console.debug(message);
+    return;
+  }
+  if (level === "warn") {
+    console.warn(message);
+    return;
+  }
+  if (level === "error") {
+    console.error(message);
+    return;
+  }
+  console.info(message);
+}
+
+function writeRateLimitedWaWarn(rateKey, payload) {
+  const now = Date.now();
+  const previous = rateLimitedLogState.get(rateKey);
+  if (previous && now - previous < LOG_RATE_LIMIT_WINDOW_MS) {
+    return;
+  }
+  rateLimitedLogState.set(rateKey, now);
+  writeWaStructuredLog("warn", payload);
+}
+
 const messageQueues = new WeakMap();
 const sendFailureMetrics = new Map();
 const clientMessageHandlers = new Map();
@@ -796,7 +850,15 @@ function clearLogoutAwaitingQr(client) {
 function setClientNotReady(client, eventName = "unknown") {
   const state = getClientReadinessState(client);
   if (state.ready) {
-    console.log(`[${state.label}] NOT_READY via ${eventName}`);
+    writeRateLimitedWaWarn(
+      `not-ready:${state.label}:${eventName}`,
+      buildWaStructuredLog({
+        clientId: client?.clientId || null,
+        label: state.label,
+        event: "wa_client_not_ready",
+        errorCode: eventName,
+      })
+    );
   }
   state.ready = false;
   state.lastLifecycleEvent = eventName;
@@ -813,10 +875,16 @@ function runSingleLifecycleTransition(client, label, eventName, reason, transiti
     const currentReason = reason ?? null;
     if (queuedEvent?.eventName !== eventName || queuedEvent?.reason !== currentReason) {
       lifecycleEventQueued.set(client, { eventName, reason: currentReason });
-      console.warn(
-        `[${label}] Lifecycle transition in-flight; queueing ${eventName}${
-          currentReason ? ` (${currentReason})` : ""
-        }.`
+      writeWaStructuredLog(
+        "debug",
+        buildWaStructuredLog({
+          clientId: client?.clientId || null,
+          label,
+          event: "wa_lifecycle_transition_queued",
+          errorCode: eventName,
+          reason: currentReason,
+        }),
+        { debugOnly: true }
       );
     }
     return;
@@ -826,8 +894,15 @@ function runSingleLifecycleTransition(client, label, eventName, reason, transiti
   Promise.resolve()
     .then(transitionHandler)
     .catch((error) => {
-      console.error(
-        `[${label}] Lifecycle transition failed for ${eventName}: ${error?.message || error}`
+      writeWaStructuredLog(
+        "error",
+        buildWaStructuredLog({
+          clientId: client?.clientId || null,
+          label,
+          event: "wa_lifecycle_transition_failed",
+          errorCode: eventName,
+          errorMessage: error?.message || String(error),
+        })
       );
     })
     .finally(() => {
@@ -848,7 +923,16 @@ function runSingleLifecycleTransition(client, label, eventName, reason, transiti
             state.lastAuthFailureAt = Date.now();
             state.lastAuthFailureMessage = queuedEvent.reason || null;
             setClientNotReady(client);
-            console.error(`[${label}] Auth failure: ${queuedEvent.reason}`);
+            writeWaStructuredLog(
+              "warn",
+              buildWaStructuredLog({
+                clientId: client?.clientId || null,
+                label,
+                event: "auth_failure",
+                errorCode: "AUTH_FAILURE",
+                errorMessage: queuedEvent.reason || null,
+              })
+            );
             return;
           }
           if (queuedEvent.eventName === "disconnected") {
@@ -858,7 +942,15 @@ function runSingleLifecycleTransition(client, label, eventName, reason, transiti
             state.lastDisconnectReason = normalizedReason || null;
             state.awaitingQrScan = shouldAwaitQr;
             setClientNotReady(client);
-            console.warn(`[${label}] Client disconnected:`, queuedEvent.reason);
+            writeWaStructuredLog(
+              "warn",
+              buildWaStructuredLog({
+                clientId: client?.clientId || null,
+                label,
+                event: "disconnected",
+                errorCode: normalizedReason || null,
+              })
+            );
           }
         }
       );
@@ -868,8 +960,15 @@ function runSingleLifecycleTransition(client, label, eventName, reason, transiti
 function flushPendingMessages(client) {
   const state = getClientReadinessState(client);
   if (state.pendingMessages.length) {
-    console.log(
-      `[${state.label}] Processing ${state.pendingMessages.length} deferred message(s)`
+    writeWaStructuredLog(
+      "debug",
+      buildWaStructuredLog({
+        clientId: client?.clientId || null,
+        label: state.label,
+        event: "wa_deferred_messages_processing",
+        pendingMessages: state.pendingMessages.length,
+      }),
+      { debugOnly: true }
     );
     const handlerInfo = clientMessageHandlers.get(client);
     state.pendingMessages.splice(0).forEach((pending) => {
@@ -879,12 +978,26 @@ function flushPendingMessages(client) {
           : { msg: pending, allowReplay: false };
       const deferredMsg = entry.msg;
       const allowReplay = Boolean(entry.allowReplay);
-      console.log(
-        `[${state.label}] Processing deferred message from ${deferredMsg?.from}`
+      writeWaStructuredLog(
+        "debug",
+        buildWaStructuredLog({
+          clientId: client?.clientId || null,
+          label: state.label,
+          event: "wa_deferred_message_replayed",
+          jid: deferredMsg?.from || null,
+          messageId: deferredMsg?.id?._serialized || deferredMsg?.id?.id || null,
+        }),
+        { debugOnly: true }
       );
       if (!handlerInfo?.handler) {
-        console.warn(
-          `[${state.label}] Missing handler for deferred message replay`
+        writeRateLimitedWaWarn(
+          `missing-handler:${state.label}`,
+          buildWaStructuredLog({
+            clientId: client?.clientId || null,
+            label: state.label,
+            event: "wa_missing_deferred_handler",
+            errorCode: "MISSING_HANDLER",
+          })
         );
         return;
       }
@@ -902,7 +1015,15 @@ function markClientReady(client, src = "unknown") {
   state.lastLifecycleAt = Date.now();
   if (!state.ready) {
     state.ready = true;
-    console.log(`[${state.label}] READY via ${src}`);
+    writeWaStructuredLog(
+      "info",
+      buildWaStructuredLog({
+        clientId: client?.clientId || null,
+        label: state.label,
+        event: "ready",
+        errorCode: src,
+      })
+    );
     state.readyResolvers.splice(0).forEach((resolve) => resolve());
   }
   if (state.lastAuthFailureAt) {
@@ -1012,10 +1133,16 @@ export async function getWaReadinessSummary() {
 function startReadinessDiagnosticsLogger() {
   setInterval(async () => {
     const summary = await getWaReadinessSummary();
-    console.log("[WA] Periodic readiness diagnostics", {
-      intervalMs: readinessDiagnosticsIntervalMs,
-      clients: summary.clients,
-    });
+    writeWaStructuredLog(
+      "debug",
+      buildWaStructuredLog({
+        label: "WA",
+        event: "wa_periodic_readiness_diagnostics",
+        intervalMs: readinessDiagnosticsIntervalMs,
+        clients: summary.clients,
+      }),
+      { debugOnly: true }
+    );
   }, readinessDiagnosticsIntervalMs).unref?.();
 }
 
@@ -1030,8 +1157,14 @@ export function queueAdminNotification(message) {
 
 export function flushAdminNotificationQueue() {
   if (!adminNotificationQueue.length) return;
-  console.log(
-    `[WA] Sending ${adminNotificationQueue.length} queued admin notification(s)`
+  writeWaStructuredLog(
+    "debug",
+    buildWaStructuredLog({
+      label: "WA",
+      event: "wa_admin_notifications_flush",
+      queuedCount: adminNotificationQueue.length,
+    }),
+    { debugOnly: true }
   );
   adminNotificationQueue.splice(0).forEach((msg) => {
     for (const wa of getAdminWAIds()) {
@@ -1283,12 +1416,12 @@ waClient.on("qr", (qr) => {
   state.lastQrPayloadSeen = qr;
   state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
-  console.log("[WA] Scan QR dengan WhatsApp Anda!");
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waClient?.clientId || null, label: "WA", event: "qr" }), { debugOnly: true });
 });
 
 waClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
-  console.log(`[WA] Authenticated (${sessionInfo}); menunggu ready.`);
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waClient?.clientId || null, label: "WA", event: "authenticated", errorCode: sessionInfo }), { debugOnly: true });
   clearLogoutAwaitingQr(waClient);
 });
 
@@ -1303,7 +1436,7 @@ waClient.on("auth_failure", (message) => {
       const state = getClientReadinessState(waClient, "WA");
       state.lastAuthFailureAt = Date.now();
       state.lastAuthFailureMessage = message || null;
-      console.error(`[WA] Auth failure: ${message}`);
+      writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waClient?.clientId || null, label: "WA", event: "auth_failure", errorCode: "AUTH_FAILURE", errorMessage: message || null }));
     }
   );
 });
@@ -1315,7 +1448,7 @@ waClient.on("disconnected", (reason) => {
     state.lastDisconnectReason = normalizedReason || null;
     state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
     setClientNotReady(waClient);
-    console.warn(`[WA] Client disconnected:`, reason);
+    writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waClient?.clientId || null, label: "WA", event: "disconnected", errorCode: normalizedReason || null }));
   });
 });
 
@@ -1328,7 +1461,17 @@ waClient.on("change_state", (state) => {
   const normalizedState = String(state || "").toLowerCase();
   if (normalizedState === "connected" || normalizedState === "open") {
     markClientReady(waClient, `change_state_${normalizedState}`);
+    return;
   }
+  writeRateLimitedWaWarn(
+    `unknown-state:WA:${normalizedState || 'empty'}`,
+    buildWaStructuredLog({
+      clientId: waClient?.clientId || null,
+      label: "WA",
+      event: "change_state_unknown",
+      errorCode: normalizedState || "UNKNOWN_STATE",
+    })
+  );
 });
 
 waUserClient.on("qr", (qr) => {
@@ -1337,12 +1480,12 @@ waUserClient.on("qr", (qr) => {
   state.lastQrPayloadSeen = qr;
   state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
-  console.log("[WA-USER] Scan QR dengan WhatsApp Anda!");
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waUserClient?.clientId || null, label: "WA-USER", event: "qr" }), { debugOnly: true });
 });
 
 waUserClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
-  console.log(`[WA-USER] Authenticated (${sessionInfo}); menunggu ready.`);
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waUserClient?.clientId || null, label: "WA-USER", event: "authenticated", errorCode: sessionInfo }), { debugOnly: true });
   clearLogoutAwaitingQr(waUserClient);
 });
 
@@ -1357,7 +1500,7 @@ waUserClient.on("auth_failure", (message) => {
       const state = getClientReadinessState(waUserClient, "WA-USER");
       state.lastAuthFailureAt = Date.now();
       state.lastAuthFailureMessage = message || null;
-      console.error(`[WA-USER] Auth failure: ${message}`);
+      writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waUserClient?.clientId || null, label: "WA-USER", event: "auth_failure", errorCode: "AUTH_FAILURE", errorMessage: message || null }));
     }
   );
 });
@@ -1374,7 +1517,7 @@ waUserClient.on("disconnected", (reason) => {
       state.lastDisconnectReason = normalizedReason || null;
       state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
       setClientNotReady(waUserClient);
-      console.warn(`[WA-USER] Client disconnected:`, reason);
+      writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waUserClient?.clientId || null, label: "WA-USER", event: "disconnected", errorCode: normalizedReason || null }));
     }
   );
 });
@@ -1388,7 +1531,17 @@ waUserClient.on("change_state", (state) => {
   const normalizedState = String(state || "").toLowerCase();
   if (normalizedState === "connected" || normalizedState === "open") {
     markClientReady(waUserClient, `change_state_${normalizedState}`);
+    return;
   }
+  writeRateLimitedWaWarn(
+    `unknown-state:WA-USER:${normalizedState || 'empty'}`,
+    buildWaStructuredLog({
+      clientId: waUserClient?.clientId || null,
+      label: "WA-USER",
+      event: "change_state_unknown",
+      errorCode: normalizedState || "UNKNOWN_STATE",
+    })
+  );
 });
 
 waGatewayClient.on("qr", (qr) => {
@@ -1397,12 +1550,12 @@ waGatewayClient.on("qr", (qr) => {
   state.lastQrPayloadSeen = qr;
   state.awaitingQrScan = true;
   qrcode.generate(qr, { small: true });
-  console.log("[WA-GATEWAY] Scan QR dengan WhatsApp Anda!");
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waGatewayClient?.clientId || null, label: "WA-GATEWAY", event: "qr" }), { debugOnly: true });
 });
 
 waGatewayClient.on("authenticated", (session) => {
   const sessionInfo = session ? "session received" : "no session payload";
-  console.log(`[WA-GATEWAY] Authenticated (${sessionInfo}); menunggu ready.`);
+  writeWaStructuredLog("debug", buildWaStructuredLog({ clientId: waGatewayClient?.clientId || null, label: "WA-GATEWAY", event: "authenticated", errorCode: sessionInfo }), { debugOnly: true });
   clearLogoutAwaitingQr(waGatewayClient);
 });
 
@@ -1417,7 +1570,7 @@ waGatewayClient.on("auth_failure", (message) => {
       const state = getClientReadinessState(waGatewayClient, "WA-GATEWAY");
       state.lastAuthFailureAt = Date.now();
       state.lastAuthFailureMessage = message || null;
-      console.error(`[WA-GATEWAY] Auth failure: ${message}`);
+      writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waGatewayClient?.clientId || null, label: "WA-GATEWAY", event: "auth_failure", errorCode: "AUTH_FAILURE", errorMessage: message || null }));
     }
   );
 });
@@ -1434,7 +1587,7 @@ waGatewayClient.on("disconnected", (reason) => {
       state.lastDisconnectReason = normalizedReason || null;
       state.awaitingQrScan = isLogoutDisconnectReason(normalizedReason);
       setClientNotReady(waGatewayClient);
-      console.warn(`[WA-GATEWAY] Client disconnected:`, reason);
+      writeWaStructuredLog("warn", buildWaStructuredLog({ clientId: waGatewayClient?.clientId || null, label: "WA-GATEWAY", event: "disconnected", errorCode: normalizedReason || null }));
     }
   );
 });
@@ -1448,7 +1601,17 @@ waGatewayClient.on("change_state", (state) => {
   const normalizedState = String(state || "").toLowerCase();
   if (normalizedState === "connected" || normalizedState === "open") {
     markClientReady(waGatewayClient, `change_state_${normalizedState}`);
+    return;
   }
+  writeRateLimitedWaWarn(
+    `unknown-state:WA-GATEWAY:${normalizedState || 'empty'}`,
+    buildWaStructuredLog({
+      clientId: waGatewayClient?.clientId || null,
+      label: "WA-GATEWAY",
+      event: "change_state_unknown",
+      errorCode: normalizedState || "UNKNOWN_STATE",
+    })
+  );
 });
 
 // =======================
@@ -4701,46 +4864,80 @@ registerClientMessageHandler(waGatewayClient, "wwebjs-gateway", handleGatewayMes
 
 if (shouldInitWhatsAppClients) {
   startReadinessDiagnosticsLogger();
-  console.log('[WA] Attaching message event listeners to WhatsApp clients...');
+  writeWaStructuredLog("info", buildWaStructuredLog({ label: "WA", event: "wa_message_listener_attach_start" }));
   
   waClient.on('message', (msg) => {
-    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
-    console.log(`[WA-SERVICE] waClient 'message' event received - from=${msg.from}`);
-    if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
-    }
+    writeWaStructuredLog(
+      "debug",
+      buildWaStructuredLog({
+        clientId: waClient?.clientId || null,
+        label: "WA",
+        event: "message_received",
+        jid: msg?.from || null,
+        messageId: msg?.id?._serialized || msg?.id?.id || null,
+      }),
+      { debugOnly: true }
+    );
     handleIncoming('wwebjs', msg, handleMessage);
   });
 
   waUserClient.on('message', (msg) => {
     const from = msg.from || '';
     if (from.endsWith('@g.us') || from === 'status@broadcast') {
-      if (process.env.WA_DEBUG_LOGGING === 'true') {
-        console.log(`[WA-SERVICE] waUserClient ignoring group/status message from=${from}`);
-      }
+      writeWaStructuredLog(
+        "debug",
+        buildWaStructuredLog({
+          clientId: waUserClient?.clientId || null,
+          label: "WA-USER",
+          event: "message_ignored",
+          jid: from || null,
+          errorCode: "GROUP_OR_STATUS",
+        }),
+        { debugOnly: true }
+      );
       return;
     }
-    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
-    console.log(`[WA-SERVICE] waUserClient 'message' event received - from=${msg.from}`);
-    if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waUserClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
-    }
+    writeWaStructuredLog(
+      "debug",
+      buildWaStructuredLog({
+        clientId: waUserClient?.clientId || null,
+        label: "WA-USER",
+        event: "message_received",
+        jid: msg?.from || null,
+        messageId: msg?.id?._serialized || msg?.id?.id || null,
+      }),
+      { debugOnly: true }
+    );
     handleIncoming('wwebjs-user', msg, handleUserMessage);
   });
 
   waGatewayClient.on('message', (msg) => {
-    // ALWAYS log message reception at waService level (critical for diagnosing reception issues)
-    console.log(`[WA-SERVICE] waGatewayClient 'message' event received - from=${msg.from}`);
-    if (process.env.WA_DEBUG_LOGGING === 'true') {
-      console.log(`[WA-SERVICE] waGatewayClient message details - body=${msg.body?.substring(0, 50) || '(empty)'}`);
-    }
+    writeWaStructuredLog(
+      "debug",
+      buildWaStructuredLog({
+        clientId: waGatewayClient?.clientId || null,
+        label: "WA-GATEWAY",
+        event: "message_received",
+        jid: msg?.from || null,
+        messageId: msg?.id?._serialized || msg?.id?.id || null,
+      }),
+      { debugOnly: true }
+    );
     handleIncoming('wwebjs-gateway', msg, handleGatewayMessage);
   });
 
-  console.log('[WA] Message event listeners attached successfully.');
-  // Verify listeners are actually attached
-  console.log(`[WA] Listener counts - waClient: ${waClient.listenerCount('message')}, waUserClient: ${waUserClient.listenerCount('message')}, waGatewayClient: ${waGatewayClient.listenerCount('message')}`);
-  console.log('[WA] ** IMPORTANT: If you send a message to the bot and see NO logs, the client may not be connected or authenticated. Check for "Client ready event received" logs above. **');
+  writeWaStructuredLog("info", buildWaStructuredLog({ label: "WA", event: "wa_message_listener_attach_ready" }));
+  writeWaStructuredLog(
+    "debug",
+    buildWaStructuredLog({
+      label: "WA",
+      event: "wa_message_listener_count",
+      waClientCount: waClient.listenerCount('message'),
+      waUserClientCount: waUserClient.listenerCount('message'),
+      waGatewayClientCount: waGatewayClient.listenerCount('message'),
+    }),
+    { debugOnly: true }
+  );
 
 
   const clientsToInit = [
@@ -4750,9 +4947,9 @@ if (shouldInitWhatsAppClients) {
   ];
 
   const initPromises = clientsToInit.map(({ label, client }) => {
-    console.log(`[${label}] Starting WhatsApp client initialization`);
+    writeWaStructuredLog("info", buildWaStructuredLog({ clientId: client?.clientId || null, label, event: "startup" }));
     return client.connect().catch((err) => {
-      console.error(`[${label}] Initialization failed (hard failure):`, err?.message);
+      writeWaStructuredLog("error", buildWaStructuredLog({ clientId: client?.clientId || null, label, event: "fatal_init_error", errorCode: err?.code || "INIT_FAILED", errorMessage: err?.message || String(err) }));
     });
   });
 
