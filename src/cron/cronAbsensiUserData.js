@@ -4,11 +4,11 @@ import { sendWAReport, getAdminWAIds } from '../utils/waHelper.js';
 import waService from '../service/waService.js';
 
 export async function runCron() {
-  await getClientsByRole('ditbinmas');
+  await getClientsByRole('ditintelkam');
   const { rows } = await query('');
   const clients = rows.sort((a, b) => {
-    if (a.client_id === 'DITBINMAS') return -1;
-    if (b.client_id === 'DITBINMAS') return 1;
+    if (a.client_id === 'DITINTELKAM') return -1;
+    if (b.client_id === 'DITINTELKAM') return 1;
     return a.nama.localeCompare(b.nama);
   });
   let idx = 1;
